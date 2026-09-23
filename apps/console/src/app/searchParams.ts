@@ -1,0 +1,76 @@
+import {
+  DEFAULT_INVOICE_QUERY,
+  type InvoiceQuery,
+  InvoiceSortField,
+  InvoiceStatus,
+} from '@fp/domain'
+
+/**
+ * The invoice query, as URL search params.
+ *
+ * This is the piece that decides whether the grid is a component or an
+ * organism. Because the query lives here — in the URL, owned by the route —
+ * the grid can stay stateless, a filtered view is a link somebody can send,
+ * back and forward work, and a refresh lands where you were.
+ *
+ * Put the same state inside the grid and all four of those quietly stop being
+ * true, which is how V1 ended up with 55 tables nobody could link to.
+ *
+ * Parsing is total: anything unrecognised falls back to the default rather
+ * than throwing. A hand-edited URL should show the first page of invoices, not
+ * an error screen.
+ */
+
+const STATUS_VALUES = new Set<string>(Object.values(InvoiceStatus))
+const SORT_VALUES = new Set<string>(Object.values(InvoiceSortField))
+
+const MAX_PAGE_SIZE = 100
+
+function positiveInt(value: unknown, fallback: number, max = Number.MAX_SAFE_INTEGER): number {
+  const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10)
+  if (!Number.isFinite(parsed) || parsed < 1) return fallback
+  return Math.min(Math.trunc(parsed), max)
+}
+
+export function parseInvoiceSearch(raw: Record<string, unknown>): InvoiceQuery {
+  const statusesRaw = raw['status']
+  const statuses = (Array.isArray(statusesRaw) ? statusesRaw : String(statusesRaw ?? '').split(','))
+    .map((s) => String(s).trim())
+    .filter((s): s is InvoiceStatus => STATUS_VALUES.has(s))
+
+  const sortBy = String(raw['sort'] ?? '')
+  const direction = String(raw['dir'] ?? '')
+
+  return {
+    page: positiveInt(raw['page'], DEFAULT_INVOICE_QUERY.page),
+    pageSize: positiveInt(raw['size'], DEFAULT_INVOICE_QUERY.pageSize, MAX_PAGE_SIZE),
+    sortBy: SORT_VALUES.has(sortBy) ? (sortBy as InvoiceSortField) : DEFAULT_INVOICE_QUERY.sortBy,
+    sortDirection: direction === 'asc' ? 'asc' : 'desc',
+    // De-duplicated so `?status=paid&status=paid` cannot produce a filter that
+    // looks selected twice in the UI.
+    statuses: [...new Set(statuses)],
+    search: String(raw['q'] ?? '').trim(),
+  }
+}
+
+/**
+ * Serializes back, omitting anything at its default.
+ *
+ * A URL that only names what the user changed is one they can read, and it
+ * keeps `/invoices` as the canonical address of the unfiltered list rather
+ * than one of many spellings of it.
+ */
+export function toInvoiceSearch(query: InvoiceQuery): Record<string, string | string[]> {
+  const search: Record<string, string | string[]> = {}
+
+  if (query.page !== DEFAULT_INVOICE_QUERY.page) search['page'] = String(query.page)
+  if (query.pageSize !== DEFAULT_INVOICE_QUERY.pageSize) search['size'] = String(query.pageSize)
+  if (query.sortBy !== DEFAULT_INVOICE_QUERY.sortBy) search['sort'] = query.sortBy
+  if (query.sortDirection !== DEFAULT_INVOICE_QUERY.sortDirection) {
+    search['dir'] = query.sortDirection
+  }
+  if (query.statuses.length > 0) search['status'] = [...query.statuses].sort()
+  if (query.search) search['q'] = query.search
+
+  return search
+}
