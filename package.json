@@ -1,0 +1,42 @@
+{
+  "name": "@fp/source",
+  "version": "0.0.0",
+  "description": "Flexprice Console \u2014 the V2 frontend platform (monorepo).",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "prepare": "husky",
+    "dev": "pnpm --filter console dev",
+    "dev:portal": "pnpm --filter portal dev",
+    "build": "nx run-many -t build",
+    "typecheck": "nx run-many -t typecheck",
+    "lint": "nx run-many -t lint",
+    "test": "nx run-many -t test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "verify": "nx run-many -t typecheck lint test build"
+  },
+  "devDependencies": {
+    "@commitlint/cli": "^21.0.2",
+    "@commitlint/config-conventional": "^21.0.2",
+    "@eslint/js": "^10.0.1",
+    "@nx/js": "^22.7.8",
+    "@types/node": "^24.12.3",
+    "eslint": "^10.3.0",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-boundaries": "^5.0.3",
+    "eslint-plugin-import": "^2.32.0",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.6.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.7",
+    "nx": "^22.7.8",
+    "prettier": "^3.8.3",
+    "prettier-plugin-tailwindcss": "^0.8.0",
+    "typescript": "~5.9.2",
+    "typescript-eslint": "^8.59.2"
+  },
+  "packageManager": "pnpm@11.6.0"
+}

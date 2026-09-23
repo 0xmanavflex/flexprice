@@ -1,0 +1,24 @@
+{
+  "name": "@fp/eslint-config",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "The architecture, as build errors.",
+  "exports": {
+    ".": "./src/index.js",
+    "./architecture": "./src/architecture.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "typescript-eslint": "^8.59.2",
+    "globals": "^17.6.0",
+    "eslint-plugin-react-hooks": "^7.1.1"
+  },
+  "devDependencies": {
+    "eslint": "^10.3.0",
+    "vitest": "^4.1.10"
+  }
+}

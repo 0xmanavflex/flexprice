@@ -1,0 +1,15 @@
+packages:
+  - 'apps/*'
+  - 'packages/*'
+
+# Security floors only. Pin a version here when a transitive dep is vulnerable
+# or when a major drifts ahead of what this repo is on — with the reason, so
+# the next person can tell an upgrade from a workaround.
+overrides:
+  axios: '>=1.18.0'
+  esbuild: '>=0.28.1'
+
+allowBuilds:
+  esbuild: true
+  nx: true
+  msw: true
