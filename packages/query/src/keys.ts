@@ -1,0 +1,35 @@
+/**
+ * Query keys, in one place.
+ *
+ * Keys assembled inline drift — `['customer', id]` in one file and
+ * `['customers', id]` in another means an invalidation that silently misses,
+ * and a stale screen nobody can reproduce. A factory makes the key structure a
+ * single fact, and `as const` makes a typo a type error.
+ *
+ * Structured hierarchically so that invalidating a prefix invalidates
+ * everything below it: `queryClient.invalidateQueries({ queryKey:
+ * queryKeys.customers.all() })` covers every customer list and detail.
+ */
+export const queryKeys = {
+  session: {
+    all: () => ['session'] as const,
+    current: () => ['session', 'current'] as const,
+    environments: () => ['session', 'environments'] as const,
+  },
+  customers: {
+    all: () => ['customers'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['customers', 'list', filter] as const,
+    detail: (id: string) => ['customers', 'detail', id] as const,
+  },
+  subscriptions: {
+    all: () => ['subscriptions'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['subscriptions', 'list', filter] as const,
+    detail: (id: string) => ['subscriptions', 'detail', id] as const,
+  },
+  invoices: {
+    all: () => ['invoices'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['invoices', 'list', filter] as const,
+    detail: (id: string) => ['invoices', 'detail', id] as const,
+  },
+} as const

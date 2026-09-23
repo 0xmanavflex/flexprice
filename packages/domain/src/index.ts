@@ -1,0 +1,48 @@
+/**
+ * The product's vocabulary.
+ *
+ * Everything here is pure and dependency-free — no SDK, no HTTP, no React.
+ * Transport types stop below this layer: `@fp/query` fetches a
+ * `CustomerResponse` and hands the UI a domain model, so no component ever
+ * receives a `WalletResponse`.
+ *
+ * That boundary is also where Flexprice's internal language becomes the
+ * product's. Watchtower established the pattern — a recurring credit grant is
+ * presented as a *monthly budget*, a one-time grant as a *top-up* — and the
+ * same translation belongs here, once, rather than in each screen that renders
+ * it.
+ *
+ * Types are added as surfaces are built. Modelling all 570 schemas up front
+ * would recreate the 53 hand-written DTO files this architecture removes; the
+ * SDK already has them, and they are only interesting once something renders.
+ */
+export {
+  InvalidMoneyError,
+  compareMoney,
+  formatMoney,
+  isNegativeMoney,
+  isZeroMoney,
+  money,
+  moneyOr,
+} from './money'
+export type { Money } from './money'
+
+export {
+  DEFAULT_INVOICE_QUERY,
+  InvoiceSortField,
+  InvoiceStatus,
+  deriveInvoiceStatus,
+  needsAttention,
+} from './invoice'
+export type { Invoice, InvoiceQuery, InvoiceStatusInput } from './invoice'
+
+export {
+  BILLING_MODEL_LABEL,
+  BillingModel,
+  TIER_MODE_LABEL,
+  TierMode,
+  emptyOverride,
+  priceOverrideSchema,
+  priceTierSchema,
+} from './priceOverride'
+export type { PriceOverride, PriceTier } from './priceOverride'

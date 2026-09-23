@@ -1,0 +1,76 @@
+import { describe, expect, it } from 'vitest'
+import { BillingModel, TierMode, priceOverrideSchema } from '@fp/domain'
+import { toOverrideLineItem } from './priceOverrides'
+
+/** Only validated domain values reach the mapper, so tests parse first. */
+const valid = (value: unknown) => priceOverrideSchema.parse(value)
+
+describe('toOverrideLineItem', () => {
+  it('maps a flat fee without inventing tier fields', () => {
+    const result = toOverrideLineItem(
+      valid({ priceId: 'p1', billingModel: BillingModel.FlatFee, amount: '9.99' }),
+    )
+
+    expect(result).toEqual({ priceId: 'p1', billingModel: 'FLAT_FEE', amount: '9.99' })
+    expect(result).not.toHaveProperty('tiers')
+    expect(result).not.toHaveProperty('transformQuantity')
+  })
+
+  it('nests the package size the way the API expects', () => {
+    expect(
+      toOverrideLineItem(
+        valid({ priceId: 'p1', billingModel: BillingModel.Package, amount: '10', divideBy: 1000 }),
+      ),
+    ).toEqual({
+      priceId: 'p1',
+      billingModel: 'PACKAGE',
+      amount: '10',
+      transformQuantity: { divideBy: 1000 },
+    })
+  })
+
+  it('preserves tier order and the unbounded final band', () => {
+    const result = toOverrideLineItem(
+      valid({
+        priceId: 'p1',
+        billingModel: BillingModel.Tiered,
+        tierMode: TierMode.Slab,
+        tiers: [
+          { upTo: 100, unitAmount: '0.10' },
+          { upTo: null, unitAmount: '0.05' },
+        ],
+      }),
+    )
+
+    expect(result.tierMode).toBe('SLAB')
+    expect(result.tiers).toEqual([
+      { upTo: 100, unitAmount: '0.10' },
+      { upTo: null, unitAmount: '0.05' },
+    ])
+  })
+
+  it('omits an absent flat amount rather than sending an empty one', () => {
+    const result = toOverrideLineItem(
+      valid({
+        priceId: 'p1',
+        billingModel: BillingModel.Tiered,
+        tierMode: TierMode.Volume,
+        tiers: [{ upTo: null, unitAmount: '0.05' }],
+      }),
+    )
+    expect(result.tiers?.[0]).not.toHaveProperty('flatAmount')
+  })
+
+  // Amounts stay strings the whole way. A float here would be a rounding bug
+  // shipped straight into a subscription.
+  it('keeps amounts as exact decimal strings', () => {
+    const result = toOverrideLineItem(
+      valid({
+        priceId: 'p1',
+        billingModel: BillingModel.FlatFee,
+        amount: '12345678901234567.89',
+      }),
+    )
+    expect(result.amount).toBe('12345678901234567.89')
+  })
+})
