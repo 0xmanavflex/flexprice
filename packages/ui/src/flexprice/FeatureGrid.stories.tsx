@@ -4,7 +4,7 @@ import { FeatureGrid } from './FeatureGrid'
 import { featureFixtures, fixtureFeatureQuery, manyFeatures } from './featureFixtures'
 
 const meta = {
-  title: 'Flexprice/FeatureGrid',
+  title: 'Surfaces/FeatureGrid',
   component: FeatureGrid,
   parameters: { layout: 'padded' },
   args: {

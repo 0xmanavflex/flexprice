@@ -37,7 +37,7 @@ const steps = (currentId: string): WorkflowStep[] => {
 }
 
 const meta = {
-  title: 'Compositions/WorkflowStepper',
+  title: 'Foundation/Compositions/WorkflowStepper',
   component: WorkflowStepper,
   parameters: { layout: 'padded' },
   args: {

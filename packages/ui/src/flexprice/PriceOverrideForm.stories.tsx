@@ -14,7 +14,7 @@ import { PriceOverrideForm } from './PriceOverrideForm'
  * single piece of state.
  */
 const meta = {
-  title: 'Flexprice/PriceOverrideForm',
+  title: 'Surfaces/PriceOverrideForm',
   component: PriceOverrideForm,
   parameters: { layout: 'padded' },
   args: { priceId: 'price_01', onSubmit: fn(), onCancel: fn() },

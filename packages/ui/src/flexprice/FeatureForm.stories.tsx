@@ -9,7 +9,7 @@ import { FeatureForm } from './FeatureForm'
  * out, no provider, no network.
  */
 const meta = {
-  title: 'Flexprice/FeatureForm',
+  title: 'Surfaces/FeatureForm',
   component: FeatureForm,
   parameters: { layout: 'padded' },
   args: { onSubmit: fn(), onCancel: fn() },

@@ -13,7 +13,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/primitives/button'
 import { Input } from '@ui/primitives/input'
-import { Label } from '@ui/primitives/label'
+import { Field } from '@ui/compositions/Field'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -128,8 +128,8 @@ export function FeatureForm({
       </fieldset>
 
       <Field label="Name" error={errors['name']?.message}>
-        {(id, describedBy) => (
-          <Input id={id} disabled={isSubmitting} aria-describedby={describedBy}
+        {({ id, ...field }) => (
+          <Input id={id} disabled={isSubmitting} {...field}
             {...form.register('name')} />
         )}
       </Field>
@@ -139,8 +139,8 @@ export function FeatureForm({
         hint="Stable identifier used by the API. Lowercase, numbers and underscores."
         error={errors['lookupKey']?.message}
       >
-        {(id, describedBy) => (
-          <Input id={id} disabled={isSubmitting} aria-describedby={describedBy}
+        {({ id, ...field }) => (
+          <Input id={id} disabled={isSubmitting} {...field}
             {...form.register('lookupKey')} />
         )}
       </Field>
@@ -150,14 +150,14 @@ export function FeatureForm({
           <legend className="px-1 text-sm font-medium">Meter</legend>
 
           <Field label="Event name" error={errors.meter?.['eventName']?.message}>
-            {(id, describedBy) => (
-              <Input id={id} aria-describedby={describedBy}
+            {({ id, ...field }) => (
+              <Input id={id} {...field}
                 {...form.register('meter.eventName' as never)} />
             )}
           </Field>
 
           <Field label="Aggregation">
-            {(id) => (
+            {({ id }) => (
               <select
                 id={id}
                 className="h-9 rounded-lg border px-3 text-sm"
@@ -179,8 +179,8 @@ export function FeatureForm({
               hint="The property on the event to aggregate. An expression can be used instead."
               error={errors.meter?.['field']?.message}
             >
-              {(id, describedBy) => (
-                <Input id={id} aria-describedby={describedBy}
+              {({ id, ...field }) => (
+                <Input id={id} {...field}
                   {...form.register('meter.field' as never)} />
               )}
             </Field>
@@ -188,8 +188,8 @@ export function FeatureForm({
 
           {showTarget ? (
             <Field label="Or an expression" error={errors.meter?.['expression']?.message}>
-              {(id, describedBy) => (
-                <Input id={id} aria-describedby={describedBy}
+              {({ id, ...field }) => (
+                <Input id={id} {...field}
                   {...form.register('meter.expression' as never)} />
               )}
             </Field>
@@ -197,15 +197,15 @@ export function FeatureForm({
 
           {showMultiplier ? (
             <Field label="Multiplier" error={errors.meter?.['multiplier']?.message}>
-              {(id, describedBy) => (
-                <Input id={id} inputMode="decimal" aria-describedby={describedBy}
+              {({ id, ...field }) => (
+                <Input id={id} inputMode="decimal" {...field}
                   {...form.register('meter.multiplier' as never)} />
               )}
             </Field>
           ) : null}
 
           <Field label="Reset usage">
-            {(id) => (
+            {({ id }) => (
               <select
                 id={id}
                 className="h-9 rounded-lg border px-3 text-sm"
@@ -236,40 +236,5 @@ export function FeatureForm({
         ) : null}
       </div>
     </form>
-  )
-}
-
-/** Label, control and error wired together so the association is never forgotten. */
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string
-  hint?: string
-  error?: string | undefined
-  children: (id: string, describedBy: string | undefined) => React.ReactNode
-}) {
-  const id = `feature-${label.toLowerCase().replace(/\s+/g, '-')}`
-  const hintId = hint ? `${id}-hint` : undefined
-  const errorId = error ? `${id}-error` : undefined
-  const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
-
-  return (
-    <div className="flex flex-col gap-1">
-      <Label htmlFor={id}>{label}</Label>
-      {hint ? (
-        <p id={hintId} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      ) : null}
-      {children(id, describedBy)}
-      {error ? (
-        <p id={errorId} role="alert" className="text-xs text-destructive">
-          {error}
-        </p>
-      ) : null}
-    </div>
   )
 }

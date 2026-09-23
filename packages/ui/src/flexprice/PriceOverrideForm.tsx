@@ -12,7 +12,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/primitives/button'
 import { Input } from '@ui/primitives/input'
-import { Label } from '@ui/primitives/label'
+import { Field } from '@ui/compositions/Field'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -129,12 +129,12 @@ export function PriceOverrideForm({
           label={billingModel === BillingModel.Package ? 'Price per package' : 'Amount'}
           error={(errors as { amount?: { message?: string } }).amount?.message}
         >
-          {(id, describedBy) => (
+          {({ id, ...field }) => (
             <Input
               id={id}
               inputMode="decimal"
               disabled={isSubmitting}
-              aria-describedby={describedBy}
+              {...field}
               {...form.register('amount' as never)}
             />
           )}
@@ -147,14 +147,14 @@ export function PriceOverrideForm({
           hint="The price above buys this many units."
           error={(errors as { divideBy?: { message?: string } }).divideBy?.message}
         >
-          {(id, describedBy) => (
+          {({ id, ...field }) => (
             <Input
               id={id}
               type="number"
               min={1}
               step={1}
               disabled={isSubmitting}
-              aria-describedby={describedBy}
+              {...field}
               {...form.register('divideBy' as never, { valueAsNumber: true })}
             />
           )}
@@ -297,40 +297,5 @@ export function PriceOverrideForm({
         ) : null}
       </div>
     </form>
-  )
-}
-
-/** Label, control and error wired together, so the association is never forgotten. */
-function Field({
-  label,
-  hint,
-  error,
-  children,
-}: {
-  label: string
-  hint?: string
-  error?: string | undefined
-  children: (id: string, describedBy: string | undefined) => React.ReactNode
-}) {
-  const id = `field-${label.toLowerCase().replace(/\s+/g, '-')}`
-  const hintId = hint ? `${id}-hint` : undefined
-  const errorId = error ? `${id}-error` : undefined
-  const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
-
-  return (
-    <div className="flex flex-col gap-1">
-      <Label htmlFor={id}>{label}</Label>
-      {hint ? (
-        <p id={hintId} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      ) : null}
-      {children(id, describedBy)}
-      {error ? (
-        <p id={errorId} role="alert" className="text-xs text-destructive">
-          {error}
-        </p>
-      ) : null}
-    </div>
   )
 }

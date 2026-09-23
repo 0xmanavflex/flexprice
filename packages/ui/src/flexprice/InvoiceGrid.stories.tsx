@@ -21,7 +21,7 @@ import { fixtureQuery, invoiceFixtures, manyInvoices } from './invoiceFixtures'
  * because there is only one of them.
  */
 const meta = {
-  title: 'Flexprice/InvoiceGrid',
+  title: 'Surfaces/InvoiceGrid',
   component: InvoiceGrid,
   parameters: {
     layout: 'padded',
