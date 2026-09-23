@@ -1,0 +1,14 @@
+/**
+ * Product components that speak billing.
+ *
+ * Domain types belong here — a `MoneyCell` takes a `Money`, an
+ * `InvoiceStatusBadge` takes a domain status. Transport types do not: a
+ * component receiving a `WalletResponse` is the bug the layering prevents.
+ *
+ * Still presentation. These take props and render; they do not fetch.
+ */
+
+export { InvoiceGrid, InvoiceGridProvenance } from './InvoiceGrid'
+export type { InvoiceGridProps } from './InvoiceGrid'
+export { PriceOverrideForm, PriceOverrideFormProvenance } from './PriceOverrideForm'
+export type { PriceOverrideFormProps } from './PriceOverrideForm'

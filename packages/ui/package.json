@@ -1,0 +1,65 @@
+{
+  "name": "@fp/ui",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Presentation only. No server state, no SDK, no transport types.",
+  "exports": {
+    ".": "./src/index.ts",
+    "./primitives": "./src/primitives/index.ts",
+    "./compositions": "./src/compositions/index.ts",
+    "./flexprice": "./src/flexprice/index.ts",
+    "./styles.css": "./src/styles.css"
+  },
+  "scripts": {
+    "typecheck": "tsc -b",
+    "lint": "eslint . --max-warnings 0",
+    "test": "vitest run --passWithNoTests",
+    "vendor:suppress": "node scripts/vendor-suppress.mjs",
+    "ui:add": "node scripts/add.mjs",
+    "storybook": "storybook dev -p 6006 --no-open",
+    "build-storybook": "storybook build --output-dir dist/storybook --quiet",
+    "test:stories": "vitest run --project=storybook"
+  },
+  "dependencies": {
+    "@base-ui/react": "^1.8.0",
+    "@dnd-kit/core": "^6.3.1",
+    "@dnd-kit/modifiers": "^9.0.0",
+    "@dnd-kit/sortable": "^10.0.0",
+    "@dnd-kit/utilities": "^3.2.2",
+    "@fp/domain": "workspace:*",
+    "@tanstack/react-table": "^9.2.4",
+    "@tanstack/react-virtual": "^3.14.13",
+    "class-variance-authority": "^0.7.1",
+    "clsx": "^2.1.1",
+    "cn": "^0.4.0",
+    "tailwind-merge": "^3.6.0",
+    "lucide-react": "^1.17.0",
+    "react-hook-form": "^7.78.0",
+    "@hookform/resolvers": "^5.4.0",
+    "zod": "^4.4.3"
+  },
+  "peerDependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "react": "^19.2.6",
+    "tailwindcss": "^4.3.0",
+    "typescript": "~5.9.2",
+    "vitest": "^4.1.10",
+    "@types/react-dom": "^19.2.3",
+    "@storybook/react-vite": "^10.6.0",
+    "@storybook/addon-docs": "^10.6.0",
+    "@storybook/addon-a11y": "^10.6.0",
+    "@storybook/addon-vitest": "^10.6.0",
+    "storybook": "^10.6.0",
+    "@vitest/browser": "4.1.11",
+    "@vitest/browser-playwright": "^4.1.11",
+    "playwright": "^1.63.0",
+    "@vitejs/plugin-react": "^6.0.1",
+    "@tailwindcss/vite": "^4.3.0",
+    "vite": "^8.0.12"
+  }
+}
