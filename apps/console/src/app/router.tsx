@@ -14,6 +14,10 @@ import { useState } from 'react'
 import type { PriceOverride } from '@fp/domain'
 import { SubscriptionCreatePage } from '@/pages/subscriptions/SubscriptionCreatePage'
 import { type SubscriptionStepId, furthestOf, parseStep, toStepSearch } from './subscriptionSteps'
+import type { FeatureQuery } from '@fp/domain'
+import { FeatureListPage } from '@/pages/features/FeatureListPage'
+import { FeatureCreatePage } from '@/pages/features/FeatureCreatePage'
+import { parseFeatureSearch, toFeatureSearch } from './featureSearch'
 
 const rootRoute = createRootRoute({ component: Outlet })
 
@@ -114,7 +118,53 @@ function SubscriptionCreateRouteComponent() {
   )
 }
 
+/**
+ * Features: list and create.
+ *
+ * The first migrated V1 surface. The query lives in search params, so a
+ * filtered list is a link — which V1's version cannot produce.
+ */
+const featuresRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/features',
+  validateSearch: (search: Record<string, unknown>): FeatureQuery => parseFeatureSearch(search),
+  component: FeaturesRouteComponent,
+})
+
+function FeaturesRouteComponent() {
+  const query = useSearch({ from: featuresRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <FeatureListPage
+      query={query}
+      onQueryChange={(next) =>
+        void navigate({ to: '/features', search: toFeatureSearch(next) as never, replace: true })
+      }
+      onCreate={() => void navigate({ to: '/features/new' })}
+      onOpenFeature={(feature) =>
+        void navigate({ to: '/features', search: { q: feature.name } as never })
+      }
+    />
+  )
+}
+
+const featureCreateRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/features/new',
+  component: FeatureCreateRouteComponent,
+})
+
+function FeatureCreateRouteComponent() {
+  const navigate = useNavigate()
+  const backToList = () => void navigate({ to: '/features', search: {} as never })
+
+  return <FeatureCreatePage onCreated={backToList} onCancel={backToList} />
+}
+
 export const routeTree = rootRoute.addChildren([
+  featuresRoute,
+  featureCreateRoute,
   indexRoute,
   invoicesRoute,
   subscriptionCreateRoute,

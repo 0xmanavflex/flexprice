@@ -36,7 +36,13 @@ describe('flat fee', () => {
 
   it('keeps the amount as an exact decimal string, never a number', () => {
     const result = parse({ priceId: 'p1', billingModel: BillingModel.FlatFee, amount: '0.1' })
-    expect(result.success && result.data.amount).toBe('0.1')
+
+    // Narrowed through the discriminant rather than asserted: if the union ever
+    // stops guaranteeing `amount` on this branch, this stops compiling.
+    expect(result.success).toBe(true)
+    if (result.success && result.data.billingModel === BillingModel.FlatFee) {
+      expect(result.data.amount).toBe('0.1')
+    }
   })
 
   // The discriminated union is what stops the form carrying dead state between

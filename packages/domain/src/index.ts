@@ -46,3 +46,17 @@ export {
   priceTierSchema,
 } from './priceOverride'
 export type { PriceOverride, PriceTier } from './priceOverride'
+
+export {
+  AGGREGATION_LABEL,
+  AggregationType,
+  DEFAULT_FEATURE_QUERY,
+  FEATURE_TYPE_LABEL,
+  FeatureType,
+  ResetUsage,
+  createFeatureSchema,
+  emptyFeature,
+  meterSchema,
+  needsAggregationTarget,
+} from './feature'
+export type { CreateFeature, Feature, FeatureQuery, MeterDraft } from './feature'

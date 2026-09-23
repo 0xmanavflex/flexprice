@@ -139,3 +139,64 @@ first step is wanted. **Plans** is deliberately *not* first — it depends on
 Explicitly not first: anything under `customer_portal`, and
 `CreateCustomerSubscriptionPage` (966 lines), which pulls in subscriptions and
 addons and would turn the first migration into a second architecture project.
+
+---
+
+# Migration 1 — Product Catalogue → Features
+
+Status: **done**. Routes `/features` and `/features/new`.
+
+## Before / after
+
+| | V1 | V2 |
+|---|---:|---:|
+| Source LOC | 2,017 | **983** |
+| `useState` | 13 | **0** |
+| Largest file | `AddFeature.tsx` **1,106** | `FeatureForm.tsx` **275** |
+| Tests / stories | **0** | **5 files, 60 tests** |
+| API classes | 3 hand-written | 0 — generated SDK |
+| Hand-rolled table | `FlexpriceTable` | ReUI `data-grid` |
+| Validation | 2 callbacks + 4 state slices | 1 domain schema |
+| Component fetching | yes | no — page + query |
+| Deep-linkable list | no | yes — URL search params |
+| `sdk-adapter` shims | — | **0** |
+
+983 LOC includes 81 lines of fixtures that V1 has no equivalent of. The form
+alone went from 1,106 lines to 275.
+
+## Three defects the migration exposed
+
+1. **A zero multiplier passes validation in V1.** `AddFeature.tsx` writes
+   `meterData.aggregation.multiplier <= 0`, but `multiplier` is a *string* on
+   the wire, and `'0' <= 0` is `false` in JavaScript. A `SUM_WITH_MULTIPLIER`
+   feature created with a zero multiplier is accepted and then bills nothing.
+   The domain schema rejects it, and a story covers it.
+
+2. **The aggregation rule could not be checked outside the form.** V1 decides
+   whether to require `field` or `expression` by reading a `showCustomExpression`
+   boolean out of component state — so the rule only exists while the form is
+   mounted. In the domain it is one rule satisfied by either, and it holds
+   wherever it is applied.
+
+3. **A meter survives a type switch.** V1 keeps meter data in a separate state
+   slice, so switching a metered feature to Boolean leaves the meter in scope.
+   The discriminated union makes that unrepresentable, and a story asserts it.
+
+## What it confirmed about the contract
+
+`GetFeature` and `ListFeatures` carry no swagger annotation, so the SDK has no
+`getFeature`. Both are served by the documented `POST /features/search`, whose
+filter carries `featureIds`, `lookupKey`, `nameContains`, `limit`/`offset` and
+`sort`. **No shim was needed.**
+
+`CreateFeatureRequest` carries an optional `meter`, so a metered feature and its
+meter are a single documented call. Nothing touches `MeterApi` (0 of 6
+annotated), which would otherwise have blocked this surface entirely.
+
+## Known gap, stated rather than hidden
+
+`FeatureFilter` has no type filter, so filtering by feature type is applied
+client-side in `fetchFeatures` — which narrows *the current page*, not the whole
+set. This is the same class of problem as `overdue` on invoices, and gets the
+same treatment: named, not approximated. If type filtering matters, the
+backend adds it to `FeatureFilter`.
