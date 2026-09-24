@@ -1,6 +1,8 @@
 import { type Feature, type FeatureQuery } from '@fp/domain'
 import { ApiError, useFeatures } from '@fp/query'
 import { FeatureGrid } from '@fp/ui/flexprice'
+import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { Button } from '@fp/ui/primitives'
 
 export interface FeatureListPageProps {
   query: FeatureQuery
@@ -25,46 +27,70 @@ export function FeatureListPage({
 }: FeatureListPageProps) {
   const features = useFeatures(query)
 
-  return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-xl font-semibold">Features</h1>
-        <button
-          type="button"
-          onClick={onCreate}
-          className="rounded-lg border px-3 py-1.5 text-sm font-medium"
-        >
-          New feature
-        </button>
-      </div>
+  const failure = toFailure(features.error)
+  const rows = features.data?.features ?? []
+  const isFiltered = query.search.length > 0 || query.types.length > 0
 
-      <FeatureGrid
-        features={features.data?.features ?? []}
-        total={features.data?.total ?? 0}
-        query={query}
-        onQueryChange={onQueryChange}
-        isLoading={features.isPending}
-        error={toMessage(features.error)}
-        onRetry={() => void features.refetch()}
-        onFeatureClick={onOpenFeature}
+  return (
+    <>
+      <PageHeader
+        title="Features"
+        description="What you meter, and what customers are entitled to."
+        action={<Button onClick={onCreate}>New feature</Button>}
       />
-    </main>
+
+      <PageBody>
+        {/*
+          Every state comes from one place, so this screen cannot invent its
+          own. Loading, both empties and both errors are inherited and already
+          tested.
+        */}
+        <ListState
+          isLoading={features.isPending}
+          error={failure}
+          isEmpty={rows.length === 0}
+          isFiltered={isFiltered}
+          onRetry={() => void features.refetch()}
+          onClearFilters={() => onQueryChange({ ...query, search: '', types: [], page: 1 })}
+          createAction={<Button onClick={onCreate}>New feature</Button>}
+          emptyTitle="No features yet"
+          emptyDescription="Features describe what you meter and what a plan includes."
+        >
+          <FeatureGrid
+            features={rows}
+            total={features.data?.total ?? 0}
+            query={query}
+            onQueryChange={onQueryChange}
+            onFeatureClick={onOpenFeature}
+          />
+        </ListState>
+      </PageBody>
+    </>
   )
 }
 
-function toMessage(error: unknown): string | null {
+/**
+ * A failure, as a sentence and a judgement about whether retrying can help.
+ *
+ * `canRetry` is the important half: a permission error offers no retry, because
+ * pressing the button again cannot change the answer.
+ */
+function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
   if (!error) return null
+
   if (error instanceof ApiError) {
     switch (error.kind) {
       case 'forbidden':
-        return 'You do not have access to features in this environment.'
+        return { message: 'You do not have access to features here.', canRetry: false }
       case 'unauthorized':
-        return 'Your session has expired. Sign in again to continue.'
+        return { message: 'Your session has expired. Sign in again.', canRetry: false }
       case 'network':
-        return 'Could not reach Flexprice. Check your connection and try again.'
+        return { message: 'Could not reach Flexprice.', canRetry: true }
+      case 'server':
+        return { message: 'Flexprice had a problem loading features.', canRetry: true }
       default:
-        return error.message
+        return { message: error.message, canRetry: false }
     }
   }
-  return 'Something went wrong loading features.'
+  return { message: 'Something went wrong loading features.', canRetry: true }
 }

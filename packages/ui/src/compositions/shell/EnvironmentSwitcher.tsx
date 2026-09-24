@@ -27,6 +27,11 @@ export interface EnvironmentSwitcherProps {
  * The kind is shown as a word, not only as a colour: colour alone excludes
  * anyone who cannot distinguish it, and this is precisely the information
  * nobody can afford to miss.
+ *
+ * Only production is badged. An environment named "Sandbox" beside a badge
+ * reading "Sandbox" says one thing twice, and the repetition makes the badge
+ * easier to stop seeing — which is the opposite of what it is for. Absence is
+ * the sandbox signal; the accessible name still states the kind either way.
  */
 export function EnvironmentSwitcher({
   current,
@@ -48,9 +53,11 @@ export function EnvironmentSwitcher({
         }
       >
         <span className="font-medium">{current.name}</span>
-        <Badge variant={isProduction ? 'destructive-light' : 'secondary'} size="sm">
-          {isProduction ? 'Live' : 'Sandbox'}
-        </Badge>
+        {isProduction ? (
+          <Badge variant="destructive-light" size="sm">
+            Live
+          </Badge>
+        ) : null}
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" className="w-64">
@@ -64,12 +71,11 @@ export function EnvironmentSwitcher({
             <span className={cn(environment.id === current.id && 'font-medium')}>
               {environment.name}
             </span>
-            <Badge
-              variant={environment.kind === 'production' ? 'destructive-light' : 'secondary'}
-              size="sm"
-            >
-              {environment.kind === 'production' ? 'Live' : 'Sandbox'}
-            </Badge>
+            {environment.kind === 'production' ? (
+              <Badge variant="destructive-light" size="sm">
+                Live
+              </Badge>
+            ) : null}
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>

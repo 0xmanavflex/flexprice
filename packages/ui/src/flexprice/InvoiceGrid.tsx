@@ -17,6 +17,7 @@ import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-g
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
+import { Button } from '@ui/primitives/button'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -221,9 +222,9 @@ export function InvoiceGrid({
       <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
         <p className="text-sm">{error}</p>
         {onRetry ? (
-          <button type="button" onClick={onRetry} className="text-sm underline">
+          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
             Try again
-          </button>
+          </Button>
         ) : null}
       </div>
     )

@@ -69,6 +69,23 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {}
 
 /**
+ * Sandbox carries no badge.
+ *
+ * An environment named "Sandbox" next to a badge reading "Sandbox" says one
+ * thing twice, and repetition is how a marker becomes invisible. The kind is
+ * still in the accessible name.
+ */
+export const SandboxIsNotBadged: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText('Live')).not.toBeInTheDocument()
+    await expect(
+      canvas.getByRole('button', { name: /environment: sandbox, sandbox/i }),
+    ).toBeInTheDocument()
+  },
+}
+
+/**
  * Production is marked, and not only by colour.
  *
  * Editing a live plan must not look identical to editing a sandbox one, and

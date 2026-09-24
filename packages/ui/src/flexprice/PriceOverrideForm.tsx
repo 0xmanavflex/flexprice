@@ -11,6 +11,17 @@ import {
   priceOverrideSchema,
 } from '@fp/domain'
 import { Button } from '@ui/primitives/button'
+import { RadioGroup, RadioGroupItem } from '@ui/primitives/radio-group'
+import { Label } from '@ui/primitives/label'
+import {
+  Table,
+  TableBody,
+  TableCaption,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@ui/primitives/table'
 import { Input } from '@ui/primitives/input'
 import { Field } from '@ui/compositions/Field'
 import { provenance } from '@ui/provenance'
@@ -71,6 +82,8 @@ export function PriceOverrideForm({
   })
 
   const billingModel = form.watch('billingModel')
+  const watchedTierMode: unknown = form.watch('tierMode' as never)
+  const tierMode = typeof watchedTierMode === 'string' ? watchedTierMode : TierMode.Volume
 
   const { fields, insert, remove } = useFieldArray({
     control: form.control,
@@ -165,12 +178,22 @@ export function PriceOverrideForm({
         <>
           <fieldset className="flex flex-col gap-2" disabled={isSubmitting}>
             <legend className="mb-2 text-sm font-medium">Tier mode</legend>
-            {TIER_MODES.map((mode) => (
-              <label key={mode} className="flex items-center gap-2 text-sm">
-                <input type="radio" value={mode} {...form.register('tierMode' as never)} />
-                {TIER_MODE_LABEL[mode]}
-              </label>
-            ))}
+            <RadioGroup
+              value={tierMode}
+              onValueChange={(value) =>
+                form.setValue('tierMode' as never, value as never, { shouldDirty: true })
+              }
+              className="flex flex-col gap-2"
+            >
+              {TIER_MODES.map((mode) => (
+                <div key={mode} className="flex items-center gap-2">
+                  <RadioGroupItem value={mode} id={`tier-mode-${mode}`} />
+                  <Label htmlFor={`tier-mode-${mode}`} className="text-sm font-normal">
+                    {TIER_MODE_LABEL[mode]}
+                  </Label>
+                </div>
+              ))}
+            </RadioGroup>
           </fieldset>
 
           <div className="flex flex-col gap-3">
@@ -189,19 +212,19 @@ export function PriceOverrideForm({
               </Button>
             </div>
 
-            <table className="w-full text-sm">
-              <caption className="sr-only">
+            <Table>
+              <TableCaption className="sr-only">
                 Price tiers, from the lowest band to the unbounded final band
-              </caption>
-              <thead>
-                <tr className="text-left">
-                  <th scope="col" className="pb-1 font-medium">Up to</th>
-                  <th scope="col" className="pb-1 font-medium">Per unit</th>
-                  <th scope="col" className="pb-1 font-medium">Flat fee</th>
-                  <th scope="col" className="sr-only">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
+              </TableCaption>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Up to</TableHead>
+                  <TableHead>Per unit</TableHead>
+                  <TableHead>Flat fee</TableHead>
+                  <TableHead className="sr-only">Actions</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
                 {fields.map((field, index) => {
                   const rowErrors = (
                     errors as { tiers?: { message?: string }[] }
@@ -211,8 +234,8 @@ export function PriceOverrideForm({
                   const isLast = index === fields.length - 1
 
                   return (
-                    <tr key={field.id}>
-                      <td className="py-1 pr-2 align-top">
+                    <TableRow key={field.id}>
+                      <TableCell className="align-top">
                         <Input
                           type="number"
                           disabled={isSubmitting || isLast}
@@ -228,8 +251,8 @@ export function PriceOverrideForm({
                             {rowErrors.upTo.message}
                           </p>
                         ) : null}
-                      </td>
-                      <td className="py-1 pr-2 align-top">
+                      </TableCell>
+                      <TableCell className="align-top">
                         <Input
                           inputMode="decimal"
                           disabled={isSubmitting}
@@ -242,16 +265,16 @@ export function PriceOverrideForm({
                             {rowErrors.unitAmount.message}
                           </p>
                         ) : null}
-                      </td>
-                      <td className="py-1 pr-2 align-top">
+                      </TableCell>
+                      <TableCell className="align-top">
                         <Input
                           inputMode="decimal"
                           disabled={isSubmitting}
                           aria-label={`Tier ${index + 1} flat fee`}
                           {...form.register(`tiers.${index}.flatAmount` as never)}
                         />
-                      </td>
-                      <td className="py-1 align-top">
+                      </TableCell>
+                      <TableCell className="align-top">
                         <Button
                           type="button"
                           variant="ghost"
@@ -264,12 +287,12 @@ export function PriceOverrideForm({
                         >
                           Remove
                         </Button>
-                      </td>
-                    </tr>
+                      </TableCell>
+                    </TableRow>
                   )
                 })}
-              </tbody>
-            </table>
+              </TableBody>
+            </Table>
 
             {tierErrors?.message ? (
               <p role="alert" className="text-xs text-destructive">

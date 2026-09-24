@@ -5,23 +5,79 @@ import {
   redirect,
   stripSearchParams,
   useNavigate,
+  useRouterState,
   useSearch,
 } from '@tanstack/react-router'
 import { Outlet } from '@tanstack/react-router'
+import { lazy, Suspense, useState as useReactState } from 'react'
+import { LoadingRows } from '@fp/ui/compositions'
+import { ConsoleShell } from './shell/ConsoleShell'
 import type { InvoiceQuery } from '@fp/domain'
-import { InvoiceListPage } from '@/pages/invoices/InvoiceListPage'
+const InvoiceListPage = lazy(() =>
+  import('@/pages/invoices/InvoiceListPage').then((m) => ({ default: m.InvoiceListPage })),
+)
 import { DEFAULT_INVOICE_QUERY } from '@fp/domain'
 import { parseInvoiceSearch } from './searchParams'
 import { useState } from 'react'
 import type { PriceOverride } from '@fp/domain'
-import { SubscriptionCreatePage } from '@/pages/subscriptions/SubscriptionCreatePage'
+const SubscriptionCreatePage = lazy(() =>
+  import('@/pages/subscriptions/SubscriptionCreatePage').then((m) => ({
+    default: m.SubscriptionCreatePage,
+  })),
+)
 import { type SubscriptionStepId, furthestOf, parseStep, toStepSearch } from './subscriptionSteps'
 import { DEFAULT_FEATURE_QUERY, type FeatureQuery } from '@fp/domain'
-import { FeatureListPage } from '@/pages/features/FeatureListPage'
-import { FeatureCreatePage } from '@/pages/features/FeatureCreatePage'
+/**
+ * Routes are split, from the first one.
+ *
+ * The bundle was 1.25 MB with a single screen in it. Retrofitting splitting
+ * after a dozen screens means auditing a dozen import graphs; doing it now
+ * costs one `lazy` per route.
+ */
+const FeatureListPage = lazy(() =>
+  import('@/pages/features/FeatureListPage').then((m) => ({ default: m.FeatureListPage })),
+)
+const FeatureCreatePage = lazy(() =>
+  import('@/pages/features/FeatureCreatePage').then((m) => ({ default: m.FeatureCreatePage })),
+)
 import { parseFeatureSearch } from './featureSearch'
 
-const rootRoute = createRootRoute({ component: Outlet })
+const SANDBOX = { id: 'env_dev', name: 'Sandbox', kind: 'sandbox' } as const
+const PRODUCTION = { id: 'env_prod', name: 'Production', kind: 'production' } as const
+
+/**
+ * The shell wraps every route.
+ *
+ * Environment state is local until the environment endpoints are annotated —
+ * `environment.go` is 1 of 5, so there is no documented way to list them yet.
+ * The shape is already right, so wiring it is a change in one place.
+ */
+function RootLayout() {
+  const navigate = useNavigate()
+  const { pathname } = useRouterState({ select: (state) => state.location })
+  const [environmentId, setEnvironmentId] = useReactState<string>(SANDBOX.id)
+
+  const environments = [SANDBOX, PRODUCTION]
+  const environment = environments.find((e) => e.id === environmentId) ?? SANDBOX
+
+  return (
+    <ConsoleShell
+      pathname={pathname}
+      onNavigate={(path) => void navigate({ to: path, search: {} as never })}
+      environment={environment}
+      environments={environments}
+      onEnvironmentChange={setEnvironmentId}
+      user={{ name: 'Signed in', email: 'you@flexprice.io' }}
+    >
+      {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
+      <Suspense fallback={<div className="p-6"><LoadingRows /></div>}>
+        <Outlet />
+      </Suspense>
+    </ConsoleShell>
+  )
+}
+
+const rootRoute = createRootRoute({ component: RootLayout })
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,

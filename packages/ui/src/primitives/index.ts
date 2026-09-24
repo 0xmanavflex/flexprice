@@ -6,6 +6,12 @@
  * `../compositions`, and record that in the component's provenance.
  *
  * Install with the shadcn CLI, never by hand:
- *   pnpm dlx shadcn@latest add @reui/<name> --yes
+ *   pnpm ui:add <name>
+ *
+ * Re-exported here so an app can reach a primitive without a deep path. Apps
+ * compose; they should not need to know the folder layout of this package.
  */
-export {}
+export { Button } from './button'
+export { Input } from './input'
+export { Label } from './label'
+export { Badge } from '@ui/components/reui/badge'

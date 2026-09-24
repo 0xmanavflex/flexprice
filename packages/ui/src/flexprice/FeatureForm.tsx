@@ -12,6 +12,13 @@ import {
   needsAggregationTarget,
 } from '@fp/domain'
 import { Button } from '@ui/primitives/button'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@ui/primitives/select'
 import { Input } from '@ui/primitives/input'
 import { Field } from '@ui/compositions/Field'
 import { provenance } from '@ui/provenance'
@@ -95,6 +102,9 @@ export function FeatureForm({
   const errors = form.formState.errors as Record<string, { message?: string }> & {
     meter?: Record<string, { message?: string }>
   }
+  const watchedReset: unknown = form.watch('meter.resetUsage' as never)
+  const resetUsage = typeof watchedReset === 'string' ? watchedReset : ResetUsage.BillingPeriod
+
   const showTarget = aggregationType ? needsAggregationTarget(aggregationType) : false
   const showMultiplier = aggregationType === AggregationType.SumWithMultiplier
 
@@ -158,17 +168,25 @@ export function FeatureForm({
 
           <Field label="Aggregation">
             {({ id }) => (
-              <select
-                id={id}
-                className="h-9 rounded-lg border px-3 text-sm"
-                {...form.register('meter.aggregationType' as never)}
+              <Select
+                value={aggregationType}
+                onValueChange={(value) =>
+                  form.setValue('meter.aggregationType' as never, value as never, {
+                    shouldDirty: true,
+                  })
+                }
               >
-                {AGGREGATIONS.map((option) => (
-                  <option key={option} value={option}>
-                    {AGGREGATION_LABEL[option]}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger id={id}>
+                  <SelectValue placeholder="Choose how to count" />
+                </SelectTrigger>
+                <SelectContent>
+                  {AGGREGATIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {AGGREGATION_LABEL[option]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             )}
           </Field>
 
@@ -206,14 +224,20 @@ export function FeatureForm({
 
           <Field label="Reset usage">
             {({ id }) => (
-              <select
-                id={id}
-                className="h-9 rounded-lg border px-3 text-sm"
-                {...form.register('meter.resetUsage' as never)}
+              <Select
+                value={resetUsage}
+                onValueChange={(value) =>
+                  form.setValue('meter.resetUsage' as never, value as never, { shouldDirty: true })
+                }
               >
-                <option value={ResetUsage.BillingPeriod}>Every billing period</option>
-                <option value={ResetUsage.Never}>Never</option>
-              </select>
+                <SelectTrigger id={id}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={ResetUsage.BillingPeriod}>Every billing period</SelectItem>
+                  <SelectItem value={ResetUsage.Never}>Never</SelectItem>
+                </SelectContent>
+              </Select>
             )}
           </Field>
         </fieldset>

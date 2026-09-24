@@ -130,15 +130,17 @@ export function SignInForm({
                 passwordRef.current = node
               }}
             />
-            <button
+            <Button
               type="button"
+              variant="ghost"
+              size="sm"
               onClick={() => setRevealed((value) => !value)}
               aria-label={revealed ? 'Hide password' : 'Show password'}
               aria-pressed={revealed}
-              className="absolute inset-y-0 right-0 flex w-10 items-center justify-center text-muted-foreground"
+              className="absolute inset-y-0 right-0 h-full w-10 p-0 text-muted-foreground"
             >
               {revealed ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
-            </button>
+            </Button>
           </div>
         )}
       </Field>
@@ -148,13 +150,9 @@ export function SignInForm({
           {isSubmitting ? 'Signing in…' : 'Sign in'}
         </Button>
         {onForgotPassword ? (
-          <button
-            type="button"
-            onClick={onForgotPassword}
-            className="text-sm text-muted-foreground underline"
-          >
+          <Button type="button" variant="link" size="sm" onClick={onForgotPassword}>
             Forgot password?
-          </button>
+          </Button>
         ) : null}
       </div>
 

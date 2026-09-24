@@ -1,3 +1,4 @@
+import { Progress, ProgressIndicator, ProgressTrack } from '@ui/primitives/progress'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -12,8 +13,12 @@ import { provenance } from '@ui/provenance'
  *   "1,200 of 1,000" stays readable rather than silently clamping.
  * - **Zero allowance.** Dividing by it is how you get `NaN%` on screen.
  *
- * Built on `<progress>` rather than a styled div: it is announced correctly,
- * and it carries its own min/max semantics without ARIA bolted on.
+ * (An earlier version used a bare `progress` element; it is ReUI's Progress now,
+ * so the track and indicator theme from the same tokens as everything else.)
+ *
+ * Built on ReUI's Progress rather than a styled div or a bare `<progress>`, so
+ * the track and indicator are themed from the same tokens as everything else
+ * and the accessible semantics come with it.
  */
 export const UsageMeterProvenance = provenance({
   source: 'custom',
@@ -55,19 +60,17 @@ export function UsageMeter({ label, used, limit, unit, locale }: UsageMeterProps
       {unlimited ? (
         <p className="text-xs text-muted-foreground">Unlimited</p>
       ) : (
-        <progress
+        <Progress
           value={percent}
-          max={100}
           aria-label={`${label}: ${summary}`}
-          className={cn(
-            'h-1.5 w-full overflow-hidden rounded-full',
-            '[&::-webkit-progress-bar]:bg-muted [&::-webkit-progress-bar]:rounded-full',
-            '[&::-webkit-progress-value]:rounded-full',
-            over
-              ? '[&::-webkit-progress-value]:bg-destructive'
-              : '[&::-webkit-progress-value]:bg-primary',
-          )}
-        />
+          className="h-1.5"
+        >
+          <ProgressTrack className="bg-muted h-1.5 rounded-full">
+            <ProgressIndicator
+              className={cn('h-full rounded-full', over ? 'bg-destructive' : 'bg-primary')}
+            />
+          </ProgressTrack>
+        </Progress>
       )}
 
       {over ? (

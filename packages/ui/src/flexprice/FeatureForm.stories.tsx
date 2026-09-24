@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { AggregationType, FeatureType, ResetUsage } from '@fp/domain'
 import { FeatureForm } from './FeatureForm'
 
@@ -8,6 +8,17 @@ import { FeatureForm } from './FeatureForm'
  * proved the same way everything else in this package is: fixtures in, props
  * out, no provider, no network.
  */
+/**
+ * Drives the ReUI Select, which is a combobox rather than a native `<select>`.
+ *
+ * `userEvent.selectOptions` only works on a real `<select>`, and the options
+ * render in a portal outside the story root — so they are found on `screen`.
+ */
+async function chooseOption(label: string, optionName: string) {
+  await userEvent.click(screen.getByRole('combobox', { name: label }))
+  await userEvent.click(await screen.findByRole('option', { name: optionName }))
+}
+
 const meta = {
   title: 'Surfaces/FeatureForm',
   component: FeatureForm,
@@ -102,10 +113,10 @@ export const CountHidesTheAggregationTarget: Story = {
 
     await expect(canvas.queryByLabelText('Event field')).not.toBeInTheDocument()
 
-    await userEvent.selectOptions(canvas.getByLabelText('Aggregation'), AggregationType.Sum)
+    await chooseOption('Aggregation', 'Sum of a field')
     await expect(await canvas.findByLabelText('Event field')).toBeInTheDocument()
 
-    await userEvent.selectOptions(canvas.getByLabelText('Aggregation'), AggregationType.Count)
+    await chooseOption('Aggregation', 'Count of events')
     await expect(canvas.queryByLabelText('Event field')).not.toBeInTheDocument()
   },
 }
@@ -117,10 +128,7 @@ export const MultiplierOnlyForSumWithMultiplier: Story = {
 
     await expect(canvas.queryByLabelText('Multiplier')).not.toBeInTheDocument()
 
-    await userEvent.selectOptions(
-      canvas.getByLabelText('Aggregation'),
-      AggregationType.SumWithMultiplier,
-    )
+    await chooseOption('Aggregation', 'Sum, multiplied')
 
     await expect(await canvas.findByLabelText('Multiplier')).toBeInTheDocument()
   },
@@ -138,11 +146,8 @@ export const ZeroMultiplierRejected: Story = {
 
     await userEvent.type(canvas.getByLabelText('Name'), 'Weighted tokens')
     await userEvent.type(canvas.getByLabelText('Event name'), 'llm_completion')
-    await userEvent.selectOptions(
-      canvas.getByLabelText('Aggregation'),
-      AggregationType.SumWithMultiplier,
-    )
-    await userEvent.type(canvas.getByLabelText('Event field'), 'tokens')
+    await chooseOption('Aggregation', 'Sum, multiplied')
+    await userEvent.type(await canvas.findByLabelText('Event field'), 'tokens')
     await userEvent.type(await canvas.findByLabelText('Multiplier'), '0')
 
     await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
