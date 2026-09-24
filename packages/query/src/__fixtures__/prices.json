@@ -1,6 +1,55 @@
 {
   "items": [
     {
+      "id": "price_01M38VCM5B7YNDSKD09ZPS7BTE",
+      "amount": "3",
+      "display_amount": "$3",
+      "currency": "usd",
+      "price_unit_type": "FIAT",
+      "price_unit_amount": "0",
+      "conversion_rate": "1",
+      "type": "USAGE",
+      "billing_period": "MONTHLY",
+      "billing_period_count": 1,
+      "billing_model": "FLAT_FEE",
+      "display_name": "Globex",
+      "billing_cadence": "RECURRING",
+      "invoice_cadence": "ARREAR",
+      "trial_period_days": 0,
+      "meter_id": "meter_01M38PTE5MW5KBEBEMPFSW4C5R",
+      "lookup_key": "",
+      "description": "",
+      "transform_quantity": {
+        "divide_by": 1
+      },
+      "metadata": {},
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "entity_type": "COSTSHEET",
+      "entity_id": "cost_01M38VC8QPY6MKV5XGV2ESBZZ9",
+      "start_date": "2026-09-24T04:39:41.483747Z",
+      "sequence": 6474,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "meter": {
+        "id": "meter_01M38PTE5MW5KBEBEMPFSW4C5R",
+        "name": "Massive Dynamic",
+        "tenant_id": "00000000-0000-0000-0000-000000000000",
+        "event_name": "tickets",
+        "aggregation": {
+          "type": "COUNT"
+        },
+        "filters": [],
+        "reset_usage": "BILLING_PERIOD",
+        "created_at": "2026-09-24T03:19:51.220245Z",
+        "updated_at": "2026-09-24T03:19:51.220245Z",
+        "status": "published"
+      }
+    },
+    {
       "id": "price_01M38PTYTMTQ7Y3PP3Q0VRX7FH",
       "amount": "89",
       "display_amount": "$89",
@@ -139,45 +188,10 @@
       "updated_at": "2026-09-24T03:20:07.094696Z",
       "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
       "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
-    },
-    {
-      "id": "price_01M38PTX9XB1H1WM9J4RXP5GHY",
-      "amount": "19",
-      "display_amount": "$19",
-      "currency": "usd",
-      "price_unit_type": "FIAT",
-      "price_unit_amount": "0",
-      "conversion_rate": "1",
-      "type": "FIXED",
-      "billing_period": "MONTHLY",
-      "billing_period_count": 1,
-      "billing_model": "FLAT_FEE",
-      "display_name": "Vehement Capital",
-      "billing_cadence": "RECURRING",
-      "invoice_cadence": "ADVANCE",
-      "trial_period_days": 0,
-      "meter_id": "",
-      "lookup_key": "custom_domain_fee",
-      "description": "",
-      "transform_quantity": {
-        "divide_by": 1
-      },
-      "metadata": {},
-      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
-      "entity_type": "ADDON",
-      "entity_id": "addon_01M38PTX6DFP86K89EN05FRRYT",
-      "start_date": "2026-09-24T03:20:06.717049Z",
-      "sequence": 6469,
-      "tenant_id": "00000000-0000-0000-0000-000000000000",
-      "status": "published",
-      "created_at": "2026-09-24T03:20:06.717058Z",
-      "updated_at": "2026-09-24T03:20:06.717058Z",
-      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
-      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
     }
   ],
   "pagination": {
-    "total": 57,
+    "total": 58,
     "limit": 5,
     "offset": 5
   }

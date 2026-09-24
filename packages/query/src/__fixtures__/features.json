@@ -16,7 +16,21 @@
       "created_at": "2026-09-24T03:19:51.223467Z",
       "updated_at": "2026-09-24T03:19:51.223467Z",
       "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
-      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "meter": {
+        "id": "meter_01M38PTE5MW5KBEBEMPFSW4C5R",
+        "name": "Massive Dynamic",
+        "tenant_id": "00000000-0000-0000-0000-000000000000",
+        "event_name": "tickets",
+        "aggregation": {
+          "type": "COUNT"
+        },
+        "filters": [],
+        "reset_usage": "BILLING_PERIOD",
+        "created_at": "2026-09-24T03:19:51.220245Z",
+        "updated_at": "2026-09-24T03:19:51.220245Z",
+        "status": "published"
+      }
     },
     {
       "id": "feat_01M38PTDXB18CESKFCH08HE0EH",
@@ -34,7 +48,22 @@
       "created_at": "2026-09-24T03:19:50.955427Z",
       "updated_at": "2026-09-24T03:19:50.955427Z",
       "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
-      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "meter": {
+        "id": "meter_01M38PTDXAQ15XPAKXJPKVVRWP",
+        "name": "Hooli",
+        "tenant_id": "00000000-0000-0000-0000-000000000000",
+        "event_name": "documents",
+        "aggregation": {
+          "type": "SUM",
+          "field": "documents_processed"
+        },
+        "filters": [],
+        "reset_usage": "BILLING_PERIOD",
+        "created_at": "2026-09-24T03:19:50.95426Z",
+        "updated_at": "2026-09-24T03:19:50.95426Z",
+        "status": "published"
+      }
     },
     {
       "id": "feat_01M38PTDP8QPQ21JD6KDXED86C",
@@ -52,7 +81,22 @@
       "created_at": "2026-09-24T03:19:50.728673Z",
       "updated_at": "2026-09-24T03:19:50.728673Z",
       "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
-      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "meter": {
+        "id": "meter_01M38PTDP73Y3ZEWS4W8VMHSKT",
+        "name": "Vehement Capital",
+        "tenant_id": "00000000-0000-0000-0000-000000000000",
+        "event_name": "video",
+        "aggregation": {
+          "type": "SUM",
+          "field": "video_minutes"
+        },
+        "filters": [],
+        "reset_usage": "BILLING_PERIOD",
+        "created_at": "2026-09-24T03:19:50.727337Z",
+        "updated_at": "2026-09-24T03:19:50.727337Z",
+        "status": "published"
+      }
     },
     {
       "id": "feat_01M38PTDD4CMGQBXCQT5NNKVXD",
@@ -70,7 +114,22 @@
       "created_at": "2026-09-24T03:19:50.436979Z",
       "updated_at": "2026-09-24T03:19:50.436979Z",
       "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
-      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "meter": {
+        "id": "meter_01M38PTDD2Q1CB165HYAS5NKBH",
+        "name": "Hooli",
+        "tenant_id": "00000000-0000-0000-0000-000000000000",
+        "event_name": "ai_usage",
+        "aggregation": {
+          "type": "SUM",
+          "field": "ai_tokens"
+        },
+        "filters": [],
+        "reset_usage": "BILLING_PERIOD",
+        "created_at": "2026-09-24T03:19:50.434344Z",
+        "updated_at": "2026-09-24T03:19:50.434344Z",
+        "status": "published"
+      }
     },
     {
       "id": "feat_01M38PTD5S4BVSR2AXB9ZKWHY9",
@@ -88,7 +147,22 @@
       "created_at": "2026-09-24T03:19:50.201519Z",
       "updated_at": "2026-09-24T03:19:50.201519Z",
       "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
-      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "meter": {
+        "id": "meter_01M38PTD5PVSWYKN0C762CF52E",
+        "name": "Vehement Capital",
+        "tenant_id": "00000000-0000-0000-0000-000000000000",
+        "event_name": "webhooks",
+        "aggregation": {
+          "type": "SUM",
+          "field": "webhook_deliveries"
+        },
+        "filters": [],
+        "reset_usage": "BILLING_PERIOD",
+        "created_at": "2026-09-24T03:19:50.19847Z",
+        "updated_at": "2026-09-24T03:19:50.19847Z",
+        "status": "published"
+      }
     }
   ],
   "pagination": {
