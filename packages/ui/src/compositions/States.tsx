@@ -67,10 +67,18 @@ export function ErrorState({ title, description, onRetry, action }: ErrorStatePr
   return (
     <div
       role="alert"
-      className="flex flex-col items-start gap-3 rounded-xl border border-destructive/30 bg-destructive/5 p-6"
+      className="flex flex-col items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-6"
     >
-      <p className="text-sm font-medium">{title}</p>
-      {description ? <p className="text-sm text-muted-foreground">{description}</p> : null}
+      {/*
+        `-foreground` on a tinted surface, and plain foreground for the body.
+        Full-saturation destructive measures 4.36:1 on its own tint and
+        `text-muted-foreground` measures 4.33:1 — both under AA. ReUI's own
+        `-light` variants pair the tint with `-foreground` for this reason.
+      */}
+      <p className="text-sm font-medium text-destructive-foreground dark:text-destructive">
+        {title}
+      </p>
+      {description ? <p className="text-sm text-foreground/80">{description}</p> : null}
       <div className="flex gap-2">
         {onRetry ? (
           <Button type="button" variant="outline" size="sm" onClick={onRetry}>
