@@ -68,12 +68,26 @@ export function toFeature(wire: FeatureWire): Feature {
   }
 }
 
-/** Domain query out, `FeatureFilter` in. Page numbers are 1-based; offsets are not. */
+/**
+ * Domain query out, `FeatureFilter` in. Page numbers are 1-based; offsets are not.
+ *
+ * `expand: 'meters'` is load-bearing, not an optimisation. The API returns
+ * `meter_id` but embeds the meter object **only** when asked — see
+ * `internal/ee/service/feature.go`, which populates `response.Items[i].Meter`
+ * behind `filter.GetExpand().Has(types.ExpandMeters)`.
+ *
+ * Without it every metered feature arrives with no event name and no
+ * aggregation, and the grid's "Measured by" column — the entire reason a
+ * metered row is interesting — renders an em dash. Unit tests did not catch
+ * this because the fixture I wrote embedded a meter; the captured response
+ * does not.
+ */
 export function toFeatureFilter(query: FeatureQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: 'name', direction: 'asc' }],
+    expand: 'meters',
     ...(query.search ? { nameContains: query.search } : {}),
   }
 }
@@ -158,7 +172,7 @@ export function useFeature(id: string) {
     queryKey: queryKeys.features.detail(id),
     queryFn: async () => {
       const response = await call(() =>
-        client.features.queryFeature({ featureIds: [id], limit: 1 } as never),
+        client.features.queryFeature({ featureIds: [id], limit: 1, expand: 'meters' } as never),
       )
       const first = (response.items ?? [])[0]
       return first ? toFeature(first as FeatureWire) : null
