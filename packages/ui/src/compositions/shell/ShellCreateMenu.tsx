@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from '@ui/primitives/dropdown-menu'
 import { provenance } from '@ui/provenance'
+import { MENU_CONTENT, MENU_ITEM } from './menuSurface'
 
 /**
  * One way to start anything, in the header, from every screen.
@@ -62,11 +63,11 @@ export function ShellCreateMenu({ actions, onCreate, label = 'Create' }: ShellCr
         {label}
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align="end" sideOffset={8} className="w-56">
+      <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
         {actions.map((action, index) => (
           <Fragment key={action.id}>
             {action.startsGroup && index > 0 ? <DropdownMenuSeparator /> : null}
-            <DropdownMenuItem onClick={() => onCreate(action.id)}>
+            <DropdownMenuItem className={MENU_ITEM} onClick={() => onCreate(action.id)}>
               {action.icon}
               {action.label}
             </DropdownMenuItem>

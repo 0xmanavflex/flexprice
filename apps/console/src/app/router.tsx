@@ -8,9 +8,10 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { Outlet } from '@tanstack/react-router'
-import { lazy, Suspense, useState as useReactState } from 'react'
+import { lazy, Suspense } from 'react'
 import { AppFailure, LoadingRows } from '@fp/ui/compositions'
 import { ConsoleShell } from './shell/ConsoleShell'
+import { useEnvironments } from './shell/useEnvironments'
 import type { InvoiceQuery } from '@fp/domain'
 const InvoiceListPage = lazy(() =>
   import('@/pages/invoices/InvoiceListPage').then((m) => ({ default: m.InvoiceListPage })),
@@ -45,31 +46,26 @@ const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
 
-const SANDBOX = { id: 'env_dev', name: 'Sandbox', kind: 'sandbox' } as const
-const PRODUCTION = { id: 'env_prod', name: 'Production', kind: 'production' } as const
-
 /**
  * The shell wraps every route.
  *
- * Environment state is local until the environment endpoints are annotated —
- * `environment.go` is 1 of 5, so there is no documented way to list them yet.
- * The shape is already right, so wiring it is a change in one place.
+ * The environment list lives in `useEnvironments`, which is also the one place
+ * that records why it is not yet a request — see the note there.
  */
 function RootLayout() {
   const navigate = useNavigate()
   const { pathname } = useRouterState({ select: (state) => state.location })
-  const [environmentId, setEnvironmentId] = useReactState<string>(SANDBOX.id)
-
-  const environments = [SANDBOX, PRODUCTION]
-  const environment = environments.find((e) => e.id === environmentId) ?? SANDBOX
+  const environments = useEnvironments()
 
   return (
     <ConsoleShell
       pathname={pathname}
       onNavigate={(path) => void navigate({ to: path, search: {} as never })}
-      environment={environment}
-      environments={environments}
-      onEnvironmentChange={setEnvironmentId}
+      environment={environments.current}
+      environments={environments.environments}
+      onEnvironmentChange={environments.select}
+      onEnvironmentCreate={environments.create}
+      canCreateProduction={environments.canCreateProduction}
       // Placeholder until the session lands — `auth.go` is 0 of 2 annotated,
       // so there is no documented way to ask who is signed in yet.
       user={{ name: 'Signed in', email: 'you@flexprice.io', organization: 'Flexprice' }}

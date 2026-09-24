@@ -16,6 +16,7 @@ import {
   useSidebar,
 } from '@ui/primitives/sidebar'
 import { provenance } from '@ui/provenance'
+import { MENU_CONTENT, MENU_ITEM } from './menuSurface'
 import type { ShellUser } from './types'
 
 /**
@@ -106,7 +107,7 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
             side={isMobile ? 'top' : 'right'}
             align="end"
             sideOffset={8}
-            className="w-60"
+            className={MENU_CONTENT}
           >
             {/*
               `DropdownMenuLabel` is Base UI's `Menu.GroupLabel`, which throws
@@ -115,7 +116,7 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
               to nothing rather than an error anyone would notice.
             */}
             <DropdownMenuGroup>
-              <DropdownMenuLabel className="flex min-w-0 flex-col">
+              <DropdownMenuLabel className="flex min-w-0 flex-col px-2.5 py-1.5">
                 <span className="truncate text-sm font-medium">{user.name}</span>
                 <span className="text-muted-foreground truncate text-xs font-normal">
                   {user.email}
@@ -125,13 +126,13 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               {onProfile ? (
-                <DropdownMenuItem onClick={onProfile}>
+                <DropdownMenuItem className={MENU_ITEM} onClick={onProfile}>
                   <UserIcon aria-hidden />
                   Profile
                 </DropdownMenuItem>
               ) : null}
               {onSettings ? (
-                <DropdownMenuItem onClick={onSettings}>
+                <DropdownMenuItem className={MENU_ITEM} onClick={onSettings}>
                   <SettingsIcon aria-hidden />
                   Settings
                 </DropdownMenuItem>
@@ -140,7 +141,7 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
             {onSignOut ? (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={onSignOut}>
+                <DropdownMenuItem className={MENU_ITEM} onClick={onSignOut}>
                   <LogOutIcon aria-hidden />
                   Sign out
                 </DropdownMenuItem>

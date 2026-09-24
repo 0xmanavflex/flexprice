@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   BarChart3Icon,
   BookOpenIcon,
@@ -16,6 +16,7 @@ import {
   PuzzleIcon,
   SettingsIcon,
 } from 'lucide-react'
+import type { CreateEnvironment } from '@fp/domain'
 import { useNavCounts } from '@fp/query'
 import {
   AppShell,
@@ -24,6 +25,7 @@ import {
   type ShellEnvironment,
   type ShellUser,
 } from '@fp/ui/compositions'
+import { EnvironmentCreateDialog } from '@fp/ui/flexprice'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import {
   breadcrumbForPath,
@@ -70,6 +72,9 @@ export interface ConsoleShellProps {
   environment: ShellEnvironment
   environments: ShellEnvironment[]
   onEnvironmentChange: (id: string) => void
+  /** Absent means the console offers no way to create one. */
+  onEnvironmentCreate?: (draft: CreateEnvironment) => void
+  canCreateProduction?: boolean
   user: ShellUser
   onSignOut?: () => void
   /** One control belonging to the page as a whole, rendered in the header. */
@@ -94,11 +99,14 @@ export function ConsoleShell({
   environment,
   environments,
   onEnvironmentChange,
+  onEnvironmentCreate,
+  canCreateProduction = false,
   user,
   onSignOut,
   headerActions,
   children,
 }: ConsoleShellProps) {
+  const [creatingEnvironment, setCreatingEnvironment] = useState(false)
   const activeItemId = navEntryForPath(pathname)
   const openGroup = groupForNavId(activeItemId)
   const counts = useNavCounts(openGroup ? (GROUP_COUNTS[openGroup] ?? []) : [])
@@ -123,6 +131,8 @@ export function ConsoleShell({
       environment={environment}
       environments={environments}
       onEnvironmentChange={onEnvironmentChange}
+      {...(onEnvironmentCreate ? { onCreateEnvironment: () => setCreatingEnvironment(true) } : {})}
+      onManageEnvironments={() => goTo('settings')}
       user={user}
       onSettings={() => goTo('settings')}
       {...(onSignOut ? { onSignOut } : {})}
@@ -183,6 +193,17 @@ export function ConsoleShell({
       notifications={[]}
     >
       {children}
+
+      <EnvironmentCreateDialog
+        open={creatingEnvironment}
+        onOpenChange={setCreatingEnvironment}
+        canCreateProduction={canCreateProduction}
+        productionUnavailableReason="Production environments are set up with us. Talk to your account contact to add one."
+        onSubmit={(draft) => {
+          onEnvironmentCreate?.(draft)
+          setCreatingEnvironment(false)
+        }}
+      />
     </AppShell>
   )
 }

@@ -20,6 +20,7 @@ import {
   useSidebar,
 } from '@ui/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
+import { MENU_CONTENT, MENU_ITEM, MENU_LABEL } from './menuSurface'
 import type { ShellNavGroup, ShellNavItem } from './types'
 
 /**
@@ -101,14 +102,14 @@ function CollapsedParent({
           {item.icon}
           <span>{item.label}</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-52">
+        <DropdownMenuContent side="right" align="start" sideOffset={8} className={MENU_CONTENT}>
           <DropdownMenuGroup>
-            <DropdownMenuLabel>{item.label}</DropdownMenuLabel>
+            <DropdownMenuLabel className={MENU_LABEL}>{item.label}</DropdownMenuLabel>
             {children.map((child) => (
               <DropdownMenuItem
                 key={child.id}
                 onClick={() => onNavigate(child.id)}
-                className={cn(child.id === activeItemId && 'bg-accent font-medium')}
+                className={cn(MENU_ITEM, child.id === activeItemId && 'bg-accent font-medium')}
               >
                 {child.label}
                 {child.count !== undefined ? (
@@ -142,9 +143,16 @@ function Row({
         isActive={isActive}
         onClick={() => onNavigate(item.id)}
         aria-current={isActive ? 'page' : undefined}
-        // The count lives outside this button, so it is named here instead —
-        // "Features, 24" rather than "Features" and a number from nowhere.
-        {...(item.count === undefined ? {} : { 'aria-label': `${item.label}, ${item.count}` })}
+        /*
+         * Always named, never inferred from its own text.
+         *
+         * Two things make the visible label insufficient. The count sits
+         * outside this button so it can be positioned, so "Features, 24"
+         * has to be assembled here or the number is announced loose. And in
+         * the icon rail the label is hidden outright — which, the first time,
+         * left every leaf row a button with no name at all.
+         */
+        aria-label={item.count === undefined ? item.label : `${item.label}, ${item.count}`}
         tooltip={item.label}
         // Lines the label up under its parent's, where the parent's icon ends.
         className={cn(indented && 'pl-9!')}

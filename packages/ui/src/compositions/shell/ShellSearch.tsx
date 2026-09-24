@@ -40,7 +40,7 @@ export interface ShellSearchProps {
   placeholder?: string
 }
 
-export function ShellSearch({ onSearch, placeholder = 'Search…' }: ShellSearchProps) {
+export function ShellSearch({ onSearch, placeholder = 'Search...' }: ShellSearchProps) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {
@@ -74,21 +74,28 @@ export function ShellSearch({ onSearch, placeholder = 'Search…' }: ShellSearch
   return (
     <>
       <SidebarGroup className="py-0">
-        <SidebarGroupContent className="relative">
+        <SidebarGroupContent className="relative flex items-center">
+          {/*
+            Flux's search, as written. The icon is laid out inline rather than
+            positioned absolutely, which is what lets the whole control shrink
+            to a 32px circle in the rail without the icon drifting off-centre.
+            The label is *hidden* when collapsed, not made transparent — the
+            transparent version left a ghost of the word inside the circle.
+          */}
           <Button
             type="button"
             variant="outline"
             onClick={() => setOpen(true)}
             aria-label="Search"
             aria-keyshortcuts="/ Meta+K Control+K"
-            className="hover:bg-background h-8 w-full justify-start pl-7 font-normal transition-[width] duration-200 ease-linear in-data-[state=collapsed]:w-8! in-data-[state=collapsed]:pl-4! in-data-[state=collapsed]:text-transparent"
+            className="border-border/60 hover:bg-sidebar-accent/80! h-8 w-full justify-start gap-1.5 overflow-hidden rounded-full pl-2 font-normal shadow-none transition-[width,padding] duration-200 ease-linear in-data-[state=collapsed]:mx-auto in-data-[state=collapsed]:w-8! in-data-[state=collapsed]:justify-center in-data-[state=collapsed]:gap-0 in-data-[state=collapsed]:px-0!"
           >
-            {placeholder}
+            <SearchIcon
+              aria-hidden
+              className="pointer-events-none size-3.5 shrink-0 opacity-50 select-none"
+            />
+            <span className="in-data-[state=collapsed]:hidden">{placeholder}</span>
           </Button>
-          <SearchIcon
-            aria-hidden
-            className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 opacity-50 select-none"
-          />
           <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 in-data-[state=collapsed]:hidden">
             /
           </Kbd>

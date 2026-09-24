@@ -1,4 +1,5 @@
 import { type CSSProperties, type ReactNode } from 'react'
+import { TooltipProvider } from '@ui/primitives/tooltip'
 import {
   Sidebar,
   SidebarContent,
@@ -56,6 +57,9 @@ export interface AppShellProps {
   environment: ShellEnvironment
   environments: ShellEnvironment[]
   onEnvironmentChange: (environmentId: string) => void
+  /** Absent means creating one is not offered — better than a dead menu item. */
+  onCreateEnvironment?: () => void
+  onManageEnvironments?: () => void
 
   user: ShellUser
   onProfile?: () => void
@@ -81,30 +85,59 @@ export interface AppShellProps {
 }
 
 /**
- * The sidebar's shape, taken from ReUI's Flux template.
+ * The sidebar's surface, taken from ReUI's Flux template as written.
  *
- * Flux is app-shell-3's layout with a quieter surface treatment, and the
- * difference is the whole reason it reads better: the block marks the current
- * row as a raised white card — border, shadow, its own background — which on a
- * sidebar that is already white produces a floating chip in a column of plain
- * text. Flux marks it with a flat accent fill and a heavier weight instead, so
- * the selection reads as *part of* the list rather than sitting on top of it.
+ * Two ideas carry it. Every row owns a *transparent* border at rest, so hover
+ * and selection can add a visible one without the row changing size — the
+ * usual cause of a list that twitches under the cursor. And the selected row
+ * is a tinted, bordered surface rather than a raised white card: on a sidebar
+ * that is itself tinted, the card floats; the tint belongs.
  *
- * The flat fill is already the Sidebar primitive's own default, so most of what
- * was here has simply been deleted. What remains is geometry: taller rows, a
- * rounder radius, horizontal padding, and a tighter gap between them — Flux's
- * numbers, applied at the wrapper so the vendored primitive stays untouched and
- * upgradeable.
+ * Icons sit at 60% until hovered and take the primary colour when active, so
+ * the eye finds the current row before it reads a word. Labels sit slightly
+ * under full strength for the same reason — the active one is the only one at
+ * full contrast.
+ *
+ * The geometry is Flux's too: h-9 rows, `rounded-xl`, horizontal padding, and
+ * a gap small enough that a group reads as one object rather than a stack of
+ * chips.
+ *
+ * Written as data-slot selectors because they reach inside the Sidebar
+ * primitive's own markup, which is vendored and must not be forked to restyle.
  */
 const FLUX = [
   '[--sidebar-border:transparent]',
 
-  // Rows: h-9, rounded-xl, px-3 py-2 — against the primitive's h-8/rounded-md/p-2.
+  // A border always present, only sometimes visible — so nothing resizes.
+  '[&_[data-sidebar=menu-button]]:border!',
+  '[&_[data-sidebar=menu-button]]:border-transparent!',
+  '[&_[data-sidebar=menu-button]:hover]:border-border/60!',
+  '[&_[data-sidebar=menu-button]:hover]:bg-sidebar-accent/80!',
+  '[&_[data-sidebar=menu-button]:hover]:text-foreground!',
+  '[&_[data-sidebar=menu-button][data-active]]:border-border/60!',
+  '[&_[data-sidebar=menu-button][data-active]]:bg-sidebar-accent!',
+  '[&_[data-sidebar=menu-button][data-active]]:hover:bg-sidebar-accent!',
+  '[&_[data-sidebar=menu-button][data-active]]:text-foreground',
+  '[&_[data-sidebar=menu-button][data-active]>svg]:text-primary',
+  '[&_[data-sidebar=menu-button][data-active]>svg]:opacity-100',
+  '**:data-[sidebar=menu-button]:text-accent-foreground/80',
+  '**:data-[sidebar=menu-button]:hover:text-foreground',
+  '[&_[data-sidebar=menu-button]:hover>svg]:opacity-100',
+  '[&_[data-sidebar=menu-button]>svg]:opacity-60',
+
+  // Rows: h-9, rounded-xl, px-3 — against the primitive's h-8/rounded-md/p-2.
   '**:data-[slot=sidebar-menu-button]:h-9',
   '**:data-[slot=sidebar-menu-button]:rounded-xl',
   '**:data-[slot=sidebar-menu-button]:px-3',
-  '**:data-[slot=sidebar-menu-button]:py-2',
-  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]]:px-2!',
+  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]]:px-0!',
+  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]]:justify-center',
+  /*
+   * In the rail, the label is hidden rather than merely clipped. The primitive
+   * truncates it, but a truncated span still claims the width left over beside
+   * the icon in a 32px row — which showed up as the first letter of every
+   * destination bleeding out past the rail, once, next to its own icon.
+   */
+  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]>span]:hidden',
 
   // Nearly touching, so a group reads as one object rather than a list of chips.
   '**:data-[slot=sidebar-menu]:gap-0.25',
@@ -122,6 +155,8 @@ export function AppShell({
   environment,
   environments,
   onEnvironmentChange,
+  onCreateEnvironment,
+  onManageEnvironments,
   user,
   onProfile,
   onSettings,
@@ -143,8 +178,20 @@ export function AppShell({
 
   return (
     <SidebarProvider
-      className={cn('h-screen', FLUX)}
-      style={{ '--sidebar-width': '260px' } as CSSProperties}
+      className={cn('bg-sidebar h-screen', FLUX)}
+      style={
+        {
+          '--sidebar-width': '260px',
+          /*
+           * The sidebar is a shade darker than the page it sits beside, so the
+           * content reads as the thing in front. ReUI's nova base ships both
+           * at very nearly white, which is why the two planes were previously
+           * indistinguishable and the shell looked flat.
+           */
+          '--sidebar': 'oklch(0.945 0 0)',
+          '--sidebar-accent': 'oklch(0.895 0 0)',
+        } as CSSProperties
+      }
     >
       {/*
         A marker across the whole shell, not only on the switcher — visible
@@ -155,6 +202,13 @@ export function AppShell({
         <div aria-hidden className="bg-destructive fixed inset-x-0 top-0 z-50 h-1" />
       ) : null}
 
+      {/*
+        Collapsed, a tooltip is the only thing naming a row — so it cannot wait
+        600ms, which is Base UI's default when no provider sets one. Without
+        this the icon rail feels broken before it feels slow.
+      */}
+
+      <TooltipProvider delay={0}>
       <Sidebar collapsible="icon" variant="inset" aria-label="Main">
         <SidebarHeader className="gap-2">
           {/*
@@ -196,11 +250,13 @@ export function AppShell({
             control in the product — editing a live plan is not the same act as
             editing a sandbox one — and burying it would contradict that.
           */}
-          <div className="-mx-1 in-data-[state=collapsed]:hidden">
+          <div className="-mx-1 in-data-[state=collapsed]:mx-0">
             <EnvironmentSwitcher
               current={environment}
               environments={environments}
               onChange={onEnvironmentChange}
+              {...(onCreateEnvironment ? { onCreate: onCreateEnvironment } : {})}
+              {...(onManageEnvironments ? { onManage: onManageEnvironments } : {})}
             />
           </div>
         </SidebarHeader>
@@ -231,10 +287,18 @@ export function AppShell({
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden">
+      {/*
+        The content plane is lifted off the sidebar: a border, a rounded
+        corner, and one soft shadow all the way around. Subtle on purpose —
+        the panel should read as sitting slightly in front of the sidebar, not
+        as a card thrown onto it.
+      */}
+      <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border shadow-[0_0_18px_-6px_rgba(0,0,0,0.12)]! md:peer-data-[variant=inset]:rounded-2xl">
         <header
           className={cn(
-            'flex h-12 shrink-0 items-center gap-2 px-4',
+            // A rule under the header, so the breadcrumb is not floating over
+            // whatever the page happens to start with.
+            'flex h-12 shrink-0 items-center gap-2 border-b px-4',
             isProduction && 'pt-1',
           )}
         >
@@ -251,6 +315,7 @@ export function AppShell({
         */}
         <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
       </SidebarInset>
+      </TooltipProvider>
     </SidebarProvider>
   )
 }

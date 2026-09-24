@@ -99,10 +99,15 @@
      * keyboard hint, an avatar fallback and a badge before this was traced to
      * the token rather than to the components.
      *
-     * 0.540 is #6d6d6d: 4.62:1 on `--muted`, 5.4:1 on `--background`, and
-     * visually indistinguishable from what it replaces.
+     * Darkened again when the sidebar itself was tinted: muted text now also
+     * has to clear 4.5:1 against `--sidebar` (#ededed), which 0.540 missed at
+     * 4.29:1. Each time the darkest surface in the system moves, this is the
+     * token that has to follow it.
+     *
+     * 0.520 is #686868: 4.66:1 on the sidebar, 4.9:1 on `--muted`, 5.9:1 on
+     * `--background`, and still unmistakably secondary text.
      */
-    --muted-foreground: oklch(0.540 0 0);
+    --muted-foreground: oklch(0.520 0 0);
     --accent: oklch(0.97 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
@@ -157,6 +162,34 @@
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
     --sidebar-ring: oklch(0.556 0 0);
+}
+
+/*
+ * Buttons and badges are fully curved, as ReUI's Flux template has them.
+ *
+ * This is a theme decision, so it lives in the theme rather than being spelled
+ * onto every call site — a `rounded-full` repeated across forty components is
+ * how a radius stops being a decision and becomes forty of them that drift.
+ * The registry components stay untouched and upgradeable.
+ *
+ * Square-cornered exceptions opt out by setting a radius of their own; the
+ * rule is deliberately low-specificity so a `rounded-*` utility still wins.
+ */
+@layer components {
+  [data-slot='button'],
+  [data-slot='badge'],
+  [data-slot='kbd'] {
+    border-radius: calc(infinity * 1px);
+  }
+
+  /*
+   * Icon buttons inside a menu or a table row are the exception: a circle in a
+   * dense row reads as a status dot, not a control.
+   */
+  [data-slot='dropdown-menu-item'] [data-slot='button'],
+  [data-slot='table'] [data-slot='button'] {
+    border-radius: var(--radius-md);
+  }
 }
 
 @layer base {

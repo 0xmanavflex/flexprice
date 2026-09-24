@@ -63,3 +63,13 @@ export type { CreateFeature, Feature, FeatureQuery, MeterDraft } from './feature
 
 export { resetRequestSchema, setPasswordSchema, signInSchema } from './auth'
 export type { ResetRequest, SetPassword, SignInCredentials } from './auth'
+export {
+  ENVIRONMENT_TYPE_DESCRIPTION,
+  ENVIRONMENT_TYPE_LABEL,
+  EnvironmentType,
+  createEnvironmentSchema,
+  emptyEnvironment,
+  environmentKind,
+  environmentSchema,
+} from './environment'
+export type { CreateEnvironment, Environment } from './environment'
