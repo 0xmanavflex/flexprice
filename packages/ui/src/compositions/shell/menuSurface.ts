@@ -12,10 +12,14 @@
  * These loosen it to match the rows the menus open from, and round the
  * corners to match the shell's own.
  */
-export const MENU_CONTENT = 'min-w-56 rounded-2xl p-1.5 shadow-lg'
+export const MENU_CONTENT = 'min-w-60 rounded-3xl p-2 shadow-xl'
 
-/** Rows the same height as the sidebar's, so the cursor does not change gear. */
-export const MENU_ITEM = 'gap-2 rounded-xl px-2.5 py-2'
+/**
+ * Rows at the sidebar's own height, and rounded nearly as much as the menu
+ * that holds them — Flux's proportion, where a selected row is a soft pill
+ * filling the panel rather than a thin highlighted line inside it.
+ */
+export const MENU_ITEM = 'gap-2.5 rounded-2xl px-3 py-2.5'
 
 /** Section headings inside a menu. Quieter than the rows they introduce. */
-export const MENU_LABEL = 'px-2.5 py-1.5 text-muted-foreground text-xs font-normal'
+export const MENU_LABEL = 'px-3 py-1.5 text-muted-foreground text-xs font-normal'

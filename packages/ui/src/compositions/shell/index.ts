@@ -12,6 +12,7 @@ export { ShellNav } from './ShellNav'
 export type { ShellNavProps } from './ShellNav'
 export { ShellNotifications, ShellNotificationsProvenance } from './ShellNotifications'
 export type { ShellNotificationsProps } from './ShellNotifications'
+export { ShellRailHandle, ShellRailHandleProvenance } from './ShellRailHandle'
 export { ShellSearch, ShellSearchProvenance } from './ShellSearch'
 export type { ShellSearchProps } from './ShellSearch'
 export type {

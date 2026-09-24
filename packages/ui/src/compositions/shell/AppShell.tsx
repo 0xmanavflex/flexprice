@@ -15,6 +15,7 @@ import { EnvironmentSwitcher } from './EnvironmentSwitcher'
 import { ShellAccount } from './ShellAccount'
 import { ShellNav } from './ShellNav'
 import { ShellNotifications } from './ShellNotifications'
+import { ShellRailHandle } from './ShellRailHandle'
 import { ShellSearch } from './ShellSearch'
 import type { ShellEnvironment, ShellNavGroup, ShellNotification, ShellUser } from './types'
 
@@ -138,6 +139,13 @@ const FLUX = [
    * destination bleeding out past the rail, once, next to its own icon.
    */
   '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]>span]:hidden',
+  /*
+   * In the rail a row is a circle, not a rounded square. At 32px the two are
+   * nearly the same shape, and Flux takes the circle — which is what makes the
+   * active icon read as a chip on a column of bare glyphs rather than as a
+   * slightly darker patch.
+   */
+  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]]:rounded-full!',
 
   // Nearly touching, so a group reads as one object rather than a list of chips.
   '**:data-[slot=sidebar-menu]:gap-0.25',
@@ -174,8 +182,6 @@ export function AppShell({
   headerActions,
   children,
 }: AppShellProps) {
-  const isProduction = environment.kind === 'production'
-
   return (
     <SidebarProvider
       className={cn('bg-sidebar h-screen', FLUX)}
@@ -194,21 +200,13 @@ export function AppShell({
       }
     >
       {/*
-        A marker across the whole shell, not only on the switcher — visible
-        wherever the eye is, so someone deep in a form can still tell they are
-        editing live data.
-      */}
-      {isProduction ? (
-        <div aria-hidden className="bg-destructive fixed inset-x-0 top-0 z-50 h-1" />
-      ) : null}
-
-      {/*
         Collapsed, a tooltip is the only thing naming a row — so it cannot wait
         600ms, which is Base UI's default when no provider sets one. Without
         this the icon rail feels broken before it feels slow.
       */}
 
       <TooltipProvider delay={0}>
+      <ShellRailHandle />
       <Sidebar collapsible="icon" variant="inset" aria-label="Main">
         <SidebarHeader className="gap-2">
           {/*
@@ -294,14 +292,9 @@ export function AppShell({
         as a card thrown onto it.
       */}
       <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border shadow-[0_0_18px_-6px_rgba(0,0,0,0.12)]! md:peer-data-[variant=inset]:rounded-2xl">
-        <header
-          className={cn(
-            // A rule under the header, so the breadcrumb is not floating over
-            // whatever the page happens to start with.
-            'flex h-12 shrink-0 items-center gap-2 border-b px-4',
-            isProduction && 'pt-1',
-          )}
-        >
+        {/* A rule under the header, so the breadcrumb is not floating over
+            whatever the page happens to start with. */}
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
           {/* The rail trigger is in the sidebar header; on mobile there is no
               sidebar to put it in, so the header carries one. */}
           <SidebarTrigger className="-ml-1 md:hidden" />

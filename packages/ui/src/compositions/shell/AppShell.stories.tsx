@@ -179,6 +179,14 @@ export const CountsAreVisible: Story = {
  * Editing a live plan must not look identical to editing a sandbox one, and
  * the marker has to survive someone who cannot distinguish the colour.
  */
+/**
+ * Production is marked, and not only by colour.
+ *
+ * The marks are the switcher's tint, its "Live" badge, and the dot the app
+ * puts at the head of the breadcrumb. There was also a red bar across the top
+ * of the window; it was removed — three marks in the places people already
+ * look beat a fourth in a place they do not.
+ */
 export const Production: Story = {
   args: { environment: production },
   play: async ({ canvasElement }) => {
@@ -333,6 +341,25 @@ export const WithBreadcrumb: Story = {
  * collapsed, so on a desktop — where the header's own trigger is `md:hidden` —
  * the rail was a one-way door.
  */
+export const EdgeHandleCollapses: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const handle = canvas.getByRole('button', { name: 'Collapse sidebar' })
+
+    // It names the destination, not the current state: a control labelled
+    // "Sidebar" tells you nothing about what pressing it does.
+    await expect(handle).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(handle)
+
+    const expand = await canvas.findByRole('button', { name: 'Expand sidebar' })
+    await expect(expand).toHaveAttribute('aria-expanded', 'false')
+
+    // And the rail is a rail: the groups became menus.
+    await userEvent.click(canvas.getByRole('button', { name: 'Billing' }))
+    await expect(await screen.findByRole('menuitem', { name: /invoices/i })).toBeVisible()
+  },
+}
+
 export const RailKeepsItsTrigger: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
