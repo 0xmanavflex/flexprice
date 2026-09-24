@@ -19,9 +19,18 @@ A capture script already exists and does all of this, including scrubbing:
 
 ```bash
 cd packages/query
-export FLEXPRICE_API_KEY=<a dev-environment API key>
+printf 'FLEXPRICE_API_KEY=<dev key>\n' > .env.local   # gitignored
 node scripts/capture.mjs
 ```
+
+The script loads `.env.local` itself via Node's built-in `process.loadEnvFile`,
+so there is nothing to source and no dotenv dependency. An already-exported
+`FLEXPRICE_API_KEY` still wins, which is what CI wants.
+
+**Use a key scoped to an environment with real variety.** The key carries its
+own environment, so that choice decides fixture quality — an environment where
+every invoice is `FINALIZED/PENDING` yields five near-identical rows and
+defeats the purpose.
 
 It writes every file to the right place in the right shape. If this works,
 stop here, commit the fixtures, and skip the rest.
@@ -48,11 +57,11 @@ One file per entity, named exactly:
 ```
 customers.json      plans.json         features.json      prices.json
 invoices.json       subscriptions.json entitlements.json  wallets.json
-payments.json       coupons.json       addons.json        creditnotes.json
-creditgrants.json   taxrates.json
+coupons.json        addons.json        payments.json      taxrates.json
 ```
 
-Missing files are fine — capture what is reachable, skip what is not.
+That is 12 files. `creditnotes.json` and `creditgrants.json` are deliberately
+absent — see below.
 
 ### How to call the API
 
@@ -67,6 +76,12 @@ Headers:  x-api-key: <dev API key>
 Body:     { "limit": 5 }
 ```
 
+The method differs by entity and is **not** guessable. Do not assume
+`POST /<entity>/search` everywhere — four of these have no `/search` route, and
+guessing produced 404s that looked like missing annotations but were wrong paths.
+
+**`POST /<entity>/search`, body `{ "limit": 5 }`:**
+
 | File | Path |
 |---|---|
 | `customers.json` | `/customers/search` |
@@ -77,12 +92,22 @@ Body:     { "limit": 5 }
 | `subscriptions.json` | `/subscriptions/search` |
 | `entitlements.json` | `/entitlements/search` |
 | `wallets.json` | `/wallets/search` |
-| `payments.json` | `/payments/search` |
 | `coupons.json` | `/coupons/search` |
 | `addons.json` | `/addons/search` |
-| `creditnotes.json` | `/creditnotes/search` |
-| `creditgrants.json` | `/creditgrants/search` |
-| `taxrates.json` | `/taxes/rates/search` |
+
+**`GET` with `?limit=5` — these have no `/search` route:**
+
+| File | Path |
+|---|---|
+| `payments.json` | `/payments` |
+| `taxrates.json` | `/taxes/rates` |
+
+**Not capturable at all** — `creditnotes` and `creditgrants` document only
+`POST /<entity>` (create) and `GET /<entity>/{id}`. Their `List*` handlers are
+live routes carrying no annotation, so there is no documented way to enumerate
+them. The script reports them as skipped. **Do not hand-write these files.**
+
+That is **12 fixtures**, not 14.
 
 For `invoices.json` send `{ "limit": 5, "skip_line_items": false }` — the line
 items are needed.

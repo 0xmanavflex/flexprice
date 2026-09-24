@@ -24,6 +24,19 @@ import { fileURLToPath } from 'node:url'
 import { scrub } from './scrub.mjs'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+/**
+ * Read `packages/query/.env.local` if it exists.
+ *
+ * `process.loadEnvFile` is built into Node 22+, so this keeps the repo free of
+ * a dotenv dependency — the same approach flexprice-front's e2e suite takes.
+ * An already-exported variable still wins, which is what CI wants.
+ */
+try {
+  process.loadEnvFile(resolve(root, '.env.local'))
+} catch {
+  // Absent or unreadable. The environment is expected to carry the value.
+}
 const outDir = resolve(root, 'src/__fixtures__')
 
 const BASE_URL = process.env.FLEXPRICE_API_URL ?? 'https://api-dev.cloud.flexprice.io/v1'
@@ -51,29 +64,57 @@ if (!API_KEY) {
  */
 const LIMIT = 5
 
-/** Every entity reachable through a documented endpoint today. */
+/**
+ * Every entity reachable through a *documented* endpoint today.
+ *
+ * The method differs by entity and is not guessable — an earlier version of
+ * this file assumed `POST /<entity>/search` everywhere and produced four 404s
+ * that looked like missing annotations but were simply wrong paths. Each entry
+ * below was checked against `docs/swagger/swagger-3-0.json`.
+ */
 const ENTITIES = [
-  { key: 'customers', path: '/customers/search', body: { limit: LIMIT } },
-  { key: 'plans', path: '/plans/search', body: { limit: LIMIT } },
-  { key: 'features', path: '/features/search', body: { limit: LIMIT } },
-  { key: 'prices', path: '/prices/search', body: { limit: LIMIT } },
-  { key: 'invoices', path: '/invoices/search', body: { limit: LIMIT, skip_line_items: false } },
-  { key: 'subscriptions', path: '/subscriptions/search', body: { limit: LIMIT } },
-  { key: 'entitlements', path: '/entitlements/search', body: { limit: LIMIT } },
-  { key: 'wallets', path: '/wallets/search', body: { limit: LIMIT } },
-  { key: 'payments', path: '/payments/search', body: { limit: LIMIT } },
-  { key: 'coupons', path: '/coupons/search', body: { limit: LIMIT } },
-  { key: 'addons', path: '/addons/search', body: { limit: LIMIT } },
-  { key: 'creditnotes', path: '/creditnotes/search', body: { limit: LIMIT } },
-  { key: 'creditgrants', path: '/creditgrants/search', body: { limit: LIMIT } },
-  { key: 'taxrates', path: '/taxes/rates/search', body: { limit: LIMIT } },
+  // POST /<entity>/search — a filter body, the richest of the three shapes.
+  { key: 'customers', method: 'POST', path: '/customers/search', body: { limit: LIMIT } },
+  { key: 'plans', method: 'POST', path: '/plans/search', body: { limit: LIMIT } },
+  { key: 'features', method: 'POST', path: '/features/search', body: { limit: LIMIT } },
+  { key: 'prices', method: 'POST', path: '/prices/search', body: { limit: LIMIT } },
+  { key: 'invoices', method: 'POST', path: '/invoices/search', body: { limit: LIMIT, skip_line_items: false } },
+  { key: 'subscriptions', method: 'POST', path: '/subscriptions/search', body: { limit: LIMIT } },
+  { key: 'entitlements', method: 'POST', path: '/entitlements/search', body: { limit: LIMIT } },
+  { key: 'wallets', method: 'POST', path: '/wallets/search', body: { limit: LIMIT } },
+  { key: 'coupons', method: 'POST', path: '/coupons/search', body: { limit: LIMIT } },
+  { key: 'addons', method: 'POST', path: '/addons/search', body: { limit: LIMIT } },
+
+  // GET with query params — these have no /search route at all.
+  { key: 'payments', method: 'GET', path: '/payments', query: { limit: LIMIT } },
+  { key: 'taxrates', method: 'GET', path: '/taxes/rates', query: { limit: LIMIT } },
 ]
 
-async function capture({ key, path, body }) {
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-api-key': API_KEY },
-    body: JSON.stringify(body),
+/**
+ * Entities with no list endpoint of any kind.
+ *
+ * `creditnotes` and `creditgrants` document only `POST /<entity>` (create) and
+ * `GET /<entity>/{id}`. Their `List*` handlers exist as live routes but carry
+ * no swagger annotation, so there is no documented way to enumerate them — see
+ * `docs/api-contract-gap.md`. Listed here rather than silently omitted, so the
+ * gap stays visible and this array shrinks when the annotations land.
+ */
+const NOT_LISTABLE = [
+  { key: 'creditnotes', reason: 'ListCreditNotes is unannotated; only create and get-by-id are documented' },
+  { key: 'creditgrants', reason: 'ListCreditGrants is unannotated; only create and get-by-id are documented' },
+]
+
+async function capture({ key, method, path, body, query }) {
+  const url = new URL(`${BASE_URL}${path}`)
+  for (const [k, v] of Object.entries(query ?? {})) url.searchParams.set(k, String(v))
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'x-api-key': API_KEY,
+      ...(method === 'POST' ? { 'Content-Type': 'application/json' } : {}),
+    },
+    ...(method === 'POST' ? { body: JSON.stringify(body) } : {}),
   })
 
   const text = await response.text()
@@ -114,6 +155,10 @@ for (const r of results) {
     // A 404 here usually means the endpoint is undocumented rather than absent.
     console.log(`  FAILED    ${r.key.padEnd(16)} HTTP ${r.status}  ${r.detail}`)
   }
+}
+
+for (const { key, reason } of NOT_LISTABLE) {
+  console.log(`  skipped   ${key.padEnd(16)} ${reason}`)
 }
 
 console.log(`\n${captured}/${results.length} captured into src/__fixtures__/`)
