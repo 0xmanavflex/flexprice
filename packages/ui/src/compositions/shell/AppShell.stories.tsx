@@ -155,12 +155,21 @@ export const ReportsAGroupClick: Story = {
   },
 }
 
-/** Counts answer "is there anything here?" before the click — zero included. */
+/**
+ * Counts answer "is there anything here?" before the click — zero included.
+ *
+ * They render outside the row's button, so that the number does not compete
+ * with the label for width. That puts them outside the accessible name too,
+ * which is why the row states the count itself.
+ */
 export const CountsAreVisible: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('12')).toBeInTheDocument()
     await expect(canvas.getByText('0')).toBeInTheDocument()
+
+    await expect(canvas.getByRole('button', { name: 'Features, 12' })).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Coupons, 0' })).toBeInTheDocument()
   },
 }
 
@@ -290,12 +299,51 @@ export const AccountMenu: Story = {
  */
 export const WithBreadcrumb: Story = {
   args: {
-    breadcrumb: <ShellBreadcrumb trail={[{ label: 'Product Catalog' }, { label: 'Features' }]} />,
+    breadcrumb: (
+      <ShellBreadcrumb
+        trail={[
+          {
+            label: 'Sandbox',
+            mark: <span aria-hidden className="bg-muted-foreground/50 size-2 rounded-full" />,
+          },
+          { label: 'Product Catalog' },
+          { label: 'Features' },
+        ]}
+      />
+    ),
   },
   play: async ({ canvasElement }) => {
     const nav = within(canvasElement).getByRole('navigation', { name: 'breadcrumb' })
+
+    // Every crumb is named even at widths where its label is hidden.
+    await expect(within(nav).getByLabelText('Sandbox')).toBeInTheDocument()
     await expect(within(nav).getByText('Product Catalog')).toBeVisible()
-    await expect(within(nav).getByText('Features')).toBeVisible()
+
+    // The current page is not a link. A link to where you already are does
+    // nothing, and offering it is a promise the interface cannot keep.
+    await expect(within(nav).getByLabelText('Features').tagName).not.toBe('BUTTON')
+    await expect(within(nav).queryByRole('button', { name: 'Features' })).not.toBeInTheDocument()
+  },
+}
+
+/**
+ * Collapsing the sidebar must not hide the way back out of it.
+ *
+ * The first version put the trigger in a cluster that was hidden when
+ * collapsed, so on a desktop — where the header's own trigger is `md:hidden` —
+ * the rail was a one-way door.
+ */
+export const RailKeepsItsTrigger: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const trigger = canvas.getAllByRole('button', { name: /toggle sidebar/i })[0]!
+
+    await userEvent.click(trigger)
+    await expect(canvas.getAllByRole('button', { name: /toggle sidebar/i })[0]).toBeVisible()
+
+    // And the groups are still reachable, as a menu rather than inline.
+    await userEvent.click(canvas.getByRole('button', { name: 'Billing' }))
+    await expect(await screen.findByRole('menuitem', { name: /invoices/i })).toBeVisible()
   },
 }
 

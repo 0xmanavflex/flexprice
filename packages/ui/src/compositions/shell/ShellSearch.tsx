@@ -23,8 +23,10 @@ import { provenance } from '@ui/provenance'
  * that sometimes does nothing. A button opens a deliberate surface, and the
  * shortcut is the way most people will reach it anyway.
  *
- * The shortcut is bound at the window, because the whole point is that it works
- * without first clicking into the sidebar.
+ * Two shortcuts are bound at the window, because the whole point is that they
+ * work without first clicking into the sidebar. `/` is shown, since it is the
+ * one worth learning; ⌘K is bound as well because it is what everyone reaches
+ * for first and failing silently would teach the wrong thing.
  */
 export const ShellSearchProvenance = provenance({
   source: 'composition',
@@ -46,6 +48,23 @@ export function ShellSearch({ onSearch, placeholder = 'Search…' }: ShellSearch
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
         setOpen(true)
+        return
+      }
+
+      // `/` is the hint Flux shows, and it is the faster of the two — but a
+      // bare character cannot be claimed globally, or typing a path into any
+      // field on the page opens a dialog on top of it.
+      if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey) {
+        const target = event.target as HTMLElement | null
+        const typing =
+          target instanceof HTMLInputElement ||
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLSelectElement ||
+          target?.isContentEditable === true
+        if (typing) return
+
+        event.preventDefault()
+        setOpen(true)
       }
     }
     window.addEventListener('keydown', onKeyDown)
@@ -61,7 +80,7 @@ export function ShellSearch({ onSearch, placeholder = 'Search…' }: ShellSearch
             variant="outline"
             onClick={() => setOpen(true)}
             aria-label="Search"
-            aria-keyshortcuts="Meta+K Control+K"
+            aria-keyshortcuts="/ Meta+K Control+K"
             className="hover:bg-background h-8 w-full justify-start pl-7 font-normal transition-[width] duration-200 ease-linear in-data-[state=collapsed]:w-8! in-data-[state=collapsed]:pl-4! in-data-[state=collapsed]:text-transparent"
           >
             {placeholder}
@@ -71,7 +90,7 @@ export function ShellSearch({ onSearch, placeholder = 'Search…' }: ShellSearch
             className="pointer-events-none absolute top-1/2 left-2 size-3.5 -translate-y-1/2 opacity-50 select-none"
           />
           <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 in-data-[state=collapsed]:hidden">
-            ⌘K
+            /
           </Kbd>
         </SidebarGroupContent>
       </SidebarGroup>

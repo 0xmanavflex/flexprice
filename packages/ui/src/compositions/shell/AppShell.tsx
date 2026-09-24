@@ -18,7 +18,8 @@ import { ShellSearch } from './ShellSearch'
 import type { ShellEnvironment, ShellNavGroup, ShellNotification, ShellUser } from './types'
 
 /**
- * The application shell, adapted from `@reui/app-shell-3`.
+ * The application shell: `@reui/app-shell-3`'s layout, ReUI's Flux template's
+ * surface treatment.
  *
  * One inset sidebar that collapses to icons, with nested navigation, search and
  * notifications *inside* the sidebar, a pinned slot above the footer, and the
@@ -44,7 +45,7 @@ export const AppShellProvenance = provenance({
     'ui/dropdown-menu',
     '@reui/badge',
   ],
-  note: 'Adapted from app-shell-3: single inset sidebar, nested nav, our controlled contract.',
+  note: "app-shell-3's layout with the Flux template's surface treatment, and our controlled contract.",
 })
 
 export interface AppShellProps {
@@ -80,43 +81,38 @@ export interface AppShellProps {
 }
 
 /**
- * The block's selection and icon treatment, lifted as written.
+ * The sidebar's shape, taken from ReUI's Flux template.
  *
- * Expressed as data-slot selectors because they reach inside the Sidebar
- * primitive's own markup — which is vendored, and which we must not fork to
- * restyle. The icon rules are half of why the block reads as layered: idle
- * icons sit at 60% and the active one takes the primary colour, so the eye
- * finds the current row before it reads a word.
+ * Flux is app-shell-3's layout with a quieter surface treatment, and the
+ * difference is the whole reason it reads better: the block marks the current
+ * row as a raised white card — border, shadow, its own background — which on a
+ * sidebar that is already white produces a floating chip in a column of plain
+ * text. Flux marks it with a flat accent fill and a heavier weight instead, so
+ * the selection reads as *part of* the list rather than sitting on top of it.
+ *
+ * The flat fill is already the Sidebar primitive's own default, so most of what
+ * was here has simply been deleted. What remains is geometry: taller rows, a
+ * rounder radius, horizontal padding, and a tighter gap between them — Flux's
+ * numbers, applied at the wrapper so the vendored primitive stays untouched and
+ * upgradeable.
  */
-const SELECTION = [
+const FLUX = [
   '[--sidebar-border:transparent]',
 
-  '[&_[data-slot=sidebar-menu-button][data-active]]:border-border/60!',
-  '[&_[data-slot=sidebar-menu-button][data-active]]:border',
-  '[&_[data-slot=sidebar-menu-button][data-active]]:shadow-xs!',
-  '[&_[data-slot=sidebar-menu-button][data-active]]:shadow-black/5!',
-  '[&_[data-slot=sidebar-menu-button][data-active]]:bg-background!',
-  '[&_[data-slot=sidebar-menu-button][data-active]]:hover:bg-background!',
-  '**:data-[slot=sidebar-menu-button]:hover:bg-transparent!',
-  '[&_[data-slot=sidebar-menu-button][data-active]]:text-foreground',
-  '[&_[data-slot=sidebar-menu-button][data-active]>svg]:text-primary',
-  '[&_[data-slot=sidebar-menu-button][data-active]>svg]:opacity-100',
-  '**:data-[slot=sidebar-menu-button]:text-accent-foreground/80',
-  '**:data-[slot=sidebar-menu-button]:hover:text-foreground',
-  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button][data-active]>svg]:-ml-px',
-  '[&_[data-slot=sidebar-menu-button]:hover>svg]:opacity-100',
-  '[&_[data-slot=sidebar-menu-button]>svg]:opacity-60',
+  // Rows: h-9, rounded-xl, px-3 py-2 — against the primitive's h-8/rounded-md/p-2.
+  '**:data-[slot=sidebar-menu-button]:h-9',
+  '**:data-[slot=sidebar-menu-button]:rounded-xl',
+  '**:data-[slot=sidebar-menu-button]:px-3',
+  '**:data-[slot=sidebar-menu-button]:py-2',
+  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]]:px-2!',
 
-  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:border-border/60!',
-  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:border',
-  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:shadow-xs!',
-  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:shadow-black/5!',
-  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:bg-background!',
-  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:hover:bg-background!',
-  '**:data-[slot=sidebar-menu-sub-button]:hover:bg-transparent!',
-  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:text-foreground',
-  '**:data-[slot=sidebar-menu-sub-button]:text-accent-foreground/80',
-  '**:data-[slot=sidebar-menu-sub-button]:hover:text-foreground',
+  // Nearly touching, so a group reads as one object rather than a list of chips.
+  '**:data-[slot=sidebar-menu]:gap-0.25',
+
+  // Headings recede; they are labels, not destinations.
+  '**:data-[slot=sidebar-group-label]:rounded-xl',
+  '**:data-[slot=sidebar-group-label]:px-3',
+  '**:data-[slot=sidebar-group-label]:text-sidebar-foreground/70',
 ].join(' ')
 
 export function AppShell({
@@ -147,7 +143,7 @@ export function AppShell({
 
   return (
     <SidebarProvider
-      className={cn('h-screen', SELECTION)}
+      className={cn('h-screen', FLUX)}
       style={{ '--sidebar-width': '260px' } as CSSProperties}
     >
       {/*
@@ -161,7 +157,13 @@ export function AppShell({
 
       <Sidebar collapsible="icon" variant="inset" aria-label="Main">
         <SidebarHeader className="gap-2">
-          <div className="flex items-center justify-between gap-2">
+          {/*
+            Collapsed, the row becomes a column. It has to: the trigger is the
+            only way back out of the rail, and the first version hid it along
+            with everything else — so collapsing the sidebar on a desktop was
+            a one-way door.
+          */}
+          <div className="flex items-center justify-between gap-2 in-data-[state=collapsed]:flex-col in-data-[state=collapsed]:items-start">
             <div className="flex min-h-9 items-center gap-2 px-0.5">
               {logo ?? (
                 <span
@@ -176,7 +178,7 @@ export function AppShell({
               </span>
             </div>
 
-            <div className="flex items-center gap-0.5 in-data-[state=collapsed]:hidden">
+            <div className="flex items-center gap-0.5 in-data-[state=collapsed]:flex-col">
               <ShellNotifications
                 notifications={notifications}
                 isLoading={notificationsLoading}
@@ -184,7 +186,7 @@ export function AppShell({
                 {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
                 {...(onOpenNotification ? { onOpenNotification } : {})}
               />
-              <SidebarTrigger className="opacity-60 hover:opacity-100 [&_svg]:transition-transform [&_svg]:duration-200" />
+              <SidebarTrigger className="opacity-60 hover:opacity-100 [&_svg]:transition-transform [&_svg]:duration-200 in-data-[state=collapsed]:[&_svg]:rotate-180" />
             </div>
           </div>
 
@@ -194,7 +196,7 @@ export function AppShell({
             control in the product — editing a live plan is not the same act as
             editing a sandbox one — and burying it would contradict that.
           */}
-          <div className="in-data-[state=collapsed]:hidden">
+          <div className="-mx-1 in-data-[state=collapsed]:hidden">
             <EnvironmentSwitcher
               current={environment}
               environments={environments}

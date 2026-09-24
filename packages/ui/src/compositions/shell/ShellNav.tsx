@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react'
-import { Badge } from '@ui/components/reui/badge'
+import { ChevronDownIcon } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,18 +13,17 @@ import {
   SidebarGroupContent,
   SidebarGroupLabel,
   SidebarMenu,
+  SidebarMenuBadge,
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarMenuSub,
-  SidebarMenuSubButton,
-  SidebarMenuSubItem,
   useSidebar,
 } from '@ui/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
 import type { ShellNavGroup, ShellNavItem } from './types'
 
 /**
- * Nested navigation, in `@reui/app-shell-3`'s treatment.
+ * Nested navigation, in the Flux template's treatment.
  *
  * A parent with children expands in place rather than replacing the panel. For
  * twenty-four destinations across three deep groups that matters: standing in
@@ -35,6 +33,12 @@ import type { ShellNavGroup, ShellNavItem } from './types'
  * Expansion is *derived*, not stored — a group is open because something inside
  * it is active. There is no second source of truth to fall out of step with the
  * URL, and a deep link opens the right group without anyone wiring it.
+ *
+ * Children are ordinary rows with a deeper indent, not `SidebarMenuSub`. The
+ * sub-menu primitive draws a vertical rule down the left of the branch, and
+ * with three expandable groups of six and seven that rule turns a sidebar into
+ * a diagram. Flux indents and stops there, which is enough: the labels line up
+ * under the parent, and nothing is drawn that carries no information.
  */
 export interface ShellNavProps {
   groups: ShellNavGroup[]
@@ -47,22 +51,26 @@ function containsActive(item: ShellNavItem, activeItemId?: string): boolean {
   return (item.items ?? []).some((child) => child.id === activeItemId)
 }
 
+/**
+ * The count, as Flux has it: a bare number, not a bordered pill.
+ *
+ * `SidebarMenuBadge` positions it absolutely against the row, so it does not
+ * compete with the label for width and every number in the column lines up.
+ *
+ * Being positioned means it is a *sibling* of the button rather than a child,
+ * so it is outside the accessible name — a screen reader would read the row,
+ * then a loose number with nothing tying the two together. It is hidden here
+ * and the row states the count in its own label instead.
+ */
 function Count({ value }: { value: number }) {
-  // Hidden from assistive tech: the count is already in the button's
-  // accessible name, and a bare number read twice has no context the second
-  // time.
-  return (
-    <Badge variant="outline" size="sm" className="ml-auto" aria-hidden>
-      {value}
-    </Badge>
-  )
+  return <SidebarMenuBadge aria-hidden>{value}</SidebarMenuBadge>
 }
 
 /**
  * A parent in the icon rail.
  *
  * Inline children would push every following item down in a 48px-wide column,
- * so the block opens them in a dropdown anchored to the icon instead. Without
+ * so the children open in a dropdown anchored to the icon instead. Without
  * this, collapsing the sidebar makes twenty of twenty-four destinations
  * unreachable — which is the kind of thing that only shows up when someone
  * actually collapses it.
@@ -93,20 +101,58 @@ function CollapsedParent({
           {item.icon}
           <span>{item.label}</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-48">
+        <DropdownMenuContent side="right" align="start" sideOffset={8} className="min-w-52">
           <DropdownMenuGroup>
             <DropdownMenuLabel>{item.label}</DropdownMenuLabel>
             {children.map((child) => (
-              <DropdownMenuItem key={child.id} onClick={() => onNavigate(child.id)}>
+              <DropdownMenuItem
+                key={child.id}
+                onClick={() => onNavigate(child.id)}
+                className={cn(child.id === activeItemId && 'bg-accent font-medium')}
+              >
                 {child.label}
                 {child.count !== undefined ? (
-                  <span className="text-muted-foreground ml-auto text-xs">{child.count}</span>
+                  <span className="text-muted-foreground ml-auto text-xs tabular-nums">
+                    {child.count}
+                  </span>
                 ) : null}
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
         </DropdownMenuContent>
       </DropdownMenu>
+    </SidebarMenuItem>
+  )
+}
+
+function Row({
+  item,
+  isActive,
+  onNavigate,
+  indented,
+}: {
+  item: ShellNavItem
+  isActive: boolean
+  onNavigate: (id: string) => void
+  indented?: boolean
+}) {
+  return (
+    <SidebarMenuItem>
+      <SidebarMenuButton
+        isActive={isActive}
+        onClick={() => onNavigate(item.id)}
+        aria-current={isActive ? 'page' : undefined}
+        // The count lives outside this button, so it is named here instead —
+        // "Features, 24" rather than "Features" and a number from nowhere.
+        {...(item.count === undefined ? {} : { 'aria-label': `${item.label}, ${item.count}` })}
+        tooltip={item.label}
+        // Lines the label up under its parent's, where the parent's icon ends.
+        className={cn(indented && 'pl-9!')}
+      >
+        {item.icon}
+        <span className="min-w-0 truncate">{item.label}</span>
+      </SidebarMenuButton>
+      {item.count !== undefined ? <Count value={item.count} /> : null}
     </SidebarMenuItem>
   )
 }
@@ -134,63 +180,37 @@ function ExpandedParent({
       >
         {item.icon}
         <span className="min-w-0 truncate">{item.label}</span>
-        <ChevronRightIcon
+        <ChevronDownIcon
           aria-hidden
           className={cn(
-            'ml-auto size-4 shrink-0 opacity-60 transition-transform duration-200',
-            expanded && 'rotate-90',
+            'ml-auto size-4 shrink-0 opacity-50 transition-transform duration-200',
+            !expanded && '-rotate-90',
           )}
         />
       </SidebarMenuButton>
 
       {expanded ? (
-        <SidebarMenuSub id={`subnav-${item.id}`}>
+        // A real nested list, inside the parent's own item — which is what
+        // `SidebarMenuSub` is for. Its border, inset and gap are stripped:
+        // that vertical rule down the branch is the one thing Flux does not
+        // draw, and with three groups of six and seven it turns a sidebar into
+        // a diagram. The nesting is kept because it is what makes the depth
+        // true rather than merely drawn.
+        <SidebarMenuSub
+          id={`subnav-${item.id}`}
+          className="mx-0 min-w-0 translate-x-0 gap-0.25 border-0 px-0 py-0"
+        >
           {children.map((child) => (
-            <SidebarMenuSubItem key={child.id}>
-              {/*
-                Rendered as a real button. `SidebarMenuSubButton` defaults to an
-                anchor, and an anchor with no href has no role and cannot be
-                focused by keyboard — so the sub-navigation would have been
-                unreachable without a mouse.
-              */}
-              <SidebarMenuSubButton
-                render={<button type="button" />}
-                isActive={child.id === activeItemId}
-                onClick={() => onNavigate(child.id)}
-                aria-current={child.id === activeItemId ? 'page' : undefined}
-              >
-                <span className="min-w-0 truncate">{child.label}</span>
-                {child.count !== undefined ? <Count value={child.count} /> : null}
-              </SidebarMenuSubButton>
-            </SidebarMenuSubItem>
+            <Row
+              key={child.id}
+              item={child}
+              isActive={child.id === activeItemId}
+              onNavigate={onNavigate}
+              indented
+            />
           ))}
         </SidebarMenuSub>
       ) : null}
-    </SidebarMenuItem>
-  )
-}
-
-function Leaf({
-  item,
-  activeItemId,
-  onNavigate,
-}: {
-  item: ShellNavItem
-  activeItemId?: string
-  onNavigate: (id: string) => void
-}) {
-  return (
-    <SidebarMenuItem>
-      <SidebarMenuButton
-        isActive={item.id === activeItemId}
-        onClick={() => onNavigate(item.id)}
-        aria-current={item.id === activeItemId ? 'page' : undefined}
-        tooltip={item.label}
-      >
-        {item.icon}
-        <span className="min-w-0 truncate">{item.label}</span>
-        {item.count !== undefined ? <Count value={item.count} /> : null}
-      </SidebarMenuButton>
     </SidebarMenuItem>
   )
 }
@@ -212,12 +232,21 @@ function Items({
   return (
     <SidebarMenu>
       {items.map((item) => {
+        if ((item.items ?? []).length === 0) {
+          return (
+            <Row
+              key={item.id}
+              item={item}
+              isActive={item.id === activeItemId}
+              onNavigate={onNavigate}
+            />
+          )
+        }
         const props = {
           item,
           ...(activeItemId === undefined ? {} : { activeItemId }),
           onNavigate,
         }
-        if ((item.items ?? []).length === 0) return <Leaf key={item.id} {...props} />
         return isRail ? (
           <CollapsedParent key={item.id} {...props} />
         ) : (
@@ -257,7 +286,7 @@ function CollapsibleGroup({
         <ChevronDownIcon
           aria-hidden
           className={cn(
-            'ml-auto size-4 shrink-0 opacity-60 transition-transform duration-200',
+            'ml-auto size-4 shrink-0 opacity-50 transition-transform duration-200',
             !open && '-rotate-90',
           )}
         />

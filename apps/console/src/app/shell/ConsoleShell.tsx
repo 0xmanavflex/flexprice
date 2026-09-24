@@ -126,7 +126,34 @@ export function ConsoleShell({
       user={user}
       onSettings={() => goTo('settings')}
       {...(onSignOut ? { onSignOut } : {})}
-      breadcrumb={<ShellBreadcrumb trail={breadcrumbForPath(pathname)} />}
+      /*
+       * The environment leads the trail, with a mark, as Flux leads with its
+       * workspace. It is stated twice — here and in the switcher — and that is
+       * deliberate: the switcher is where you change it, this is where you
+       * read it, and the one place people look while working is the top of the
+       * page they are working on. Production is red; sandbox is not coloured
+       * at all, because marking the safe state teaches people to ignore marks.
+       */
+      breadcrumb={
+        <ShellBreadcrumb
+          trail={[
+            {
+              label: environment.name,
+              mark: (
+                <span
+                  aria-hidden
+                  className={`size-2 rounded-full ${
+                    environment.kind === 'production'
+                      ? 'bg-destructive'
+                      : 'bg-muted-foreground/50'
+                  }`}
+                />
+              ),
+            },
+            ...breadcrumbForPath(pathname),
+          ]}
+        />
+      }
       /*
        * Create sits in the header rather than on each page, because the things
        * people start cold — a subscription, a customer — do not live on the

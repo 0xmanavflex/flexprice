@@ -62,19 +62,40 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
-            className="h-auto bg-transparent py-1.5 pr-0! group-data-[collapsible=icon]:justify-center"
+            className="-ml-1 h-auto bg-transparent py-2 pr-0! group-data-[collapsible=icon]:ml-0! group-data-[collapsible=icon]:justify-center"
             render={<SidebarMenuButton aria-label={`Account: ${user.name}. Open account menu`} />}
           >
-            <Avatar className="size-6">
-              {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt="" /> : null}
-              <AvatarFallback className="text-[10px]">{initials(user.name)}</AvatarFallback>
-            </Avatar>
-            <span className="flex min-w-0 flex-col text-left in-data-[state=collapsed]:hidden">
-              <span className="truncate text-sm font-medium">{user.name}</span>
-              <span className="text-muted-foreground truncate text-xs">
-                {user.organization ?? user.email}
-              </span>
-            </span>
+            {/*
+              Flux's footer row: a rounded-square avatar, the person's name,
+              and beneath it the organisation with its own mark. Two lines
+              rather than one because they answer different questions — who am
+              I signed in as, and whose data am I looking at — and the second
+              is the one people forget.
+            */}
+            <div className="flex min-w-0 flex-1 items-center gap-2 in-data-[state=collapsed]:justify-center">
+              <Avatar className="size-7 shrink-0 rounded-md in-data-[state=collapsed]:size-6!">
+                {user.avatarUrl ? <AvatarImage src={user.avatarUrl} alt="" /> : null}
+                <AvatarFallback className="text-[10px] font-semibold">
+                  {initials(user.name)}
+                </AvatarFallback>
+              </Avatar>
+
+              <div className="flex min-w-0 flex-col in-data-[state=collapsed]:hidden">
+                <span className="truncate text-xs font-medium">{user.name}</span>
+                <span className="inline-flex min-w-0 items-center gap-1">
+                  {user.organization ? (
+                    <span
+                      aria-hidden
+                      className="bg-primary/70 size-1.5 shrink-0 rounded-full"
+                    />
+                  ) : null}
+                  <span className="text-muted-foreground truncate text-[10px]">
+                    {user.organization ?? user.email}
+                  </span>
+                </span>
+              </div>
+            </div>
+
             <MoreHorizontalIcon
               aria-hidden
               className="mr-1 ml-auto size-4 shrink-0 opacity-50 in-data-[state=collapsed]:hidden"
