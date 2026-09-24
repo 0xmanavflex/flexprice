@@ -19,3 +19,8 @@ export type { EmptyStateProps } from './EmptyState'
 
 export { Toolbar, ToolbarProvenance } from './Toolbar'
 export type { ToolbarProps } from './Toolbar'
+
+export { PageBody, PageHeader, PageProvenance, PageToolbar } from './Page'
+export type { PageHeaderProps } from './Page'
+
+export * from './shell'

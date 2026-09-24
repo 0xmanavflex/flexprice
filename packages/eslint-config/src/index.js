@@ -11,7 +11,11 @@ import { architecture } from './architecture.js'
  * upstream fix stays a re-install, so linting them to our standards would only
  * ever produce edits that the next install destroys.
  */
-const VENDORED = ['packages/ui/src/components/reui/**', 'packages/ui/src/primitives/**']
+const VENDORED = [
+  'packages/ui/src/components/reui/**',
+  'packages/ui/src/primitives/**',
+  'packages/ui/src/components/blocks/**',
+]
 
 export const config = [
   { ignores: ['**/dist/**', '**/node_modules/**', '**/*.gen.ts', '**/.nx/**'] },

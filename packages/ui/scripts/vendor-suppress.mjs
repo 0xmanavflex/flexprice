@@ -24,7 +24,14 @@ import { fileURLToPath } from 'node:url'
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Vendored, therefore not ours to fix. Everything else is fully typechecked. */
-const VENDORED = ['src/components/reui/**/*.{ts,tsx}', 'src/primitives/**/*.{ts,tsx}']
+const VENDORED = [
+  'src/components/reui/**/*.{ts,tsx}',
+  'src/primitives/**/*.{ts,tsx}',
+  // Premium blocks arrive as whole demo pages with their own components and
+  // fixture data. They are a starting point to adapt, not code we maintain —
+  // same rule, same treatment.
+  'src/components/blocks/**/*.{ts,tsx}',
+]
 
 const MARKER = '// @ts-nocheck'
 const HEADER = `${MARKER} — vendored from the ReUI registry; do not hand-edit.

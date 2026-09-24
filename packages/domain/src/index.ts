@@ -60,3 +60,6 @@ export {
   needsAggregationTarget,
 } from './feature'
 export type { CreateFeature, Feature, FeatureQuery, MeterDraft } from './feature'
+
+export { resetRequestSchema, signInSchema } from './auth'
+export type { ResetRequest, SignInCredentials } from './auth'
