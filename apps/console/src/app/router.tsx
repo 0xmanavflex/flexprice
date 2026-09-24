@@ -3,21 +3,23 @@ import {
   createRoute,
   createRouter,
   redirect,
+  stripSearchParams,
   useNavigate,
   useSearch,
 } from '@tanstack/react-router'
 import { Outlet } from '@tanstack/react-router'
 import type { InvoiceQuery } from '@fp/domain'
 import { InvoiceListPage } from '@/pages/invoices/InvoiceListPage'
-import { parseInvoiceSearch, toInvoiceSearch } from './searchParams'
+import { DEFAULT_INVOICE_QUERY } from '@fp/domain'
+import { parseInvoiceSearch } from './searchParams'
 import { useState } from 'react'
 import type { PriceOverride } from '@fp/domain'
 import { SubscriptionCreatePage } from '@/pages/subscriptions/SubscriptionCreatePage'
 import { type SubscriptionStepId, furthestOf, parseStep, toStepSearch } from './subscriptionSteps'
-import type { FeatureQuery } from '@fp/domain'
+import { DEFAULT_FEATURE_QUERY, type FeatureQuery } from '@fp/domain'
 import { FeatureListPage } from '@/pages/features/FeatureListPage'
 import { FeatureCreatePage } from '@/pages/features/FeatureCreatePage'
-import { parseFeatureSearch, toFeatureSearch } from './featureSearch'
+import { parseFeatureSearch } from './featureSearch'
 
 const rootRoute = createRootRoute({ component: Outlet })
 
@@ -47,6 +49,18 @@ const invoicesRoute = createRoute({
   path: '/invoices',
   validateSearch: (search: Record<string, unknown>): InvoiceQuery =>
     parseInvoiceSearch(search),
+  /**
+   * Keep defaults out of the address bar.
+   *
+   * `validateSearch` returns a *complete* query — which is what makes the page
+   * type-safe — but TanStack then writes all of it into the URL, so `/invoices`
+   * became `?page=1&pageSize=25&sortBy=issuedAt&…&statuses=%5B%5D`. Unreadable,
+   * un-shareable, and it made `/invoices` one of many spellings of itself.
+   *
+   * The codec's own tests could not catch this: they asserted the serializer
+   * omits defaults, and the router was not calling the serializer.
+   */
+  search: { middlewares: [stripSearchParams(DEFAULT_INVOICE_QUERY)] },
   component: InvoicesRouteComponent,
 })
 
@@ -60,7 +74,7 @@ function InvoicesRouteComponent() {
       onQueryChange={(next) =>
         void navigate({
           to: '/invoices',
-          search: toInvoiceSearch(next) as never,
+          search: next,
           // Paging and sorting are navigation, not history. Without this, Back
           // walks the user through every page they clicked instead of leaving
           // the list.
@@ -128,6 +142,7 @@ const featuresRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/features',
   validateSearch: (search: Record<string, unknown>): FeatureQuery => parseFeatureSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_FEATURE_QUERY)] },
   component: FeaturesRouteComponent,
 })
 
@@ -139,11 +154,11 @@ function FeaturesRouteComponent() {
     <FeatureListPage
       query={query}
       onQueryChange={(next) =>
-        void navigate({ to: '/features', search: toFeatureSearch(next) as never, replace: true })
+        void navigate({ to: '/features', search: next, replace: true })
       }
       onCreate={() => void navigate({ to: '/features/new' })}
       onOpenFeature={(feature) =>
-        void navigate({ to: '/features', search: { q: feature.name } as never })
+        void navigate({ to: '/features', search: { ...query, search: feature.name, page: 1 } })
       }
     />
   )

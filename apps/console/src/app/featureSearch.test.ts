@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_FEATURE_QUERY, FeatureType } from '@fp/domain'
-import { parseFeatureSearch, toFeatureSearch } from './featureSearch'
+import { parseFeatureSearch } from './featureSearch'
 
 describe('parseFeatureSearch', () => {
   it('returns defaults for an empty URL', () => {
@@ -39,21 +39,3 @@ describe('parseFeatureSearch', () => {
   })
 })
 
-describe('toFeatureSearch', () => {
-  it('omits defaults, keeping /features canonical', () => {
-    expect(toFeatureSearch(DEFAULT_FEATURE_QUERY)).toEqual({})
-  })
-
-  it('orders types so the same filter is always the same URL', () => {
-    expect(toFeatureSearch({ ...DEFAULT_FEATURE_QUERY, types: ['static', 'boolean'] as never }))
-      .toEqual(toFeatureSearch({ ...DEFAULT_FEATURE_QUERY, types: ['boolean', 'static'] as never }))
-  })
-
-  it.each([
-    DEFAULT_FEATURE_QUERY,
-    { ...DEFAULT_FEATURE_QUERY, page: 4, pageSize: 50 },
-    { ...DEFAULT_FEATURE_QUERY, search: 'api', types: [FeatureType.Metered] },
-  ])('round-trips (%#)', (query) => {
-    expect(parseFeatureSearch(toFeatureSearch(query))).toEqual(query)
-  })
-})

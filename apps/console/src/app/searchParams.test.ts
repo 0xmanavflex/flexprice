@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_INVOICE_QUERY, InvoiceSortField, InvoiceStatus } from '@fp/domain'
-import { parseInvoiceSearch, toInvoiceSearch } from './searchParams'
+import { parseInvoiceSearch } from './searchParams'
 
 describe('parseInvoiceSearch', () => {
   it('returns defaults for an empty URL', () => {
@@ -50,31 +50,4 @@ describe('parseInvoiceSearch', () => {
   })
 })
 
-describe('toInvoiceSearch', () => {
-  it('omits everything at its default, keeping /invoices canonical', () => {
-    expect(toInvoiceSearch(DEFAULT_INVOICE_QUERY)).toEqual({})
-  })
 
-  it('writes only what changed', () => {
-    expect(toInvoiceSearch({ ...DEFAULT_INVOICE_QUERY, page: 4 })).toEqual({ page: '4' })
-  })
-
-  it('orders statuses so the same filter is always the same URL', () => {
-    const a = toInvoiceSearch({ ...DEFAULT_INVOICE_QUERY, statuses: ['paid', 'draft'] as never })
-    const b = toInvoiceSearch({ ...DEFAULT_INVOICE_QUERY, statuses: ['draft', 'paid'] as never })
-    expect(a).toEqual(b)
-  })
-})
-
-describe('round trip', () => {
-  // The property that makes a view shareable: what you serialize is what the
-  // recipient parses.
-  it.each([
-    DEFAULT_INVOICE_QUERY,
-    { ...DEFAULT_INVOICE_QUERY, page: 7, pageSize: 50 },
-    { ...DEFAULT_INVOICE_QUERY, sortBy: InvoiceSortField.DueDate, sortDirection: 'asc' as const },
-    { ...DEFAULT_INVOICE_QUERY, statuses: [InvoiceStatus.Draft, InvoiceStatus.Overdue], search: 'acme' },
-  ])('survives serialize -> parse (%#)', (query) => {
-    expect(parseInvoiceSearch(toInvoiceSearch(query))).toEqual(query)
-  })
-})

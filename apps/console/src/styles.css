@@ -1,0 +1,9 @@
+/*
+ * The app's stylesheet.
+ *
+ * Pulls in the design system, then tells Tailwind to scan this app's own
+ * markup too — `@source` in `@fp/ui` covers the package, not its consumers.
+ */
+@import '@fp/ui/styles.css';
+
+@source "./";

@@ -1,5 +1,19 @@
 @import 'tailwindcss';
 
+/*
+ * Tell Tailwind where this package's markup lives.
+ *
+ * v4 auto-detects sources from the *consuming* project's root — which, for a
+ * monorepo, is `apps/console` and does not include `packages/ui/src`. Without
+ * this the app renders with the class names in the DOM and none of the
+ * corresponding CSS generated: every table, badge and button arrives unstyled,
+ * and nothing errors. It looks like a broken stylesheet rather than a missing
+ * scan path, which is what makes it slow to diagnose.
+ *
+ * Resolved relative to this file, so it holds for any app that imports it.
+ */
+@source "./";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

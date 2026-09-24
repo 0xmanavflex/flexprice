@@ -5,13 +5,15 @@
   "type": "module",
   "description": "The only data door. Components and pages import from here and nowhere else.",
   "exports": {
-    ".": "./src/index.ts"
+    ".": "./src/index.ts",
+    "./fixtures": "./src/fixtures.ts"
   },
   "scripts": {
     "typecheck": "tsc -b",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
-    "capture": "node scripts/capture.mjs"
+    "capture": "node scripts/capture.mjs",
+    "synthesize": "node scripts/synthesize.mjs"
   },
   "dependencies": {
     "@fp/api": "workspace:*",

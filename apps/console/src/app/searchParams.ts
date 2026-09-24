@@ -52,25 +52,3 @@ export function parseInvoiceSearch(raw: Record<string, unknown>): InvoiceQuery {
     search: String(raw['q'] ?? '').trim(),
   }
 }
-
-/**
- * Serializes back, omitting anything at its default.
- *
- * A URL that only names what the user changed is one they can read, and it
- * keeps `/invoices` as the canonical address of the unfiltered list rather
- * than one of many spellings of it.
- */
-export function toInvoiceSearch(query: InvoiceQuery): Record<string, string | string[]> {
-  const search: Record<string, string | string[]> = {}
-
-  if (query.page !== DEFAULT_INVOICE_QUERY.page) search['page'] = String(query.page)
-  if (query.pageSize !== DEFAULT_INVOICE_QUERY.pageSize) search['size'] = String(query.pageSize)
-  if (query.sortBy !== DEFAULT_INVOICE_QUERY.sortBy) search['sort'] = query.sortBy
-  if (query.sortDirection !== DEFAULT_INVOICE_QUERY.sortDirection) {
-    search['dir'] = query.sortDirection
-  }
-  if (query.statuses.length > 0) search['status'] = [...query.statuses].sort()
-  if (query.search) search['q'] = query.search
-
-  return search
-}

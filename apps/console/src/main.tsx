@@ -2,12 +2,25 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
 import { FlexpriceProvider } from '@fp/query'
-import '@fp/ui/styles.css'
+import './styles.css'
 import { router } from './app/router'
 import { env } from './env'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('#root is missing from index.html')
+
+/**
+ * Start the mock API before rendering, when asked.
+ *
+ * Dynamically imported so neither MSW nor the fixture corpus reaches a
+ * production bundle, and awaited so the first query cannot race the worker —
+ * otherwise the opening request escapes to the network and the screen shows an
+ * error that disappears on refresh.
+ */
+if (env.useMocks) {
+  const { startMocks } = await import('./mocks/browser')
+  await startMocks()
+}
 
 createRoot(container).render(
   <StrictMode>

@@ -29,12 +29,3 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
     types: [...new Set(types)],
   }
 }
-
-export function toFeatureSearch(query: FeatureQuery): Record<string, string | string[]> {
-  const search: Record<string, string | string[]> = {}
-  if (query.page !== DEFAULT_FEATURE_QUERY.page) search['page'] = String(query.page)
-  if (query.pageSize !== DEFAULT_FEATURE_QUERY.pageSize) search['size'] = String(query.pageSize)
-  if (query.search) search['q'] = query.search
-  if (query.types.length > 0) search['type'] = [...query.types].sort()
-  return search
-}
