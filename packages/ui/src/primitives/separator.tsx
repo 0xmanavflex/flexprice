@@ -1,5 +1,7 @@
 // @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
+"use client"
+
 import { Separator as SeparatorPrimitive } from "@base-ui/react/separator"
 import { cn } from "cn"
 

@@ -1,39 +1,30 @@
 import type { ReactNode } from 'react'
 import {
   BarChart3Icon,
+  CodeIcon,
   HouseIcon,
   PackageIcon,
   ReceiptIcon,
   SettingsIcon,
-  UsersIcon,
 } from 'lucide-react'
-import { AppShell, type ShellEnvironment, type ShellSection } from '@fp/ui/compositions'
 import { useNavCounts } from '@fp/query'
+import { AppShell, type ShellEnvironment } from '@fp/ui/compositions'
 import {
-  SECTION_COUNTS,
-  SECTION_IDS,
-  SECTION_LABEL,
-  SECTION_NAV,
-  type SectionId,
+  GROUP_COUNTS,
+  groupForNavId,
   navEntryForPath,
-  sectionForPath,
+  pathForNavId,
   toNavGroups,
 } from './navigation'
 
-const ICONS: Record<SectionId, ReactNode> = {
-  home: <HouseIcon className="size-5" />,
-  customers: <UsersIcon className="size-5" />,
-  billing: <ReceiptIcon className="size-5" />,
-  catalog: <PackageIcon className="size-5" />,
-  usage: <BarChart3Icon className="size-5" />,
-  settings: <SettingsIcon className="size-5" />,
+const ICONS: Record<string, ReactNode> = {
+  home: <HouseIcon className="size-4" />,
+  catalog: <PackageIcon className="size-4" />,
+  billing: <ReceiptIcon className="size-4" />,
+  revenue: <BarChart3Icon className="size-4" />,
+  developers: <CodeIcon className="size-4" />,
+  settings: <SettingsIcon className="size-4" />,
 }
-
-const SECTIONS: ShellSection[] = SECTION_IDS.map((id) => ({
-  id,
-  label: SECTION_LABEL[id],
-  icon: ICONS[id],
-}))
 
 export interface ConsoleShellProps {
   pathname: string
@@ -48,12 +39,13 @@ export interface ConsoleShellProps {
 /**
  * The shell, bound to routes.
  *
- * All the routing knowledge lives here rather than in `@fp/ui`: the shell is
- * given a section and a list, and reports which one was clicked. This is what
- * lets the shell be a story with no router mounted.
+ * All routing knowledge lives here rather than in `@fp/ui`: the shell is given
+ * a tree and an active id, and reports which one was clicked. That is what lets
+ * the shell be a story with no router mounted.
  *
- * A section with no children navigates to its first entry, or nowhere if it has
- * none — clicking "Home" on the rail should go Home, not select an empty panel.
+ * Clicking a parent navigates to its first child. A group heading that does
+ * nothing when clicked is a dead control, and the child is what the person
+ * wanted anyway.
  */
 export function ConsoleShell({
   pathname,
@@ -64,24 +56,25 @@ export function ConsoleShell({
   user,
   children,
 }: ConsoleShellProps) {
-  const section = sectionForPath(pathname)
-  // Counted here rather than passed in, so a page never has to remember to.
-  const counts = useNavCounts(SECTION_COUNTS[section])
   const activeItemId = navEntryForPath(pathname)
+  const openGroup = groupForNavId(activeItemId)
+  const counts = useNavCounts(openGroup ? (GROUP_COUNTS[openGroup] ?? []) : [])
 
   return (
     <AppShell
-      sections={SECTIONS}
-      activeSectionId={section}
-      onSectionChange={(next) => {
-        const first = SECTION_NAV[next as SectionId][0]
-        if (first) onNavigate(first.path)
-      }}
-      navGroups={toNavGroups(section, counts)}
+      navGroups={toNavGroups(ICONS, counts)}
       {...(activeItemId === undefined ? {} : { activeItemId })}
-      onNavigate={(itemId) => {
-        const entry = SECTION_NAV[section].find((candidate) => candidate.id === itemId)
-        if (entry) onNavigate(entry.path)
+      onNavigate={(id) => {
+        const path = pathForNavId(id)
+        if (path) {
+          onNavigate(path)
+          return
+        }
+        // A parent: go to its first child rather than doing nothing.
+        const group = toNavGroups()[0]?.items.find((item) => item.id === id)
+        const first = group?.items?.[0]
+        const childPath = first ? pathForNavId(first.id) : undefined
+        if (childPath) onNavigate(childPath)
       }}
       environment={environment}
       environments={environments}

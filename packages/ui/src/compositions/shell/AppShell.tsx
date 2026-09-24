@@ -1,43 +1,49 @@
 import { type CSSProperties, type ReactNode } from 'react'
-import { SidebarProvider } from '@ui/primitives/sidebar'
+import { SearchIcon } from 'lucide-react'
+import { Input } from '@ui/primitives/input'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarProvider,
+  SidebarTrigger,
+} from '@ui/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { EnvironmentSwitcher } from './EnvironmentSwitcher'
 import { ShellNav } from './ShellNav'
-import { ShellRail } from './ShellRail'
-import { ShellSearch } from './ShellSearch'
-import type { ShellEnvironment, ShellNavGroup, ShellSection, ShellUser } from './types'
+import type { ShellEnvironment, ShellNavGroup, ShellUser } from './types'
 
 /**
- * The application shell, adapted from `@reui/app-shell-16`.
+ * The application shell, adapted from `@reui/app-shell-3`.
  *
- * Adapted, not merely built on its primitives: the dark rounded rail, the
- * `bg-muted` navigation panel with its raised active item, and the search that
- * collapses into a dialog below `lg` are the block's design. An earlier version
- * composed the same primitives from scratch and produced something much flatter
- * — the block is the baseline, and its treatment is most of what makes it one.
+ * One inset sidebar that collapses to icons, with nested navigation, the search
+ * field *inside* the sidebar, and a pinned slot above the footer. The header is
+ * deliberately thin — a breadcrumb and nothing else.
  *
- * What is ours is the contract. It is entirely controlled and entirely
- * presentational: no route state, no navigation, and it cannot import the query
- * layer. That is what lets every arrangement be a story — an empty catalogue, a
- * production environment, a section with no children.
+ * This replaces a two-level rail, and the reason is the product's own shape:
+ * twenty-four destinations across three deep groups. A rail that swaps its
+ * panel shows one group at a time, so standing in the catalogue you cannot see
+ * that Billing has invoices under it. Nesting keeps the whole tree legible, and
+ * it is the model the current dashboard already uses.
  *
- * Two levels because Flexprice has six sections averaging three children each.
- * A single flat sidebar would be twenty-plus items with no grouping, and a
- * top-nav-only shell has nowhere to put the children at all.
+ * The active-item treatment is the block's and is why it reads as layered: the
+ * selected row is a raised card — border, shadow, background — rather than a
+ * tint, and hover is transparent so the selection is the only surface.
+ *
+ * Fully controlled and entirely presentational: no route state, no navigation,
+ * and it cannot import the query layer. That is what lets every arrangement be
+ * a story.
  */
 export const AppShellProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/app-shell-16', 'ui/sidebar', 'ui/button', 'ui/dialog', '@reui/badge'],
-  note: 'Adapted from app-shell-16: its layout and treatment, our controlled contract.',
+  composes: ['@reui/app-shell-3', 'ui/sidebar', 'ui/input', '@reui/badge'],
+  note: 'Adapted from app-shell-3: single inset sidebar, nested nav, our controlled contract.',
 })
 
 export interface AppShellProps {
-  sections: ShellSection[]
-  activeSectionId: string
-  onSectionChange: (sectionId: string) => void
-
-  /** The active section's own navigation. Empty renders no second panel. */
   navGroups: ShellNavGroup[]
   activeItemId?: string
   onNavigate: (itemId: string) => void
@@ -47,17 +53,40 @@ export interface AppShellProps {
   onEnvironmentChange: (environmentId: string) => void
 
   user: ShellUser
+  productName?: string
   logo?: ReactNode
   onSearch?: (term: string) => void
+  /** Pinned above the footer — an allowance, a usage meter, an alert count. */
+  pinned?: ReactNode
   breadcrumb?: ReactNode
   accountMenu?: ReactNode
   children: ReactNode
 }
 
+/**
+ * The block's selection treatment, lifted as written.
+ *
+ * Expressed as data-slot selectors because they reach inside the Sidebar
+ * primitive's own markup — which is vendored, and which we must not fork to
+ * restyle.
+ */
+const SELECTION = [
+  '[&_[data-slot=sidebar-menu-button][data-active]]:border-border/60!',
+  '[&_[data-slot=sidebar-menu-button][data-active]]:border',
+  '[&_[data-slot=sidebar-menu-button][data-active]]:shadow-xs!',
+  '[&_[data-slot=sidebar-menu-button][data-active]]:bg-background!',
+  '[&_[data-slot=sidebar-menu-button][data-active]]:hover:bg-background!',
+  '**:data-[slot=sidebar-menu-button]:hover:bg-transparent!',
+  '[&_[data-slot=sidebar-menu-button][data-active]]:text-foreground',
+  '**:data-[slot=sidebar-menu-button]:hover:text-foreground',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:border-border/60!',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:border',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:shadow-xs!',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:bg-background!',
+  '**:data-[slot=sidebar-menu-sub-button]:hover:bg-transparent!',
+].join(' ')
+
 export function AppShell({
-  sections,
-  activeSectionId,
-  onSectionChange,
   navGroups,
   activeItemId,
   onNavigate,
@@ -65,20 +94,20 @@ export function AppShell({
   environments,
   onEnvironmentChange,
   user,
+  productName = 'Flexprice',
   logo,
   onSearch,
+  pinned,
   breadcrumb,
   accountMenu,
   children,
 }: AppShellProps) {
-  const activeSection = sections.find((section) => section.id === activeSectionId)
-  const hasNav = navGroups.some((group) => group.items.length > 0)
   const isProduction = environment.kind === 'production'
 
   return (
     <SidebarProvider
-      className="bg-muted dark:bg-background h-screen [--header-height:56px]"
-      style={{ '--sidebar-width': '56px' } as CSSProperties}
+      className={cn('h-screen', SELECTION)}
+      style={{ '--sidebar-width': '260px' } as CSSProperties}
     >
       {/*
         A marker across the whole shell, not only on the switcher — visible
@@ -89,55 +118,100 @@ export function AppShell({
         <div aria-hidden className="bg-destructive fixed inset-x-0 top-0 z-50 h-1" />
       ) : null}
 
-      <ShellRail
-        sections={sections}
-        activeSectionId={activeSectionId}
-        onSectionChange={onSectionChange}
-        user={user}
-        {...(logo ? { logo } : {})}
-      />
+      <Sidebar collapsible="icon" variant="inset" aria-label="Main">
+        <SidebarHeader className="gap-2">
+          <div className="flex items-center justify-between gap-2">
+            <div className="flex min-h-9 items-center gap-2 px-0.5">
+              {logo ?? (
+                <span
+                  aria-hidden
+                  className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold"
+                >
+                  F
+                </span>
+              )}
+              <span className="truncate text-sm font-medium in-data-[state=collapsed]:hidden">
+                {productName}
+              </span>
+            </div>
+            <SidebarTrigger className="opacity-60 hover:opacity-100" />
+          </div>
 
-      {hasNav ? (
-        <ShellNav
-          title={activeSection?.label ?? ''}
-          groups={navGroups}
-          {...(activeItemId === undefined ? {} : { activeItemId })}
-          onNavigate={onNavigate}
-        />
-      ) : null}
-
-      {/*
-        The content sits on its own rounded surface, the block's inset
-        treatment — which is what separates it from the rail and panel rather
-        than a border doing the work.
-      */}
-      <div className={cn('flex min-w-0 flex-1 flex-col p-2.5', isProduction && 'pt-3.5')}>
-        <div className="bg-background flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl border shadow-xs">
-          <header className="flex h-(--header-height) shrink-0 items-center gap-3 border-b px-4">
+          {/*
+            The environment switcher sits at the top, not in the footer where
+            the block puts its workspace picker. It is the most consequential
+            control in the product — editing a live plan is not the same act as
+            editing a sandbox one — and burying it would contradict that.
+          */}
+          <div className="in-data-[state=collapsed]:hidden">
             <EnvironmentSwitcher
               current={environment}
               environments={environments}
               onChange={onEnvironmentChange}
             />
+          </div>
+        </SidebarHeader>
 
-            {breadcrumb ? (
-              <div className="min-w-0 flex-1">{breadcrumb}</div>
-            ) : (
-              <div className="flex-1" />
-            )}
+        <SidebarContent>
+          {/* Search lives in the sidebar, as the block has it. */}
+          <div className="px-2 py-2 in-data-[state=collapsed]:hidden">
+            <form
+              role="search"
+              className="relative"
+              onSubmit={(event) => {
+                event.preventDefault()
+                onSearch?.(new FormData(event.currentTarget).get('q')?.toString() ?? '')
+              }}
+            >
+              <SearchIcon
+                aria-hidden
+                className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
+              />
+              <Input
+                type="search"
+                name="q"
+                aria-label="Search"
+                placeholder="Search"
+                className="h-8 pl-8"
+              />
+            </form>
+          </div>
 
-            <ShellSearch {...(onSearch ? { onSearch } : {})} />
+          <ShellNav
+            groups={navGroups}
+            {...(activeItemId === undefined ? {} : { activeItemId })}
+            onNavigate={onNavigate}
+          />
 
-            {accountMenu ?? (
-              <span className="text-muted-foreground hidden text-sm sm:inline" title={user.email}>
-                {user.name}
-              </span>
-            )}
-          </header>
+          {pinned ? (
+            <div className="mt-auto px-2 pb-2 in-data-[state=collapsed]:hidden">{pinned}</div>
+          ) : null}
+        </SidebarContent>
 
-          <main className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</main>
-        </div>
-      </div>
+        <SidebarFooter>
+          {accountMenu ?? (
+            <div className="flex min-w-0 flex-col px-2 py-1 in-data-[state=collapsed]:hidden">
+              <span className="truncate text-sm font-medium">{user.name}</span>
+              <span className="text-muted-foreground truncate text-xs">{user.email}</span>
+            </div>
+          )}
+        </SidebarFooter>
+      </Sidebar>
+
+      <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden">
+        <header
+          className={cn('flex h-12 shrink-0 items-center gap-2 px-4', isProduction && 'pt-1')}
+        >
+          <SidebarTrigger className="-ml-1 md:hidden" />
+          {breadcrumb}
+        </header>
+
+        {/*
+          A div, not a `main`. `SidebarInset` is already the `main` landmark —
+          nesting another inside it produces two, and a document may have one.
+        */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+      </SidebarInset>
     </SidebarProvider>
   )
 }

@@ -1,13 +1,12 @@
 import type { ReactNode } from 'react'
 
-/** A top-level destination on the icon rail. */
-export interface ShellSection {
-  id: string
-  label: string
-  icon: ReactNode
-}
-
-/** An entry in the section's own navigation panel. */
+/**
+ * A destination, or a group of them.
+ *
+ * One level of nesting, which is what the product needs: Product Catalog has
+ * seven children, Billing six, Developers seven. A flat list would be
+ * twenty-plus items with no grouping.
+ */
 export interface ShellNavItem {
   id: string
   label: string
@@ -15,11 +14,12 @@ export interface ShellNavItem {
   /**
    * How many of this thing exist.
    *
-   * Shown so "is there anything here?" is answered before a click — which is
-   * how an empty catalogue becomes obvious rather than a surprise after
-   * navigating.
+   * Answers "is there anything here?" before a click, which is how an empty
+   * catalogue becomes obvious rather than a surprise after navigating.
    */
   count?: number
+  /** Children. A parent with children is expandable rather than navigable. */
+  items?: ShellNavItem[]
 }
 
 export interface ShellNavGroup {

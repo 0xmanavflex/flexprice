@@ -1,100 +1,115 @@
 import type { CountableId } from '@fp/query'
-import type { ShellNavGroup, ShellSection } from '@fp/ui/compositions'
+import type { ShellNavGroup } from '@fp/ui/compositions'
 
 /**
- * The navigation, ordered by how often a finance person needs it.
+ * The navigation tree.
  *
- * Catalog is fourth here and first to be built, because customers, billing and
- * usage all reference it. Navigation order and build order are different
- * things, and conflating them is how a product ends up with a menu sorted by
- * engineering convenience.
+ * One flat group with one level of nesting, which is what the product needs:
+ * Product Catalog has seven children, Billing six, Developers seven. The shape
+ * mirrors the dashboard people already use, so nobody has to relearn where
+ * anything lives.
  *
- * Icons are supplied by the app rather than declared here, so this module stays
- * free of JSX and can be unit-tested as data.
+ * Icons are attached by the app rather than declared here, so this module stays
+ * free of JSX and can be tested as data.
  */
-export const SECTION_IDS = ['home', 'customers', 'billing', 'catalog', 'usage', 'settings'] as const
-export type SectionId = (typeof SECTION_IDS)[number]
-
-export const SECTION_LABEL: Record<SectionId, string> = {
-  home: 'Home',
-  customers: 'Customers',
-  billing: 'Billing',
-  catalog: 'Catalog',
-  usage: 'Usage',
-  settings: 'Settings',
-}
-
-/** Sub-navigation per section. `path` is the route it goes to. */
 export interface NavEntry {
   id: string
   label: string
-  path: string
+  /** Absent for a parent: it expands rather than navigating somewhere of its own. */
+  path?: string
+  children?: NavEntry[]
 }
 
-export const SECTION_NAV: Record<SectionId, NavEntry[]> = {
-  home: [],
-  customers: [
-    { id: 'customers', label: 'Customers', path: '/customers' },
-    { id: 'subscriptions', label: 'Subscriptions', path: '/subscriptions' },
-  ],
-  billing: [{ id: 'invoices', label: 'Invoices', path: '/invoices' }],
-  catalog: [
-    { id: 'features', label: 'Features', path: '/features' },
-    { id: 'plans', label: 'Plans', path: '/plans' },
-  ],
-  usage: [],
-  settings: [],
-}
+export const NAV: NavEntry[] = [
+  { id: 'home', label: 'Home', path: '/' },
+  {
+    id: 'catalog',
+    label: 'Product Catalog',
+    children: [
+      { id: 'features', label: 'Features', path: '/features' },
+      { id: 'plans', label: 'Plans', path: '/plans' },
+    ],
+  },
+  {
+    id: 'billing',
+    label: 'Billing',
+    children: [
+      { id: 'customers', label: 'Customers', path: '/customers' },
+      { id: 'invoices', label: 'Invoices', path: '/invoices' },
+      { id: 'subscriptions', label: 'Subscriptions', path: '/subscriptions' },
+    ],
+  },
+  { id: 'revenue', label: 'Revenue', path: '/revenue' },
+  { id: 'developers', label: 'Developers', path: '/developers' },
+  { id: 'settings', label: 'Settings', path: '/settings' },
+]
 
-/** Which section a path belongs to. Drives the rail without duplicating routes. */
-export function sectionForPath(pathname: string): SectionId {
-  for (const section of SECTION_IDS) {
-    if (SECTION_NAV[section].some((entry) => pathname.startsWith(entry.path))) return section
-  }
-  return 'home'
-}
-
-export function navEntryForPath(pathname: string): string | undefined {
-  for (const section of SECTION_IDS) {
-    const match = SECTION_NAV[section].find((entry) => pathname.startsWith(entry.path))
-    if (match) return match.id
-  }
-  return undefined
+/** Every entry that can be navigated to, flattened. */
+function leaves(entries: NavEntry[] = NAV): NavEntry[] {
+  return entries.flatMap((entry) => [
+    ...(entry.path ? [entry] : []),
+    ...leaves(entry.children ?? []),
+  ])
 }
 
 /**
- * Which entities a section wants counted.
+ * Which entry a path belongs to.
  *
- * Only the active section is counted — nobody needs the invoice count while
- * looking at the catalogue, and counting all six on every navigation would be
- * a dozen requests to render a sidebar.
+ * Longest match wins, so `/features/new` resolves to `features` rather than to
+ * `/` — which would otherwise match everything.
  */
-export const SECTION_COUNTS: Record<SectionId, readonly CountableId[]> = {
-  home: [],
-  customers: ['customers', 'subscriptions'],
-  billing: ['invoices'],
-  catalog: ['features', 'plans'],
-  usage: [],
-  settings: [],
+export function navEntryForPath(pathname: string): string | undefined {
+  const match = leaves()
+    .filter((entry) => entry.path === '/' ? pathname === '/' : pathname.startsWith(entry.path ?? ''))
+    .sort((a, b) => (b.path?.length ?? 0) - (a.path?.length ?? 0))[0]
+  return match?.id
 }
 
-/** Counts come from the app; the shape is built here. */
+export function pathForNavId(id: string): string | undefined {
+  return leaves().find((entry) => entry.id === id)?.path
+}
+
+/**
+ * Which entities to count, by the group that is open.
+ *
+ * Only the expanded group is counted — nobody needs the invoice count while
+ * looking at the catalogue, and counting everything on every navigation would
+ * be a dozen requests to render a sidebar.
+ */
+export const GROUP_COUNTS: Record<string, readonly CountableId[]> = {
+  catalog: ['features', 'plans'],
+  billing: ['customers', 'invoices', 'subscriptions'],
+}
+
+/** The group an entry sits in, so its counts can be fetched. */
+export function groupForNavId(id: string | undefined): string | undefined {
+  if (!id) return undefined
+  return NAV.find((entry) => entry.id === id || (entry.children ?? []).some((c) => c.id === id))?.id
+}
+
+/** Builds what the shell renders. Counts come from the app. */
 export function toNavGroups(
-  section: SectionId,
+  icons: Record<string, React.ReactNode> = {},
   counts: Partial<Record<string, number>> = {},
 ): ShellNavGroup[] {
-  const items = SECTION_NAV[section]
-  if (items.length === 0) return []
   return [
     {
-      id: section,
-      items: items.map((entry) => ({
+      id: 'main',
+      items: NAV.map((entry) => ({
         id: entry.id,
         label: entry.label,
+        ...(icons[entry.id] ? { icon: icons[entry.id] } : {}),
         ...(counts[entry.id] !== undefined ? { count: counts[entry.id] } : {}),
+        ...(entry.children
+          ? {
+              items: entry.children.map((child) => ({
+                id: child.id,
+                label: child.label,
+                ...(counts[child.id] !== undefined ? { count: counts[child.id] } : {}),
+              })),
+            }
+          : {}),
       })),
     },
   ]
 }
-
-export type { ShellSection }

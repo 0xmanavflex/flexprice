@@ -24,6 +24,7 @@ function AuthLogo({ className }: LogoProps) {
           height="50"
           viewBox="25.668 25.1352 49.6644 50"
           fill="none"
+          xmlns="http://www.w3.org/2000/svg"
           className="size-4"
         >
           <circle cx="70.634" cy="29.8334" r="4.69799" fill="currentColor" />

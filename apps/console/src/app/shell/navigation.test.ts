@@ -1,27 +1,21 @@
 import { describe, expect, it } from 'vitest'
-import { SECTION_IDS, navEntryForPath, sectionForPath, toNavGroups } from './navigation'
-
-describe('sectionForPath', () => {
-  it.each([
-    ['/features', 'catalog'],
-    ['/features/new', 'catalog'],
-    ['/plans', 'catalog'],
-    ['/invoices', 'billing'],
-    ['/invoices?page=2', 'billing'],
-    ['/customers', 'customers'],
-  ])('puts %s in %s', (path, section) => {
-    expect(sectionForPath(path)).toBe(section)
-  })
-
-  // An unknown path must land somewhere rather than leaving the rail blank.
-  it.each(['/', '/nonsense', ''])('falls back to home for %p', (path) => {
-    expect(sectionForPath(path)).toBe('home')
-  })
-})
+import { NAV, groupForNavId, navEntryForPath, pathForNavId, toNavGroups } from './navigation'
 
 describe('navEntryForPath', () => {
-  it('finds the entry a nested route belongs to', () => {
-    expect(navEntryForPath('/features/new')).toBe('features')
+  it.each([
+    ['/features', 'features'],
+    ['/features/new', 'features'],
+    ['/invoices', 'invoices'],
+    ['/invoices?page=2', 'invoices'],
+    ['/customers', 'customers'],
+  ])('resolves %s to %s', (path, id) => {
+    expect(navEntryForPath(path)).toBe(id)
+  })
+
+  // Longest match wins: '/' would otherwise match every path.
+  it('does not let the root entry swallow every path', () => {
+    expect(navEntryForPath('/')).toBe('home')
+    expect(navEntryForPath('/features')).not.toBe('home')
   })
 
   it('returns nothing for a path with no entry', () => {
@@ -29,23 +23,53 @@ describe('navEntryForPath', () => {
   })
 })
 
-describe('toNavGroups', () => {
-  it('renders no group for a section with no children', () => {
-    expect(toNavGroups('home')).toEqual([])
+describe('groupForNavId', () => {
+  it('finds the group a child belongs to', () => {
+    expect(groupForNavId('features')).toBe('catalog')
+    expect(groupForNavId('invoices')).toBe('billing')
   })
 
-  it('carries counts through when given, and omits them when not', () => {
-    const [group] = toNavGroups('catalog', { features: 12 })
-    expect(group?.items.find((i) => i.id === 'features')?.count).toBe(12)
-    expect(group?.items.find((i) => i.id === 'plans')).not.toHaveProperty('count')
+  it('treats a top-level entry as its own group', () => {
+    expect(groupForNavId('home')).toBe('home')
+  })
+
+  it('handles an unknown id', () => {
+    expect(groupForNavId(undefined)).toBeUndefined()
+    expect(groupForNavId('nonsense')).toBeUndefined()
+  })
+})
+
+describe('toNavGroups', () => {
+  it('nests children under their parent', () => {
+    const [group] = toNavGroups()
+    const catalog = group?.items.find((item) => item.id === 'catalog')
+    expect(catalog?.items?.map((child) => child.id)).toEqual(['features', 'plans'])
+  })
+
+  it('carries counts onto children, and omits them when absent', () => {
+    const [group] = toNavGroups({}, { features: 12 })
+    const catalog = group?.items.find((item) => item.id === 'catalog')
+    expect(catalog?.items?.find((c) => c.id === 'features')?.count).toBe(12)
+    expect(catalog?.items?.find((c) => c.id === 'plans')).not.toHaveProperty('count')
   })
 
   it('shows a zero count rather than hiding it', () => {
-    const [group] = toNavGroups('catalog', { plans: 0 })
-    expect(group?.items.find((i) => i.id === 'plans')?.count).toBe(0)
+    const [group] = toNavGroups({}, { plans: 0 })
+    const catalog = group?.items.find((item) => item.id === 'catalog')
+    expect(catalog?.items?.find((c) => c.id === 'plans')?.count).toBe(0)
+  })
+})
+
+describe('the tree itself', () => {
+  it('gives every entry either a path or children, never neither', () => {
+    for (const entry of NAV) {
+      expect(entry.path ?? entry.children, entry.id).toBeDefined()
+    }
   })
 
-  it('covers every section', () => {
-    for (const section of SECTION_IDS) expect(() => toNavGroups(section)).not.toThrow()
+  it('every navigable id round-trips to a path', () => {
+    for (const entry of NAV) {
+      for (const child of entry.children ?? []) expect(pathForNavId(child.id)).toBeDefined()
+    }
   })
 })

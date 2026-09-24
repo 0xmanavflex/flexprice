@@ -1,85 +1,121 @@
+import { ChevronRightIcon } from 'lucide-react'
 import { Badge } from '@ui/components/reui/badge'
-import { Button } from '@ui/primitives/button'
-import { cn } from '@ui/lib/cn'
-import type { ShellNavGroup } from './types'
+import {
+  SidebarGroup,
+  SidebarGroupLabel,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarMenuSub,
+  SidebarMenuSubButton,
+  SidebarMenuSubItem,
+} from '@ui/primitives/sidebar'
+import type { ShellNavGroup, ShellNavItem } from './types'
 
 /**
- * The section's own navigation, taking its treatment from
- * `@reui/app-shell-16`.
+ * Nested navigation, in `@reui/app-shell-3`'s treatment.
  *
- * A `bg-muted` panel where the *active* item is the one with a raised white
- * surface — the inverse of the usual "tint the selection" pattern, and the
- * reason the block reads as layered rather than flat.
+ * A parent with children expands in place rather than replacing the panel. For
+ * twenty-four destinations across three deep groups that matters: standing in
+ * the catalogue you can still see that Billing exists and what is under it,
+ * which a rail that swaps its panel cannot show.
  *
- * One deviation from the block: its labels use `text-muted-foreground` on this
- * `bg-muted` panel, which measures 4.34:1 and fails AA. Muted on muted is the
- * recurring version of this mistake — the token is tuned for the page
- * background, not for a surface that has already been tinted.
+ * The expansion is *derived*, not stored — a group is open because something
+ * inside it is active. There is no second source of truth to fall out of step
+ * with the URL, and a deep link opens the right group without anyone wiring it.
  */
 export interface ShellNavProps {
-  title: string
   groups: ShellNavGroup[]
   activeItemId?: string
   onNavigate: (itemId: string) => void
 }
 
-export function ShellNav({ title, groups, activeItemId, onNavigate }: ShellNavProps) {
+function containsActive(item: ShellNavItem, activeItemId?: string): boolean {
+  if (item.id === activeItemId) return true
+  return (item.items ?? []).some((child) => child.id === activeItemId)
+}
+
+export function ShellNav({ groups, activeItemId, onNavigate }: ShellNavProps) {
   return (
-    <aside
-      aria-label={title}
-      className="bg-muted dark:bg-background hidden w-60 shrink-0 flex-col overflow-hidden md:flex"
-    >
-      <div className="px-4 pt-5 pb-3">
-        <p className="text-foreground/75 text-xs font-semibold tracking-wide uppercase">
-          {title}
-        </p>
-      </div>
-
-      <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-2 pb-4">
-        {groups.map((group) => (
-          <div key={group.id} className="flex flex-col gap-0.5">
-            {group.title ? (
-              <p className="text-foreground/75 px-2 pb-1 text-xs font-medium">{group.title}</p>
-            ) : null}
-
+    <>
+      {groups.map((group) => (
+        <SidebarGroup key={group.id}>
+          {group.title ? <SidebarGroupLabel>{group.title}</SidebarGroupLabel> : null}
+          <SidebarMenu>
             {group.items.map((item) => {
-              const isActive = item.id === activeItemId
+              const children = item.items ?? []
+              const expanded = containsActive(item, activeItemId)
+
               return (
-                <Button
-                  key={item.id}
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => onNavigate(item.id)}
-                  aria-current={isActive ? 'page' : undefined}
-                  className={cn(
-                    'h-8 w-full justify-start gap-2 rounded-md px-2 text-sm font-normal',
-                    isActive
-                      ? 'bg-background text-foreground hover:bg-background shadow-xs'
-                      : 'text-foreground hover:bg-background/70',
-                  )}
-                >
-                  {item.icon ? (
-                    <span className="text-muted-foreground size-4 shrink-0 opacity-80 [&_svg]:size-4">
-                      {item.icon}
-                    </span>
+                <SidebarMenuItem key={item.id}>
+                  <SidebarMenuButton
+                    isActive={children.length === 0 && item.id === activeItemId}
+                    onClick={() => onNavigate(item.id)}
+                    aria-current={item.id === activeItemId ? 'page' : undefined}
+                    {...(children.length > 0 ? { 'aria-expanded': expanded } : {})}
+                    tooltip={item.label}
+                  >
+                    {item.icon}
+                    <span className="min-w-0 truncate">{item.label}</span>
+
+                    {item.count !== undefined ? (
+                      // Hidden from assistive tech: the count is already in the
+                      // button's accessible name, and a bare number read twice
+                      // has no context the second time.
+                      <Badge variant="outline" size="sm" className="ml-auto" aria-hidden>
+                        {item.count}
+                      </Badge>
+                    ) : null}
+
+                    {children.length > 0 ? (
+                      <ChevronRightIcon
+                        aria-hidden
+                        className={`ml-auto size-4 transition-transform ${
+                          expanded ? 'rotate-90' : ''
+                        }`}
+                      />
+                    ) : null}
+                  </SidebarMenuButton>
+
+                  {children.length > 0 && expanded ? (
+                    <SidebarMenuSub>
+                      {children.map((child) => (
+                        <SidebarMenuSubItem key={child.id}>
+                          {/*
+                            Rendered as a real button. `SidebarMenuSubButton`
+                            defaults to an anchor, and an anchor with no href
+                            has no role and cannot be focused by keyboard — so
+                            the sub-navigation would have been unreachable
+                            without a mouse.
+                          */}
+                          <SidebarMenuSubButton
+                            render={<button type="button" />}
+                            isActive={child.id === activeItemId}
+                            onClick={() => onNavigate(child.id)}
+                            aria-current={child.id === activeItemId ? 'page' : undefined}
+                          >
+                            <span className="min-w-0 truncate">{child.label}</span>
+                            {child.count !== undefined ? (
+                              <Badge
+                                variant="outline"
+                                size="sm"
+                                className="ml-auto"
+                                aria-hidden
+                              >
+                                {child.count}
+                              </Badge>
+                            ) : null}
+                          </SidebarMenuSubButton>
+                        </SidebarMenuSubItem>
+                      ))}
+                    </SidebarMenuSub>
                   ) : null}
-                  <span className="min-w-0 truncate">{item.label}</span>
-                  {/*
-                    `aria-hidden` because the count is already in the button's
-                    accessible name — otherwise a screen reader hears a bare
-                    number with no context.
-                  */}
-                  {item.count !== undefined ? (
-                    <Badge variant="outline" size="sm" className="ml-auto" aria-hidden>
-                      {item.count}
-                    </Badge>
-                  ) : null}
-                </Button>
+                </SidebarMenuItem>
               )
             })}
-          </div>
-        ))}
-      </div>
-    </aside>
+          </SidebarMenu>
+        </SidebarGroup>
+      ))}
+    </>
   )
 }

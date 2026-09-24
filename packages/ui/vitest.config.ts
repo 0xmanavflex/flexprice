@@ -27,6 +27,16 @@ export default defineConfig({
             enabled: true,
             provider: playwright(),
             headless: true,
+            /**
+             * A desktop viewport, explicitly.
+             *
+             * The default is narrower than the sidebar's mobile breakpoint, so
+             * `useIsMobile` was true and the Sidebar rendered as its closed
+             * Sheet — the navigation was simply not in the DOM, and every
+             * query for it failed in a way that looked like a selector
+             * problem rather than a layout one.
+             */
+            viewport: { width: 1280, height: 800 },
             instances: [{ browser: 'chromium' }],
           },
         },
