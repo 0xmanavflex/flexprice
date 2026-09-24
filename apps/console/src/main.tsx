@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
+import { AppFailure } from '@fp/ui/compositions'
 import { FlexpriceProvider } from '@fp/query'
 import './styles.css'
 import { router } from './app/router'
@@ -20,6 +21,19 @@ if (!container) throw new Error('#root is missing from index.html')
 if (env.useMocks) {
   const { startMocks } = await import('./mocks/browser')
   await startMocks()
+}
+
+if (env.problem) {
+  createRoot(container).render(
+    <StrictMode>
+      <AppFailure
+        title={env.problem.title}
+        detail={env.problem.detail}
+        fix={env.problem.fix}
+      />
+    </StrictMode>,
+  )
+  throw new Error(env.problem.detail)
 }
 
 createRoot(container).render(

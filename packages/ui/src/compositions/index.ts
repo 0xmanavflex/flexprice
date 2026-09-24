@@ -23,6 +23,9 @@ export type { ToolbarProps } from './Toolbar'
 export { PageBody, PageHeader, PageProvenance, PageToolbar } from './Page'
 export type { PageHeaderProps } from './Page'
 
+export { AppFailure, AppFailureProvenance } from './AppFailure'
+export type { AppFailureProps } from './AppFailure'
+
 export { ErrorState, ListState, LoadingRows, StatesProvenance } from './States'
 export type { ErrorStateProps, ListStateProps } from './States'
 

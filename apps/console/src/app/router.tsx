@@ -10,7 +10,7 @@ import {
 } from '@tanstack/react-router'
 import { Outlet } from '@tanstack/react-router'
 import { lazy, Suspense, useState as useReactState } from 'react'
-import { LoadingRows } from '@fp/ui/compositions'
+import { AppFailure, LoadingRows } from '@fp/ui/compositions'
 import { ConsoleShell } from './shell/ConsoleShell'
 import type { InvoiceQuery } from '@fp/domain'
 const InvoiceListPage = lazy(() =>
@@ -77,7 +77,21 @@ function RootLayout() {
   )
 }
 
-const rootRoute = createRootRoute({ component: RootLayout })
+const rootRoute = createRootRoute({
+  component: RootLayout,
+  /**
+   * Without this a thrown route — including a rejected lazy import — renders
+   * nothing at all, and a crash is indistinguishable from an empty list.
+   */
+  errorComponent: ({ error, reset }) => (
+    <AppFailure
+      title="This page could not be loaded"
+      detail="The rest of the console still works. Try again, or pick another page."
+      onRetry={reset}
+      {...(import.meta.env.DEV && error instanceof Error ? { technical: error.stack ?? error.message } : {})}
+    />
+  ),
+})
 
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
