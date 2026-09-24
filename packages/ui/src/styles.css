@@ -92,7 +92,17 @@
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
     --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
+    /*
+     * Darkened from nova's 0.556 (#737373), which fails WCAG AA against
+     * `--muted` (#f5f5f5) at 4.34:1 — and muted text on a muted surface is one
+     * of the registry's most common pairings, so the failure turned up in a
+     * keyboard hint, an avatar fallback and a badge before this was traced to
+     * the token rather than to the components.
+     *
+     * 0.540 is #6d6d6d: 4.62:1 on `--muted`, 5.4:1 on `--background`, and
+     * visually indistinguishable from what it replaces.
+     */
+    --muted-foreground: oklch(0.540 0 0);
     --accent: oklch(0.97 0 0);
     --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);

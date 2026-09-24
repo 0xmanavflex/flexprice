@@ -1,13 +1,17 @@
 import type { CountableId } from '@fp/query'
-import type { ShellNavGroup } from '@fp/ui/compositions'
+import type { ShellCrumb, ShellNavGroup, ShellNavItem } from '@fp/ui/compositions'
 
 /**
  * The navigation tree.
  *
- * One flat group with one level of nesting, which is what the product needs:
- * Product Catalog has seven children, Billing six, Developers seven. The shape
- * mirrors the dashboard people already use, so nobody has to relearn where
- * anything lives.
+ * Twenty-four destinations, one level of nesting, in the arrangement the
+ * current dashboard already uses: Product Catalog has seven children, Billing
+ * six, Developers seven. Keeping the grouping means nobody has to relearn where
+ * anything lives during the migration — the shell changed, the map did not.
+ *
+ * Paths are one flat segment each. The current dashboard nests them
+ * (`/product-catalog/coupons`, `/billing/payments`), which buys nothing a
+ * person can see and makes every URL longer than the thing it identifies.
  *
  * Icons are attached by the app rather than declared here, so this module stays
  * free of JSX and can be tested as data.
@@ -15,7 +19,7 @@ import type { ShellNavGroup } from '@fp/ui/compositions'
 export interface NavEntry {
   id: string
   label: string
-  /** Absent for a parent: it expands rather than navigating somewhere of its own. */
+  /** Absent for a parent: it expands, and clicking it goes to its first child. */
   path?: string
   children?: NavEntry[]
 }
@@ -28,6 +32,11 @@ export const NAV: NavEntry[] = [
     children: [
       { id: 'features', label: 'Features', path: '/features' },
       { id: 'plans', label: 'Plans', path: '/plans' },
+      { id: 'coupons', label: 'Coupons', path: '/coupons' },
+      { id: 'addons', label: 'Addons', path: '/addons' },
+      { id: 'cost-sheets', label: 'Cost Sheets', path: '/cost-sheets' },
+      { id: 'price-units', label: 'Price Units', path: '/price-units' },
+      { id: 'groups', label: 'Groups', path: '/groups' },
     ],
   },
   {
@@ -35,17 +44,45 @@ export const NAV: NavEntry[] = [
     label: 'Billing',
     children: [
       { id: 'customers', label: 'Customers', path: '/customers' },
-      { id: 'invoices', label: 'Invoices', path: '/invoices' },
       { id: 'subscriptions', label: 'Subscriptions', path: '/subscriptions' },
+      { id: 'invoices', label: 'Invoices', path: '/invoices' },
+      { id: 'payments', label: 'Payments', path: '/payments' },
+      { id: 'credit-notes', label: 'Credit Notes', path: '/credit-notes' },
+      { id: 'taxes', label: 'Taxes', path: '/taxes' },
     ],
   },
   { id: 'revenue', label: 'Revenue', path: '/revenue' },
-  { id: 'developers', label: 'Developers', path: '/developers' },
+  {
+    id: 'developers',
+    label: 'Developers',
+    children: [
+      { id: 'events', label: 'Events Debugger', path: '/events' },
+      { id: 'api-keys', label: 'API Keys', path: '/api-keys' },
+      { id: 'service-accounts', label: 'Service Accounts', path: '/service-accounts' },
+      { id: 'webhooks', label: 'Webhooks', path: '/webhooks' },
+      { id: 'exports', label: 'Exports', path: '/exports' },
+      { id: 'usage-syncs', label: 'Usage Syncs', path: '/usage-syncs' },
+      { id: 'workflows', label: 'Workflows', path: '/workflows' },
+    ],
+  },
+  { id: 'integrations', label: 'Integrations', path: '/integrations' },
+  { id: 'pricing-widget', label: 'Pricing Widget', path: '/pricing-widget' },
+]
+
+/**
+ * Secondary links, below the navigation and under their own heading.
+ *
+ * Separate from `NAV` because they are not part of the product's map — nobody
+ * navigates the console by way of Settings. Grouping them keeps the primary
+ * tree at twenty-four items rather than twenty-six.
+ */
+export const SECONDARY: NavEntry[] = [
   { id: 'settings', label: 'Settings', path: '/settings' },
+  { id: 'docs', label: 'Documentation', path: '/docs' },
 ]
 
 /** Every entry that can be navigated to, flattened. */
-function leaves(entries: NavEntry[] = NAV): NavEntry[] {
+function leaves(entries: NavEntry[] = [...NAV, ...SECONDARY]): NavEntry[] {
   return entries.flatMap((entry) => [
     ...(entry.path ? [entry] : []),
     ...leaves(entry.children ?? []),
@@ -60,13 +97,45 @@ function leaves(entries: NavEntry[] = NAV): NavEntry[] {
  */
 export function navEntryForPath(pathname: string): string | undefined {
   const match = leaves()
-    .filter((entry) => entry.path === '/' ? pathname === '/' : pathname.startsWith(entry.path ?? ''))
+    .filter((entry) =>
+      entry.path === '/' ? pathname === '/' : pathname.startsWith(entry.path ?? ''),
+    )
     .sort((a, b) => (b.path?.length ?? 0) - (a.path?.length ?? 0))[0]
   return match?.id
 }
 
 export function pathForNavId(id: string): string | undefined {
   return leaves().find((entry) => entry.id === id)?.path
+}
+
+export function labelForNavId(id: string): string | undefined {
+  return [...NAV, ...SECONDARY]
+    .flatMap((entry) => [entry, ...(entry.children ?? [])])
+    .find((entry) => entry.id === id)?.label
+}
+
+/** A parent, if the entry has one. Drives both the breadcrumb and the counts. */
+export function parentForNavId(id: string | undefined): NavEntry | undefined {
+  if (!id) return undefined
+  return NAV.find((entry) => (entry.children ?? []).some((child) => child.id === id))
+}
+
+/**
+ * The crumbs for a path: the group, then the page.
+ *
+ * The group is not a link — it is a heading with no page of its own, and a
+ * crumb that navigates somewhere the user did not name is worse than one that
+ * does nothing.
+ */
+export function breadcrumbForPath(pathname: string): ShellCrumb[] {
+  const id = navEntryForPath(pathname)
+  if (!id) return []
+
+  const label = labelForNavId(id)
+  if (!label) return []
+
+  const parent = parentForNavId(id)
+  return parent ? [{ label: parent.label }, { label }] : [{ label }]
 }
 
 /**
@@ -84,7 +153,23 @@ export const GROUP_COUNTS: Record<string, readonly CountableId[]> = {
 /** The group an entry sits in, so its counts can be fetched. */
 export function groupForNavId(id: string | undefined): string | undefined {
   if (!id) return undefined
-  return NAV.find((entry) => entry.id === id || (entry.children ?? []).some((c) => c.id === id))?.id
+  return NAV.find(
+    (entry) => entry.id === id || (entry.children ?? []).some((child) => child.id === id),
+  )?.id
+}
+
+function toItems(
+  entries: NavEntry[],
+  icons: Record<string, React.ReactNode>,
+  counts: Partial<Record<string, number>>,
+): ShellNavItem[] {
+  return entries.map((entry) => ({
+    id: entry.id,
+    label: entry.label,
+    ...(icons[entry.id] ? { icon: icons[entry.id] } : {}),
+    ...(counts[entry.id] !== undefined ? { count: counts[entry.id] } : {}),
+    ...(entry.children ? { items: toItems(entry.children, {}, counts) } : {}),
+  }))
 }
 
 /** Builds what the shell renders. Counts come from the app. */
@@ -93,23 +178,12 @@ export function toNavGroups(
   counts: Partial<Record<string, number>> = {},
 ): ShellNavGroup[] {
   return [
+    { id: 'main', title: 'Workspace', items: toItems(NAV, icons, counts) },
     {
-      id: 'main',
-      items: NAV.map((entry) => ({
-        id: entry.id,
-        label: entry.label,
-        ...(icons[entry.id] ? { icon: icons[entry.id] } : {}),
-        ...(counts[entry.id] !== undefined ? { count: counts[entry.id] } : {}),
-        ...(entry.children
-          ? {
-              items: entry.children.map((child) => ({
-                id: child.id,
-                label: child.label,
-                ...(counts[child.id] !== undefined ? { count: counts[child.id] } : {}),
-              })),
-            }
-          : {}),
-      })),
+      id: 'secondary',
+      title: 'Quick links',
+      collapsible: true,
+      items: toItems(SECONDARY, icons, counts),
     },
   ]
 }

@@ -2,6 +2,22 @@ export { AppShell, AppShellProvenance } from './AppShell'
 export type { AppShellProps } from './AppShell'
 export { EnvironmentSwitcher } from './EnvironmentSwitcher'
 export type { EnvironmentSwitcherProps } from './EnvironmentSwitcher'
+export { ShellAccount, ShellAccountProvenance } from './ShellAccount'
+export type { ShellAccountProps } from './ShellAccount'
+export { ShellBreadcrumb, ShellBreadcrumbProvenance } from './ShellBreadcrumb'
+export type { ShellBreadcrumbProps, ShellCrumb } from './ShellBreadcrumb'
+export { ShellCreateMenu, ShellCreateMenuProvenance } from './ShellCreateMenu'
+export type { ShellCreateAction, ShellCreateMenuProps } from './ShellCreateMenu'
 export { ShellNav } from './ShellNav'
 export type { ShellNavProps } from './ShellNav'
-export type { ShellEnvironment, ShellNavGroup, ShellNavItem, ShellUser } from './types'
+export { ShellNotifications, ShellNotificationsProvenance } from './ShellNotifications'
+export type { ShellNotificationsProps } from './ShellNotifications'
+export { ShellSearch, ShellSearchProvenance } from './ShellSearch'
+export type { ShellSearchProps } from './ShellSearch'
+export type {
+  ShellEnvironment,
+  ShellNavGroup,
+  ShellNavItem,
+  ShellNotification,
+  ShellUser,
+} from './types'

@@ -2,6 +2,7 @@ import { Button } from '@ui/primitives/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
@@ -61,7 +62,10 @@ export function EnvironmentSwitcher({
       </DropdownMenuTrigger>
 
       <DropdownMenuContent align="start" className="w-64">
-        <DropdownMenuLabel>Environment</DropdownMenuLabel>
+        {/* The label is a `Menu.GroupLabel`; outside a group it throws. */}
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>Environment</DropdownMenuLabel>
+        </DropdownMenuGroup>
         {environments.map((environment) => (
           <DropdownMenuItem
             key={environment.id}

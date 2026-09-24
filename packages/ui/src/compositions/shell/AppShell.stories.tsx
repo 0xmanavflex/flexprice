@@ -1,8 +1,10 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from 'lucide-react'
 import { AppShell } from './AppShell'
-import type { ShellEnvironment, ShellNavGroup } from './types'
+import { ShellBreadcrumb } from './ShellBreadcrumb'
+import { ShellCreateMenu } from './ShellCreateMenu'
+import type { ShellEnvironment, ShellNavGroup, ShellNotification } from './types'
 
 /**
  * The shell, in the arrangements that actually occur.
@@ -36,8 +38,29 @@ const navGroups: ShellNavGroup[] = [
         ],
       },
       { id: 'revenue', label: 'Revenue', icon: <BarChart3Icon className="size-4" /> },
-      { id: 'settings', label: 'Settings', icon: <SettingsIcon className="size-4" /> },
     ],
+    title: 'Workspace',
+  },
+  {
+    id: 'secondary',
+    title: 'Quick links',
+    collapsible: true,
+    items: [{ id: 'settings', label: 'Settings', icon: <SettingsIcon className="size-4" /> }],
+  },
+]
+
+const notifications: ShellNotification[] = [
+  {
+    id: 'n1',
+    title: 'Payment failed for Acme Corp',
+    description: 'Card declined on invoice INV-2041, $4,820.00.',
+    timestamp: '12 minutes ago',
+    unread: true,
+  },
+  {
+    id: 'n2',
+    title: 'Usage export finished',
+    timestamp: 'Yesterday',
   },
 ]
 
@@ -47,7 +70,21 @@ const production: ShellEnvironment = { id: 'env_prod', name: 'Production', kind:
 const meta = {
   title: 'Foundation/Compositions/AppShell',
   component: AppShell,
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    a11y: {
+      config: {
+        /*
+         * Base UI renders `aria-hidden` focus guards with `tabindex="0"` on
+         * either side of every portalled surface — menu, popover, dialog. Axe
+         * flags them, correctly, and we cannot fix them without forking the
+         * library. The rule stays on everywhere else; this file is the one
+         * that opens portals.
+         */
+        rules: [{ id: 'aria-hidden-focus', enabled: false }],
+      },
+    },
+  },
   args: {
     navGroups,
     activeItemId: 'features',
@@ -55,7 +92,8 @@ const meta = {
     environment: sandbox,
     environments: [sandbox, production],
     onEnvironmentChange: fn(),
-    user: { name: 'Dinesh K', email: 'dinesh@flexprice.io' },
+    user: { name: 'Dinesh K', email: 'dinesh@flexprice.io', organization: 'Flexprice' },
+    onSignOut: fn(),
     onSearch: fn(),
     children: <div className="p-6 text-sm text-muted-foreground">Page content.</div>,
   },
@@ -159,12 +197,135 @@ export const SandboxIsNotBadged: Story = {
   },
 }
 
-export const SearchIsInTheSidebar: Story = {
+/**
+ * Search is a button that opens a dialog, not a field that sits there.
+ *
+ * An always-present input is a tab stop on every screen and an implicit
+ * promise to filter *something* — but what it searches changes by page, which
+ * is how the current dashboard ends up with a box that sometimes does nothing.
+ *
+ * The dialog is a portal, so it is asserted on the document rather than on the
+ * canvas.
+ */
+export const SearchOpensADialog: Story = {
   play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    const field = canvas.getByRole('searchbox', { name: 'Search' })
-    await userEvent.type(field, 'acme{Enter}')
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
+
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByRole('searchbox', { name: 'Search' }), 'acme{Enter}')
     await expect(args.onSearch).toHaveBeenCalledWith('acme')
+  },
+}
+
+/**
+ * Notifications, in each of the four states it can be in.
+ *
+ * This is the one surface guaranteed to be on screen during an incident, which
+ * is exactly why it must not report "all clear" from a failed request.
+ */
+export const NotificationsUnread: Story = {
+  args: { notifications, onMarkNotificationsRead: fn() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /1 unread/i })).toBeInTheDocument()
+
+    await userEvent.click(canvas.getByRole('button', { name: /notifications/i }))
+    const panel = within(await screen.findByText('Payment failed for Acme Corp'))
+    await expect(panel).toBeDefined()
+  },
+}
+
+export const NotificationsEmpty: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // No dot, and the name does not claim a count.
+    await expect(canvas.getByRole('button', { name: 'Notifications' })).toBeInTheDocument()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Notifications' }))
+    await expect(await screen.findByText('You are all caught up.')).toBeInTheDocument()
+  },
+}
+
+/**
+ * A failed request says so.
+ *
+ * An empty list here would assert "nothing has happened", which is a different
+ * claim from "we could not ask" — and the difference matters most when
+ * something *has* happened.
+ */
+export const NotificationsFailed: Story = {
+  args: { notificationsError: { message: 'The service did not respond.' } },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Notifications' }))
+    await expect(await screen.findByRole('alert')).toHaveTextContent(
+      /could not be loaded/i,
+    )
+  },
+}
+
+export const NotificationsLoading: Story = {
+  args: { notificationsLoading: true },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Notifications' }))
+    await expect(await screen.findByText('Loading notifications')).toBeInTheDocument()
+  },
+}
+
+/** The account menu is how someone leaves, so it is reachable in one click. */
+export const AccountMenu: Story = {
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: /account: dinesh k/i }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
+    await expect(args.onSignOut).toHaveBeenCalled()
+  },
+}
+
+/**
+ * The breadcrumb names the group as well as the page.
+ *
+ * With navigation two levels deep, "Features" alone does not say it sits under
+ * Product Catalog.
+ */
+export const WithBreadcrumb: Story = {
+  args: {
+    breadcrumb: <ShellBreadcrumb trail={[{ label: 'Product Catalog' }, { label: 'Features' }]} />,
+  },
+  play: async ({ canvasElement }) => {
+    const nav = within(canvasElement).getByRole('navigation', { name: 'breadcrumb' })
+    await expect(within(nav).getByText('Product Catalog')).toBeVisible()
+    await expect(within(nav).getByText('Features')).toBeVisible()
+  },
+}
+
+/** One control that belongs to the page as a whole, not to its content. */
+export const WithHeaderActions: Story = {
+  args: {
+    headerActions: (
+      <span className="text-muted-foreground rounded-md border px-2 py-1 text-xs">
+        All systems normal
+      </span>
+    ),
+  },
+}
+
+/**
+ * The secondary group collapses; the primary one does not.
+ *
+ * Hiding the product's own map costs more than the space it saves.
+ */
+export const QuickLinksCollapse: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const heading = canvas.getByRole('button', { name: /quick links/i })
+
+    await expect(canvas.getByRole('button', { name: /^settings/i })).toBeVisible()
+    await userEvent.click(heading)
+    await expect(canvas.queryByRole('button', { name: /^settings/i })).not.toBeInTheDocument()
+
+    // The primary group has no such control.
+    await expect(canvas.queryByRole('button', { name: /^workspace$/i })).not.toBeInTheDocument()
   },
 }
 
@@ -177,5 +338,36 @@ export const WithPinnedContent: Story = {
         <p className="text-muted-foreground">Oldest is 35 days past due.</p>
       </div>
     ),
+  },
+}
+
+/**
+ * Create, in the header, from every screen.
+ *
+ * The things a finance person starts cold — a subscription, a customer — do
+ * not live on the screen they happen to be looking at, so reaching them costs
+ * a navigation and a search before any work begins.
+ *
+ * The menu's own behaviour is covered in `ShellCreateMenu.stories.tsx`; this
+ * one is about where it sits.
+ */
+export const CreateMenu: Story = {
+  args: {
+    headerActions: (
+      <ShellCreateMenu
+        actions={[
+          { id: 'subscription', label: 'New subscription' },
+          { id: 'customer', label: 'New customer' },
+          { id: 'plan', label: 'New plan', startsGroup: true },
+        ]}
+        onCreate={fn()}
+      />
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Beside the breadcrumb, in the header — not in the sidebar, and not on
+    // the page.
+    await expect(canvas.getByRole('button', { name: /create/i })).toBeVisible()
   },
 }

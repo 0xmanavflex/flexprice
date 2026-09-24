@@ -1,6 +1,4 @@
 import { type CSSProperties, type ReactNode } from 'react'
-import { SearchIcon } from 'lucide-react'
-import { Input } from '@ui/primitives/input'
 import {
   Sidebar,
   SidebarContent,
@@ -13,15 +11,19 @@ import {
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { EnvironmentSwitcher } from './EnvironmentSwitcher'
+import { ShellAccount } from './ShellAccount'
 import { ShellNav } from './ShellNav'
-import type { ShellEnvironment, ShellNavGroup, ShellUser } from './types'
+import { ShellNotifications } from './ShellNotifications'
+import { ShellSearch } from './ShellSearch'
+import type { ShellEnvironment, ShellNavGroup, ShellNotification, ShellUser } from './types'
 
 /**
  * The application shell, adapted from `@reui/app-shell-3`.
  *
- * One inset sidebar that collapses to icons, with nested navigation, the search
- * field *inside* the sidebar, and a pinned slot above the footer. The header is
- * deliberately thin — a breadcrumb and nothing else.
+ * One inset sidebar that collapses to icons, with nested navigation, search and
+ * notifications *inside* the sidebar, a pinned slot above the footer, and the
+ * account menu at the bottom. The header carries the breadcrumb and whatever
+ * one control belongs to the whole page rather than to its content.
  *
  * This replaces a two-level rail, and the reason is the product's own shape:
  * twenty-four destinations across three deep groups. A rail that swaps its
@@ -29,17 +31,19 @@ import type { ShellEnvironment, ShellNavGroup, ShellUser } from './types'
  * that Billing has invoices under it. Nesting keeps the whole tree legible, and
  * it is the model the current dashboard already uses.
  *
- * The active-item treatment is the block's and is why it reads as layered: the
- * selected row is a raised card — border, shadow, background — rather than a
- * tint, and hover is transparent so the selection is the only surface.
- *
  * Fully controlled and entirely presentational: no route state, no navigation,
  * and it cannot import the query layer. That is what lets every arrangement be
  * a story.
  */
 export const AppShellProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/app-shell-3', 'ui/sidebar', 'ui/input', '@reui/badge'],
+  composes: [
+    '@reui/app-shell-3',
+    'ui/sidebar',
+    'ui/breadcrumb',
+    'ui/dropdown-menu',
+    '@reui/badge',
+  ],
   note: 'Adapted from app-shell-3: single inset sidebar, nested nav, our controlled contract.',
 })
 
@@ -53,37 +57,66 @@ export interface AppShellProps {
   onEnvironmentChange: (environmentId: string) => void
 
   user: ShellUser
+  onProfile?: () => void
+  onSettings?: () => void
+  onSignOut?: () => void
+
   productName?: string
   logo?: ReactNode
   onSearch?: (term: string) => void
+
+  notifications?: ShellNotification[]
+  notificationsLoading?: boolean
+  notificationsError?: { message: string } | null
+  onMarkNotificationsRead?: () => void
+  onOpenNotification?: (id: string) => void
+
   /** Pinned above the footer — an allowance, a usage meter, an alert count. */
   pinned?: ReactNode
   breadcrumb?: ReactNode
-  accountMenu?: ReactNode
+  /** One control that belongs to the page as a whole, not to its content. */
+  headerActions?: ReactNode
   children: ReactNode
 }
 
 /**
- * The block's selection treatment, lifted as written.
+ * The block's selection and icon treatment, lifted as written.
  *
  * Expressed as data-slot selectors because they reach inside the Sidebar
  * primitive's own markup — which is vendored, and which we must not fork to
- * restyle.
+ * restyle. The icon rules are half of why the block reads as layered: idle
+ * icons sit at 60% and the active one takes the primary colour, so the eye
+ * finds the current row before it reads a word.
  */
 const SELECTION = [
+  '[--sidebar-border:transparent]',
+
   '[&_[data-slot=sidebar-menu-button][data-active]]:border-border/60!',
   '[&_[data-slot=sidebar-menu-button][data-active]]:border',
   '[&_[data-slot=sidebar-menu-button][data-active]]:shadow-xs!',
+  '[&_[data-slot=sidebar-menu-button][data-active]]:shadow-black/5!',
   '[&_[data-slot=sidebar-menu-button][data-active]]:bg-background!',
   '[&_[data-slot=sidebar-menu-button][data-active]]:hover:bg-background!',
   '**:data-[slot=sidebar-menu-button]:hover:bg-transparent!',
   '[&_[data-slot=sidebar-menu-button][data-active]]:text-foreground',
+  '[&_[data-slot=sidebar-menu-button][data-active]>svg]:text-primary',
+  '[&_[data-slot=sidebar-menu-button][data-active]>svg]:opacity-100',
+  '**:data-[slot=sidebar-menu-button]:text-accent-foreground/80',
   '**:data-[slot=sidebar-menu-button]:hover:text-foreground',
+  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button][data-active]>svg]:-ml-px',
+  '[&_[data-slot=sidebar-menu-button]:hover>svg]:opacity-100',
+  '[&_[data-slot=sidebar-menu-button]>svg]:opacity-60',
+
   '[&_[data-slot=sidebar-menu-sub-button][data-active]]:border-border/60!',
   '[&_[data-slot=sidebar-menu-sub-button][data-active]]:border',
   '[&_[data-slot=sidebar-menu-sub-button][data-active]]:shadow-xs!',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:shadow-black/5!',
   '[&_[data-slot=sidebar-menu-sub-button][data-active]]:bg-background!',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:hover:bg-background!',
   '**:data-[slot=sidebar-menu-sub-button]:hover:bg-transparent!',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:text-foreground',
+  '**:data-[slot=sidebar-menu-sub-button]:text-accent-foreground/80',
+  '**:data-[slot=sidebar-menu-sub-button]:hover:text-foreground',
 ].join(' ')
 
 export function AppShell({
@@ -94,12 +127,20 @@ export function AppShell({
   environments,
   onEnvironmentChange,
   user,
+  onProfile,
+  onSettings,
+  onSignOut,
   productName = 'Flexprice',
   logo,
   onSearch,
+  notifications = [],
+  notificationsLoading = false,
+  notificationsError = null,
+  onMarkNotificationsRead,
+  onOpenNotification,
   pinned,
   breadcrumb,
-  accountMenu,
+  headerActions,
   children,
 }: AppShellProps) {
   const isProduction = environment.kind === 'production'
@@ -134,7 +175,17 @@ export function AppShell({
                 {productName}
               </span>
             </div>
-            <SidebarTrigger className="opacity-60 hover:opacity-100" />
+
+            <div className="flex items-center gap-0.5 in-data-[state=collapsed]:hidden">
+              <ShellNotifications
+                notifications={notifications}
+                isLoading={notificationsLoading}
+                error={notificationsError}
+                {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
+                {...(onOpenNotification ? { onOpenNotification } : {})}
+              />
+              <SidebarTrigger className="opacity-60 hover:opacity-100 [&_svg]:transition-transform [&_svg]:duration-200" />
+            </div>
           </div>
 
           {/*
@@ -153,28 +204,8 @@ export function AppShell({
         </SidebarHeader>
 
         <SidebarContent>
-          {/* Search lives in the sidebar, as the block has it. */}
-          <div className="px-2 py-2 in-data-[state=collapsed]:hidden">
-            <form
-              role="search"
-              className="relative"
-              onSubmit={(event) => {
-                event.preventDefault()
-                onSearch?.(new FormData(event.currentTarget).get('q')?.toString() ?? '')
-              }}
-            >
-              <SearchIcon
-                aria-hidden
-                className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2"
-              />
-              <Input
-                type="search"
-                name="q"
-                aria-label="Search"
-                placeholder="Search"
-                className="h-8 pl-8"
-              />
-            </form>
+          <div className="py-2">
+            <ShellSearch {...(onSearch ? { onSearch } : {})} />
           </div>
 
           <ShellNav
@@ -189,21 +220,27 @@ export function AppShell({
         </SidebarContent>
 
         <SidebarFooter>
-          {accountMenu ?? (
-            <div className="flex min-w-0 flex-col px-2 py-1 in-data-[state=collapsed]:hidden">
-              <span className="truncate text-sm font-medium">{user.name}</span>
-              <span className="text-muted-foreground truncate text-xs">{user.email}</span>
-            </div>
-          )}
+          <ShellAccount
+            user={user}
+            {...(onProfile ? { onProfile } : {})}
+            {...(onSettings ? { onSettings } : {})}
+            {...(onSignOut ? { onSignOut } : {})}
+          />
         </SidebarFooter>
       </Sidebar>
 
       <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden">
         <header
-          className={cn('flex h-12 shrink-0 items-center gap-2 px-4', isProduction && 'pt-1')}
+          className={cn(
+            'flex h-12 shrink-0 items-center gap-2 px-4',
+            isProduction && 'pt-1',
+          )}
         >
+          {/* The rail trigger is in the sidebar header; on mobile there is no
+              sidebar to put it in, so the header carries one. */}
           <SidebarTrigger className="-ml-1 md:hidden" />
           {breadcrumb}
+          {headerActions ? <div className="ml-auto flex items-center gap-2">{headerActions}</div> : null}
         </header>
 
         {/*

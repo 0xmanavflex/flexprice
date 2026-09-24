@@ -5,7 +5,7 @@ import type { ReactNode } from 'react'
  *
  * One level of nesting, which is what the product needs: Product Catalog has
  * seven children, Billing six, Developers seven. A flat list would be
- * twenty-plus items with no grouping.
+ * twenty-four items with no grouping.
  */
 export interface ShellNavItem {
   id: string
@@ -18,7 +18,7 @@ export interface ShellNavItem {
    * catalogue becomes obvious rather than a surprise after navigating.
    */
   count?: number
-  /** Children. A parent with children is expandable rather than navigable. */
+  /** Children. A parent with children expands rather than standing alone. */
   items?: ShellNavItem[]
 }
 
@@ -26,6 +26,13 @@ export interface ShellNavGroup {
   id: string
   title?: string
   items: ShellNavItem[]
+  /**
+   * Whether the whole group collapses under its own heading.
+   *
+   * The primary navigation must not — hiding it costs more than it saves. A
+   * secondary group of links is exactly what this is for.
+   */
+  collapsible?: boolean
 }
 
 /**
@@ -44,4 +51,21 @@ export interface ShellEnvironment {
 export interface ShellUser {
   name: string
   email: string
+  avatarUrl?: string
+  /** Shown under the name in the footer, where the block shows a workspace. */
+  organization?: string
+}
+
+/**
+ * Something that happened which the user did not ask to be told about.
+ *
+ * `timestamp` is a rendered string rather than a Date: formatting is
+ * locale-dependent and this package is not where that decision belongs.
+ */
+export interface ShellNotification {
+  id: string
+  title: string
+  description?: string
+  timestamp: string
+  unread?: boolean
 }

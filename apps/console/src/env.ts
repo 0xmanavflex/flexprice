@@ -64,6 +64,14 @@ export const env = {
   useMocks,
   problem,
   apiUrl: apiUrl ?? MOCK_API_URL,
+  /**
+   * Where the current dashboard lives, if anywhere.
+   *
+   * Used only by the migration placeholders, to hand someone off to the screen
+   * that works today. Unset means no hand-off link is offered — a link to a
+   * guessed origin is worse than none.
+   */
+  legacyConsoleUrl: read('VITE_LEGACY_CONSOLE_URL') ?? null,
   /** Local development only, until the auth surface lands. */
   devToken: read('VITE_DEV_JWT') ?? null,
   environmentId: read('VITE_ENVIRONMENT_ID') ?? null,

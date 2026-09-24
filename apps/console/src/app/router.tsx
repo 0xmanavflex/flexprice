@@ -2,7 +2,6 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
-  redirect,
   stripSearchParams,
   useNavigate,
   useRouterState,
@@ -41,6 +40,10 @@ const FeatureCreatePage = lazy(() =>
   import('@/pages/features/FeatureCreatePage').then((m) => ({ default: m.FeatureCreatePage })),
 )
 import { parseFeatureSearch } from './featureSearch'
+import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
+const PlaceholderPage = lazy(() =>
+  import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
+)
 
 const SANDBOX = { id: 'env_dev', name: 'Sandbox', kind: 'sandbox' } as const
 const PRODUCTION = { id: 'env_prod', name: 'Production', kind: 'production' } as const
@@ -67,7 +70,9 @@ function RootLayout() {
       environment={environment}
       environments={environments}
       onEnvironmentChange={setEnvironmentId}
-      user={{ name: 'Signed in', email: 'you@flexprice.io' }}
+      // Placeholder until the session lands — `auth.go` is 0 of 2 annotated,
+      // so there is no documented way to ask who is signed in yet.
+      user={{ name: 'Signed in', email: 'you@flexprice.io', organization: 'Flexprice' }}
     >
       {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
       <Suspense fallback={<div className="p-6"><LoadingRows /></div>}>
@@ -83,6 +88,17 @@ const rootRoute = createRootRoute({
    * Without this a thrown route — including a rejected lazy import — renders
    * nothing at all, and a crash is indistinguishable from an empty list.
    */
+  /**
+   * A mistyped or retired URL. Distinct from `errorComponent`, which is for a
+   * page that exists and broke — the two need different words and different
+   * ways out.
+   */
+  notFoundComponent: () => (
+    <AppFailure
+      title="There is no page at this address"
+      detail="The link may be out of date, or the address mistyped. Everything in the sidebar still works."
+    />
+  ),
   errorComponent: ({ error, reset }) => (
     <AppFailure
       title="This page could not be loaded"
@@ -93,18 +109,31 @@ const rootRoute = createRootRoute({
   ),
 })
 
-const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: '/',
-  beforeLoad: () => {
-    // `/invoices` declares required search params, so TanStack demands a
-    // `search` here. Empty is correct: `validateSearch` is total and parses
-    // `{}` into the defaults — asserted in `searchParams.test.ts`. Passing the
-    // defaults explicitly instead would spell every one of them into the URL
-    // on first load.
-    throw redirect({ to: '/invoices', search: {} as never })
-  },
-})
+/**
+ * Every destination in the sidebar resolves to something.
+ *
+ * Before this, twenty of twenty-four navigated to a bare "Not Found" — which
+ * is what a broken link looks like, so the shell appeared broken rather than
+ * unfinished. A placeholder says which screen this is, what it will do, and
+ * where the working version is today.
+ *
+ * The rows come from `placeholderRoutes.ts`, and a row is deleted when its
+ * real page lands. `/` is among them: Home is a destination, not a redirect to
+ * whichever list happened to be built first.
+ */
+const placeholderRoutes = PLACEHOLDER_ROUTES.map((entry) =>
+  createRoute({
+    getParentRoute: () => rootRoute,
+    path: entry.path,
+    component: () => (
+      <PlaceholderPage
+        title={entry.title}
+        description={entry.description}
+        {...('legacy' in entry ? { legacyPath: entry.legacy } : {})}
+      />
+    ),
+  }),
+)
 
 /**
  * The invoice list route.
@@ -197,7 +226,7 @@ function SubscriptionCreateRouteComponent() {
         setOverride(value)
         goToStep('entitlements')
       }}
-      onCancel={() => void navigate({ to: '/invoices', search: {} as never })}
+      onCancel={() => void navigate({ to: '/subscriptions' })}
     />
   )
 }
@@ -250,9 +279,9 @@ function FeatureCreateRouteComponent() {
 export const routeTree = rootRoute.addChildren([
   featuresRoute,
   featureCreateRoute,
-  indexRoute,
   invoicesRoute,
   subscriptionCreateRoute,
+  ...placeholderRoutes,
 ])
 
 export const router = createRouter({ routeTree })
