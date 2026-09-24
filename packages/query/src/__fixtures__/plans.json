@@ -1,0 +1,84 @@
+{
+  "items": [
+    {
+      "id": "plan_01M38PTQ0MKFYJ3JBVEWXEAT3Y",
+      "name": "Vehement Capital",
+      "lookup_key": "plan_ultimate",
+      "description": "Replaced.",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "metadata": null,
+      "display_order": 0,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:00.276168Z",
+      "updated_at": "2026-09-24T03:20:00.276168Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "plan_01M38PTPCN2QK5BEER002HDT4D",
+      "name": "Globex",
+      "lookup_key": "plan_premier",
+      "description": "Replaced.",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "metadata": null,
+      "display_order": 0,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:19:59.637807Z",
+      "updated_at": "2026-09-24T03:19:59.637807Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "plan_01M38PTNKB9CA8M5N9V744RH3A",
+      "name": "Hooli",
+      "lookup_key": "plan_platform",
+      "description": "Replaced.",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "metadata": null,
+      "display_order": 0,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:19:58.827519Z",
+      "updated_at": "2026-09-24T03:19:58.827519Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "plan_01M38PTMVEAEQ3KGFXFE38GEK1",
+      "name": "Massive Dynamic",
+      "lookup_key": "plan_agency",
+      "description": "Replaced.",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "metadata": null,
+      "display_order": 0,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:19:58.062732Z",
+      "updated_at": "2026-09-24T03:19:58.062732Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "plan_01M38PTM26CYQ33M1YM2RKVWK2",
+      "name": "Umbrella Ltd",
+      "lookup_key": "plan_studio",
+      "description": "Replaced.",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "metadata": null,
+      "display_order": 0,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:19:57.254771Z",
+      "updated_at": "2026-09-24T03:19:57.254771Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    }
+  ],
+  "pagination": {
+    "total": 12,
+    "limit": 5,
+    "offset": 5
+  }
+}

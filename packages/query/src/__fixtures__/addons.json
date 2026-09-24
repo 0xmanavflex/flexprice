@@ -1,0 +1,74 @@
+{
+  "items": [
+    {
+      "id": "addon_01M38PTYPPG0ARNTHGYNQEQG79",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "lookup_key": "extra_seats_pack",
+      "name": "Acme Corp",
+      "description": "Replaced.",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:08.150709Z",
+      "updated_at": "2026-09-24T03:20:08.150709Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "addon_01M38PTY8C0Z7AQBD5AEJ7H7D6",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "lookup_key": "onboarding_package",
+      "name": "Hooli",
+      "description": "Replaced.",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:07.692448Z",
+      "updated_at": "2026-09-24T03:20:07.692448Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "addon_01M38PTXWNKAQNDRDH14NA4PRE",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "lookup_key": "white_labeling",
+      "name": "Wayne Enterprises",
+      "description": "Replaced.",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:07.317915Z",
+      "updated_at": "2026-09-24T03:20:07.317915Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "addon_01M38PTXJ2CY79X0Q6SW67VPGH",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "lookup_key": "sla_9999",
+      "name": "Soylent",
+      "description": "Replaced.",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:06.978261Z",
+      "updated_at": "2026-09-24T03:20:06.978261Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "addon_01M38PTX6DFP86K89EN05FRRYT",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "lookup_key": "custom_domain",
+      "name": "Massive Dynamic",
+      "description": "Replaced.",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:06.605759Z",
+      "updated_at": "2026-09-24T03:20:06.605759Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    }
+  ],
+  "pagination": {
+    "total": 12,
+    "limit": 5,
+    "offset": 5
+  }
+}

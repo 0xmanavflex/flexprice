@@ -1,0 +1,129 @@
+{
+  "items": [
+    {
+      "id": "cust_01M38PTT9YY71XTEW779A424PA",
+      "external_id": "ext_7742dc0ed3",
+      "name": "Globex",
+      "email": "billing@globex.example.com",
+      "address_line1": "1 Example Street",
+      "address_line2": "",
+      "address_city": "San Francisco",
+      "address_state": "CA",
+      "address_postal_code": "94105",
+      "address_country": "CA",
+      "timezone": "UTC",
+      "tax_treatment": "taxable",
+      "metadata": {
+        "segment": "enterprise"
+      },
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:03.646346Z",
+      "updated_at": "2026-09-24T03:20:03.646346Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "cust_01M38PTT2RY541NG7J0XK1CA9Z",
+      "external_id": "ext_b6861bec20",
+      "name": "Massive Dynamic",
+      "email": "billing@massivedynamic.example.com",
+      "address_line1": "1 Example Street",
+      "address_line2": "",
+      "address_city": "San Francisco",
+      "address_state": "CA",
+      "address_postal_code": "94105",
+      "address_country": "IN",
+      "timezone": "UTC",
+      "tax_treatment": "taxable",
+      "metadata": {
+        "segment": "mid"
+      },
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:03.416814Z",
+      "updated_at": "2026-09-24T03:20:03.416814Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "cust_01M38PTSSF0XG4JG4T7VB2D4BM",
+      "external_id": "ext_6058d311e7",
+      "name": "Massive Dynamic",
+      "email": "billing@massivedynamic.example.com",
+      "address_line1": "1 Example Street",
+      "address_line2": "",
+      "address_city": "San Francisco",
+      "address_state": "CA",
+      "address_postal_code": "94105",
+      "address_country": "DE",
+      "timezone": "UTC",
+      "tax_treatment": "taxable",
+      "metadata": {
+        "segment": "smb"
+      },
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:03.119053Z",
+      "updated_at": "2026-09-24T03:20:03.119053Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "cust_01M38PTSJD11HYDDE4S7YSCKF7",
+      "external_id": "ext_842a428304",
+      "name": "Vehement Capital",
+      "email": "billing@vehementcapital.example.com",
+      "address_line1": "1 Example Street",
+      "address_line2": "",
+      "address_city": "San Francisco",
+      "address_state": "CA",
+      "address_postal_code": "94105",
+      "address_country": "GB",
+      "timezone": "UTC",
+      "tax_treatment": "taxable",
+      "metadata": {
+        "segment": "enterprise"
+      },
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:02.893768Z",
+      "updated_at": "2026-09-24T03:20:02.893768Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    },
+    {
+      "id": "cust_01M38PTS9QT04ZZ401ZNBZ1W5D",
+      "external_id": "ext_c1e09fab46",
+      "name": "Initech",
+      "email": "billing@initech.example.com",
+      "address_line1": "1 Example Street",
+      "address_line2": "",
+      "address_city": "San Francisco",
+      "address_state": "CA",
+      "address_postal_code": "94105",
+      "address_country": "US",
+      "timezone": "UTC",
+      "tax_treatment": "taxable",
+      "metadata": {
+        "segment": "mid"
+      },
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T03:20:02.615663Z",
+      "updated_at": "2026-09-24T03:20:02.615663Z",
+      "created_by": "dde9a118-f186-45a6-969b-a9dab4590a75",
+      "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
+    }
+  ],
+  "pagination": {
+    "total": 12,
+    "limit": 5,
+    "offset": 5
+  }
+}
