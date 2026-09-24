@@ -241,6 +241,22 @@ function synthPrices(captured, count = 20) {
   return { items, pagination: { total: items.length, limit: 25, offset: 0 } }
 }
 
+/**
+ * Re-points a foreign key at a row that actually exists in the corpus.
+ *
+ * `multiply` reassigns ids, which silently orphans every reference to the old
+ * ones: a subscription kept `customer_id` from the captured record, so nothing
+ * in the generated corpus matched it. Lists still rendered — they read the
+ * embedded object — but anything that follows a reference, like opening a
+ * customer from a subscription, would find nothing.
+ */
+function link(row, field, pool, index, embedAs) {
+  if (pool.length === 0) return
+  const target = pool[index % pool.length]
+  row[field] = target.id
+  if (embedAs) row[embedAs] = clone(target)
+}
+
 /** Entities with no interesting variety axis: more rows, same shape. */
 function multiply(captured, prefix, count) {
   const seeds = captured?.items ?? []
@@ -267,13 +283,61 @@ const captured = {
   addons: read('addons'),
 }
 
+/**
+ * The subscription states a list has to distinguish.
+ *
+ * The capture environment had only `active`, which makes a status column
+ * decorative.
+ */
+const SUBSCRIPTION_STATES = [
+  { subscription_status: 'active' },
+  { subscription_status: 'trialing', trialing: true },
+  { subscription_status: 'paused' },
+  { subscription_status: 'cancelled', cancelled: true },
+  { subscription_status: 'active' },
+  { subscription_status: 'incomplete' },
+]
+
+function synthSubscriptions(captured, customers, plans, count = 24) {
+  const base = multiply(captured, 'subs', count)
+  if (!base) return null
+
+  base.items.forEach((row, i) => {
+    const state = SUBSCRIPTION_STATES[i % SUBSCRIPTION_STATES.length]
+    row.subscription_status = state.subscription_status
+    row.currency = ['USD', 'EUR', 'INR'][i % 3]
+
+    link(row, 'customer_id', customers?.items ?? [], i, 'customer')
+    link(row, 'plan_id', plans?.items ?? [], i, 'plan')
+
+    row.start_date = iso(days(-120 + i * 4))
+    row.current_period_start = iso(days(-30))
+    row.current_period_end = iso(days(1 + (i % 28)))
+
+    delete row.cancel_at
+    delete row.trial_start
+    delete row.trial_end
+    if (state.cancelled) row.cancel_at = iso(days(-5 + (i % 10)))
+    if (state.trialing) {
+      row.trial_start = iso(days(-7))
+      row.trial_end = iso(days(7))
+    }
+  })
+  return base
+}
+
+const generatedCustomers = multiply(captured.customers, 'cus', 30)
+const generatedPlans = multiply(captured.plans, 'plan', 12)
+
 const generated = {
-  invoices: captured.invoices && synthInvoices(captured.invoices, captured.customers),
+  customers: generatedCustomers,
+  plans: generatedPlans,
+  invoices: captured.invoices && synthInvoices(captured.invoices, generatedCustomers),
   features: captured.features && synthFeatures(captured.features),
   prices: captured.prices && synthPrices(captured.prices),
-  customers: multiply(captured.customers, 'cus', 30),
-  plans: multiply(captured.plans, 'plan', 12),
-  subscriptions: multiply(captured.subscriptions, 'subs', 24),
+  subscriptions:
+    captured.subscriptions &&
+    synthSubscriptions(captured.subscriptions, generatedCustomers, generatedPlans),
   addons: multiply(captured.addons, 'addon', 12),
 }
 

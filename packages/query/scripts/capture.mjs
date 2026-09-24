@@ -75,13 +75,16 @@ const LIMIT = 5
 const ENTITIES = [
   // POST /<entity>/search — a filter body, the richest of the three shapes.
   { key: 'customers', method: 'POST', path: '/customers/search', body: { limit: LIMIT } },
-  { key: 'plans', method: 'POST', path: '/plans/search', body: { limit: LIMIT } },
+  // Plans are bare without expansion — no prices, no entitlements, nothing a
+  // plan detail page could render.
+  { key: 'plans', method: 'POST', path: '/plans/search', body: { limit: LIMIT, expand: 'prices,entitlements,credit_grant' } },
   // `expand: 'meters'` — the API returns meter_id but embeds the meter only on
   // request. Without it a metered feature fixture carries nothing to measure by.
   { key: 'features', method: 'POST', path: '/features/search', body: { limit: LIMIT, expand: 'meters' } },
-  { key: 'prices', method: 'POST', path: '/prices/search', body: { limit: LIMIT } },
+  { key: 'prices', method: 'POST', path: '/prices/search', body: { limit: LIMIT, expand: 'meters,plan' } },
   { key: 'invoices', method: 'POST', path: '/invoices/search', body: { limit: LIMIT, skip_line_items: false } },
-  { key: 'subscriptions', method: 'POST', path: '/subscriptions/search', body: { limit: LIMIT } },
+  // Without expansion a subscription carries a null customer and no line items.
+  { key: 'subscriptions', method: 'POST', path: '/subscriptions/search', body: { limit: LIMIT, expand: 'plan,customer,subscription_line_items,prices' } },
   { key: 'entitlements', method: 'POST', path: '/entitlements/search', body: { limit: LIMIT } },
   { key: 'wallets', method: 'POST', path: '/wallets/search', body: { limit: LIMIT } },
   { key: 'coupons', method: 'POST', path: '/coupons/search', body: { limit: LIMIT } },
