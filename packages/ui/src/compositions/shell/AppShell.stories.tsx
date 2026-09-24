@@ -335,38 +335,20 @@ export const WithBreadcrumb: Story = {
 }
 
 /**
- * Collapsing the sidebar must not hide the way back out of it.
+ * Collapsing must not hide the way back out.
  *
- * The first version put the trigger in a cluster that was hidden when
- * collapsed, so on a desktop — where the header's own trigger is `md:hidden` —
- * the rail was a one-way door.
+ * An earlier version put the trigger in a cluster that was hidden when
+ * collapsed, so on a desktop — where the page header's own trigger is
+ * `md:hidden` — the rail was a one-way door. That trigger has since been
+ * removed entirely in favour of the edge handle, which makes this the test
+ * that the replacement actually replaced it.
  */
-export const EdgeHandleCollapses: Story = {
+export const RailCanBeReopened: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const handle = canvas.getByRole('button', { name: 'Collapse sidebar' })
+    await userEvent.click(canvas.getByRole('button', { name: 'Collapse sidebar' }))
 
-    // It names the destination, not the current state: a control labelled
-    // "Sidebar" tells you nothing about what pressing it does.
-    await expect(handle).toHaveAttribute('aria-expanded', 'true')
-    await userEvent.click(handle)
-
-    const expand = await canvas.findByRole('button', { name: 'Expand sidebar' })
-    await expect(expand).toHaveAttribute('aria-expanded', 'false')
-
-    // And the rail is a rail: the groups became menus.
-    await userEvent.click(canvas.getByRole('button', { name: 'Billing' }))
-    await expect(await screen.findByRole('menuitem', { name: /invoices/i })).toBeVisible()
-  },
-}
-
-export const RailKeepsItsTrigger: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const trigger = canvas.getAllByRole('button', { name: /toggle sidebar/i })[0]!
-
-    await userEvent.click(trigger)
-    await expect(canvas.getAllByRole('button', { name: /toggle sidebar/i })[0]).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: 'Expand sidebar' })).toBeVisible()
 
     // And the groups are still reachable, as a menu rather than inline.
     await userEvent.click(canvas.getByRole('button', { name: 'Billing' }))
@@ -374,7 +356,6 @@ export const RailKeepsItsTrigger: Story = {
   },
 }
 
-/** One control that belongs to the page as a whole, not to its content. */
 export const WithHeaderActions: Story = {
   args: {
     headerActions: (

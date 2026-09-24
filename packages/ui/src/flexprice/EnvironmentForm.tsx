@@ -8,7 +8,6 @@ import {
   createEnvironmentSchema,
   emptyEnvironment,
 } from '@fp/domain'
-import { Button } from '@ui/primitives/button'
 import { Input } from '@ui/primitives/input'
 import { RadioGroup, RadioGroupItem } from '@ui/primitives/radio-group'
 import { Field } from '@ui/compositions/Field'
@@ -20,28 +19,30 @@ import { provenance } from '@ui/provenance'
  *
  * Two fields, and the second one is the whole point. V1 presents the type as a
  * `Select` of two options, which makes "Production" and "Sandbox" look like
- * equivalent choices from a list — they are not. Here each is a card carrying
- * what it means, because the person about to create a production environment
- * should have read the sentence "changes here bill someone" before they do.
+ * equivalent picks from a list — they are not. Here each is a card carrying
+ * one line about what it means, because the person about to create a
+ * production environment should have read "real customers, real money" first.
  *
- * Creating production can be withheld — most tenants are on a plan where it is
- * arranged rather than self-served. When it is, the option is visibly present
- * and disabled with the reason attached, rather than absent: an option that
- * silently does not exist reads as a bug, and people go looking for it.
+ * Creating production can be withheld — most tenants arrange it rather than
+ * self-serving it. When it is, the option stays visible and disabled with the
+ * reason attached: an option that silently does not exist reads as a bug, and
+ * people go looking for it.
  *
- * Presentational, like everything else here: it takes a default and emits a
- * validated `CreateEnvironment`. It does not fetch.
+ * It renders no buttons. The dialog that hosts it puts them in a
+ * `DialogFooter` and submits with `form="…"`, which is what keeps the footer
+ * ReUI's own bar rather than a row improvised inside the body.
  */
 export const EnvironmentFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'ui/radio-group'],
-  note: 'RHF + the domain schema. The type is a pair of explained cards, not a select.',
+  composes: ['ui/input', 'ui/radio-group', 'ui/field'],
+  note: 'RHF + the domain schema. The type is a pair of one-line cards, not a select.',
 })
 
 export interface EnvironmentFormProps {
+  /** Ties the submit button in the dialog footer to this form. */
+  id: string
   defaultValue?: CreateEnvironment
   onSubmit: (environment: CreateEnvironment) => void
-  onCancel: () => void
   isSubmitting?: boolean
   submitError?: string | null
   /**
@@ -55,9 +56,9 @@ export interface EnvironmentFormProps {
 const TYPES = [EnvironmentType.Sandbox, EnvironmentType.Production] as const
 
 export function EnvironmentForm({
+  id,
   defaultValue = emptyEnvironment,
   onSubmit,
-  onCancel,
   isSubmitting = false,
   submitError = null,
   canCreateProduction = true,
@@ -70,10 +71,12 @@ export function EnvironmentForm({
   })
 
   const type = form.watch('type')
+  const error = form.formState.errors.type?.message ?? submitError
 
   return (
     <form
-      className="flex flex-col gap-5"
+      id={id}
+      className="flex flex-col gap-4"
       /*
        * Production is refused here as well as disabled in the control, because
        * `aria-disabled` is an announcement rather than a lock: Base UI renders
@@ -83,8 +86,7 @@ export function EnvironmentForm({
       onSubmit={form.handleSubmit((value) => {
         if (value.type === EnvironmentType.Production && !canCreateProduction) {
           form.setError('type', {
-            message:
-              productionUnavailableReason ?? 'Production environments cannot be created here.',
+            message: productionUnavailableReason ?? 'Production cannot be created here.',
           })
           return
         }
@@ -92,16 +94,13 @@ export function EnvironmentForm({
       })}
       noValidate
     >
-      <Field
-        label="Name"
-        hint="What this environment is for — “EU staging”, not “Environment 4”."
-        error={form.formState.errors.name?.message}
-      >
-        {({ id, ...field }) => (
+      {/* No hint under the label: the placeholder already shows the shape. */}
+      <Field label="Name" error={form.formState.errors.name?.message}>
+        {({ id: fieldId, ...field }) => (
           <Input
-            id={id}
+            id={fieldId}
             autoFocus
-            placeholder="Sandbox"
+            placeholder="EU staging"
             disabled={isSubmitting}
             {...field}
             {...form.register('name')}
@@ -109,12 +108,12 @@ export function EnvironmentForm({
         )}
       </Field>
 
-      <fieldset className="flex flex-col gap-2">
+      <fieldset className="flex flex-col gap-1.5" disabled={isSubmitting}>
         <legend className="text-sm font-medium">Type</legend>
         <RadioGroup
           value={type}
           onValueChange={(value) => form.setValue('type', value as CreateEnvironment['type'])}
-          className="grid gap-2"
+          className="grid gap-1.5"
         >
           {TYPES.map((option) => {
             const isProduction = option === EnvironmentType.Production
@@ -124,22 +123,19 @@ export function EnvironmentForm({
               <label
                 key={option}
                 className={cn(
-                  'flex cursor-pointer items-start gap-3 rounded-xl border p-3 transition-colors',
+                  'flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition-colors',
                   type === option && 'border-primary/40 bg-accent/50',
                   disabled && 'cursor-not-allowed opacity-60',
                 )}
               >
-                <RadioGroupItem value={option} disabled={disabled} className="mt-0.5" />
-                <span className="flex min-w-0 flex-col gap-0.5">
+                <RadioGroupItem value={option} disabled={disabled} />
+                <span className="flex min-w-0 flex-col">
                   <span className="text-sm font-medium">{ENVIRONMENT_TYPE_LABEL[option]}</span>
-                  <span className="text-muted-foreground text-sm">
-                    {ENVIRONMENT_TYPE_DESCRIPTION[option]}
+                  <span className="text-muted-foreground text-xs">
+                    {disabled && productionUnavailableReason
+                      ? productionUnavailableReason
+                      : ENVIRONMENT_TYPE_DESCRIPTION[option]}
                   </span>
-                  {disabled && productionUnavailableReason ? (
-                    <span className="text-muted-foreground mt-1 text-xs">
-                      {productionUnavailableReason}
-                    </span>
-                  ) : null}
                 </span>
               </label>
             )
@@ -147,20 +143,11 @@ export function EnvironmentForm({
         </RadioGroup>
       </fieldset>
 
-      {form.formState.errors.type?.message ?? submitError ? (
+      {error ? (
         <p role="alert" className="text-destructive text-sm">
-          {form.formState.errors.type?.message ?? submitError}
+          {error}
         </p>
       ) : null}
-
-      <div className="flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Creating…' : 'Create environment'}
-        </Button>
-      </div>
     </form>
   )
 }

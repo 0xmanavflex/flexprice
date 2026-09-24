@@ -209,12 +209,6 @@ export function AppShell({
       <ShellRailHandle />
       <Sidebar collapsible="icon" variant="inset" aria-label="Main">
         <SidebarHeader className="gap-2">
-          {/*
-            Collapsed, the row becomes a column. It has to: the trigger is the
-            only way back out of the rail, and the first version hid it along
-            with everything else — so collapsing the sidebar on a desktop was
-            a one-way door.
-          */}
           <div className="flex items-center justify-between gap-2 in-data-[state=collapsed]:flex-col in-data-[state=collapsed]:items-start">
             <div className="flex min-h-9 items-center gap-2 px-0.5">
               {logo ?? (
@@ -230,16 +224,19 @@ export function AppShell({
               </span>
             </div>
 
-            <div className="flex items-center gap-0.5 in-data-[state=collapsed]:flex-col">
-              <ShellNotifications
-                notifications={notifications}
-                isLoading={notificationsLoading}
-                error={notificationsError}
-                {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
-                {...(onOpenNotification ? { onOpenNotification } : {})}
-              />
-              <SidebarTrigger className="opacity-60 hover:opacity-100 [&_svg]:transition-transform [&_svg]:duration-200 in-data-[state=collapsed]:[&_svg]:rotate-180" />
-            </div>
+            {/*
+              Only the bell. There was a collapse trigger beside it, which the
+              edge handle now replaces — and two controls that do the same
+              thing, one of them permanently in the corner of the rail, is one
+              too many for a 48px column.
+            */}
+            <ShellNotifications
+              notifications={notifications}
+              isLoading={notificationsLoading}
+              error={notificationsError}
+              {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
+              {...(onOpenNotification ? { onOpenNotification } : {})}
+            />
           </div>
 
           {/*
@@ -295,8 +292,8 @@ export function AppShell({
         {/* A rule under the header, so the breadcrumb is not floating over
             whatever the page happens to start with. */}
         <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-          {/* The rail trigger is in the sidebar header; on mobile there is no
-              sidebar to put it in, so the header carries one. */}
+          {/* The edge handle is desktop-only — on mobile the sidebar is a
+              sheet, and this is the only thing that opens it. */}
           <SidebarTrigger className="-ml-1 md:hidden" />
           {breadcrumb}
           {headerActions ? <div className="ml-auto flex items-center gap-2">{headerActions}</div> : null}

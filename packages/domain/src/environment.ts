@@ -21,10 +21,10 @@ export const ENVIRONMENT_TYPE_LABEL: Record<EnvironmentType, string> = {
   [EnvironmentType.Sandbox]: 'Sandbox',
 }
 
+/** One line each, and the line is the difference between them. */
 export const ENVIRONMENT_TYPE_DESCRIPTION: Record<EnvironmentType, string> = {
-  [EnvironmentType.Production]:
-    'Real customers, real invoices, real money. Changes here bill someone.',
-  [EnvironmentType.Sandbox]: 'A copy to try things in. Nothing here charges anyone.',
+  [EnvironmentType.Production]: 'Real customers, real money.',
+  [EnvironmentType.Sandbox]: 'Nothing here charges anyone.',
 }
 
 export const environmentSchema = z.object({

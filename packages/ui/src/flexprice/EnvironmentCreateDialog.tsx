@@ -1,7 +1,10 @@
+import { useId } from 'react'
+import { Button } from '@ui/primitives/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@ui/primitives/dialog'
@@ -15,22 +18,25 @@ import { EnvironmentForm, type EnvironmentFormProps } from './EnvironmentForm'
  * subscriptions — and for the same reason that rule exists. Complex workflows
  * are pages because they have sequence and more than one conceptual domain;
  * this has two fields and no sequence, and it is always started from the
- * switcher in the corner of whatever you were already doing. Sending someone
- * to a page here would lose the page they were on to ask them for a name.
+ * switcher in the corner of whatever you were already doing.
  *
- * It owns nothing but its own visibility. The form emits a validated value and
- * the caller decides what that means, so every state below — submitting, a
- * rejected name, production withheld — is reachable as a story with no network
- * anywhere near it.
+ * Structured as ReUI builds a dialog: header, body, and a `DialogFooter` bar
+ * carrying the actions. The footer is a real part of the component — tinted,
+ * with a rule above it — rather than a right-aligned row improvised inside the
+ * body, which is what it was and why it looked like a form someone had dropped
+ * into a box. The submit button lives in that footer and reaches the form by
+ * `form="…"`, so the structure survives the actions moving out of it.
+ *
+ * Width is the primitive's own `sm:max-w-sm`. The earlier `max-w-lg` gave two
+ * short fields the width of a settings page.
  */
 export const EnvironmentCreateDialogProvenance = provenance({
   source: 'composition',
-  composes: ['ui/dialog'],
-  note: 'EnvironmentForm in a dialog. Two fields and no sequence is not a page.',
+  composes: ['ui/dialog', 'ui/button'],
+  note: "ReUI's dialog structure — header, body, footer bar — around EnvironmentForm.",
 })
 
-export interface EnvironmentCreateDialogProps
-  extends Omit<EnvironmentFormProps, 'onCancel'> {
+export interface EnvironmentCreateDialogProps extends Omit<EnvironmentFormProps, 'id'> {
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -40,18 +46,31 @@ export function EnvironmentCreateDialog({
   onOpenChange,
   ...form
 }: EnvironmentCreateDialogProps) {
+  const formId = useId()
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent>
         <DialogHeader>
           <DialogTitle>New environment</DialogTitle>
-          <DialogDescription>
-            A separate set of customers, plans and invoices. Nothing crosses between
-            environments.
-          </DialogDescription>
+          <DialogDescription>Data does not cross between environments.</DialogDescription>
         </DialogHeader>
 
-        <EnvironmentForm {...form} onCancel={() => onOpenChange(false)} />
+        <EnvironmentForm id={formId} {...form} />
+
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={form.isSubmitting}
+          >
+            Cancel
+          </Button>
+          <Button type="submit" form={formId} disabled={form.isSubmitting}>
+            {form.isSubmitting ? 'Creating…' : 'Create'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )

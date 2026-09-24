@@ -198,7 +198,7 @@ export function ConsoleShell({
         open={creatingEnvironment}
         onOpenChange={setCreatingEnvironment}
         canCreateProduction={canCreateProduction}
-        productionUnavailableReason="Production environments are set up with us. Talk to your account contact to add one."
+        productionUnavailableReason="Set up with your account contact."
         onSubmit={(draft) => {
           onEnvironmentCreate?.(draft)
           setCreatingEnvironment(false)
