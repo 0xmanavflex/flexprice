@@ -42,3 +42,6 @@ export {
   useFeatures,
 } from './features'
 export type { FeaturePage, FeatureWire } from './features'
+
+export { useNavCounts } from './counts'
+export type { CountableId } from './counts'

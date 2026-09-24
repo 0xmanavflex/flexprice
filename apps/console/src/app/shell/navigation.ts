@@ -1,3 +1,4 @@
+import type { CountableId } from '@fp/query'
 import type { ShellNavGroup, ShellSection } from '@fp/ui/compositions'
 
 /**
@@ -59,6 +60,22 @@ export function navEntryForPath(pathname: string): string | undefined {
     if (match) return match.id
   }
   return undefined
+}
+
+/**
+ * Which entities a section wants counted.
+ *
+ * Only the active section is counted — nobody needs the invoice count while
+ * looking at the catalogue, and counting all six on every navigation would be
+ * a dozen requests to render a sidebar.
+ */
+export const SECTION_COUNTS: Record<SectionId, readonly CountableId[]> = {
+  home: [],
+  customers: ['customers', 'subscriptions'],
+  billing: ['invoices'],
+  catalog: ['features', 'plans'],
+  usage: [],
+  settings: [],
 }
 
 /** Counts come from the app; the shape is built here. */

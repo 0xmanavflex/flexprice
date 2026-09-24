@@ -24,3 +24,26 @@ export const resetRequestSchema = z.object({
 })
 
 export type ResetRequest = z.infer<typeof resetRequestSchema>
+
+/**
+ * Choosing a password, when accepting an invitation or completing a reset.
+ *
+ * The rules are deliberately few. Length is the one requirement that reliably
+ * increases strength; composition rules ("one number, one symbol") mostly
+ * produce `Password1!` and a sticky note. The confirmation field exists because
+ * a typo in a password field is invisible by definition.
+ */
+export const setPasswordSchema = z
+  .object({
+    password: z
+      .string()
+      .min(12, 'Use at least 12 characters')
+      .max(200, 'That is longer than we can store'),
+    confirm: z.string().min(1, 'Type the password again'),
+  })
+  .refine((value) => value.password === value.confirm, {
+    path: ['confirm'],
+    message: 'These do not match',
+  })
+
+export type SetPassword = z.infer<typeof setPasswordSchema>

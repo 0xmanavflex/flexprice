@@ -27,6 +27,10 @@ export const queryKeys = {
       ['subscriptions', 'list', filter] as const,
     detail: (id: string) => ['subscriptions', 'detail', id] as const,
   },
+  counts: {
+    all: () => ['counts'] as const,
+    of: (entity: string) => ['counts', entity] as const,
+  },
   features: {
     all: () => ['features'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['features', 'list', filter] as const,

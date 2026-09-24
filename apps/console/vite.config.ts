@@ -15,4 +15,32 @@ export default defineConfig({
     },
   },
   server: { port: 3000 },
+
+  build: {
+    rollupOptions: {
+      output: {
+        /**
+         * Split the dependencies that never change from the code that does.
+         *
+         * Without this everything outside a route chunk lands in one ~900 kB
+         * file, so shipping a one-line fix re-downloads React and Base UI with
+         * it. These three are separate because they version independently and
+         * are cached across deploys.
+         *
+         * MSW is left alone deliberately: it is already its own chunk through
+         * the dynamic import, and it is only fetched when mocks are switched
+         * on — so it costs a production visitor nothing despite its size.
+         */
+        manualChunks(id: string) {
+          if (!id.includes('node_modules')) return undefined
+          if (/[\\/]react(-dom)?[\\/]/.test(id) || id.includes('react/jsx-runtime')) {
+            return 'vendor-react'
+          }
+          if (id.includes('@base-ui')) return 'vendor-base-ui'
+          if (id.includes('@tanstack')) return 'vendor-tanstack'
+          return undefined
+        },
+      },
+    },
+  },
 })

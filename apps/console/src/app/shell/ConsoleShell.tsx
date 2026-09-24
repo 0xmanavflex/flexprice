@@ -8,7 +8,9 @@ import {
   UsersIcon,
 } from 'lucide-react'
 import { AppShell, type ShellEnvironment, type ShellSection } from '@fp/ui/compositions'
+import { useNavCounts } from '@fp/query'
 import {
+  SECTION_COUNTS,
   SECTION_IDS,
   SECTION_LABEL,
   SECTION_NAV,
@@ -40,7 +42,6 @@ export interface ConsoleShellProps {
   environments: ShellEnvironment[]
   onEnvironmentChange: (id: string) => void
   user: { name: string; email: string }
-  counts?: Partial<Record<string, number>>
   children: ReactNode
 }
 
@@ -61,10 +62,11 @@ export function ConsoleShell({
   environments,
   onEnvironmentChange,
   user,
-  counts,
   children,
 }: ConsoleShellProps) {
   const section = sectionForPath(pathname)
+  // Counted here rather than passed in, so a page never has to remember to.
+  const counts = useNavCounts(SECTION_COUNTS[section])
   const activeItemId = navEntryForPath(pathname)
 
   return (
