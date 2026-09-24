@@ -257,6 +257,38 @@ function link(row, field, pool, index, embedAs) {
   if (embedAs) row[embedAs] = clone(target)
 }
 
+/**
+ * Nested collections carried by a row, and the field pointing back at it.
+ *
+ * Re-keying a row is not enough. `multiply` gave each generated plan a fresh
+ * id but left its embedded prices untouched, so twelve plans shared seventeen
+ * price ids, and every subscription's line items still named the *captured*
+ * subscription. Duplicate ids break React keys, and a back-reference to a row
+ * that is not in the corpus is the orphan bug one level down.
+ */
+const NESTED = {
+  prices: 'entity_id',
+  line_items: 'subscription_id',
+  entitlements: 'plan_id',
+  credit_grants: 'plan_id',
+}
+
+/** Gives a row's nested collections unique ids and correct back-references. */
+function rekeyNested(row, index) {
+  for (const [field, backRef] of Object.entries(NESTED)) {
+    const collection = row[field]
+    if (!Array.isArray(collection)) continue
+
+    row[field] = collection.map((item, n) => {
+      const next = clone(item)
+      const prefix = String(next.id ?? field).split('_')[0]
+      next.id = `${prefix}_synth_${String(index).padStart(4, '0')}_${n}`
+      if (backRef in next) next[backRef] = row.id
+      return next
+    })
+  }
+}
+
 /** Entities with no interesting variety axis: more rows, same shape. */
 function multiply(captured, prefix, count) {
   const seeds = captured?.items ?? []
@@ -267,6 +299,7 @@ function multiply(captured, prefix, count) {
     row.id = `${prefix}_synth_${String(i).padStart(4, '0')}`
     if (row.name) row.name = `${row.name} ${i + 1}`
     if (row.lookup_key) row.lookup_key = `${row.lookup_key}_${i + 1}`
+    rekeyNested(row, i)
     return row
   })
 
@@ -309,6 +342,14 @@ function synthSubscriptions(captured, customers, plans, count = 24) {
 
     link(row, 'customer_id', customers?.items ?? [], i, 'customer')
     link(row, 'plan_id', plans?.items ?? [], i, 'plan')
+
+    // Re-linking the customer changes who these belong to.
+    for (const [n, item] of (row.line_items ?? []).entries()) {
+      item.id = `li_synth_${String(i).padStart(4, '0')}_${n}`
+      item.subscription_id = row.id
+      item.customer_id = row.customer_id
+      item.currency = row.currency
+    }
 
     row.start_date = iso(days(-120 + i * 4))
     row.current_period_start = iso(days(-30))
