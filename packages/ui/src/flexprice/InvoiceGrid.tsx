@@ -10,7 +10,6 @@ import {
   type InvoiceQuery,
   InvoiceSortField,
   InvoiceStatus,
-  formatMoney,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
@@ -18,6 +17,7 @@ import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-co
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
+import { Money } from './Money'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -160,7 +160,7 @@ export function InvoiceGrid({
           header: ({ column }: never) => <DataGridColumnHeader title="Total" column={column} />,
           // Money is formatted from the exact decimal; it never becomes a float.
           cell: ({ row }: { row: { original: Invoice } }) => (
-            <span className="tabular-nums">{formatMoney(row.original.total, locale)}</span>
+            <Money value={row.original.total} {...(locale ? { locale } : {})} truncate />
           ),
           size: 140,
         },

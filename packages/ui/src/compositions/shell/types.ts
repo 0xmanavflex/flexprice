@@ -11,6 +11,7 @@ export interface ShellSection {
 export interface ShellNavItem {
   id: string
   label: string
+  icon?: ReactNode
   /**
    * How many of this thing exist.
    *

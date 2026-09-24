@@ -58,7 +58,7 @@ const meta = {
     environments: [sandbox, production],
     onEnvironmentChange: fn(),
     user: { name: 'Dinesh K', email: 'dinesh@flexprice.io' },
-    onOpenSearch: fn(),
+    onSearch: fn(),
     children: <div className="p-6 text-sm text-muted-foreground">Page content.</div>,
   },
 } satisfies Meta<typeof AppShell>

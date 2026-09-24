@@ -41,3 +41,26 @@ export const Zero: Story = { args: { value: money('0', 'USD'), muteZero: true } 
 
 /** Sign carries meaning for credits and refunds. */
 export const Negative: Story = { args: { value: money('-250.00', 'USD'), signed: true } }
+
+/**
+ * Truncation, for table cells.
+ *
+ * A large contract or a currency with no minor unit produces an amount long
+ * enough to break a column. Left alone it pushes into the next cell and makes
+ * two unreadable instead of one.
+ */
+export const TruncatedInANarrowColumn: Story = {
+  args: { value: money('185128200000000000.00', 'EUR'), truncate: true },
+  render: (args) => (
+    <div className="w-40 border p-2">
+      <Money {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Clipped visually, but the full amount is still reachable.
+    const el = canvas.getByTitle(/185,128,200,000,000,000/)
+    await expect(el).toBeInTheDocument()
+    await expect(el.scrollWidth).toBeGreaterThan(el.clientWidth)
+  },
+}

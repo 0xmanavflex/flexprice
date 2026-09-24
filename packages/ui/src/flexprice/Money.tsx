@@ -26,23 +26,48 @@ export interface MoneyProps {
   muteZero?: boolean
   /** Colours negatives — for credits and refunds, where the sign is the meaning. */
   signed?: boolean
+  /**
+   * Truncate rather than overflow, for table cells.
+   *
+   * An amount long enough to break a column is rare and real: a large
+   * contract, or a currency with no minor unit. Left alone it pushes into the
+   * next column and makes two cells unreadable instead of one. Truncated, the
+   * row still scans and the full value is in the title attribute and available
+   * to a screen reader.
+   *
+   * Not the default: a detail page has room, and silently hiding digits from
+   * someone reading a single invoice is worse than a wide line.
+   */
+  truncate?: boolean
   className?: string
 }
 
-export function Money({ value, locale, muteZero = false, signed = false, className }: MoneyProps) {
+export function Money({
+  value,
+  locale,
+  muteZero = false,
+  signed = false,
+  truncate = false,
+  className,
+}: MoneyProps) {
   const zero = isZeroMoney(value)
   const negative = isNegativeMoney(value)
+  const formatted = formatMoney(value, locale)
 
   return (
     <span
+      // The full amount stays reachable on hover and to assistive tech even
+      // when the visible text is clipped.
+      {...(truncate ? { title: formatted } : {})}
       className={cn(
         'tabular-nums',
+        truncate && 'block max-w-full truncate',
         muteZero && zero && 'text-muted-foreground',
         signed && negative && 'text-destructive',
         className,
       )}
     >
-      {formatMoney(value, locale)}
+      {formatted}
     </span>
   )
 }
