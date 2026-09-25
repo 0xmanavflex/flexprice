@@ -18,6 +18,7 @@ import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagi
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { useRef, useState } from 'react'
 import { Button } from '@ui/primitives/button'
+import { Skeleton } from '@ui/primitives/skeleton'
 import { FitToWindow } from '@ui/compositions/FitToWindow'
 import { SortMenu } from '@ui/compositions/SortMenu'
 import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
@@ -149,6 +150,7 @@ export function InvoiceGrid({
       [
         {
           id: 'number',
+          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Invoice) => row.number,
           header: ({ column }: never) => <DataGridColumnHeader title="Invoice" column={column} />,
           cell: ({ row }: { row: { original: Invoice } }) => (
@@ -159,6 +161,7 @@ export function InvoiceGrid({
         },
         {
           id: 'customer',
+          meta: { skeleton: <Skeleton className="h-4 w-36" /> },
           accessorFn: (row: Invoice) => row.customerName,
           header: ({ column }: never) => <DataGridColumnHeader title="Customer" column={column} />,
           cell: ({ row }: { row: { original: Invoice } }) => row.original.customerName,
@@ -167,6 +170,7 @@ export function InvoiceGrid({
         },
         {
           id: 'status',
+          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
           accessorFn: (row: Invoice) => row.status,
           header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
           cell: ({ row }: { row: { original: Invoice } }) => (
@@ -178,6 +182,7 @@ export function InvoiceGrid({
         },
         {
           id: 'total',
+          meta: { skeleton: <Skeleton className="ml-auto h-4 w-20" /> },
           accessorFn: (row: Invoice) => row.total.amount,
           header: ({ column }: never) => <DataGridColumnHeader title="Total" column={column} />,
           // Money is formatted from the exact decimal; it never becomes a float.
@@ -188,6 +193,7 @@ export function InvoiceGrid({
         },
         {
           id: 'dueDate',
+          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Invoice) => row.dueDate,
           header: ({ column }: never) => <DataGridColumnHeader title="Due" column={column} />,
           cell: ({ row }: { row: { original: Invoice } }) => formatDate(row.original.dueDate, locale),
@@ -195,6 +201,7 @@ export function InvoiceGrid({
         },
         {
           id: 'issuedAt',
+          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Invoice) => row.issuedAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Issued" column={column} />,
           cell: ({ row }: { row: { original: Invoice } }) => formatDate(row.original.issuedAt, locale),
@@ -293,7 +300,19 @@ export function InvoiceGrid({
         isLoading={isLoading}
         emptyMessage="No invoices match these filters."
         {...(onInvoiceClick ? { onRowClick: onInvoiceClick } : {})}
-        tableLayout={{ headerSticky: true, columnsVisibility: true, width: 'fixed' }}
+        tableLayout={{
+          headerSticky: true,
+          columnsVisibility: true,
+          width: 'fixed',
+          /*
+           * No horizontal rules, and tighter rows. Removing the lines is most
+           * of what makes a dense ledger read quietly — rows separate by
+           * rhythm and alignment, which is enough once every column is
+           * aligned. The rules only earn their place when rows wrap.
+           */
+          rowBorder: false,
+          dense: true,
+        }}
       >
         <DataGridTable />
         <DataGridPagination />

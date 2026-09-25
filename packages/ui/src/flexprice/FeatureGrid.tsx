@@ -172,7 +172,19 @@ export function FeatureGrid({
       isLoading={isLoading}
       emptyMessage="No features match these filters."
       {...(onFeatureClick ? { onRowClick: onFeatureClick } : {})}
-      tableLayout={{ headerSticky: true, columnsVisibility: true, width: 'fixed' }}
+      tableLayout={{
+        headerSticky: true,
+        columnsVisibility: true,
+        width: 'fixed',
+        /*
+         * No horizontal rules, and tighter rows. Removing the lines is most
+         * of what makes a dense ledger read quietly — rows separate by
+         * rhythm and alignment, which is enough once every column is
+         * aligned. The rules only earn their place when rows wrap.
+         */
+        rowBorder: false,
+        dense: true,
+      }}
     >
       <DataGridTable />
       <DataGridPagination />
