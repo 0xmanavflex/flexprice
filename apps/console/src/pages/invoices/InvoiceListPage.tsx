@@ -1,6 +1,8 @@
 import { type InvoiceQuery } from '@fp/domain'
 import { ApiError, useInvoices } from '@fp/query'
+import { ReceiptIcon } from 'lucide-react'
 import { InvoiceGrid } from '@fp/ui/flexprice'
+import { EmptyState, PageBody, PageHeader } from '@fp/ui/compositions'
 
 export interface InvoiceListPageProps {
   query: InvoiceQuery
@@ -21,20 +23,43 @@ export interface InvoiceListPageProps {
 export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) {
   const invoices = useInvoices(query)
 
-  return (
-    <main className="mx-auto flex w-full max-w-7xl flex-col gap-4 p-6">
-      <h1 className="text-xl font-semibold">Invoices</h1>
+  const isFiltered = query.search.length > 0 || query.statuses.length > 0
+  const rows = invoices.data?.invoices ?? []
 
-      <InvoiceGrid
-        invoices={invoices.data?.invoices ?? []}
-        total={invoices.data?.total ?? 0}
-        query={query}
-        onQueryChange={onQueryChange}
-        isLoading={invoices.isPending}
-        error={toMessage(invoices.error)}
-        onRetry={() => void invoices.refetch()}
+  return (
+    <>
+      <PageHeader
+        title="Invoices"
+        description="What customers have been billed, and what is still owed."
       />
-    </main>
+
+      <PageBody>
+        {/*
+         * The first-run state belongs to the page, not the table: with no
+         * invoices at all there is nothing to put a header row above, and the
+         * useful thing to say is that invoices arrive from subscriptions
+         * rather than being made here.
+         */}
+        {!invoices.isPending && !invoices.error && rows.length === 0 && !isFiltered ? (
+          <EmptyState
+            icon={<ReceiptIcon aria-hidden />}
+            title="No invoices yet"
+            description="Invoices are produced when a subscription's billing period closes. Create a plan and subscribe a customer, and the first one will appear here."
+          />
+        ) : (
+          <InvoiceGrid
+            invoices={rows}
+            total={invoices.data?.total ?? 0}
+            query={query}
+            onQueryChange={onQueryChange}
+            isLoading={invoices.isPending}
+            error={toMessage(invoices.error)}
+            onRetry={() => void invoices.refetch()}
+            onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+          />
+        )}
+      </PageBody>
+    </>
   )
 }
 

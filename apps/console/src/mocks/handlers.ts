@@ -96,8 +96,22 @@ function applyFeatureExpand(result: ReturnType<typeof page>, expand: string | un
   }
 }
 
+/**
+ * TEMPORARY — every list is served empty, so the empty states can be reviewed.
+ *
+ * Getting to an empty state otherwise means deleting the fixture corpus or
+ * finding a tenant with no data, and the empty state is the screen most likely
+ * to ship unlooked-at.
+ *
+ * To restore the corpus: delete this constant and the two `if (EMPTY_REVIEW)`
+ * lines below. Nothing else references it.
+ */
+const EMPTY_REVIEW = true
+const EMPTY = { items: [], total: 0 }
+
 const search = (path: string, key: string) =>
   http.post(`${BASE}${path}`, async ({ request }) => {
+    if (EMPTY_REVIEW) return HttpResponse.json(EMPTY)
     const body = ((await request.json().catch(() => ({}))) ?? {}) as SearchBody
     const result = page(corpus[key] as Corpus, body)
     return HttpResponse.json(
@@ -107,6 +121,7 @@ const search = (path: string, key: string) =>
 
 const list = (path: string, key: string) =>
   http.get(`${BASE}${path}`, ({ request }) => {
+    if (EMPTY_REVIEW) return HttpResponse.json(EMPTY)
     const url = new URL(request.url)
     return HttpResponse.json(
       page(corpus[key] as Corpus, {

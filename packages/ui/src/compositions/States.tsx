@@ -102,6 +102,10 @@ export interface ListStateProps {
   onClearFilters?: () => void
   emptyTitle: string
   emptyDescription?: string
+  /** The glyph for the first-run state. Sits inside the illustration. */
+  emptyIcon?: ReactNode
+  /** Beside the primary action — an import, a link to the docs. */
+  emptySecondaryAction?: ReactNode
   children: ReactNode
 }
 
@@ -124,6 +128,8 @@ export function ListState({
   onClearFilters,
   emptyTitle,
   emptyDescription,
+  emptyIcon,
+  emptySecondaryAction,
   children,
 }: ListStateProps) {
   if (error) {
@@ -143,6 +149,7 @@ export function ListState({
   if (isEmpty) {
     return isFiltered ? (
       <EmptyState
+        size="inline"
         title="Nothing matches these filters"
         description="Try a different search, or clear the filters to see everything."
         isFiltered
@@ -158,6 +165,8 @@ export function ListState({
       <EmptyState
         title={emptyTitle}
         {...(emptyDescription ? { description: emptyDescription } : {})}
+        {...(emptyIcon ? { icon: emptyIcon } : {})}
+        {...(emptySecondaryAction ? { secondaryAction: emptySecondaryAction } : {})}
         {...(createAction ? { action: createAction } : {})}
       />
     )

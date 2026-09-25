@@ -17,6 +17,7 @@ import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { useRef, useState } from 'react'
 import { Button } from '@ui/primitives/button'
 import { Skeleton } from '@ui/primitives/skeleton'
+import { EmptyState } from '@ui/compositions/EmptyState'
 import { FitToWindow } from '@ui/compositions/FitToWindow'
 import { SortMenu } from '@ui/compositions/SortMenu'
 import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
@@ -63,6 +64,8 @@ export interface InvoiceGridProps {
   error?: string | null
   onRetry?: () => void
   onInvoiceClick?: (invoice: Invoice) => void
+  /** Offered when a filter is what emptied the list. */
+  onClearFilters?: () => void
   /** Locale for money and dates. Supplied by the app, never read from a global. */
   locale?: string
 }
@@ -123,6 +126,7 @@ export function InvoiceGrid({
   error = null,
   onRetry,
   onInvoiceClick,
+  onClearFilters,
   locale,
 }: InvoiceGridProps) {
   const columns = useMemo<ColumnDef<never, Invoice>[]>(
@@ -276,7 +280,21 @@ export function InvoiceGrid({
         table={table as never}
         recordCount={total}
         isLoading={isLoading}
-        emptyMessage="No invoices match these filters."
+        emptyMessage={
+          <EmptyState
+            size="inline"
+            isFiltered
+            title="No invoices match these filters"
+            description="Try a different search, or clear what is narrowing the list."
+            onClearFilters={
+              onClearFilters ? (
+                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
+        }
         {...(onInvoiceClick ? { onRowClick: onInvoiceClick } : {})}
         tableLayout={{
           headerSticky: true,

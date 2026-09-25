@@ -2,6 +2,7 @@ import { type Feature, type FeatureQuery } from '@fp/domain'
 import { ApiError, useFeatures } from '@fp/query'
 import { FeatureGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
 
 export interface FeatureListPageProps {
@@ -60,8 +61,9 @@ export function FeatureListPage({
           onRetry={() => void features.refetch()}
           onClearFilters={() => onQueryChange({ ...query, search: '', types: [], page: 1 })}
           createAction={<Button onClick={onCreate}>New feature</Button>}
-          emptyTitle="No features yet"
-          emptyDescription="Features describe what you meter and what a plan includes."
+          emptyIcon={<GaugeIcon aria-hidden />}
+          emptyTitle="Nothing is being measured yet"
+          emptyDescription="A Feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
         >
           <FeatureGrid
             features={rows}
@@ -69,6 +71,7 @@ export function FeatureListPage({
             query={query}
             onQueryChange={onQueryChange}
             onFeatureClick={onOpenFeature}
+            onClearFilters={() => onQueryChange({ ...query, search: '', types: [], page: 1 })}
           />
         </ListState>
       </PageBody>

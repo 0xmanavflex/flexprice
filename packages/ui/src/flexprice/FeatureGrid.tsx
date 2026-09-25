@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from '@ui/primitives/dropdown-menu'
 import { ChevronDownIcon, FilterIcon } from 'lucide-react'
+import { EmptyState } from '@ui/compositions/EmptyState'
 import { GridFooter } from '@ui/compositions/GridFooter'
 import { GridToolbar } from '@ui/compositions/GridToolbar'
 import { SortMenu } from '@ui/compositions/SortMenu'
@@ -58,6 +59,8 @@ export interface FeatureGridProps {
   onFeatureClick?: (feature: Feature) => void
   /** Filter controls, rendered beside Sort. */
   filters?: ReactNode
+  /** Offered when a filter is what emptied the list. */
+  onClearFilters?: () => void
   locale?: string
 }
 
@@ -78,6 +81,7 @@ export function FeatureGrid({
   onRetry,
   onFeatureClick,
   filters,
+  onClearFilters,
   locale,
 }: FeatureGridProps) {
   const columns = useMemo<ColumnDef<never, Feature>[]>(
@@ -282,7 +286,27 @@ export function FeatureGrid({
         table={table as never}
         recordCount={total}
         isLoading={isLoading}
-        emptyMessage="No features match these filters."
+        emptyMessage={
+          /*
+           * The table body, not a replacement for the page. A bare sentence
+           * leaves someone who just typed a search with nothing to press —
+           * and the only useful action here is undoing the thing that emptied
+           * the list.
+           */
+          <EmptyState
+            size="inline"
+            isFiltered
+            title="No features match these filters"
+            description="Try a different search, or clear what is narrowing the list."
+            onClearFilters={
+              onClearFilters ? (
+                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
+                  Clear filters
+                </Button>
+              ) : undefined
+            }
+          />
+        }
         {...(onFeatureClick ? { onRowClick: onFeatureClick } : {})}
         tableLayout={{
           headerSticky: true,
