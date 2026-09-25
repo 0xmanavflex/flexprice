@@ -1,4 +1,4 @@
-import { ConstructionIcon } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { Button } from '@fp/ui/primitives'
 import { EmptyState, PageBody, PageHeader } from '@fp/ui/compositions'
 import { env } from '@/env'
@@ -6,18 +6,26 @@ import { env } from '@/env'
 /**
  * A destination that exists in the navigation but not yet in V2.
  *
- * The alternative is what the shell did until now: twenty of twenty-four items
- * navigated to a bare "Not Found", which is indistinguishable from a broken
- * link. A destination that says "this one is still in the current dashboard,
- * here is the link" is honest about the migration and keeps the person moving.
+ * It reads as an empty state, not as a construction notice. "No addons yet",
+ * with a sentence saying what an addon is, is true and useful on the day the
+ * page ships as well as today — whereas "this is being migrated" is a note to
+ * ourselves that a customer has to read and cannot act on, so it is not shown
+ * at all.
  *
- * This is a migration scaffold with an end date, not a pattern. Each page
- * deletes its own placeholder when it lands.
+ * The consequence is that this page mostly stops being a placeholder: when the
+ * real screen lands it inherits the same copy, and only the action changes
+ * from "open the current dashboard" to "create one".
  */
 export interface PlaceholderPageProps {
   title: string
-  /** What this screen will be for, in the words a finance person would use. */
+  /** What this screen is for, in the page header. */
   description: string
+  /** The empty state's own headline. */
+  emptyTitle: string
+  emptyDescription: string
+  /** Label for the primary action, or `null` where creating one is not the move. */
+  cta?: string | null
+  icon?: ReactNode
   /**
    * Where the working version lives today, as a path in the current dashboard.
    * The origin comes from configuration; with none set, no link is offered.
@@ -25,22 +33,38 @@ export interface PlaceholderPageProps {
   legacyPath?: string
 }
 
-export function PlaceholderPage({ title, description, legacyPath }: PlaceholderPageProps) {
+export function PlaceholderPage({
+  title,
+  description,
+  emptyTitle,
+  emptyDescription,
+  cta,
+  icon,
+  legacyPath,
+}: PlaceholderPageProps) {
+  /*
+   * The action goes to the current dashboard, because that is where the thing
+   * can actually be created today. With no legacy origin configured there is
+   * nowhere for it to go, so it is not rendered — a primary button that does
+   * nothing is worse than no button.
+   */
+  const href = legacyPath && env.legacyConsoleUrl ? `${env.legacyConsoleUrl}${legacyPath}` : null
+
   return (
     <>
       <PageHeader title={title} description={description} />
       <PageBody>
         <EmptyState
-          icon={<ConstructionIcon className="size-6" aria-hidden />}
-          title={`${title} is not in the new console yet`}
-          description="It is being migrated. Until then it works exactly as it does today in the current dashboard."
-          {...(legacyPath && env.legacyConsoleUrl
+          {...(icon ? { icon } : {})}
+          title={emptyTitle}
+          description={emptyDescription}
+          {...(cta && href
             ? {
                 action: (
                   <Button
                     render={
                       <a
-                        href={`${env.legacyConsoleUrl}${legacyPath}`}
+                        href={href}
                         rel="noreferrer"
                         // A new tab, so an unfinished form in the console is
                         // not discarded by following a link out of it.
@@ -48,7 +72,7 @@ export function PlaceholderPage({ title, description, legacyPath }: PlaceholderP
                       />
                     }
                   >
-                    Open in the current dashboard
+                    {cta}
                   </Button>
                 ),
               }

@@ -125,6 +125,9 @@ const placeholderRoutes = PLACEHOLDER_ROUTES.map((entry) =>
       <PlaceholderPage
         title={entry.title}
         description={entry.description}
+        emptyTitle={entry.emptyTitle}
+        emptyDescription={entry.emptyDescription}
+        cta={entry.cta}
         {...('legacy' in entry ? { legacyPath: entry.legacy } : {})}
       />
     ),

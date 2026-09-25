@@ -30,8 +30,13 @@ export interface PageHeaderProps {
 }
 
 export function PageHeader({ title, description, action, menu, breadcrumb }: PageHeaderProps) {
+  /*
+   * No rule under it. The shell's own header already draws one a few pixels
+   * above, and two stacked hairlines read as a seam rather than a boundary.
+   * The heading's size and the space below it are enough separation.
+   */
   return (
-    <header className="flex flex-col gap-3 border-b px-6 py-5">
+    <header className="flex flex-col gap-3 px-6 py-5">
       {breadcrumb}
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
