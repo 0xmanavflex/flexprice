@@ -17,6 +17,7 @@ import { ShellNav } from './ShellNav'
 import { ShellNotifications } from './ShellNotifications'
 import { ShellRailHandle } from './ShellRailHandle'
 import { ShellSearch } from './ShellSearch'
+import { ThemeToggle } from './ThemeToggle'
 import type { ShellEnvironment, ShellNavGroup, ShellNotification, ShellUser } from './types'
 
 /**
@@ -185,19 +186,12 @@ export function AppShell({
   return (
     <SidebarProvider
       className={cn('bg-sidebar h-screen', FLUX)}
-      style={
-        {
-          '--sidebar-width': '260px',
-          /*
-           * The sidebar is a shade darker than the page it sits beside, so the
-           * content reads as the thing in front. ReUI's nova base ships both
-           * at very nearly white, which is why the two planes were previously
-           * indistinguishable and the shell looked flat.
-           */
-          '--sidebar': 'oklch(0.945 0 0)',
-          '--sidebar-accent': 'oklch(0.895 0 0)',
-        } as CSSProperties
-      }
+      /*
+       * Width only. The sidebar's colours live in `styles.css` under `:root`
+       * and `.dark` — set here, they were a fixed light grey that survived the
+       * theme switch, so dark mode rendered light text on a light sidebar.
+       */
+      style={{ '--sidebar-width': '260px' } as CSSProperties}
     >
       {/*
         Collapsed, a tooltip is the only thing naming a row — so it cannot wait
@@ -230,13 +224,16 @@ export function AppShell({
               thing, one of them permanently in the corner of the rail, is one
               too many for a 48px column.
             */}
-            <ShellNotifications
-              notifications={notifications}
-              isLoading={notificationsLoading}
-              error={notificationsError}
-              {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
-              {...(onOpenNotification ? { onOpenNotification } : {})}
-            />
+            <div className="flex items-center gap-0.5 in-data-[state=collapsed]:flex-col">
+              <ShellNotifications
+                notifications={notifications}
+                isLoading={notificationsLoading}
+                error={notificationsError}
+                {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
+                {...(onOpenNotification ? { onOpenNotification } : {})}
+              />
+              <ThemeToggle />
+            </div>
           </div>
 
           {/*

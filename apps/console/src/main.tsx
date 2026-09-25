@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider } from '@tanstack/react-router'
-import { AppFailure } from '@fp/ui/compositions'
+import { AppFailure, ThemeProvider } from '@fp/ui/compositions'
 import { FlexpriceProvider } from '@fp/query'
 import './styles.css'
 import { router } from './app/router'
@@ -38,6 +38,7 @@ if (env.problem) {
 
 createRoot(container).render(
   <StrictMode>
+    <ThemeProvider>
     <FlexpriceProvider
       serverURL={env.apiUrl}
       auth={{
@@ -52,5 +53,6 @@ createRoot(container).render(
     >
       <RouterProvider router={router} />
     </FlexpriceProvider>
+    </ThemeProvider>
   </StrictMode>,
 )

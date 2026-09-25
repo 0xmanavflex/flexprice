@@ -16,7 +16,11 @@ import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-g
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
+import { useRef, useState } from 'react'
 import { Button } from '@ui/primitives/button'
+import { FitToWindow } from '@ui/compositions/FitToWindow'
+import { SortMenu } from '@ui/compositions/SortMenu'
+import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { Money } from './Money'
 import { provenance } from '@ui/provenance'
 
@@ -105,6 +109,24 @@ const SORTABLE: Record<string, InvoiceSortField> = {
   total: InvoiceSortField.Total,
   status: InvoiceSortField.Status,
 }
+
+/**
+ * The same four fields the columns offer, for the menu.
+ *
+ * Derived from `SORTABLE` rather than written again, so a column that becomes
+ * sortable cannot be missing from the menu — or the other way round.
+ */
+const SORT_LABEL: Record<InvoiceSortField, string> = {
+  [InvoiceSortField.IssuedAt]: 'Issued',
+  [InvoiceSortField.DueDate]: 'Due',
+  [InvoiceSortField.Total]: 'Total',
+  [InvoiceSortField.Status]: 'Status',
+}
+
+const SORT_OPTIONS = Object.values(SORTABLE).map((value) => ({
+  value,
+  label: SORT_LABEL[value],
+}))
 
 function formatDate(value: Date | null, locale?: string): string {
   if (!value) return '—'
@@ -217,6 +239,25 @@ export function InvoiceGrid({
     },
   } as never)
 
+  /*
+   * Measured paging. Hooks run before the error branch below, because a
+   * component may not change how many hooks it calls between renders — and an
+   * error is exactly when that would otherwise happen.
+   */
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [fitToWindow, setFitToWindow] = useState(false)
+  const capacity = useViewportPageSize({
+    containerRef,
+    enabled: fitToWindow,
+    // The toolbar above and the pagination footer below are not rows.
+    reservedHeight: 96,
+  })
+
+  // `null` means "no measurement yet" — keep whatever size is already set.
+  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
+    onQueryChange({ ...query, pageSize: capacity, page: 1 })
+  }
+
   if (error) {
     return (
       <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
@@ -231,16 +272,32 @@ export function InvoiceGrid({
   }
 
   return (
-    <DataGrid
-      table={table as never}
-      recordCount={total}
-      isLoading={isLoading}
-      emptyMessage="No invoices match these filters."
-      {...(onInvoiceClick ? { onRowClick: onInvoiceClick } : {})}
-      tableLayout={{ headerSticky: true, columnsVisibility: true, width: 'fixed' }}
-    >
-      <DataGridTable />
-      <DataGridPagination />
-    </DataGrid>
+    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
+      <div className="flex items-center gap-1">
+        <SortMenu
+          options={SORT_OPTIONS}
+          field={query.sortBy}
+          direction={query.sortDirection}
+          onChange={(sortBy, sortDirection) =>
+            onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
+          }
+        />
+        <div className="ml-auto">
+          <FitToWindow pressed={fitToWindow} onPressedChange={setFitToWindow} />
+        </div>
+      </div>
+
+      <DataGrid
+        table={table as never}
+        recordCount={total}
+        isLoading={isLoading}
+        emptyMessage="No invoices match these filters."
+        {...(onInvoiceClick ? { onRowClick: onInvoiceClick } : {})}
+        tableLayout={{ headerSticky: true, columnsVisibility: true, width: 'fixed' }}
+      >
+        <DataGridTable />
+        <DataGridPagination />
+      </DataGrid>
+    </div>
   )
 }

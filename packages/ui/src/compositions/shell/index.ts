@@ -14,6 +14,8 @@ export { ShellNotifications, ShellNotificationsProvenance } from './ShellNotific
 export type { ShellNotificationsProps } from './ShellNotifications'
 export { ShellRailHandle, ShellRailHandleProvenance } from './ShellRailHandle'
 export { ShellSearch, ShellSearchProvenance } from './ShellSearch'
+export { ThemeProvider, ThemeProviderProvenance } from './ThemeProvider'
+export { ThemeToggle, ThemeToggleProvenance } from './ThemeToggle'
 export type { ShellSearchProps } from './ShellSearch'
 export type {
   ShellEnvironment,

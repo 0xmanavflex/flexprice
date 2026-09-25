@@ -23,6 +23,15 @@ export type { ToolbarProps } from './Toolbar'
 export { PageBody, PageHeader, PageProvenance, PageToolbar } from './Page'
 export type { PageHeaderProps } from './Page'
 
+export { FilterBar, FilterBarProvenance, emptyFilterQuery } from './FilterBar'
+export type { FilterBarProps, FlatFilter } from './FilterBar'
+export { SortMenu, SortMenuProvenance } from './SortMenu'
+export type { SortMenuProps, SortOption } from './SortMenu'
+export { FitToWindow, FitToWindowProvenance } from './FitToWindow'
+export type { FitToWindowProps } from './FitToWindow'
+export { useViewportPageSize } from './useViewportPageSize'
+export type { ViewportPageSizeOptions } from './useViewportPageSize'
+
 export { AppFailure, AppFailureProvenance } from './AppFailure'
 export type { AppFailureProps } from './AppFailure'
 
