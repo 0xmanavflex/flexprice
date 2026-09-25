@@ -1,7 +1,5 @@
 // @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
-"use client"
-
 import { Checkbox as CheckboxPrimitive } from "@base-ui/react/checkbox"
 import { cn } from "cn"
 import { CheckIcon } from "lucide-react"

@@ -26,6 +26,23 @@ const SORT_VALUES = new Set<string>(Object.values(InvoiceSortField))
 
 const MAX_PAGE_SIZE = 100
 
+/**
+ * A param under either spelling.
+ *
+ * The short names are what a person writes by hand — `?q=api&type=metered`
+ * beats `?search=api&types=%5B%22metered%22%5D`. The long names are what
+ * TanStack writes, because it serialises the query object as it stands.
+ *
+ * Reading both is what makes the round trip work. Reading only the short ones
+ * meant every filter and sort reverted the instant it was applied: navigate
+ * wrote `types`, the parser looked for `type`, found nothing, and returned the
+ * default — with no error anywhere.
+ */
+function param(raw: Record<string, unknown>, short: string, long: string): unknown {
+  const value = raw[short]
+  return value === undefined || value === null ? raw[long] : value
+}
+
 function positiveInt(value: unknown, fallback: number, max = Number.MAX_SAFE_INTEGER): number {
   const parsed = typeof value === 'number' ? value : Number.parseInt(String(value ?? ''), 10)
   if (!Number.isFinite(parsed) || parsed < 1) return fallback
@@ -33,22 +50,22 @@ function positiveInt(value: unknown, fallback: number, max = Number.MAX_SAFE_INT
 }
 
 export function parseInvoiceSearch(raw: Record<string, unknown>): InvoiceQuery {
-  const statusesRaw = raw['status']
+  const statusesRaw = param(raw, 'status', 'statuses')
   const statuses = (Array.isArray(statusesRaw) ? statusesRaw : String(statusesRaw ?? '').split(','))
     .map((s) => String(s).trim())
     .filter((s): s is InvoiceStatus => STATUS_VALUES.has(s))
 
-  const sortBy = String(raw['sort'] ?? '')
-  const direction = String(raw['dir'] ?? '')
+  const sortBy = String(param(raw, 'sort', 'sortBy') ?? '')
+  const direction = String(param(raw, 'dir', 'sortDirection') ?? '')
 
   return {
     page: positiveInt(raw['page'], DEFAULT_INVOICE_QUERY.page),
-    pageSize: positiveInt(raw['size'], DEFAULT_INVOICE_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_INVOICE_QUERY.pageSize, MAX_PAGE_SIZE),
     sortBy: SORT_VALUES.has(sortBy) ? (sortBy as InvoiceSortField) : DEFAULT_INVOICE_QUERY.sortBy,
     sortDirection: direction === 'asc' ? 'asc' : 'desc',
     // De-duplicated so `?status=paid&status=paid` cannot produce a filter that
     // looks selected twice in the UI.
     statuses: [...new Set(statuses)],
-    search: String(raw['q'] ?? '').trim(),
+    search: String(param(raw, 'q', 'search') ?? '').trim(),
   }
 }

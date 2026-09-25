@@ -58,6 +58,8 @@ export {
   emptyFeature,
   meterSchema,
   needsAggregationTarget,
+  FEATURE_SORT_LABEL,
+  FeatureSortField,
 } from './feature'
 export type { CreateFeature, Feature, FeatureQuery, MeterDraft } from './feature'
 

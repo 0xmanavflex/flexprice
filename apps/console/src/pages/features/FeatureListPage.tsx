@@ -45,10 +45,17 @@ export function FeatureListPage({
           own. Loading, both empties and both errors are inherited and already
           tested.
         */}
+        {/*
+          `isEmpty` is only true when the catalogue itself is empty. When a
+          filter is responsible, the grid keeps its own toolbar and says "no
+          features match these filters" in the table body — replacing the whole
+          grid would take the search box away with it, leaving no way to undo
+          the search that caused the emptiness.
+        */}
         <ListState
           isLoading={features.isPending}
           error={failure}
-          isEmpty={rows.length === 0}
+          isEmpty={rows.length === 0 && !isFiltered}
           isFiltered={isFiltered}
           onRetry={() => void features.refetch()}
           onClearFilters={() => onQueryChange({ ...query, search: '', types: [], page: 1 })}

@@ -1,33 +1,57 @@
+import {
+  CircleAlertIcon,
+  CircleCheckIcon,
+  CircleDashedIcon,
+  CircleIcon,
+  CircleMinusIcon,
+  CircleSlashIcon,
+} from 'lucide-react'
 import { InvoiceStatus, needsAttention } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
 
 /**
- * A billing status, coloured by what it asks of the reader.
+ * A billing status: an icon in colour, on a surface that stays neutral.
  *
- * The rule is that only a status needing action is destructive. If several
- * shout at once, none of them does, and the one row a billing operator has to
- * act on stops standing out.
+ * Colour is carried by the glyph rather than a fill. With five statuses down
+ * eighteen dense rows, tinted fills turn the status column into a traffic
+ * light — every row shouting at once, which is the same as none of them
+ * shouting. A ring of neutral pills with one red glyph in it reads instantly.
  *
- * The `-light` variants are used rather than the solid ones because the solid
- * ones fail WCAG AA at this size — white on `success` measures 2.47:1 against a
- * 4.5:1 threshold. That was caught by the accessibility check, not by eye.
+ * The shape also does work colour cannot: dashed for draft, hollow for open,
+ * a tick for paid, a slash for void. Someone who cannot distinguish the hues
+ * can still tell the six apart, and so can a printed page.
+ *
+ * Only a status needing action gets the destructive colour. If several shout,
+ * the one row a billing operator has to act on stops standing out.
+ *
+ * Solid variants were tried and dropped: white on `success` measures 2.47:1
+ * against a 4.5:1 threshold. The accessibility check caught that, not the eye.
  */
 export const StatusBadgeProvenance = provenance({
   source: 'composition',
   composes: ['@reui/badge'],
-  note: 'Maps domain billing statuses to accessible badge variants in one place.',
+  note: 'Colour on the glyph, neutral surface — so a dense column is not a traffic light.',
 })
 
-type Variant = 'secondary' | 'info-light' | 'success-light' | 'destructive-light'
+/** The colour each status carries, on its icon only. */
+const INVOICE_TONE: Record<InvoiceStatus, string> = {
+  [InvoiceStatus.Draft]: 'text-muted-foreground',
+  [InvoiceStatus.Open]: 'text-info',
+  [InvoiceStatus.Paid]: 'text-success',
+  [InvoiceStatus.Overdue]: 'text-destructive',
+  [InvoiceStatus.Void]: 'text-muted-foreground',
+  [InvoiceStatus.Skipped]: 'text-muted-foreground',
+}
 
-const INVOICE_VARIANT: Record<InvoiceStatus, Variant> = {
-  [InvoiceStatus.Draft]: 'secondary',
-  [InvoiceStatus.Open]: 'info-light',
-  [InvoiceStatus.Paid]: 'success-light',
-  [InvoiceStatus.Overdue]: 'destructive-light',
-  [InvoiceStatus.Void]: 'secondary',
-  [InvoiceStatus.Skipped]: 'secondary',
+/** Shape, so the six are distinguishable without colour at all. */
+const INVOICE_ICON: Record<InvoiceStatus, typeof CircleIcon> = {
+  [InvoiceStatus.Draft]: CircleDashedIcon,
+  [InvoiceStatus.Open]: CircleIcon,
+  [InvoiceStatus.Paid]: CircleCheckIcon,
+  [InvoiceStatus.Overdue]: CircleAlertIcon,
+  [InvoiceStatus.Void]: CircleSlashIcon,
+  [InvoiceStatus.Skipped]: CircleMinusIcon,
 }
 
 const INVOICE_LABEL: Record<InvoiceStatus, string> = {
@@ -44,8 +68,16 @@ export interface InvoiceStatusBadgeProps {
 }
 
 export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
+  const Icon = INVOICE_ICON[status]
+
   return (
-    <Badge variant={INVOICE_VARIANT[status]} size="sm">
+    <Badge
+      variant="outline"
+      size="sm"
+      radius="full"
+      className="border-border/60 bg-transparent px-2 font-normal text-foreground dark:bg-transparent"
+    >
+      <Icon aria-hidden className={INVOICE_TONE[status]} />
       {INVOICE_LABEL[status]}
       {/* Colour alone cannot carry "this one needs you". */}
       {needsAttention(status) ? <span className="sr-only"> — needs attention</span> : null}

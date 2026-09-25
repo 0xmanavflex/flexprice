@@ -1,18 +1,32 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
 import {
   AGGREGATION_LABEL,
+  FEATURE_SORT_LABEL,
   FEATURE_TYPE_LABEL,
   type Feature,
   type FeatureQuery,
+  FeatureSortField,
   FeatureType,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@ui/primitives/dropdown-menu'
+import { ChevronDownIcon, FilterIcon } from 'lucide-react'
+import { GridFooter } from '@ui/compositions/GridFooter'
+import { GridToolbar } from '@ui/compositions/GridToolbar'
+import { SortMenu } from '@ui/compositions/SortMenu'
+import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -28,6 +42,11 @@ export const FeatureGridProvenance = provenance({
   note: 'Controlled wrapper; the page owns query state.',
 })
 
+const SORT_OPTIONS = Object.values(FeatureSortField).map((value) => ({
+  value,
+  label: FEATURE_SORT_LABEL[value],
+}))
+
 export interface FeatureGridProps {
   features: Feature[]
   total: number
@@ -37,6 +56,8 @@ export interface FeatureGridProps {
   error?: string | null
   onRetry?: () => void
   onFeatureClick?: (feature: Feature) => void
+  /** Filter controls, rendered beside Sort. */
+  filters?: ReactNode
   locale?: string
 }
 
@@ -56,6 +77,7 @@ export function FeatureGrid({
   error = null,
   onRetry,
   onFeatureClick,
+  filters,
   locale,
 }: FeatureGridProps) {
   const columns = useMemo<ColumnDef<never, Feature>[]>(
@@ -152,6 +174,20 @@ export function FeatureGrid({
     },
   } as never)
 
+  const containerRef = useRef<HTMLDivElement>(null)
+  const [fitToWindow, setFitToWindow] = useState(false)
+  const capacity = useViewportPageSize({
+    containerRef,
+    enabled: fitToWindow,
+    // The toolbar above and the footer below are not rows.
+    reservedHeight: 104,
+  })
+
+  // `null` means no measurement yet — keep whatever size is already set.
+  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
+    onQueryChange({ ...query, pageSize: capacity, page: 1 })
+  }
+
   if (error) {
     return (
       <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
@@ -166,28 +202,110 @@ export function FeatureGrid({
   }
 
   return (
-    <DataGrid
-      table={table as never}
-      recordCount={total}
-      isLoading={isLoading}
-      emptyMessage="No features match these filters."
-      {...(onFeatureClick ? { onRowClick: onFeatureClick } : {})}
-      tableLayout={{
-        headerSticky: true,
-        columnsVisibility: true,
-        width: 'fixed',
-        /*
-         * No horizontal rules, and tighter rows. Removing the lines is most
-         * of what makes a dense ledger read quietly — rows separate by
-         * rhythm and alignment, which is enough once every column is
-         * aligned. The rules only earn their place when rows wrap.
-         */
-        rowBorder: false,
-        dense: true,
-      }}
-    >
-      <DataGridTable />
-      <DataGridPagination />
-    </DataGrid>
+    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
+      <GridToolbar
+        search={query.search}
+        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+        placeholder="Search..."
+        label="Search features"
+      >
+        {/*
+          Type is the only filter features have, so it is the Filter button
+          rather than hiding behind one. Checkboxes, not radios: "metered or
+          boolean" is a question people actually ask.
+        */}
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                aria-label={
+                  query.types.length > 0
+                    ? `Filter features, ${query.types.length} selected`
+                    : 'Filter features'
+                }
+              />
+            }
+          >
+            <FilterIcon aria-hidden className="size-4" />
+            Filters
+            {query.types.length > 0 ? (
+              <Badge variant="outline" size="sm" radius="full">
+                {query.types.length}
+              </Badge>
+            ) : null}
+            <ChevronDownIcon data-icon="inline-end" aria-hidden />
+          </DropdownMenuTrigger>
+
+          <DropdownMenuContent align="end" sideOffset={8} className="min-w-52 rounded-2xl p-1.5">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-normal text-muted-foreground">
+                Type
+              </DropdownMenuLabel>
+              {Object.values(FeatureType).map((type) => (
+                <DropdownMenuCheckboxItem
+                  key={type}
+                  className="gap-2 rounded-xl px-2.5 py-2"
+                  checked={query.types.includes(type)}
+                  onCheckedChange={(checked) =>
+                    onQueryChange({
+                      ...query,
+                      types: checked
+                        ? [...query.types, type]
+                        : query.types.filter((t) => t !== type),
+                      page: 1,
+                    })
+                  }
+                >
+                  {FEATURE_TYPE_LABEL[type]}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {filters}
+        <SortMenu
+          align="end"
+          options={SORT_OPTIONS}
+          field={query.sortBy}
+          direction={query.sortDirection}
+          onChange={(sortBy, sortDirection) =>
+            onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
+          }
+        />
+      </GridToolbar>
+
+      <DataGrid
+        table={table as never}
+        recordCount={total}
+        isLoading={isLoading}
+        emptyMessage="No features match these filters."
+        {...(onFeatureClick ? { onRowClick: onFeatureClick } : {})}
+        tableLayout={{
+          headerSticky: true,
+          columnsVisibility: true,
+          width: 'fixed',
+          /*
+           * No horizontal rules, and tighter rows. Removing the lines is most
+           * of what makes a dense ledger read quietly — rows separate by
+           * rhythm and alignment, which is enough once every column is
+           * aligned. The rules only earn their place when rows wrap.
+           */
+          rowBorder: false,
+          dense: true,
+        }}
+      >
+        <DataGridTable />
+        <GridFooter
+          fitToWindow={fitToWindow}
+          onFitToWindowChange={setFitToWindow}
+          pageSize={query.pageSize}
+          noun="features"
+        />
+      </DataGrid>
+    </div>
   )
 }

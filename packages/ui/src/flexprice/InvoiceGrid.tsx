@@ -9,9 +9,7 @@ import {
   type Invoice,
   type InvoiceQuery,
   InvoiceSortField,
-  InvoiceStatus,
 } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
@@ -24,6 +22,7 @@ import { SortMenu } from '@ui/compositions/SortMenu'
 import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { Money } from './Money'
 import { provenance } from '@ui/provenance'
+import { InvoiceStatusBadge } from './StatusBadge'
 
 /**
  * The invoice list, as a *controlled* grid.
@@ -74,7 +73,6 @@ export interface InvoiceGridProps {
  * Only `overdue` is destructive. If several statuses shout, none of them does,
  * and the one row a billing operator has to act on stops standing out.
  */
-type BadgeVariant = 'secondary' | 'info-light' | 'success-light' | 'destructive-light'
 
 /**
  * The `-light` variants, not the solid ones.
@@ -85,24 +83,6 @@ type BadgeVariant = 'secondary' | 'info-light' | 'success-light' | 'destructive-
  * clear it comfortably, which is also the right density for a table: a row of
  * saturated pills competes with the data it is annotating.
  */
-const STATUS_VARIANT: Record<InvoiceStatus, BadgeVariant> = {
-  [InvoiceStatus.Draft]: 'secondary',
-  [InvoiceStatus.Open]: 'info-light',
-  [InvoiceStatus.Paid]: 'success-light',
-  [InvoiceStatus.Overdue]: 'destructive-light',
-  [InvoiceStatus.Void]: 'secondary',
-  [InvoiceStatus.Skipped]: 'secondary',
-}
-
-const STATUS_LABEL: Record<InvoiceStatus, string> = {
-  [InvoiceStatus.Draft]: 'Draft',
-  [InvoiceStatus.Open]: 'Open',
-  [InvoiceStatus.Paid]: 'Paid',
-  [InvoiceStatus.Overdue]: 'Overdue',
-  [InvoiceStatus.Void]: 'Void',
-  [InvoiceStatus.Skipped]: 'Skipped',
-}
-
 /** Column ids are the domain sort fields, so the two cannot drift apart. */
 const SORTABLE: Record<string, InvoiceSortField> = {
   issuedAt: InvoiceSortField.IssuedAt,
@@ -174,9 +154,7 @@ export function InvoiceGrid({
           accessorFn: (row: Invoice) => row.status,
           header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
           cell: ({ row }: { row: { original: Invoice } }) => (
-            <Badge variant={STATUS_VARIANT[row.original.status]} size="sm">
-              {STATUS_LABEL[row.original.status]}
-            </Badge>
+            <InvoiceStatusBadge status={row.original.status} />
           ),
           size: 120,
         },

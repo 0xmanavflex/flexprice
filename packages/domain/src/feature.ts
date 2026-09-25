@@ -177,12 +177,34 @@ export const AGGREGATION_LABEL: Record<AggregationType, string> = {
   [AggregationType.WeightedSum]: 'Weighted sum',
 }
 
+/**
+ * What the list can be sorted by.
+ *
+ * The three the API's `sort` accepts and a person would ask for. Named in
+ * product terms, mapped to wire field names in `@fp/query` — a screen should
+ * never have to know that "Created" is `created_at`.
+ */
+export const FeatureSortField = {
+  Name: 'name',
+  CreatedAt: 'createdAt',
+  UpdatedAt: 'updatedAt',
+} as const
+export type FeatureSortField = (typeof FeatureSortField)[keyof typeof FeatureSortField]
+
+export const FEATURE_SORT_LABEL: Record<FeatureSortField, string> = {
+  [FeatureSortField.Name]: 'Name',
+  [FeatureSortField.CreatedAt]: 'Created',
+  [FeatureSortField.UpdatedAt]: 'Updated',
+}
+
 /** What the list can ask for. Product vocabulary, not transport. */
 export interface FeatureQuery {
   page: number
   pageSize: number
   search: string
   types: FeatureType[]
+  sortBy: FeatureSortField
+  sortDirection: 'asc' | 'desc'
 }
 
 export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
@@ -190,4 +212,8 @@ export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   pageSize: 25,
   search: '',
   types: [],
+  // Alphabetical, because a catalogue is looked *up* more often than it is
+  // scanned for what changed.
+  sortBy: FeatureSortField.Name,
+  sortDirection: 'asc',
 }

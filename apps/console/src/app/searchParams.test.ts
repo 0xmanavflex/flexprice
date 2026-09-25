@@ -50,4 +50,20 @@ describe('parseInvoiceSearch', () => {
   })
 })
 
+describe('round-trips what the router writes', () => {
+  it('reads the long names TanStack emits', () => {
+    expect(
+      parseInvoiceSearch({ pageSize: 50, search: 'acme', sortBy: 'total', sortDirection: 'asc' }),
+    ).toMatchObject({
+      pageSize: 50,
+      search: 'acme',
+      sortBy: 'total',
+      sortDirection: 'asc',
+    })
+  })
 
+  it('is stable across a parse of its own output', () => {
+    const once = parseInvoiceSearch({ sortBy: 'total', sortDirection: 'asc', search: 'acme' })
+    expect(parseInvoiceSearch({ ...once })).toEqual(once)
+  })
+})

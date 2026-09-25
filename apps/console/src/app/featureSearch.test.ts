@@ -13,6 +13,8 @@ describe('parseFeatureSearch', () => {
       pageSize: 50,
       search: 'api',
       types: [FeatureType.Metered],
+      sortBy: 'name',
+      sortDirection: 'asc',
     })
   })
 
@@ -39,3 +41,46 @@ describe('parseFeatureSearch', () => {
   })
 })
 
+/**
+ * The round trip, which was broken.
+ *
+ * TanStack serialises the query object as it stands, so navigation writes
+ * `types`, `pageSize`, `search`, `sortBy`. The parser only read the short
+ * hand-written spellings, so every filter and sort reverted the instant it was
+ * applied — no error, just a control that did nothing.
+ */
+describe('round-trips what the router writes', () => {
+  it('reads the long names TanStack emits', () => {
+    const query = parseFeatureSearch({
+      page: 3,
+      pageSize: 50,
+      search: 'api',
+      types: ['metered'],
+      sortBy: 'updatedAt',
+      sortDirection: 'desc',
+    })
+
+    expect(query).toEqual({
+      page: 3,
+      pageSize: 50,
+      search: 'api',
+      types: [FeatureType.Metered],
+      sortBy: 'updatedAt',
+      sortDirection: 'desc',
+    })
+  })
+
+  it('still reads the short names a person types', () => {
+    expect(parseFeatureSearch({ q: 'api', sort: 'createdAt', dir: 'desc' })).toMatchObject({
+      search: 'api',
+      sortBy: 'createdAt',
+      sortDirection: 'desc',
+    })
+  })
+
+  // Parsing its own output must be a fixed point, or a reload changes the list.
+  it('is stable across a parse of its own output', () => {
+    const once = parseFeatureSearch({ types: ['metered'], sortBy: 'name', sortDirection: 'desc' })
+    expect(parseFeatureSearch({ ...once })).toEqual(once)
+  })
+})

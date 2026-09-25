@@ -59,9 +59,9 @@ export function SortMenu<T extends string>({
       <DropdownMenuTrigger
         render={
           <Button
-            variant="ghost"
+            type="button"
+            variant="outline"
             size="sm"
-            className="text-muted-foreground gap-1.5 font-normal"
             // The current sort is in the name, so it does not need to be read
             // off the screen to be known.
             aria-label={`Sort by ${current?.label ?? field}, ${

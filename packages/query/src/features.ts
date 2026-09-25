@@ -6,6 +6,7 @@ import {
   type Feature,
   type FeatureQuery,
   FeatureType,
+  FeatureSortField,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
@@ -68,6 +69,13 @@ export function toFeature(wire: FeatureWire): Feature {
   }
 }
 
+/** Product sort names to the wire's. The only place the two are related. */
+const SORT_FIELD: Record<FeatureSortField, string> = {
+  [FeatureSortField.Name]: 'name',
+  [FeatureSortField.CreatedAt]: 'created_at',
+  [FeatureSortField.UpdatedAt]: 'updated_at',
+}
+
 /**
  * Domain query out, `FeatureFilter` in. Page numbers are 1-based; offsets are not.
  *
@@ -86,7 +94,7 @@ export function toFeatureFilter(query: FeatureQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: 'name', direction: 'asc' }],
+    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     expand: 'meters',
     ...(query.search ? { nameContains: query.search } : {}),
   }
