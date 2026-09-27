@@ -113,10 +113,12 @@ export function PlanGrid({
           accessorFn: (row: Plan) => row.name,
           header: ({ column }: never) => <DataGridColumnHeader title="Plan" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => (
-            <div className="flex flex-col">
-              <span className="font-medium">{row.original.name}</span>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate font-medium">{row.original.name}</span>
               {row.original.lookupKey ? (
-                <span className="text-xs text-muted-foreground">{row.original.lookupKey}</span>
+                <span className="truncate text-xs text-muted-foreground">
+                  {row.original.lookupKey}
+                </span>
               ) : null}
             </div>
           ),
@@ -270,7 +272,9 @@ export function PlanGrid({
         tableLayout={{
           headerSticky: true,
           columnsVisibility: true,
-          width: 'fixed',
+          // Auto, so columns fill the width rather than leaving an empty band on
+          // the right; the name cell truncates so a long value stays contained.
+          width: 'auto',
           rowBorder: false,
           dense: true,
         }}

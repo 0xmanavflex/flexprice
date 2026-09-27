@@ -115,10 +115,12 @@ export function CouponGrid({
           accessorFn: (row: Coupon) => row.name,
           header: ({ column }: never) => <DataGridColumnHeader title="Coupon" column={column} />,
           cell: ({ row }: { row: { original: Coupon } }) => (
-            <div className="flex flex-col">
-              <span className="font-medium">{row.original.name}</span>
+            <div className="flex min-w-0 flex-col">
+              <span className="truncate font-medium">{row.original.name}</span>
               {row.original.code ? (
-                <span className="font-mono text-xs text-muted-foreground">{row.original.code}</span>
+                <span className="truncate font-mono text-xs text-muted-foreground">
+                  {row.original.code}
+                </span>
               ) : null}
             </div>
           ),
@@ -289,7 +291,11 @@ export function CouponGrid({
         tableLayout={{
           headerSticky: true,
           columnsVisibility: true,
-          width: 'fixed',
+          // Auto, so the columns spread to fill the width instead of leaving a
+          // band of empty table on the right. The `size` hints still set the
+          // proportions; the name cell truncates so a long value cannot blow the
+          // column out.
+          width: 'auto',
           rowBorder: false,
           dense: true,
         }}

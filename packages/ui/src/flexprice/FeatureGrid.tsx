@@ -100,7 +100,7 @@ export function FeatureGrid({
           accessorFn: (row: Feature) => row.name,
           header: ({ column }: never) => <DataGridColumnHeader title="Feature" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => (
-            <span className="font-medium">{row.original.name}</span>
+            <span className="block truncate font-medium">{row.original.name}</span>
           ),
           enableSorting: false,
           size: 240,
@@ -279,7 +279,9 @@ export function FeatureGrid({
         tableLayout={{
           headerSticky: true,
           columnsVisibility: true,
-          width: 'fixed',
+          // Auto, so columns fill the width rather than leaving an empty band on
+          // the right; the name cell truncates so a long value stays contained.
+          width: 'auto',
           rowBorder: false,
           dense: true,
         }}
