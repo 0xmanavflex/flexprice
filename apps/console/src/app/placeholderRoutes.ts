@@ -42,16 +42,7 @@ export const PLACEHOLDER_ROUTES = [
 
   // Product catalogue
   // `/plans` is a real page now — see `plansRoute` in router.tsx.
-  {
-    path: '/coupons',
-    title: 'Coupons',
-    description: 'Discounts you can apply to a subscription or an invoice.',
-    emptyTitle: 'No coupons yet',
-    emptyDescription:
-      'Coupons apply a discount to a subscription or an invoice, once or for a set number of periods.',
-    cta: 'Create coupon',
-    legacy: '/product-catalog/coupons',
-  },
+  // `/coupons` is a real page now — see `couponsRoute` in router.tsx.
   // `/addons` is a real page now — see `addonsRoute` in router.tsx.
   {
     path: '/cost-sheets',

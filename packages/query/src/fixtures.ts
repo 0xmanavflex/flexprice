@@ -13,6 +13,7 @@
  * invent the record.
  */
 import addons from './__fixtures__/generated/addons.json' with { type: 'json' }
+import coupons from './__fixtures__/generated/coupons.json' with { type: 'json' }
 import customers from './__fixtures__/generated/customers.json' with { type: 'json' }
 import features from './__fixtures__/generated/features.json' with { type: 'json' }
 import invoices from './__fixtures__/generated/invoices.json' with { type: 'json' }
@@ -25,6 +26,15 @@ export interface Corpus {
   pagination: { total: number; limit: number; offset: number }
 }
 
+/**
+ * `coupons` is the one corpus not descended from a capture: the capture
+ * environment had no coupons, so an empty `/coupons/search` would leave the
+ * surface undemonstrable. These rows are authored — but authored *to shape*,
+ * every field matching `@flexprice/sdk`'s `CouponResponse` (snake_case, a fixed
+ * discount as `amount_off` + `currency`, a percentage as `percentage_off`), so
+ * the mock still cannot silently disagree with the wire. `synthesize.mjs` does
+ * not touch it, having no captured source to expand.
+ */
 export const corpus = {
-  addons, customers, features, invoices, plans, prices, subscriptions,
+  addons, coupons, customers, features, invoices, plans, prices, subscriptions,
 } as unknown as Record<string, Corpus>

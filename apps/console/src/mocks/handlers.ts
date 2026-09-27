@@ -124,6 +124,7 @@ export const handlers = [
   search('/invoices/search', 'invoices'),
   search('/subscriptions/search', 'subscriptions'),
   search('/addons/search', 'addons'),
+  search('/coupons/search', 'coupons'),
 
   list('/payments', 'invoices'),
 
@@ -134,9 +135,6 @@ export const handlers = [
     HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
   ),
   http.post(`${BASE}/wallets/search`, () =>
-    HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
-  ),
-  http.post(`${BASE}/coupons/search`, () =>
     HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
   ),
 

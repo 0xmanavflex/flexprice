@@ -51,6 +51,11 @@ const AddonListPage = lazy(() =>
   import('@/pages/addons/AddonListPage').then((m) => ({ default: m.AddonListPage })),
 )
 import { parseAddonSearch } from './addonSearch'
+import { DEFAULT_COUPON_QUERY, type CouponQuery } from '@fp/domain'
+const CouponListPage = lazy(() =>
+  import('@/pages/coupons/CouponListPage').then((m) => ({ default: m.CouponListPage })),
+)
+import { parseCouponSearch } from './couponSearch'
 import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
 const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
@@ -342,11 +347,41 @@ function AddonsRouteComponent() {
   )
 }
 
+/**
+ * Coupons: the list. The same URL-as-query contract; the editor is a later
+ * surface, so create/open narrow the list for now — the same honest stand-in
+ * plans and add-ons use.
+ */
+const couponsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/coupons',
+  validateSearch: (search: Record<string, unknown>): CouponQuery => parseCouponSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_COUPON_QUERY)] },
+  component: CouponsRouteComponent,
+})
+
+function CouponsRouteComponent() {
+  const query = useSearch({ from: couponsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <CouponListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/coupons', search: next, replace: true })}
+      onCreate={() => void navigate({ to: '/coupons', search: { ...query, page: 1 } })}
+      onOpenCoupon={(coupon) =>
+        void navigate({ to: '/coupons', search: { ...query, search: coupon.name, page: 1 } })
+      }
+    />
+  )
+}
+
 export const routeTree = rootRoute.addChildren([
   featuresRoute,
   featureCreateRoute,
   plansRoute,
   addonsRoute,
+  couponsRoute,
   invoicesRoute,
   subscriptionCreateRoute,
   ...placeholderRoutes,

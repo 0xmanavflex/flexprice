@@ -86,6 +86,20 @@ export {
 } from './addon'
 export type { Addon, AddonQuery } from './addon'
 
+export {
+  COUPON_CADENCE_LABEL,
+  COUPON_SORT_LABEL,
+  COUPON_STATUS_LABEL,
+  COUPON_TYPE_LABEL,
+  CouponCadence,
+  CouponSortField,
+  CouponStatus,
+  CouponType,
+  CouponView,
+  DEFAULT_COUPON_QUERY,
+} from './coupon'
+export type { Coupon, CouponQuery } from './coupon'
+
 export { resetRequestSchema, setPasswordSchema, signInSchema } from './auth'
 export type { ResetRequest, SetPassword, SignInCredentials } from './auth'
 export {

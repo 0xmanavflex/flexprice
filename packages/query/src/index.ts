@@ -49,5 +49,8 @@ export type { PlanPage, PlanWire } from './plans'
 export { fetchAddons, toAddon, toAddonFilter, useAddons } from './addons'
 export type { AddonPage, AddonWire } from './addons'
 
+export { fetchCoupons, toCoupon, toCouponFilter, useCoupons } from './coupons'
+export type { CouponPage, CouponWire } from './coupons'
+
 export { useNavCounts } from './counts'
 export type { CountableId } from './counts'

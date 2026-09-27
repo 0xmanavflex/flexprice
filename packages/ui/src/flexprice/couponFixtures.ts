@@ -1,0 +1,128 @@
+import {
+  DEFAULT_COUPON_QUERY,
+  type Coupon,
+  type CouponQuery,
+  CouponCadence,
+  CouponStatus,
+  CouponType,
+  money,
+} from '@fp/domain'
+
+/** Coupons as plain domain values — no client, no provider, no network. */
+export const couponFixtures: Coupon[] = [
+  {
+    id: 'coupon_01',
+    name: 'Launch 20% off',
+    code: 'LAUNCH20',
+    type: CouponType.Percentage,
+    amountOff: null,
+    percentageOff: '20',
+    cadence: CouponCadence.Once,
+    durationInPeriods: null,
+    maxRedemptions: 500,
+    totalRedemptions: 213,
+    redeemAfter: new Date('2026-01-01T00:00:00Z'),
+    redeemBefore: new Date('2026-06-30T00:00:00Z'),
+    status: CouponStatus.Published,
+    createdAt: new Date('2026-01-02T00:00:00Z'),
+    updatedAt: new Date('2026-03-01T00:00:00Z'),
+  },
+  {
+    id: 'coupon_02',
+    name: 'Annual plan credit',
+    code: 'ANNUAL50',
+    type: CouponType.Fixed,
+    amountOff: money('50.00', 'USD'),
+    percentageOff: null,
+    cadence: CouponCadence.Once,
+    durationInPeriods: null,
+    // Unlimited redemptions — the row that shows the ∞ ceiling.
+    maxRedemptions: null,
+    totalRedemptions: 87,
+    redeemAfter: null,
+    redeemBefore: null,
+    status: CouponStatus.Published,
+    createdAt: new Date('2026-01-10T00:00:00Z'),
+    updatedAt: new Date('2026-02-14T00:00:00Z'),
+  },
+  {
+    id: 'coupon_03',
+    name: 'First three months',
+    code: 'FIRST3',
+    type: CouponType.Percentage,
+    amountOff: null,
+    percentageOff: '25',
+    // Repeating — the only cadence that reads with a period count beside it.
+    cadence: CouponCadence.Repeated,
+    durationInPeriods: 3,
+    maxRedemptions: 1000,
+    totalRedemptions: 642,
+    redeemAfter: null,
+    redeemBefore: null,
+    status: CouponStatus.Published,
+    createdAt: new Date('2026-02-01T00:00:00Z'),
+    updatedAt: new Date('2026-03-22T00:00:00Z'),
+  },
+  {
+    id: 'coupon_04',
+    name: 'Loyalty forever',
+    code: 'LOYAL10',
+    type: CouponType.Fixed,
+    amountOff: money('10.00', 'EUR'),
+    percentageOff: null,
+    cadence: CouponCadence.Forever,
+    durationInPeriods: null,
+    maxRedemptions: null,
+    totalRedemptions: 402,
+    redeemAfter: null,
+    redeemBefore: null,
+    status: CouponStatus.Published,
+    createdAt: new Date('2025-09-01T00:00:00Z'),
+    updatedAt: new Date('2026-03-28T00:00:00Z'),
+  },
+  {
+    // Archived, and fully redeemed — the muted row at its ceiling.
+    id: 'coupon_05',
+    name: 'Black Friday 2025',
+    code: 'BF2025',
+    type: CouponType.Percentage,
+    amountOff: null,
+    percentageOff: '40',
+    cadence: CouponCadence.Once,
+    durationInPeriods: null,
+    maxRedemptions: 2000,
+    totalRedemptions: 2000,
+    redeemAfter: new Date('2025-11-24T00:00:00Z'),
+    redeemBefore: new Date('2025-12-02T00:00:00Z'),
+    status: CouponStatus.Archived,
+    createdAt: new Date('2025-11-01T00:00:00Z'),
+    updatedAt: new Date('2025-12-03T00:00:00Z'),
+  },
+  {
+    // No code and no redeem window — the row a hand-written demo omits.
+    id: 'coupon_06',
+    name: 'Referral reward',
+    code: '',
+    type: CouponType.Fixed,
+    amountOff: money('10.00', 'USD'),
+    percentageOff: null,
+    cadence: CouponCadence.Once,
+    durationInPeriods: null,
+    maxRedemptions: null,
+    totalRedemptions: 158,
+    redeemAfter: null,
+    redeemBefore: null,
+    status: CouponStatus.Published,
+    createdAt: null,
+    updatedAt: null,
+  },
+]
+
+export const fixtureCouponQuery: CouponQuery = { ...DEFAULT_COUPON_QUERY }
+
+export function manyCoupons(count: number): Coupon[] {
+  return Array.from({ length: count }, (_, index) => {
+    const base = couponFixtures[index % couponFixtures.length] as Coupon
+    return { ...base, id: `coupon_page_${index}`, name: `${base.name} ${index}` }
+  })
+}
