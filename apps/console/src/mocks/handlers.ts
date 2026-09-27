@@ -157,4 +157,18 @@ export const handlers = [
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
   }),
+
+  // Plans, the same way: create and edit echo the record back so the drawer's
+  // success path runs end to end.
+  http.post(`${BASE}/plans`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json(
+      { ...body, id: `plan_new_${Date.now()}`, status: 'published' },
+      { status: 201 },
+    )
+  }),
+  http.put(`${BASE}/plans/:id`, async ({ request, params }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+  }),
 ]

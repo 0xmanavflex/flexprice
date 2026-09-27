@@ -73,8 +73,10 @@ export {
   PlanSortField,
   PlanStatus,
   PlanView,
+  createPlanSchema,
+  emptyPlan,
 } from './plan'
-export type { Plan, PlanHeadline, PlanQuery } from './plan'
+export type { CreatePlan, Plan, PlanHeadline, PlanQuery } from './plan'
 
 export {
   ADDON_SORT_LABEL,

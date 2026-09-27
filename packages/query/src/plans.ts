@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  type CreatePlan,
   type Plan,
   type PlanHeadline,
   type PlanQuery,
@@ -122,5 +123,55 @@ export function usePlans(query: PlanQuery) {
     queryKey: queryKeys.plans.list({ ...key, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchPlans(client, query),
     placeholderData: (previous) => previous,
+  })
+}
+
+/**
+ * The plan details draft, mapped to the wire.
+ *
+ * A plan's lookup key is optional and editable — unlike an add-on's — so it is
+ * sent whenever present in either direction. Empty optional fields are dropped
+ * on create (absent and `""` are different to the API) but sent as `""` on
+ * update, so clearing the text on an edit actually clears it.
+ */
+export function toCreatePlanRequest(draft: CreatePlan): Record<string, unknown> {
+  return {
+    name: draft.name,
+    ...(draft.lookupKey ? { lookupKey: draft.lookupKey } : {}),
+    ...(draft.description ? { description: draft.description } : {}),
+  }
+}
+
+export function toUpdatePlanRequest(draft: CreatePlan): Record<string, unknown> {
+  return {
+    name: draft.name,
+    lookupKey: draft.lookupKey ?? '',
+    description: draft.description ?? '',
+  }
+}
+
+export function useCreatePlan() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreatePlan) =>
+      call(() => client.plans.createPlan(toCreatePlanRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plans.all() })
+    },
+  })
+}
+
+export function useUpdatePlan() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: CreatePlan }) =>
+      call(() => client.plans.updatePlan(id, toUpdatePlanRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plans.all() })
+    },
   })
 }

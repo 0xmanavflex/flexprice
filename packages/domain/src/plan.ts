@@ -3,10 +3,12 @@
  *
  * V1 splits a plan across four containers — a drawer for name, a separate page
  * for charges, a drawer on a tab for entitlements, a modal for credit grants.
- * This is only the *read* model the catalogue list needs; the editor that
- * reunites those four is a separate, later surface. Keeping the list model small
- * is what lets the grid stay the same shape as every other list here.
+ * This is the *read* model the catalogue list needs plus the *details* an editor
+ * writes; the charges, entitlements and credit grants that complete a plan are a
+ * separate, later surface. Keeping the list model small is what lets the grid
+ * stay the same shape as every other list here.
  */
+import { z } from 'zod'
 
 export const PlanStatus = {
   Published: 'published',
@@ -92,4 +94,32 @@ export const DEFAULT_PLAN_QUERY: PlanQuery = {
   sortBy: PlanSortField.Name,
   sortDirection: 'asc',
   view: PlanView.Table,
+}
+
+/**
+ * The rules for creating or editing a plan's details.
+ *
+ * The details step only — name, an optional lookup key, a description. What
+ * turns a plan from a shell into something that bills — its charges,
+ * entitlements and credit grants — is the larger surface added afterwards, the
+ * way V1 creates the plan in a drawer and prices it on a separate page.
+ *
+ * Unlike an add-on, a plan's lookup key is optional (the create endpoint does
+ * not require one) and stays editable — so it is a plain field in both modes.
+ */
+export const createPlanSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a name'),
+  lookupKey: z
+    .string()
+    .trim()
+    .regex(/^[a-z0-9_]*$/, 'Use lowercase letters, numbers and underscores')
+    .optional(),
+  description: z.string().trim().optional(),
+})
+
+export type CreatePlan = z.infer<typeof createPlanSchema>
+
+/** A blank draft, so the create form starts on a valid, empty shape. */
+export function emptyPlan(): CreatePlan {
+  return { name: '', lookupKey: '', description: '' }
 }

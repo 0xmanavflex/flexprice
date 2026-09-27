@@ -288,9 +288,11 @@ function FeatureCreateRouteComponent() {
 }
 
 /**
- * Plans: the list. Same URL-as-query contract as features and invoices — a
- * filtered, sorted, paged view is a link. The `/plans/new` editor is a later
- * surface; for now the create action hands off to the legacy dashboard.
+ * Plans: the list, plus a create/edit drawer the page owns.
+ *
+ * Same URL-as-query contract as features and invoices — a filtered, sorted,
+ * paged view is a link. Creating or editing a plan's details happens in a drawer
+ * over the list (see `PlanListPage`); the charges editor is a later surface.
  */
 const plansRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -308,13 +310,6 @@ function PlansRouteComponent() {
     <PlanListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/plans', search: next, replace: true })}
-      // The plan editor is not built yet; opening or creating narrows the list
-      // to that plan for now, so the action does something honest rather than
-      // navigating to a page that does not exist.
-      onCreate={() => void navigate({ to: '/plans', search: { ...query, page: 1 } })}
-      onOpenPlan={(plan) =>
-        void navigate({ to: '/plans', search: { ...query, search: plan.name, page: 1 } })
-      }
     />
   )
 }

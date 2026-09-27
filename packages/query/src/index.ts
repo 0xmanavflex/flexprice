@@ -43,7 +43,16 @@ export {
 } from './features'
 export type { FeaturePage, FeatureWire } from './features'
 
-export { fetchPlans, toPlan, toPlanFilter, usePlans } from './plans'
+export {
+  fetchPlans,
+  toCreatePlanRequest,
+  toPlan,
+  toPlanFilter,
+  toUpdatePlanRequest,
+  usePlans,
+  useCreatePlan,
+  useUpdatePlan,
+} from './plans'
 export type { PlanPage, PlanWire } from './plans'
 
 export {
