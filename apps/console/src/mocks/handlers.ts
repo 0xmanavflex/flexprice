@@ -143,4 +143,18 @@ export const handlers = [
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ ...body, id: `feat_new_${Date.now()}`, status: 'published' }, { status: 201 })
   }),
+
+  // Creating and editing an add-on echo the record back, so the drawer's
+  // success path — close, invalidate, refetch — completes end to end.
+  http.post(`${BASE}/addons`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json(
+      { ...body, id: `addon_new_${Date.now()}`, status: 'published' },
+      { status: 201 },
+    )
+  }),
+  http.put(`${BASE}/addons/:id`, async ({ request, params }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+  }),
 ]

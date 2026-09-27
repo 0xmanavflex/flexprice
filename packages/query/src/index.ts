@@ -46,7 +46,16 @@ export type { FeaturePage, FeatureWire } from './features'
 export { fetchPlans, toPlan, toPlanFilter, usePlans } from './plans'
 export type { PlanPage, PlanWire } from './plans'
 
-export { fetchAddons, toAddon, toAddonFilter, useAddons } from './addons'
+export {
+  fetchAddons,
+  toAddon,
+  toAddonFilter,
+  toCreateAddonRequest,
+  toUpdateAddonRequest,
+  useAddons,
+  useCreateAddon,
+  useUpdateAddon,
+} from './addons'
 export type { AddonPage, AddonWire } from './addons'
 
 export { fetchCoupons, toCoupon, toCouponFilter, useCoupons } from './coupons'

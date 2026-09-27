@@ -83,8 +83,10 @@ export {
   AddonStatus,
   AddonView,
   DEFAULT_ADDON_QUERY,
+  createAddonSchema,
+  emptyAddon,
 } from './addon'
-export type { Addon, AddonQuery } from './addon'
+export type { Addon, AddonQuery, CreateAddon } from './addon'
 
 export {
   COUPON_CADENCE_LABEL,

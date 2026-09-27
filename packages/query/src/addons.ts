@@ -1,6 +1,12 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
-import { type Addon, type AddonQuery, AddonSortField, AddonStatus } from '@fp/domain'
+import {
+  type Addon,
+  type AddonQuery,
+  AddonSortField,
+  AddonStatus,
+  type CreateAddon,
+} from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -86,5 +92,56 @@ export function useAddons(query: AddonQuery) {
     queryKey: queryKeys.addons.list({ ...key, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchAddons(client, query),
     placeholderData: (previous) => previous,
+  })
+}
+
+/**
+ * Create and edit share the details draft; the wire splits them.
+ *
+ * Create requires the lookup key; update does not accept one — an integration
+ * keys off it, so it is fixed once set. Empty optional fields are dropped rather
+ * than sent as `""`, which is a different value to the API than absent.
+ */
+export function toCreateAddonRequest(draft: CreateAddon): Record<string, unknown> {
+  return {
+    name: draft.name,
+    lookupKey: draft.lookupKey,
+    ...(draft.description ? { description: draft.description } : {}),
+  }
+}
+
+export function toUpdateAddonRequest(draft: CreateAddon): Record<string, unknown> {
+  return {
+    name: draft.name,
+    // `description` is cleared with an empty string rather than omitted, so
+    // removing the text on an edit actually removes it.
+    description: draft.description ?? '',
+  }
+}
+
+export function useCreateAddon() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateAddon) =>
+      call(() => client.addons.createAddon(toCreateAddonRequest(draft) as never)),
+    onSuccess: () => {
+      // Invalidating the prefix covers every list and filter combination.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.addons.all() })
+    },
+  })
+}
+
+export function useUpdateAddon() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: CreateAddon }) =>
+      call(() => client.addons.updateAddon(id, toUpdateAddonRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.addons.all() })
+    },
   })
 }

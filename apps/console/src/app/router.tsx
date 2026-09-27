@@ -320,8 +320,11 @@ function PlansRouteComponent() {
 }
 
 /**
- * Add-ons: the list. The same URL-as-query contract; the editor it shares with
- * plans is a later surface, so create/open narrow the list for now.
+ * Add-ons: the list, plus a create/edit drawer the page owns.
+ *
+ * The list keeps the URL-as-query contract; the editor is local state, so the
+ * route only has to hand the page its query. Creating or editing an add-on
+ * happens in a drawer over the list — see `AddonListPage`.
  */
 const addonsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -339,10 +342,6 @@ function AddonsRouteComponent() {
     <AddonListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/addons', search: next, replace: true })}
-      onCreate={() => void navigate({ to: '/addons', search: { ...query, page: 1 } })}
-      onOpenAddon={(addon) =>
-        void navigate({ to: '/addons', search: { ...query, search: addon.name, page: 1 } })
-      }
     />
   )
 }
