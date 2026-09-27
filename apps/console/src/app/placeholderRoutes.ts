@@ -41,16 +41,7 @@ export const PLACEHOLDER_ROUTES = [
   },
 
   // Product catalogue
-  {
-    path: '/plans',
-    title: 'Plans',
-    description: 'What you sell, and what each plan charges for.',
-    emptyTitle: 'No plans yet',
-    emptyDescription:
-      'Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants.',
-    cta: 'Create plan',
-    legacy: '/product-catalog/plans',
-  },
+  // `/plans` is a real page now — see `plansRoute` in router.tsx.
   {
     path: '/coupons',
     title: 'Coupons',

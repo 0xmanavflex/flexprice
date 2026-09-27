@@ -64,6 +64,16 @@ export {
 } from './feature'
 export type { CreateFeature, Feature, FeatureQuery, MeterDraft } from './feature'
 
+export {
+  DEFAULT_PLAN_QUERY,
+  PLAN_SORT_LABEL,
+  PLAN_STATUS_LABEL,
+  PlanSortField,
+  PlanStatus,
+  PlanView,
+} from './plan'
+export type { Plan, PlanQuery } from './plan'
+
 export { resetRequestSchema, setPasswordSchema, signInSchema } from './auth'
 export type { ResetRequest, SetPassword, SignInCredentials } from './auth'
 export {

@@ -43,5 +43,8 @@ export {
 } from './features'
 export type { FeaturePage, FeatureWire } from './features'
 
+export { fetchPlans, toPlan, toPlanFilter, usePlans } from './plans'
+export type { PlanPage, PlanWire } from './plans'
+
 export { useNavCounts } from './counts'
 export type { CountableId } from './counts'

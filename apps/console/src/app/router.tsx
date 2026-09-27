@@ -41,6 +41,11 @@ const FeatureCreatePage = lazy(() =>
   import('@/pages/features/FeatureCreatePage').then((m) => ({ default: m.FeatureCreatePage })),
 )
 import { parseFeatureSearch } from './featureSearch'
+import { DEFAULT_PLAN_QUERY, type PlanQuery } from '@fp/domain'
+const PlanListPage = lazy(() =>
+  import('@/pages/plans/PlanListPage').then((m) => ({ default: m.PlanListPage })),
+)
+import { parsePlanSearch } from './planSearch'
 import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
 const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
@@ -275,9 +280,42 @@ function FeatureCreateRouteComponent() {
   return <FeatureCreatePage onCreated={backToList} onCancel={backToList} />
 }
 
+/**
+ * Plans: the list. Same URL-as-query contract as features and invoices — a
+ * filtered, sorted, paged view is a link. The `/plans/new` editor is a later
+ * surface; for now the create action hands off to the legacy dashboard.
+ */
+const plansRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/plans',
+  validateSearch: (search: Record<string, unknown>): PlanQuery => parsePlanSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_PLAN_QUERY)] },
+  component: PlansRouteComponent,
+})
+
+function PlansRouteComponent() {
+  const query = useSearch({ from: plansRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <PlanListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/plans', search: next, replace: true })}
+      // The plan editor is not built yet; opening or creating narrows the list
+      // to that plan for now, so the action does something honest rather than
+      // navigating to a page that does not exist.
+      onCreate={() => void navigate({ to: '/plans', search: { ...query, page: 1 } })}
+      onOpenPlan={(plan) =>
+        void navigate({ to: '/plans', search: { ...query, search: plan.name, page: 1 } })
+      }
+    />
+  )
+}
+
 export const routeTree = rootRoute.addChildren([
   featuresRoute,
   featureCreateRoute,
+  plansRoute,
   invoicesRoute,
   subscriptionCreateRoute,
   ...placeholderRoutes,
