@@ -175,7 +175,14 @@ export function EnvironmentSwitcher({
   )
 }
 
-/** The dot. Coloured only for production; absence is the sandbox signal. */
+/**
+ * The dot. Red for production, amber for a sandbox.
+ *
+ * Sandbox was a muted grey — indistinguishable from every other grey in the
+ * shell, so the most consequential state in the product read as nothing. Amber
+ * is the "test mode" convention a billing operator already knows, and it pairs
+ * with production's red as a two-state signal rather than colour-versus-absence.
+ */
 export function Mark({
   kind,
   className,
@@ -188,7 +195,7 @@ export function Mark({
       aria-hidden
       className={cn(
         'size-2 shrink-0 rounded-full',
-        kind === 'production' ? 'bg-destructive' : 'bg-muted-foreground/50',
+        kind === 'production' ? 'bg-destructive' : 'bg-warning',
         className,
       )}
     />

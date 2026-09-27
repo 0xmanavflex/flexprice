@@ -55,7 +55,7 @@ export function PlanForm({
     <form
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
       noValidate
-      className="flex flex-col gap-6"
+      className="flex min-h-full flex-col gap-6"
     >
       <Field label="Name" required error={errors.name?.message}>
         {({ id, ...field }) => (
@@ -86,27 +86,29 @@ export function PlanForm({
           : 'Charges, entitlements and credit grants are edited separately.'}
       </p>
 
-      {submitError ? (
-        <p role="alert" className="text-sm text-destructive">
-          {submitError}
-        </p>
-      ) : null}
-
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting
-            ? mode === 'create'
-              ? 'Creating…'
-              : 'Saving…'
-            : mode === 'create'
-              ? 'Create plan'
-              : 'Save changes'}
-        </Button>
-        {onCancel ? (
-          <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
-            Cancel
-          </Button>
+      {/* Pinned to the bottom of the drawer, on a divider. */}
+      <div className="mt-auto flex flex-col gap-3 border-t pt-4">
+        {submitError ? (
+          <p role="alert" className="text-sm text-destructive">
+            {submitError}
+          </p>
         ) : null}
+        <div className="flex gap-2">
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting
+              ? mode === 'create'
+                ? 'Creating…'
+                : 'Saving…'
+              : mode === 'create'
+                ? 'Create plan'
+                : 'Save changes'}
+          </Button>
+          {onCancel ? (
+            <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+              Cancel
+            </Button>
+          ) : null}
+        </div>
       </div>
     </form>
   )

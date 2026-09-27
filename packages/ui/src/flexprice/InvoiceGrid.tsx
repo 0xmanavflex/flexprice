@@ -164,12 +164,19 @@ export function InvoiceGrid({
         },
         {
           id: 'total',
-          meta: { skeleton: <Skeleton className="ml-auto h-4 w-20" /> },
+          meta: {
+            skeleton: <Skeleton className="ml-auto h-4 w-20" />,
+            headerClassName: 'text-right [&>div]:justify-end',
+          },
           accessorFn: (row: Invoice) => row.total.amount,
           header: ({ column }: never) => <DataGridColumnHeader title="Total" column={column} />,
           // Money is formatted from the exact decimal; it never becomes a float.
+          // Right-aligned with tabular figures so a column of amounts lines up on
+          // the decimal and scans as money rather than as text.
           cell: ({ row }: { row: { original: Invoice } }) => (
-            <Money value={row.original.total} {...(locale ? { locale } : {})} truncate />
+            <div className="text-right tabular-nums">
+              <Money value={row.original.total} {...(locale ? { locale } : {})} truncate />
+            </div>
           ),
           size: 140,
         },

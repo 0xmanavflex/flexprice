@@ -81,14 +81,27 @@
 }
 
 :root {
+    /*
+     * The brand hue. The console was entirely greyscale — every token
+     * `oklch(x 0 0)` — which read as a wireframe rather than a product. One
+     * confident accent (indigo, ~274°) now carries the primary action, the
+     * active navigation, focus rings and links; everything else stays neutral
+     * so the accent means something. Swap these three lines to rebrand; nothing
+     * else in the system names a colour.
+     */
+    --brand: oklch(0.52 0.196 274);
+    --brand-foreground: oklch(0.985 0 0);
+    --brand-muted: oklch(0.955 0.018 274);
+
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
     --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
     --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
+    /* Primary is the brand now, not near-black. White on it clears 5:1. */
+    --primary: var(--brand);
+    --primary-foreground: var(--brand-foreground);
     --secondary: oklch(0.97 0 0);
     --secondary-foreground: oklch(0.205 0 0);
     --muted: oklch(0.97 0 0);
@@ -113,7 +126,8 @@
     --destructive: oklch(0.577 0.245 27.325);
     --border: oklch(0.922 0 0);
     --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
+    /* Focus ring in the brand, so keyboard focus is unmistakable and on-brand. */
+    --ring: oklch(0.55 0.18 274);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -127,23 +141,32 @@
      */
     --sidebar: oklch(0.945 0 0);
     --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
+    --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.895 0 0);
+    /* The active row wears a faint brand wash instead of a flat grey, so the
+       current page is found by colour before it is read. */
+    --sidebar-accent: oklch(0.905 0.028 274);
     --sidebar-accent-foreground: oklch(0.205 0 0);
     --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar-ring: oklch(0.55 0.18 274);
 }
 
 .dark {
+    /* A touch lighter and less saturated than light mode, so the accent holds
+       up against a dark surface without glowing. */
+    --brand: oklch(0.62 0.17 274);
+    --brand-foreground: oklch(0.985 0 0);
+    --brand-muted: oklch(0.28 0.05 274);
+
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.985 0 0);
     --card: oklch(0.205 0 0);
     --card-foreground: oklch(0.985 0 0);
     --popover: oklch(0.205 0 0);
     --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
+    /* Brand-on-dark with light text, rather than the near-white slab it was. */
+    --primary: var(--brand);
+    --primary-foreground: var(--brand-foreground);
     --secondary: oklch(0.269 0 0);
     --secondary-foreground: oklch(0.985 0 0);
     --muted: oklch(0.269 0 0);
@@ -153,7 +176,7 @@
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
+    --ring: oklch(0.62 0.16 274);
     --chart-1: oklch(0.87 0 0);
     --chart-2: oklch(0.556 0 0);
     --chart-3: oklch(0.439 0 0);
@@ -161,12 +184,12 @@
     --chart-5: oklch(0.269 0 0);
     --sidebar: oklch(0.175 0 0);
     --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
+    --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.255 0 0);
+    --sidebar-accent: oklch(0.275 0.03 274);
     --sidebar-accent-foreground: oklch(0.985 0 0);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: oklch(0.62 0.16 274);
 }
 
 /*
@@ -247,4 +270,50 @@
     --color-warning-foreground: var(--warning-foreground);
     --color-invert: var(--invert);
     --color-invert-foreground: var(--invert-foreground);
+    /* So `text-brand`, `bg-brand`, `bg-brand-muted` are available to compose with. */
+    --color-brand: var(--brand);
+    --color-brand-foreground: var(--brand-foreground);
+    --color-brand-muted: var(--brand-muted);
+}
+
+/*
+ * Depth and interaction — the two things a flat, hairline-only surface lacked.
+ *
+ * Written as `data-slot` selectors (the vendor's public targeting contract) and
+ * declared after Tailwind's utilities, so a `className` at the call site still
+ * wins and no vendored component is forked to get them.
+ */
+@layer components {
+  /*
+   * Lift the surfaces that float above the page — the drawer, menus, popovers,
+   * cards — with one soft, low shadow. Restrained on purpose: a surface should
+   * read as slightly in front, not as a card thrown onto the page.
+   */
+  [data-slot='sheet-content'],
+  [data-slot='popover-content'],
+  [data-slot='dropdown-menu-content'],
+  [data-slot='select-content'],
+  [data-slot='card'] {
+    box-shadow:
+      0 1px 2px -1px oklch(0 0 0 / 0.08),
+      0 8px 24px -12px oklch(0 0 0 / 0.14);
+  }
+  .dark [data-slot='sheet-content'],
+  .dark [data-slot='popover-content'],
+  .dark [data-slot='dropdown-menu-content'],
+  .dark [data-slot='select-content'],
+  .dark [data-slot='card'] {
+    box-shadow:
+      0 1px 2px -1px oklch(0 0 0 / 0.4),
+      0 8px 24px -12px oklch(0 0 0 / 0.5);
+  }
+
+  /*
+   * A table row answers the cursor, so a long list reads as something you act on
+   * rather than a static dump. `color-mix` keeps it a wash of the theme's own
+   * muted tone in either mode.
+   */
+  [data-slot='table-row']:hover {
+    background-color: color-mix(in oklch, var(--muted) 55%, transparent);
+  }
 }

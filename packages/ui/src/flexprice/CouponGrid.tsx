@@ -127,11 +127,13 @@ export function CouponGrid({
         },
         {
           id: 'discount',
-          meta: { skeleton: <Skeleton className="h-4 w-16" /> },
+          meta: { skeleton: <Skeleton className="ml-auto h-4 w-16" />, headerClassName: 'text-right [&>div]:justify-end' },
           accessorFn: (row: Coupon) => (row.type === CouponType.Percentage ? row.percentageOff : row.amountOff?.amount),
           header: ({ column }: never) => <DataGridColumnHeader title="Discount" column={column} />,
           cell: ({ row }: { row: { original: Coupon } }) => (
-            <DiscountCell coupon={row.original} locale={locale} />
+            <div className="text-right tabular-nums">
+              <DiscountCell coupon={row.original} locale={locale} />
+            </div>
           ),
           enableSorting: false,
           size: 120,
@@ -149,13 +151,13 @@ export function CouponGrid({
         },
         {
           id: 'redemptions',
-          meta: { skeleton: <Skeleton className="h-4 w-16" /> },
+          meta: { skeleton: <Skeleton className="ml-auto h-4 w-16" />, headerClassName: 'text-right [&>div]:justify-end' },
           accessorFn: (row: Coupon) => row.totalRedemptions,
           header: ({ column }: never) => <DataGridColumnHeader title="Redemptions" column={column} />,
           cell: ({ row }: { row: { original: Coupon } }) => (
-            <span className="tabular-nums text-muted-foreground">
+            <div className="text-right tabular-nums text-muted-foreground">
               {redemptionsLabel(row.original, locale)}
-            </span>
+            </div>
           ),
           enableSorting: false,
           size: 140,
