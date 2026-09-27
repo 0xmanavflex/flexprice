@@ -28,6 +28,8 @@ const IMPORTS = {
   domain: "import { money } from '@fp/domain'",
   react: "import { useState } from 'react'",
   adapter: "import { SHIMS } from '@fp/sdk-adapter'",
+  dataGrid: "import { DataGrid } from '@ui/components/reui/data-grid/data-grid'",
+  filters: "import { createFilterQuery } from '@ui/components/reui/filters/filters-query'",
 }
 
 describe('UI is presentation', () => {
@@ -104,6 +106,29 @@ describe('apps compose through the door', () => {
     ['@fp/api', IMPORTS.api],
   ])('refuses %s, which would bypass retry, errors and auth', async (_label, code) => {
     expect(await lintAt('apps/console/src/pages/Invoices.tsx', code)).toHaveLength(1)
+  })
+})
+
+describe('block-grade primitives live behind one seam', () => {
+  it('lets the flexprice grids import the data grid', async () => {
+    expect(await lintAt('packages/ui/src/flexprice/CouponGrid.tsx', IMPORTS.dataGrid)).toEqual([])
+  })
+
+  it('lets FilterBar import the filter builder', async () => {
+    expect(await lintAt('packages/ui/src/compositions/FilterBar.tsx', IMPORTS.filters)).toEqual([])
+  })
+
+  it('refuses a composition reaching for the data grid directly', async () => {
+    const messages = await lintAt('packages/ui/src/compositions/Toolbar.tsx', IMPORTS.dataGrid)
+    expect(messages).toHaveLength(1)
+    expect(messages[0]).toMatch(/one place|FeatureGrid|block-grade/i)
+  })
+
+  // The whole reason the seam rule replicates the full forbidden set: a second
+  // no-restricted-imports config replaces the first, so if it dropped the SDK
+  // ban, a non-seam file could quietly import the SDK. It must not.
+  it('still forbids the SDK in a non-seam composition — the seam rule does not clobber the UI rule', async () => {
+    expect(await lintAt('packages/ui/src/compositions/Toolbar.tsx', IMPORTS.sdk)).toHaveLength(1)
   })
 })
 

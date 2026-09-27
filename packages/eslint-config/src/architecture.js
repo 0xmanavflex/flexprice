@@ -41,6 +41,29 @@ const REACT = ['react', 'react-dom', 'react/*', 'react-dom/*']
 const ADAPTER_MESSAGE =
   '@fp/sdk-adapter is a temporary compensation for gaps in the OpenAPI contract, and only @fp/query may use it. Letting it spread is how a stopgap becomes permanent. See docs/api-contract-gap.md.'
 
+/**
+ * The block-grade vendor primitives: the data grid, the filter builder, the
+ * cascader. Powerful, deep, and easy to restyle into a corner — which is
+ * precisely how V1 broke: every screen reached for a component and customised
+ * it locally, so a registry update or a design change meant editing dozens of
+ * call sites, and each one drifted.
+ *
+ * The fix is one seam. These may be imported only by the `flexprice/` grids and
+ * filters, and by `FilterBar`/`GridFooter` that back them — never by a page, a
+ * shell part, or another composition. A screen composes from `FeatureGrid`, not
+ * from `data-grid`, so swapping or restyling the grid stays a change in one file
+ * and can never leak into forty.
+ */
+const BLOCKS = [
+  '@ui/components/reui/data-grid',
+  '@ui/components/reui/data-grid/*',
+  '@ui/components/reui/filters',
+  '@ui/components/reui/filters/*',
+  '@ui/components/reui/cascader',
+  '@ui/components/reui/cascader/*',
+  '@ui/components/blocks/*',
+]
+
 /** One scoped config object with a single, complete `no-restricted-imports`. */
 function layer(files, patterns) {
   return { files, rules: { 'no-restricted-imports': ['error', { patterns }] } }
@@ -102,7 +125,12 @@ export const actionsRules = layer(['packages/actions/**/*.{ts,tsx}'], [
  * survives the API changing shape. Loading, empty and error become props rather
  * than states you must provoke a server into producing.
  */
-export const uiRules = layer(['packages/ui/**/*.{ts,tsx}'], [
+/**
+ * The forbidden set every UI file shares. Factored out so the seam and the
+ * consumers below cannot drift apart — the flat-config footgun above makes a
+ * silent divergence the failure mode, and one array is one source of truth.
+ */
+const uiForbidden = [
   {
     group: [...SDK, ...API],
     message:
@@ -119,7 +147,44 @@ export const uiRules = layer(['packages/ui/**/*.{ts,tsx}'], [
       'UI must not depend on actions. Take an `onX` callback as a prop and let the page bind it — this is what keeps agent infrastructure out of the component tree.',
   },
   { group: ADAPTER, message: ADAPTER_MESSAGE },
-])
+]
+
+export const uiRules = layer(['packages/ui/**/*.{ts,tsx}'], uiForbidden)
+
+/**
+ * UI files that are *not* the grid/filter seam and *not* vendored may not reach
+ * a block-grade primitive — that is the one-seam rule made mechanical.
+ *
+ * It carries the complete `uiForbidden` set plus `BLOCKS`, because a second
+ * config that also sets `no-restricted-imports` on these files replaces the
+ * first wholesale (see the note at the top). It sits after `uiRules` so it wins
+ * for the files it matches, and ignores the seam and the vendored components so
+ * they keep their access.
+ */
+export const uiSeamRules = {
+  files: ['packages/ui/src/**/*.{ts,tsx}'],
+  ignores: [
+    'packages/ui/src/components/**',
+    'packages/ui/src/flexprice/**',
+    'packages/ui/src/compositions/FilterBar.tsx',
+    'packages/ui/src/compositions/GridFooter.tsx',
+  ],
+  rules: {
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          ...uiForbidden,
+          {
+            group: BLOCKS,
+            message:
+              'This is a block-grade primitive. Only the flexprice/ grids and filters (and FilterBar/GridFooter) may import the data grid, filter builder or cascader — compose from FeatureGrid, PlanGrid, FilterBar, and the swap stays a change in one place.',
+          },
+        ],
+      },
+    ],
+  },
+}
 
 /** The adapter sits beside query, below everything else. */
 export const adapterRules = layer(['packages/sdk-adapter/**/*.{ts,tsx}'], [
@@ -150,6 +215,8 @@ export const architecture = [
   queryRules,
   actionsRules,
   uiRules,
+  // After uiRules, so it wins for the non-seam files it matches.
+  uiSeamRules,
   appRules,
 ]
 
