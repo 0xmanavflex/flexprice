@@ -3,10 +3,12 @@ import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-
 import {
   AGGREGATION_LABEL,
   FEATURE_SORT_LABEL,
+  FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   type Feature,
   type FeatureQuery,
   FeatureSortField,
+  FeatureStatus,
   FeatureType,
   FeatureView,
 } from '@fp/domain'
@@ -79,6 +81,11 @@ const TYPE_VARIANT: Record<FeatureType, 'info-light' | 'success-light' | 'second
   [FeatureType.Config]: 'secondary',
 }
 
+const STATUS_VARIANT: Record<FeatureStatus, 'success-light' | 'secondary'> = {
+  [FeatureStatus.Published]: 'success-light',
+  [FeatureStatus.Archived]: 'secondary',
+}
+
 function formatDate(value: Date | null, locale?: string): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
@@ -138,6 +145,19 @@ export function FeatureGrid({
           size: 110,
         },
         {
+          id: 'status',
+          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
+          accessorFn: (row: Feature) => row.status,
+          header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
+          cell: ({ row }: { row: { original: Feature } }) => (
+            <Badge variant={STATUS_VARIANT[row.original.status]} size="sm">
+              {FEATURE_STATUS_LABEL[row.original.status]}
+            </Badge>
+          ),
+          enableSorting: false,
+          size: 110,
+        },
+        {
           id: 'measurement',
           meta: { skeleton: <Skeleton className="h-4 w-32" /> },
           accessorFn: (row: Feature) => row.eventName,
@@ -184,7 +204,16 @@ export function FeatureGrid({
           header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => formatDate(row.original.createdAt, locale),
           enableSorting: false,
-          size: 140,
+          size: 130,
+        },
+        {
+          id: 'updatedAt',
+          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
+          accessorFn: (row: Feature) => row.updatedAt,
+          header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
+          cell: ({ row }: { row: { original: Feature } }) => formatDate(row.original.updatedAt, locale),
+          enableSorting: false,
+          size: 130,
         },
       ] as never,
     [locale],
@@ -437,6 +466,11 @@ function FeatureCards({
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-1.5">
+              <CardDetail label="Status">
+                <Badge variant={STATUS_VARIANT[feature.status]} size="sm">
+                  {FEATURE_STATUS_LABEL[feature.status]}
+                </Badge>
+              </CardDetail>
               <CardDetail label="Measured by">
                 {measurement ? <span className="font-mono text-xs">{measurement}</span> : '—'}
               </CardDetail>
@@ -447,6 +481,7 @@ function FeatureCards({
                 </CardDetail>
               ) : null}
               <CardDetail label="Created">{formatDate(feature.createdAt, locale)}</CardDetail>
+              <CardDetail label="Updated">{formatDate(feature.updatedAt, locale)}</CardDetail>
             </CardContent>
           </Card>
         )

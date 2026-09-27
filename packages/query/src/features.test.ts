@@ -125,6 +125,12 @@ describe('toFeature', () => {
     })
   })
 
+  it('maps status, defaulting an unknown or missing one to published', () => {
+    expect(toFeature({ status: 'archived' }).status).toBe('archived')
+    expect(toFeature({ status: 'weird' }).status).toBe('published')
+    expect(toFeature({}).status).toBe('published')
+  })
+
   // Every field on FeatureResponse is optional. The grid must still get a row.
   it('survives a response with nothing on it', () => {
     expect(toFeature({})).toMatchObject({

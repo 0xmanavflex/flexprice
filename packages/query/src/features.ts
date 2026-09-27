@@ -5,6 +5,7 @@ import {
   type CreateFeature,
   type Feature,
   type FeatureQuery,
+  FeatureStatus,
   FeatureType,
   FeatureSortField,
 } from '@fp/domain'
@@ -38,15 +39,18 @@ export interface FeatureWire {
   lookupKey?: string | undefined
   description?: string | undefined
   type?: string | undefined
+  status?: string | undefined
   unitSingular?: string | undefined
   unitPlural?: string | undefined
   createdAt?: Date | undefined
+  updatedAt?: Date | undefined
   meter?:
     | { eventName?: string | undefined; aggregation?: { type?: string | undefined } | undefined }
     | undefined
 }
 
 const FEATURE_TYPES = new Set<string>(Object.values(FeatureType))
+const FEATURE_STATUSES = new Set<string>(Object.values(FeatureStatus))
 
 export function toFeature(wire: FeatureWire): Feature {
   const type = FEATURE_TYPES.has(wire.type ?? '')
@@ -55,17 +59,23 @@ export function toFeature(wire: FeatureWire): Feature {
       // is wrong but harmless; dropping the row would hide it entirely.
       FeatureType.Boolean
 
+  const status = FEATURE_STATUSES.has(wire.status ?? '')
+    ? (wire.status as FeatureStatus)
+    : FeatureStatus.Published
+
   return {
     id: wire.id ?? '',
     name: wire.name ?? 'Untitled feature',
     lookupKey: wire.lookupKey ?? '',
     description: wire.description ?? '',
     type,
+    status,
     eventName: wire.meter?.eventName ?? null,
     aggregationType: (wire.meter?.aggregation?.type as AggregationType | undefined) ?? null,
     unitSingular: wire.unitSingular ?? '',
     unitPlural: wire.unitPlural ?? '',
     createdAt: wire.createdAt ?? null,
+    updatedAt: wire.updatedAt ?? null,
   }
 }
 
@@ -151,13 +161,15 @@ export async function fetchFeatures(
   )
   const features = (response.items ?? []).map((item) => toFeature(item as FeatureWire))
 
+  // Type and status are not server-side filters on FeatureFilter, so they are
+  // applied here. Stated rather than hidden: they narrow the current page, not
+  // the whole set, which is why the count below reports what is actually shown.
+  let rows = features
+  if (query.types.length > 0) rows = rows.filter((f) => query.types.includes(f.type))
+  if (query.statuses.length > 0) rows = rows.filter((f) => query.statuses.includes(f.status))
+
   return {
-    // Type is not a server-side filter on FeatureFilter, so it is applied here.
-    // Stated rather than hidden: it narrows the current page, not the whole set,
-    // which is why the count below reports what is actually shown.
-    features: query.types.length > 0
-      ? features.filter((f) => query.types.includes(f.type))
-      : features,
+    features: rows,
     total: response.pagination?.total ?? 0,
   }
 }
@@ -170,7 +182,11 @@ export function useFeatures(query: FeatureQuery) {
   const { view: _view, ...key } = query
 
   return useQuery({
-    queryKey: queryKeys.features.list({ ...key, types: [...query.types].sort() }),
+    queryKey: queryKeys.features.list({
+      ...key,
+      types: [...query.types].sort(),
+      statuses: [...query.statuses].sort(),
+    }),
     queryFn: () => fetchFeatures(client, query),
     placeholderData: (previous) => previous,
   })

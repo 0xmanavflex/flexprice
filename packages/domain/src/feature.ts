@@ -44,6 +44,17 @@ export const ResetUsage = {
 } as const
 export type ResetUsage = (typeof ResetUsage)[keyof typeof ResetUsage]
 
+export const FeatureStatus = {
+  Published: 'published',
+  Archived: 'archived',
+} as const
+export type FeatureStatus = (typeof FeatureStatus)[keyof typeof FeatureStatus]
+
+export const FEATURE_STATUS_LABEL: Record<FeatureStatus, string> = {
+  [FeatureStatus.Published]: 'Published',
+  [FeatureStatus.Archived]: 'Archived',
+}
+
 /** COUNT is the only aggregation that needs nothing per event to add up. */
 export function needsAggregationTarget(type: AggregationType): boolean {
   return type !== AggregationType.Count
@@ -151,12 +162,14 @@ export interface Feature {
   lookupKey: string
   description: string
   type: FeatureType
+  status: FeatureStatus
   /** Present only for metered features. */
   eventName: string | null
   aggregationType: AggregationType | null
   unitSingular: string
   unitPlural: string
   createdAt: Date | null
+  updatedAt: Date | null
 }
 
 export const FEATURE_TYPE_LABEL: Record<FeatureType, string> = {
@@ -214,6 +227,7 @@ export interface FeatureQuery {
   pageSize: number
   search: string
   types: FeatureType[]
+  statuses: FeatureStatus[]
   sortBy: FeatureSortField
   sortDirection: 'asc' | 'desc'
   /** Table or cards. Lives in the URL like the rest of the query. */
@@ -225,6 +239,7 @@ export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   pageSize: 25,
   search: '',
   types: [],
+  statuses: [],
   // Alphabetical, because a catalogue is looked *up* more often than it is
   // scanned for what changed.
   sortBy: FeatureSortField.Name,

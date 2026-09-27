@@ -30,7 +30,10 @@ export function FeatureListPage({
 
   const failure = toFailure(features.error)
   const rows = features.data?.features ?? []
-  const isFiltered = query.search.length > 0 || query.types.length > 0
+  const isFiltered =
+    query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', types: [], statuses: [], page: 1 })
 
   return (
     <>
@@ -59,7 +62,7 @@ export function FeatureListPage({
           isEmpty={rows.length === 0 && !isFiltered}
           isFiltered={isFiltered}
           onRetry={() => void features.refetch()}
-          onClearFilters={() => onQueryChange({ ...query, search: '', types: [], page: 1 })}
+          onClearFilters={clearFilters}
           createAction={<Button onClick={onCreate}>New feature</Button>}
           emptyIcon={<GaugeIcon aria-hidden />}
           emptyTitle="Nothing is being measured yet"
@@ -71,11 +74,14 @@ export function FeatureListPage({
             query={query}
             onQueryChange={onQueryChange}
             onFeatureClick={onOpenFeature}
-            onClearFilters={() => onQueryChange({ ...query, search: '', types: [], page: 1 })}
+            onClearFilters={clearFilters}
             filters={
               <FeatureFilters
                 types={query.types}
-                onTypesChange={(types) => onQueryChange({ ...query, types, page: 1 })}
+                statuses={query.statuses}
+                onChange={({ types, statuses }) =>
+                  onQueryChange({ ...query, types, statuses, page: 1 })
+                }
               />
             }
           />

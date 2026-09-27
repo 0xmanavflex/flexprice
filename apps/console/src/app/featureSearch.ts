@@ -2,6 +2,7 @@ import {
   DEFAULT_FEATURE_QUERY,
   type FeatureQuery,
   FeatureSortField,
+  FeatureStatus,
   FeatureType,
   FeatureView,
 } from '@fp/domain'
@@ -14,6 +15,7 @@ import {
  * URL shows the first page rather than an error.
  */
 const TYPES = new Set<string>(Object.values(FeatureType))
+const STATUSES = new Set<string>(Object.values(FeatureStatus))
 const SORT_FIELDS = new Set<string>(Object.values(FeatureSortField))
 const MAX_PAGE_SIZE = 100
 
@@ -46,11 +48,17 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
     .map((t) => String(t).trim())
     .filter((t): t is FeatureType => TYPES.has(t))
 
+  const rawStatuses = param(raw, 'status', 'statuses')
+  const statuses = (Array.isArray(rawStatuses) ? rawStatuses : String(rawStatuses ?? '').split(','))
+    .map((s) => String(s).trim())
+    .filter((s): s is FeatureStatus => STATUSES.has(s))
+
   return {
     page: positiveInt(raw['page'], DEFAULT_FEATURE_QUERY.page),
     pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_FEATURE_QUERY.pageSize, MAX_PAGE_SIZE),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     types: [...new Set(types)],
+    statuses: [...new Set(statuses)],
     // Unknown values fall back rather than throwing: a hand-edited URL should
     // show the default list, not an error page.
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
