@@ -44,6 +44,21 @@ const iso = (d) => d.toISOString()
 const NOW = new Date('2026-09-24T00:00:00Z')
 const days = (n) => new Date(NOW.getTime() + n * 86_400_000)
 
+/**
+ * An `updated_at` after a `created` offset and before today.
+ *
+ * The capture stamped `created_at` and `updated_at` identical on every row, so
+ * every "Updated" column read the same date — the corpus looked frozen. This
+ * spreads the updated date somewhere between the created date and yesterday, the
+ * way a real record's does. Deterministic (a fixed multiplier, not `rand`), so a
+ * re-run produces the same corpus and a reviewable diff.
+ */
+function updatedAfter(createdOffset, i) {
+  const span = Math.max(1, -createdOffset)
+  const delta = 1 + ((i * 53) % span)
+  return iso(days(Math.min(createdOffset + delta, -1)))
+}
+
 /** Decimal arithmetic on strings, to two places. Never a float in the output. */
 function scale(amount, factor) {
   const cents = Math.round(Number.parseFloat(amount || '0') * 100 * factor)
@@ -114,7 +129,14 @@ function synthInvoices(captured, customers, count = 40) {
     // Vary currency, so formatting is exercised beyond one locale.
     row.currency = ['USD', 'EUR', 'INR', 'GBP'][i % 4]
 
-    row.created_at = iso(days(-200 + i * 3))
+    {
+      const createdOffset = -200 + i * 3
+      row.created_at = iso(days(createdOffset))
+      row.updated_at = updatedAfter(createdOffset, i)
+      // The invoice list's "Issued" column reads this; without it every row
+      // showed the same capture date.
+      row.issue_date = iso(days(createdOffset))
+    }
     row.period_start = iso(days(-230 + i * 3))
     row.period_end = iso(days(-200 + i * 3))
 
@@ -163,7 +185,11 @@ function synthFeatures(captured, count = 24) {
     row.type = shape.type
     row.unit_singular = shape.unit[0]
     row.unit_plural = shape.unit[1]
-    row.created_at = iso(days(-300 + i * 7))
+    {
+      const createdOffset = -300 + i * 7
+      row.created_at = iso(days(createdOffset))
+      row.updated_at = updatedAfter(createdOffset, i)
+    }
 
     if (shape.type === 'metered') {
       row.meter_id = `meter_synth_${i}`
@@ -299,6 +325,11 @@ function multiply(captured, prefix, count) {
     row.id = `${prefix}_synth_${String(i).padStart(4, '0')}`
     if (row.name) row.name = `${row.name} ${i + 1}`
     if (row.lookup_key) row.lookup_key = `${row.lookup_key}_${i + 1}`
+    // Spread the timestamps — the seed stamped them identical, which froze the
+    // Created/Updated columns to one date across the whole list.
+    const createdOffset = -(30 + ((i * 37) % 300))
+    row.created_at = iso(days(createdOffset))
+    row.updated_at = updatedAfter(createdOffset, i)
     rekeyNested(row, i)
     return row
   })
