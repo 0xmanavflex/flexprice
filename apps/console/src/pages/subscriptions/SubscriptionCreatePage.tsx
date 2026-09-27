@@ -46,7 +46,7 @@ export function SubscriptionCreatePage({
   onCancel,
 }: SubscriptionCreatePageProps) {
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-8 p-6">
+    <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto p-6">
       <h1 className="text-xl font-semibold">New subscription</h1>
 
       <WorkflowStepper

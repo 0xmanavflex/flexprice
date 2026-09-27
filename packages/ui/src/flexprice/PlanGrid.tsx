@@ -2,16 +2,14 @@ import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
 import {
   PLAN_SORT_LABEL,
-  PLAN_STATUS_LABEL,
   type Plan,
   type PlanQuery,
   PlanSortField,
-  PlanStatus,
   PlanView,
 } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
+import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
 import {
@@ -30,6 +28,7 @@ import { GridToolbar } from '@ui/compositions/GridToolbar'
 import { SortMenu } from '@ui/compositions/SortMenu'
 import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
+import { CatalogStatusBadge } from './StatusBadge'
 
 /**
  * The plan list.
@@ -65,11 +64,6 @@ export interface PlanGridProps {
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   locale?: string
-}
-
-const STATUS_VARIANT: Record<PlanStatus, 'success-light' | 'secondary'> = {
-  [PlanStatus.Published]: 'success-light',
-  [PlanStatus.Archived]: 'secondary',
 }
 
 /** Billing period, shortened the way a pricing page writes it. */
@@ -135,9 +129,7 @@ export function PlanGrid({
           accessorFn: (row: Plan) => row.status,
           header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => (
-            <Badge variant={STATUS_VARIANT[row.original.status]} size="sm">
-              {PLAN_STATUS_LABEL[row.original.status]}
-            </Badge>
+            <CatalogStatusBadge status={row.original.status} />
           ),
           enableSorting: false,
           size: 120,
@@ -196,7 +188,9 @@ export function PlanGrid({
   } as never)
 
   const containerRef = useRef<HTMLDivElement>(null)
-  const [fitToWindow, setFitToWindow] = useState(false)
+  // On by default: the pagination footer sits just below the last row rather
+  // than the page size overflowing the viewport.
+  const [fitToWindow, setFitToWindow] = useState(true)
   const capacity = useViewportPageSize({
     containerRef,
     enabled: fitToWindow && query.view === PlanView.Table,
@@ -282,15 +276,19 @@ export function PlanGrid({
         }}
       >
         {query.view === PlanView.Cards ? (
-          <PlanCards
-            plans={plans}
-            isLoading={isLoading}
-            onPlanClick={onPlanClick}
-            onClearFilters={onClearFilters}
-            locale={locale}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <PlanCards
+              plans={plans}
+              isLoading={isLoading}
+              onPlanClick={onPlanClick}
+              onClearFilters={onClearFilters}
+              locale={locale}
+            />
+          </div>
         ) : (
-          <DataGridTable />
+          <DataGridScrollArea className="min-h-0 flex-1">
+            <DataGridTable />
+          </DataGridScrollArea>
         )}
         <GridFooter
           fitToWindow={fitToWindow}
@@ -362,9 +360,7 @@ function PlanCards({ plans, isLoading, onPlanClick, onClearFilters, locale }: Pl
           <CardHeader>
             <div className="flex items-start justify-between gap-2">
               <CardTitle className="truncate">{plan.name}</CardTitle>
-              <Badge variant={STATUS_VARIANT[plan.status]} size="sm">
-                {PLAN_STATUS_LABEL[plan.status]}
-              </Badge>
+              <CatalogStatusBadge status={plan.status} />
             </div>
             {plan.lookupKey ? (
               <CardDescription className="truncate font-mono text-xs">

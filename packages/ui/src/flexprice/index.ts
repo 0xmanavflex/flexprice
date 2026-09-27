@@ -30,8 +30,18 @@ export { Money, MoneyProvenance } from './Money'
 export type { MoneyProps } from './Money'
 export { Metric, MetricProvenance } from './Metric'
 export type { MetricProps, Sentiment } from './Metric'
-export { InvoiceStatusBadge, StatusBadgeProvenance } from './StatusBadge'
-export type { InvoiceStatusBadgeProps } from './StatusBadge'
+export {
+  CatalogStatusBadge,
+  FeatureTypeBadge,
+  InvoiceStatusBadge,
+  StatusBadgeProvenance,
+} from './StatusBadge'
+export type {
+  CatalogStatus,
+  CatalogStatusBadgeProps,
+  FeatureTypeBadgeProps,
+  InvoiceStatusBadgeProps,
+} from './StatusBadge'
 export { UsageMeter, UsageMeterProvenance } from './UsageMeter'
 export type { UsageMeterProps } from './UsageMeter'
 export { SignInForm, SignInFormProvenance } from './SignInForm'

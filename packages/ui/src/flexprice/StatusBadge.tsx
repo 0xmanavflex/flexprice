@@ -1,12 +1,17 @@
 import {
+  ArchiveIcon,
+  BracesIcon,
   CircleAlertIcon,
   CircleCheckIcon,
   CircleDashedIcon,
   CircleIcon,
   CircleMinusIcon,
   CircleSlashIcon,
+  GaugeIcon,
+  HashIcon,
+  ToggleRightIcon,
 } from 'lucide-react'
-import { InvoiceStatus, needsAttention } from '@fp/domain'
+import { FEATURE_TYPE_LABEL, FeatureType, InvoiceStatus, needsAttention } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
 
@@ -83,4 +88,61 @@ export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
       {needsAttention(status) ? <span className="sr-only"> — needs attention</span> : null}
     </Badge>
   )
+}
+
+/**
+ * A catalogue label, drawn the same way a status is: outline surface, colour on
+ * the glyph only. One shape shared by every catalogue chip so the table reads as
+ * one system rather than a colour swatch per column.
+ */
+function GlyphBadge({ icon: Icon, tone, label }: { icon: typeof CircleIcon; tone: string; label: string }) {
+  return (
+    <Badge
+      variant="outline"
+      size="sm"
+      radius="full"
+      className="border-border/60 bg-transparent px-2 font-normal text-foreground dark:bg-transparent"
+    >
+      <Icon aria-hidden className={tone} />
+      {label}
+    </Badge>
+  )
+}
+
+/** The colour each feature type carries, on its icon only. */
+const FEATURE_TYPE_ICON: Record<FeatureType, { icon: typeof CircleIcon; tone: string }> = {
+  [FeatureType.Metered]: { icon: GaugeIcon, tone: 'text-info' },
+  [FeatureType.Boolean]: { icon: ToggleRightIcon, tone: 'text-muted-foreground' },
+  [FeatureType.Static]: { icon: HashIcon, tone: 'text-success' },
+  [FeatureType.Config]: { icon: BracesIcon, tone: 'text-muted-foreground' },
+}
+
+export interface FeatureTypeBadgeProps {
+  type: FeatureType
+}
+
+export function FeatureTypeBadge({ type }: FeatureTypeBadgeProps) {
+  const { icon, tone } = FEATURE_TYPE_ICON[type]
+  return <GlyphBadge icon={icon} tone={tone} label={FEATURE_TYPE_LABEL[type]} />
+}
+
+/**
+ * The shared catalogue status: published or archived, drawn like every status
+ * here — colour on the glyph, neutral fill. Features, plans and add-ons all use
+ * it, so a Published chip is the same object in every catalogue table.
+ */
+export type CatalogStatus = 'published' | 'archived'
+
+const CATALOG_STATUS: Record<CatalogStatus, { icon: typeof CircleIcon; tone: string; label: string }> = {
+  published: { icon: CircleCheckIcon, tone: 'text-success', label: 'Published' },
+  archived: { icon: ArchiveIcon, tone: 'text-muted-foreground', label: 'Archived' },
+}
+
+export interface CatalogStatusBadgeProps {
+  status: CatalogStatus
+}
+
+export function CatalogStatusBadge({ status }: CatalogStatusBadgeProps) {
+  const { icon, tone, label } = CATALOG_STATUS[status]
+  return <GlyphBadge icon={icon} tone={tone} label={label} />
 }

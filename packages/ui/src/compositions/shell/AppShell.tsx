@@ -299,8 +299,13 @@ export function AppShell({
         {/*
           A div, not a `main`. `SidebarInset` is already the `main` landmark —
           nesting another inside it produces two, and a document may have one.
+
+          `overflow-hidden`, not `auto`: a list page fills this region and scrolls
+          its own grid, so the pagination footer stays pinned to the bottom and
+          fit-to-window has a bounded height to measure. Pages that read top to
+          bottom (forms) own their scroll with `h-full overflow-y-auto`.
         */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
       </SidebarInset>
       </TooltipProvider>
     </SidebarProvider>

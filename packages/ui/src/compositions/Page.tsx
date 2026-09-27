@@ -73,7 +73,9 @@ export function PageBody({
   return (
     <div
       className={cn(
-        'flex flex-1 flex-col gap-4 px-6 py-5',
+        // `min-h-0` so a list page's grid can fill this region and scroll
+        // itself, rather than pushing the pagination footer off the bottom.
+        'flex min-h-0 flex-1 flex-col gap-4 px-6 py-5',
         width === 'narrow' ? 'mx-auto w-full max-w-3xl' : 'w-full max-w-[1440px]',
         className,
       )}

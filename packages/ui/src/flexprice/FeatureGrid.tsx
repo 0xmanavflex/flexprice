@@ -3,18 +3,14 @@ import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-
 import {
   AGGREGATION_LABEL,
   FEATURE_SORT_LABEL,
-  FEATURE_STATUS_LABEL,
-  FEATURE_TYPE_LABEL,
   type Feature,
   type FeatureQuery,
   FeatureSortField,
-  FeatureStatus,
-  FeatureType,
   FeatureView,
 } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
+import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
 import {
@@ -33,24 +29,21 @@ import { GridToolbar } from '@ui/compositions/GridToolbar'
 import { SortMenu } from '@ui/compositions/SortMenu'
 import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
+import { CatalogStatusBadge, FeatureTypeBadge } from './StatusBadge'
 
 /**
  * The feature list.
  *
- * Replaces V1's `Features.tsx`, which renders a hand-rolled `FlexpriceTable`
- * and owns drawer state for editing. Controlled in the same way `InvoiceGrid`
- * is: the route owns the query, this renders it and reports intent.
- *
- * Two layouts over one query: a dense **table** for scanning many features and
- * a **cards** grid for reading each one's detail. The toggle writes `query.view`,
- * so a chosen layout is part of the shareable URL, not local state. Filtering is
- * not built in — the page passes an advanced `FeatureFilters` builder into the
- * `filters` slot, keeping this component ignorant of what a feature type is.
+ * Controlled like `InvoiceGrid`: the route owns the query, this renders it and
+ * reports intent. Two layouts over one query — a dense table and a cards grid.
+ * Every column is a single value: the type and status are the shared
+ * catalogue badge (`@reui/badge`, colour on the glyph), never a coloured fill,
+ * and no cell stacks a heading over a subheading.
  */
 export const FeatureGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge', 'ui/card', 'ui/tabs'],
-  note: 'Controlled wrapper; the page owns query state. Table and cards over one query.',
+  composes: ['@reui/data-grid', 'ui/card', 'ui/tabs'],
+  note: 'Controlled wrapper; the page owns query state. Single-value columns, shared badges.',
 })
 
 const SORT_OPTIONS = Object.values(FeatureSortField).map((value) => ({
@@ -74,29 +67,15 @@ export interface FeatureGridProps {
   locale?: string
 }
 
-const TYPE_VARIANT: Record<FeatureType, 'info-light' | 'success-light' | 'secondary'> = {
-  [FeatureType.Metered]: 'info-light',
-  [FeatureType.Boolean]: 'secondary',
-  [FeatureType.Static]: 'success-light',
-  [FeatureType.Config]: 'secondary',
-}
-
-const STATUS_VARIANT: Record<FeatureStatus, 'success-light' | 'secondary'> = {
-  [FeatureStatus.Published]: 'success-light',
-  [FeatureStatus.Archived]: 'secondary',
-}
-
 function formatDate(value: Date | null, locale?: string): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
 }
 
-/** How a metered feature is measured, as one line. Empty for the rest. */
-function measuredBy(feature: Feature): string | null {
-  if (!feature.eventName) return null
-  return feature.aggregationType
-    ? `${feature.eventName} · ${AGGREGATION_LABEL[feature.aggregationType]}`
-    : feature.eventName
+/** One value: how usage is aggregated. An em dash where nothing is measured. */
+function measuredBy(feature: Feature): ReactNode {
+  if (!feature.aggregationType) return <span className="text-muted-foreground">—</span>
+  return AGGREGATION_LABEL[feature.aggregationType]
 }
 
 export function FeatureGrid({
@@ -121,67 +100,43 @@ export function FeatureGrid({
           accessorFn: (row: Feature) => row.name,
           header: ({ column }: never) => <DataGridColumnHeader title="Feature" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => (
-            <div className="flex flex-col">
-              <span className="font-medium">{row.original.name}</span>
-              {row.original.lookupKey ? (
-                <span className="text-xs text-muted-foreground">{row.original.lookupKey}</span>
-              ) : null}
-            </div>
+            <span className="font-medium">{row.original.name}</span>
           ),
           enableSorting: false,
           size: 240,
         },
         {
           id: 'type',
-          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
+          meta: { skeleton: <Skeleton className="h-5 w-20 rounded-full" /> },
           accessorFn: (row: Feature) => row.type,
           header: ({ column }: never) => <DataGridColumnHeader title="Type" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => (
-            <Badge variant={TYPE_VARIANT[row.original.type]} size="sm">
-              {FEATURE_TYPE_LABEL[row.original.type]}
-            </Badge>
+            <FeatureTypeBadge type={row.original.type} />
           ),
           enableSorting: false,
-          size: 110,
+          size: 130,
         },
         {
           id: 'status',
-          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
+          meta: { skeleton: <Skeleton className="h-5 w-24 rounded-full" /> },
           accessorFn: (row: Feature) => row.status,
           header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => (
-            <Badge variant={STATUS_VARIANT[row.original.status]} size="sm">
-              {FEATURE_STATUS_LABEL[row.original.status]}
-            </Badge>
+            <CatalogStatusBadge status={row.original.status} />
           ),
           enableSorting: false,
-          size: 110,
+          size: 140,
         },
         {
           id: 'measurement',
           meta: { skeleton: <Skeleton className="h-4 w-32" /> },
-          accessorFn: (row: Feature) => row.eventName,
+          accessorFn: (row: Feature) => row.aggregationType,
           header: ({ column }: never) => (
             <DataGridColumnHeader title="Measured by" column={column} />
           ),
-          // Only metered features measure anything; an em dash beats an empty
-          // cell, which reads as missing data rather than not applicable.
-          cell: ({ row }: { row: { original: Feature } }) => {
-            const { eventName, aggregationType } = row.original
-            if (!eventName) return <span className="text-muted-foreground">—</span>
-            return (
-              <div className="flex flex-col">
-                <span className="font-mono text-xs">{eventName}</span>
-                {aggregationType ? (
-                  <span className="text-xs text-muted-foreground">
-                    {AGGREGATION_LABEL[aggregationType]}
-                  </span>
-                ) : null}
-              </div>
-            )
-          },
+          cell: ({ row }: { row: { original: Feature } }) => measuredBy(row.original),
           enableSorting: false,
-          size: 220,
+          size: 200,
         },
         {
           id: 'unit',
@@ -195,7 +150,7 @@ export function FeatureGrid({
               <span className="text-muted-foreground">—</span>
             ),
           enableSorting: false,
-          size: 120,
+          size: 110,
         },
         {
           id: 'createdAt',
@@ -242,17 +197,15 @@ export function FeatureGrid({
   } as never)
 
   const containerRef = useRef<HTMLDivElement>(null)
-  const [fitToWindow, setFitToWindow] = useState(false)
+  // On by default: a list page fills its region and the pagination footer sits
+  // just below the last row, rather than the page size overflowing the viewport.
+  const [fitToWindow, setFitToWindow] = useState(true)
   const capacity = useViewportPageSize({
     containerRef,
-    // Fitting to a window of cards would fight their reflow; only the table has
-    // a fixed row height to measure against.
     enabled: fitToWindow && query.view === FeatureView.Table,
-    // The toolbar above and the footer below are not rows.
     reservedHeight: 104,
   })
 
-  // `null` means no measurement yet — keep whatever size is already set.
   if (fitToWindow && query.view === FeatureView.Table && capacity !== null && capacity !== query.pageSize) {
     onQueryChange({ ...query, pageSize: capacity, page: 1 })
   }
@@ -278,7 +231,6 @@ export function FeatureGrid({
         placeholder="Search..."
         label="Search features"
       >
-        {/* The advanced, V1-style filter builder, passed by the page. */}
         {filters}
         <SortMenu
           align="end"
@@ -309,12 +261,6 @@ export function FeatureGrid({
         recordCount={total}
         isLoading={isLoading}
         emptyMessage={
-          /*
-           * The table body, not a replacement for the page. A bare sentence
-           * leaves someone who just typed a search with nothing to press —
-           * and the only useful action here is undoing the thing that emptied
-           * the list.
-           */
           <EmptyState
             size="inline"
             isFiltered
@@ -334,26 +280,24 @@ export function FeatureGrid({
           headerSticky: true,
           columnsVisibility: true,
           width: 'fixed',
-          /*
-           * No horizontal rules, and tighter rows. Removing the lines is most
-           * of what makes a dense ledger read quietly — rows separate by
-           * rhythm and alignment, which is enough once every column is
-           * aligned. The rules only earn their place when rows wrap.
-           */
           rowBorder: false,
           dense: true,
         }}
       >
         {query.view === FeatureView.Cards ? (
-          <FeatureCards
-            features={features}
-            isLoading={isLoading}
-            onFeatureClick={onFeatureClick}
-            onClearFilters={onClearFilters}
-            locale={locale}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <FeatureCards
+              features={features}
+              isLoading={isLoading}
+              onFeatureClick={onFeatureClick}
+              onClearFilters={onClearFilters}
+              locale={locale}
+            />
+          </div>
         ) : (
-          <DataGridTable />
+          <DataGridScrollArea className="min-h-0 flex-1">
+            <DataGridTable />
+          </DataGridScrollArea>
         )}
         <GridFooter
           fitToWindow={fitToWindow}
@@ -374,11 +318,7 @@ interface FeatureCardsProps {
   locale?: string | undefined
 }
 
-/**
- * The same rows as the table, one card each — the layout for reading a feature
- * rather than scanning a column. Loading and the filtered-empty state live here
- * because in this view there is no `DataGridTable` to own them.
- */
+/** The same rows as the table, one card each — for reading a feature, not scanning. */
 function FeatureCards({
   features,
   isLoading,
@@ -425,7 +365,6 @@ function FeatureCards({
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
       {features.map((feature) => {
-        const measurement = measuredBy(feature)
         const clickable = Boolean(onFeatureClick)
         return (
           <Card
@@ -460,28 +399,16 @@ function FeatureCards({
                     </CardDescription>
                   ) : null}
                 </div>
-                <Badge variant={TYPE_VARIANT[feature.type]} size="sm">
-                  {FEATURE_TYPE_LABEL[feature.type]}
-                </Badge>
+                <FeatureTypeBadge type={feature.type} />
               </div>
             </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              <CardDetail label="Status">
-                <Badge variant={STATUS_VARIANT[feature.status]} size="sm">
-                  {FEATURE_STATUS_LABEL[feature.status]}
-                </Badge>
-              </CardDetail>
-              <CardDetail label="Measured by">
-                {measurement ? <span className="font-mono text-xs">{measurement}</span> : '—'}
-              </CardDetail>
-              <CardDetail label="Unit">{feature.unitSingular || '—'}</CardDetail>
-              {feature.description ? (
-                <CardDetail label="Description">
-                  <span className="line-clamp-2">{feature.description}</span>
-                </CardDetail>
-              ) : null}
-              <CardDetail label="Created">{formatDate(feature.createdAt, locale)}</CardDetail>
-              <CardDetail label="Updated">{formatDate(feature.updatedAt, locale)}</CardDetail>
+            <CardContent className="flex flex-col gap-2">
+              <FeatureCardRow label="Status">
+                <CatalogStatusBadge status={feature.status} />
+              </FeatureCardRow>
+              <FeatureCardRow label="Measured by">{measuredBy(feature)}</FeatureCardRow>
+              <FeatureCardRow label="Unit">{feature.unitSingular || '—'}</FeatureCardRow>
+              <FeatureCardRow label="Updated">{formatDate(feature.updatedAt, locale)}</FeatureCardRow>
             </CardContent>
           </Card>
         )
@@ -490,9 +417,9 @@ function FeatureCards({
   )
 }
 
-function CardDetail({ label, children }: { label: string; children: ReactNode }) {
+function FeatureCardRow({ label, children }: { label: string; children: ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
+    <div className="flex items-center justify-between gap-3">
       <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
       <span className="min-w-0 truncate text-right">{children}</span>
     </div>

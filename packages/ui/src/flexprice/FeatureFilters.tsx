@@ -95,6 +95,7 @@ export function FeatureFilters({ types, statuses, onChange }: FeatureFiltersProp
 
   return (
     <FilterBar
+      variant="advanced"
       fields={FIELDS}
       query={query}
       onQueryChange={(_next, flat: FlatFilter[]) => {

@@ -26,8 +26,11 @@ export const Populated: Story = {
     const canvas = within(canvasElement)
 
     await expect(await canvas.findByText('API calls')).toBeInTheDocument()
-    await expect(canvas.getByText('api_call')).toBeInTheDocument()
+    // Each column is a single value: the measurement is the aggregation, not the
+    // event name repeated from the feature's own key.
     await expect(canvas.getByText('Count of events')).toBeInTheDocument()
+    // Type and status render as the shared catalogue badge.
+    await expect(canvas.getAllByText('Published').length).toBeGreaterThan(0)
     // Non-metered features measure nothing; the cell says so rather than
     // rendering blank, which reads as missing data.
     await expect(canvas.getAllByText('—').length).toBeGreaterThan(0)

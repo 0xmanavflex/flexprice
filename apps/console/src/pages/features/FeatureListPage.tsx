@@ -1,4 +1,4 @@
-import { type Feature, type FeatureQuery } from '@fp/domain'
+import { type FeatureQuery } from '@fp/domain'
 import { ApiError, useFeatures } from '@fp/query'
 import { FeatureFilters, FeatureGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
@@ -9,7 +9,6 @@ export interface FeatureListPageProps {
   query: FeatureQuery
   onQueryChange: (query: FeatureQuery) => void
   onCreate: () => void
-  onOpenFeature: (feature: Feature) => void
 }
 
 /**
@@ -20,12 +19,7 @@ export interface FeatureListPageProps {
  * into a sentence, and hands the grid plain props. No `useState`: the query
  * lives in the URL.
  */
-export function FeatureListPage({
-  query,
-  onQueryChange,
-  onCreate,
-  onOpenFeature,
-}: FeatureListPageProps) {
+export function FeatureListPage({ query, onQueryChange, onCreate }: FeatureListPageProps) {
   const features = useFeatures(query)
 
   const failure = toFailure(features.error)
@@ -68,12 +62,16 @@ export function FeatureListPage({
           emptyTitle="Nothing is being measured yet"
           emptyDescription="A Feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
         >
+          {/*
+            No onFeatureClick: the feature detail page is not built yet, and a
+            row that navigates nowhere useful — the old behaviour dropped the
+            name into the search box — is worse than a row that does nothing.
+          */}
           <FeatureGrid
             features={rows}
             total={features.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
-            onFeatureClick={onOpenFeature}
             onClearFilters={clearFilters}
             filters={
               <FeatureFilters

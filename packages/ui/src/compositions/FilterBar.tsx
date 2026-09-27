@@ -39,6 +39,15 @@ export interface FilterBarProps {
   query: FilterQuery
   onQueryChange: (query: FilterQuery, flat: FlatFilter[]) => void
   size?: 'sm' | 'default'
+  /**
+   * Which chrome draws the query. `basic` is the flat chip row; `advanced` is
+   * ReUI's full builder — nested conditions, operators, reorder — behind the
+   * trigger. Still flattened to a URL-safe array on the way out, so a query
+   * a flat schema cannot express is simply one the caller never receives.
+   */
+  variant?: 'basic' | 'advanced'
+  /** Where the advanced builder renders. `popover` keeps the toolbar compact. */
+  advancedMode?: 'popover' | 'inline'
 }
 
 /** A query with nothing in it. Exported so callers can seed state with it. */
@@ -46,10 +55,19 @@ export function emptyFilterQuery(): FilterQuery {
   return createFilterQuery()
 }
 
-export function FilterBar({ fields, query, onQueryChange, size = 'sm' }: FilterBarProps) {
+export function FilterBar({
+  fields,
+  query,
+  onQueryChange,
+  size = 'sm',
+  variant = 'basic',
+  advancedMode = 'popover',
+}: FilterBarProps) {
   return (
     <Filters
       size={size}
+      variant={variant}
+      advancedMode={advancedMode}
       fields={fields}
       query={query}
       onQueryChange={(next: FilterQuery) => {

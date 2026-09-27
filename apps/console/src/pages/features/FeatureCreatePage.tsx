@@ -18,7 +18,7 @@ export function FeatureCreatePage({ onCreated, onCancel }: FeatureCreatePageProp
   const create = useCreateFeature()
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-col gap-6 p-6">
+    <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-6 overflow-y-auto p-6">
       <FeatureForm
         onSubmit={(draft) => create.mutate(draft, { onSuccess: onCreated })}
         onCancel={onCancel}

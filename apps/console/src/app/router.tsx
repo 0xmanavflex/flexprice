@@ -265,9 +265,6 @@ function FeaturesRouteComponent() {
         void navigate({ to: '/features', search: next, replace: true })
       }
       onCreate={() => void navigate({ to: '/features/new' })}
-      onOpenFeature={(feature) =>
-        void navigate({ to: '/features', search: { ...query, search: feature.name, page: 1 } })
-      }
     />
   )
 }
