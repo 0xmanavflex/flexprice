@@ -15,6 +15,7 @@ describe('parseFeatureSearch', () => {
       types: [FeatureType.Metered],
       sortBy: 'name',
       sortDirection: 'asc',
+      view: 'table',
     })
   })
 
@@ -38,6 +39,13 @@ describe('parseFeatureSearch', () => {
 
   it('caps page size', () => {
     expect(parseFeatureSearch({ size: '99999' }).pageSize).toBe(100)
+  })
+
+  it('reads the cards view, and defaults everything else to the table', () => {
+    expect(parseFeatureSearch({ view: 'cards' }).view).toBe('cards')
+    expect(parseFeatureSearch({ view: 'table' }).view).toBe('table')
+    expect(parseFeatureSearch({ view: 'grid' }).view).toBe('table')
+    expect(parseFeatureSearch({}).view).toBe('table')
   })
 })
 
@@ -67,6 +75,7 @@ describe('round-trips what the router writes', () => {
       types: [FeatureType.Metered],
       sortBy: 'updatedAt',
       sortDirection: 'desc',
+      view: 'table',
     })
   })
 

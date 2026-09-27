@@ -14,6 +14,8 @@ export { PriceOverrideForm, PriceOverrideFormProvenance } from './PriceOverrideF
 export type { PriceOverrideFormProps } from './PriceOverrideForm'
 export { FeatureGrid, FeatureGridProvenance } from './FeatureGrid'
 export type { FeatureGridProps } from './FeatureGrid'
+export { FeatureFilters, FeatureFiltersProvenance } from './FeatureFilters'
+export type { FeatureFiltersProps } from './FeatureFilters'
 export { FeatureForm, FeatureFormProvenance } from './FeatureForm'
 export type { FeatureFormProps } from './FeatureForm'
 export { Money, MoneyProvenance } from './Money'

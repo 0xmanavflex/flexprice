@@ -3,6 +3,7 @@ import {
   type FeatureQuery,
   FeatureSortField,
   FeatureType,
+  FeatureView,
 } from '@fp/domain'
 
 /**
@@ -59,5 +60,7 @@ export function parseFeatureSearch(raw: Record<string, unknown>): FeatureQuery {
       param(raw, 'dir', 'sortDirection') === 'desc'
         ? 'desc'
         : DEFAULT_FEATURE_QUERY.sortDirection,
+    // A layout, not a filter. `cards` persists; anything else is the table.
+    view: param(raw, 'view', 'view') === FeatureView.Cards ? FeatureView.Cards : FeatureView.Table,
   }
 }

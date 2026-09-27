@@ -60,6 +60,7 @@ export {
   needsAggregationTarget,
   FEATURE_SORT_LABEL,
   FeatureSortField,
+  FeatureView,
 } from './feature'
 export type { CreateFeature, Feature, FeatureQuery, MeterDraft } from './feature'
 

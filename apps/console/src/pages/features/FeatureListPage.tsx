@@ -1,6 +1,6 @@
 import { type Feature, type FeatureQuery } from '@fp/domain'
 import { ApiError, useFeatures } from '@fp/query'
-import { FeatureGrid } from '@fp/ui/flexprice'
+import { FeatureFilters, FeatureGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
 import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -72,6 +72,12 @@ export function FeatureListPage({
             onQueryChange={onQueryChange}
             onFeatureClick={onOpenFeature}
             onClearFilters={() => onQueryChange({ ...query, search: '', types: [], page: 1 })}
+            filters={
+              <FeatureFilters
+                types={query.types}
+                onTypesChange={(types) => onQueryChange({ ...query, types, page: 1 })}
+              />
+            }
           />
         </ListState>
       </PageBody>

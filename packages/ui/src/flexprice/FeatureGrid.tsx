@@ -8,6 +8,7 @@ import {
   type FeatureQuery,
   FeatureSortField,
   FeatureType,
+  FeatureView,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
@@ -15,14 +16,15 @@ import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-co
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
 import {
-  DropdownMenu,
-  DropdownMenuCheckboxItem,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuLabel,
-  DropdownMenuTrigger,
-} from '@ui/primitives/dropdown-menu'
-import { ChevronDownIcon, FilterIcon } from 'lucide-react'
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@ui/primitives/card'
+import { Skeleton } from '@ui/primitives/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@ui/primitives/tabs'
+import { LayoutGridIcon, TableIcon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { GridFooter } from '@ui/compositions/GridFooter'
 import { GridToolbar } from '@ui/compositions/GridToolbar'
@@ -36,11 +38,17 @@ import { provenance } from '@ui/provenance'
  * Replaces V1's `Features.tsx`, which renders a hand-rolled `FlexpriceTable`
  * and owns drawer state for editing. Controlled in the same way `InvoiceGrid`
  * is: the route owns the query, this renders it and reports intent.
+ *
+ * Two layouts over one query: a dense **table** for scanning many features and
+ * a **cards** grid for reading each one's detail. The toggle writes `query.view`,
+ * so a chosen layout is part of the shareable URL, not local state. Filtering is
+ * not built in — the page passes an advanced `FeatureFilters` builder into the
+ * `filters` slot, keeping this component ignorant of what a feature type is.
  */
 export const FeatureGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge'],
-  note: 'Controlled wrapper; the page owns query state.',
+  composes: ['@reui/data-grid', '@reui/badge', 'ui/card', 'ui/tabs'],
+  note: 'Controlled wrapper; the page owns query state. Table and cards over one query.',
 })
 
 const SORT_OPTIONS = Object.values(FeatureSortField).map((value) => ({
@@ -69,6 +77,19 @@ const TYPE_VARIANT: Record<FeatureType, 'info-light' | 'success-light' | 'second
   [FeatureType.Boolean]: 'secondary',
   [FeatureType.Static]: 'success-light',
   [FeatureType.Config]: 'secondary',
+}
+
+function formatDate(value: Date | null, locale?: string): string {
+  if (!value) return '—'
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+}
+
+/** How a metered feature is measured, as one line. Empty for the rest. */
+function measuredBy(feature: Feature): string | null {
+  if (!feature.eventName) return null
+  return feature.aggregationType
+    ? `${feature.eventName} · ${AGGREGATION_LABEL[feature.aggregationType]}`
+    : feature.eventName
 }
 
 export function FeatureGrid({
@@ -140,15 +161,23 @@ export function FeatureGrid({
           size: 220,
         },
         {
+          id: 'unit',
+          accessorFn: (row: Feature) => row.unitSingular,
+          header: ({ column }: never) => <DataGridColumnHeader title="Unit" column={column} />,
+          cell: ({ row }: { row: { original: Feature } }) =>
+            row.original.unitSingular ? (
+              row.original.unitSingular
+            ) : (
+              <span className="text-muted-foreground">—</span>
+            ),
+          enableSorting: false,
+          size: 120,
+        },
+        {
           id: 'createdAt',
           accessorFn: (row: Feature) => row.createdAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
-          cell: ({ row }: { row: { original: Feature } }) =>
-            row.original.createdAt
-              ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(
-                  row.original.createdAt,
-                )
-              : '—',
+          cell: ({ row }: { row: { original: Feature } }) => formatDate(row.original.createdAt, locale),
           enableSorting: false,
           size: 140,
         },
@@ -182,13 +211,15 @@ export function FeatureGrid({
   const [fitToWindow, setFitToWindow] = useState(false)
   const capacity = useViewportPageSize({
     containerRef,
-    enabled: fitToWindow,
+    // Fitting to a window of cards would fight their reflow; only the table has
+    // a fixed row height to measure against.
+    enabled: fitToWindow && query.view === FeatureView.Table,
     // The toolbar above and the footer below are not rows.
     reservedHeight: 104,
   })
 
   // `null` means no measurement yet — keep whatever size is already set.
-  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
+  if (fitToWindow && query.view === FeatureView.Table && capacity !== null && capacity !== query.pageSize) {
     onQueryChange({ ...query, pageSize: capacity, page: 1 })
   }
 
@@ -213,63 +244,7 @@ export function FeatureGrid({
         placeholder="Search..."
         label="Search features"
       >
-        {/*
-          Type is the only filter features have, so it is the Filter button
-          rather than hiding behind one. Checkboxes, not radios: "metered or
-          boolean" is a question people actually ask.
-        */}
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                aria-label={
-                  query.types.length > 0
-                    ? `Filter features, ${query.types.length} selected`
-                    : 'Filter features'
-                }
-              />
-            }
-          >
-            <FilterIcon aria-hidden className="size-4" />
-            Filters
-            {query.types.length > 0 ? (
-              <Badge variant="outline" size="sm" radius="full">
-                {query.types.length}
-              </Badge>
-            ) : null}
-            <ChevronDownIcon data-icon="inline-end" aria-hidden />
-          </DropdownMenuTrigger>
-
-          <DropdownMenuContent align="end" sideOffset={8} className="min-w-52 rounded-2xl p-1.5">
-            <DropdownMenuGroup>
-              <DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-normal text-muted-foreground">
-                Type
-              </DropdownMenuLabel>
-              {Object.values(FeatureType).map((type) => (
-                <DropdownMenuCheckboxItem
-                  key={type}
-                  className="gap-2 rounded-xl px-2.5 py-2"
-                  checked={query.types.includes(type)}
-                  onCheckedChange={(checked) =>
-                    onQueryChange({
-                      ...query,
-                      types: checked
-                        ? [...query.types, type]
-                        : query.types.filter((t) => t !== type),
-                      page: 1,
-                    })
-                  }
-                >
-                  {FEATURE_TYPE_LABEL[type]}
-                </DropdownMenuCheckboxItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-
+        {/* The advanced, V1-style filter builder, passed by the page. */}
         {filters}
         <SortMenu
           align="end"
@@ -280,6 +255,19 @@ export function FeatureGrid({
             onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
           }
         />
+        <Tabs
+          value={query.view}
+          onValueChange={(view) => onQueryChange({ ...query, view: view as FeatureView })}
+        >
+          <TabsList>
+            <TabsTrigger value={FeatureView.Table} aria-label="Table view">
+              <TableIcon aria-hidden />
+            </TabsTrigger>
+            <TabsTrigger value={FeatureView.Cards} aria-label="Card view">
+              <LayoutGridIcon aria-hidden />
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </GridToolbar>
 
       <DataGrid
@@ -322,7 +310,17 @@ export function FeatureGrid({
           dense: true,
         }}
       >
-        <DataGridTable />
+        {query.view === FeatureView.Cards ? (
+          <FeatureCards
+            features={features}
+            isLoading={isLoading}
+            onFeatureClick={onFeatureClick}
+            onClearFilters={onClearFilters}
+            locale={locale}
+          />
+        ) : (
+          <DataGridTable />
+        )}
         <GridFooter
           fitToWindow={fitToWindow}
           onFitToWindowChange={setFitToWindow}
@@ -330,6 +328,133 @@ export function FeatureGrid({
           noun="features"
         />
       </DataGrid>
+    </div>
+  )
+}
+
+interface FeatureCardsProps {
+  features: Feature[]
+  isLoading: boolean
+  onFeatureClick?: ((feature: Feature) => void) | undefined
+  onClearFilters?: (() => void) | undefined
+  locale?: string | undefined
+}
+
+/**
+ * The same rows as the table, one card each — the layout for reading a feature
+ * rather than scanning a column. Loading and the filtered-empty state live here
+ * because in this view there is no `DataGridTable` to own them.
+ */
+function FeatureCards({
+  features,
+  isLoading,
+  onFeatureClick,
+  onClearFilters,
+  locale,
+}: FeatureCardsProps) {
+  if (isLoading && features.length === 0) {
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, index) => (
+          <Card key={index} size="sm">
+            <CardHeader>
+              <Skeleton className="h-4 w-32" />
+            </CardHeader>
+            <CardContent className="flex flex-col gap-2">
+              <Skeleton className="h-3 w-40" />
+              <Skeleton className="h-3 w-24" />
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    )
+  }
+
+  if (features.length === 0) {
+    return (
+      <EmptyState
+        size="inline"
+        isFiltered
+        title="No features match these filters"
+        description="Try a different search, or clear what is narrowing the list."
+        onClearFilters={
+          onClearFilters ? (
+            <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
+              Clear filters
+            </Button>
+          ) : undefined
+        }
+      />
+    )
+  }
+
+  return (
+    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      {features.map((feature) => {
+        const measurement = measuredBy(feature)
+        const clickable = Boolean(onFeatureClick)
+        return (
+          <Card
+            key={feature.id}
+            size="sm"
+            role={clickable ? 'button' : undefined}
+            tabIndex={clickable ? 0 : undefined}
+            onClick={clickable ? () => onFeatureClick?.(feature) : undefined}
+            onKeyDown={
+              clickable
+                ? (event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault()
+                      onFeatureClick?.(feature)
+                    }
+                  }
+                : undefined
+            }
+            className={
+              clickable
+                ? 'cursor-pointer transition hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
+                : undefined
+            }
+          >
+            <CardHeader>
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex min-w-0 flex-col">
+                  <CardTitle className="truncate">{feature.name}</CardTitle>
+                  {feature.lookupKey ? (
+                    <CardDescription className="truncate font-mono text-xs">
+                      {feature.lookupKey}
+                    </CardDescription>
+                  ) : null}
+                </div>
+                <Badge variant={TYPE_VARIANT[feature.type]} size="sm">
+                  {FEATURE_TYPE_LABEL[feature.type]}
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-1.5">
+              <CardDetail label="Measured by">
+                {measurement ? <span className="font-mono text-xs">{measurement}</span> : '—'}
+              </CardDetail>
+              <CardDetail label="Unit">{feature.unitSingular || '—'}</CardDetail>
+              {feature.description ? (
+                <CardDetail label="Description">
+                  <span className="line-clamp-2">{feature.description}</span>
+                </CardDetail>
+              ) : null}
+              <CardDetail label="Created">{formatDate(feature.createdAt, locale)}</CardDetail>
+            </CardContent>
+          </Card>
+        )
+      })}
+    </div>
+  )
+}
+
+function CardDetail({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3">
+      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
+      <span className="min-w-0 truncate text-right">{children}</span>
     </div>
   )
 }

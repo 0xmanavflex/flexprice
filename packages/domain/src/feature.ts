@@ -197,6 +197,17 @@ export const FEATURE_SORT_LABEL: Record<FeatureSortField, string> = {
   [FeatureSortField.UpdatedAt]: 'Updated',
 }
 
+/**
+ * How the list is laid out. `table` for scanning many rows, `cards` for reading
+ * each feature's detail at a glance. A layout, not a filter — it changes nothing
+ * about which features are fetched, so `@fp/query` keeps it out of the cache key.
+ */
+export const FeatureView = {
+  Table: 'table',
+  Cards: 'cards',
+} as const
+export type FeatureView = (typeof FeatureView)[keyof typeof FeatureView]
+
 /** What the list can ask for. Product vocabulary, not transport. */
 export interface FeatureQuery {
   page: number
@@ -205,6 +216,8 @@ export interface FeatureQuery {
   types: FeatureType[]
   sortBy: FeatureSortField
   sortDirection: 'asc' | 'desc'
+  /** Table or cards. Lives in the URL like the rest of the query. */
+  view: FeatureView
 }
 
 export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
@@ -216,4 +229,5 @@ export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   // scanned for what changed.
   sortBy: FeatureSortField.Name,
   sortDirection: 'asc',
+  view: FeatureView.Table,
 }

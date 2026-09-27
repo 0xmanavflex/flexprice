@@ -165,8 +165,12 @@ export async function fetchFeatures(
 export function useFeatures(query: FeatureQuery) {
   const client = useFlexprice()
 
+  // `view` is a layout, not a filter: it changes nothing about what is fetched,
+  // so it stays out of the key — toggling table/cards must not miss the cache.
+  const { view: _view, ...key } = query
+
   return useQuery({
-    queryKey: queryKeys.features.list({ ...query, types: [...query.types].sort() }),
+    queryKey: queryKeys.features.list({ ...key, types: [...query.types].sort() }),
     queryFn: () => fetchFeatures(client, query),
     placeholderData: (previous) => previous,
   })
