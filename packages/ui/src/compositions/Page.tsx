@@ -36,7 +36,7 @@ export function PageHeader({ title, description, action, menu, breadcrumb }: Pag
    * The heading's size and the space below it are enough separation.
    */
   return (
-    <header className="flex flex-col gap-3 px-6 py-5">
+    <header className="flex flex-col gap-3 px-6 pt-5 pb-4">
       {breadcrumb}
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
@@ -75,7 +75,9 @@ export function PageBody({
       className={cn(
         // `min-h-0` so a list page's grid can fill this region and scroll
         // itself, rather than pushing the pagination footer off the bottom.
-        'flex min-h-0 flex-1 flex-col gap-4 px-6 py-5',
+        // Tighter top padding pulls the content up under the header, so a list
+        // does not open with a band of empty space above its toolbar.
+        'flex min-h-0 flex-1 flex-col gap-4 px-6 pt-3 pb-5',
         width === 'narrow' ? 'mx-auto w-full max-w-3xl' : 'w-full max-w-[1440px]',
         className,
       )}

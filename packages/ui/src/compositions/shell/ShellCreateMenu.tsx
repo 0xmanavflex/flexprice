@@ -54,9 +54,16 @@ export function ShellCreateMenu({ actions, onCreate, label = 'Create' }: ShellCr
 
   return (
     <DropdownMenu>
+      {/*
+        Outline, not filled. This is the global quick-start menu that lives in
+        the chrome; each page carries its own filled primary "New X" for the
+        thing that page is about. Two filled brand buttons competing on one
+        screen flattens the hierarchy — the page's action should lead, and this
+        should read as the always-there utility it is.
+      */}
       <DropdownMenuTrigger
         render={
-          <Button size="sm" className="gap-1.5" aria-label={`${label} something new`} />
+          <Button variant="outline" size="sm" className="gap-1.5" aria-label={`${label} something new`} />
         }
       >
         <PlusIcon aria-hidden className="size-4" />
