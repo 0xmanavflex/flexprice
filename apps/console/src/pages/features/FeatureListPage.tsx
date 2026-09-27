@@ -1,6 +1,6 @@
 import { type FeatureQuery } from '@fp/domain'
-import { ApiError, useFeatures } from '@fp/query'
-import { FeatureFilters, FeatureGrid } from '@fp/ui/flexprice'
+import { ApiError, useCatalogStats, useFeatures } from '@fp/query'
+import { FeatureFilters, FeatureGrid, StatCards } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
 import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -21,6 +21,7 @@ export interface FeatureListPageProps {
  */
 export function FeatureListPage({ query, onQueryChange, onCreate }: FeatureListPageProps) {
   const features = useFeatures(query)
+  const stats = useCatalogStats('features')
 
   const failure = toFailure(features.error)
   const rows = features.data?.features ?? []
@@ -38,6 +39,17 @@ export function FeatureListPage({ query, onQueryChange, onCreate }: FeatureListP
       />
 
       <PageBody>
+        {stats.total !== 0 ? (
+          <StatCards
+            isLoading={stats.isPending}
+            stats={[
+              { label: 'Features', value: stats.total },
+              { label: 'Published', value: stats.published },
+              { label: 'Archived', value: stats.archived },
+            ]}
+          />
+        ) : null}
+
         {/*
           Every state comes from one place, so this screen cannot invent its
           own. Loading, both empties and both errors are inherited and already

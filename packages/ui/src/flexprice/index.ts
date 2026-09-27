@@ -42,6 +42,8 @@ export { Money, MoneyProvenance } from './Money'
 export type { MoneyProps } from './Money'
 export { Metric, MetricProvenance } from './Metric'
 export type { MetricProps, Sentiment } from './Metric'
+export { StatCards, StatCardsProvenance } from './StatCards'
+export type { Stat, StatCardsProps } from './StatCards'
 export {
   CatalogStatusBadge,
   FeatureTypeBadge,

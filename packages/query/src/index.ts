@@ -72,3 +72,6 @@ export type { CouponPage, CouponWire } from './coupons'
 
 export { useNavCounts } from './counts'
 export type { CountableId } from './counts'
+
+export { useCatalogStats } from './catalogStats'
+export type { CatalogEntity, CatalogStats } from './catalogStats'

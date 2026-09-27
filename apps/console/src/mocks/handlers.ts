@@ -24,6 +24,8 @@ interface SearchBody {
   sort?: { field: string; direction: 'asc' | 'desc' }[]
   invoice_status?: string[]
   invoiceStatus?: string[]
+  /** A single catalogue status (published/archived) — how the count queries filter. */
+  status?: string
   name_contains?: string
   nameContains?: string
   feature_ids?: string[]
@@ -49,6 +51,12 @@ function page(source: Corpus, body: SearchBody) {
   const statuses = body.invoice_status ?? body.invoiceStatus
   if (statuses?.length) {
     rows = rows.filter((row) => statuses.includes(readString(row, 'invoice_status')))
+  }
+
+  // A single catalogue status, so a count query for "published" reports the real
+  // published total rather than the whole corpus.
+  if (body.status) {
+    rows = rows.filter((row) => readString(row, 'status') === body.status)
   }
 
   const search = body.name_contains ?? body.nameContains
