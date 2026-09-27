@@ -41,6 +41,11 @@ export const queryKeys = {
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['plans', 'list', filter] as const,
     detail: (id: string) => ['plans', 'detail', id] as const,
   },
+  addons: {
+    all: () => ['addons'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['addons', 'list', filter] as const,
+    detail: (id: string) => ['addons', 'detail', id] as const,
+  },
   invoices: {
     all: () => ['invoices'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['invoices', 'list', filter] as const,

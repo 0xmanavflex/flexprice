@@ -110,6 +110,7 @@ export function FeatureGrid({
       [
         {
           id: 'name',
+          meta: { skeleton: <Skeleton className="h-4 w-40" /> },
           accessorFn: (row: Feature) => row.name,
           header: ({ column }: never) => <DataGridColumnHeader title="Feature" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => (
@@ -125,6 +126,7 @@ export function FeatureGrid({
         },
         {
           id: 'type',
+          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
           accessorFn: (row: Feature) => row.type,
           header: ({ column }: never) => <DataGridColumnHeader title="Type" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => (
@@ -137,6 +139,7 @@ export function FeatureGrid({
         },
         {
           id: 'measurement',
+          meta: { skeleton: <Skeleton className="h-4 w-32" /> },
           accessorFn: (row: Feature) => row.eventName,
           header: ({ column }: never) => (
             <DataGridColumnHeader title="Measured by" column={column} />
@@ -162,6 +165,7 @@ export function FeatureGrid({
         },
         {
           id: 'unit',
+          meta: { skeleton: <Skeleton className="h-4 w-16" /> },
           accessorFn: (row: Feature) => row.unitSingular,
           header: ({ column }: never) => <DataGridColumnHeader title="Unit" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) =>
@@ -175,6 +179,7 @@ export function FeatureGrid({
         },
         {
           id: 'createdAt',
+          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Feature) => row.createdAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => formatDate(row.original.createdAt, locale),

@@ -52,16 +52,7 @@ export const PLACEHOLDER_ROUTES = [
     cta: 'Create coupon',
     legacy: '/product-catalog/coupons',
   },
-  {
-    path: '/addons',
-    title: 'Addons',
-    description: 'Extras a customer can buy alongside a plan.',
-    emptyTitle: 'No addons yet',
-    emptyDescription:
-      'Addons are optional extras customers can purchase alongside a plan.',
-    cta: 'Create addon',
-    legacy: '/product-catalog/addons',
-  },
+  // `/addons` is a real page now — see `addonsRoute` in router.tsx.
   {
     path: '/cost-sheets',
     title: 'Cost Sheets',

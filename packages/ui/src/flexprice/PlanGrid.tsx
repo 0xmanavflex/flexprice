@@ -34,15 +34,16 @@ import { provenance } from '@ui/provenance'
 /**
  * The plan list.
  *
- * The same controlled shape as `FeatureGrid` — the route owns the query, this
- * renders it and reports intent — with two layouts over one query: a dense
- * table for scanning, a cards grid for reading. Filtering is passed in through
- * the `filters` slot, so this component never learns what a plan status is.
+ * The same controlled shape as `FeatureGrid`, with two layouts over one query:
+ * a dense table for scanning, and a **pricing-card** grid — plans read as a
+ * customer sees them, one headline price each, the way the ReUI marketing
+ * pricing block presents tiers. Filtering is passed in through the `filters`
+ * slot, so this component never learns what a plan status is.
  */
 export const PlanGridProvenance = provenance({
   source: 'composition',
   composes: ['@reui/data-grid', '@reui/badge', 'ui/card', 'ui/tabs'],
-  note: 'Controlled wrapper; the page owns query state. Table and cards over one query.',
+  note: 'Controlled wrapper; the page owns query state. Table, and pricing cards, over one query.',
 })
 
 const SORT_OPTIONS = Object.values(PlanSortField).map((value) => ({
@@ -69,6 +70,20 @@ export interface PlanGridProps {
 const STATUS_VARIANT: Record<PlanStatus, 'success-light' | 'secondary'> = {
   [PlanStatus.Published]: 'success-light',
   [PlanStatus.Archived]: 'secondary',
+}
+
+/** Billing period, shortened the way a pricing page writes it. */
+const PERIOD_SHORT: Record<string, string> = {
+  DAILY: 'day',
+  WEEKLY: 'week',
+  MONTHLY: 'mo',
+  QUARTERLY: 'quarter',
+  HALF_YEARLY: '6 mo',
+  ANNUAL: 'yr',
+  ONETIME: 'once',
+}
+function periodShort(period: string): string {
+  return PERIOD_SHORT[period] ?? period.toLowerCase()
 }
 
 function formatDate(value: Date | null, locale?: string): string {
@@ -100,6 +115,7 @@ export function PlanGrid({
       [
         {
           id: 'name',
+          meta: { skeleton: <Skeleton className="h-4 w-40" /> },
           accessorFn: (row: Plan) => row.name,
           header: ({ column }: never) => <DataGridColumnHeader title="Plan" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => (
@@ -115,6 +131,7 @@ export function PlanGrid({
         },
         {
           id: 'status',
+          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
           accessorFn: (row: Plan) => row.status,
           header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => (
@@ -127,6 +144,7 @@ export function PlanGrid({
         },
         {
           id: 'charges',
+          meta: { skeleton: <Skeleton className="h-4 w-20" /> },
           accessorFn: (row: Plan) => row.chargeCount,
           header: ({ column }: never) => <DataGridColumnHeader title="Charges" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => charges(row.original.chargeCount),
@@ -135,6 +153,7 @@ export function PlanGrid({
         },
         {
           id: 'createdAt',
+          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Plan) => row.createdAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => formatDate(row.original.createdAt, locale),
@@ -143,6 +162,7 @@ export function PlanGrid({
         },
         {
           id: 'updatedAt',
+          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Plan) => row.updatedAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => formatDate(row.original.updatedAt, locale),
@@ -291,19 +311,25 @@ interface PlanCardsProps {
   locale?: string | undefined
 }
 
-/** The same rows as the table, one card each — the layout for reading a plan. */
+/**
+ * Plans as pricing cards — the artefact a customer sees.
+ *
+ * One headline price per card, the way the ReUI marketing pricing block presents
+ * a tier: name, price over period, what it carries, and the action. The card is
+ * not itself a button; the CTA is, so a pricing card has one obvious next step.
+ */
 function PlanCards({ plans, isLoading, onPlanClick, onClearFilters, locale }: PlanCardsProps) {
   if (isLoading && plans.length === 0) {
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {Array.from({ length: 6 }).map((_, index) => (
-          <Card key={index} size="sm">
+          <Card key={index}>
             <CardHeader>
-              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-4 w-28" />
             </CardHeader>
-            <CardContent className="flex flex-col gap-2">
+            <CardContent className="flex flex-col gap-3">
+              <Skeleton className="h-8 w-24" />
               <Skeleton className="h-3 w-40" />
-              <Skeleton className="h-3 w-24" />
             </CardContent>
           </Card>
         ))}
@@ -330,69 +356,67 @@ function PlanCards({ plans, isLoading, onPlanClick, onClearFilters, locale }: Pl
   }
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {plans.map((plan) => {
-        const clickable = Boolean(onPlanClick)
-        return (
-          <Card
-            key={plan.id}
-            size="sm"
-            role={clickable ? 'button' : undefined}
-            tabIndex={clickable ? 0 : undefined}
-            onClick={clickable ? () => onPlanClick?.(plan) : undefined}
-            onKeyDown={
-              clickable
-                ? (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      onPlanClick?.(plan)
-                    }
-                  }
-                : undefined
-            }
-            className={
-              clickable
-                ? 'cursor-pointer transition hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
-                : undefined
-            }
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-col">
-                  <CardTitle className="truncate">{plan.name}</CardTitle>
-                  {plan.lookupKey ? (
-                    <CardDescription className="truncate font-mono text-xs">
-                      {plan.lookupKey}
-                    </CardDescription>
-                  ) : null}
-                </div>
-                <Badge variant={STATUS_VARIANT[plan.status]} size="sm">
-                  {PLAN_STATUS_LABEL[plan.status]}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              <PlanDetail label="Charges">{charges(plan.chargeCount)}</PlanDetail>
-              {plan.description ? (
-                <PlanDetail label="Description">
-                  <span className="line-clamp-2">{plan.description}</span>
-                </PlanDetail>
-              ) : null}
-              <PlanDetail label="Created">{formatDate(plan.createdAt, locale)}</PlanDetail>
-              <PlanDetail label="Updated">{formatDate(plan.updatedAt, locale)}</PlanDetail>
-            </CardContent>
-          </Card>
-        )
-      })}
-    </div>
-  )
-}
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+      {plans.map((plan) => (
+        <Card key={plan.id} className="flex flex-col">
+          <CardHeader>
+            <div className="flex items-start justify-between gap-2">
+              <CardTitle className="truncate">{plan.name}</CardTitle>
+              <Badge variant={STATUS_VARIANT[plan.status]} size="sm">
+                {PLAN_STATUS_LABEL[plan.status]}
+              </Badge>
+            </div>
+            {plan.lookupKey ? (
+              <CardDescription className="truncate font-mono text-xs">
+                {plan.lookupKey}
+              </CardDescription>
+            ) : null}
+          </CardHeader>
 
-function PlanDetail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-right">{children}</span>
+          <CardContent className="flex flex-1 flex-col gap-3">
+            {/* The headline: one price, over its period. */}
+            <div className="flex items-baseline gap-1">
+              {plan.headline ? (
+                <>
+                  <span className="text-2xl font-semibold tracking-tight">
+                    {plan.headline.amount}
+                  </span>
+                  {plan.headline.period ? (
+                    <span className="text-sm text-muted-foreground">
+                      /{periodShort(plan.headline.period)}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                <span className="text-2xl font-semibold tracking-tight text-muted-foreground">
+                  —
+                </span>
+              )}
+            </div>
+
+            {plan.description ? (
+              <p className="line-clamp-2 text-sm text-muted-foreground">{plan.description}</p>
+            ) : null}
+
+            <div className="mt-auto flex flex-col gap-3">
+              <div className="text-xs text-muted-foreground">
+                {charges(plan.chargeCount)} · Updated {formatDate(plan.updatedAt, locale)}
+              </div>
+              {onPlanClick ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="w-full"
+                  onClick={() => onPlanClick(plan)}
+                >
+                  View plan
+                </Button>
+              ) : null}
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   )
 }

@@ -1,6 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
-import { type Plan, type PlanQuery, PlanSortField, PlanStatus } from '@fp/domain'
+import {
+  type Plan,
+  type PlanHeadline,
+  type PlanQuery,
+  PlanSortField,
+  PlanStatus,
+} from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -28,6 +34,26 @@ export interface PlanWire {
 
 const PLAN_STATUSES = new Set<string>(Object.values(PlanStatus))
 
+/**
+ * One headline price from a plan's charges, for the pricing-card view.
+ *
+ * A pricing card shows a single number, so this picks one: the recurring fixed
+ * base a customer thinks of as "the price", falling back to the first charge
+ * when a plan is purely usage-priced. `displayAmount` is the string the API
+ * formatted; a plan that prices nothing has no headline at all.
+ */
+function toHeadline(prices: unknown[] | undefined): PlanHeadline | null {
+  if (!Array.isArray(prices) || prices.length === 0) return null
+  const list = prices as Array<Record<string, unknown>>
+  const base =
+    list.find((p) => p['type'] === 'FIXED' && p['billingCadence'] === 'RECURRING') ?? list[0]
+  if (!base) return null
+  const amount = typeof base['displayAmount'] === 'string' ? base['displayAmount'] : null
+  if (!amount) return null
+  const period = typeof base['billingPeriod'] === 'string' ? (base['billingPeriod'] as string) : ''
+  return { amount, period }
+}
+
 export function toPlan(wire: PlanWire): Plan {
   const status = PLAN_STATUSES.has(wire.status ?? '')
     ? (wire.status as PlanStatus)
@@ -42,6 +68,7 @@ export function toPlan(wire: PlanWire): Plan {
     description: wire.description ?? '',
     status,
     chargeCount: Array.isArray(wire.prices) ? wire.prices.length : 0,
+    headline: toHeadline(wire.prices),
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }

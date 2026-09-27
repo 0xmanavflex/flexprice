@@ -72,7 +72,17 @@ export {
   PlanStatus,
   PlanView,
 } from './plan'
-export type { Plan, PlanQuery } from './plan'
+export type { Plan, PlanHeadline, PlanQuery } from './plan'
+
+export {
+  ADDON_SORT_LABEL,
+  ADDON_STATUS_LABEL,
+  AddonSortField,
+  AddonStatus,
+  AddonView,
+  DEFAULT_ADDON_QUERY,
+} from './addon'
+export type { Addon, AddonQuery } from './addon'
 
 export { resetRequestSchema, setPasswordSchema, signInSchema } from './auth'
 export type { ResetRequest, SetPassword, SignInCredentials } from './auth'

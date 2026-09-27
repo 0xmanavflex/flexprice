@@ -19,6 +19,19 @@ export const PLAN_STATUS_LABEL: Record<PlanStatus, string> = {
   [PlanStatus.Archived]: 'Archived',
 }
 
+/**
+ * A representative price for the pricing-card view.
+ *
+ * A plan can carry many charges; the card shows one headline the way a pricing
+ * page does — the recurring base where there is one, else the first charge. The
+ * `amount` is the string the API already formatted (`$29`), never a float, and
+ * `period` is the raw billing enum the card shortens for display.
+ */
+export interface PlanHeadline {
+  amount: string
+  period: string
+}
+
 /** The read model the list and detail pages render. */
 export interface Plan {
   id: string
@@ -28,6 +41,8 @@ export interface Plan {
   status: PlanStatus
   /** How many charges (prices) the plan carries. 0 means it bills nothing yet. */
   chargeCount: number
+  /** The pricing-card headline, or null when the plan prices nothing yet. */
+  headline: PlanHeadline | null
   createdAt: Date | null
   updatedAt: Date | null
 }

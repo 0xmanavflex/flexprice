@@ -46,6 +46,11 @@ const PlanListPage = lazy(() =>
   import('@/pages/plans/PlanListPage').then((m) => ({ default: m.PlanListPage })),
 )
 import { parsePlanSearch } from './planSearch'
+import { DEFAULT_ADDON_QUERY, type AddonQuery } from '@fp/domain'
+const AddonListPage = lazy(() =>
+  import('@/pages/addons/AddonListPage').then((m) => ({ default: m.AddonListPage })),
+)
+import { parseAddonSearch } from './addonSearch'
 import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
 const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
@@ -312,10 +317,39 @@ function PlansRouteComponent() {
   )
 }
 
+/**
+ * Add-ons: the list. The same URL-as-query contract; the editor it shares with
+ * plans is a later surface, so create/open narrow the list for now.
+ */
+const addonsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/addons',
+  validateSearch: (search: Record<string, unknown>): AddonQuery => parseAddonSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_ADDON_QUERY)] },
+  component: AddonsRouteComponent,
+})
+
+function AddonsRouteComponent() {
+  const query = useSearch({ from: addonsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <AddonListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/addons', search: next, replace: true })}
+      onCreate={() => void navigate({ to: '/addons', search: { ...query, page: 1 } })}
+      onOpenAddon={(addon) =>
+        void navigate({ to: '/addons', search: { ...query, search: addon.name, page: 1 } })
+      }
+    />
+  )
+}
+
 export const routeTree = rootRoute.addChildren([
   featuresRoute,
   featureCreateRoute,
   plansRoute,
+  addonsRoute,
   invoicesRoute,
   subscriptionCreateRoute,
   ...placeholderRoutes,
