@@ -112,10 +112,40 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     queryClient.clear()
   }, [queryClient])
 
-  const setEnvironmentId = useCallback((id: string) => {
-    setEnvironmentIdState(id)
-    writeEnvironmentId(id)
-  }, [])
+  /*
+   * The previous environment id, tracked with a ref for the same reason as the
+   * session above: switching environments has a side effect — dropping the old
+   * environment's cached data — and that must run once per actual switch, not
+   * inside a state updater React invokes twice under StrictMode.
+   */
+  const latestEnvironmentId = useRef(environmentId)
+  latestEnvironmentId.current = environmentId
+
+  const setEnvironmentId = useCallback(
+    (id: string) => {
+      const previous = latestEnvironmentId.current
+      /*
+       * A real switch — from one environment to a different one — has to refetch
+       * everything, because nothing is keyed by the environment: the id rides in
+       * the `X-Environment-ID` header the SDK reads per request, not in any query
+       * key. Without this the header would change while plans, customers and
+       * invoices kept serving the previous environment's cached rows — the exact
+       * "I switched and the data didn't" bug. Invalidating marks every query
+       * stale and refetches the mounted ones under the new environment.
+       *
+       * Guarded on a real change: the initial null→id defaulting (a fresh tab
+       * choosing its first environment) is not a switch, and firing here would
+       * make every page on first load fetch twice.
+       */
+      if (previous !== null && previous !== id) {
+        void queryClient.invalidateQueries()
+      }
+      latestEnvironmentId.current = id
+      setEnvironmentIdState(id)
+      writeEnvironmentId(id)
+    },
+    [queryClient],
+  )
 
   const value = useMemo<SessionValue>(
     () => ({

@@ -39,8 +39,19 @@ const meta = {
   ],
   parameters: {
     a11y: {
-      // Base UI's portal focus guards — see AppShell.stories.tsx.
-      config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
+      config: {
+        rules: [
+          // Base UI's portal focus guards — see AppShell.stories.tsx.
+          { id: 'aria-hidden-focus', enabled: false },
+          // The environment list scrolls once it is long. axe wants a scrollable
+          // region to be tabbable or to hold tabbable content; a menu holds
+          // neither, because it is driven by arrow keys — Base UI moves focus
+          // between the menuitems and scrolls the focused one into view. The
+          // region is reachable by keyboard, just not by Tab, so the rule is a
+          // false positive for a menu list.
+          { id: 'scrollable-region-focusable', enabled: false },
+        ],
+      },
     },
   },
   args: {
@@ -97,7 +108,12 @@ export const InBreadcrumb: Story = {
   },
 }
 
-/** Grouped by kind, production first, with a tick on the current one. */
+/**
+ * One flat list, production first, with a tick on the current one — and, at
+ * eight, past the ~three rows the menu shows, so the list scrolls inside its
+ * cap rather than running off the screen. No section headings: the mark on each
+ * row already says which kind it is.
+ */
 export const EightEnvironments: Story = {
   args: { current: eight[3]!, environments: eight },
   play: async ({ canvasElement }) => {
@@ -143,6 +159,26 @@ export const WithManagementActions: Story = {
     await userEvent.click(
       within(canvasElement).getByRole('button', { name: /change environment/i }),
     )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'New environment' }))
+    await expect(args.onCreate).toHaveBeenCalled()
+  },
+}
+
+/**
+ * A long list does not bury create.
+ *
+ * The environments scroll inside their cap; create and manage sit below that
+ * scroll area, so "New environment" is reachable without scrolling to the end of
+ * eight environments first — the whole point of pinning them.
+ */
+export const ManyWithPinnedActions: Story = {
+  args: { environments: eight, current: eight[3]!, onCreate: fn(), onManage: fn() },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: /change environment/i }),
+    )
+    // Both the last environment and the pinned create action are present at once.
+    await expect(await screen.findByRole('menuitem', { name: 'Scratch' })).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('menuitem', { name: 'New environment' }))
     await expect(args.onCreate).toHaveBeenCalled()
   },

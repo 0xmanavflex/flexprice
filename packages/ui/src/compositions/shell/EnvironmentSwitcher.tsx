@@ -4,7 +4,6 @@ import {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/primitives/dropdown-menu'
@@ -12,7 +11,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/primitives/tooltip'
 import { Badge } from '@ui/components/reui/badge'
 import { cn } from '@ui/lib/cn'
 import { useSidebar } from '@ui/primitives/sidebar'
-import { MENU_CONTENT, MENU_ITEM, MENU_LABEL } from './menuSurface'
+import { MENU_CONTENT, MENU_ITEM } from './menuSurface'
 import type { ShellEnvironment } from './types'
 
 export interface EnvironmentSwitcherProps {
@@ -46,10 +45,17 @@ export interface EnvironmentSwitcherProps {
  * nobody can afford to miss. Only production is marked and only production is
  * coloured — marking the safe state is how people learn to stop seeing marks.
  *
- * Shaped after ReUI's workspace-switcher menu: a name and its kind on each
- * row, a tick on the current one, and the two management actions below a rule.
- * Environments are grouped by kind with production first, because at eight of
- * them a flat list is already a list you have to read rather than scan.
+ * Shaped after ReUI's workspace-switcher menu: a name and its kind's mark on
+ * each row, a tick on the current one, and the two management actions below a
+ * rule. The rows are the fetched environments and nothing else — production
+ * first, so the consequential one leads — with no section headings above them:
+ * the red/amber mark already says which kind a row is, so a "Production" label
+ * over a single production row is a word doing a dot's job.
+ *
+ * The list is capped to about three rows and scrolls past that, so a tenant
+ * with a dozen environments gets a menu it scans rather than one that runs off
+ * the screen; create and manage sit below the scroll area, pinned, so making a
+ * new environment never means scrolling to the end of the list first.
  *
  * The same menu serves two triggers, chosen by `variant`: the full-width
  * sidebar row it began as, and the compact control that now leads the header's
@@ -80,8 +86,11 @@ export function EnvironmentSwitcher({
   const isRail = variant === 'sidebar' && state === 'collapsed' && !isMobile
   const isProduction = current.kind === 'production'
 
+  // Production first, so the consequential environment leads the list; the rest
+  // follow in the order the server returned them. One flat list, no headings.
   const production = environments.filter((e) => e.kind === 'production')
   const sandboxes = environments.filter((e) => e.kind !== 'production')
+  const ordered = [...production, ...sandboxes]
 
   const trigger =
     variant === 'breadcrumb' ? (
@@ -164,25 +173,15 @@ export function EnvironmentSwitcher({
         sideOffset={8}
         className={MENU_CONTENT}
       >
-        {production.length > 0 ? (
-          <DropdownMenuGroup>
-            {/* The label is a `Menu.GroupLabel`; outside a group it throws. */}
-            <DropdownMenuLabel className={MENU_LABEL}>Production</DropdownMenuLabel>
-            {production.map((environment) => (
-              <Option
-                key={environment.id}
-                environment={environment}
-                isCurrent={environment.id === current.id}
-                onSelect={onChange}
-              />
-            ))}
-          </DropdownMenuGroup>
-        ) : null}
-
-        {sandboxes.length > 0 ? (
-          <DropdownMenuGroup>
-            <DropdownMenuLabel className={MENU_LABEL}>Sandboxes</DropdownMenuLabel>
-            {sandboxes.map((environment) => (
+        {/*
+          The fetched environments, one flat scrolling list. Capped to about
+          three rows (`max-h-36`) so a long list scrolls inside the menu rather
+          than running off the screen; `overscroll-contain` keeps that scroll
+          from chaining to the page behind it.
+        */}
+        {ordered.length > 0 ? (
+          <DropdownMenuGroup className="max-h-36 overflow-y-auto overscroll-contain">
+            {ordered.map((environment) => (
               <Option
                 key={environment.id}
                 environment={environment}
@@ -195,6 +194,8 @@ export function EnvironmentSwitcher({
 
         {onCreate || onManage ? (
           <>
+            {/* Below the scroll area, so create/manage stay visible however long
+                the environment list is. */}
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
               {onCreate ? (
