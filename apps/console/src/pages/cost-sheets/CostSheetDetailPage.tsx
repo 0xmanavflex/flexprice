@@ -1,11 +1,11 @@
-import { type CostSheet } from '@fp/domain'
-import { ApiError, useCostSheet } from '@fp/query'
-import { CatalogStatusBadge } from '@fp/ui/flexprice'
+import { type Charge, type CostSheet, PriceEntityType } from '@fp/domain'
+import { ApiError, useCostSheet, usePrices } from '@fp/query'
+import { CatalogStatusBadge, ChargeTable } from '@fp/ui/flexprice'
 import {
   AppFailure,
+  type DetailMetric,
   DetailList,
-  DetailHeader,
-  DetailStats,
+  DetailShell,
   EmptyState,
   LoadingRows,
   PageBody,
@@ -21,18 +21,22 @@ export interface CostSheetDetailPageProps {
 /**
  * One cost sheet, in full.
  *
- * A shared header, a Frame stat rail, then the cost sheet's own details and the
- * prices it groups. The details lead, so the page opens on the record itself
- * rather than an empty section. Replaces V1's `CostSheetDetails`, which reaches
- * into `CostSheetApi` directly and hand-rolls its own cards; this fetches
- * through `useCostSheet` and composes the shared detail pieces.
+ * A cost sheet exists to weigh cost against price, so the page leads with the
+ * numbers that answer that — how many prices it groups and in what currency —
+ * then lists the record itself and the prices it collects. The prices are read
+ * through the same `usePrices` hook and `ChargeTable` the plan and add-on use,
+ * with `PriceEntityType.CostSheet`; where the corpus carries no cost-sheet
+ * prices the table is honestly empty rather than a permanent "coming soon" stub.
  *
- * Prices show an honest empty state: V2 has no cost-sheet price read hook yet,
- * so the section says so rather than inventing rows — the same stand-in the
- * list pages use for surfaces still being built.
+ * No blended margin or total appears, deliberately: `@fp/domain`'s money module
+ * forbids client-side arithmetic on money (totals are the backend's answer, and
+ * a UI that recomputes them drifts from the invoice), and the API sends neither
+ * a list price nor a total for a cost sheet. Inventing one would be exactly the
+ * fabricated metric the detail-page audit warns against.
  */
 export function CostSheetDetailPage({ costSheetId, onNavigateToList }: CostSheetDetailPageProps) {
   const costSheet = useCostSheet(costSheetId)
+  const prices = usePrices(PriceEntityType.CostSheet, costSheetId)
 
   if (costSheet.isPending) {
     return (
@@ -69,67 +73,86 @@ export function CostSheetDetailPage({ costSheetId, onNavigateToList }: CostSheet
   }
 
   const data = costSheet.data
+  const charges = prices.data ?? null
 
   return (
-    <>
-      <DetailHeader
-        breadcrumb={
-          <button
-            type="button"
-            onClick={onNavigateToList}
-            className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            ← Cost Sheets
-          </button>
-        }
-        title={data.name}
-        badges={<CatalogStatusBadge status={data.status} />}
-        identifier={data.lookupKey || data.id}
-        {...(data.description ? { description: data.description } : {})}
-      />
+    <DetailShell
+      breadcrumb={
+        <button
+          type="button"
+          onClick={onNavigateToList}
+          className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          ← Cost Sheets
+        </button>
+      }
+      title={data.name}
+      badges={<CatalogStatusBadge status={data.status} />}
+      identifier={data.lookupKey || data.id}
+      {...(data.description ? { description: data.description } : {})}
+      metrics={costSheetMetrics(data, charges)}
+    >
+      <Section title="Information" description="Every attribute of this cost sheet.">
+        <DetailList
+          items={[
+            { label: 'Name', value: data.name },
+            { label: 'Lookup key', value: data.lookupKey || '—' },
+            { label: 'Description', value: data.description || '—', full: true },
+            { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
+            { label: 'Cost sheet ID', value: <span className="font-mono text-xs">{data.id}</span> },
+            { label: 'Created', value: formatDate(data.createdAt) },
+            { label: 'Updated', value: formatDate(data.updatedAt) },
+          ]}
+        />
+      </Section>
 
-      <PageBody>
-        <DetailStats stats={detailStats(data)} />
-
-        <Section title="Information" description="Every attribute of this cost sheet.">
-          <DetailList
-            items={[
-              { label: 'Name', value: data.name },
-              { label: 'Lookup key', value: data.lookupKey },
-              { label: 'Description', value: data.description, full: true },
-              { label: 'Prices', value: pricesLabel(data.priceCount) },
-              { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-              { label: 'Cost sheet ID', value: <span className="font-mono text-xs">{data.id}</span> },
-              { label: 'Created', value: formatDate(data.createdAt) },
-              { label: 'Updated', value: formatDate(data.updatedAt) },
-            ]}
-          />
-        </Section>
-
-        <Section title="Prices" description="The prices this cost sheet groups to measure cost.">
+      <Section title="Prices" description="The prices this cost sheet groups to measure cost.">
+        {prices.isPending ? (
+          <LoadingRows />
+        ) : charges && charges.length > 0 ? (
+          <ChargeTable charges={charges} />
+        ) : (
           <EmptyState
             size="inline"
             icon={<ReceiptIcon aria-hidden />}
             title="No prices yet"
-            description="The prices this cost sheet groups will appear here once the price view lands."
+            description="Prices tagged to this cost sheet will appear here. None have been added to it yet."
           />
-        </Section>
-      </PageBody>
-    </>
+        )}
+      </Section>
+    </DetailShell>
   )
 }
 
-function detailStats(costSheet: CostSheet) {
-  return [
-    { label: 'Prices', value: pricesLabel(costSheet.priceCount) },
-    { label: 'Status', value: <CatalogStatusBadge status={costSheet.status} /> },
-    { label: 'Updated', value: formatDate(costSheet.updatedAt) },
+/**
+ * The rail: how much this cost sheet covers, in real numbers.
+ *
+ * Price count and currency come from the prices the sheet actually groups —
+ * never its status, lookup key or timestamps, which live in the header and the
+ * Information list. No total: money is not summed client-side (see the file
+ * note), and the API sends none.
+ */
+function costSheetMetrics(data: CostSheet, charges: Charge[] | null): DetailMetric[] {
+  const count = charges?.length ?? data.priceCount
+  const metrics: DetailMetric[] = [
+    {
+      label: 'Prices',
+      value: new Intl.NumberFormat().format(count),
+      hint: 'grouped to measure cost',
+    },
   ]
-}
 
-function pricesLabel(count: number): string {
-  if (count <= 0) return '—'
-  return count === 1 ? '1 price' : `${count} prices`
+  if (charges && charges.length > 0) {
+    const currencies = [...new Set(charges.map((charge) => charge.currency.toUpperCase()).filter(Boolean))]
+    const [only] = currencies
+    if (currencies.length === 1 && only) {
+      metrics.push({ label: 'Currency', value: only })
+    } else if (currencies.length > 1) {
+      metrics.push({ label: 'Currencies', value: currencies.length })
+    }
+  }
+
+  return metrics
 }
 
 function formatDate(value: Date | null): string {

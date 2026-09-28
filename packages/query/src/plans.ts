@@ -243,3 +243,59 @@ export function useSyncPlanPrices() {
     mutationFn: (id: string) => call(() => client.plans.syncPlanPrices(id)),
   })
 }
+
+/**
+ * One row of the plan's subscriber list, for the detail page's metric rail.
+ *
+ * Deliberately a light mapping, not a full `Subscription` domain model: the rail
+ * leads with how many customers are actually on the plan — the one number that
+ * says whether it is in use — so it needs only an id, a status to count the
+ * active ones, and the currency they bill in. A subscriptions *section* would
+ * want the whole record; a metric does not.
+ */
+export interface PlanSubscriptionRow {
+  id: string
+  /** `active`, `cancelled`, … — whatever the API sent, so the page can count it. */
+  status: string
+  currency: string
+}
+
+/**
+ * The subscriptions currently on a plan.
+ *
+ * Reached through `POST /subscriptions/search` scoped by `plan_id`; scoping is
+ * what makes the rail count *this* plan's subscribers rather than the whole
+ * book. A generous `limit` because the rail tallies them — a plan's subscriber
+ * list is a page, not a stream — and the status field is read under a few
+ * spellings, since the capture and the SDK camelCasing disagree on it.
+ */
+export function usePlanSubscriptions(planId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.list({ planId }),
+    queryFn: async () => {
+      const response = (await call(() =>
+        client.subscriptions.querySubscription({ plan_id: planId, limit: 100 } as never),
+      )) as { items?: unknown[] }
+
+      return (response.items ?? []).map((item): PlanSubscriptionRow => {
+        const row = item as Record<string, unknown>
+        const read = (...keys: string[]): string => {
+          for (const key of keys) {
+            const value = row[key]
+            if (typeof value === 'string') return value
+          }
+          return ''
+        }
+        return {
+          id: read('id'),
+          status: read('subscriptionStatus', 'subscription_status', 'status'),
+          currency: read('currency'),
+        }
+      })
+    },
+    // A plan with no id yet (a create in flight) has no subscriptions to fetch.
+    enabled: planId.length > 0,
+  })
+}

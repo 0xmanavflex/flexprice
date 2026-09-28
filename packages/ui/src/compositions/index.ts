@@ -50,6 +50,10 @@ export type { DetailHeaderProps } from './DetailHeader'
 
 export { DetailStats, DetailStatsProvenance } from './DetailStats'
 export type { DetailStat, DetailStatsProps } from './DetailStats'
+export { MetricRail, MetricRailProvenance } from './MetricRail'
+export type { DetailMetric, MetricRailProps } from './MetricRail'
+export { DetailShell, DetailShellProvenance } from './DetailShell'
+export type { DetailShellProps } from './DetailShell'
 export { ConfirmDialog, ConfirmDialogProvenance } from './ConfirmDialog'
 export type { ConfirmDialogProps } from './ConfirmDialog'
 

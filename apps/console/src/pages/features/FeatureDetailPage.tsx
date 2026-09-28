@@ -1,23 +1,26 @@
+import { useState } from 'react'
 import {
   AGGREGATION_LABEL,
+  FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   FeatureType,
+  needsAggregationTarget,
   type Feature,
 } from '@fp/domain'
 import { ApiError, useFeature } from '@fp/query'
 import { CatalogStatusBadge, FeatureTypeBadge } from '@fp/ui/flexprice'
 import {
   AppFailure,
+  type DetailItem,
   DetailList,
-  DetailHeader,
-  DetailStats,
+  DetailShell,
   EmptyState,
   LoadingRows,
   PageBody,
   Section,
 } from '@fp/ui/compositions'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@fp/ui/primitives'
-import { GaugeIcon, ReceiptIcon } from 'lucide-react'
+import { Button } from '@fp/ui/primitives'
+import { CheckIcon, CopyIcon, GaugeIcon, ReceiptIcon } from 'lucide-react'
 
 export interface FeatureDetailPageProps {
   featureId: string
@@ -27,15 +30,24 @@ export interface FeatureDetailPageProps {
 /**
  * One feature, in full.
  *
- * The reference detail page: a shared header, a Frame stat rail, then tabbed
- * sections — Overview (what this feature meters, and what it is linked to) and
- * Information (every attribute). Replaces V1's `FeatureDetails`, which reaches
- * into `FeatureApi` directly and hand-rolls its own cards; this fetches through
- * `useFeature` and composes the shared detail pieces.
+ * Built on the shared `DetailShell`: a breadcrumb, a large title with its type
+ * and status badges, the identifier, and the description. There is **no rail**.
+ * A rail is for money and counts — events over time, plans using a feature — and
+ * V2 has no hook that can derive any of those for a feature yet. Faking one out
+ * of Type/Status/Aggregation/Unit is exactly the metadata restatement the audit
+ * called out, so the header simply carries none; `DetailShell` renders nothing
+ * where the rail would be.
  *
- * Charges and entitlements show an honest empty state: V2 has no linked-price
- * or entitlement read hook yet, so the sections say so rather than inventing
- * rows — the same stand-in the list pages use for surfaces still being built.
+ * For a **metered** feature the page leads with what it meters (once, in "Event
+ * details") and a ready-to-run "Ingest an event" cURL built from the feature's
+ * own event name and aggregation — the one genuinely useful thing this page can
+ * offer a developer today. Charges and Entitlements are honest empty states:
+ * there is no linked-price or entitlement read hook yet, so they say what will
+ * appear rather than inventing rows.
+ *
+ * No Edit action: there is no `useUpdateFeature` mutation in `@fp/query`, so an
+ * edit control would be a button with nowhere to go. It is omitted rather than
+ * invented.
  */
 export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
@@ -78,110 +90,177 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
   const isMetered = data.type === FeatureType.Metered
 
   return (
-    <>
-      <DetailHeader
-        breadcrumb={
-          <button
-            type="button"
-            onClick={onNavigateToList}
-            className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            ← Features
-          </button>
-        }
-        title={data.name}
-        badges={
-          <>
-            <FeatureTypeBadge type={data.type} />
-            <CatalogStatusBadge status={data.status} />
-          </>
-        }
-        identifier={data.lookupKey || data.id}
-        {...(data.description ? { description: data.description } : {})}
-      />
+    <DetailShell
+      breadcrumb={
+        <button
+          type="button"
+          onClick={onNavigateToList}
+          className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          ← Features
+        </button>
+      }
+      title={data.name}
+      badges={
+        <>
+          <FeatureTypeBadge type={data.type} />
+          <CatalogStatusBadge status={data.status} />
+        </>
+      }
+      identifier={data.lookupKey || data.id}
+      {...(data.description ? { description: data.description } : {})}
+    >
+      {isMetered ? (
+        <Section title="Event details" description="What this feature meters, and how usage is measured.">
+          <DetailList
+            items={[
+              {
+                label: 'Event name',
+                value: data.eventName ? (
+                  <span className="font-mono text-xs">{data.eventName}</span>
+                ) : (
+                  '—'
+                ),
+              },
+              {
+                label: 'Aggregation',
+                value: data.aggregationType ? AGGREGATION_LABEL[data.aggregationType] : '—',
+              },
+              { label: 'Unit (singular)', value: data.unitSingular || '—' },
+              { label: 'Unit (plural)', value: data.unitPlural || '—' },
+            ]}
+          />
+        </Section>
+      ) : null}
 
-      <PageBody>
-        <DetailStats stats={detailStats(data)} />
+      {isMetered ? <IngestEventSection feature={data} /> : null}
 
-        <Tabs defaultValue="overview">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="information">Information</TabsTrigger>
-          </TabsList>
+      <Section title="Charges" description="Prices across the catalogue that meter this feature.">
+        <EmptyState
+          size="inline"
+          icon={<ReceiptIcon aria-hidden />}
+          title="No linked charges to show yet"
+          description="Plans and add-ons that price this feature will appear here once the linked-price view is wired up."
+        />
+      </Section>
 
-          <TabsContent value="overview" className="flex flex-col gap-4 pt-2">
-            {isMetered ? (
-              <Section title="Event details" description="What this feature meters, and how.">
-                <DetailList
-                  items={[
-                    { label: 'Event name', value: data.eventName },
-                    {
-                      label: 'Aggregation',
-                      value: data.aggregationType ? AGGREGATION_LABEL[data.aggregationType] : null,
-                    },
-                    { label: 'Unit (singular)', value: data.unitSingular },
-                    { label: 'Unit (plural)', value: data.unitPlural },
-                  ]}
-                />
-              </Section>
-            ) : null}
+      <Section title="Entitlements" description="Plans and add-ons that grant this feature.">
+        <EmptyState
+          size="inline"
+          icon={<GaugeIcon aria-hidden />}
+          title="No entitlements to show yet"
+          description="Plans and add-ons that grant this feature will appear here once the entitlement view is wired up."
+        />
+      </Section>
 
-            <Section title="Charges" description="Prices across the catalogue that meter this feature.">
-              <EmptyState
-                size="inline"
-                icon={<ReceiptIcon aria-hidden />}
-                title="No charges linked yet"
-                description="Prices that meter this feature will appear here once the linked-price view lands."
-              />
-            </Section>
-
-            <Section title="Entitlements" description="Plans and add-ons that grant this feature.">
-              <EmptyState
-                size="inline"
-                icon={<GaugeIcon aria-hidden />}
-                title="No entitlements linked yet"
-                description="Plans and add-ons that grant this feature will appear here once the entitlement view lands."
-              />
-            </Section>
-          </TabsContent>
-
-          <TabsContent value="information" className="pt-2">
-            <Section title="Information" description="Every attribute of this feature.">
-              <DetailList
-                items={[
-                  { label: 'Name', value: data.name },
-                  { label: 'Lookup key', value: data.lookupKey },
-                  { label: 'Type', value: FEATURE_TYPE_LABEL[data.type] },
-                  { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-                  { label: 'Feature ID', value: <span className="font-mono text-xs">{data.id}</span> },
-                  { label: 'Description', value: data.description },
-                  { label: 'Created', value: formatDate(data.createdAt) },
-                  { label: 'Updated', value: formatDate(data.updatedAt) },
-                ]}
-              />
-            </Section>
-          </TabsContent>
-        </Tabs>
-      </PageBody>
-    </>
+      <Section title="Information" description="Every attribute of this feature.">
+        <DetailList items={informationItems(data, isMetered)} />
+      </Section>
+    </DetailShell>
   )
 }
 
-function detailStats(feature: Feature) {
-  const stats = [
+/**
+ * The "Ingest an event" developer aid, ported from V1's `FeatureDetails`.
+ *
+ * A read-only cURL that a developer can copy, drop their key and customer id
+ * into, and fire — pre-filled with this feature's own event name so the meter
+ * actually matches. When the aggregation sums or averages a field (anything but
+ * a plain count), the body carries a placeholder property to make that explicit.
+ */
+function IngestEventSection({ feature }: { feature: Feature }) {
+  const command = buildIngestCurl(feature)
+  return (
+    <Section
+      title="Ingest an event"
+      description="Send a usage event to Flexprice for this feature. Fill in the placeholders, then run it from your terminal or backend."
+      actions={<CopyButton value={command} />}
+    >
+      <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 font-mono text-xs leading-relaxed text-foreground">
+        <code>{command}</code>
+      </pre>
+    </Section>
+  )
+}
+
+/** Builds the ingest cURL from the feature's event name and aggregation. */
+function buildIngestCurl(feature: Feature): string {
+  const eventName = feature.eventName || 'your_event_name'
+  const needsField =
+    feature.aggregationType != null && needsAggregationTarget(feature.aggregationType)
+  const properties = needsField ? '{ "your_property": "<value>" }' : '{}'
+  return [
+    `curl --request POST \\`,
+    `  --url https://api.cloud.flexprice.io/v1/events \\`,
+    `  --header 'Content-Type: application/json' \\`,
+    `  --header 'x-api-key: <your_api_key>' \\`,
+    `  --data '{`,
+    `    "event_name": "${eventName}",`,
+    `    "external_customer_id": "<your_customer_id>",`,
+    `    "properties": ${properties},`,
+    `    "source": "api"`,
+    `  }'`,
+  ].join('\n')
+}
+
+/** Copy-to-clipboard, with a brief confirmation. A nice-to-have on the snippet. */
+function CopyButton({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={() => {
+        const done = navigator.clipboard?.writeText(value)
+        if (done) {
+          void done.then(() => {
+            setCopied(true)
+            window.setTimeout(() => setCopied(false), 1500)
+          })
+        }
+      }}
+    >
+      {copied ? (
+        <CheckIcon aria-hidden className="size-4" />
+      ) : (
+        <CopyIcon aria-hidden className="size-4" />
+      )}
+      {copied ? 'Copied' : 'Copy'}
+    </Button>
+  )
+}
+
+/** The full attribute set, once. Meter ID only appears for metered features. */
+function informationItems(feature: Feature, isMetered: boolean): DetailItem[] {
+  return [
+    { label: 'Name', value: feature.name },
+    {
+      label: 'Lookup key',
+      value: feature.lookupKey ? (
+        <span className="font-mono text-xs">{feature.lookupKey}</span>
+      ) : (
+        '—'
+      ),
+    },
     { label: 'Type', value: FEATURE_TYPE_LABEL[feature.type] },
-    { label: 'Status', value: <CatalogStatusBadge status={feature.status} /> },
+    { label: 'Status', value: FEATURE_STATUS_LABEL[feature.status] },
+    { label: 'Feature ID', value: <span className="font-mono text-xs">{feature.id}</span> },
+    ...(isMetered
+      ? [
+          {
+            label: 'Meter ID',
+            value: feature.meterId ? (
+              <span className="font-mono text-xs">{feature.meterId}</span>
+            ) : (
+              '—'
+            ),
+          },
+        ]
+      : []),
+    { label: 'Description', value: feature.description || '—', full: true },
+    { label: 'Created', value: formatDate(feature.createdAt) },
+    { label: 'Updated', value: formatDate(feature.updatedAt) },
   ]
-  if (feature.type === FeatureType.Metered) {
-    stats.push({
-      label: 'Aggregation',
-      value: feature.aggregationType ? AGGREGATION_LABEL[feature.aggregationType] : '—',
-    })
-    stats.push({ label: 'Unit', value: feature.unitSingular || '—' })
-  } else {
-    stats.push({ label: 'Updated', value: formatDate(feature.updatedAt) })
-  }
-  return stats
 }
 
 function formatDate(value: Date | null): string {

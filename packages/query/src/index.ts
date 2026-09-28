@@ -53,11 +53,12 @@ export {
   useClonePlan,
   useCreatePlan,
   usePlan,
+  usePlanSubscriptions,
   usePlans,
   useSyncPlanPrices,
   useUpdatePlan,
 } from './plans'
-export type { PlanPage, PlanWire } from './plans'
+export type { PlanPage, PlanSubscriptionRow, PlanWire } from './plans'
 
 export {
   fetchAddons,

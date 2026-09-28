@@ -1,36 +1,30 @@
 import { useState } from 'react'
-import { type CreatePriceUnit, type PriceUnit } from '@fp/domain'
+import { type CreatePriceUnit, formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogStatusBadge, PriceUnitEditorSheet } from '@fp/ui/flexprice'
-import {
-  AppFailure,
-  DetailList,
-  DetailHeader,
-  DetailStats,
-  LoadingRows,
-  PageBody,
-  Section,
-} from '@fp/ui/compositions'
-import { Button, Tabs, TabsContent, TabsList, TabsTrigger } from '@fp/ui/primitives'
+import { AppFailure, DetailList, DetailShell, LoadingRows, Section } from '@fp/ui/compositions'
+import { Button } from '@fp/ui/primitives'
 
 export interface PriceUnitDetailPageProps {
   priceUnitId: string
   onNavigateToList: () => void
 }
 
+/** A round quantity for the worked example — enough to make the total read clearly. */
+const SAMPLE_QUANTITY = 1000
+
 /**
  * One price unit, in full.
  *
- * The reference detail page: a shared header, a Frame stat rail, then tabbed
- * sections — Overview (how this unit converts to its base currency) and
- * Information (every attribute). V1 keeps price units in a list and a drawer
- * with no detail page, so there is nothing to replace here; this fetches
- * through `usePriceUnit` and composes the shared detail pieces the way the
- * other catalogue detail pages do.
+ * A price unit is a rate anchor — a code and symbol pinned to a base currency
+ * through a conversion rate — so it is a small entity, and this page is
+ * deliberately small to match. One `DetailShell` header, one **Conversion**
+ * section with a live worked example ("1 CRD = $0.01 → 1,000 CRD = $10.00"), and
+ * one **Information** list of every attribute. No tabs and no rail: the earlier
+ * version rendered the same four fields three times over, which this replaces.
  *
- * There is no Charges or Entitlements section: a price unit is a rate anchor,
- * not something plans and prices link to directly, so the two tabs cover it
- * without an honest-empty-state stand-in.
+ * The name (and metadata) is all the backend lets change, so the header's Edit
+ * opens a drawer that shows the rest read-only.
  */
 export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnitDetailPageProps) {
   const priceUnit = usePriceUnit(priceUnitId)
@@ -39,44 +33,40 @@ export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnit
 
   if (priceUnit.isPending) {
     return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
+      <div className="p-6">
+        <LoadingRows />
+      </div>
     )
   }
 
   if (priceUnit.error) {
     return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(priceUnit.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void priceUnit.refetch()}
-        />
-      </PageBody>
+      <AppFailure
+        title={failureTitle(priceUnit.error)}
+        detail="The rest of the console still works. Try again, or go back to the list."
+        onRetry={() => void priceUnit.refetch()}
+      />
     )
   }
 
   if (!priceUnit.data) {
     return (
-      <PageBody>
-        <AppFailure
-          title="This price unit no longer exists"
-          detail="It may have been deleted. Everything else in the catalogue still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
+      <AppFailure
+        title="This price unit no longer exists"
+        detail="It may have been deleted. Everything else in the catalogue still works."
+        onRetry={onNavigateToList}
+      />
     )
   }
 
   const data = priceUnit.data
   const baseCurrency = data.baseCurrency ? data.baseCurrency.toUpperCase() : null
-  const conversionSentence =
-    data.conversionRate && baseCurrency
-      ? `One ${data.code || 'unit'} converts to ${data.conversionRate} ${baseCurrency}.`
-      : 'How this unit converts to its base currency.'
+  const codeLabel = data.code || 'unit'
+  const conversion = workedExample(data.conversionRate, baseCurrency)
+
+  // The Symbol field showed a broken glyph when a unit carried no symbol; fall
+  // back to an em dash rather than render an empty box.
+  const symbolDisplay = data.symbol.trim() ? data.symbol : '—'
 
   const closeEditor = () => {
     setEditing(false)
@@ -92,12 +82,12 @@ export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnit
 
   return (
     <>
-      <DetailHeader
+      <DetailShell
         breadcrumb={
           <button
             type="button"
             onClick={onNavigateToList}
-            className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="-ml-1 inline-flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
           >
             ← Price Units
           </button>
@@ -106,49 +96,61 @@ export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnit
         badges={<CatalogStatusBadge status={data.status} />}
         identifier={data.code || data.id}
         actions={<Button onClick={() => setEditing(true)}>Edit</Button>}
-      />
+      >
+        <Section
+          title="Conversion"
+          description={
+            conversion
+              ? `How ${codeLabel === 'unit' ? 'this unit' : codeLabel} converts into ${baseCurrency}.`
+              : 'How this unit converts into its base currency.'
+          }
+        >
+          {conversion ? (
+            <div className="rounded-lg border bg-muted/40 p-4">
+              <p className="text-xs font-medium text-muted-foreground">Worked example</p>
+              <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg tabular-nums">
+                <span className="font-semibold">1 {codeLabel}</span>
+                <span className="text-muted-foreground">=</span>
+                <span>{conversion.unit}</span>
+                <span aria-hidden className="px-1 text-muted-foreground">
+                  →
+                </span>
+                <span className="font-semibold">
+                  {SAMPLE_QUANTITY.toLocaleString()} {codeLabel}
+                </span>
+                <span className="text-muted-foreground">=</span>
+                <span>{conversion.total}</span>
+              </p>
+            </div>
+          ) : (
+            <p className="text-sm text-muted-foreground">
+              This unit has no conversion rate and base currency set, so an example can't be shown.
+            </p>
+          )}
+        </Section>
 
-      <PageBody>
-        <DetailStats stats={detailStats(data)} />
-
-        <Tabs defaultValue="overview">
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="information">Information</TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="overview" className="flex flex-col gap-4 pt-2">
-            <Section title="Conversion" description={conversionSentence}>
-              <DetailList
-                items={[
-                  { label: 'Code', value: data.code ? <span className="font-mono">{data.code}</span> : null },
-                  { label: 'Symbol', value: data.symbol },
-                  { label: 'Base currency', value: baseCurrency },
-                  { label: 'Conversion rate', value: data.conversionRate },
-                ]}
-              />
-            </Section>
-          </TabsContent>
-
-          <TabsContent value="information" className="pt-2">
-            <Section title="Information" description="Every attribute of this price unit.">
-              <DetailList
-                items={[
-                  { label: 'Name', value: data.name },
-                  { label: 'Code', value: data.code ? <span className="font-mono">{data.code}</span> : null },
-                  { label: 'Symbol', value: data.symbol },
-                  { label: 'Base currency', value: baseCurrency },
-                  { label: 'Conversion rate', value: data.conversionRate },
-                  { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-                  { label: 'Price unit ID', value: <span className="font-mono text-xs">{data.id}</span> },
-                  { label: 'Created', value: formatDate(data.createdAt) },
-                  { label: 'Updated', value: formatDate(data.updatedAt) },
-                ]}
-              />
-            </Section>
-          </TabsContent>
-        </Tabs>
-      </PageBody>
+        <Section title="Information" description="Every attribute of this price unit.">
+          <DetailList
+            items={[
+              { label: 'Name', value: data.name },
+              {
+                label: 'Code',
+                value: data.code ? <span className="font-mono">{data.code}</span> : '—',
+              },
+              { label: 'Symbol', value: symbolDisplay },
+              { label: 'Base currency', value: baseCurrency ?? '—' },
+              {
+                label: 'Conversion rate',
+                value: <span className="tabular-nums">{data.conversionRate || '—'}</span>,
+              },
+              { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
+              { label: 'Price unit ID', value: <span className="font-mono text-xs">{data.id}</span> },
+              { label: 'Created', value: formatDate(data.createdAt) },
+              { label: 'Updated', value: formatDate(data.updatedAt) },
+            ]}
+          />
+        </Section>
+      </DetailShell>
 
       <PriceUnitEditorSheet
         open={editing}
@@ -171,13 +173,41 @@ export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnit
   )
 }
 
-function detailStats(unit: PriceUnit) {
-  return [
-    { label: 'Code', value: unit.code || '—' },
-    { label: 'Symbol', value: unit.symbol || '—' },
-    { label: 'Base currency', value: unit.baseCurrency ? unit.baseCurrency.toUpperCase() : '—' },
-    { label: 'Conversion rate', value: unit.conversionRate || '—' },
-  ]
+/**
+ * A live conversion example, computed exactly from the rate.
+ *
+ * `amount × conversion_rate = base_currency_amount`, so one unit is worth the
+ * rate itself and the sample quantity is that rate times the quantity. The
+ * multiplication is done on the decimal string with `BigInt` rather than a
+ * float, so the example never drifts the way `parseFloat` would. Returns null
+ * when there is no rate or base currency to compute against — `formatMoney`
+ * needs a real ISO currency, and an empty one would throw.
+ */
+function workedExample(
+  rate: string,
+  baseCurrency: string | null,
+): { unit: string; total: string } | null {
+  const trimmed = rate.trim()
+  if (!baseCurrency || !/^\d+(\.\d+)?$/.test(trimmed) || Number(trimmed) <= 0) return null
+
+  try {
+    return {
+      unit: formatMoney(money(trimmed, baseCurrency)),
+      total: formatMoney(money(scaleDecimal(trimmed, SAMPLE_QUANTITY), baseCurrency)),
+    }
+  } catch {
+    return null
+  }
+}
+
+/** Multiplies a non-negative decimal string by an integer, exactly. */
+function scaleDecimal(decimal: string, factor: number): string {
+  const [whole, fraction = ''] = decimal.split('.')
+  const scaled = BigInt((whole || '0') + fraction) * BigInt(factor)
+  if (fraction.length === 0) return scaled.toString()
+  const digits = scaled.toString().padStart(fraction.length + 1, '0')
+  const cut = digits.length - fraction.length
+  return `${digits.slice(0, cut)}.${digits.slice(cut)}`
 }
 
 function formatDate(value: Date | null): string {

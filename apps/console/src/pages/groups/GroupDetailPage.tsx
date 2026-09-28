@@ -3,9 +3,9 @@ import { ApiError, useGroup } from '@fp/query'
 import { CatalogStatusBadge } from '@fp/ui/flexprice'
 import {
   AppFailure,
+  type DetailMetric,
   DetailList,
-  DetailHeader,
-  DetailStats,
+  DetailShell,
   EmptyState,
   LoadingRows,
   PageBody,
@@ -21,15 +21,15 @@ export interface GroupDetailPageProps {
 /**
  * One group, in full.
  *
- * A shared header, a Frame stat rail, then the group's own details and the
- * members it bundles. The details lead, so the page opens on the record itself
- * rather than an empty section. Replaces V1's `GroupProfilePage`, which reaches
- * into `GroupApi` directly and hand-rolls its own header; this fetches through
- * `useGroup` and composes the shared detail pieces.
+ * A group exists to show its contents, so the page leads with the one number it
+ * can honestly derive — how many members it holds, from the `entityIds` the
+ * group model carries as a count — then lists the record and, where the members
+ * themselves would go, an honest empty state.
  *
- * Members show an honest empty state: V2 has no member-entities read hook yet,
- * so the section says so rather than inventing rows — the same stand-in the
- * list pages use for surfaces still being built.
+ * The members are a genuine empty state, not a stub dressed as one: V2 has no
+ * member-entities read hook, so there is no way to enumerate them yet. The count
+ * is real (it rides on the group), so it earns the rail; the list of who they
+ * are is not, so the section says so plainly rather than inventing rows.
  */
 export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPageProps) {
   const group = useGroup(groupId)
@@ -69,70 +69,67 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
   }
 
   const data = group.data
+  const kind = GROUP_ENTITY_TYPE_LABEL[data.entityType].toLowerCase()
 
   return (
-    <>
-      <DetailHeader
-        breadcrumb={
-          <button
-            type="button"
-            onClick={onNavigateToList}
-            className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
-          >
-            ← Groups
-          </button>
-        }
-        title={data.name}
-        badges={<CatalogStatusBadge status={data.status} />}
-        identifier={data.lookupKey || data.id}
-      />
+    <DetailShell
+      breadcrumb={
+        <button
+          type="button"
+          onClick={onNavigateToList}
+          className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
+        >
+          ← Groups
+        </button>
+      }
+      title={data.name}
+      badges={<CatalogStatusBadge status={data.status} />}
+      identifier={data.lookupKey || data.id}
+      metrics={groupMetrics(data)}
+    >
+      <Section title="Information" description="Every attribute of this group.">
+        <DetailList
+          items={[
+            { label: 'Name', value: data.name },
+            { label: 'Lookup key', value: data.lookupKey || '—' },
+            { label: 'Holds', value: GROUP_ENTITY_TYPE_LABEL[data.entityType] },
+            { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
+            { label: 'Group ID', value: <span className="font-mono text-xs">{data.id}</span> },
+            { label: 'Created', value: formatDate(data.createdAt) },
+            { label: 'Updated', value: formatDate(data.updatedAt) },
+          ]}
+        />
+      </Section>
 
-      <PageBody>
-        <DetailStats stats={detailStats(data)} />
-
-        <Section title="Information" description="Every attribute of this group.">
-          <DetailList
-            items={[
-              { label: 'Name', value: data.name },
-              { label: 'Lookup key', value: data.lookupKey },
-              { label: 'Holds', value: GROUP_ENTITY_TYPE_LABEL[data.entityType] },
-              { label: 'Members', value: membersLabel(data) },
-              { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-              { label: 'Group ID', value: <span className="font-mono text-xs">{data.id}</span> },
-              { label: 'Created', value: formatDate(data.createdAt) },
-              { label: 'Updated', value: formatDate(data.updatedAt) },
-            ]}
-          />
-        </Section>
-
-        <Section title="Members" description="The prices or features this group bundles.">
-          <EmptyState
-            size="inline"
-            icon={<LayersIcon aria-hidden />}
-            title="No members to show yet"
-            description="The prices and features this group holds will appear here once the member view lands."
-          />
-        </Section>
-      </PageBody>
-    </>
+      <Section title="Members" description={`The ${kind} this group holds.`}>
+        <EmptyState
+          size="inline"
+          icon={<LayersIcon aria-hidden />}
+          title="Members aren't listed yet"
+          description={`The ${kind} this group holds will appear here once the members read view is wired.`}
+        />
+      </Section>
+    </DetailShell>
   )
 }
 
-function detailStats(group: Group) {
-  return [
-    { label: 'Holds', value: GROUP_ENTITY_TYPE_LABEL[group.entityType] },
-    { label: 'Members', value: membersLabel(group) },
-    { label: 'Status', value: <CatalogStatusBadge status={group.status} /> },
-    { label: 'Updated', value: formatDate(group.updatedAt) },
-  ]
-}
-
-/** "12 prices", "1 feature" — the count with the kind it holds. */
-function membersLabel(group: Group): string {
-  const count = new Intl.NumberFormat().format(group.entityCount)
+/**
+ * The rail: the one number a group is for — how many members it holds.
+ *
+ * The count rides on the group record (its `entityIds`), so it is real and
+ * belongs here as the headline; the kind it holds is the hint. Status, lookup
+ * key and timestamps stay in the header and Information, never restated here.
+ */
+function groupMetrics(group: Group): DetailMetric[] {
   const noun = GROUP_ENTITY_TYPE_LABEL[group.entityType].toLowerCase()
-  const singular = group.entityCount === 1 ? noun.replace(/s$/, '') : noun
-  return `${count} ${singular}`
+  const kind = group.entityCount === 1 ? noun.replace(/s$/, '') : noun
+  return [
+    {
+      label: 'Members',
+      value: new Intl.NumberFormat().format(group.entityCount),
+      hint: kind,
+    },
+  ]
 }
 
 function formatDate(value: Date | null): string {

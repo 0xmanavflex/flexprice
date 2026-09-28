@@ -21,15 +21,16 @@ import { CatalogStatusBadge, CouponEditorSheet, Money } from '@fp/ui/flexprice'
 import {
   AppFailure,
   ConfirmDialog,
+  type DetailItem,
   DetailList,
+  type DetailMetric,
+  DetailShell,
   EmptyState,
   LoadingRows,
-  PageBody,
-  PageHeader,
   Section,
-  type DetailItem,
 } from '@fp/ui/compositions'
 import {
+  Badge,
   Button,
   Table,
   TableBody,
@@ -46,13 +47,19 @@ export interface CouponDetailPageProps {
 }
 
 /**
- * A coupon's detail page: read-only, with a rename drawer and archive.
+ * A coupon's detail page.
  *
- * Replaces V1's `CouponDetails` — the same details card (type, code, discount,
- * cadence, redemptions, window, timestamps, metadata) — and adds what V1 could
- * not answer: **Where used**, the subscriptions this coupon is applied to, read
- * from `/coupons/associations`. The discount is immutable, so the header's Edit
- * opens a rename drawer; Archive soft-deletes.
+ * Built on the shared `DetailShell`, so it opens like every other detail page:
+ * a breadcrumb, a large title with its status and type chips, the redemption
+ * code as identifier, and a **metric rail** that leads with the numbers a coupon
+ * is actually about — its discount and how many times it has been redeemed,
+ * rather than burying them in a spec sheet.
+ *
+ * "Where used" (the subscriptions this coupon is applied to, from
+ * `/coupons/associations`) is promoted above the attribute list: it is the
+ * question V1 could not answer and the most useful thing on the page. The
+ * header's Edit opens a rename drawer — the discount is immutable — and Archive
+ * soft-deletes behind a confirmation.
  */
 export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
   const coupon = useCoupon(couponId)
@@ -64,9 +71,9 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
 
   if (coupon.isPending) {
     return (
-      <PageBody>
+      <div className="p-6">
         <LoadingRows />
-      </PageBody>
+      </div>
     )
   }
 
@@ -99,7 +106,7 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
 
   return (
     <>
-      <PageHeader
+      <DetailShell
         breadcrumb={
           <button
             type="button"
@@ -111,8 +118,21 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
           </button>
         }
         title={record.name}
-        description={`${discountText(record)} · ${cadenceText(record)}`}
-        action={
+        badges={
+          <>
+            <CatalogStatusBadge status={record.status} />
+            <Badge
+              variant="outline"
+              size="sm"
+              radius="full"
+              className="border-border/60 bg-transparent px-2 font-normal text-foreground dark:bg-transparent"
+            >
+              {COUPON_TYPE_LABEL[record.type]}
+            </Badge>
+          </>
+        }
+        identifier={record.code || record.id}
+        actions={
           <>
             <Button variant="outline" onClick={() => setEditing(true)}>
               Edit
@@ -124,15 +144,21 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
             )}
           </>
         }
-      />
+        metrics={couponMetrics(record)}
+      >
+        {/* The most useful content first: where this coupon is in force. */}
+        <CouponUsage couponId={record.id} />
 
-      <PageBody width="narrow">
         <Section title="Details">
           <DetailList items={detailItems(record)} />
         </Section>
 
-        <CouponUsage couponId={record.id} />
-      </PageBody>
+        {record.metadata ? (
+          <Section title="Metadata" description="Custom key-value pairs stored on this coupon.">
+            <DetailList items={metadataItems(record.metadata)} />
+          </Section>
+        ) : null}
+      </DetailShell>
 
       <CouponEditorSheet
         open={editing}
@@ -166,6 +192,51 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
   )
 }
 
+/**
+ * The rail: the numbers a coupon exists to carry.
+ *
+ * Discount is the headline (the % or the `Money` amount); redemptions leads with
+ * the count used against its ceiling; and where a ceiling is set, the rate that
+ * ceiling has reached. Status and type are chips in the header, not tiles —
+ * a rail that restated them would add nothing.
+ */
+function couponMetrics(coupon: Coupon): DetailMetric[] {
+  const metrics: DetailMetric[] = [
+    {
+      label: 'Discount',
+      value:
+        coupon.type === CouponType.Percentage ? (
+          <span className="tabular-nums">{coupon.percentageOff ?? '0'}%</span>
+        ) : coupon.amountOff ? (
+          <Money value={coupon.amountOff} />
+        ) : (
+          '—'
+        ),
+      hint: cadenceText(coupon),
+    },
+    {
+      label: 'Redemptions',
+      value: <span className="tabular-nums">{coupon.totalRedemptions.toLocaleString()}</span>,
+      hint:
+        coupon.maxRedemptions !== null
+          ? `of ${coupon.maxRedemptions.toLocaleString()}`
+          : 'no limit',
+    },
+  ]
+
+  // A rate only means something against a ceiling.
+  if (coupon.maxRedemptions !== null && coupon.maxRedemptions > 0) {
+    const rate = Math.round((coupon.totalRedemptions / coupon.maxRedemptions) * 100)
+    metrics.push({
+      label: 'Redemption rate',
+      value: `${rate}%`,
+      hint: 'of limit used',
+    })
+  }
+
+  return metrics
+}
+
 /** The discount, drawn from whichever field the type populates. */
 function discountText(coupon: Coupon): string {
   if (coupon.type === CouponType.Percentage) return `${coupon.percentageOff ?? '0'}% off`
@@ -186,60 +257,27 @@ function formatDate(value: Date | null): string {
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(value)
 }
 
+/**
+ * The attribute list — the record's reference, minus what the rail and header
+ * already lead with (discount, redemptions, status, code).
+ */
 function detailItems(coupon: Coupon): DetailItem[] {
-  const discount =
-    coupon.type === CouponType.Percentage ? (
-      <span className="tabular-nums">{coupon.percentageOff ?? '0'}%</span>
-    ) : coupon.amountOff ? (
-      <Money value={coupon.amountOff} />
-    ) : (
-      '—'
-    )
-
-  const items: DetailItem[] = [
+  return [
     { label: 'Type', value: COUPON_TYPE_LABEL[coupon.type] },
-    {
-      label: 'Coupon code',
-      value: coupon.code ? (
-        <code className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">{coupon.code}</code>
-      ) : (
-        '—'
-      ),
-    },
-    { label: 'Discount', value: discount },
     { label: 'Cadence', value: cadenceText(coupon) },
-    { label: 'Status', value: <CatalogStatusBadge status={coupon.status} /> },
-    {
-      label: 'Redemptions',
-      value: (
-        <span className="tabular-nums">
-          {coupon.totalRedemptions} / {coupon.maxRedemptions ?? '∞'}
-        </span>
-      ),
-    },
-    {
-      label: 'Duration',
-      value: coupon.durationInPeriods !== null ? String(coupon.durationInPeriods) : 'Not set',
-    },
     { label: 'Redeem after', value: formatDate(coupon.redeemAfter) },
     { label: 'Redeem before', value: formatDate(coupon.redeemBefore) },
     { label: 'Created', value: formatDate(coupon.createdAt) },
     { label: 'Updated', value: formatDate(coupon.updatedAt) },
   ]
+}
 
-  if (coupon.metadata) {
-    items.push({
-      label: 'Metadata',
-      full: true,
-      value: (
-        <pre className="max-h-40 overflow-auto rounded-md bg-muted p-3 text-xs">
-          {JSON.stringify(coupon.metadata, null, 2)}
-        </pre>
-      ),
-    })
-  }
-
-  return items
+/** Metadata as readable rows, not a raw JSON dump. */
+function metadataItems(metadata: Record<string, string>): DetailItem[] {
+  return Object.entries(metadata).map(([key, value]) => ({
+    label: key,
+    value: <span className="break-words">{value}</span>,
+  }))
 }
 
 /**
@@ -255,10 +293,7 @@ function CouponUsage({ couponId }: { couponId: string }) {
   const rows = associations.data?.associations ?? []
 
   return (
-    <Section
-      title="Where used"
-      description="Subscriptions this coupon is applied to."
-    >
+    <Section title="Where used" description="Subscriptions this coupon is applied to.">
       {associations.isPending ? (
         <LoadingRows />
       ) : associations.error ? (

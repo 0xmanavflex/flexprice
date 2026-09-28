@@ -35,6 +35,9 @@ interface SearchBody {
   entityIds?: string[]
   entity_type?: string
   entityType?: string
+  /** How the plan detail page's subscriptions metric scopes to one plan. */
+  plan_id?: string
+  planId?: string
   expand?: string
 }
 
@@ -81,6 +84,12 @@ function page(source: Corpus, body: SearchBody) {
 
   const entityIds = body.entity_ids ?? body.entityIds
   if (entityIds?.length) rows = rows.filter((row) => entityIds.includes(readString(row, 'entity_id')))
+
+  // A plan's subscriptions, for the detail page's "active subscriptions" metric.
+  // Scoping here is what makes the rail count *this* plan's subscribers rather
+  // than the whole book — the bug an unfiltered mock would hide until production.
+  const planId = body.plan_id ?? body.planId
+  if (planId) rows = rows.filter((row) => readString(row, 'plan_id') === planId)
 
   const sort = body.sort?.[0]
   if (sort) {
