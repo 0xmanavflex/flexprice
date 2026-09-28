@@ -73,4 +73,21 @@ export const queryKeys = {
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['invoices', 'list', filter] as const,
     detail: (id: string) => ['invoices', 'detail', id] as const,
   },
+  // A plan's money lives in three separate record types, so each has its own
+  // key: invalidating `prices.all()` refreshes every charge list without
+  // touching entitlements or grants.
+  prices: {
+    all: () => ['prices'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['prices', 'list', filter] as const,
+  },
+  entitlements: {
+    all: () => ['entitlements'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['entitlements', 'list', filter] as const,
+  },
+  creditGrants: {
+    all: () => ['creditGrants'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['creditGrants', 'list', filter] as const,
+  },
 } as const

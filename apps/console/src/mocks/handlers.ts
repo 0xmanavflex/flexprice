@@ -30,6 +30,11 @@ interface SearchBody {
   nameContains?: string
   feature_ids?: string[]
   featureIds?: string[]
+  /** How the charges/entitlements searches scope to one plan (or add-on). */
+  entity_ids?: string[]
+  entityIds?: string[]
+  entity_type?: string
+  entityType?: string
   expand?: string
 }
 
@@ -67,6 +72,15 @@ function page(source: Corpus, body: SearchBody) {
 
   const ids = body.feature_ids ?? body.featureIds
   if (ids?.length) rows = rows.filter((row) => ids.includes(readString(row, 'id')))
+
+  // Charges and entitlements are searched by the entity they price. Scoping to
+  // it here is what makes a plan's detail page show *its* charges, not the whole
+  // catalogue's — the bug an unfiltered mock would hide until production.
+  const entityType = body.entity_type ?? body.entityType
+  if (entityType) rows = rows.filter((row) => readString(row, 'entity_type') === entityType)
+
+  const entityIds = body.entity_ids ?? body.entityIds
+  if (entityIds?.length) rows = rows.filter((row) => entityIds.includes(readString(row, 'entity_id')))
 
   const sort = body.sort?.[0]
   if (sort) {
@@ -137,12 +151,12 @@ export const handlers = [
 
   list('/payments', 'invoices'),
 
+  // Charges and entitlements, scoped by entity — the plan detail page's tabs.
+  search('/entitlements/search', 'entitlements'),
+
   // Entities the capture environment had nothing in are deliberately absent.
   // An empty list from a real endpoint is a state worth seeing; a fabricated
   // row is not.
-  http.post(`${BASE}/entitlements/search`, () =>
-    HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
-  ),
   http.post(`${BASE}/wallets/search`, () =>
     HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
   ),
@@ -155,6 +169,62 @@ export const handlers = [
   ),
   http.post(`${BASE}/costs/search`, () =>
     HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
+  ),
+
+  // Saving a plan's charges. The bulk endpoint echoes each price back with an
+  // id, so the editor's success path — close, invalidate, refetch — runs end to
+  // end and the Overview tab shows what was just saved.
+  http.post(`${BASE}/prices/bulk`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { items?: Record<string, unknown>[] }
+    const items = (body.items ?? []).map((item, index) => ({
+      ...item,
+      id: `price_new_${Date.now()}_${index}`,
+      status: 'published',
+    }))
+    return HttpResponse.json({ items }, { status: 201 })
+  }),
+  http.put(`${BASE}/prices/:id`, async ({ request, params }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+  }),
+  http.delete(`${BASE}/prices/:id`, ({ params }) =>
+    HttpResponse.json({ success: true, id: params['id'] }),
+  ),
+
+  // Granting entitlements, the same bulk shape.
+  http.post(`${BASE}/entitlements/bulk`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { items?: Record<string, unknown>[] }
+    const items = (body.items ?? []).map((item, index) => ({
+      ...item,
+      id: `ent_new_${Date.now()}_${index}`,
+      status: 'published',
+    }))
+    return HttpResponse.json({ items }, { status: 201 })
+  }),
+  http.delete(`${BASE}/entitlements/:id`, ({ params }) =>
+    HttpResponse.json({ success: true, id: params['id'] }),
+  ),
+
+  // Credit grants have no search — only the scoped list endpoints — so the plan
+  // and add-on tabs read from these, filtered by the id in the path.
+  http.get(`${BASE}/plans/:id/creditgrants`, ({ params }) => {
+    const rows = (corpus['creditgrants'] as Corpus).items.filter(
+      (row) => readString(row, 'plan_id') === params['id'],
+    )
+    return HttpResponse.json({ items: rows, pagination: { total: rows.length, limit: 25, offset: 0 } })
+  }),
+  http.get(`${BASE}/addons/:id/creditgrants`, ({ params }) => {
+    const rows = (corpus['creditgrants'] as Corpus).items.filter(
+      (row) => readString(row, 'addon_id') === params['id'],
+    )
+    return HttpResponse.json({ items: rows, pagination: { total: rows.length, limit: 25, offset: 0 } })
+  }),
+  http.post(`${BASE}/creditgrants`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json({ ...body, id: `cg_new_${Date.now()}`, status: 'published' }, { status: 201 })
+  }),
+  http.delete(`${BASE}/creditgrants/:id`, ({ params }) =>
+    HttpResponse.json({ success: true, id: params['id'] }),
   ),
 
   // Creating a feature echoes it back, so the form's success path completes.
@@ -207,4 +277,29 @@ export const handlers = [
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
   }),
+
+  // One plan, by id — what the detail page loads on a direct navigation. Served
+  // from the same corpus the list reads, so the two never disagree; a plan a
+  // create just echoed (no corpus row yet) degrades to a minimal record rather
+  // than a 404, so the just-created detail page still renders.
+  http.get(`${BASE}/plans/:id`, ({ params }) => {
+    const id = String(params['id'])
+    const found = (corpus['plans'] as Corpus).items.find((row) => readString(row, 'id') === id)
+    return HttpResponse.json(found ?? { id, name: 'New plan', status: 'published', prices: [] })
+  }),
+
+  // Duplicate and sync, so the detail page's header actions complete.
+  http.post(`${BASE}/plans/:id/clone`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    return HttpResponse.json(
+      { ...body, id: `plan_clone_${Date.now()}`, status: 'published' },
+      { status: 201 },
+    )
+  }),
+  http.post(`${BASE}/plans/:id/sync/subscriptions`, ({ params }) =>
+    HttpResponse.json({ workflow_id: `wf_${Date.now()}`, status: 'Running', plan_id: params['id'] }),
+  ),
+  http.delete(`${BASE}/plans/:id`, ({ params }) =>
+    HttpResponse.json({ success: true, id: params['id'] }),
+  ),
 ]

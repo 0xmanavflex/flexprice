@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { BillingModel, TierMode, nonNegativeAmount, tiersSchema } from './price'
 
 /**
  * A price override, as a schema rather than as twelve pieces of state.
@@ -17,86 +18,21 @@ import { z } from 'zod'
  * These are *product* rules, not form plumbing — a tiered price with
  * overlapping tiers is wrong no matter what draws it — so they live in the
  * domain, and the UI and any agent-driven action validate identically.
- */
-
-/** Decimal string, as the API sends and expects. Never a float. */
-const decimal = z
-  .string()
-  .trim()
-  .min(1, 'Enter an amount')
-  .regex(/^-?\d+(\.\d+)?$/, 'Enter a number, for example 9.99')
-
-const nonNegative = decimal.refine((v) => !v.startsWith('-'), 'Amount cannot be negative')
-
-export const BillingModel = {
-  FlatFee: 'FLAT_FEE',
-  Package: 'PACKAGE',
-  Tiered: 'TIERED',
-} as const
-export type BillingModel = (typeof BillingModel)[keyof typeof BillingModel]
-
-export const TierMode = {
-  /** One rate for everything, chosen by the total. */
-  Volume: 'VOLUME',
-  /** Each band charged at its own rate. */
-  Slab: 'SLAB',
-} as const
-export type TierMode = (typeof TierMode)[keyof typeof TierMode]
-
-/**
- * One tier band.
  *
- * `upTo` absent means "and everything above", which is why exactly one tier may
- * omit it and it has to be the last.
+ * The pricing enums and the tier schema this builds on are defined once in
+ * `./price` — a charge and an override are the same money, described the same
+ * way — and re-exported here so this file's long-standing callers and tests
+ * keep their import site.
  */
-export const priceTierSchema = z.object({
-  upTo: z.number().int().positive('Must be greater than zero').nullable(),
-  unitAmount: nonNegative,
-  flatAmount: nonNegative.optional(),
-})
-export type PriceTier = z.infer<typeof priceTierSchema>
 
-/**
- * Tier bands must climb, and end open.
- *
- * Both failures are silent in V1: overlapping bands simply bill the wrong
- * amount, and a closed final band drops usage above it on the floor. Neither
- * shows up until an invoice is wrong, which is the worst possible time.
- */
-const tiersSchema = z
-  .array(priceTierSchema)
-  .min(1, 'Add at least one tier')
-  .superRefine((tiers, ctx) => {
-    tiers.forEach((tier, index) => {
-      const isLast = index === tiers.length - 1
-
-      if (!isLast && tier.upTo === null) {
-        ctx.addIssue({
-          code: 'custom',
-          path: [index, 'upTo'],
-          message: 'Only the last tier can be unbounded',
-        })
-        return
-      }
-
-      const previous = tiers[index - 1]
-      if (previous?.upTo != null && tier.upTo != null && tier.upTo <= previous.upTo) {
-        ctx.addIssue({
-          code: 'custom',
-          path: [index, 'upTo'],
-          message: `Must be greater than ${previous.upTo}`,
-        })
-      }
-    })
-
-    if (tiers.at(-1)?.upTo !== null) {
-      ctx.addIssue({
-        code: 'custom',
-        path: [tiers.length - 1, 'upTo'],
-        message: 'The last tier must be unbounded, or usage above it is not billed',
-      })
-    }
-  })
+export {
+  BillingModel,
+  TierMode,
+  BILLING_MODEL_LABEL,
+  TIER_MODE_LABEL,
+  priceTierSchema,
+} from './price'
+export type { PriceTier } from './price'
 
 const base = { priceId: z.string().min(1) }
 
@@ -104,12 +40,12 @@ export const priceOverrideSchema = z.discriminatedUnion('billingModel', [
   z.object({
     ...base,
     billingModel: z.literal(BillingModel.FlatFee),
-    amount: nonNegative,
+    amount: nonNegativeAmount,
   }),
   z.object({
     ...base,
     billingModel: z.literal(BillingModel.Package),
-    amount: nonNegative,
+    amount: nonNegativeAmount,
     /** Price is per package of this many units, so zero is meaningless. */
     divideBy: z
       .number({ error: 'Enter a package size' })
@@ -143,16 +79,4 @@ export function emptyOverride(priceId: string, billingModel: BillingModel): Pric
         tiers: [{ upTo: null, unitAmount: '' }],
       }
   }
-}
-
-/** Human labels, defined beside the values so the two cannot drift. */
-export const BILLING_MODEL_LABEL: Record<BillingModel, string> = {
-  [BillingModel.FlatFee]: 'Flat fee',
-  [BillingModel.Package]: 'Package',
-  [BillingModel.Tiered]: 'Tiered',
-}
-
-export const TIER_MODE_LABEL: Record<TierMode, string> = {
-  [TierMode.Volume]: 'Volume — one rate for the whole quantity',
-  [TierMode.Slab]: 'Slab — each band at its own rate',
 }

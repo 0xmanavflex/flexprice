@@ -175,3 +175,71 @@ export function useUpdatePlan() {
     },
   })
 }
+
+/**
+ * One plan, for its detail page.
+ *
+ * `expand: 'prices'` so the header can say how many charges the plan carries
+ * before the Overview tab's own price query resolves. Reached by id through
+ * `GET /plans/{id}`, distinct from the list's search.
+ */
+export function usePlan(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.plans.detail(id),
+    queryFn: async () => {
+      const wire = await call(() => client.plans.getPlan(id))
+      return toPlan(wire as PlanWire)
+    },
+    enabled: id.length > 0,
+  })
+}
+
+/**
+ * Archive a plan.
+ *
+ * A soft delete — `DELETE /plans/{id}` retires the plan without erasing the
+ * history that referenced it. The list and the plan's own detail are stale
+ * afterwards, so both are invalidated.
+ */
+export function useArchivePlan() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.plans.deletePlan(id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plans.all() })
+    },
+  })
+}
+
+/** Duplicate a plan, charges and all, under a new name. */
+export function useClonePlan() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, name }: { id: string; name: string }) =>
+      call(() => client.plans.clonePlan(id, { name } as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plans.all() })
+    },
+  })
+}
+
+/**
+ * Push a plan's charge changes onto its live subscriptions.
+ *
+ * A plan's prices and its subscriptions can drift once a charge is edited; this
+ * runs the backend workflow that reconciles them. It returns a workflow handle,
+ * not a finished result — the sync completes asynchronously.
+ */
+export function useSyncPlanPrices() {
+  const client = useFlexprice()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.plans.syncPlanPrices(id)),
+  })
+}

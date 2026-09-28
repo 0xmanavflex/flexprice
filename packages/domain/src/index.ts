@@ -38,14 +38,52 @@ export type { Invoice, InvoiceQuery, InvoiceStatusInput } from './invoice'
 
 export {
   BILLING_MODEL_LABEL,
+  BILLING_PERIOD_LABEL,
+  BILLING_PERIOD_SHORT,
   BillingModel,
+  BillingPeriod,
+  INVOICE_CADENCE_LABEL,
+  InvoiceCadence,
+  PRICE_TYPE_LABEL,
+  PriceEntityType,
+  PriceType,
+  RoundType,
   TIER_MODE_LABEL,
   TierMode,
-  emptyOverride,
-  priceOverrideSchema,
+  createChargeSchema,
+  emptyCharge,
+  nonNegativeAmount,
   priceTierSchema,
-} from './priceOverride'
-export type { PriceOverride, PriceTier } from './priceOverride'
+  tiersSchema,
+} from './price'
+export type { Charge, CreateCharge, PriceTier, Tier } from './price'
+
+export { emptyOverride, priceOverrideSchema } from './priceOverride'
+export type { PriceOverride } from './priceOverride'
+
+export {
+  EntitlementEntityType,
+  USAGE_RESET_PERIOD_LABEL,
+  UsageResetPeriod,
+  createEntitlementSchema,
+  emptyEntitlement,
+} from './entitlement'
+export type { CreateEntitlement, Entitlement } from './entitlement'
+
+export {
+  CREDIT_GRANT_CADENCE_LABEL,
+  CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
+  CREDIT_GRANT_EXPIRY_TYPE_LABEL,
+  CREDIT_GRANT_PERIOD_LABEL,
+  CreditGrantCadence,
+  CreditGrantExpiryDurationUnit,
+  CreditGrantExpiryType,
+  CreditGrantPeriod,
+  CreditGrantScope,
+  createCreditGrantSchema,
+  emptyCreditGrant,
+} from './creditGrant'
+export type { CreateCreditGrant, CreditGrant } from './creditGrant'
 
 export {
   AGGREGATION_LABEL,

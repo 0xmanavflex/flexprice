@@ -166,6 +166,8 @@ export interface Feature {
   /** Present only for metered features. */
   eventName: string | null
   aggregationType: AggregationType | null
+  /** The meter a metered feature bills against; null for non-metered features. */
+  meterId: string | null
   unitSingular: string
   unitPlural: string
   createdAt: Date | null

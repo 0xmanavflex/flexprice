@@ -49,8 +49,12 @@ export {
   toPlan,
   toPlanFilter,
   toUpdatePlanRequest,
-  usePlans,
+  useArchivePlan,
+  useClonePlan,
   useCreatePlan,
+  usePlan,
+  usePlans,
+  useSyncPlanPrices,
   useUpdatePlan,
 } from './plans'
 export type { PlanPage, PlanWire } from './plans'
@@ -87,6 +91,34 @@ export type { GroupPage, GroupWire } from './groups'
 
 export { fetchCostSheets, toCostSheet, toCostSheetFilter, useCostSheets } from './costSheets'
 export type { CostSheetPage, CostSheetWire } from './costSheets'
+
+export {
+  toCharge,
+  toChargeRequest,
+  useCreateBulkPrices,
+  usePrices,
+  useTerminatePrice,
+  useUpdatePrice,
+} from './prices'
+export type { ChargeWire } from './prices'
+
+export {
+  toEntitlement,
+  toEntitlementRequest,
+  useCreateBulkEntitlements,
+  useDeleteEntitlement,
+  useEntitlements,
+} from './entitlements'
+export type { EntitlementWire } from './entitlements'
+
+export {
+  toCreditGrant,
+  toCreditGrantRequest,
+  useCreateCreditGrant,
+  useCreditGrants,
+  useDeleteCreditGrant,
+} from './creditGrants'
+export type { CreditGrantWire } from './creditGrants'
 
 export { useNavCounts } from './counts'
 export type { CountableId } from './counts'
