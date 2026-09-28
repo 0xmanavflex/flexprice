@@ -44,8 +44,13 @@ export interface FeatureWire {
   unitPlural?: string | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
+  meterId?: string | undefined
   meter?:
-    | { eventName?: string | undefined; aggregation?: { type?: string | undefined } | undefined }
+    | {
+        id?: string | undefined
+        eventName?: string | undefined
+        aggregation?: { type?: string | undefined } | undefined
+      }
     | undefined
 }
 
@@ -72,6 +77,7 @@ export function toFeature(wire: FeatureWire): Feature {
     status,
     eventName: wire.meter?.eventName ?? null,
     aggregationType: (wire.meter?.aggregation?.type as AggregationType | undefined) ?? null,
+    meterId: wire.meterId ?? wire.meter?.id ?? null,
     unitSingular: wire.unitSingular ?? '',
     unitPlural: wire.unitPlural ?? '',
     createdAt: wire.createdAt ?? null,

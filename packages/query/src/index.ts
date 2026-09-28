@@ -49,8 +49,12 @@ export {
   toPlan,
   toPlanFilter,
   toUpdatePlanRequest,
-  usePlans,
+  useArchivePlan,
+  useClonePlan,
   useCreatePlan,
+  usePlan,
+  usePlans,
+  useSyncPlanPrices,
   useUpdatePlan,
 } from './plans'
 export type { PlanPage, PlanWire } from './plans'
@@ -69,6 +73,34 @@ export type { AddonPage, AddonWire } from './addons'
 
 export { fetchCoupons, toCoupon, toCouponFilter, useCoupons } from './coupons'
 export type { CouponPage, CouponWire } from './coupons'
+
+export {
+  toCharge,
+  toChargeRequest,
+  useCreateBulkPrices,
+  usePrices,
+  useTerminatePrice,
+  useUpdatePrice,
+} from './prices'
+export type { ChargeWire } from './prices'
+
+export {
+  toEntitlement,
+  toEntitlementRequest,
+  useCreateBulkEntitlements,
+  useDeleteEntitlement,
+  useEntitlements,
+} from './entitlements'
+export type { EntitlementWire } from './entitlements'
+
+export {
+  toCreditGrant,
+  toCreditGrantRequest,
+  useCreateCreditGrant,
+  useCreditGrants,
+  useDeleteCreditGrant,
+} from './creditGrants'
+export type { CreditGrantWire } from './creditGrants'
 
 export { useNavCounts } from './counts'
 export type { CountableId } from './counts'

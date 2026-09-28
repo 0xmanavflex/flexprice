@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { type CreatePlan, type Plan, type PlanQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, useCreatePlan, usePlans, useUpdatePlan } from '@fp/query'
+import { type CreatePlan, type PlanQuery } from '@fp/domain'
+import { ApiError, useCatalogStats, useCreatePlan, usePlans } from '@fp/query'
 import { PlanEditorSheet, PlanFilters, PlanGrid, StatCards } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
@@ -9,46 +9,46 @@ import { Button } from '@fp/ui/primitives'
 export interface PlanListPageProps {
   query: PlanQuery
   onQueryChange: (query: PlanQuery) => void
+  /** Open a plan's detail page. A row click, and where a new plan lands. */
+  onOpenPlan: (planId: string) => void
 }
 
-/** Which record the drawer is editing — a new one, or an existing plan. */
-type Editing = { mode: 'create' } | { mode: 'edit'; plan: Plan } | null
-
 /**
- * The plan surface: a list, and a drawer to create or edit one's details.
+ * The plan surface: a list, and a drawer to create one's details.
  *
- * Replaces V1's `Plans.tsx`, which owns drawer state and reaches into `PlanApi`
- * directly. The list stays URL-driven — a filtered view is a link — and the
- * editor is the one piece of local state, opened over the list rather than
- * navigating away. Charges, entitlements and credit grants are a later surface.
+ * Replaces V1's `Plans.tsx`. The list stays URL-driven — a filtered view is a
+ * link — and a row now opens the plan's *detail page*, the hub where charges,
+ * entitlements and credit grants are added. Creating a plan is still the one
+ * piece of local state, a drawer over the list; on success it navigates to the
+ * new plan's detail page, because a plan that bills nothing yet is only half
+ * made and the next step is to price it.
  */
-export function PlanListPage({ query, onQueryChange }: PlanListPageProps) {
+export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageProps) {
   const plans = usePlans(query)
   const stats = useCatalogStats('plans')
   const create = useCreatePlan()
-  const update = useUpdatePlan()
 
-  const [editing, setEditing] = useState<Editing>(null)
+  const [creating, setCreating] = useState(false)
 
   const failure = toFailure(plans.error)
   const rows = plans.data?.plans ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
-  const active = editing?.mode === 'create' ? create : update
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
 
   const close = () => {
-    setEditing(null)
+    setCreating(false)
     create.reset()
-    update.reset()
   }
 
   const submit = (draft: CreatePlan) => {
-    if (editing?.mode === 'create') {
-      create.mutate(draft, { onSuccess: close })
-    } else if (editing?.mode === 'edit') {
-      update.mutate({ id: editing.plan.id, draft }, { onSuccess: close })
-    }
+    create.mutate(draft, {
+      onSuccess: (result) => {
+        close()
+        const id = (result as { id?: string }).id
+        if (id) onOpenPlan(id)
+      },
+    })
   }
 
   return (
@@ -56,7 +56,7 @@ export function PlanListPage({ query, onQueryChange }: PlanListPageProps) {
       <PageHeader
         title="Plans"
         description="What you sell, and what each plan charges for."
-        action={<Button onClick={() => setEditing({ mode: 'create' })}>New plan</Button>}
+        action={<Button onClick={() => setCreating(true)}>New plan</Button>}
       />
 
       <PageBody>
@@ -80,7 +80,7 @@ export function PlanListPage({ query, onQueryChange }: PlanListPageProps) {
           isFiltered={isFiltered}
           onRetry={() => void plans.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={() => setEditing({ mode: 'create' })}>New plan</Button>}
+          createAction={<Button onClick={() => setCreating(true)}>New plan</Button>}
           emptyIcon={<PackageIcon aria-hidden />}
           emptyTitle="No plans yet"
           emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants — create the first to start selling."
@@ -90,7 +90,7 @@ export function PlanListPage({ query, onQueryChange }: PlanListPageProps) {
             total={plans.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
-            onPlanClick={(plan) => setEditing({ mode: 'edit', plan })}
+            onPlanClick={(plan) => onOpenPlan(plan.id)}
             onClearFilters={clearFilters}
             filters={
               <PlanFilters
@@ -103,23 +103,14 @@ export function PlanListPage({ query, onQueryChange }: PlanListPageProps) {
       </PageBody>
 
       <PlanEditorSheet
-        open={editing !== null}
+        open={creating}
         onOpenChange={(open) => {
           if (!open) close()
         }}
-        mode={editing?.mode ?? 'create'}
-        {...(editing?.mode === 'edit'
-          ? {
-              defaultValue: {
-                name: editing.plan.name,
-                lookupKey: editing.plan.lookupKey,
-                description: editing.plan.description,
-              },
-            }
-          : {})}
+        mode="create"
         onSubmit={submit}
-        isSubmitting={active.isPending}
-        submitError={toSubmitError(active.error)}
+        isSubmitting={create.isPending}
+        submitError={toSubmitError(create.error)}
       />
     </>
   )

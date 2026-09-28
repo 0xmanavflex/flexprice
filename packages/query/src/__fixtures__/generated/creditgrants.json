@@ -1,0 +1,38 @@
+{
+  "items": [
+    {
+      "id": "cg_plan0000_welcome",
+      "name": "Welcome credits",
+      "scope": "PLAN",
+      "plan_id": "plan_synth_0000",
+      "credits": "500",
+      "cadence": "ONETIME",
+      "expiration_type": "NEVER",
+      "priority": 0,
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z"
+    },
+    {
+      "id": "cg_plan0000_monthly",
+      "name": "Monthly budget",
+      "scope": "PLAN",
+      "plan_id": "plan_synth_0000",
+      "credits": "1000",
+      "cadence": "RECURRING",
+      "period": "MONTHLY",
+      "period_count": 1,
+      "expiration_type": "BILLING_CYCLE",
+      "conversion_rate": "0.01",
+      "priority": 1,
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z"
+    }
+  ],
+  "pagination": { "total": 2, "limit": 25, "offset": 0 }
+}

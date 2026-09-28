@@ -45,6 +45,13 @@ import { DEFAULT_PLAN_QUERY, type PlanQuery } from '@fp/domain'
 const PlanListPage = lazy(() =>
   import('@/pages/plans/PlanListPage').then((m) => ({ default: m.PlanListPage })),
 )
+const PlanDetailPage = lazy(() =>
+  import('@/pages/plans/PlanDetailPage').then((m) => ({ default: m.PlanDetailPage })),
+)
+const PlanChargesPage = lazy(() =>
+  import('@/pages/plans/PlanChargesPage').then((m) => ({ default: m.PlanChargesPage })),
+)
+import { parsePlanTab, type PlanTab } from '@/pages/plans/PlanDetailPage'
 import { parsePlanSearch } from './planSearch'
 import { DEFAULT_ADDON_QUERY, type AddonQuery } from '@fp/domain'
 const AddonListPage = lazy(() =>
@@ -310,8 +317,74 @@ function PlansRouteComponent() {
     <PlanListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/plans', search: next, replace: true })}
+      onOpenPlan={(planId) =>
+        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+      }
     />
   )
+}
+
+/**
+ * A plan's detail page and its charges builder.
+ *
+ * `/plans/$planId` is the tabbed hub; `?tab=` keeps the open tab in the URL, so a
+ * plan's entitlements or credit grants are a link. `/plans/$planId/charges` is
+ * the two-pane charges editor, a full route rather than a drawer because pricing
+ * a plan is the work, not an aside to it.
+ */
+const planDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/plans/$planId',
+  validateSearch: (search: Record<string, unknown>): { tab: PlanTab } => ({
+    tab: parsePlanTab(search['tab']),
+  }),
+  // Overview is the default tab, so it stays out of the address bar; only a
+  // non-default tab appears as `?tab=`.
+  search: { middlewares: [stripSearchParams({ tab: 'overview' })] },
+  component: PlanDetailRouteComponent,
+})
+
+function PlanDetailRouteComponent() {
+  const { planId } = planDetailRoute.useParams()
+  const { tab } = planDetailRoute.useSearch()
+  const navigate = useNavigate()
+
+  return (
+    <PlanDetailPage
+      planId={planId}
+      tab={tab}
+      onTabChange={(next) =>
+        void navigate({
+          to: '/plans/$planId',
+          params: { planId },
+          search: { tab: next },
+          replace: true,
+        })
+      }
+      onOpenCharges={() =>
+        void navigate({ to: '/plans/$planId/charges', params: { planId }, search: {} as never })
+      }
+      onArchived={() => void navigate({ to: '/plans', search: {} as never })}
+      onDuplicated={(newId) =>
+        void navigate({ to: '/plans/$planId', params: { planId: newId }, search: {} as never })
+      }
+    />
+  )
+}
+
+const planChargesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/plans/$planId/charges',
+  component: PlanChargesRouteComponent,
+})
+
+function PlanChargesRouteComponent() {
+  const { planId } = planChargesRoute.useParams()
+  const navigate = useNavigate()
+  const toDetail = () =>
+    void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+
+  return <PlanChargesPage planId={planId} onDone={toDetail} onCancel={toDetail} />
 }
 
 /**
@@ -374,6 +447,10 @@ export const routeTree = rootRoute.addChildren([
   featuresRoute,
   featureCreateRoute,
   plansRoute,
+  // The charges route is registered before the detail route so `/plans/x/charges`
+  // is matched by it, not swallowed as a `$planId` of "x/charges".
+  planChargesRoute,
+  planDetailRoute,
   addonsRoute,
   couponsRoute,
   invoicesRoute,

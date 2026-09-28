@@ -14,7 +14,9 @@
  */
 import addons from './__fixtures__/generated/addons.json' with { type: 'json' }
 import coupons from './__fixtures__/generated/coupons.json' with { type: 'json' }
+import creditgrants from './__fixtures__/generated/creditgrants.json' with { type: 'json' }
 import customers from './__fixtures__/generated/customers.json' with { type: 'json' }
+import entitlements from './__fixtures__/generated/entitlements.json' with { type: 'json' }
 import features from './__fixtures__/generated/features.json' with { type: 'json' }
 import invoices from './__fixtures__/generated/invoices.json' with { type: 'json' }
 import plans from './__fixtures__/generated/plans.json' with { type: 'json' }
@@ -27,14 +29,18 @@ export interface Corpus {
 }
 
 /**
- * `coupons` is the one corpus not descended from a capture: the capture
- * environment had no coupons, so an empty `/coupons/search` would leave the
- * surface undemonstrable. These rows are authored — but authored *to shape*,
- * every field matching `@flexprice/sdk`'s `CouponResponse` (snake_case, a fixed
- * discount as `amount_off` + `currency`, a percentage as `percentage_off`), so
- * the mock still cannot silently disagree with the wire. `synthesize.mjs` does
- * not touch it, having no captured source to expand.
+ * `coupons`, `entitlements` and `creditgrants` are the corpora not descended
+ * from a capture: the capture environment had none, so an empty search would
+ * leave those surfaces undemonstrable. Their rows are authored — but authored
+ * *to shape*, every field matching `@flexprice/sdk`'s response models
+ * (snake_case, a fixed coupon discount as `amount_off` + `currency`; an
+ * entitlement's `usage_limit` / `is_enabled` / `static_value` per feature type;
+ * a grant's `cadence` / `expiration_type`), so the mock still cannot silently
+ * disagree with the wire. `synthesize.mjs` does not touch them, having no
+ * captured source to expand. The plan-scoped prices appended to `prices` share
+ * that rule.
  */
 export const corpus = {
-  addons, coupons, customers, features, invoices, plans, prices, subscriptions,
+  addons, coupons, creditgrants, customers, entitlements, features, invoices, plans, prices,
+  subscriptions,
 } as unknown as Record<string, Corpus>
