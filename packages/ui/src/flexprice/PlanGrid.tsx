@@ -290,9 +290,14 @@ export function PlanGrid({
             />
           </div>
         ) : (
-          <DataGridScrollArea className="min-h-0 flex-1">
-            <DataGridTable />
-          </DataGridScrollArea>
+          // Wrapper makes ReUI's scroll-area root the flex-1 item (its className
+          // lands on an inner node), so it shrinks and scrolls rather than
+          // pushing the pagination off-screen on a tall list.
+          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+            <DataGridScrollArea className="min-h-0 flex-1">
+              <DataGridTable />
+            </DataGridScrollArea>
+          </div>
         )}
         <GridFooter
           fitToWindow={fitToWindow}

@@ -12,6 +12,7 @@ import {
 import { Badge } from '@ui/components/reui/badge'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
+import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
 import {
@@ -252,16 +253,27 @@ export function AddonGrid({
           dense: true,
         }}
       >
+        {/* Bounded scroll region so the pagination footer stays pinned in view —
+            the same pattern the feature and plan grids use. */}
         {query.view === AddonView.Cards ? (
-          <AddonCards
-            addons={addons}
-            isLoading={isLoading}
-            onAddonClick={onAddonClick}
-            onClearFilters={onClearFilters}
-            locale={locale}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <AddonCards
+              addons={addons}
+              isLoading={isLoading}
+              onAddonClick={onAddonClick}
+              onClearFilters={onClearFilters}
+              locale={locale}
+            />
+          </div>
         ) : (
-          <DataGridTable />
+          // Wrapper makes ReUI's scroll-area root the flex-1 item (its className
+          // lands on an inner node), so it shrinks and scrolls rather than
+          // pushing the pagination off-screen on a tall list.
+          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+            <DataGridScrollArea className="min-h-0 flex-1">
+              <DataGridTable />
+            </DataGridScrollArea>
+          </div>
         )}
         <GridFooter
           fitToWindow={fitToWindow}

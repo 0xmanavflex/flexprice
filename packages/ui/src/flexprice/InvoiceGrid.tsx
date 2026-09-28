@@ -13,6 +13,7 @@ import {
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
+import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { useRef, useState } from 'react'
 import { Button } from '@ui/primitives/button'
@@ -317,7 +318,15 @@ export function InvoiceGrid({
           dense: true,
         }}
       >
-        <DataGridTable />
+        {/* Bounded scroll region so the pagination below stays pinned in view.
+            The wrapper makes ReUI's scroll-area root the flex-1 item — its
+            className lands on an inner node — so it shrinks and scrolls instead
+            of pushing the footer off-screen on a tall list. */}
+        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+          <DataGridScrollArea className="min-h-0 flex-1">
+            <DataGridTable />
+          </DataGridScrollArea>
+        </div>
         <DataGridPagination />
       </DataGrid>
     </div>

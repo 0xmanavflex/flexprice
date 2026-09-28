@@ -12,6 +12,7 @@ import {
 } from '@fp/domain'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
+import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/primitives/card'
@@ -129,13 +130,13 @@ export function CouponGrid({
         },
         {
           id: 'discount',
-          meta: { skeleton: <Skeleton className="ml-auto h-4 w-16" />, headerClassName: 'text-right [&>div]:justify-end' },
+          meta: { skeleton: <Skeleton className="h-4 w-16" /> },
           accessorFn: (row: Coupon) => (row.type === CouponType.Percentage ? row.percentageOff : row.amountOff?.amount),
           header: ({ column }: never) => <DataGridColumnHeader title="Discount" column={column} />,
           cell: ({ row }: { row: { original: Coupon } }) => (
-            <div className="text-right tabular-nums">
+            <span className="tabular-nums">
               <DiscountCell coupon={row.original} locale={locale} />
-            </div>
+            </span>
           ),
           enableSorting: false,
           size: 120,
@@ -153,13 +154,13 @@ export function CouponGrid({
         },
         {
           id: 'redemptions',
-          meta: { skeleton: <Skeleton className="ml-auto h-4 w-16" />, headerClassName: 'text-right [&>div]:justify-end' },
+          meta: { skeleton: <Skeleton className="h-4 w-16" /> },
           accessorFn: (row: Coupon) => row.totalRedemptions,
           header: ({ column }: never) => <DataGridColumnHeader title="Redemptions" column={column} />,
           cell: ({ row }: { row: { original: Coupon } }) => (
-            <div className="text-right tabular-nums text-muted-foreground">
+            <span className="tabular-nums text-muted-foreground">
               {redemptionsLabel(row.original, locale)}
-            </div>
+            </span>
           ),
           enableSorting: false,
           size: 140,
@@ -300,16 +301,31 @@ export function CouponGrid({
           dense: true,
         }}
       >
+        {/* The table/cards scroll within a bounded region so the pagination
+            footer below stays pinned in view instead of being pushed off the
+            bottom when the list is taller than the screen — the same pattern the
+            feature and plan grids use. */}
         {query.view === CouponView.Cards ? (
-          <CouponCards
-            coupons={coupons}
-            isLoading={isLoading}
-            onCouponClick={onCouponClick}
-            onClearFilters={onClearFilters}
-            locale={locale}
-          />
+          <div className="min-h-0 flex-1 overflow-y-auto">
+            <CouponCards
+              coupons={coupons}
+              isLoading={isLoading}
+              onCouponClick={onCouponClick}
+              onClearFilters={onClearFilters}
+              locale={locale}
+            />
+          </div>
         ) : (
-          <DataGridTable />
+          // ReUI's DataGridScrollArea puts `className` on an inner node, so its
+          // own root div never becomes the flex-1 item — it sizes to content and
+          // the footer below is pushed off-screen once the list is taller than
+          // the viewport. This wrapper makes the root (`> div`) the flex child
+          // that fills and scrolls, keeping the pagination pinned in view.
+          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+            <DataGridScrollArea className="min-h-0 flex-1">
+              <DataGridTable />
+            </DataGridScrollArea>
+          </div>
         )}
         <GridFooter
           fitToWindow={fitToWindow}
