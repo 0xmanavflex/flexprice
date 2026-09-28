@@ -1,13 +1,7 @@
 import { useState } from 'react'
 import { type CreatePriceUnit, type PriceUnit, type PriceUnitQuery } from '@fp/domain'
-import {
-  ApiError,
-  useCatalogStats,
-  useCreatePriceUnit,
-  usePriceUnits,
-  useUpdatePriceUnit,
-} from '@fp/query'
-import { PriceUnitEditorSheet, PriceUnitFilters, PriceUnitGrid, StatCards } from '@fp/ui/flexprice'
+import { ApiError, useCreatePriceUnit, usePriceUnits, useUpdatePriceUnit } from '@fp/query'
+import { PriceUnitEditorSheet, PriceUnitFilters, PriceUnitGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
 import { CoinsIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -31,7 +25,6 @@ type Editing = { mode: 'create' } | { mode: 'edit'; priceUnit: PriceUnit } | nul
  */
 export function PriceUnitListPage({ query, onQueryChange }: PriceUnitListPageProps) {
   const priceUnits = usePriceUnits(query)
-  const stats = useCatalogStats('priceUnits')
   const create = useCreatePriceUnit()
   const update = useUpdatePriceUnit()
 
@@ -68,17 +61,6 @@ export function PriceUnitListPage({ query, onQueryChange }: PriceUnitListPagePro
       />
 
       <PageBody>
-        {stats.total !== 0 ? (
-          <StatCards
-            isLoading={stats.isPending}
-            stats={[
-              { label: 'Price units', value: stats.total },
-              { label: 'Published', value: stats.published },
-              { label: 'Archived', value: stats.archived },
-            ]}
-          />
-        ) : null}
-
         <ListState
           isLoading={priceUnits.isPending}
           error={failure}
