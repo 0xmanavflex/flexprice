@@ -7,19 +7,22 @@
  * that opens from a 36px sidebar row should not feel like a different
  * component when it opens from the header.
  *
- * The primitive's defaults are tuned for a dense desktop menu bar: `p-1`
- * around `py-1` rows, which at this size reads as cramped rather than compact.
- * These loosen it to match the rows the menus open from, and round the
- * corners to match the shell's own.
+ * The surface itself — corner, inset and float-shadow — is now one rule in
+ * `styles.css` shared with the sort menu, the selects and the filter popover, so
+ * every menu in the app opens the same shape. What is left here is only what is
+ * particular to a shell menu: a comfortable minimum width, and rows at the
+ * sidebar's own height (below), since the primitive's `p-1`/`py-1` default reads
+ * cramped at this size.
  */
-export const MENU_CONTENT = 'min-w-60 rounded-3xl p-2 shadow-xl'
+export const MENU_CONTENT = 'min-w-60'
 
 /**
- * Rows at the sidebar's own height, and rounded nearly as much as the menu
- * that holds them — Flux's proportion, where a selected row is a soft pill
- * filling the panel rather than a thin highlighted line inside it.
+ * Rows at the sidebar's own height. The radius, inset and float-shadow now come
+ * from the one menu-surface rule in `styles.css` (so this menu matches the sort
+ * menu, the selects and the filter popover); this sets only what is this menu's
+ * own — its comfortable row height and gap.
  */
-export const MENU_ITEM = 'gap-2.5 rounded-2xl px-3 py-2.5'
+export const MENU_ITEM = 'gap-2.5 px-3 py-2.5'
 
 /** Section headings inside a menu. Quieter than the rows they introduce. */
 export const MENU_LABEL = 'px-3 py-1.5 text-muted-foreground text-xs font-normal'

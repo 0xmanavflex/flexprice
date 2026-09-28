@@ -74,7 +74,7 @@ export function SortMenu<T extends string>({
         Sort
       </DropdownMenuTrigger>
 
-      <DropdownMenuContent align={align} sideOffset={8} className="min-w-52 rounded-2xl p-1.5">
+      <DropdownMenuContent align={align} sideOffset={8} className="min-w-52">
         <DropdownMenuGroup>
           <DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-normal text-muted-foreground">
             Sort by
@@ -87,7 +87,7 @@ export function SortMenu<T extends string>({
               <DropdownMenuRadioItem
                 key={option.value}
                 value={option.value}
-                className="gap-2 rounded-xl px-2.5 py-2"
+                className="gap-2 px-2.5 py-2"
               >
                 {option.label}
               </DropdownMenuRadioItem>
@@ -102,11 +102,11 @@ export function SortMenu<T extends string>({
             value={direction}
             onValueChange={(value) => onChange(field, value as 'asc' | 'desc')}
           >
-            <DropdownMenuRadioItem value="asc" className="gap-2 rounded-xl px-2.5 py-2">
+            <DropdownMenuRadioItem value="asc" className="gap-2 px-2.5 py-2">
               <ArrowUpIcon aria-hidden className="size-4" />
               Ascending
             </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="desc" className="gap-2 rounded-xl px-2.5 py-2">
+            <DropdownMenuRadioItem value="desc" className="gap-2 px-2.5 py-2">
               <ArrowDownIcon aria-hidden className="size-4" />
               Descending
             </DropdownMenuRadioItem>

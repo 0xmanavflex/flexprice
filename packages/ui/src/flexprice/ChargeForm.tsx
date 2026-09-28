@@ -232,7 +232,13 @@ export function ChargeForm({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
                   <SelectTrigger id={id} className="w-full">
-                    <SelectValue />
+                    {/* Base UI's SelectValue renders the raw value; show the
+                        humanized label the options use, not `MONTHLY`. */}
+                    <SelectValue>
+                      {(value) =>
+                        value ? BILLING_PERIOD_LABEL[value as keyof typeof BILLING_PERIOD_LABEL] : null
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {periods.map((period) => (
@@ -353,7 +359,11 @@ export function ChargeForm({
                     disabled={isSubmitting}
                   >
                     <SelectTrigger id={id} className="w-full">
-                      <SelectValue />
+                      <SelectValue>
+                        {(value) =>
+                          value ? TIER_MODE_LABEL[value as keyof typeof TIER_MODE_LABEL] : null
+                        }
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {TIER_MODES.map((mode) => (
@@ -395,7 +405,11 @@ export function ChargeForm({
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
                   <SelectTrigger id={id} className="w-full">
-                    <SelectValue />
+                    <SelectValue>
+                      {(value) =>
+                        value ? INVOICE_CADENCE_LABEL[value as keyof typeof INVOICE_CADENCE_LABEL] : null
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {[InvoiceCadence.Advance, InvoiceCadence.Arrear].map((cadence) => (
