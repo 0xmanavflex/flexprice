@@ -9,6 +9,7 @@ import {
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
+import { nameContainsFilter } from './search'
 
 /**
  * Add-ons: the translation between product vocabulary and the API.
@@ -59,7 +60,7 @@ export function toAddonFilter(query: AddonQuery): Record<string, unknown> {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
-    ...(query.search ? { nameContains: query.search } : {}),
+    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
   }
 }
 

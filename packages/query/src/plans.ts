@@ -10,6 +10,7 @@ import {
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
+import { nameContainsFilter } from './search'
 
 /**
  * Plans: the translation between product vocabulary and the API.
@@ -89,7 +90,7 @@ export function toPlanFilter(query: PlanQuery): Record<string, unknown> {
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     expand: 'prices',
-    ...(query.search ? { nameContains: query.search } : {}),
+    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
   }
 }
 
@@ -263,11 +264,18 @@ export interface PlanSubscriptionRow {
 /**
  * The subscriptions currently on a plan.
  *
- * Reached through `POST /subscriptions/search` scoped by `plan_id`; scoping is
+ * Reached through `POST /subscriptions/search` scoped to this plan; scoping is
  * what makes the rail count *this* plan's subscribers rather than the whole
  * book. A generous `limit` because the rail tallies them — a plan's subscriber
  * list is a page, not a stream — and the status field is read under a few
  * spellings, since the capture and the SDK camelCasing disagree on it.
+ *
+ * The scope key is `planId`, **camelCase**. The SDK parses this body through a
+ * generated zod schema that strips undeclared keys, and `SubscriptionFilter`
+ * declares `planId` (remapped to `plan_id` on the wire). A literal `plan_id`
+ * here is silently dropped: verified live, the request left as `{limit: 100}`
+ * and the rail counted every subscription in the tenant. The MSW handler
+ * accepts both spellings, so no test could catch it.
  */
 export function usePlanSubscriptions(planId: string) {
   const client = useFlexprice()
@@ -276,7 +284,7 @@ export function usePlanSubscriptions(planId: string) {
     queryKey: queryKeys.subscriptions.list({ planId }),
     queryFn: async () => {
       const response = (await call(() =>
-        client.subscriptions.querySubscription({ plan_id: planId, limit: 100 } as never),
+        client.subscriptions.querySubscription({ planId, limit: 100 } as never),
       )) as { items?: unknown[] }
 
       return (response.items ?? []).map((item): PlanSubscriptionRow => {

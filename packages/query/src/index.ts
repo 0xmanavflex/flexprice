@@ -23,8 +23,17 @@ export { createQueryClient, shouldRetry } from './client'
 // which the boundary rule forbids. The error shape is part of the door.
 export { ApiError, ErrorKind } from '@fp/api'
 
-export { FlexpriceProvider, useFlexprice } from './provider'
+export { FlexpriceProvider, useFlexprice, useFlexpriceServerURL } from './provider'
 export type { FlexpriceProviderProps } from './provider'
+
+export {
+  toEnvironment,
+  useCreateEnvironment,
+  useCurrentUser,
+  useEnvironmentList,
+  useSignIn,
+} from './session'
+export type { CurrentUser, SessionCredentials } from './session'
 
 export { fetchInvoices, isServerFilterable, toInvoice, toInvoiceFilter, useInvoices } from './invoices'
 export type { InvoicePage, InvoiceWire } from './invoices'

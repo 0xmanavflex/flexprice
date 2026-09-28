@@ -13,6 +13,7 @@ import {
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
+import { nameContainsFilter } from './search'
 
 /**
  * Coupons: the translation between product vocabulary and the API.
@@ -78,8 +79,7 @@ export function toCoupon(wire: CouponWire): Coupon {
     amountOff: type === CouponType.Fixed ? moneyOr(wire.amountOff, wire.currency) : null,
     percentageOff: type === CouponType.Percentage ? (wire.percentageOff ?? '0') : null,
     cadence,
-    durationInPeriods:
-      cadence === CouponCadence.Repeated ? (wire.durationInPeriods ?? null) : null,
+    durationInPeriods: cadence === CouponCadence.Repeated ? (wire.durationInPeriods ?? null) : null,
     maxRedemptions: wire.maxRedemptions ?? null,
     totalRedemptions: wire.totalRedemptions ?? 0,
     redeemAfter: toDate(wire.redeemAfter),
@@ -102,7 +102,7 @@ export function toCouponFilter(query: CouponQuery): Record<string, unknown> {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
-    ...(query.search ? { nameContains: query.search } : {}),
+    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
   }
 }
 

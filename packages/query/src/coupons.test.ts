@@ -56,7 +56,11 @@ describe('toCoupon', () => {
   })
 
   it('falls back to safe defaults for unknown enum values', () => {
-    const coupon = toCoupon({ type: 'mystery', cadence: 'sometimes', status: 'deleted' } as CouponWire)
+    const coupon = toCoupon({
+      type: 'mystery',
+      cadence: 'sometimes',
+      status: 'deleted',
+    } as CouponWire)
     expect(coupon.type).toBe(CouponType.Fixed)
     expect(coupon.cadence).toBe(CouponCadence.Once)
     expect(coupon.status).toBe(CouponStatus.Published)
@@ -66,7 +70,13 @@ describe('toCoupon', () => {
 
 describe('toCouponFilter', () => {
   it('maps a domain sort field to its wire name and computes the offset', () => {
-    const filter = toCouponFilter({ ...DEFAULT_COUPON_QUERY, page: 3, pageSize: 25, sortBy: 'updatedAt', sortDirection: 'desc' })
+    const filter = toCouponFilter({
+      ...DEFAULT_COUPON_QUERY,
+      page: 3,
+      pageSize: 25,
+      sortBy: 'updatedAt',
+      sortDirection: 'desc',
+    })
     expect(filter).toMatchObject({
       limit: 25,
       offset: 50,
@@ -75,10 +85,17 @@ describe('toCouponFilter', () => {
   })
 
   it('omits the search key when the query has no search term', () => {
-    expect(toCouponFilter(DEFAULT_COUPON_QUERY)).not.toHaveProperty('nameContains')
-    expect(toCouponFilter({ ...DEFAULT_COUPON_QUERY, search: 'launch' })).toHaveProperty(
-      'nameContains',
-      'launch',
-    )
+    expect(toCouponFilter(DEFAULT_COUPON_QUERY)).not.toHaveProperty('filters')
+  })
+
+  // `CouponFilter` has no `nameContains`, and the SDK strips keys its generated
+  // schema does not declare — so a name search has to go through the filter DSL
+  // or it never reaches the network at all.
+  it('searches by name through the filter DSL', () => {
+    expect(toCouponFilter({ ...DEFAULT_COUPON_QUERY, search: 'launch' })).toMatchObject({
+      filters: [
+        { field: 'name', operator: 'contains', dataType: 'string', value: { string: 'launch' } },
+      ],
+    })
   })
 })

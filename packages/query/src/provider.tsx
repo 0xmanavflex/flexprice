@@ -3,7 +3,19 @@ import { QueryClientProvider, type QueryClient } from '@tanstack/react-query'
 import { type AuthSource, type Flexprice, createFlexpriceClient } from '@fp/api'
 import { createQueryClient } from './client'
 
-const FlexpriceContext = createContext<Flexprice | null>(null)
+interface FlexpriceContextValue {
+  client: Flexprice
+  /**
+   * Carried alongside the client because the session-bootstrap routes are not
+   * on it: `/auth/login`, `/users/me` and `/environments` are absent from the
+   * OpenAPI document, so `@fp/api` reaches them with `fetch` and needs to be
+   * told where. Reading the URL from context rather than a second env import
+   * keeps one source of truth for which region the app is pointed at.
+   */
+  serverURL: string
+}
+
+const FlexpriceContext = createContext<FlexpriceContextValue | null>(null)
 
 export interface FlexpriceProviderProps {
   serverURL: string
@@ -39,17 +51,28 @@ export function FlexpriceProvider({
 
   const resolvedQueryClient = useMemo(() => queryClient ?? createQueryClient(), [queryClient])
 
+  const value = useMemo(() => ({ client, serverURL }), [client, serverURL])
+
   return (
     <QueryClientProvider client={resolvedQueryClient}>
-      <FlexpriceContext.Provider value={client}>{children}</FlexpriceContext.Provider>
+      <FlexpriceContext.Provider value={value}>{children}</FlexpriceContext.Provider>
     </QueryClientProvider>
   )
 }
 
-export function useFlexprice(): Flexprice {
-  const client = useContext(FlexpriceContext)
-  if (!client) {
+function useFlexpriceContext(): FlexpriceContextValue {
+  const value = useContext(FlexpriceContext)
+  if (!value) {
     throw new Error('useFlexprice must be used inside <FlexpriceProvider>.')
   }
-  return client
+  return value
+}
+
+export function useFlexprice(): Flexprice {
+  return useFlexpriceContext().client
+}
+
+/** Where this console is pointed. Only the session-bootstrap hooks need it. */
+export function useFlexpriceServerURL(): string {
+  return useFlexpriceContext().serverURL
 }

@@ -2,6 +2,7 @@ import {
   createRootRoute,
   createRoute,
   createRouter,
+  redirect,
   stripSearchParams,
   useNavigate,
   useRouterState,
@@ -10,7 +11,9 @@ import {
 import { Outlet } from '@tanstack/react-router'
 import { lazy, Suspense } from 'react'
 import { AppFailure, LoadingRows } from '@fp/ui/compositions'
+import { useCurrentUser } from '@fp/query'
 import { ConsoleShell } from './shell/ConsoleShell'
+import { hasSession, needsSignIn, useSession } from './session'
 import { useEnvironments } from './shell/useEnvironments'
 import type { InvoiceQuery } from '@fp/domain'
 const InvoiceListPage = lazy(() =>
@@ -127,17 +130,41 @@ const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
 const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
+/*
+ * Not lazy, unlike every other page.
+ *
+ * It is the first thing a signed-out visitor sees, so putting it behind a
+ * second network round trip buys a blank screen on the one route that has no
+ * shell to render a spinner into.
+ */
+import { SignInPage } from '@/pages/auth/SignInPage'
 
 /**
- * The shell wraps every route.
+ * The shell wraps every route except the ones you can reach signed out.
+ *
+ * It is the component of a *pathless* layout route rather than of the root, so
+ * that `/sign-in` can be a sibling of the whole console instead of a page
+ * inside it. A sign-in screen with a sidebar behind it offers navigation to
+ * someone who cannot navigate anywhere, which is both a lie and a flash of
+ * someone else's data if the previous user's chunks are still cached.
  *
  * The environment list lives in `useEnvironments`, which is also the one place
  * that records why it is not yet a request — see the note there.
  */
-function RootLayout() {
+function ShellLayout() {
   const navigate = useNavigate()
   const { pathname } = useRouterState({ select: (state) => state.location })
   const environments = useEnvironments()
+  const { session, signOut } = useSession()
+  /*
+   * Who is signed in, when anyone is.
+   *
+   * The hook is a no-op without a token, so under mocks and behind an API key
+   * this costs nothing and simply never resolves — which is why the fallbacks
+   * below are the normal case there rather than an error state.
+   */
+  const currentUser = useCurrentUser(session?.token ?? null)
+  const user = currentUser.data
 
   return (
     <ConsoleShell
@@ -148,20 +175,43 @@ function RootLayout() {
       onEnvironmentChange={environments.select}
       onEnvironmentCreate={environments.create}
       canCreateProduction={environments.canCreateProduction}
-      // Placeholder until the session lands — `auth.go` is 0 of 2 annotated,
-      // so there is no documented way to ask who is signed in yet.
-      user={{ name: 'Signed in', email: 'you@flexprice.io', organization: 'Flexprice' }}
+      /*
+       * The email is the name until `/users/me` says otherwise: it is the one
+       * thing the person definitely recognises as theirs, and it is what they
+       * just typed. Inventing a display name would be worse than showing none.
+       */
+      user={{
+        name: user?.email ?? 'Signed in',
+        email: user?.email ?? '',
+        ...(user?.tenantName ? { organization: user.tenantName } : {}),
+      }}
+      onSignOut={() => {
+        signOut()
+        void navigate({ to: '/sign-in', search: {} as never })
+      }}
     >
       {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
-      <Suspense fallback={<div className="p-6"><LoadingRows /></div>}>
+      <Suspense
+        fallback={
+          <div className="p-6">
+            <LoadingRows />
+          </div>
+        }
+      >
         <Outlet />
       </Suspense>
     </ConsoleShell>
   )
 }
 
+/**
+ * The root holds nothing but an outlet.
+ *
+ * Everything visible moved down to `shellRoute`, because the root is the only
+ * place `/sign-in` can live without the shell around it.
+ */
 const rootRoute = createRootRoute({
-  component: RootLayout,
+  component: () => <Outlet />,
   /**
    * Without this a thrown route — including a rejected lazy import — renders
    * nothing at all, and a crash is indistinguishable from an empty list.
@@ -182,10 +232,69 @@ const rootRoute = createRootRoute({
       title="This page could not be loaded"
       detail="The rest of the console still works. Try again, or pick another page."
       onRetry={reset}
-      {...(import.meta.env.DEV && error instanceof Error ? { technical: error.stack ?? error.message } : {})}
+      {...(import.meta.env.DEV && error instanceof Error
+        ? { technical: error.stack ?? error.message }
+        : {})}
     />
   ),
 })
+
+/**
+ * The console proper: every route that requires a session.
+ *
+ * A pathless layout route — it contributes no path segment, only the shell and
+ * the guard. Adding a route to the console means parenting it here; a route
+ * parented to `rootRoute` is deliberately opting out of both.
+ */
+const shellRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  id: '_shell',
+  /**
+   * The guard, in `beforeLoad` rather than in a component.
+   *
+   * A guard that runs during render has already mounted the shell, so a
+   * signed-out visitor sees the sidebar and a flash of empty lists before being
+   * moved on. `beforeLoad` runs before any of that, and it can do so
+   * synchronously because the session lives in `localStorage` — see
+   * `session/guard.ts` for why mocks and an API key are exempt.
+   *
+   * The address being turned away is carried along, so a bookmarked
+   * `/invoices?status=overdue` still resolves after signing in instead of
+   * dumping the user on the home page.
+   */
+  beforeLoad: ({ location }) => {
+    if (needsSignIn()) {
+      throw redirect({ to: '/sign-in', search: { redirect: location.href } })
+    }
+  },
+  component: ShellLayout,
+})
+
+/**
+ * Sign in — the one route outside the shell.
+ *
+ * Already signed in, it steps aside rather than offering a second sign-in: a
+ * form that re-authenticates a user who is already authenticated is a way to
+ * lose a working session to a typo. It steps aside only for a *real* session,
+ * not for the bypasses — under mocks there is nobody signed in, and the page
+ * still has to be reachable for the fixture-backed end-to-end suite.
+ */
+const signInRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sign-in',
+  validateSearch: (search: Record<string, unknown>): { redirect: string | undefined } => ({
+    redirect: typeof search['redirect'] === 'string' ? search['redirect'] : undefined,
+  }),
+  beforeLoad: () => {
+    if (hasSession()) throw redirect({ to: '/' })
+  },
+  component: SignInRouteComponent,
+})
+
+function SignInRouteComponent() {
+  const { redirect: target } = signInRoute.useSearch()
+  return <SignInPage redirect={target} />
+}
 
 /**
  * Every destination in the sidebar resolves to something.
@@ -201,7 +310,7 @@ const rootRoute = createRootRoute({
  */
 const placeholderRoutes = PLACEHOLDER_ROUTES.map((entry) =>
   createRoute({
-    getParentRoute: () => rootRoute,
+    getParentRoute: () => shellRoute,
     path: entry.path,
     component: () => (
       <PlaceholderPage
@@ -225,10 +334,9 @@ const placeholderRoutes = PLACEHOLDER_ROUTES.map((entry) =>
  * hand-edited URL degrades to defaults rather than throwing.
  */
 const invoicesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/invoices',
-  validateSearch: (search: Record<string, unknown>): InvoiceQuery =>
-    parseInvoiceSearch(search),
+  validateSearch: (search: Record<string, unknown>): InvoiceQuery => parseInvoiceSearch(search),
   /**
    * Keep defaults out of the address bar.
    *
@@ -274,7 +382,7 @@ function InvoicesRouteComponent() {
  * route owns workflow state.
  */
 const subscriptionCreateRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/subscriptions/new',
   validateSearch: (search: Record<string, unknown>) => ({ step: parseStep(search['step']) }),
   component: SubscriptionCreateRouteComponent,
@@ -319,7 +427,7 @@ function SubscriptionCreateRouteComponent() {
  * filtered list is a link — which V1's version cannot produce.
  */
 const featuresRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/features',
   validateSearch: (search: Record<string, unknown>): FeatureQuery => parseFeatureSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_FEATURE_QUERY)] },
@@ -333,9 +441,7 @@ function FeaturesRouteComponent() {
   return (
     <FeatureListPage
       query={query}
-      onQueryChange={(next) =>
-        void navigate({ to: '/features', search: next, replace: true })
-      }
+      onQueryChange={(next) => void navigate({ to: '/features', search: next, replace: true })}
       onCreate={() => void navigate({ to: '/features/new' })}
       onOpenFeature={(feature) =>
         void navigate({ to: '/features/$featureId', params: { featureId: feature.id } })
@@ -345,7 +451,7 @@ function FeaturesRouteComponent() {
 }
 
 const featureCreateRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/features/new',
   component: FeatureCreateRouteComponent,
 })
@@ -359,7 +465,7 @@ function FeatureCreateRouteComponent() {
 
 /** The feature detail page. `/features/$featureId` — the id is a path param. */
 const featureDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/features/$featureId',
   component: FeatureDetailRouteComponent,
 })
@@ -384,7 +490,7 @@ function FeatureDetailRouteComponent() {
  * over the list (see `PlanListPage`); the charges editor is a later surface.
  */
 const plansRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/plans',
   validateSearch: (search: Record<string, unknown>): PlanQuery => parsePlanSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_PLAN_QUERY)] },
@@ -415,7 +521,7 @@ function PlansRouteComponent() {
  * a plan is the work, not an aside to it.
  */
 const planDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/plans/$planId',
   validateSearch: (search: Record<string, unknown>): { tab: PlanTab } => ({
     tab: parsePlanTab(search['tab']),
@@ -455,7 +561,7 @@ function PlanDetailRouteComponent() {
 }
 
 const planChargesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/plans/$planId/charges',
   component: PlanChargesRouteComponent,
 })
@@ -477,7 +583,7 @@ function PlanChargesRouteComponent() {
  * happens in a drawer over the list — see `AddonListPage`.
  */
 const addonsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/addons',
   validateSearch: (search: Record<string, unknown>): AddonQuery => parseAddonSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_ADDON_QUERY)] },
@@ -501,7 +607,7 @@ function AddonsRouteComponent() {
 
 /** The add-on detail page. `/addons/$addonId` — view, and edit its details in place. */
 const addonDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/addons/$addonId',
   component: AddonDetailRouteComponent,
 })
@@ -527,7 +633,7 @@ function AddonDetailRouteComponent() {
  * a rename (the discount is immutable), so it stays a drawer over the detail.
  */
 const couponsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/coupons',
   validateSearch: (search: Record<string, unknown>): CouponQuery => parseCouponSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_COUPON_QUERY)] },
@@ -551,7 +657,7 @@ function CouponsRouteComponent() {
 }
 
 const couponDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/coupons/$couponId',
   component: CouponDetailRouteComponent,
 })
@@ -577,7 +683,7 @@ function CouponDetailRouteComponent() {
  * (see `PriceUnitListPage`).
  */
 const priceUnitsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/price-units',
   validateSearch: (search: Record<string, unknown>): PriceUnitQuery => parsePriceUnitSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_PRICE_UNIT_QUERY)] },
@@ -601,7 +707,7 @@ function PriceUnitsRouteComponent() {
 
 /** The price-unit detail page. `/price-units/$priceUnitId` — view, and edit in place. */
 const priceUnitDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/price-units/$priceUnitId',
   component: PriceUnitDetailRouteComponent,
 })
@@ -625,7 +731,7 @@ function PriceUnitDetailRouteComponent() {
  * hand the page its query.
  */
 const groupsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/groups',
   validateSearch: (search: Record<string, unknown>): GroupQuery => parseGroupSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_GROUP_QUERY)] },
@@ -640,14 +746,16 @@ function GroupsRouteComponent() {
     <GroupListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
-      onOpenGroup={(group) => void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })}
+      onOpenGroup={(group) =>
+        void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })
+      }
     />
   )
 }
 
 /** The group detail page. `/groups/$groupId` — a read-only view for now. */
 const groupDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/groups/$groupId',
   component: GroupDetailRouteComponent,
 })
@@ -665,7 +773,7 @@ function GroupDetailRouteComponent() {
 }
 
 const costSheetsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/cost-sheets',
   validateSearch: (search: Record<string, unknown>): CostSheetQuery => parseCostSheetSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_COST_SHEET_QUERY)] },
@@ -689,7 +797,7 @@ function CostSheetsRouteComponent() {
 
 /** The cost-sheet detail page. `/cost-sheets/$costSheetId` — a read-only view for now. */
 const costSheetDetailRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/cost-sheets/$costSheetId',
   component: CostSheetDetailRouteComponent,
 })
@@ -714,7 +822,7 @@ function CostSheetDetailRouteComponent() {
  * sample data until it is wired to real revenue and usage.
  */
 const homeRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/',
   component: HomePage,
 })
@@ -726,7 +834,7 @@ const homeRoute = createRoute({
  * header opens the existing create wizard.
  */
 const customersRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/customers',
   validateSearch: (search: Record<string, unknown>): CustomerQuery => parseCustomerSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_CUSTOMER_QUERY)] },
@@ -746,7 +854,7 @@ function CustomersRouteComponent() {
 }
 
 const subscriptionsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/subscriptions',
   validateSearch: (search: Record<string, unknown>): SubscriptionQuery =>
     parseSubscriptionSearch(search),
@@ -768,7 +876,7 @@ function SubscriptionsRouteComponent() {
 }
 
 const paymentsRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/payments',
   validateSearch: (search: Record<string, unknown>): PaymentQuery => parsePaymentSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_PAYMENT_QUERY)] },
@@ -788,7 +896,7 @@ function PaymentsRouteComponent() {
 }
 
 const taxesRoute = createRoute({
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => shellRoute,
   path: '/taxes',
   validateSearch: (search: Record<string, unknown>): TaxRateQuery => parseTaxSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_TAX_RATE_QUERY)] },
@@ -808,32 +916,35 @@ function TaxesRouteComponent() {
 }
 
 export const routeTree = rootRoute.addChildren([
-  homeRoute,
-  featuresRoute,
-  featureCreateRoute,
-  featureDetailRoute,
-  plansRoute,
-  // The charges route is registered before the detail route so `/plans/x/charges`
-  // is matched by it, not swallowed as a `$planId` of "x/charges".
-  planChargesRoute,
-  planDetailRoute,
-  addonsRoute,
-  addonDetailRoute,
-  couponsRoute,
-  couponDetailRoute,
-  priceUnitsRoute,
-  priceUnitDetailRoute,
-  groupsRoute,
-  groupDetailRoute,
-  costSheetsRoute,
-  costSheetDetailRoute,
-  customersRoute,
-  subscriptionsRoute,
-  invoicesRoute,
-  paymentsRoute,
-  taxesRoute,
-  subscriptionCreateRoute,
-  ...placeholderRoutes,
+  signInRoute,
+  shellRoute.addChildren([
+    homeRoute,
+    featuresRoute,
+    featureCreateRoute,
+    featureDetailRoute,
+    plansRoute,
+    // The charges route is registered before the detail route so `/plans/x/charges`
+    // is matched by it, not swallowed as a `$planId` of "x/charges".
+    planChargesRoute,
+    planDetailRoute,
+    addonsRoute,
+    addonDetailRoute,
+    couponsRoute,
+    couponDetailRoute,
+    priceUnitsRoute,
+    priceUnitDetailRoute,
+    groupsRoute,
+    groupDetailRoute,
+    costSheetsRoute,
+    costSheetDetailRoute,
+    customersRoute,
+    subscriptionsRoute,
+    invoicesRoute,
+    paymentsRoute,
+    taxesRoute,
+    subscriptionCreateRoute,
+    ...placeholderRoutes,
+  ]),
 ])
 
 export const router = createRouter({ routeTree })

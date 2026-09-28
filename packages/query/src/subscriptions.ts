@@ -72,11 +72,26 @@ const SORT_FIELD: Record<SubscriptionSortField, string> = {
   [SubscriptionSortField.CreatedAt]: 'created_at',
 }
 
+/**
+ * Domain query out, `SubscriptionFilter` in.
+ *
+ * `expand: 'customer,plan'` is load-bearing, not an optimisation. The live
+ * search returns `plan` embedded by default but **not** `customer`, so without
+ * the expand every row arrives with `customer` absent and `toSubscription`
+ * falls all the way through to `customerId` — the Customer column renders a raw
+ * `cust_01M3H…` ULID for every subscription. Verified live: the same request
+ * with `expand: 'customer'` resolves the name to "Test".
+ *
+ * The value is singular. `expand: 'customers'` is accepted and silently does
+ * nothing, which is the failure this comment exists to prevent. `plan` is named
+ * explicitly rather than relied on as a default.
+ */
 export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    expand: 'customer,plan',
   }
 }
 
@@ -92,7 +107,9 @@ export async function fetchSubscriptions(
   const response = await call(() =>
     client.subscriptions.querySubscription(toSubscriptionFilter(query) as never),
   )
-  const subscriptions = (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
+  const subscriptions = (response.items ?? []).map((item) =>
+    toSubscription(item as SubscriptionWire),
+  )
 
   // Neither status nor search is a server-side filter here, so both are applied
   // on the page — the same split coupons and add-ons use.

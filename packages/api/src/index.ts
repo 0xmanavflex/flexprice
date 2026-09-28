@@ -15,7 +15,15 @@
 export { call, createFlexpriceClient } from './client'
 export type { AuthSource, ClientOptions } from './client'
 
-export { ApiError, ErrorKind, toApiError } from './errors'
+export { ApiError, ErrorKind, kindForStatus, readErrorBody, toApiError } from './errors'
+
+/**
+ * Session bootstrap — the four routes missing from the OpenAPI document, and
+ * therefore from the SDK. See `session.ts` for why they are here and what
+ * deletes them.
+ */
+export { createEnvironment, fetchCurrentUser, fetchEnvironments, signIn, signUp } from './session'
+export type { CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
 
 /**
  * The SDK's request and response models, re-exported so the rest of the

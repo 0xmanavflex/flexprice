@@ -28,6 +28,12 @@ interface SearchBody {
   status?: string
   name_contains?: string
   nameContains?: string
+  /**
+   * The generic filter DSL. Plans, add-ons, coupons and price units have no
+   * name-search field, so their search goes through this instead — see
+   * `packages/query/src/search.ts`.
+   */
+  filters?: { field?: string; operator?: string; value?: { string?: string } }[]
   feature_ids?: string[]
   featureIds?: string[]
   /** How the charges/entitlements searches scope to one plan (or add-on). */
@@ -67,7 +73,14 @@ function page(source: Corpus, body: SearchBody) {
     rows = rows.filter((row) => readString(row, 'status') === body.status)
   }
 
-  const search = body.name_contains ?? body.nameContains
+  // A name search arrives one of two ways: `name_contains` (features, which
+  // have the field) or a `contains` condition in the filter DSL (plans,
+  // add-ons, coupons, price units, which do not). Both are honoured so the mock
+  // matches the real API rather than being laxer than it.
+  const dsl = body.filters?.find(
+    (condition) => condition.field === 'name' && condition.operator === 'contains',
+  )
+  const search = body.name_contains ?? body.nameContains ?? dsl?.value?.string
   if (search) {
     const needle = search.toLowerCase()
     rows = rows.filter((row) => readString(row, 'name').toLowerCase().includes(needle))
@@ -83,7 +96,8 @@ function page(source: Corpus, body: SearchBody) {
   if (entityType) rows = rows.filter((row) => readString(row, 'entity_type') === entityType)
 
   const entityIds = body.entity_ids ?? body.entityIds
-  if (entityIds?.length) rows = rows.filter((row) => entityIds.includes(readString(row, 'entity_id')))
+  if (entityIds?.length)
+    rows = rows.filter((row) => entityIds.includes(readString(row, 'entity_id')))
 
   // A plan's subscriptions, for the detail page's "active subscriptions" metric.
   // Scoping here is what makes the rail count *this* plan's subscribers rather
@@ -131,9 +145,7 @@ const search = (path: string, key: string) =>
   http.post(`${BASE}${path}`, async ({ request }) => {
     const body = ((await request.json().catch(() => ({}))) ?? {}) as SearchBody
     const result = page(corpus[key] as Corpus, body)
-    return HttpResponse.json(
-      key === 'features' ? applyFeatureExpand(result, body.expand) : result,
-    )
+    return HttpResponse.json(key === 'features' ? applyFeatureExpand(result, body.expand) : result)
   })
 
 const list = (path: string, key: string) =>
@@ -191,7 +203,68 @@ function couponAssociations(): Record<string, unknown>[] {
   ]
 }
 
+/**
+ * The environment list, served rather than hardcoded in the hook.
+ *
+ * `GET /environments` and `POST /environments` are absent from the OpenAPI
+ * document (`docs/api-contract-gap.md`), so `@fp/api` reaches them with
+ * `fetch` — but from the console's side they are ordinary endpoints, and
+ * mocking them here is what lets `useEnvironments` have exactly one code path
+ * instead of a `env.useMocks` branch that only the real build ever exercises.
+ *
+ * The shape is copied from a live response, keys and all: an `environments`
+ * array beside `total`/`offset`/`limit`, `type` as the wire word
+ * `development` rather than the product's "sandbox", and the timestamps the
+ * API actually sends.
+ *
+ * Two of them, one of each kind, because the thing worth demonstrating is the
+ * switch — and the default-selection rule (prefer the sandbox) has nothing to
+ * choose between with a single row.
+ */
+const environments: Record<string, unknown>[] = [
+  {
+    id: 'env_01KVSNYVPMAP6JJGDF177V2DE6',
+    name: 'Sandbox',
+    type: 'development',
+    created_at: '2026-06-23T07:26:18Z',
+    updated_at: '2026-06-23T07:26:18Z',
+  },
+  {
+    id: 'env_01M020PHF0GF9KP1E9CEVNKJA1',
+    name: 'Production',
+    type: 'production',
+    created_at: '2026-08-15T06:10:42Z',
+    updated_at: '2026-08-15T06:11:02Z',
+  },
+]
+
 export const handlers = [
+  // Environments. Unlike the create handlers further down — which echo the
+  // record back and leave the corpus alone — this one appends, because the
+  // console switches to what you just created and then refetches the list. An
+  // echo-only mock would switch to an id the next list does not contain, and
+  // the hook would correctly treat it as stale and bounce you back out.
+  http.get(`${BASE}/environments`, () =>
+    HttpResponse.json({
+      environments,
+      total: environments.length,
+      offset: 0,
+      limit: 50,
+    }),
+  ),
+  http.post(`${BASE}/environments`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const created = {
+      id: `env_mock_${Date.now()}`,
+      name: readString(body, 'name'),
+      type: readString(body, 'type') || 'development',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    environments.push(created)
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
   search('/customers/search', 'customers'),
   search('/plans/search', 'plans'),
   search('/features/search', 'features'),
@@ -264,17 +337,26 @@ export const handlers = [
     const rows = (corpus['creditgrants'] as Corpus).items.filter(
       (row) => readString(row, 'plan_id') === params['id'],
     )
-    return HttpResponse.json({ items: rows, pagination: { total: rows.length, limit: 25, offset: 0 } })
+    return HttpResponse.json({
+      items: rows,
+      pagination: { total: rows.length, limit: 25, offset: 0 },
+    })
   }),
   http.get(`${BASE}/addons/:id/creditgrants`, ({ params }) => {
     const rows = (corpus['creditgrants'] as Corpus).items.filter(
       (row) => readString(row, 'addon_id') === params['id'],
     )
-    return HttpResponse.json({ items: rows, pagination: { total: rows.length, limit: 25, offset: 0 } })
+    return HttpResponse.json({
+      items: rows,
+      pagination: { total: rows.length, limit: 25, offset: 0 },
+    })
   }),
   http.post(`${BASE}/creditgrants`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json({ ...body, id: `cg_new_${Date.now()}`, status: 'published' }, { status: 201 })
+    return HttpResponse.json(
+      { ...body, id: `cg_new_${Date.now()}`, status: 'published' },
+      { status: 201 },
+    )
   }),
   http.delete(`${BASE}/creditgrants/:id`, ({ params }) =>
     HttpResponse.json({ success: true, id: params['id'] }),
@@ -283,7 +365,10 @@ export const handlers = [
   // Creating a feature echoes it back, so the form's success path completes.
   http.post(`${BASE}/features`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json({ ...body, id: `feat_new_${Date.now()}`, status: 'published' }, { status: 201 })
+    return HttpResponse.json(
+      { ...body, id: `feat_new_${Date.now()}`, status: 'published' },
+      { status: 201 },
+    )
   }),
 
   // Creating and editing an add-on echo the record back, so the drawer's
@@ -339,7 +424,9 @@ export const handlers = [
     const existing = byId('coupons', String(params['id'])) ?? {}
     return HttpResponse.json({ ...existing, ...body, id: params['id'] })
   }),
-  http.delete(`${BASE}/coupons/:id`, ({ params }) => HttpResponse.json({ id: String(params['id']) })),
+  http.delete(`${BASE}/coupons/:id`, ({ params }) =>
+    HttpResponse.json({ id: String(params['id']) }),
+  ),
 
   // Price units, the same way: create echoes the record back, and update — which
   // sends only the name — echoes it beside a fixed identity, so the drawer's
@@ -382,7 +469,11 @@ export const handlers = [
     )
   }),
   http.post(`${BASE}/plans/:id/sync/subscriptions`, ({ params }) =>
-    HttpResponse.json({ workflow_id: `wf_${Date.now()}`, status: 'Running', plan_id: params['id'] }),
+    HttpResponse.json({
+      workflow_id: `wf_${Date.now()}`,
+      status: 'Running',
+      plan_id: params['id'],
+    }),
   ),
   http.delete(`${BASE}/plans/:id`, ({ params }) =>
     HttpResponse.json({ success: true, id: params['id'] }),
