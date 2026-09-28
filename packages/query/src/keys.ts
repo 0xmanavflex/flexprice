@@ -57,6 +57,17 @@ export const queryKeys = {
       ['priceUnits', 'list', filter] as const,
     detail: (id: string) => ['priceUnits', 'detail', id] as const,
   },
+  groups: {
+    all: () => ['groups'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['groups', 'list', filter] as const,
+    detail: (id: string) => ['groups', 'detail', id] as const,
+  },
+  costSheets: {
+    all: () => ['costSheets'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['costSheets', 'list', filter] as const,
+    detail: (id: string) => ['costSheets', 'detail', id] as const,
+  },
   invoices: {
     all: () => ['invoices'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['invoices', 'list', filter] as const,

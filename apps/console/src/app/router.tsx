@@ -61,6 +61,16 @@ const PriceUnitListPage = lazy(() =>
   import('@/pages/price-units/PriceUnitListPage').then((m) => ({ default: m.PriceUnitListPage })),
 )
 import { parsePriceUnitSearch } from './priceUnitSearch'
+import { DEFAULT_GROUP_QUERY, type GroupQuery } from '@fp/domain'
+const GroupListPage = lazy(() =>
+  import('@/pages/groups/GroupListPage').then((m) => ({ default: m.GroupListPage })),
+)
+import { parseGroupSearch } from './groupSearch'
+import { DEFAULT_COST_SHEET_QUERY, type CostSheetQuery } from '@fp/domain'
+const CostSheetListPage = lazy(() =>
+  import('@/pages/cost-sheets/CostSheetListPage').then((m) => ({ default: m.CostSheetListPage })),
+)
+import { parseCostSheetSearch } from './costSheetSearch'
 import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
 const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
@@ -403,6 +413,52 @@ function PriceUnitsRouteComponent() {
   )
 }
 
+/**
+ * Groups and cost sheets: the same URL-as-query contract as the other
+ * catalogue lists. Each is read-only for now — the editor is a later surface,
+ * the way coupons shipped a list before its editor — so the route only has to
+ * hand the page its query.
+ */
+const groupsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/groups',
+  validateSearch: (search: Record<string, unknown>): GroupQuery => parseGroupSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_GROUP_QUERY)] },
+  component: GroupsRouteComponent,
+})
+
+function GroupsRouteComponent() {
+  const query = useSearch({ from: groupsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <GroupListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
+    />
+  )
+}
+
+const costSheetsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cost-sheets',
+  validateSearch: (search: Record<string, unknown>): CostSheetQuery => parseCostSheetSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_COST_SHEET_QUERY)] },
+  component: CostSheetsRouteComponent,
+})
+
+function CostSheetsRouteComponent() {
+  const query = useSearch({ from: costSheetsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <CostSheetListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/cost-sheets', search: next, replace: true })}
+    />
+  )
+}
+
 export const routeTree = rootRoute.addChildren([
   featuresRoute,
   featureCreateRoute,
@@ -410,6 +466,8 @@ export const routeTree = rootRoute.addChildren([
   addonsRoute,
   couponsRoute,
   priceUnitsRoute,
+  groupsRoute,
+  costSheetsRoute,
   invoicesRoute,
   subscriptionCreateRoute,
   ...placeholderRoutes,

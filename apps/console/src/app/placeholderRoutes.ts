@@ -45,26 +45,8 @@ export const PLACEHOLDER_ROUTES = [
   // `/coupons` is a real page now — see `couponsRoute` in router.tsx.
   // `/addons` is a real page now — see `addonsRoute` in router.tsx.
   // `/price-units` is a real page now — see `priceUnitsRoute` in router.tsx.
-  {
-    path: '/cost-sheets',
-    title: 'Cost Sheets',
-    description: 'What each unit of usage costs you, so margin is visible.',
-    emptyTitle: 'No cost sheets yet',
-    emptyDescription:
-      'Cost sheets record what usage costs you, so margin can be measured against what you charge.',
-    cta: 'Create cost sheet',
-    legacy: '/product-catalog/cost-sheets',
-  },
-  {
-    path: '/groups',
-    title: 'Groups',
-    description: 'Collections of features and plans, managed together.',
-    emptyTitle: 'No groups yet',
-    emptyDescription:
-      'Groups bundle features or prices so they report and invoice together.',
-    cta: 'Create group',
-    legacy: '/product-catalog/groups',
-  },
+  // `/cost-sheets` is a real page now — see `costSheetsRoute` in router.tsx.
+  // `/groups` is a real page now — see `groupsRoute` in router.tsx.
   {
     path: '/pricing-widget',
     title: 'Pricing Widget',

@@ -1,0 +1,91 @@
+/**
+ * A group, as the list reads it.
+ *
+ * A group bundles catalogue entities — prices or features — so they can be
+ * filtered, reported and invoiced together, the way a product line or a region
+ * is. A group is of one kind: it holds prices, or it holds features, never both.
+ * V1 keeps the fields across a drawer and a read-only detail page; this is only
+ * the list's read model. The editor that reunites them is a later surface, the
+ * same way plans and add-ons split.
+ *
+ * Two shapes cross this boundary that transport does not: the count of members
+ * is carried as a number (never the wire's `entityIds` array, which the list
+ * never enumerates), and status collapses to the two a catalogue shows.
+ */
+export const GroupStatus = {
+  Published: 'published',
+  Archived: 'archived',
+} as const
+export type GroupStatus = (typeof GroupStatus)[keyof typeof GroupStatus]
+
+export const GROUP_STATUS_LABEL: Record<GroupStatus, string> = {
+  [GroupStatus.Published]: 'Published',
+  [GroupStatus.Archived]: 'Archived',
+}
+
+/** What a group holds. The wire's `entity_type`, unchanged. */
+export const GroupEntityType = {
+  Price: 'price',
+  Feature: 'feature',
+} as const
+export type GroupEntityType = (typeof GroupEntityType)[keyof typeof GroupEntityType]
+
+export const GROUP_ENTITY_TYPE_LABEL: Record<GroupEntityType, string> = {
+  [GroupEntityType.Price]: 'Prices',
+  [GroupEntityType.Feature]: 'Features',
+}
+
+/** The read model the list and cards render. */
+export interface Group {
+  id: string
+  name: string
+  /** The stable key the group is referenced by. Empty when it has none. */
+  lookupKey: string
+  /** Whether the group holds prices or features. */
+  entityType: GroupEntityType
+  /** How many entities the group holds. */
+  entityCount: number
+  status: GroupStatus
+  createdAt: Date | null
+  updatedAt: Date | null
+}
+
+export const GroupSortField = {
+  Name: 'name',
+  CreatedAt: 'createdAt',
+  UpdatedAt: 'updatedAt',
+} as const
+export type GroupSortField = (typeof GroupSortField)[keyof typeof GroupSortField]
+
+export const GROUP_SORT_LABEL: Record<GroupSortField, string> = {
+  [GroupSortField.Name]: 'Name',
+  [GroupSortField.CreatedAt]: 'Created',
+  [GroupSortField.UpdatedAt]: 'Updated',
+}
+
+/** Table or cards. A layout, not a filter — kept out of the fetch key. */
+export const GroupView = {
+  Table: 'table',
+  Cards: 'cards',
+} as const
+export type GroupView = (typeof GroupView)[keyof typeof GroupView]
+
+export interface GroupQuery {
+  page: number
+  pageSize: number
+  search: string
+  statuses: GroupStatus[]
+  sortBy: GroupSortField
+  sortDirection: 'asc' | 'desc'
+  view: GroupView
+}
+
+export const DEFAULT_GROUP_QUERY: GroupQuery = {
+  page: 1,
+  pageSize: 25,
+  search: '',
+  statuses: [],
+  sortBy: GroupSortField.Name,
+  sortDirection: 'asc',
+  view: GroupView.Table,
+}

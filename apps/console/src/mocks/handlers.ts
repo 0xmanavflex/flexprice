@@ -147,6 +147,16 @@ export const handlers = [
     HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
   ),
 
+  // Groups and cost sheets: the capture environment had none, so these return
+  // an empty list — a state worth seeing — rather than a fabricated row. They
+  // disappear when a captured corpus for each lands.
+  http.post(`${BASE}/groups/search`, () =>
+    HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
+  ),
+  http.post(`${BASE}/costs/search`, () =>
+    HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
+  ),
+
   // Creating a feature echoes it back, so the form's success path completes.
   http.post(`${BASE}/features`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
