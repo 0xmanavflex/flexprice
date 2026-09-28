@@ -12,3 +12,6 @@ playwright-report/
 test-results/
 storybook-static/
 .claude/settings.local.json
+
+# Agent worktrees (ephemeral, never commit)
+.claude/worktrees/
