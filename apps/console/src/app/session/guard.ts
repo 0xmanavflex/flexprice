@@ -11,18 +11,21 @@ import { readSession } from './storage'
  * session is in `localStorage`, which is synchronous. `readSession()` and the
  * provider's initial state are the same read, so the two never disagree.
  *
- * Two ways out, and neither is a loophole worth worrying about:
+ * One way out, and it is not a loophole worth worrying about:
  *
- *   - **Mocks.** The fixture corpus answers every request without a token, and
- *     the whole Storybook and end-to-end flow depends on the app being usable
- *     with no account. A sign-in wall in front of a mock backend protects
- *     nothing and breaks everything that is not a browser with a human in it.
  *   - **An API key.** Development only; `env.apiKey` is `null` in a production
  *     build. The key authenticates on its own, so demanding a session as well
  *     would just be a form standing in front of credentials that already work.
+ *
+ * Mocks deliberately do *not* bypass: under `VITE_USE_MOCKS` the console still
+ * shows `/sign-in`, so the mock build demonstrates the sign-in flow. The demo
+ * account (`demo@flexprice.io` / `demo1234`) is pre-filled there and its mock
+ * `/auth/login` returns a token, so one click lands on the fixture-backed
+ * dashboard. Automated suites seed a session directly rather than clicking
+ * through it.
  */
 export function bypassesSignIn(): boolean {
-  return env.useMocks || env.apiKey !== null
+  return env.apiKey !== null
 }
 
 /** True when the visitor must be sent to `/sign-in` before seeing anything. */

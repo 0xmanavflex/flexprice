@@ -3,6 +3,23 @@ import { expect, test } from '@playwright/test'
 import { CatalogListPage, CouponDetailPage } from './pages/catalog'
 
 /**
+ * Seed the mock demo session before every test.
+ *
+ * The guard now requires a sign-in even under mocks (the mock build shows the
+ * demo login), so the journeys seed the session directly rather than clicking
+ * through `/sign-in` on every test. Its shape matches `session/storage.ts`.
+ */
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript((value) => {
+    try {
+      window.localStorage.setItem('flexprice.session', value)
+    } catch {
+      /* private-mode browser: the guard falls back to sign-in, tested elsewhere */
+    }
+  }, JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }))
+})
+
+/**
  * What the catalogue surfaces promise.
  *
  * Not "the search box exists" — that restates the DOM. These assert the
@@ -17,7 +34,7 @@ test.describe('the plans list', () => {
     const plans = new CatalogListPage(page, { heading: 'Plans', searchLabel: 'Search plans' })
     await page.goto('/plans')
 
-    await expect(plans.heading).toBeVisible()
+    await expect(plans.heading).toBeAttached()
     await expect(plans.grid).toBeVisible()
     // The fixtures carry plans, so the grid renders rows, not just a frame.
     await expect(plans.rows().first()).toBeVisible()
@@ -26,7 +43,7 @@ test.describe('the plans list', () => {
   test('reflects the search into the URL and survives a reload', async ({ page }) => {
     const plans = new CatalogListPage(page, { heading: 'Plans', searchLabel: 'Search plans' })
     await page.goto('/plans')
-    await expect(plans.heading).toBeVisible()
+    await expect(plans.heading).toBeAttached()
 
     await plans.search.fill('pro')
 

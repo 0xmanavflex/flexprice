@@ -16,6 +16,22 @@ export const Default: Story = {}
 
 export const Submitting: Story = { args: { isSubmitting: true } }
 
+/**
+ * Seeded initial values.
+ *
+ * Under mocks the app pre-fills demo credentials so someone can reach the
+ * dashboard by clicking Sign in. The seed only has to survive to the inputs.
+ */
+export const Prefilled: Story = {
+  args: { defaultValues: { email: 'demo@flexprice.io', password: 'demo1234' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    await expect(canvas.getByLabelText('Email')).toHaveValue('demo@flexprice.io')
+    await expect(canvas.getByLabelText('Password')).toHaveValue('demo1234')
+  },
+}
+
 export const Failed: Story = {
   args: { error: 'That email and password do not match.' },
   play: async ({ canvasElement }) => {

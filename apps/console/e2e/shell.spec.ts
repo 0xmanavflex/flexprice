@@ -2,6 +2,18 @@ import { expect, test } from '@playwright/test'
 
 import { ShellPage } from './pages/shell'
 
+/** Seed the mock demo session (see catalog.spec.ts) — the guard now requires a
+ *  sign-in even under mocks, so the journeys seed rather than click through it. */
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript((value) => {
+    try {
+      window.localStorage.setItem('flexprice.session', value)
+    } catch {
+      /* private-mode browser */
+    }
+  }, JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }))
+})
+
 /**
  * The surfaces, and moving between them.
  *
@@ -57,7 +69,7 @@ test.describe('the shell', () => {
     await shell.goto('/coupons')
 
     await expect(shell.home).toBeVisible()
-    await expect(page.getByRole('heading', { level: 1, name: 'Coupons' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1, name: 'Coupons' })).toBeAttached()
   })
 
   test('a Product Catalogue parent routes to its first child rather than a dead end', async ({

@@ -2,6 +2,22 @@ import { useNavigate } from '@tanstack/react-router'
 import { ApiError, ErrorKind, useSignIn } from '@fp/query'
 import { SignInScreen } from '@fp/ui/flexprice'
 import { useSession } from '@/app/session'
+import { env } from '@/env'
+
+/**
+ * Demo credentials for mock mode.
+ *
+ * A shared contract with the mock `POST /auth/login` handler: these exact
+ * values are what it accepts, so pre-filling them lets someone reach the
+ * dashboard by clicking **Sign in** with nothing to type. The password is eight
+ * characters, which the domain schema accepts. Kept as a literal rather than an
+ * import because the handler owns its own copy and the two only have to agree on
+ * the string, not the module.
+ */
+const DEMO_CREDENTIALS = { email: 'demo@flexprice.io', password: 'demo1234' } as const
+
+/** Shown only under mocks, so it never appears in front of the live API. */
+const DEMO_HINT = 'Demo mode — the sample data is loaded. Just click Sign in.'
 
 /**
  * Turns a failed sign-in into a sentence worth reading.
@@ -77,9 +93,15 @@ export function SignInPage({ redirect }: SignInPageProps) {
   const session = useSession()
   const signIn = useSignIn()
 
+  // Under mocks the form is seeded and announces itself; against a real API it
+  // stays empty and silent. Spread conditionally rather than passing `undefined`
+  // — the props are exact-optional, so an explicit `undefined` would not type.
+  const demoProps = env.useMocks ? { defaultValues: DEMO_CREDENTIALS, hint: DEMO_HINT } : {}
+
   return (
     <main className="bg-background min-h-svh">
       <SignInScreen
+        {...demoProps}
         isSubmitting={signIn.isPending}
         error={signIn.error ? messageForSignInError(signIn.error) : null}
         onSubmit={(credentials) => {

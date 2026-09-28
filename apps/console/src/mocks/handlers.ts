@@ -265,6 +265,32 @@ export const handlers = [
     return HttpResponse.json(created, { status: 201 })
   }),
 
+  // The mock demo login. `POST /auth/login` takes `{ email, password }` and, on
+  // the live API, returns `{ token, user_id, tenant_id }` — the snake_case keys
+  // `toCredentials` in `@fp/api` reads and maps to `{ token, userId, tenantId }`.
+  // The demo account is the only one that succeeds; every other credential gets
+  // the API's wrong-password answer, a 403 whose `code`/`message`/`http_status_code`
+  // shape `messageForSignInError` collapses to "That email and password do not
+  // match." Under mocks the fixtures are served regardless of the bearer token,
+  // so any valid session is all the route guard needs — this just mints one.
+  http.post(`${BASE}/auth/login`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as {
+      email?: string
+      password?: string
+    }
+    if (body.email === 'demo@flexprice.io' && body.password === 'demo1234') {
+      return HttpResponse.json({
+        token: 'mock_demo_token',
+        user_id: 'user_demo',
+        tenant_id: 'tenant_demo',
+      })
+    }
+    return HttpResponse.json(
+      { code: 'permission_denied', message: 'Failed to get user', http_status_code: 403 },
+      { status: 403 },
+    )
+  }),
+
   search('/customers/search', 'customers'),
   search('/plans/search', 'plans'),
   search('/features/search', 'features'),

@@ -38,6 +38,12 @@ export interface SignInFormProps {
   error?: string | null
   /** Rendered under a divider — SSO, magic link, whatever the deployment has. */
   alternatives?: React.ReactNode
+  /**
+   * Seed the form's initial email/password. Used to pre-fill demo credentials
+   * under mocks; omitted in normal operation so the form starts empty. Only read
+   * on mount, the same as react-hook-form's own defaults.
+   */
+  defaultValues?: { email?: string; password?: string }
 }
 
 export function SignInForm({
@@ -46,13 +52,17 @@ export function SignInForm({
   isSubmitting = false,
   error = null,
   alternatives,
+  defaultValues,
 }: SignInFormProps) {
   const [revealed, setRevealed] = useState(false)
   const passwordRef = useRef<HTMLInputElement | null>(null)
 
   const form = useForm<SignInCredentials>({
     resolver: standardSchemaResolver(signInSchema) as Resolver<SignInCredentials>,
-    defaultValues: { email: '', password: '' },
+    defaultValues: {
+      email: defaultValues?.email ?? '',
+      password: defaultValues?.password ?? '',
+    },
     mode: 'onTouched',
   })
 
@@ -78,10 +88,10 @@ export function SignInForm({
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
       noValidate
       aria-labelledby="sign-in-heading"
-      className="flex w-full max-w-sm flex-col gap-5"
+      className="flex w-full flex-col gap-4"
     >
-      <div className="flex flex-col gap-1">
-        <h1 id="sign-in-heading" className="text-xl font-semibold">
+      <div className="flex flex-col items-center gap-1 text-center">
+        <h1 id="sign-in-heading" className="text-xl font-semibold tracking-tight">
           Sign in to Flexprice
         </h1>
         <p className="text-sm text-muted-foreground">Billing and usage for your product.</p>
@@ -145,16 +155,22 @@ export function SignInForm({
         )}
       </Field>
 
-      <div className="flex items-center justify-between">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Signing in…' : 'Sign in'}
-        </Button>
-        {onForgotPassword ? (
-          <Button type="button" variant="link" size="sm" onClick={onForgotPassword}>
+      {onForgotPassword ? (
+        <div className="-mt-1 flex justify-end">
+          <Button
+            type="button"
+            variant="link"
+            onClick={onForgotPassword}
+            className="text-muted-foreground h-auto p-0 text-xs font-normal"
+          >
             Forgot password?
           </Button>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
+
+      <Button type="submit" disabled={isSubmitting} className="w-full">
+        {isSubmitting ? 'Signing in…' : 'Sign in'}
+      </Button>
 
       {alternatives ? (
         <>
