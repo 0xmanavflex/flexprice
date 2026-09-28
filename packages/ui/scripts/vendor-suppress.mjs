@@ -31,6 +31,9 @@ const VENDORED = [
   // fixture data. They are a starting point to adapt, not code we maintain —
   // same rule, same treatment.
   'src/components/blocks/**/*.{ts,tsx}',
+  // `c-*` examples are the same: vendored reference use-cases we read and adapt,
+  // authored against looser settings than our strict tsconfig.
+  'src/components/examples/**/*.{ts,tsx}',
 ]
 
 const MARKER = '// @ts-nocheck'

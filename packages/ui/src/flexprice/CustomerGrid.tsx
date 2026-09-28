@@ -57,9 +57,10 @@ export interface CustomerGridProps {
   locale?: string
 }
 
-function formatDate(value: Date | null, locale?: string): string {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
+function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
+  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
+  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 export function CustomerGrid({
@@ -87,13 +88,13 @@ export function CustomerGrid({
           // two facts a billing operator scans a customer by, in one cell.
           cell: ({ row }: { row: { original: Customer } }) => (
             <div className="flex min-w-0 flex-col">
-              <span className="truncate font-medium">{row.original.name}</span>
+              <span className="truncate">{row.original.name}</span>
               {row.original.email ? (
                 <span className="truncate text-xs text-muted-foreground">{row.original.email}</span>
               ) : null}
             </div>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 280,
         },
         {
@@ -109,7 +110,7 @@ export function CustomerGrid({
             ) : (
               <span className="text-muted-foreground">—</span>
             ),
-          enableSorting: false,
+          enableSorting: true,
           size: 180,
         },
         {
@@ -123,7 +124,7 @@ export function CustomerGrid({
             ) : (
               <span className="text-muted-foreground">—</span>
             ),
-          enableSorting: false,
+          enableSorting: true,
           size: 120,
         },
         {
@@ -134,7 +135,7 @@ export function CustomerGrid({
           cell: ({ row }: { row: { original: Customer } }) => (
             <CatalogStatusBadge status={row.original.status} />
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 120,
         },
         {
@@ -142,8 +143,10 @@ export function CustomerGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Customer) => row.createdAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
-          cell: ({ row }: { row: { original: Customer } }) => formatDate(row.original.createdAt, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: Customer } }) => (
+            <DateCell value={row.original.createdAt} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
       ] as never,
@@ -203,6 +206,7 @@ export function CustomerGrid({
   return (
     <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
       <GridToolbar
+        heading="Customers"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
         placeholder="Search..."

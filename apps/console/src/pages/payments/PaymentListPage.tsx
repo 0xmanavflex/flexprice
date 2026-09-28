@@ -1,7 +1,7 @@
 import { type PaymentQuery } from '@fp/domain'
 import { ApiError, usePayments } from '@fp/query'
 import { PaymentFilters, PaymentGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { CreditCardIcon } from 'lucide-react'
 
 export interface PaymentListPageProps {
@@ -26,11 +26,6 @@ export function PaymentListPage({ query, onQueryChange }: PaymentListPageProps) 
 
   return (
     <>
-      <PageHeader
-        title="Payments"
-        description="Money received, and anything that failed to collect."
-      />
-
       <PageBody>
         <ListState
           isLoading={payments.isPending}

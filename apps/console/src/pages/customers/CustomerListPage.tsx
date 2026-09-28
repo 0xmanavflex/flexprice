@@ -1,7 +1,7 @@
 import { type CustomerQuery } from '@fp/domain'
 import { ApiError, useCustomers } from '@fp/query'
 import { CustomerFilters, CustomerGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { UsersIcon } from 'lucide-react'
 
 export interface CustomerListPageProps {
@@ -25,11 +25,6 @@ export function CustomerListPage({ query, onQueryChange }: CustomerListPageProps
 
   return (
     <>
-      <PageHeader
-        title="Customers"
-        description="Who you bill — their contact details, and what they are on."
-      />
-
       <PageBody>
         <ListState
           isLoading={customers.isPending}

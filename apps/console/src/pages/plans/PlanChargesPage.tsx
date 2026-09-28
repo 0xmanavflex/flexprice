@@ -8,12 +8,13 @@ import { ChevronLeftIcon } from 'lucide-react'
 /**
  * The charges builder — the plan's `/charges` route.
  *
- * A full-page mount of the two-pane `ChargeEditor`: the plan's name and metered
- * features are fetched here and handed down, and a save commits the drafts
- * through the bulk price endpoint before returning to the detail page. It adds
- * charges to the plan — the Overview tab is where existing charges are managed —
- * so it opens empty rather than re-loading what is already priced (which the
- * bulk endpoint would duplicate).
+ * A full-page mount of the standalone, stepped `ChargeEditor`: the plan's name
+ * and metered features are fetched here and handed down, and a save commits the
+ * drafts through the bulk price endpoint before returning to the detail page. It
+ * adds charges to the plan — the Overview tab is where existing charges are
+ * managed — so it opens empty rather than re-loading what is already priced
+ * (which the bulk endpoint would duplicate). The customer-facing preview now
+ * lives on the detail page, so the editor here is a focused charge builder.
  */
 export interface PlanChargesPageProps {
   planId: string
@@ -43,7 +44,7 @@ export function PlanChargesPage({ planId, onDone, onCancel }: PlanChargesPagePro
     <>
       <PageHeader
         title={`Add charges — ${plan.data?.name ?? 'Plan'}`}
-        description="Price what the plan bills for. The preview updates as you go."
+        description="Price what the plan bills for — pick a charge type, configure it, then review and save."
         breadcrumb={
           <Button variant="ghost" size="sm" className="-ml-2 w-fit" onClick={onCancel}>
             <ChevronLeftIcon aria-hidden className="size-4" />

@@ -80,15 +80,19 @@ import { CopyIcon, EyeOffIcon, MoreHorizontalIcon, PencilIcon, RefreshCwIcon } f
  *
  * V1 scatters a plan across four containers; this gathers them behind one set of
  * tabs on the shared `DetailShell`. The header carries a large title, its status,
- * the lookup key as an identifier, and the actions on the plan as a whole — sync,
- * edit, duplicate, archive. The **metric rail** leads with real numbers, never a
- * restatement of the badge below it: how many subscriptions are on the plan, what
- * it starts at, how many charges it carries, and in which currency.
+ * the lookup key as an identifier, and — in a single ⋮ overflow menu — the actions
+ * on the plan as a whole: edit, duplicate, sync usage charges, archive. The
+ * **metric rail** leads with real numbers, never a restatement of the badge below
+ * it: how many subscriptions are on the plan, what it starts at, how many charges
+ * it carries, and in which currency.
  *
- * Overview shows the charges the plan bills beside a live customer-facing preview;
- * Entitlements and Credit Grants are what it includes; Information is the record
- * itself. Every destructive action — terminate a charge, delete an entitlement or
- * grant, archive the plan — goes through a `ConfirmDialog` first.
+ * The body pairs a tabbed left column with a persistent right rail: the live
+ * customer-facing preview — the plan's pricing and an example bill — stays visible
+ * on every tab, while the left column changes with the tab. Overview shows the
+ * charges the plan bills, Entitlements and Credit Grants are what it includes, and
+ * Information is the record itself. Every destructive action — terminate a charge,
+ * delete an entitlement or grant, archive the plan — goes through a `ConfirmDialog`
+ * first.
  *
  * The page fetches and composes; every piece it renders is a presentational
  * component from `@fp/ui`, so what the tabs show is testable without this page.
@@ -237,6 +241,13 @@ export function PlanDetailPage({
     subscriptionsPending: subscriptions.isPending,
   })
 
+  // The right rail. The plan's live charges, mapped to the draft shape the
+  // preview reads, so the customer-facing price stays visible on every tab — it
+  // is the plan's pricing, relevant whether you are on Entitlements or Overview.
+  const chargeRows = charges.data ?? []
+  const previewCharges = chargeRows.map(toDraftCharge)
+  const meterName = (id: string) => chargeRows.find((c) => c.meterId === id)?.meterName ?? id
+
   return (
     <>
       <DetailShell
@@ -250,80 +261,91 @@ export function PlanDetailPage({
         {...(record.description ? { description: record.description } : {})}
         metrics={metrics}
         actions={
-          <>
-            <Button variant="outline" disabled={sync.isPending} onClick={() => sync.mutate(planId)}>
-              <RefreshCwIcon aria-hidden className="size-4" />
-              {sync.isPending ? 'Syncing…' : 'Sync usage charges'}
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" size="icon" aria-label="More actions">
-                    <MoreHorizontalIcon aria-hidden className="size-4" />
-                  </Button>
-                }
-              />
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setEditing(true)}>
-                  <PencilIcon aria-hidden className="size-4" />
-                  Edit details
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    clone.mutate(
-                      { id: planId, name: `${record.name} (copy)` },
-                      {
-                        onSuccess: (result) => {
-                          const id = (result as { id?: string }).id
-                          if (id) onDuplicated(id)
-                        },
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="ghost" size="icon" aria-label="More actions">
+                  <MoreHorizontalIcon aria-hidden className="size-4" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setEditing(true)}>
+                <PencilIcon aria-hidden className="size-4" />
+                Edit details
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                onClick={() =>
+                  clone.mutate(
+                    { id: planId, name: `${record.name} (copy)` },
+                    {
+                      onSuccess: (result) => {
+                        const id = (result as { id?: string }).id
+                        if (id) onDuplicated(id)
                       },
-                    )
-                  }
-                >
-                  <CopyIcon aria-hidden className="size-4" />
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
-                  <EyeOffIcon aria-hidden className="size-4" />
-                  Archive
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
+                    },
+                  )
+                }
+              >
+                <CopyIcon aria-hidden className="size-4" />
+                Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={sync.isPending}
+                onClick={() => sync.mutate(planId)}
+              >
+                <RefreshCwIcon aria-hidden className="size-4" />
+                {sync.isPending ? 'Syncing…' : 'Sync usage charges'}
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
+                <EyeOffIcon aria-hidden className="size-4" />
+                Archive
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         }
       >
-        <Tabs value={tab} onValueChange={(value) => onTabChange(value as PlanTab)}>
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
-            <TabsTrigger value="credit-grants">Credit Grants</TabsTrigger>
-            <TabsTrigger value="information">Information</TabsTrigger>
-          </TabsList>
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+          {/* LEFT — changes with the tab. */}
+          <div className="min-w-0">
+            <Tabs value={tab} onValueChange={(value) => onTabChange(value as PlanTab)}>
+              <TabsList>
+                <TabsTrigger value="overview">Overview</TabsTrigger>
+                <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
+                <TabsTrigger value="credit-grants">Credit Grants</TabsTrigger>
+                <TabsTrigger value="information">Information</TabsTrigger>
+              </TabsList>
 
-          <TabsContent value="overview" className="pt-4">
-            <OverviewTab planId={planId} planName={record.name} onOpenCharges={onOpenCharges} />
-          </TabsContent>
-          <TabsContent value="entitlements" className="pt-4">
-            <EntitlementsTab planId={planId} />
-          </TabsContent>
-          <TabsContent value="credit-grants" className="pt-4">
-            <CreditGrantsTab planId={planId} />
-          </TabsContent>
-          <TabsContent value="information" className="pt-4">
-            <InformationTab
-              name={record.name}
-              lookupKey={record.lookupKey}
-              planId={record.id}
-              description={record.description}
-              status={PLAN_STATUS_LABEL[record.status]}
-              createdAt={record.createdAt}
-              updatedAt={record.updatedAt}
-              onEdit={() => setEditing(true)}
-            />
-          </TabsContent>
-        </Tabs>
+              <TabsContent value="overview" className="pt-4">
+                <OverviewTab planId={planId} onOpenCharges={onOpenCharges} />
+              </TabsContent>
+              <TabsContent value="entitlements" className="pt-4">
+                <EntitlementsTab planId={planId} />
+              </TabsContent>
+              <TabsContent value="credit-grants" className="pt-4">
+                <CreditGrantsTab planId={planId} />
+              </TabsContent>
+              <TabsContent value="information" className="pt-4">
+                <InformationTab
+                  name={record.name}
+                  lookupKey={record.lookupKey}
+                  planId={record.id}
+                  description={record.description}
+                  status={PLAN_STATUS_LABEL[record.status]}
+                  createdAt={record.createdAt}
+                  updatedAt={record.updatedAt}
+                  onEdit={() => setEditing(true)}
+                />
+              </TabsContent>
+            </Tabs>
+          </div>
+
+          {/* RIGHT — the plan's pricing, persistent across every tab. */}
+          <aside className="lg:sticky lg:top-4 lg:self-start">
+            <PlanPreviewCard name={record.name} charges={previewCharges} meterLabel={meterName} />
+          </aside>
+        </div>
       </DetailShell>
 
       <PlanEditorSheet
@@ -419,19 +441,17 @@ function buildMetrics({
 }
 
 /**
- * Overview — the charges the plan bills, beside a live customer-facing preview.
+ * Overview — the charges the plan bills.
  *
- * Left, the charges table (add opens the two-pane builder, terminate ends a
- * charge behind a confirm); right, the same `PlanPreviewCard` the editor shows,
- * so the plan's live price and an example bill are always visible on the plan.
+ * The charges table (add opens the standalone charge builder, terminate ends a
+ * charge behind a confirm). The live customer-facing preview is no longer inline
+ * here: it lives in the detail page's persistent right rail, visible on every tab.
  */
 function OverviewTab({
   planId,
-  planName,
   onOpenCharges,
 }: {
   planId: string
-  planName: string
   onOpenCharges: () => void
 }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
@@ -441,24 +461,16 @@ function OverviewTab({
   if (charges.isPending) return <LoadingRows />
 
   const rows = charges.data ?? []
-  const previewCharges = rows.map(toDraftCharge)
-  const meterName = (id: string) => rows.find((c) => c.meterId === id)?.meterName ?? id
 
   return (
     <>
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-        <Section title="Charges" description="What this plan bills, and how.">
-          <ChargeTable
-            charges={rows}
-            onAdd={onOpenCharges}
-            onTerminate={(charge) => setTerminating(charge)}
-          />
-        </Section>
-
-        <div className="lg:sticky lg:top-4 lg:self-start">
-          <PlanPreviewCard name={planName} charges={previewCharges} meterLabel={meterName} />
-        </div>
-      </div>
+      <Section title="Charges" description="What this plan bills, and how.">
+        <ChargeTable
+          charges={rows}
+          onAdd={onOpenCharges}
+          onTerminate={(charge) => setTerminating(charge)}
+        />
+      </Section>
 
       <ConfirmDialog
         open={terminating !== null}

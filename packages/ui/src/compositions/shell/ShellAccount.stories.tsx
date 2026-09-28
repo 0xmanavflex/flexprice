@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { SidebarProvider } from '@ui/primitives/sidebar'
 import { ShellAccount } from './ShellAccount'
 
@@ -25,6 +25,7 @@ const meta = {
     user: { name: 'Dinesh K', email: 'dinesh@flexprice.io', organization: 'Flexprice' },
     onProfile: fn(),
     onSettings: fn(),
+    onDocs: fn(),
     onSignOut: fn(),
   },
 } satisfies Meta<typeof ShellAccount>
@@ -40,6 +41,20 @@ export const SignsOut: Story = {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /account: dinesh k/i }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
     await expect(args.onSignOut).toHaveBeenCalledOnce()
+  },
+}
+
+/**
+ * Documentation now lives here, beside Settings — it left the sidebar's "Quick
+ * links" group when that group was removed.
+ */
+export const OffersDocumentation: Story = {
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /account: dinesh k/i }))
+    // `waitFor` so the visibility check retries while the menu animates open.
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeVisible())
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Documentation' }))
+    await expect(args.onDocs).toHaveBeenCalledOnce()
   },
 }
 

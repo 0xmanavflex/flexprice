@@ -70,11 +70,13 @@ export const NAV: NavEntry[] = [
 ]
 
 /**
- * Secondary links, below the navigation and under their own heading.
+ * Secondary destinations — Settings and Documentation.
  *
  * Separate from `NAV` because they are not part of the product's map — nobody
- * navigates the console by way of Settings. Grouping them keeps the primary
- * tree at twenty-four items rather than twenty-six.
+ * navigates the console by way of Settings. They are no longer rendered as a
+ * "Quick links" sidebar group; Documentation now lives in the footer account
+ * menu beside Settings. They stay here because they are still real routes, and
+ * `pathForNavId`, `labelForNavId`, and `breadcrumbForPath` resolve against them.
  */
 export const SECONDARY: NavEntry[] = [
   { id: 'settings', label: 'Settings', path: '/settings' },
@@ -177,13 +179,9 @@ export function toNavGroups(
   icons: Record<string, React.ReactNode> = {},
   counts: Partial<Record<string, number>> = {},
 ): ShellNavGroup[] {
-  return [
-    { id: 'main', title: 'Workspace', items: toItems(NAV, icons, counts) },
-    {
-      id: 'secondary',
-      title: 'Quick links',
-      collapsible: true,
-      items: toItems(SECONDARY, icons, counts),
-    },
-  ]
+  // Only the primary Workspace tree. The former "Quick links" group (Settings +
+  // Documentation, from `SECONDARY`) is no longer a sidebar section: Settings and
+  // Documentation now live in the footer account menu. `SECONDARY` remains for
+  // route resolution — see the note on that constant.
+  return [{ id: 'main', title: 'Workspace', items: toItems(NAV, icons, counts) }]
 }

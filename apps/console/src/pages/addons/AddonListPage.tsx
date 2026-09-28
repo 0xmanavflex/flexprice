@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { type Addon, type AddonQuery, type CreateAddon } from '@fp/domain'
 import { ApiError, useAddons, useCreateAddon, useUpdateAddon } from '@fp/query'
 import { AddonEditorSheet, AddonFilters, AddonGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { PuzzleIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
 
@@ -53,12 +53,6 @@ export function AddonListPage({ query, onQueryChange, onOpenAddon }: AddonListPa
 
   return (
     <>
-      <PageHeader
-        title="Add-ons"
-        description="Extras a customer can buy alongside a plan."
-        action={<Button onClick={() => setEditing({ mode: 'create' })}>New add-on</Button>}
-      />
-
       <PageBody>
         <ListState
           isLoading={addons.isPending}
@@ -78,6 +72,7 @@ export function AddonListPage({ query, onQueryChange, onOpenAddon }: AddonListPa
             query={query}
             onQueryChange={onQueryChange}
             onAddonClick={onOpenAddon}
+            onCreate={() => setEditing({ mode: 'create' })}
             onClearFilters={clearFilters}
             filters={
               <AddonFilters

@@ -1,7 +1,7 @@
 import { type TaxRateQuery } from '@fp/domain'
 import { ApiError, useTaxRates } from '@fp/query'
 import { TaxRateFilters, TaxRateGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { PercentIcon } from 'lucide-react'
 
 export interface TaxListPageProps {
@@ -25,8 +25,6 @@ export function TaxListPage({ query, onQueryChange }: TaxListPageProps) {
 
   return (
     <>
-      <PageHeader title="Taxes" description="Tax rates, and where each one applies." />
-
       <PageBody>
         <ListState
           isLoading={taxRates.isPending}

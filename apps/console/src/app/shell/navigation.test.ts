@@ -91,13 +91,23 @@ describe('the tree itself', () => {
   })
 })
 
-describe('the secondary group', () => {
-  it('is separate, titled and collapsible', () => {
-    const [primary, secondary] = toNavGroups()
-    expect(primary?.title).toBe('Workspace')
-    expect(secondary?.title).toBe('Quick links')
-    expect(secondary?.collapsible).toBe(true)
-    expect(secondary?.items.map((item) => item.id)).toEqual(['settings', 'docs'])
+describe('the secondary destinations', () => {
+  // The "Quick links" group is gone: Settings and Documentation moved to the
+  // footer account menu, so the sidebar renders only the primary tree now.
+  it('renders only the Workspace group, with no Quick links group', () => {
+    const groups = toNavGroups()
+    expect(groups).toHaveLength(1)
+    expect(groups[0]?.title).toBe('Workspace')
+    expect(groups.some((group) => group.title === 'Quick links')).toBe(false)
+    expect(groups.some((group) => group.collapsible)).toBe(false)
+  })
+
+  // Kept out of the sidebar, but still real routes — the account menu and the
+  // breadcrumb resolve against them.
+  it('still resolves Settings and Documentation as routes', () => {
+    expect(pathForNavId('settings')).toBe('/settings')
+    expect(pathForNavId('docs')).toBe('/docs')
+    expect(SECONDARY.map((entry) => entry.id)).toEqual(['settings', 'docs'])
   })
 
   it('keeps the primary tree at twenty-four destinations', () => {

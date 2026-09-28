@@ -51,6 +51,8 @@ export interface SubscriptionGridProps {
   error?: string | null
   onRetry?: () => void
   onSubscriptionClick?: (subscription: Subscription) => void
+  /** The primary create action; renders a "New subscription" CTA at the toolbar's end. */
+  onCreate?: () => void
   filters?: ReactNode
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
@@ -58,9 +60,10 @@ export interface SubscriptionGridProps {
   locale?: string
 }
 
-function formatDate(value: Date | null, locale?: string): string {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
+function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
+  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
+  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 export function SubscriptionGrid({
@@ -72,6 +75,7 @@ export function SubscriptionGrid({
   error = null,
   onRetry,
   onSubscriptionClick,
+  onCreate,
   filters,
   onClearFilters,
   locale,
@@ -85,9 +89,9 @@ export function SubscriptionGrid({
           accessorFn: (row: Subscription) => row.customerName,
           header: ({ column }: never) => <DataGridColumnHeader title="Customer" column={column} />,
           cell: ({ row }: { row: { original: Subscription } }) => (
-            <span className="truncate font-medium">{row.original.customerName}</span>
+            <span className="truncate">{row.original.customerName}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 240,
         },
         {
@@ -98,7 +102,7 @@ export function SubscriptionGrid({
           cell: ({ row }: { row: { original: Subscription } }) => (
             <span className="truncate text-muted-foreground">{row.original.planName}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 200,
         },
         {
@@ -109,7 +113,7 @@ export function SubscriptionGrid({
           cell: ({ row }: { row: { original: Subscription } }) => (
             <SubscriptionStatusBadge status={row.original.status} />
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 130,
         },
         {
@@ -122,7 +126,7 @@ export function SubscriptionGrid({
           cell: ({ row }: { row: { original: Subscription } }) => (
             <span className="text-muted-foreground">{row.original.billingPeriodLabel}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 140,
         },
         {
@@ -130,9 +134,10 @@ export function SubscriptionGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Subscription) => row.currentPeriodEnd,
           header: ({ column }: never) => <DataGridColumnHeader title="Renews" column={column} />,
-          cell: ({ row }: { row: { original: Subscription } }) =>
-            formatDate(row.original.currentPeriodEnd, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: Subscription } }) => (
+            <DateCell value={row.original.currentPeriodEnd} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
         {
@@ -140,9 +145,10 @@ export function SubscriptionGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Subscription) => row.startDate,
           header: ({ column }: never) => <DataGridColumnHeader title="Started" column={column} />,
-          cell: ({ row }: { row: { original: Subscription } }) =>
-            formatDate(row.original.startDate, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: Subscription } }) => (
+            <DateCell value={row.original.startDate} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
       ] as never,
@@ -210,10 +216,18 @@ export function SubscriptionGrid({
   return (
     <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
       <GridToolbar
+        heading="Subscriptions"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
         placeholder="Search…"
         label="Search subscriptions"
+        action={
+          onCreate ? (
+            <Button size="sm" onClick={onCreate}>
+              New subscription
+            </Button>
+          ) : undefined
+        }
       >
         {filters}
         <SortMenu

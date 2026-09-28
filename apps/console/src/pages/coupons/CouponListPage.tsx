@@ -1,7 +1,7 @@
 import { type Coupon, type CouponQuery } from '@fp/domain'
 import { ApiError, useCoupons } from '@fp/query'
 import { CouponFilters, CouponGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { TicketPercentIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
 
@@ -27,12 +27,6 @@ export function CouponListPage({ query, onQueryChange, onCreate, onOpenCoupon }:
 
   return (
     <>
-      <PageHeader
-        title="Coupons"
-        description="Discounts a customer can redeem against a subscription or an invoice."
-        action={<Button onClick={onCreate}>New coupon</Button>}
-      />
-
       <PageBody>
         <ListState
           isLoading={coupons.isPending}
@@ -52,6 +46,7 @@ export function CouponListPage({ query, onQueryChange, onCreate, onOpenCoupon }:
             query={query}
             onQueryChange={onQueryChange}
             onCouponClick={onOpenCoupon}
+            onCreate={onCreate}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
             filters={
               <CouponFilters

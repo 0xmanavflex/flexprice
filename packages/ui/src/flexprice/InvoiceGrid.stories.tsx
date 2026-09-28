@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { InvoiceSortField, InvoiceStatus } from '@fp/domain'
 import { InvoiceGrid, InvoiceGridProvenance } from './InvoiceGrid'
 import { fixtureQuery, invoiceFixtures, manyInvoices } from './invoiceFixtures'
@@ -105,19 +105,23 @@ export const Filtered: Story = {
 }
 
 /**
- * Sorting reports intent in domain vocabulary, and changes nothing itself.
+ * The Sort menu reports intent in domain vocabulary, and changes nothing itself.
  *
- * The callback must carry `sortBy: 'total'` — not `amount_due`, which is the
- * API's name for it and something this component must never learn. It must also
- * reset to page 1: staying on page 7 of a different ordering shows rows the
- * user did not ask for and cannot explain.
+ * The column carets now re-sort the loaded page client-side, so the *menu* is
+ * what persists an ordering into the route. Its callback must carry
+ * `sortBy: 'total'` — not `amount_due`, which is the API's name for it and
+ * something this component must never learn. It must also reset to page 1:
+ * staying on page 7 of a different ordering shows rows the user did not ask for
+ * and cannot explain.
  */
 export const SortInteraction: Story = {
   args: { query: { ...fixtureQuery, page: 7 } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.click(await canvas.findByRole('button', { name: /total/i }))
+    // The menu content portals to the body, so it is reached from `screen`.
+    await userEvent.click(await canvas.findByRole('button', { name: /change sorting/i }))
+    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Total' }))
 
     await expect(args.onQueryChange).toHaveBeenCalledWith(
       expect.objectContaining({ sortBy: InvoiceSortField.Total, page: 1 }),

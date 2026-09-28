@@ -4,7 +4,8 @@ import { Button } from '@ui/primitives/button'
 import { GridToolbar } from './GridToolbar'
 
 /**
- * The bar above a grid: a bordered search on the left, controls on the right.
+ * The bar above a grid: a compact table heading and a bordered search on the
+ * left, filter/sort controls next, and the primary create CTA at the very end.
  * Controlled — the route owns the query, so the toolbar and grid cannot
  * disagree about what is shown.
  */
@@ -17,11 +18,13 @@ const meta = {
     onSearchChange: fn(),
     placeholder: 'Search…',
     label: 'Search coupons',
+    heading: 'Coupons',
     children: (
       <Button size="sm" variant="outline">
         Filter
       </Button>
     ),
+    action: <Button size="sm">New coupon</Button>,
   },
 } satisfies Meta<typeof GridToolbar>
 
@@ -29,6 +32,18 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+/**
+ * The full toolbar: a compact heading over the table, the search, then the
+ * filter/sort controls, and the create CTA pinned to the end.
+ */
+export const WithHeadingAndCreate: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'Coupons' })).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'New coupon' })).toBeInTheDocument()
+  },
+}
 
 /** A search landmark, reachable without tabbing through the page. */
 export const IsASearchLandmark: Story = {

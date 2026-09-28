@@ -52,9 +52,10 @@ export interface PaymentGridProps {
   locale?: string
 }
 
-function formatDate(value: Date | null, locale?: string): string {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
+function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
+  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
+  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 export function PaymentGrid({
@@ -89,7 +90,7 @@ export function PaymentGrid({
               <Money value={row.original.amount} {...(locale ? { locale } : {})} />
             </div>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 140,
         },
         {
@@ -100,7 +101,7 @@ export function PaymentGrid({
           cell: ({ row }: { row: { original: Payment } }) => (
             <PaymentStatusBadge status={row.original.status} />
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 130,
         },
         {
@@ -111,7 +112,7 @@ export function PaymentGrid({
           cell: ({ row }: { row: { original: Payment } }) => (
             <span className="text-muted-foreground">{row.original.methodType || '—'}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 160,
         },
         {
@@ -125,7 +126,7 @@ export function PaymentGrid({
             ) : (
               <span className="text-muted-foreground">—</span>
             ),
-          enableSorting: false,
+          enableSorting: true,
           size: 160,
         },
         {
@@ -133,8 +134,10 @@ export function PaymentGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Payment) => row.createdAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Date" column={column} />,
-          cell: ({ row }: { row: { original: Payment } }) => formatDate(row.original.createdAt, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: Payment } }) => (
+            <DateCell value={row.original.createdAt} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
       ] as never,
@@ -196,6 +199,7 @@ export function PaymentGrid({
   return (
     <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
       <GridToolbar
+        heading="Payments"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
         placeholder="Search..."

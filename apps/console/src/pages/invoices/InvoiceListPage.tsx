@@ -2,7 +2,7 @@ import { type InvoiceQuery } from '@fp/domain'
 import { ApiError, useInvoices } from '@fp/query'
 import { ReceiptIcon } from 'lucide-react'
 import { InvoiceGrid } from '@fp/ui/flexprice'
-import { EmptyState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { EmptyState, PageBody } from '@fp/ui/compositions'
 
 export interface InvoiceListPageProps {
   query: InvoiceQuery
@@ -28,11 +28,6 @@ export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) 
 
   return (
     <>
-      <PageHeader
-        title="Invoices"
-        description="What customers have been billed, and what is still owed."
-      />
-
       <PageBody>
         {/*
          * The first-run state belongs to the page, not the table: with no

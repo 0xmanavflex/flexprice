@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { type CreatePlan, type PlanQuery } from '@fp/domain'
 import { ApiError, useCreatePlan, usePlans } from '@fp/query'
 import { PlanEditorSheet, PlanFilters, PlanGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
 
@@ -52,12 +52,6 @@ export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageP
 
   return (
     <>
-      <PageHeader
-        title="Plans"
-        description="What you sell, and what each plan charges for."
-        action={<Button onClick={() => setCreating(true)}>New plan</Button>}
-      />
-
       <PageBody>
         <ListState
           isLoading={plans.isPending}
@@ -77,6 +71,7 @@ export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageP
             query={query}
             onQueryChange={onQueryChange}
             onPlanClick={(plan) => onOpenPlan(plan.id)}
+            onCreate={() => setCreating(true)}
             onClearFilters={clearFilters}
             filters={
               <PlanFilters

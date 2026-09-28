@@ -1,7 +1,7 @@
 import { type CostSheet, type CostSheetQuery } from '@fp/domain'
 import { ApiError, useCostSheets } from '@fp/query'
 import { CostSheetFilters, CostSheetGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { SheetIcon } from 'lucide-react'
 
 export interface CostSheetListPageProps {
@@ -32,11 +32,6 @@ export function CostSheetListPage({
 
   return (
     <>
-      <PageHeader
-        title="Cost Sheets"
-        description="What each unit of usage costs you, so margin is visible against what you charge."
-      />
-
       <PageBody>
         <ListState
           isLoading={costSheets.isPending}

@@ -64,7 +64,15 @@ function containsActive(item: ShellNavItem, activeItemId?: string): boolean {
  * and the row states the count in its own label instead.
  */
 function Count({ value }: { value: number }) {
-  return <SidebarMenuBadge aria-hidden>{value}</SidebarMenuBadge>
+  // Faded well below the label: the count is a quiet secondary reading, and the
+  // nav text darkened for contrast made the default badge look heavy. It is
+  // aria-hidden (the row states the count in its own label), so this is purely
+  // visual.
+  return (
+    <SidebarMenuBadge aria-hidden className="font-normal text-sidebar-foreground/55">
+      {value}
+    </SidebarMenuBadge>
+  )
 }
 
 /**

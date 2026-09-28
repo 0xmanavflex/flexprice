@@ -1,7 +1,7 @@
 import { type Feature, type FeatureQuery } from '@fp/domain'
 import { ApiError, useFeatures } from '@fp/query'
 import { FeatureFilters, FeatureGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
 
@@ -37,12 +37,6 @@ export function FeatureListPage({
 
   return (
     <>
-      <PageHeader
-        title="Features"
-        description="What you meter, and what customers are entitled to."
-        action={<Button onClick={onCreate}>New feature</Button>}
-      />
-
       <PageBody>
         {/*
           Every state comes from one place, so this screen cannot invent its
@@ -79,6 +73,7 @@ export function FeatureListPage({
             query={query}
             onQueryChange={onQueryChange}
             onFeatureClick={onOpenFeature}
+            onCreate={onCreate}
             onClearFilters={clearFilters}
             filters={
               <FeatureFilters

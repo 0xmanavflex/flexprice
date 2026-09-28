@@ -1,8 +1,7 @@
-import { useMemo } from 'react'
+import { useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   type ColumnDef,
   type PaginationState,
-  type SortingState,
   useTable,
 } from '@tanstack/react-table'
 import {
@@ -12,14 +11,13 @@ import {
 } from '@fp/domain'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
 import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
-import { useRef, useState } from 'react'
 import { Button } from '@ui/primitives/button'
 import { Skeleton } from '@ui/primitives/skeleton'
 import { EmptyState } from '@ui/compositions/EmptyState'
-import { FitToWindow } from '@ui/compositions/FitToWindow'
+import { GridFooter } from '@ui/compositions/GridFooter'
+import { GridToolbar } from '@ui/compositions/GridToolbar'
 import { SortMenu } from '@ui/compositions/SortMenu'
 import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { Money } from './Money'
@@ -87,19 +85,13 @@ export interface InvoiceGridProps {
  * clear it comfortably, which is also the right density for a table: a row of
  * saturated pills competes with the data it is annotating.
  */
-/** Column ids are the domain sort fields, so the two cannot drift apart. */
-const SORTABLE: Record<string, InvoiceSortField> = {
-  issuedAt: InvoiceSortField.IssuedAt,
-  dueDate: InvoiceSortField.DueDate,
-  total: InvoiceSortField.Total,
-  status: InvoiceSortField.Status,
-}
-
 /**
- * The same four fields the columns offer, for the menu.
+ * The sort fields the ledger offers in the menu.
  *
- * Derived from `SORTABLE` rather than written again, so a column that becomes
- * sortable cannot be missing from the menu — or the other way round.
+ * The menu carries the fields the route can persist across every page; the
+ * column headers add an instant, client-side re-sort of the loaded page, so
+ * every column has a caret whether or not the API can order the whole ledger by
+ * it.
  */
 const SORT_LABEL: Record<InvoiceSortField, string> = {
   [InvoiceSortField.IssuedAt]: 'Issued',
@@ -108,14 +100,15 @@ const SORT_LABEL: Record<InvoiceSortField, string> = {
   [InvoiceSortField.Status]: 'Status',
 }
 
-const SORT_OPTIONS = Object.values(SORTABLE).map((value) => ({
+const SORT_OPTIONS = Object.values(InvoiceSortField).map((value) => ({
   value,
   label: SORT_LABEL[value],
 }))
 
-function formatDate(value: Date | null, locale?: string): string {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
+function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
+  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
+  return <span className="whitespace-nowrap tabular-nums text-muted-foreground">{text}</span>
 }
 
 export function InvoiceGrid({
@@ -139,9 +132,9 @@ export function InvoiceGrid({
           accessorFn: (row: Invoice) => row.number,
           header: ({ column }: never) => <DataGridColumnHeader title="Invoice" column={column} />,
           cell: ({ row }: { row: { original: Invoice } }) => (
-            <span className="font-medium tabular-nums">{row.original.number}</span>
+            <span className="tabular-nums">{row.original.number}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 140,
         },
         {
@@ -150,7 +143,7 @@ export function InvoiceGrid({
           accessorFn: (row: Invoice) => row.customerName,
           header: ({ column }: never) => <DataGridColumnHeader title="Customer" column={column} />,
           cell: ({ row }: { row: { original: Invoice } }) => row.original.customerName,
-          enableSorting: false,
+          enableSorting: true,
           size: 220,
         },
         {
@@ -161,6 +154,7 @@ export function InvoiceGrid({
           cell: ({ row }: { row: { original: Invoice } }) => (
             <InvoiceStatusBadge status={row.original.status} />
           ),
+          enableSorting: true,
           size: 120,
         },
         {
@@ -179,6 +173,7 @@ export function InvoiceGrid({
               <Money value={row.original.total} {...(locale ? { locale } : {})} truncate />
             </div>
           ),
+          enableSorting: true,
           size: 140,
         },
         {
@@ -186,7 +181,10 @@ export function InvoiceGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Invoice) => row.dueDate,
           header: ({ column }: never) => <DataGridColumnHeader title="Due" column={column} />,
-          cell: ({ row }: { row: { original: Invoice } }) => formatDate(row.original.dueDate, locale),
+          cell: ({ row }: { row: { original: Invoice } }) => (
+            <DateCell value={row.original.dueDate} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
         {
@@ -194,45 +192,38 @@ export function InvoiceGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Invoice) => row.issuedAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Issued" column={column} />,
-          cell: ({ row }: { row: { original: Invoice } }) => formatDate(row.original.issuedAt, locale),
+          cell: ({ row }: { row: { original: Invoice } }) => (
+            <DateCell value={row.original.issuedAt} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
       ] as never,
     [locale],
   )
 
-  // TanStack's state, derived from the query rather than stored beside it.
-  // One source of truth: change the URL and the grid follows.
+  // Paging is derived from the query and kept in the URL, so a link restores the
+  // page. Sorting is the table's own client-side state — an instant re-sort of
+  // the loaded page — so the menu (which persists a sort into the URL) and the
+  // header carets can both reorder without a second copy of the truth.
   const pagination: PaginationState = {
     pageIndex: query.page - 1,
     pageSize: query.pageSize,
   }
-  const sorting: SortingState = [{ id: query.sortBy, desc: query.sortDirection === 'desc' }]
 
   const table = useTable({
     features: dataGridFeatures,
     data: invoices,
     columns,
-    // Server-side: `data` is exactly one page, so the grid must not re-page or
-    // re-sort it. `rowCount` is what makes getPageCount() correct.
+    // Server-side paging: `data` is exactly one page, so the grid must not
+    // re-page it. `rowCount` is what makes getPageCount() correct.
     manualPagination: true,
-    manualSorting: true,
     rowCount: total,
     getRowId: (row: Invoice) => row.id,
-    state: { pagination, sorting },
+    state: { pagination },
     onPaginationChange: (updater: unknown) => {
       const next = typeof updater === 'function' ? (updater as (p: PaginationState) => PaginationState)(pagination) : (updater as PaginationState)
       onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
-    },
-    onSortingChange: (updater: unknown) => {
-      const next = typeof updater === 'function' ? (updater as (s: SortingState) => SortingState)(sorting) : (updater as SortingState)
-      const first = next[0]
-      if (!first) return
-      const sortBy = SORTABLE[first.id]
-      if (!sortBy) return
-      // Re-sorting returns to page 1: staying on page 7 of a different order
-      // shows rows the user did not ask for and cannot explain.
-      onQueryChange({ ...query, sortBy, sortDirection: first.desc ? 'desc' : 'asc', page: 1 })
     },
   } as never)
 
@@ -247,7 +238,7 @@ export function InvoiceGrid({
     containerRef,
     enabled: fitToWindow,
     // The toolbar above and the pagination footer below are not rows.
-    reservedHeight: 96,
+    reservedHeight: 104,
   })
 
   // `null` means "no measurement yet" — keep whatever size is already set.
@@ -270,8 +261,15 @@ export function InvoiceGrid({
 
   return (
     <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
-      <div className="flex items-center gap-1">
+      <GridToolbar
+        heading="Invoices"
+        search={query.search}
+        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+        placeholder="Search invoice # or customer..."
+        label="Search invoices"
+      >
         <SortMenu
+          align="end"
           options={SORT_OPTIONS}
           field={query.sortBy}
           direction={query.sortDirection}
@@ -279,10 +277,7 @@ export function InvoiceGrid({
             onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
           }
         />
-        <div className="ml-auto">
-          <FitToWindow pressed={fitToWindow} onPressedChange={setFitToWindow} />
-        </div>
-      </div>
+      </GridToolbar>
 
       <DataGrid
         table={table as never}
@@ -327,7 +322,12 @@ export function InvoiceGrid({
             <DataGridTable />
           </DataGridScrollArea>
         </div>
-        <DataGridPagination />
+        <GridFooter
+          fitToWindow={fitToWindow}
+          onFitToWindowChange={setFitToWindow}
+          pageSize={query.pageSize}
+          noun="invoices"
+        />
       </DataGrid>
     </div>
   )

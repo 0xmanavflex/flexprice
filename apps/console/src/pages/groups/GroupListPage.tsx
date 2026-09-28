@@ -1,7 +1,7 @@
 import { type Group, type GroupQuery } from '@fp/domain'
 import { ApiError, useGroups } from '@fp/query'
 import { GroupFilters, GroupGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { LayersIcon } from 'lucide-react'
 
 export interface GroupListPageProps {
@@ -28,11 +28,6 @@ export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPa
 
   return (
     <>
-      <PageHeader
-        title="Groups"
-        description="Collections of prices or features, managed and reported together."
-      />
-
       <PageBody>
         <ListState
           isLoading={groups.isPending}

@@ -48,14 +48,17 @@ export interface PriceUnitGridProps {
   error?: string | null
   onRetry?: () => void
   onPriceUnitClick?: (priceUnit: PriceUnit) => void
+  /** The primary create action; renders a "New price unit" CTA at the toolbar's end. */
+  onCreate?: () => void
   filters?: ReactNode
   onClearFilters?: () => void
   locale?: string
 }
 
-function formatDate(value: Date | null, locale?: string): string {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
+function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
+  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
+  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 /**
@@ -84,6 +87,7 @@ export function PriceUnitGrid({
   error = null,
   onRetry,
   onPriceUnitClick,
+  onCreate,
   filters,
   onClearFilters,
   locale,
@@ -97,9 +101,9 @@ export function PriceUnitGrid({
           accessorFn: (row: PriceUnit) => row.name,
           header: ({ column }: never) => <DataGridColumnHeader title="Name" column={column} />,
           cell: ({ row }: { row: { original: PriceUnit } }) => (
-            <span className="truncate font-medium">{row.original.name}</span>
+            <span className="truncate">{row.original.name}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 240,
         },
         {
@@ -110,7 +114,7 @@ export function PriceUnitGrid({
           cell: ({ row }: { row: { original: PriceUnit } }) => (
             <span className="font-mono text-xs text-muted-foreground">{row.original.code}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 100,
         },
         {
@@ -121,7 +125,7 @@ export function PriceUnitGrid({
           cell: ({ row }: { row: { original: PriceUnit } }) => (
             <span className="text-base leading-none">{row.original.symbol || '—'}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 90,
         },
         {
@@ -134,7 +138,7 @@ export function PriceUnitGrid({
           cell: ({ row }: { row: { original: PriceUnit } }) => (
             <span className="tabular-nums">{row.original.baseCurrency.toUpperCase() || '—'}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 140,
         },
         {
@@ -149,7 +153,7 @@ export function PriceUnitGrid({
               {formatConversionRate(row.original.conversionRate, locale)}
             </span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 160,
         },
         {
@@ -160,7 +164,7 @@ export function PriceUnitGrid({
           cell: ({ row }: { row: { original: PriceUnit } }) => (
             <CatalogStatusBadge status={row.original.status} />
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 120,
         },
         {
@@ -168,9 +172,10 @@ export function PriceUnitGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: PriceUnit) => row.updatedAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
-          cell: ({ row }: { row: { original: PriceUnit } }) =>
-            formatDate(row.original.updatedAt, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: PriceUnit } }) => (
+            <DateCell value={row.original.updatedAt} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
       ] as never,
@@ -227,10 +232,18 @@ export function PriceUnitGrid({
   return (
     <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
       <GridToolbar
+        heading="Price units"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
         placeholder="Search..."
         label="Search price units"
+        action={
+          onCreate ? (
+            <Button size="sm" onClick={onCreate}>
+              New price unit
+            </Button>
+          ) : undefined
+        }
       >
         {filters}
         <SortMenu

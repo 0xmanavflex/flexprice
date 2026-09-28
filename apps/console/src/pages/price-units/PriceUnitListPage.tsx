@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { type CreatePriceUnit, type PriceUnit, type PriceUnitQuery } from '@fp/domain'
 import { ApiError, useCreatePriceUnit, usePriceUnits, useUpdatePriceUnit } from '@fp/query'
 import { PriceUnitEditorSheet, PriceUnitFilters, PriceUnitGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { CoinsIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
 
@@ -59,12 +59,6 @@ export function PriceUnitListPage({
 
   return (
     <>
-      <PageHeader
-        title="Price units"
-        description="The units you price in — credits, tokens, minutes — each pinned to a currency."
-        action={<Button onClick={() => setEditing({ mode: 'create' })}>New price unit</Button>}
-      />
-
       <PageBody>
         <ListState
           isLoading={priceUnits.isPending}
@@ -86,6 +80,7 @@ export function PriceUnitListPage({
             query={query}
             onQueryChange={onQueryChange}
             onPriceUnitClick={onOpenPriceUnit}
+            onCreate={() => setEditing({ mode: 'create' })}
             onClearFilters={clearFilters}
             filters={
               <PriceUnitFilters

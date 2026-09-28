@@ -50,6 +50,8 @@ export interface FeatureGridProps {
   error?: string | null
   onRetry?: () => void
   onFeatureClick?: (feature: Feature) => void
+  /** The primary create action; renders a "New feature" CTA at the toolbar's end. */
+  onCreate?: () => void
   /** Filter controls, rendered beside Sort. */
   filters?: ReactNode
   /** Offered when a filter is what emptied the list. */
@@ -57,9 +59,10 @@ export interface FeatureGridProps {
   locale?: string
 }
 
-function formatDate(value: Date | null, locale?: string): string {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
+function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
+  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
+  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 /** One value: how usage is aggregated. An em dash where nothing is measured. */
@@ -77,6 +80,7 @@ export function FeatureGrid({
   error = null,
   onRetry,
   onFeatureClick,
+  onCreate,
   filters,
   onClearFilters,
   locale,
@@ -90,9 +94,9 @@ export function FeatureGrid({
           accessorFn: (row: Feature) => row.name,
           header: ({ column }: never) => <DataGridColumnHeader title="Feature" column={column} />,
           cell: ({ row }: { row: { original: Feature } }) => (
-            <span className="block truncate font-medium">{row.original.name}</span>
+            <span className="block truncate">{row.original.name}</span>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 240,
         },
         {
@@ -103,7 +107,7 @@ export function FeatureGrid({
           cell: ({ row }: { row: { original: Feature } }) => (
             <FeatureTypeBadge type={row.original.type} />
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 130,
         },
         {
@@ -114,7 +118,7 @@ export function FeatureGrid({
           cell: ({ row }: { row: { original: Feature } }) => (
             <CatalogStatusBadge status={row.original.status} />
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 140,
         },
         {
@@ -125,7 +129,7 @@ export function FeatureGrid({
             <DataGridColumnHeader title="Measured by" column={column} />
           ),
           cell: ({ row }: { row: { original: Feature } }) => measuredBy(row.original),
-          enableSorting: false,
+          enableSorting: true,
           size: 200,
         },
         {
@@ -139,7 +143,7 @@ export function FeatureGrid({
             ) : (
               <span className="text-muted-foreground">—</span>
             ),
-          enableSorting: false,
+          enableSorting: true,
           size: 110,
         },
         {
@@ -147,8 +151,10 @@ export function FeatureGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Feature) => row.createdAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
-          cell: ({ row }: { row: { original: Feature } }) => formatDate(row.original.createdAt, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: Feature } }) => (
+            <DateCell value={row.original.createdAt} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 130,
         },
         {
@@ -156,8 +162,10 @@ export function FeatureGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Feature) => row.updatedAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
-          cell: ({ row }: { row: { original: Feature } }) => formatDate(row.original.updatedAt, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: Feature } }) => (
+            <DateCell value={row.original.updatedAt} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 130,
         },
       ] as never,
@@ -216,10 +224,18 @@ export function FeatureGrid({
   return (
     <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
       <GridToolbar
+        heading="Features"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
         placeholder="Search..."
         label="Search features"
+        action={
+          onCreate ? (
+            <Button size="sm" onClick={onCreate}>
+              New feature
+            </Button>
+          ) : undefined
+        }
       >
         {filters}
         <SortMenu

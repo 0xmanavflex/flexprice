@@ -15,10 +15,25 @@ const VENDORED = [
   'packages/ui/src/components/reui/**',
   'packages/ui/src/primitives/**',
   'packages/ui/src/components/blocks/**',
+  'packages/ui/src/components/examples/**',
 ]
 
 export const config = [
-  { ignores: ['**/dist/**', '**/node_modules/**', '**/*.gen.ts', '**/.nx/**'] },
+  // Build output and tool artifacts. `test-results/` and `playwright-report/`
+  // hold Playwright traces — minified vendor JS and screenshots that are
+  // git-ignored but still on disk, so without this a local e2e run leaves the
+  // next `pnpm lint` failing on `no-undef` in code nobody wrote.
+  {
+    ignores: [
+      '**/dist/**',
+      '**/node_modules/**',
+      '**/*.gen.ts',
+      '**/.nx/**',
+      '**/test-results/**',
+      '**/playwright-report/**',
+      '**/storybook-static/**',
+    ],
+  },
   js.configs.recommended,
   ...tseslint.configs.recommended,
   {

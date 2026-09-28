@@ -1,4 +1,4 @@
-import { LogOutIcon, MoreHorizontalIcon, SettingsIcon, UserIcon } from 'lucide-react'
+import { BookOpenIcon, LogOutIcon, MoreHorizontalIcon, SettingsIcon, UserIcon } from 'lucide-react'
 import { Avatar, AvatarFallback, AvatarImage } from '@ui/primitives/avatar'
 import {
   DropdownMenu,
@@ -40,6 +40,8 @@ export interface ShellAccountProps {
   user: ShellUser
   onProfile?: () => void
   onSettings?: () => void
+  /** Documentation, beside Settings — where the sidebar's "Quick links" used to be. */
+  onDocs?: () => void
   onSignOut?: () => void
 }
 
@@ -55,7 +57,13 @@ function initials(name: string): string {
   )
 }
 
-export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAccountProps) {
+export function ShellAccount({
+  user,
+  onProfile,
+  onSettings,
+  onDocs,
+  onSignOut,
+}: ShellAccountProps) {
   const { isMobile } = useSidebar()
 
   return (
@@ -135,6 +143,12 @@ export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAc
                 <DropdownMenuItem className={MENU_ITEM} onClick={onSettings}>
                   <SettingsIcon aria-hidden />
                   Settings
+                </DropdownMenuItem>
+              ) : null}
+              {onDocs ? (
+                <DropdownMenuItem className={MENU_ITEM} onClick={onDocs}>
+                  <BookOpenIcon aria-hidden />
+                  Documentation
                 </DropdownMenuItem>
               ) : null}
             </DropdownMenuGroup>

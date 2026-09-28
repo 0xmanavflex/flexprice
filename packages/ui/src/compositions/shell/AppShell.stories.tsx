@@ -116,6 +116,8 @@ const meta = {
     activeItemId: 'features',
     onNavigate: fn(),
     user: { name: 'Dinesh K', email: 'dinesh@flexprice.io', organization: 'Flexprice' },
+    onSettings: fn(),
+    onDocs: fn(),
     onSignOut: fn(),
     onSearch: fn(),
     children: <div className="p-6 text-sm text-muted-foreground">Page content.</div>,
@@ -312,12 +314,18 @@ export const NotificationsLoading: Story = {
   },
 }
 
-/** The account menu is how someone leaves, so it is reachable in one click. */
+/**
+ * The account menu is how someone leaves, so it is reachable in one click — and
+ * it is where Documentation now lives, beside Settings, since "Quick links" left
+ * the sidebar.
+ */
 export const AccountMenu: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(
       within(canvasElement).getByRole('button', { name: /account: dinesh k/i }),
     )
+    await expect(await screen.findByRole('menuitem', { name: 'Settings' })).toBeVisible()
+    await expect(await screen.findByRole('menuitem', { name: 'Documentation' })).toBeVisible()
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
     await expect(args.onSignOut).toHaveBeenCalled()
   },

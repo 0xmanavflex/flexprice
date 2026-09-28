@@ -289,4 +289,12 @@
   [data-slot='table-row']:hover {
     background-color: color-mix(in oklch, var(--muted) 60%, transparent);
   }
+
+  /* Hover reads fainter than the selected row — the same teal tone at lower
+     strength — so the current page still stands out from one you are merely
+     pointing at. Active rows keep the full `--sidebar-accent` wash. */
+  [data-slot='sidebar-menu-button']:not([data-active]):hover,
+  [data-slot='sidebar-menu-sub-button']:not([data-active]):hover {
+    background-color: color-mix(in oklch, var(--sidebar-accent) 45%, transparent);
+  }
 }

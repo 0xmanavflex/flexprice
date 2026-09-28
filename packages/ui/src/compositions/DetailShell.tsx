@@ -47,7 +47,10 @@ export function DetailShell({
   className,
 }: DetailShellProps) {
   return (
-    <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
+    // `overflow-y-auto` so the whole detail page scrolls within the shell's
+    // content region (which is `overflow-hidden`): header + body together, so a
+    // long page is never clipped.
+    <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
       <header className="flex flex-col gap-4 px-6 pt-5 pb-5">
         {breadcrumb}
         <div className="flex items-start justify-between gap-4">

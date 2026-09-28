@@ -1,7 +1,7 @@
 import { type SubscriptionQuery } from '@fp/domain'
 import { ApiError, useSubscriptions } from '@fp/query'
 import { SubscriptionFilters, SubscriptionGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
+import { ListState, PageBody } from '@fp/ui/compositions'
 import { RefreshCwIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
 
@@ -26,12 +26,6 @@ export function SubscriptionListPage({ query, onQueryChange, onCreate }: Subscri
 
   return (
     <>
-      <PageHeader
-        title="Subscriptions"
-        description="Every active, paused and cancelled subscription."
-        action={<Button onClick={onCreate}>New subscription</Button>}
-      />
-
       <PageBody>
         <ListState
           isLoading={subscriptions.isPending}
@@ -50,6 +44,7 @@ export function SubscriptionListPage({ query, onQueryChange, onCreate }: Subscri
             total={subscriptions.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            onCreate={onCreate}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
             filters={
               <SubscriptionFilters

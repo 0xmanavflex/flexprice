@@ -1,7 +1,5 @@
 // @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
-"use client"
-
 import * as React from "react"
 import { useCascaderActions } from "@ui/components/reui/cascader/cascader-context"
 import {

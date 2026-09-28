@@ -47,6 +47,8 @@ export interface PlanGridProps {
   error?: string | null
   onRetry?: () => void
   onPlanClick?: (plan: Plan) => void
+  /** The primary create action; renders a "New plan" CTA at the toolbar's end. */
+  onCreate?: () => void
   /** Filter controls, rendered beside Sort. */
   filters?: ReactNode
   /** Offered when a filter is what emptied the list. */
@@ -54,9 +56,10 @@ export interface PlanGridProps {
   locale?: string
 }
 
-function formatDate(value: Date | null, locale?: string): string {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
+function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
+  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
+  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 /** "2 charges", "1 charge", or the muted note that a plan bills nothing yet. */
@@ -74,6 +77,7 @@ export function PlanGrid({
   error = null,
   onRetry,
   onPlanClick,
+  onCreate,
   filters,
   onClearFilters,
   locale,
@@ -88,7 +92,7 @@ export function PlanGrid({
           header: ({ column }: never) => <DataGridColumnHeader title="Plan" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => (
             <div className="flex min-w-0 flex-col">
-              <span className="truncate font-medium">{row.original.name}</span>
+              <span className="truncate">{row.original.name}</span>
               {row.original.lookupKey ? (
                 <span className="truncate text-xs text-muted-foreground">
                   {row.original.lookupKey}
@@ -96,7 +100,7 @@ export function PlanGrid({
               ) : null}
             </div>
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 260,
         },
         {
@@ -107,7 +111,7 @@ export function PlanGrid({
           cell: ({ row }: { row: { original: Plan } }) => (
             <CatalogStatusBadge status={row.original.status} />
           ),
-          enableSorting: false,
+          enableSorting: true,
           size: 120,
         },
         {
@@ -116,7 +120,7 @@ export function PlanGrid({
           accessorFn: (row: Plan) => row.chargeCount,
           header: ({ column }: never) => <DataGridColumnHeader title="Charges" column={column} />,
           cell: ({ row }: { row: { original: Plan } }) => charges(row.original.chargeCount),
-          enableSorting: false,
+          enableSorting: true,
           size: 140,
         },
         {
@@ -124,8 +128,10 @@ export function PlanGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Plan) => row.createdAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
-          cell: ({ row }: { row: { original: Plan } }) => formatDate(row.original.createdAt, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: Plan } }) => (
+            <DateCell value={row.original.createdAt} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
         {
@@ -133,8 +139,10 @@ export function PlanGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Plan) => row.updatedAt,
           header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
-          cell: ({ row }: { row: { original: Plan } }) => formatDate(row.original.updatedAt, locale),
-          enableSorting: false,
+          cell: ({ row }: { row: { original: Plan } }) => (
+            <DateCell value={row.original.updatedAt} {...(locale ? { locale } : {})} />
+          ),
+          enableSorting: true,
           size: 140,
         },
       ] as never,
@@ -193,10 +201,18 @@ export function PlanGrid({
   return (
     <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
       <GridToolbar
+        heading="Plans"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
         placeholder="Search..."
         label="Search plans"
+        action={
+          onCreate ? (
+            <Button size="sm" onClick={onCreate}>
+              New plan
+            </Button>
+          ) : undefined
+        }
       >
         {filters}
         <SortMenu

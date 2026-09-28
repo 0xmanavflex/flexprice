@@ -12,14 +12,21 @@ import {
 import { ChargeEditor } from './ChargeEditor'
 
 /**
- * The two-pane charges builder. Charge cards on the left, a sticky live preview
- * on the right that updates as charges are added, edited or removed. Fixtures
- * in, a validated `CreateCharge[]` out on save — no provider, no network.
+ * The standalone, stepped charge builder: pick a charge type, configure it with
+ * the charge form, then review the working set and save. No inline preview — that
+ * lives on the plan detail page now. Fixtures in, a validated `CreateCharge[]` out
+ * on save — no provider, no network.
  */
 const meta = {
   title: 'Surfaces/ChargeEditor',
   component: ChargeEditor,
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    // The vendored ReUI Stepper renders role="tablist" without role="tab"
+    // children (its steps are buttons), which axe flags as aria-required-children
+    // — an upstream ARIA shape we do not fork. Disable just that rule.
+    a11y: { config: { rules: [{ id: 'aria-required-children', enabled: false }] } },
+  },
   args: {
     planName: 'Growth',
     entityType: PriceEntityType.Plan,
@@ -66,25 +73,34 @@ const usageTiered: CreateCharge = {
   ],
 }
 
-/** The first-run state: choose a charge type to begin. */
-export const Empty: Story = {}
+/** The first-run state: the type step, choose a charge type to begin. */
+export const Empty: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /fixed charge/i })).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: /usage charge/i })).toBeInTheDocument()
+  },
+}
 
-/** A plan already carrying a fixed base and a tiered usage charge. */
+/** A plan already carrying a fixed base and a tiered usage charge lands on Review. */
 export const WithCharges: Story = {
   args: { initialCharges: [fixedBase, usageTiered] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // "Platform base" shows on both the charge card and the preview line item.
-    await expect(canvas.getAllByText('Platform base').length).toBeGreaterThan(0)
-    await expect(canvas.getByText('Example bill')).toBeInTheDocument()
+    // The review lists each charge by its name; the tiered usage charge resolves
+    // to its meter, "API calls".
+    await expect(canvas.getByText('Platform base')).toBeInTheDocument()
+    await expect(canvas.getByText('API calls')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: /save charges/i })).toBeInTheDocument()
   },
 }
 
-/** Adding a fixed charge opens its form in place. */
+/** Picking a type and continuing opens the charge form to configure it. */
 export const AddingAFixedCharge: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /add fixed charge/i }))
+    await userEvent.click(canvas.getByRole('button', { name: /fixed charge/i }))
+    await userEvent.click(canvas.getByRole('button', { name: /continue/i }))
     await expect(await canvas.findByText('New charge')).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /^add charge$/i })).toBeInTheDocument()
   },
