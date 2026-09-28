@@ -70,10 +70,14 @@ export function GridToolbar({
         label rather than a hero, because the breadcrumb already carries the
         page title and the visual hierarchy is the layout, not a big heading.
       */}
-      {heading ? (
-        <h1 className="mr-1 shrink-0 truncate text-sm font-semibold text-foreground">{heading}</h1>
-      ) : null}
-      <InputGroup>
+      {/* The page title lives in the breadcrumb, so no visible heading sits over
+          the table. It stays as an `sr-only` <h1> only so the page keeps its one
+          heading for assistive tech and the journey tests. */}
+      {heading ? <h1 className="sr-only">{heading}</h1> : null}
+      {/* Constrained, not full-width: a search that stretches the whole bar
+          reads as one big empty field. Capped at a comfortable width, with the
+          controls pinned to the right by `ml-auto`. */}
+      <InputGroup className="w-full max-w-xs">
         <InputGroupAddon align="inline-start">
           <SearchIcon aria-hidden />
         </InputGroupAddon>
@@ -97,8 +101,12 @@ export function GridToolbar({
         ) : null}
       </InputGroup>
 
-      {children ? <div className="flex shrink-0 items-center gap-1.5">{children}</div> : null}
-      {action ? <div className="shrink-0">{action}</div> : null}
+      {children || action ? (
+        <div className="ml-auto flex shrink-0 items-center gap-2">
+          {children ? <div className="flex items-center gap-1.5">{children}</div> : null}
+          {action}
+        </div>
+      ) : null}
     </div>
   )
 }

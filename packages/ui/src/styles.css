@@ -295,6 +295,15 @@
      pointing at. Active rows keep the full `--sidebar-accent` wash. */
   [data-slot='sidebar-menu-button']:not([data-active]):hover,
   [data-slot='sidebar-menu-sub-button']:not([data-active]):hover {
-    background-color: color-mix(in oklch, var(--sidebar-accent) 45%, transparent);
+    /* Clearly fainter than the selected row (a full `--sidebar-accent` wash):
+       a light neutral tint so "pointing at" never reads like "selected". */
+    background-color: color-mix(in oklch, var(--sidebar-foreground) 7%, transparent) !important;
+  }
+
+  /* Dropdowns answer the cursor and read as a control, not flat text — a light
+     hover wash in both modes (the vendored select only had one in dark), so a
+     row of selects invites a click. */
+  [data-slot='select-trigger']:hover:not(:disabled) {
+    background-color: color-mix(in oklch, var(--muted) 55%, transparent);
   }
 }

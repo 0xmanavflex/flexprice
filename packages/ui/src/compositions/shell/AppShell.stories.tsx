@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from 'lucide-react'
 import { AppShell } from './AppShell'
 import { EnvironmentSwitcher } from './EnvironmentSwitcher'
@@ -324,8 +324,11 @@ export const AccountMenu: Story = {
     await userEvent.click(
       within(canvasElement).getByRole('button', { name: /account: dinesh k/i }),
     )
-    await expect(await screen.findByRole('menuitem', { name: 'Settings' })).toBeVisible()
-    await expect(await screen.findByRole('menuitem', { name: 'Documentation' })).toBeVisible()
+    // `waitFor` so the visibility checks retry while the menu animates open.
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeVisible())
+    await waitFor(() =>
+      expect(screen.getByRole('menuitem', { name: 'Documentation' })).toBeVisible(),
+    )
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
     await expect(args.onSignOut).toHaveBeenCalled()
   },

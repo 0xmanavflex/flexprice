@@ -40,14 +40,17 @@ export interface FilterBarProps {
   onQueryChange: (query: FilterQuery, flat: FlatFilter[]) => void
   size?: 'sm' | 'default'
   /**
-   * Which chrome draws the query. `basic` is the flat chip row; `advanced` is
-   * ReUI's full builder — nested conditions, operators, reorder — behind the
-   * trigger. Still flattened to a URL-safe array on the way out, so a query
-   * a flat schema cannot express is simply one the caller never receives.
+   * Which chrome draws the query. `advanced` is ReUI's builder — the inline
+   * "Field is any of value" chips the reference tables use; `basic` is the older
+   * flat chip row. Either way the query is flattened to a URL-safe array on the
+   * way out, so a query a flat schema cannot express is one the caller never
+   * receives.
    */
   variant?: 'basic' | 'advanced'
-  /** Where the advanced builder renders. `popover` keeps the toolbar compact. */
+  /** Where the advanced builder renders. `inline` shows the chips in the bar. */
   advancedMode?: 'popover' | 'inline'
+  /** A Clear button once the query holds anything (the reference bar has one). */
+  showClear?: boolean
 }
 
 /** A query with nothing in it. Exported so callers can seed state with it. */
@@ -60,14 +63,16 @@ export function FilterBar({
   query,
   onQueryChange,
   size = 'sm',
-  variant = 'basic',
-  advancedMode = 'popover',
+  variant = 'advanced',
+  advancedMode = 'inline',
+  showClear = true,
 }: FilterBarProps) {
   return (
     <Filters
       size={size}
       variant={variant}
       advancedMode={advancedMode}
+      showClear={showClear}
       fields={fields}
       query={query}
       onQueryChange={(next: FilterQuery) => {

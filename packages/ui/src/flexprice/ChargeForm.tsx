@@ -165,7 +165,7 @@ export function ChargeForm({
                   onValueChange={field.onChange}
                   disabled={isSubmitting}
                 >
-                  <SelectTrigger id={id}>
+                  <SelectTrigger id={id} className="w-full">
                     <SelectValue placeholder="Choose a feature to meter" />
                   </SelectTrigger>
                   <SelectContent>
@@ -208,7 +208,7 @@ export function ChargeForm({
               name="currency"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
-                  <SelectTrigger id={id}>
+                  <SelectTrigger id={id} className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -231,7 +231,7 @@ export function ChargeForm({
               name="billingPeriod"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
-                  <SelectTrigger id={id}>
+                  <SelectTrigger id={id} className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -352,7 +352,7 @@ export function ChargeForm({
                     onValueChange={field.onChange}
                     disabled={isSubmitting}
                   >
-                    <SelectTrigger id={id}>
+                    <SelectTrigger id={id} className="w-full">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -394,7 +394,7 @@ export function ChargeForm({
               name="invoiceCadence"
               render={({ field }) => (
                 <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
-                  <SelectTrigger id={id}>
+                  <SelectTrigger id={id} className="w-full">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
