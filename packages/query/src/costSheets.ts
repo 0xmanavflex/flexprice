@@ -104,3 +104,22 @@ export function useCostSheets(query: CostSheetQuery) {
     placeholderData: (previous) => previous,
   })
 }
+
+/**
+ * One cost sheet, fetched by id through `GET /costs/{id}`.
+ *
+ * The get endpoint wraps the record under `costsheet`, unlike the list — so this
+ * unwraps it and reports a missing record as null.
+ */
+export function useCostSheet(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.costSheets.detail(id),
+    queryFn: async () => {
+      const response = await call(() => client.costs.getCostsheet(id))
+      return response.costsheet ? toCostSheet(response.costsheet as CostSheetWire) : null
+    },
+    enabled: id.length > 0,
+  })
+}

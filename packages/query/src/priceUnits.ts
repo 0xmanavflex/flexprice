@@ -164,3 +164,17 @@ export function useUpdatePriceUnit() {
     },
   })
 }
+
+/** One price unit, fetched by id through `GET /prices/units/{id}`. */
+export function usePriceUnit(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.priceUnits.detail(id),
+    queryFn: async () => {
+      const response = await call(() => client.priceUnits.getPriceUnit(id))
+      return toPriceUnit(response as PriceUnitWire)
+    },
+    enabled: id.length > 0,
+  })
+}

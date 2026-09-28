@@ -9,6 +9,7 @@ import { Button } from '@fp/ui/primitives'
 export interface PriceUnitListPageProps {
   query: PriceUnitQuery
   onQueryChange: (query: PriceUnitQuery) => void
+  onOpenPriceUnit: (priceUnit: PriceUnit) => void
 }
 
 /** Which record the drawer is editing — a new one, or an existing price unit. */
@@ -23,7 +24,11 @@ type Editing = { mode: 'create' } | { mode: 'edit'; priceUnit: PriceUnit } | nul
  * state, because a half-typed unit is not a place worth a URL, and opening it
  * keeps the list behind it rather than navigating away.
  */
-export function PriceUnitListPage({ query, onQueryChange }: PriceUnitListPageProps) {
+export function PriceUnitListPage({
+  query,
+  onQueryChange,
+  onOpenPriceUnit,
+}: PriceUnitListPageProps) {
   const priceUnits = usePriceUnits(query)
   const create = useCreatePriceUnit()
   const update = useUpdatePriceUnit()
@@ -80,7 +85,7 @@ export function PriceUnitListPage({ query, onQueryChange }: PriceUnitListPagePro
             total={priceUnits.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
-            onPriceUnitClick={(priceUnit) => setEditing({ mode: 'edit', priceUnit })}
+            onPriceUnitClick={onOpenPriceUnit}
             onClearFilters={clearFilters}
             filters={
               <PriceUnitFilters

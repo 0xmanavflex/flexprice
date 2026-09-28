@@ -1,4 +1,4 @@
-import { type CostSheetQuery } from '@fp/domain'
+import { type CostSheet, type CostSheetQuery } from '@fp/domain'
 import { ApiError, useCostSheets } from '@fp/query'
 import { CostSheetFilters, CostSheetGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
@@ -7,6 +7,7 @@ import { SheetIcon } from 'lucide-react'
 export interface CostSheetListPageProps {
   query: CostSheetQuery
   onQueryChange: (query: CostSheetQuery) => void
+  onOpenCostSheet: (costSheet: CostSheet) => void
 }
 
 /**
@@ -17,7 +18,11 @@ export interface CostSheetListPageProps {
  * editing a cost sheet is a later surface, the same way coupons shipped a list
  * before its editor.
  */
-export function CostSheetListPage({ query, onQueryChange }: CostSheetListPageProps) {
+export function CostSheetListPage({
+  query,
+  onQueryChange,
+  onOpenCostSheet,
+}: CostSheetListPageProps) {
   const costSheets = useCostSheets(query)
 
   const failure = toFailure(costSheets.error)
@@ -49,6 +54,7 @@ export function CostSheetListPage({ query, onQueryChange }: CostSheetListPagePro
             total={costSheets.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            onCostSheetClick={onOpenCostSheet}
             onClearFilters={clearFilters}
             filters={
               <CostSheetFilters

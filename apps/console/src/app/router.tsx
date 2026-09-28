@@ -82,6 +82,25 @@ const CostSheetListPage = lazy(() =>
 )
 import { parseCostSheetSearch } from './costSheetSearch'
 import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
+const FeatureDetailPage = lazy(() =>
+  import('@/pages/features/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })),
+)
+const AddonDetailPage = lazy(() =>
+  import('@/pages/addons/AddonDetailPage').then((m) => ({ default: m.AddonDetailPage })),
+)
+const PriceUnitDetailPage = lazy(() =>
+  import('@/pages/price-units/PriceUnitDetailPage').then((m) => ({
+    default: m.PriceUnitDetailPage,
+  })),
+)
+const GroupDetailPage = lazy(() =>
+  import('@/pages/groups/GroupDetailPage').then((m) => ({ default: m.GroupDetailPage })),
+)
+const CostSheetDetailPage = lazy(() =>
+  import('@/pages/cost-sheets/CostSheetDetailPage').then((m) => ({
+    default: m.CostSheetDetailPage,
+  })),
+)
 const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
@@ -296,6 +315,9 @@ function FeaturesRouteComponent() {
         void navigate({ to: '/features', search: next, replace: true })
       }
       onCreate={() => void navigate({ to: '/features/new' })}
+      onOpenFeature={(feature) =>
+        void navigate({ to: '/features/$featureId', params: { featureId: feature.id } })
+      }
     />
   )
 }
@@ -311,6 +333,25 @@ function FeatureCreateRouteComponent() {
   const backToList = () => void navigate({ to: '/features', search: {} as never })
 
   return <FeatureCreatePage onCreated={backToList} onCancel={backToList} />
+}
+
+/** The feature detail page. `/features/$featureId` — the id is a path param. */
+const featureDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/features/$featureId',
+  component: FeatureDetailRouteComponent,
+})
+
+function FeatureDetailRouteComponent() {
+  const { featureId } = featureDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <FeatureDetailPage
+      featureId={featureId}
+      onNavigateToList={() => void navigate({ to: '/features', search: {} as never })}
+    />
+  )
 }
 
 /**
@@ -429,6 +470,28 @@ function AddonsRouteComponent() {
     <AddonListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/addons', search: next, replace: true })}
+      onOpenAddon={(addon) =>
+        void navigate({ to: '/addons/$addonId', params: { addonId: addon.id } })
+      }
+    />
+  )
+}
+
+/** The add-on detail page. `/addons/$addonId` — view, and edit its details in place. */
+const addonDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/addons/$addonId',
+  component: AddonDetailRouteComponent,
+})
+
+function AddonDetailRouteComponent() {
+  const { addonId } = addonDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <AddonDetailPage
+      addonId={addonId}
+      onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
     />
   )
 }
@@ -507,6 +570,28 @@ function PriceUnitsRouteComponent() {
     <PriceUnitListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/price-units', search: next, replace: true })}
+      onOpenPriceUnit={(priceUnit) =>
+        void navigate({ to: '/price-units/$priceUnitId', params: { priceUnitId: priceUnit.id } })
+      }
+    />
+  )
+}
+
+/** The price-unit detail page. `/price-units/$priceUnitId` — view, and edit in place. */
+const priceUnitDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/price-units/$priceUnitId',
+  component: PriceUnitDetailRouteComponent,
+})
+
+function PriceUnitDetailRouteComponent() {
+  const { priceUnitId } = priceUnitDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <PriceUnitDetailPage
+      priceUnitId={priceUnitId}
+      onNavigateToList={() => void navigate({ to: '/price-units', search: {} as never })}
     />
   )
 }
@@ -533,6 +618,26 @@ function GroupsRouteComponent() {
     <GroupListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
+      onOpenGroup={(group) => void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })}
+    />
+  )
+}
+
+/** The group detail page. `/groups/$groupId` — a read-only view for now. */
+const groupDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/groups/$groupId',
+  component: GroupDetailRouteComponent,
+})
+
+function GroupDetailRouteComponent() {
+  const { groupId } = groupDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <GroupDetailPage
+      groupId={groupId}
+      onNavigateToList={() => void navigate({ to: '/groups', search: {} as never })}
     />
   )
 }
@@ -553,6 +658,28 @@ function CostSheetsRouteComponent() {
     <CostSheetListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/cost-sheets', search: next, replace: true })}
+      onOpenCostSheet={(costSheet) =>
+        void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId: costSheet.id } })
+      }
+    />
+  )
+}
+
+/** The cost-sheet detail page. `/cost-sheets/$costSheetId` — a read-only view for now. */
+const costSheetDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/cost-sheets/$costSheetId',
+  component: CostSheetDetailRouteComponent,
+})
+
+function CostSheetDetailRouteComponent() {
+  const { costSheetId } = costSheetDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <CostSheetDetailPage
+      costSheetId={costSheetId}
+      onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
     />
   )
 }
@@ -574,17 +701,22 @@ export const routeTree = rootRoute.addChildren([
   homeRoute,
   featuresRoute,
   featureCreateRoute,
+  featureDetailRoute,
   plansRoute,
   // The charges route is registered before the detail route so `/plans/x/charges`
   // is matched by it, not swallowed as a `$planId` of "x/charges".
   planChargesRoute,
   planDetailRoute,
   addonsRoute,
+  addonDetailRoute,
   couponsRoute,
   couponDetailRoute,
   priceUnitsRoute,
+  priceUnitDetailRoute,
   groupsRoute,
+  groupDetailRoute,
   costSheetsRoute,
+  costSheetDetailRoute,
   invoicesRoute,
   subscriptionCreateRoute,
   ...placeholderRoutes,

@@ -44,6 +44,12 @@ export type { ErrorStateProps, ListStateProps } from './States'
 
 export { DetailList, DetailListProvenance } from './DetailList'
 export type { DetailItem, DetailListProps } from './DetailList'
+
+export { DetailHeader, DetailHeaderProvenance } from './DetailHeader'
+export type { DetailHeaderProps } from './DetailHeader'
+
+export { DetailStats, DetailStatsProvenance } from './DetailStats'
+export type { DetailStat, DetailStatsProps } from './DetailStats'
 export { ConfirmDialog, ConfirmDialogProvenance } from './ConfirmDialog'
 export type { ConfirmDialogProps } from './ConfirmDialog'
 

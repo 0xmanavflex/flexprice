@@ -290,6 +290,12 @@ export const handlers = [
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
   }),
+  // One add-on, by id — the detail page on a direct navigation, from the same
+  // corpus the list reads.
+  http.get(`${BASE}/addons/:id`, ({ params }) => {
+    const addon = byId('addons', String(params['id']))
+    return addon ? HttpResponse.json(addon) : new HttpResponse(null, { status: 404 })
+  }),
 
   // Plans, the same way: create and edit echo the record back so the drawer's
   // success path runs end to end.
@@ -341,6 +347,11 @@ export const handlers = [
   http.put(`${BASE}/prices/units/:id`, async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+  }),
+  // One price unit, by id — the detail page on a direct navigation.
+  http.get(`${BASE}/prices/units/:id`, ({ params }) => {
+    const unit = byId('priceUnits', String(params['id']))
+    return unit ? HttpResponse.json(unit) : new HttpResponse(null, { status: 404 })
   }),
 
   // One plan, by id — what the detail page loads on a direct navigation. Served

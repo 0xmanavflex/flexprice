@@ -105,3 +105,17 @@ export function useGroups(query: GroupQuery) {
     placeholderData: (previous) => previous,
   })
 }
+
+/** One group, fetched by id through `GET /groups/{id}`. */
+export function useGroup(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.groups.detail(id),
+    queryFn: async () => {
+      const response = await call(() => client.groups.getGroup(id))
+      return toGroup(response as GroupWire)
+    },
+    enabled: id.length > 0,
+  })
+}

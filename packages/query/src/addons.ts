@@ -145,3 +145,17 @@ export function useUpdateAddon() {
     },
   })
 }
+
+/** One add-on, fetched by id through `GET /addons/{id}`. */
+export function useAddon(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.addons.detail(id),
+    queryFn: async () => {
+      const response = await call(() => client.addons.getAddon(id))
+      return toAddon(response as AddonWire)
+    },
+    enabled: id.length > 0,
+  })
+}

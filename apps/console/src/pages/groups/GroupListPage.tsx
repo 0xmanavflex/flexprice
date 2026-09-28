@@ -1,4 +1,4 @@
-import { type GroupQuery } from '@fp/domain'
+import { type Group, type GroupQuery } from '@fp/domain'
 import { ApiError, useGroups } from '@fp/query'
 import { GroupFilters, GroupGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
@@ -7,6 +7,7 @@ import { LayersIcon } from 'lucide-react'
 export interface GroupListPageProps {
   query: GroupQuery
   onQueryChange: (query: GroupQuery) => void
+  onOpenGroup: (group: Group) => void
 }
 
 /**
@@ -17,7 +18,7 @@ export interface GroupListPageProps {
  * editing a group is a later surface, the same way coupons shipped a list
  * before its editor.
  */
-export function GroupListPage({ query, onQueryChange }: GroupListPageProps) {
+export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPageProps) {
   const groups = useGroups(query)
 
   const failure = toFailure(groups.error)
@@ -49,6 +50,7 @@ export function GroupListPage({ query, onQueryChange }: GroupListPageProps) {
             total={groups.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            onGroupClick={onOpenGroup}
             onClearFilters={clearFilters}
             filters={
               <GroupFilters

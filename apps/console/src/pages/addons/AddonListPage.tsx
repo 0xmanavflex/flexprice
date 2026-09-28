@@ -9,6 +9,7 @@ import { Button } from '@fp/ui/primitives'
 export interface AddonListPageProps {
   query: AddonQuery
   onQueryChange: (query: AddonQuery) => void
+  onOpenAddon: (addon: Addon) => void
 }
 
 /** Which record the drawer is editing — a new one, or an existing add-on. */
@@ -21,7 +22,7 @@ type Editing = { mode: 'create' } | { mode: 'edit'; addon: Addon } | null
  * piece of local state here, because a half-typed add-on is not a place worth a
  * URL; opening it keeps the list behind it rather than navigating away.
  */
-export function AddonListPage({ query, onQueryChange }: AddonListPageProps) {
+export function AddonListPage({ query, onQueryChange, onOpenAddon }: AddonListPageProps) {
   const addons = useAddons(query)
   const create = useCreateAddon()
   const update = useUpdateAddon()
@@ -76,7 +77,7 @@ export function AddonListPage({ query, onQueryChange }: AddonListPageProps) {
             total={addons.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
-            onAddonClick={(addon) => setEditing({ mode: 'edit', addon })}
+            onAddonClick={onOpenAddon}
             onClearFilters={clearFilters}
             filters={
               <AddonFilters

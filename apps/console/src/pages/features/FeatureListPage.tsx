@@ -1,4 +1,4 @@
-import { type FeatureQuery } from '@fp/domain'
+import { type Feature, type FeatureQuery } from '@fp/domain'
 import { ApiError, useFeatures } from '@fp/query'
 import { FeatureFilters, FeatureGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
@@ -9,6 +9,7 @@ export interface FeatureListPageProps {
   query: FeatureQuery
   onQueryChange: (query: FeatureQuery) => void
   onCreate: () => void
+  onOpenFeature: (feature: Feature) => void
 }
 
 /**
@@ -19,7 +20,12 @@ export interface FeatureListPageProps {
  * into a sentence, and hands the grid plain props. No `useState`: the query
  * lives in the URL.
  */
-export function FeatureListPage({ query, onQueryChange, onCreate }: FeatureListPageProps) {
+export function FeatureListPage({
+  query,
+  onQueryChange,
+  onCreate,
+  onOpenFeature,
+}: FeatureListPageProps) {
   const features = useFeatures(query)
 
   const failure = toFailure(features.error)
@@ -72,6 +78,7 @@ export function FeatureListPage({ query, onQueryChange, onCreate }: FeatureListP
             total={features.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            onFeatureClick={onOpenFeature}
             onClearFilters={clearFilters}
             filters={
               <FeatureFilters
