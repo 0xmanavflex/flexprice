@@ -2,14 +2,11 @@ import { useMemo, useRef, useState, type ReactNode } from 'react'
 import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
 import {
   ADDON_SORT_LABEL,
-  ADDON_STATUS_LABEL,
   type Addon,
   type AddonQuery,
   AddonSortField,
-  AddonStatus,
   AddonView,
 } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
@@ -31,6 +28,7 @@ import { GridToolbar } from '@ui/compositions/GridToolbar'
 import { SortMenu } from '@ui/compositions/SortMenu'
 import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
+import { CatalogStatusBadge } from './StatusBadge'
 
 /**
  * The add-on list.
@@ -64,10 +62,6 @@ export interface AddonGridProps {
   locale?: string
 }
 
-const STATUS_VARIANT: Record<AddonStatus, 'success-light' | 'secondary'> = {
-  [AddonStatus.Published]: 'success-light',
-  [AddonStatus.Archived]: 'secondary',
-}
 
 function formatDate(value: Date | null, locale?: string): string {
   if (!value) return '—'
@@ -114,9 +108,7 @@ export function AddonGrid({
           accessorFn: (row: Addon) => row.status,
           header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
           cell: ({ row }: { row: { original: Addon } }) => (
-            <Badge variant={STATUS_VARIANT[row.original.status]} size="sm">
-              {ADDON_STATUS_LABEL[row.original.status]}
-            </Badge>
+            <CatalogStatusBadge status={row.original.status} />
           ),
           enableSorting: false,
           size: 120,
@@ -368,9 +360,7 @@ function AddonCards({ addons, isLoading, onAddonClick, onClearFilters, locale }:
                     </CardDescription>
                   ) : null}
                 </div>
-                <Badge variant={STATUS_VARIANT[addon.status]} size="sm">
-                  {ADDON_STATUS_LABEL[addon.status]}
-                </Badge>
+                <CatalogStatusBadge status={addon.status} />
               </div>
             </CardHeader>
             <CardContent className="flex flex-col gap-1.5">
