@@ -85,6 +85,7 @@ import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
 const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
+const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
 
 /**
  * The shell wraps every route.
@@ -556,7 +557,21 @@ function CostSheetsRouteComponent() {
   )
 }
 
+/**
+ * Home — the ReUI `dashboard-4` block, mounted as installed.
+ *
+ * The first destination in the sidebar, and the only one that is a dashboard
+ * rather than a list. It carries no query state yet; the block renders its own
+ * sample data until it is wired to real revenue and usage.
+ */
+const homeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/',
+  component: HomePage,
+})
+
 export const routeTree = rootRoute.addChildren([
+  homeRoute,
   featuresRoute,
   featureCreateRoute,
   plansRoute,

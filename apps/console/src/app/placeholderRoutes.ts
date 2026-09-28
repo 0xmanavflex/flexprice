@@ -29,16 +29,7 @@ export interface PlaceholderRoute {
 }
 
 export const PLACEHOLDER_ROUTES = [
-  {
-    path: '/',
-    title: 'Home',
-    description: 'Revenue, usage and anything that needs attention today.',
-    emptyTitle: 'Nothing to show yet',
-    emptyDescription:
-      'Revenue, usage and anything needing attention will appear here once you have customers.',
-    cta: null,
-    legacy: '/',
-  },
+  // `/` (Home) is a real page now — see `homeRoute` in router.tsx.
 
   // Product catalogue
   // `/plans` is a real page now — see `plansRoute` in router.tsx.

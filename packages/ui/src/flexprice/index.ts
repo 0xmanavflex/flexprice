@@ -8,6 +8,7 @@
  * Still presentation. These take props and render; they do not fetch.
  */
 
+export { DashboardHome, DashboardHomeProvenance } from './DashboardHome'
 export { InvoiceGrid, InvoiceGridProvenance } from './InvoiceGrid'
 export type { InvoiceGridProps } from './InvoiceGrid'
 export { PriceOverrideForm, PriceOverrideFormProvenance } from './PriceOverrideForm'

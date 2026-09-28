@@ -141,6 +141,7 @@ describe('breadcrumbForPath', () => {
  */
 describe('every destination resolves', () => {
   const BUILT = [
+    '/',
     '/features',
     '/plans',
     '/addons',
