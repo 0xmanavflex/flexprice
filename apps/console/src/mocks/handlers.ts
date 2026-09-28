@@ -138,6 +138,50 @@ const list = (path: string, key: string) =>
     )
   })
 
+/** Finds one row in a corpus by id — the by-id GET endpoints read it. */
+function byId(key: string, id: string): Record<string, unknown> | null {
+  return (corpus[key] as Corpus).items.find((row) => readString(row, 'id') === id) ?? null
+}
+
+/**
+ * Authored coupon associations, to shape.
+ *
+ * The corpus has no subscriptions wired to coupons, so "Where used" would be
+ * permanently empty. These rows are authored — matching `CouponAssociationResponse`
+ * (snake_case, `start_date`/`end_date` as ISO, an open-ended one omitting the
+ * end) — and returned only for the one coupon below, so the surface is
+ * demonstrable without pretending every coupon is in use.
+ */
+const DEMO_ASSOCIATION_COUPON = 'coupon_01M38QAAA0000000000000001'
+
+function couponAssociations(): Record<string, unknown>[] {
+  return [
+    {
+      id: 'cpasc_01M38QASSOC0000000000001',
+      coupon_id: DEMO_ASSOCIATION_COUPON,
+      subscription_id: 'subs_01M38QSUB00000000000001',
+      status: 'published',
+      start_date: '2026-02-01T00:00:00Z',
+    },
+    {
+      id: 'cpasc_01M38QASSOC0000000000002',
+      coupon_id: DEMO_ASSOCIATION_COUPON,
+      subscription_id: 'subs_01M38QSUB00000000000002',
+      status: 'published',
+      start_date: '2026-03-01T00:00:00Z',
+      end_date: '2026-09-01T00:00:00Z',
+    },
+    {
+      id: 'cpasc_01M38QASSOC0000000000003',
+      coupon_id: DEMO_ASSOCIATION_COUPON,
+      subscription_id: 'subs_01M38QSUB00000000000003',
+      status: 'archived',
+      start_date: '2025-11-01T00:00:00Z',
+      end_date: '2026-01-01T00:00:00Z',
+    },
+  ]
+}
+
 export const handlers = [
   search('/customers/search', 'customers'),
   search('/plans/search', 'plans'),
@@ -260,6 +304,27 @@ export const handlers = [
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
   }),
+
+  // A coupon's detail page: where-used, fetch by id, rename, archive.
+  //
+  // `/coupons/associations` is registered before `/coupons/:id`, so the literal
+  // path is not swallowed by the `:id` param (MSW matches in order).
+  http.get(`${BASE}/coupons/associations`, ({ request }) => {
+    const url = new URL(request.url)
+    const couponIds = url.searchParams.getAll('coupon_ids').flatMap((value) => value.split(','))
+    const items = couponIds.includes(DEMO_ASSOCIATION_COUPON) ? couponAssociations() : []
+    return HttpResponse.json({ items, pagination: { total: items.length, limit: 100, offset: 0 } })
+  }),
+  http.get(`${BASE}/coupons/:id`, ({ params }) => {
+    const coupon = byId('coupons', String(params['id']))
+    return coupon ? HttpResponse.json(coupon) : new HttpResponse(null, { status: 404 })
+  }),
+  http.put(`${BASE}/coupons/:id`, async ({ request, params }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const existing = byId('coupons', String(params['id'])) ?? {}
+    return HttpResponse.json({ ...existing, ...body, id: params['id'] })
+  }),
+  http.delete(`${BASE}/coupons/:id`, ({ params }) => HttpResponse.json({ id: String(params['id']) })),
 
   // Price units, the same way: create echoes the record back, and update — which
   // sends only the name — echoes it beside a fixed identity, so the drawer's

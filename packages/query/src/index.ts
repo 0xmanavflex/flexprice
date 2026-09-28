@@ -71,8 +71,24 @@ export {
 } from './addons'
 export type { AddonPage, AddonWire } from './addons'
 
-export { fetchCoupons, toCoupon, toCouponFilter, useCoupons } from './coupons'
-export type { CouponPage, CouponWire } from './coupons'
+export {
+  fetchCoupons,
+  toCoupon,
+  toCouponAssociation,
+  toCouponFilter,
+  toUpdateCouponRequest,
+  useArchiveCoupon,
+  useCoupon,
+  useCouponAssociations,
+  useCoupons,
+  useUpdateCoupon,
+} from './coupons'
+export type {
+  CouponAssociationPage,
+  CouponAssociationWire,
+  CouponPage,
+  CouponWire,
+} from './coupons'
 
 export {
   fetchPriceUnits,

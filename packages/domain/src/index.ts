@@ -139,8 +139,9 @@ export {
   CouponType,
   CouponView,
   DEFAULT_COUPON_QUERY,
+  editCouponSchema,
 } from './coupon'
-export type { Coupon, CouponQuery } from './coupon'
+export type { Coupon, CouponAssociation, CouponQuery, EditCoupon } from './coupon'
 
 export {
   DEFAULT_PRICE_UNIT_QUERY,

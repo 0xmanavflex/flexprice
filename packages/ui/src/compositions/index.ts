@@ -42,4 +42,9 @@ export type { AppFailureProps } from './AppFailure'
 export { ErrorState, ListState, LoadingRows, StatesProvenance } from './States'
 export type { ErrorStateProps, ListStateProps } from './States'
 
+export { DetailList, DetailListProvenance } from './DetailList'
+export type { DetailItem, DetailListProps } from './DetailList'
+export { ConfirmDialog, ConfirmDialogProvenance } from './ConfirmDialog'
+export type { ConfirmDialogProps } from './ConfirmDialog'
+
 export * from './shell'

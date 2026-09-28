@@ -62,6 +62,9 @@ import { DEFAULT_COUPON_QUERY, type CouponQuery } from '@fp/domain'
 const CouponListPage = lazy(() =>
   import('@/pages/coupons/CouponListPage').then((m) => ({ default: m.CouponListPage })),
 )
+const CouponDetailPage = lazy(() =>
+  import('@/pages/coupons/CouponDetailPage').then((m) => ({ default: m.CouponDetailPage })),
+)
 import { parseCouponSearch } from './couponSearch'
 import { DEFAULT_PRICE_UNIT_QUERY, type PriceUnitQuery } from '@fp/domain'
 const PriceUnitListPage = lazy(() =>
@@ -430,9 +433,12 @@ function AddonsRouteComponent() {
 }
 
 /**
- * Coupons: the list. The same URL-as-query contract; the editor is a later
- * surface, so create/open narrow the list for now — the same honest stand-in
- * plans and add-ons use.
+ * Coupons: the list, plus a read-only detail page with a rename drawer.
+ *
+ * The list keeps the URL-as-query contract; opening a coupon navigates to
+ * `/coupons/$couponId`, which is where the discount, redemptions, window, and —
+ * the V2 addition — where the coupon is applied all live. Editing is limited to
+ * a rename (the discount is immutable), so it stays a drawer over the detail.
  */
 const couponsRoute = createRoute({
   getParentRoute: () => rootRoute,
@@ -452,8 +458,26 @@ function CouponsRouteComponent() {
       onQueryChange={(next) => void navigate({ to: '/coupons', search: next, replace: true })}
       onCreate={() => void navigate({ to: '/coupons', search: { ...query, page: 1 } })}
       onOpenCoupon={(coupon) =>
-        void navigate({ to: '/coupons', search: { ...query, search: coupon.name, page: 1 } })
+        void navigate({ to: '/coupons/$couponId', params: { couponId: coupon.id } })
       }
+    />
+  )
+}
+
+const couponDetailRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/coupons/$couponId',
+  component: CouponDetailRouteComponent,
+})
+
+function CouponDetailRouteComponent() {
+  const { couponId } = couponDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <CouponDetailPage
+      couponId={couponId}
+      onBack={() => void navigate({ to: '/coupons', search: {} as never })}
     />
   )
 }
@@ -542,6 +566,7 @@ export const routeTree = rootRoute.addChildren([
   planDetailRoute,
   addonsRoute,
   couponsRoute,
+  couponDetailRoute,
   priceUnitsRoute,
   groupsRoute,
   costSheetsRoute,

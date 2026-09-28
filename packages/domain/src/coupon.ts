@@ -11,6 +11,7 @@
  * domain `Money` (never the API's bare `amount_off` string beside a separate
  * `currency`), and status collapses to the two a catalogue shows.
  */
+import { z } from 'zod'
 import type { Money } from './money'
 
 export const CouponStatus = {
@@ -75,6 +76,8 @@ export interface Coupon {
   redeemAfter: Date | null
   redeemBefore: Date | null
   status: CouponStatus
+  /** Free-form string map, or null when the coupon carries none. */
+  metadata: Record<string, string> | null
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -117,4 +120,37 @@ export const DEFAULT_COUPON_QUERY: CouponQuery = {
   sortBy: CouponSortField.Name,
   sortDirection: 'asc',
   view: CouponView.Table,
+}
+
+/**
+ * The rules for editing a coupon.
+ *
+ * A coupon's money — its type, discount, cadence and redemption window — is
+ * fixed once created (the API's `UpdateCouponRequest` accepts only `name` and
+ * `metadata`), because a coupon already redeemed against live subscriptions
+ * cannot change what it discounts underneath them. So the editor is a rename:
+ * the detail page shows the discount read-only and this schema guards the one
+ * field the API will take.
+ */
+export const editCouponSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a name'),
+})
+
+export type EditCoupon = z.infer<typeof editCouponSchema>
+
+/**
+ * Where a coupon is used — one subscription it is applied to.
+ *
+ * V1's detail page could not answer "where is this coupon in force"; the API
+ * grew a `/coupons/associations` endpoint since, and this is the read model of
+ * one association: which subscription, over what window, and whether it is
+ * still active. The heavy expansions (the subscription's line items and their
+ * prices) stay on the wire — this surface only needs to link back.
+ */
+export interface CouponAssociation {
+  id: string
+  subscriptionId: string
+  status: CouponStatus
+  startDate: Date | null
+  endDate: Date | null
 }
