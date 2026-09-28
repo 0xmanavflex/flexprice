@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { FilterIcon } from 'lucide-react'
 import { Button } from '@ui/primitives/button'
 import { Filters } from '@ui/components/reui/filters/filters'
@@ -40,14 +41,22 @@ export interface FilterBarProps {
   onQueryChange: (query: FilterQuery, flat: FlatFilter[]) => void
   size?: 'sm' | 'default'
   /**
-   * Which chrome draws the query. `advanced` is ReUI's builder — the inline
-   * "Field is any of value" chips the reference tables use; `basic` is the older
-   * flat chip row. Either way the query is flattened to a URL-safe array on the
-   * way out, so a query a flat schema cannot express is one the caller never
-   * receives.
+   * Which chrome draws the query.
+   *
+   * `basic` is the flat pill row the registry documents as "a toolbar over a
+   * table" — a chip reading `Status  is any of  Select…` with a kebab, the
+   * trigger below, and Clear. That is the reference bar, and it is the default.
+   *
+   * `advanced` is the nested condition builder, which the registry documents as
+   * being for "a sidebar or a settings page". Rendered `inline` in a toolbar it
+   * draws its whole empty-state panel — a glyph, "No filters yet", and Add
+   * filter / Add group — across the bar, and it honours neither `trigger` nor
+   * `showClear`, both of which belong to the chip row. It is kept as an option
+   * for a surface that genuinely wants a builder; it is not what a list screen
+   * wants.
    */
   variant?: 'basic' | 'advanced'
-  /** Where the advanced builder renders. `inline` shows the chips in the bar. */
+  /** Where the advanced builder renders. Ignored in `basic`. */
   advancedMode?: 'popover' | 'inline'
   /** A Clear button once the query holds anything (the reference bar has one). */
   showClear?: boolean
@@ -58,15 +67,52 @@ export function emptyFilterQuery(): FilterQuery {
   return createFilterQuery()
 }
 
+/** What a query means once half-built rules are dropped. Two queries with the
+ *  same signature select the same records, whatever drafts are open. */
+function committedSignature(query: FilterQuery): string {
+  return JSON.stringify(flattenFilterConditions(query))
+}
+
 export function FilterBar({
   fields,
   query,
   onQueryChange,
   size = 'sm',
-  variant = 'advanced',
-  advancedMode = 'inline',
+  variant = 'basic',
+  advancedMode = 'popover',
   showClear = true,
 }: FilterBarProps) {
+  /*
+   * The bar owns the tree; the caller owns what it *means*.
+   *
+   * This is not a convenience — without it the bar cannot be used at all.
+   * Callers derive `query` from the committed filter (`statuses` in the URL),
+   * and picking an attribute creates a rule whose value has not been chosen
+   * yet. `flattenFilterConditions` deliberately skips such a rule, so the
+   * caller is told "nothing is filtered", recomputes the same empty query it
+   * started with, and the chip the user was halfway through filling in is
+   * destroyed under them. Choosing "Status" put the chip on screen and took it
+   * away in the same frame, so no filter could ever be completed.
+   *
+   * Holding the draft here keeps the half-built rule alive locally while the
+   * caller still only ever hears about rules that are finished.
+   */
+  const [draft, setDraft] = useState<FilterQuery>(query)
+  const incoming = committedSignature(query)
+  const [seen, setSeen] = useState(incoming)
+
+  /*
+   * Re-seed only when the committed meaning changes from outside — a URL, the
+   * back button, a Clear elsewhere. Comparing signatures rather than trees is
+   * what stops an open draft being wiped by the caller's own echo of the
+   * change that draft just produced. Adjusting state during render is the
+   * documented way to react to a changed prop without a wasted commit.
+   */
+  if (incoming !== seen) {
+    setSeen(incoming)
+    setDraft(query)
+  }
+
   return (
     <Filters
       size={size}
@@ -74,19 +120,22 @@ export function FilterBar({
       advancedMode={advancedMode}
       showClear={showClear}
       fields={fields}
-      query={query}
+      query={draft}
       onQueryChange={(next: FilterQuery) => {
+        setDraft(next)
         /*
          * `flattenFilterConditions` skips a half-built rule, so a rule whose
          * value has not been chosen yet cannot reach the request and quietly
          * filter everything to nothing.
          */
-        onQueryChange(next, flattenFilterConditions(next) as FlatFilter[])
+        const flat = flattenFilterConditions(next) as FlatFilter[]
+        setSeen(JSON.stringify(flat))
+        onQueryChange(next, flat)
       }}
       trigger={
-        // The library's own outline button — a border and medium weight, the
-        // same treatment as the Sort trigger beside it. Stripping those made
-        // the control read as plain text rather than something to press.
+        // Replaces the row's own "Add filter" button, so the control reads the
+        // same as Sort beside it. Only the chip row draws a trigger — the
+        // inline builder ignores this, which is why it used to vanish.
         <Button variant="outline" size="sm">
           <FilterIcon aria-hidden className="size-4" />
           Filter

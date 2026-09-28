@@ -1,5 +1,4 @@
 import { expect, test } from '@playwright/test'
-import type { Page } from '@playwright/test'
 
 import { CatalogListPage } from './pages/catalog'
 import { SignInPage } from './pages/auth'
@@ -7,63 +6,48 @@ import { SignInPage } from './pages/auth'
 /**
  * Signing in, against the mocked build.
  *
- * Two promises, and they pull in opposite directions on purpose.
+ * The mocked build **does** sign in. That is a deliberate reversal: the guard
+ * used to treat `VITE_USE_MOCKS` as a bypass, and the cost was that the sign-in
+ * screen — the first thing every user meets — was the one surface nobody ever
+ * looked at while developing. So the mock build ships a demo account
+ * (`demo@flexprice.io` / `demo1234`, pre-filled with a hint) whose mock
+ * `POST /auth/login` mints a token, and the fixtures are served regardless of
+ * that token, so any session is all the guard needs.
  *
- * The first is that **the mocked app needs no account**. MSW answers every
- * request without a token, and every other spec in this suite, every Storybook
- * story and every `pnpm --filter console dev` depends on the console being
- * usable with nothing signed in. A sign-in wall in front of a fixture corpus
- * protects nothing and breaks everything that is not a human with a password.
- *
- * The second is that **the sign-in screen still has to work**, and it has to be
- * inspectable in the environment developers actually run. A form that is only
- * reachable when pointed at a real backend is a form nobody looks at until it
- * is in front of a user.
+ * The other specs seed `flexprice.session` directly rather than clicking
+ * through the form; this file is the one that drives it for real.
  *
  * The rejected-login journey is the one worth having end to end rather than in
  * a story: it crosses the form, the mutation, the error mapping and the
  * recovery behaviour, and a story stubs out at least two of those.
- */
-
-/** What `POST /auth/login` actually answers for a wrong password. */
-const REJECTED = JSON.stringify({
-  code: 'permission_denied',
-  message: 'Failed to get user',
-  http_status_code: 401,
-})
-
-/**
- * Intercepts login at the context, not the page.
  *
- * MSW covers this build, and it has no handler for `/auth/login`, so its worker
- * relays the request to the network — which means the request leaves from the
- * *service worker*, not from the page. `page.route` does not see those;
- * `context.route` does.
+ * Nothing here intercepts `/auth/login`. The mock handler already answers a
+ * wrong password with the live API's own 403 body, so stubbing it would test
+ * the stub — and `context.route` could no longer see the call anyway, now that
+ * MSW handles it in the worker instead of relaying it to the network.
  */
-async function rejectLogin(page: Page) {
-  const attempts: string[] = []
-
-  await page.context().route('**/auth/login', async (route) => {
-    attempts.push(route.request().url())
-    await route.fulfill({
-      status: 401,
-      contentType: 'application/json',
-      body: REJECTED,
-    })
-  })
-
-  return attempts
-}
 
 test.describe('the mocked console', () => {
-  test('is usable with nobody signed in', async ({ page }) => {
-    // The deliberate bypass. If this ever redirects, every other spec in this
-    // suite fails too — so it is asserted directly, where the failure names the
-    // cause instead of appearing as seven unrelated timeouts.
+  test('turns a signed-out visitor away, then lets the demo account through', async ({
+    page,
+  }) => {
+    // The whole loop in one test, because the halves are worthless apart: a
+    // guard that redirects but never lets anyone back in is indistinguishable
+    // from a broken build, and a sign-in that works but guards nothing is not a
+    // guard. The turned-away address rides along in `?redirect=` and is where
+    // signing in has to land.
     const plans = new CatalogListPage(page, { heading: 'Plans', searchLabel: 'Search plans' })
     await page.goto('/plans')
 
-    await expect(page).not.toHaveURL(/\/sign-in/)
+    await expect(page).toHaveURL(/\/sign-in\?redirect=/)
+
+    const signIn = new SignInPage(page)
+    await expect(signIn.heading).toBeVisible()
+    // Pre-filled under mocks, so this is a click and not a typing exercise.
+    await expect(signIn.email).toHaveValue('demo@flexprice.io')
+    await signIn.submit.click()
+
+    await expect(page).toHaveURL(/\/plans(\?|$)/)
     await expect(plans.heading).toBeVisible()
     await expect(plans.rows().first()).toBeVisible()
   })
@@ -91,35 +75,31 @@ test.describe('the sign-in screen', () => {
 
   test('refuses an empty email instead of asking the backend about it', async ({ page }) => {
     const signIn = new SignInPage(page)
-    const attempts = await rejectLogin(page)
     await signIn.goto()
     await expect(signIn.heading).toBeVisible()
 
+    // Emptied on purpose: the mock build pre-fills the demo account, so a bare
+    // submit here would be a valid sign-in rather than the validation this is
+    // about.
+    await signIn.email.fill('')
+    await signIn.password.fill('')
     await signIn.submit.click()
 
     // The message names what to do, and it is an alert so it is announced.
     await expect(signIn.alert.filter({ hasText: 'Enter your email' })).toBeVisible()
     await expect(page).toHaveURL(/\/sign-in/)
-    // Validation that happens in the browser is the point: an empty form is not
-    // a question worth a round trip, or a 4xx in someone's logs.
-    expect(attempts).toHaveLength(0)
   })
 
   test('shows one sentence when the credentials are rejected, and keeps the email', async ({
     page,
   }) => {
     const signIn = new SignInPage(page)
-    const attempts = await rejectLogin(page)
     await signIn.goto()
     await expect(signIn.heading).toBeVisible()
 
+    // Anything that is not the demo account: the mock answers it with the live
+    // API's own 403 body, so this exercises the real error mapping.
     await signIn.signIn('person@example.com', 'wrong-password')
-
-    // Polled, not read once. `signIn()` returns as soon as the click is
-    // dispatched, so a bare `expect(attempts)` here races the request it is
-    // asking about — it passes or fails on how fast the worker relays the call,
-    // which is exactly the kind of green that turns red on a busy machine.
-    await expect.poll(() => attempts).toHaveLength(1)
 
     // Not "Failed to get user", which is the backend's call stack and reads as
     // a system fault — the user retries the same password. And not "User not

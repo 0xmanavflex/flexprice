@@ -76,7 +76,11 @@ export function SignInForm({
   // something the application had just done itself.
   useEffect(() => {
     if (!error) return
-    form.resetField('password')
+    // `defaultValue: ''` explicitly, because a bare `resetField` restores the
+    // field's *default* — and under mocks that default is the pre-filled demo
+    // password. Clearing a rejected password only to put a password straight
+    // back is the one thing this branch exists to prevent.
+    form.resetField('password', { defaultValue: '' })
     passwordRef.current?.focus()
   }, [error, form])
 
