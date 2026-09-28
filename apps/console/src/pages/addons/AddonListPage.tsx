@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Addon, type AddonQuery, type CreateAddon } from '@fp/domain'
-import { ApiError, useAddons, useCatalogStats, useCreateAddon, useUpdateAddon } from '@fp/query'
-import { AddonEditorSheet, AddonFilters, AddonGrid, StatCards } from '@fp/ui/flexprice'
+import { ApiError, useAddons, useCreateAddon, useUpdateAddon } from '@fp/query'
+import { AddonEditorSheet, AddonFilters, AddonGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
 import { PuzzleIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -23,7 +23,6 @@ type Editing = { mode: 'create' } | { mode: 'edit'; addon: Addon } | null
  */
 export function AddonListPage({ query, onQueryChange }: AddonListPageProps) {
   const addons = useAddons(query)
-  const stats = useCatalogStats('addons')
   const create = useCreateAddon()
   const update = useUpdateAddon()
 
@@ -60,17 +59,6 @@ export function AddonListPage({ query, onQueryChange }: AddonListPageProps) {
       />
 
       <PageBody>
-        {stats.total !== 0 ? (
-          <StatCards
-            isLoading={stats.isPending}
-            stats={[
-              { label: 'Add-ons', value: stats.total },
-              { label: 'Published', value: stats.published },
-              { label: 'Archived', value: stats.archived },
-            ]}
-          />
-        ) : null}
-
         <ListState
           isLoading={addons.isPending}
           error={failure}

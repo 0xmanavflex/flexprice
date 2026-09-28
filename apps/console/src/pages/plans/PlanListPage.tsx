@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type CreatePlan, type Plan, type PlanQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, useCreatePlan, usePlans, useUpdatePlan } from '@fp/query'
-import { PlanEditorSheet, PlanFilters, PlanGrid, StatCards } from '@fp/ui/flexprice'
+import { ApiError, useCreatePlan, usePlans, useUpdatePlan } from '@fp/query'
+import { PlanEditorSheet, PlanFilters, PlanGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -24,7 +24,6 @@ type Editing = { mode: 'create' } | { mode: 'edit'; plan: Plan } | null
  */
 export function PlanListPage({ query, onQueryChange }: PlanListPageProps) {
   const plans = usePlans(query)
-  const stats = useCatalogStats('plans')
   const create = useCreatePlan()
   const update = useUpdatePlan()
 
@@ -60,19 +59,6 @@ export function PlanListPage({ query, onQueryChange }: PlanListPageProps) {
       />
 
       <PageBody>
-        {/* The list's shape, before its rows — hidden only once the total is
-            confirmed zero, so a first-run empty state stays clean. */}
-        {stats.total !== 0 ? (
-          <StatCards
-            isLoading={stats.isPending}
-            stats={[
-              { label: 'Plans', value: stats.total },
-              { label: 'Published', value: stats.published },
-              { label: 'Archived', value: stats.archived },
-            ]}
-          />
-        ) : null}
-
         <ListState
           isLoading={plans.isPending}
           error={failure}

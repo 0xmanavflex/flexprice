@@ -1,6 +1,6 @@
 import { type Coupon, type CouponQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, useCoupons } from '@fp/query'
-import { CouponFilters, CouponGrid, StatCards } from '@fp/ui/flexprice'
+import { ApiError, useCoupons } from '@fp/query'
+import { CouponFilters, CouponGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody, PageHeader } from '@fp/ui/compositions'
 import { TicketPercentIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -20,7 +20,6 @@ export interface CouponListPageProps {
  */
 export function CouponListPage({ query, onQueryChange, onCreate, onOpenCoupon }: CouponListPageProps) {
   const coupons = useCoupons(query)
-  const stats = useCatalogStats('coupons')
 
   const failure = toFailure(coupons.error)
   const rows = coupons.data?.coupons ?? []
@@ -35,17 +34,6 @@ export function CouponListPage({ query, onQueryChange, onCreate, onOpenCoupon }:
       />
 
       <PageBody>
-        {stats.total !== 0 ? (
-          <StatCards
-            isLoading={stats.isPending}
-            stats={[
-              { label: 'Coupons', value: stats.total },
-              { label: 'Published', value: stats.published },
-              { label: 'Archived', value: stats.archived },
-            ]}
-          />
-        ) : null}
-
         <ListState
           isLoading={coupons.isPending}
           error={failure}
