@@ -204,7 +204,7 @@ export function PlanGrid({
         heading="Plans"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search..."
+        placeholder="Search plans…"
         label="Search plans"
         action={
           onCreate ? (

@@ -385,7 +385,7 @@ export function PlanDetailPage({
   )
 }
 
-/** The rail's four numbers, built from the plan's charges and subscriptions. */
+/** The rail's numbers (up to four), built from the plan's charges and subscriptions. */
 function buildMetrics({
   charges,
   chargesPending,
@@ -431,13 +431,19 @@ function buildMetrics({
         }
       : { label: 'Charges', value: '0', sentiment: 'muted' }
 
-  const currencyMetric: DetailMetric = chargesPending
+  // While loading it reads '—' like the others; once resolved with no charge
+  // setting a currency, it is omitted rather than shown as a permanent empty
+  // "Currency —" tile. A rail tile is a number the plan has, not a field it is
+  // missing — an unpriced plan simply has one fewer tile.
+  const currencyMetric: DetailMetric | null = chargesPending
     ? { label: 'Currency', value: '—' }
     : currency
       ? { label: 'Currency', value: currency }
-      : { label: 'Currency', value: '—', sentiment: 'muted', hint: 'Set by its first charge' }
+      : null
 
-  return [subscriptionsMetric, startsAtMetric, chargesMetric, currencyMetric]
+  return [subscriptionsMetric, startsAtMetric, chargesMetric, currencyMetric].filter(
+    (metric): metric is DetailMetric => metric !== null,
+  )
 }
 
 /**

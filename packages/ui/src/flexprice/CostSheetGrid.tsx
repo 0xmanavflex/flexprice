@@ -207,7 +207,7 @@ export function CostSheetGrid({
         heading="Cost sheets"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search..."
+        placeholder="Search cost sheets…"
         label="Search cost sheets"
       >
         {filters}

@@ -214,7 +214,7 @@ export function TaxRateGrid({
         heading="Tax rates"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search..."
+        placeholder="Search tax rates…"
         label="Search tax rates"
       >
         {filters}

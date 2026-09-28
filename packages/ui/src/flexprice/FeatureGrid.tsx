@@ -227,7 +227,7 @@ export function FeatureGrid({
         heading="Features"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search..."
+        placeholder="Search features…"
         label="Search features"
         action={
           onCreate ? (

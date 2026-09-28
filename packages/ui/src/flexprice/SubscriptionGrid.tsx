@@ -219,7 +219,7 @@ export function SubscriptionGrid({
         heading="Subscriptions"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search…"
+        placeholder="Search subscriptions…"
         label="Search subscriptions"
         action={
           onCreate ? (

@@ -43,7 +43,10 @@ export interface ShellSearchProps {
   placeholder?: string
 }
 
-export function ShellSearch({ onSearch, placeholder = 'Search...' }: ShellSearchProps) {
+// The default names the *scope*, not just "Search": the list toolbars each say
+// "Search plans…"/"Search features…", so the header's own search has to say it
+// reaches wider, or the two read as the same box twice.
+export function ShellSearch({ onSearch, placeholder = 'Search everything' }: ShellSearchProps) {
   const [open, setOpen] = useState(false)
 
   useEffect(() => {

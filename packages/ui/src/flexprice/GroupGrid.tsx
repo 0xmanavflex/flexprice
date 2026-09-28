@@ -206,7 +206,7 @@ export function GroupGrid({
         heading="Groups"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search..."
+        placeholder="Search groups…"
         label="Search groups"
       >
         {filters}

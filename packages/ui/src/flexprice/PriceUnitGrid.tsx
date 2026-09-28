@@ -235,7 +235,7 @@ export function PriceUnitGrid({
         heading="Price units"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search..."
+        placeholder="Search price units…"
         label="Search price units"
         action={
           onCreate ? (

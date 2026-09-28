@@ -202,7 +202,7 @@ export function PaymentGrid({
         heading="Payments"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search..."
+        placeholder="Search payments…"
         label="Search payments"
       >
         {filters}

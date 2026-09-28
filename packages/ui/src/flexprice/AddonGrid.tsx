@@ -186,7 +186,7 @@ export function AddonGrid({
         heading="Add-ons"
         search={query.search}
         onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search..."
+        placeholder="Search add-ons…"
         label="Search add-ons"
         action={
           onCreate ? (
