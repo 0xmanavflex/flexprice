@@ -1,0 +1,247 @@
+[
+  {
+    "method": "POST",
+    "path": "/v1/auth/login",
+    "status": 200,
+    "env": null,
+    "auth": null
+  },
+  {
+    "method": "GET",
+    "path": "/v1/environments",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/users/me",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/environments",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/users/me",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/features/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/environments",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/users/me",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/features/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/features/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/features/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/users/me",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/environments",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/customers/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/subscriptions/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/invoices/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/customers/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/users/me",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/environments",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/customers/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/invoices/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/subscriptions/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/subscriptions/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/users/me",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "GET",
+    "path": "/v1/environments",
+    "status": 200,
+    "env": null,
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/features/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  },
+  {
+    "method": "POST",
+    "path": "/v1/plans/search",
+    "status": 200,
+    "env": "env_01KVSNYVPMAP6JJGDF177V2DE6",
+    "auth": "Bearer …"
+  }
+]

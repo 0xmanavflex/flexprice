@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { ApiError, ErrorKind, useSignIn } from '@fp/query'
-import { SignInForm } from '@fp/ui/flexprice'
+import { SignInScreen } from '@fp/ui/flexprice'
 import { useSession } from '@/app/session'
 
 /**
@@ -78,8 +78,8 @@ export function SignInPage({ redirect }: SignInPageProps) {
   const signIn = useSignIn()
 
   return (
-    <main className="bg-background flex min-h-screen items-center justify-center p-6">
-      <SignInForm
+    <main className="bg-background min-h-svh">
+      <SignInScreen
         isSubmitting={signIn.isPending}
         error={signIn.error ? messageForSignInError(signIn.error) : null}
         onSubmit={(credentials) => {
