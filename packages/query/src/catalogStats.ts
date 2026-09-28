@@ -16,7 +16,7 @@ import { useFlexprice } from './provider'
  * Typed loosely per entity because each SDK resource has its own filter shape
  * and this only ever reads `pagination.total`.
  */
-export type CatalogEntity = 'plans' | 'features' | 'addons' | 'coupons'
+export type CatalogEntity = 'plans' | 'features' | 'addons' | 'coupons' | 'priceUnits'
 
 const COUNTERS: Record<CatalogEntity, (client: Flexprice, status?: string) => Promise<unknown>> = {
   plans: (client, status) =>
@@ -27,6 +27,8 @@ const COUNTERS: Record<CatalogEntity, (client: Flexprice, status?: string) => Pr
     client.addons.queryAddon({ limit: 1, ...(status ? { status } : {}) } as never),
   coupons: (client, status) =>
     client.coupons.queryCoupon({ limit: 1, ...(status ? { status } : {}) } as never),
+  priceUnits: (client, status) =>
+    client.priceUnits.queryPriceUnit({ limit: 1, ...(status ? { status } : {}) } as never),
 }
 
 async function fetchCount(

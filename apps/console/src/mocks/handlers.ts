@@ -133,6 +133,7 @@ export const handlers = [
   search('/subscriptions/search', 'subscriptions'),
   search('/addons/search', 'addons'),
   search('/coupons/search', 'coupons'),
+  search('/prices/units/search', 'priceUnits'),
 
   list('/payments', 'invoices'),
 
@@ -176,6 +177,23 @@ export const handlers = [
     )
   }),
   http.put(`${BASE}/plans/:id`, async ({ request, params }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+  }),
+
+  // Price units, the same way: create echoes the record back, and update — which
+  // sends only the name — echoes it beside a fixed identity, so the drawer's
+  // success path (close, invalidate, refetch) runs end to end. The base path is
+  // registered after `/prices/units/search` above so the search POST is not
+  // shadowed.
+  http.post(`${BASE}/prices/units`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    return HttpResponse.json(
+      { ...body, id: `pu_new_${Date.now()}`, status: 'published' },
+      { status: 201 },
+    )
+  }),
+  http.put(`${BASE}/prices/units/:id`, async ({ request, params }) => {
     const body = (await request.json()) as Record<string, unknown>
     return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
   }),

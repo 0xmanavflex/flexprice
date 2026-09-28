@@ -104,6 +104,19 @@ export {
 } from './coupon'
 export type { Coupon, CouponQuery } from './coupon'
 
+export {
+  DEFAULT_PRICE_UNIT_QUERY,
+  PRICE_UNIT_CURRENCIES,
+  PRICE_UNIT_SORT_LABEL,
+  PRICE_UNIT_STATUS_LABEL,
+  PriceUnitSortField,
+  PriceUnitStatus,
+  PriceUnitView,
+  createPriceUnitSchema,
+  emptyPriceUnit,
+} from './priceUnit'
+export type { CreatePriceUnit, PriceUnit, PriceUnitQuery } from './priceUnit'
+
 export { resetRequestSchema, setPasswordSchema, signInSchema } from './auth'
 export type { ResetRequest, SetPassword, SignInCredentials } from './auth'
 export {

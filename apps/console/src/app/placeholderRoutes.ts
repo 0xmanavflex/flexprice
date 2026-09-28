@@ -44,6 +44,7 @@ export const PLACEHOLDER_ROUTES = [
   // `/plans` is a real page now — see `plansRoute` in router.tsx.
   // `/coupons` is a real page now — see `couponsRoute` in router.tsx.
   // `/addons` is a real page now — see `addonsRoute` in router.tsx.
+  // `/price-units` is a real page now — see `priceUnitsRoute` in router.tsx.
   {
     path: '/cost-sheets',
     title: 'Cost Sheets',
@@ -53,16 +54,6 @@ export const PLACEHOLDER_ROUTES = [
       'Cost sheets record what usage costs you, so margin can be measured against what you charge.',
     cta: 'Create cost sheet',
     legacy: '/product-catalog/cost-sheets',
-  },
-  {
-    path: '/price-units',
-    title: 'Price Units',
-    description: 'The units you price in — tokens, seats, gigabytes.',
-    emptyTitle: 'No price units yet',
-    emptyDescription:
-      'Price units let you charge in credits, tokens or minutes instead of a currency.',
-    cta: 'Create price unit',
-    legacy: '/product-catalog/price-units',
   },
   {
     path: '/groups',

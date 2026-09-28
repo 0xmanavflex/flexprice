@@ -56,6 +56,11 @@ const CouponListPage = lazy(() =>
   import('@/pages/coupons/CouponListPage').then((m) => ({ default: m.CouponListPage })),
 )
 import { parseCouponSearch } from './couponSearch'
+import { DEFAULT_PRICE_UNIT_QUERY, type PriceUnitQuery } from '@fp/domain'
+const PriceUnitListPage = lazy(() =>
+  import('@/pages/price-units/PriceUnitListPage').then((m) => ({ default: m.PriceUnitListPage })),
+)
+import { parsePriceUnitSearch } from './priceUnitSearch'
 import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
 const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
@@ -370,12 +375,41 @@ function CouponsRouteComponent() {
   )
 }
 
+/**
+ * Price units: the list, plus a create/edit drawer the page owns.
+ *
+ * The same shape as add-ons — URL-as-query list, editor in local state — because
+ * V1 keeps price units to a list and a drawer with no detail page. The route
+ * only has to hand the page its query; opening the editor happens over the list
+ * (see `PriceUnitListPage`).
+ */
+const priceUnitsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/price-units',
+  validateSearch: (search: Record<string, unknown>): PriceUnitQuery => parsePriceUnitSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_PRICE_UNIT_QUERY)] },
+  component: PriceUnitsRouteComponent,
+})
+
+function PriceUnitsRouteComponent() {
+  const query = useSearch({ from: priceUnitsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <PriceUnitListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/price-units', search: next, replace: true })}
+    />
+  )
+}
+
 export const routeTree = rootRoute.addChildren([
   featuresRoute,
   featureCreateRoute,
   plansRoute,
   addonsRoute,
   couponsRoute,
+  priceUnitsRoute,
   invoicesRoute,
   subscriptionCreateRoute,
   ...placeholderRoutes,

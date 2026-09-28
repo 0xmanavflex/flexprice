@@ -140,7 +140,7 @@ describe('breadcrumbForPath', () => {
  * and the route table were maintained separately and drifted.
  */
 describe('every destination resolves', () => {
-  const BUILT = ['/features', '/plans', '/addons', '/coupons', '/invoices']
+  const BUILT = ['/features', '/plans', '/addons', '/coupons', '/price-units', '/invoices']
 
   const destinations = [...NAV, ...SECONDARY].flatMap((entry) => [
     ...(entry.path ? [entry.path] : []),

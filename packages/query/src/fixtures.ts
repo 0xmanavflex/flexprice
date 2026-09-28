@@ -18,6 +18,7 @@ import customers from './__fixtures__/generated/customers.json' with { type: 'js
 import features from './__fixtures__/generated/features.json' with { type: 'json' }
 import invoices from './__fixtures__/generated/invoices.json' with { type: 'json' }
 import plans from './__fixtures__/generated/plans.json' with { type: 'json' }
+import priceUnits from './__fixtures__/generated/priceUnits.json' with { type: 'json' }
 import prices from './__fixtures__/generated/prices.json' with { type: 'json' }
 import subscriptions from './__fixtures__/generated/subscriptions.json' with { type: 'json' }
 
@@ -27,14 +28,15 @@ export interface Corpus {
 }
 
 /**
- * `coupons` is the one corpus not descended from a capture: the capture
- * environment had no coupons, so an empty `/coupons/search` would leave the
- * surface undemonstrable. These rows are authored — but authored *to shape*,
- * every field matching `@flexprice/sdk`'s `CouponResponse` (snake_case, a fixed
- * discount as `amount_off` + `currency`, a percentage as `percentage_off`), so
- * the mock still cannot silently disagree with the wire. `synthesize.mjs` does
- * not touch it, having no captured source to expand.
+ * `coupons` and `priceUnits` are the corpora not descended from a capture: the
+ * capture environment had neither, so an empty `/coupons/search` or
+ * `/prices/units/search` would leave those surfaces undemonstrable. Their rows
+ * are authored — but authored *to shape*, every field matching `@flexprice/sdk`'s
+ * response (snake_case: a coupon's `amount_off` + `currency`, a price unit's
+ * `code` / `symbol` / `base_currency` / `conversion_rate` string), so the mock
+ * still cannot silently disagree with the wire. `synthesize.mjs` does not touch
+ * them, having no captured source to expand.
  */
 export const corpus = {
-  addons, coupons, customers, features, invoices, plans, prices, subscriptions,
+  addons, coupons, customers, features, invoices, plans, priceUnits, prices, subscriptions,
 } as unknown as Record<string, Corpus>

@@ -70,6 +70,18 @@ export type { AddonPage, AddonWire } from './addons'
 export { fetchCoupons, toCoupon, toCouponFilter, useCoupons } from './coupons'
 export type { CouponPage, CouponWire } from './coupons'
 
+export {
+  fetchPriceUnits,
+  toCreatePriceUnitRequest,
+  toPriceUnit,
+  toPriceUnitFilter,
+  toUpdatePriceUnitRequest,
+  useCreatePriceUnit,
+  usePriceUnits,
+  useUpdatePriceUnit,
+} from './priceUnits'
+export type { PriceUnitPage, PriceUnitWire } from './priceUnits'
+
 export { useNavCounts } from './counts'
 export type { CountableId } from './counts'
 

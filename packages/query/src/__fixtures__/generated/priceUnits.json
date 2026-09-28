@@ -1,0 +1,139 @@
+{
+  "items": [
+    {
+      "id": "pu_01M38QBBB0000000000000001",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Credits",
+      "code": "CRD",
+      "symbol": "⛁",
+      "base_currency": "usd",
+      "conversion_rate": "0.01",
+      "status": "published",
+      "created_at": "2026-01-02T09:15:00Z",
+      "updated_at": "2026-03-01T11:20:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000002",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Tokens",
+      "code": "TOK",
+      "symbol": "◈",
+      "base_currency": "usd",
+      "conversion_rate": "0.0000025",
+      "status": "published",
+      "created_at": "2026-01-10T14:00:00Z",
+      "updated_at": "2026-02-14T08:05:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000003",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Compute minutes",
+      "code": "CMN",
+      "symbol": "▶",
+      "base_currency": "usd",
+      "conversion_rate": "0.05",
+      "status": "published",
+      "created_at": "2026-02-01T10:30:00Z",
+      "updated_at": "2026-03-22T16:45:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000004",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Euro credits",
+      "code": "EUC",
+      "symbol": "✦",
+      "base_currency": "eur",
+      "conversion_rate": "0.02",
+      "status": "published",
+      "created_at": "2026-01-18T12:00:00Z",
+      "updated_at": "2026-02-28T09:10:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000005",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Rupee coins",
+      "code": "RCN",
+      "symbol": "◉",
+      "base_currency": "inr",
+      "conversion_rate": "1.5",
+      "status": "published",
+      "created_at": "2026-02-05T07:20:00Z",
+      "updated_at": "2026-03-15T13:00:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000006",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Gold stars",
+      "code": "STR",
+      "symbol": "★",
+      "base_currency": "usd",
+      "conversion_rate": "0.25",
+      "status": "published",
+      "created_at": "2025-11-12T08:00:00Z",
+      "updated_at": "2026-01-06T10:00:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000007",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Storage gigabytes",
+      "code": "SGB",
+      "symbol": "⛃",
+      "base_currency": "usd",
+      "conversion_rate": "0.10",
+      "status": "published",
+      "created_at": "2026-03-01T09:00:00Z",
+      "updated_at": "2026-03-25T18:30:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000008",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Pound points",
+      "code": "GBP",
+      "symbol": "◆",
+      "base_currency": "gbp",
+      "conversion_rate": "0.008",
+      "status": "published",
+      "created_at": "2026-02-20T11:45:00Z",
+      "updated_at": "2026-03-10T14:15:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000009",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Legacy credits",
+      "code": "LGC",
+      "symbol": "¤",
+      "base_currency": "usd",
+      "conversion_rate": "0.015",
+      "status": "archived",
+      "created_at": "2025-06-01T08:00:00Z",
+      "updated_at": "2025-12-01T10:00:00Z"
+    },
+    {
+      "id": "pu_01M38QBBB0000000000000010",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "name": "Trial minutes",
+      "code": "TRM",
+      "symbol": "◷",
+      "base_currency": "usd",
+      "conversion_rate": "0.03",
+      "status": "archived",
+      "created_at": "2025-09-15T09:30:00Z",
+      "updated_at": "2025-10-01T09:30:00Z"
+    }
+  ],
+  "pagination": {
+    "total": 10,
+    "limit": 25,
+    "offset": 0
+  }
+}
