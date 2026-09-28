@@ -11,11 +11,10 @@ import { provenance } from '@ui/provenance'
 /**
  * The bar above a grid: search on the left, controls on the right.
  *
- * Search is borderless and takes the width it is given. A bordered box would
- * draw a second rectangle immediately above the table's own, and the field is
- * already obvious — it has a magnifier in it and it is the first thing on the
- * row. Losing the border is what lets the toolbar read as part of the table
- * rather than as a form sitting on top of one.
+ * The search carries the input group's own light border — the `input`/`border`
+ * tokens — so it reads as a field you type into rather than a bare line of
+ * text. It still takes the width it is given, with the controls pinned to the
+ * end of the row.
  *
  * The clear button only exists once there is something to clear, because a
  * permanent ✕ on an empty field is a control that does nothing most of the
@@ -27,7 +26,7 @@ import { provenance } from '@ui/provenance'
 export const GridToolbarProvenance = provenance({
   source: 'composition',
   composes: ['ui/input-group'],
-  note: 'Borderless search left, controls right. The bar above a data grid.',
+  note: 'Bordered search left, controls right. The bar above a data grid.',
 })
 
 export interface GridToolbarProps {
@@ -48,7 +47,7 @@ export function GridToolbar({
 }: GridToolbarProps) {
   return (
     <div role="search" className="flex items-center gap-2">
-      <InputGroup className="border-transparent bg-transparent shadow-none dark:bg-transparent">
+      <InputGroup>
         <InputGroupAddon align="inline-start">
           <SearchIcon aria-hidden />
         </InputGroupAddon>

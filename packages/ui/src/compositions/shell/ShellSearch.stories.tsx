@@ -1,23 +1,15 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { SidebarProvider } from '@ui/primitives/sidebar'
 import { ShellSearch } from './ShellSearch'
 
 /**
  * Search as a button that opens a dialog, not a field that sits there
- * collecting focus. It lives in the sidebar, so it is mounted in a
- * `SidebarProvider` here.
+ * collecting focus. It rides in the top bar beside Create, so it is a plain
+ * control with no sidebar context to mount.
  */
 const meta = {
   title: 'Foundation/Compositions/Shell/ShellSearch',
   component: ShellSearch,
-  decorators: [
-    (Story) => (
-      <SidebarProvider className="block h-auto w-64 p-2">
-        <Story />
-      </SidebarProvider>
-    ),
-  ],
   parameters: {
     // The dialog is a Base UI portal; its focus guards trip axe. The dialog
     // has an sr-only title and the field is labelled. See AppShell.stories.tsx.

@@ -6,12 +6,11 @@ import {
   GroupEntityType,
   type GroupQuery,
   GroupStatus,
-  GroupView,
 } from '@fp/domain'
 import { GroupGrid } from './GroupGrid'
 
 /**
- * The group list — the same controlled table/cards shape as the other grids.
+ * The group list — the same controlled table shape as the other grids.
  * The page owns the query; the grid renders rows and reports a domain query
  * back. Groups as plain domain values, no client, no provider, no network.
  */
@@ -114,26 +113,6 @@ export const Populated: Story = {
 }
 
 export const Loading: Story = { args: { groups: [], total: 0, isLoading: true } }
-
-/** The same rows, read as cards. `query.view` drives the layout. */
-export const Cards: Story = {
-  args: { query: { ...fixtureGroupQuery, view: GroupView.Cards } },
-  play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('Beta features')).toBeInTheDocument()
-  },
-}
-
-/** The toggle reports a layout, and leaves the rest of the query untouched. */
-export const ViewToggle: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('tab', { name: /card view/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    const reported = spy.mock.calls.at(-1)?.[0] as Record<string, unknown>
-    expect(reported).toMatchObject({ view: 'cards' })
-  },
-}
 
 export const Empty: Story = {
   args: { groups: [], total: 0 },

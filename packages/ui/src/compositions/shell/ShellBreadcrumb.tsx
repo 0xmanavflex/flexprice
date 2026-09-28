@@ -46,6 +46,15 @@ export interface ShellCrumb {
   mark?: ReactNode
   /** Absent means it is not navigable — a grouping, or the current page. */
   onClick?: () => void
+  /**
+   * A control rendered in place of the label — a dropdown, a switcher.
+   *
+   * When present it owns the crumb entirely: `mark`, `onClick` and the
+   * label/link treatment are skipped, and the control is responsible for its
+   * own name. This is how the environment leads the trail as a switcher rather
+   * than a static word. `label` is still required, as the crumb's key.
+   */
+  content?: ReactNode
 }
 
 export interface ShellBreadcrumbProps {
@@ -87,7 +96,9 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
           return (
             <Fragment key={`${crumb.label}-${index}`}>
               <BreadcrumbItem className="flex min-w-0 items-center gap-1.5">
-                {isLast || !crumb.onClick ? (
+                {crumb.content ? (
+                  crumb.content
+                ) : isLast || !crumb.onClick ? (
                   // The label can be hidden at narrow widths, so the crumb
                   // carries its own name for anything reading the tree.
                   <BreadcrumbPage

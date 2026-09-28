@@ -5,23 +5,13 @@ import {
   type Plan,
   type PlanQuery,
   PlanSortField,
-  PlanView,
 } from '@fp/domain'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@ui/primitives/card'
 import { Skeleton } from '@ui/primitives/skeleton'
-import { Tabs, TabsList, TabsTrigger } from '@ui/primitives/tabs'
-import { LayoutGridIcon, TableIcon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { GridFooter } from '@ui/compositions/GridFooter'
 import { GridToolbar } from '@ui/compositions/GridToolbar'
@@ -33,16 +23,14 @@ import { CatalogStatusBadge } from './StatusBadge'
 /**
  * The plan list.
  *
- * The same controlled shape as `FeatureGrid`, with two layouts over one query:
- * a dense table for scanning, and a **pricing-card** grid — plans read as a
- * customer sees them, one headline price each, the way the ReUI marketing
- * pricing block presents tiers. Filtering is passed in through the `filters`
- * slot, so this component never learns what a plan status is.
+ * The same controlled shape as `FeatureGrid`: a dense table for scanning,
+ * over one query. Filtering is passed in through the `filters` slot, so this
+ * component never learns what a plan status is.
  */
 export const PlanGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge', 'ui/card', 'ui/tabs'],
-  note: 'Controlled wrapper; the page owns query state. Table, and pricing cards, over one query.',
+  composes: ['@reui/data-grid', '@reui/badge'],
+  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
 })
 
 const SORT_OPTIONS = Object.values(PlanSortField).map((value) => ({
@@ -64,20 +52,6 @@ export interface PlanGridProps {
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   locale?: string
-}
-
-/** Billing period, shortened the way a pricing page writes it. */
-const PERIOD_SHORT: Record<string, string> = {
-  DAILY: 'day',
-  WEEKLY: 'week',
-  MONTHLY: 'mo',
-  QUARTERLY: 'quarter',
-  HALF_YEARLY: '6 mo',
-  ANNUAL: 'yr',
-  ONETIME: 'once',
-}
-function periodShort(period: string): string {
-  return PERIOD_SHORT[period] ?? period.toLowerCase()
 }
 
 function formatDate(value: Date | null, locale?: string): string {
@@ -195,11 +169,11 @@ export function PlanGrid({
   const [fitToWindow, setFitToWindow] = useState(true)
   const capacity = useViewportPageSize({
     containerRef,
-    enabled: fitToWindow && query.view === PlanView.Table,
+    enabled: fitToWindow,
     reservedHeight: 104,
   })
 
-  if (fitToWindow && query.view === PlanView.Table && capacity !== null && capacity !== query.pageSize) {
+  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
     onQueryChange({ ...query, pageSize: capacity, page: 1 })
   }
 
@@ -234,19 +208,6 @@ export function PlanGrid({
             onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
           }
         />
-        <Tabs
-          value={query.view}
-          onValueChange={(view) => onQueryChange({ ...query, view: view as PlanView })}
-        >
-          <TabsList>
-            <TabsTrigger value={PlanView.Table} aria-label="Table view">
-              <TableIcon aria-hidden />
-            </TabsTrigger>
-            <TabsTrigger value={PlanView.Cards} aria-label="Card view">
-              <LayoutGridIcon aria-hidden />
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </GridToolbar>
 
       <DataGrid
@@ -279,26 +240,14 @@ export function PlanGrid({
           dense: true,
         }}
       >
-        {query.view === PlanView.Cards ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <PlanCards
-              plans={plans}
-              isLoading={isLoading}
-              onPlanClick={onPlanClick}
-              onClearFilters={onClearFilters}
-              locale={locale}
-            />
-          </div>
-        ) : (
-          // Wrapper makes ReUI's scroll-area root the flex-1 item (its className
-          // lands on an inner node), so it shrinks and scrolls rather than
-          // pushing the pagination off-screen on a tall list.
-          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-            <DataGridScrollArea className="min-h-0 flex-1">
-              <DataGridTable />
-            </DataGridScrollArea>
-          </div>
-        )}
+        {/* Wrapper makes ReUI's scroll-area root the flex-1 item (its className
+            lands on an inner node), so it shrinks and scrolls rather than
+            pushing the pagination off-screen on a tall list. */}
+        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+          <DataGridScrollArea className="min-h-0 flex-1">
+            <DataGridTable />
+          </DataGridScrollArea>
+        </div>
         <GridFooter
           fitToWindow={fitToWindow}
           onFitToWindowChange={setFitToWindow}
@@ -306,122 +255,6 @@ export function PlanGrid({
           noun="plans"
         />
       </DataGrid>
-    </div>
-  )
-}
-
-interface PlanCardsProps {
-  plans: Plan[]
-  isLoading: boolean
-  onPlanClick?: ((plan: Plan) => void) | undefined
-  onClearFilters?: (() => void) | undefined
-  locale?: string | undefined
-}
-
-/**
- * Plans as pricing cards — the artefact a customer sees.
- *
- * One headline price per card, the way the ReUI marketing pricing block presents
- * a tier: name, price over period, what it carries, and the action. The card is
- * not itself a button; the CTA is, so a pricing card has one obvious next step.
- */
-function PlanCards({ plans, isLoading, onPlanClick, onClearFilters, locale }: PlanCardsProps) {
-  if (isLoading && plans.length === 0) {
-    return (
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Card key={index}>
-            <CardHeader>
-              <Skeleton className="h-4 w-28" />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-3">
-              <Skeleton className="h-8 w-24" />
-              <Skeleton className="h-3 w-40" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  if (plans.length === 0) {
-    return (
-      <EmptyState
-        size="inline"
-        isFiltered
-        title="No plans match these filters"
-        description="Try a different search, or clear what is narrowing the list."
-        onClearFilters={
-          onClearFilters ? (
-            <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-              Clear filters
-            </Button>
-          ) : undefined
-        }
-      />
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-      {plans.map((plan) => (
-        <Card key={plan.id} className="flex flex-col">
-          <CardHeader>
-            <div className="flex items-start justify-between gap-2">
-              <CardTitle className="truncate">{plan.name}</CardTitle>
-              <CatalogStatusBadge status={plan.status} />
-            </div>
-            {plan.lookupKey ? (
-              <CardDescription className="truncate font-mono text-xs">
-                {plan.lookupKey}
-              </CardDescription>
-            ) : null}
-          </CardHeader>
-
-          <CardContent className="flex flex-1 flex-col gap-3">
-            {/* The headline: one price, over its period. */}
-            <div className="flex items-baseline gap-1">
-              {plan.headline ? (
-                <>
-                  <span className="text-2xl font-semibold tracking-tight">
-                    {plan.headline.amount}
-                  </span>
-                  {plan.headline.period ? (
-                    <span className="text-sm text-muted-foreground">
-                      /{periodShort(plan.headline.period)}
-                    </span>
-                  ) : null}
-                </>
-              ) : (
-                <span className="text-2xl font-semibold tracking-tight text-muted-foreground">
-                  —
-                </span>
-              )}
-            </div>
-
-            {plan.description ? (
-              <p className="line-clamp-2 text-sm text-muted-foreground">{plan.description}</p>
-            ) : null}
-
-            <div className="mt-auto flex flex-col gap-3">
-              <div className="text-xs text-muted-foreground">
-                {charges(plan.chargeCount)} · Updated {formatDate(plan.updatedAt, locale)}
-              </div>
-              {onPlanClick ? (
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => onPlanClick(plan)}
-                >
-                  View plan
-                </Button>
-              ) : null}
-            </div>
-          </CardContent>
-        </Card>
-      ))}
     </div>
   )
 }

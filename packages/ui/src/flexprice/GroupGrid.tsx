@@ -6,17 +6,13 @@ import {
   type Group,
   type GroupQuery,
   GroupSortField,
-  GroupView,
 } from '@fp/domain'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/primitives/card'
 import { Skeleton } from '@ui/primitives/skeleton'
-import { Tabs, TabsList, TabsTrigger } from '@ui/primitives/tabs'
-import { LayoutGridIcon, TableIcon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { GridFooter } from '@ui/compositions/GridFooter'
 import { GridToolbar } from '@ui/compositions/GridToolbar'
@@ -28,14 +24,14 @@ import { CatalogStatusBadge } from './StatusBadge'
 /**
  * The group list.
  *
- * The same controlled table/cards shape as `CouponGrid`, with a group's own
+ * The same controlled table shape as `CouponGrid`, with a group's own
  * columns: what it holds (prices or features), how many members it has, and its
  * status. Filtering is passed in through the `filters` slot.
  */
 export const GroupGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', 'ui/card', 'ui/tabs'],
-  note: 'Controlled wrapper; the page owns query state. Table and cards over one query.',
+  composes: ['@reui/data-grid'],
+  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
 })
 
 const SORT_OPTIONS = Object.values(GroupSortField).map((value) => ({
@@ -180,11 +176,11 @@ export function GroupGrid({
   const [fitToWindow, setFitToWindow] = useState(false)
   const capacity = useViewportPageSize({
     containerRef,
-    enabled: fitToWindow && query.view === GroupView.Table,
+    enabled: fitToWindow,
     reservedHeight: 104,
   })
 
-  if (fitToWindow && query.view === GroupView.Table && capacity !== null && capacity !== query.pageSize) {
+  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
     onQueryChange({ ...query, pageSize: capacity, page: 1 })
   }
 
@@ -219,19 +215,6 @@ export function GroupGrid({
             onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
           }
         />
-        <Tabs
-          value={query.view}
-          onValueChange={(view) => onQueryChange({ ...query, view: view as GroupView })}
-        >
-          <TabsList>
-            <TabsTrigger value={GroupView.Table} aria-label="Table view">
-              <TableIcon aria-hidden />
-            </TabsTrigger>
-            <TabsTrigger value={GroupView.Cards} aria-label="Card view">
-              <LayoutGridIcon aria-hidden />
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </GridToolbar>
 
       <DataGrid
@@ -262,23 +245,11 @@ export function GroupGrid({
           dense: true,
         }}
       >
-        {query.view === GroupView.Cards ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <GroupCards
-              groups={groups}
-              isLoading={isLoading}
-              onGroupClick={onGroupClick}
-              onClearFilters={onClearFilters}
-              locale={locale}
-            />
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-            <DataGridScrollArea className="min-h-0 flex-1">
-              <DataGridTable />
-            </DataGridScrollArea>
-          </div>
-        )}
+        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+          <DataGridScrollArea className="min-h-0 flex-1">
+            <DataGridTable />
+          </DataGridScrollArea>
+        </div>
         <GridFooter
           fitToWindow={fitToWindow}
           onFitToWindowChange={setFitToWindow}
@@ -286,114 +257,6 @@ export function GroupGrid({
           noun="groups"
         />
       </DataGrid>
-    </div>
-  )
-}
-
-interface GroupCardsProps {
-  groups: Group[]
-  isLoading: boolean
-  onGroupClick?: ((group: Group) => void) | undefined
-  onClearFilters?: (() => void) | undefined
-  locale?: string | undefined
-}
-
-function GroupCards({ groups, isLoading, onGroupClick, onClearFilters, locale }: GroupCardsProps) {
-  if (isLoading && groups.length === 0) {
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Card key={index} size="sm">
-            <CardHeader>
-              <Skeleton className="h-4 w-32" />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <Skeleton className="h-3 w-40" />
-              <Skeleton className="h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  if (groups.length === 0) {
-    return (
-      <EmptyState
-        size="inline"
-        isFiltered
-        title="No groups match these filters"
-        description="Try a different search, or clear what is narrowing the list."
-        onClearFilters={
-          onClearFilters ? (
-            <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-              Clear filters
-            </Button>
-          ) : undefined
-        }
-      />
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {groups.map((group) => {
-        const clickable = Boolean(onGroupClick)
-        return (
-          <Card
-            key={group.id}
-            size="sm"
-            role={clickable ? 'button' : undefined}
-            tabIndex={clickable ? 0 : undefined}
-            onClick={clickable ? () => onGroupClick?.(group) : undefined}
-            onKeyDown={
-              clickable
-                ? (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      onGroupClick?.(group)
-                    }
-                  }
-                : undefined
-            }
-            className={
-              clickable
-                ? 'cursor-pointer transition hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
-                : undefined
-            }
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-col">
-                  <CardTitle className="truncate">{group.name}</CardTitle>
-                  {group.lookupKey ? (
-                    <CardDescription className="truncate font-mono text-xs">
-                      {group.lookupKey}
-                    </CardDescription>
-                  ) : null}
-                </div>
-                <CatalogStatusBadge status={group.status} />
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              <GroupDetail label="Holds">{GROUP_ENTITY_TYPE_LABEL[group.entityType]}</GroupDetail>
-              <GroupDetail label="Members">
-                <span className="tabular-nums">{membersLabel(group, locale)}</span>
-              </GroupDetail>
-              <GroupDetail label="Updated">{formatDate(group.updatedAt, locale)}</GroupDetail>
-            </CardContent>
-          </Card>
-        )
-      })}
-    </div>
-  )
-}
-
-function GroupDetail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-right">{children}</span>
     </div>
   )
 }

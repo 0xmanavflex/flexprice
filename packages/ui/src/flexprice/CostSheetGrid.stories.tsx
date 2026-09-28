@@ -4,13 +4,12 @@ import {
   type CostSheet,
   type CostSheetQuery,
   CostSheetStatus,
-  CostSheetView,
   DEFAULT_COST_SHEET_QUERY,
 } from '@fp/domain'
 import { CostSheetGrid } from './CostSheetGrid'
 
 /**
- * The cost sheet list. The same controlled table/cards shape as `CouponGrid`,
+ * The cost sheet list. The same controlled table shape as `CouponGrid`,
  * with a cost sheet's own columns: what it covers, how many prices it groups,
  * and its status. The page owns the query; this reports intent through it.
  */
@@ -98,23 +97,6 @@ export const Populated: Story = {
 }
 
 export const Loading: Story = { args: { costSheets: [], total: 0, isLoading: true } }
-
-export const Cards: Story = {
-  args: { query: { ...fixtureCostSheetQuery, view: CostSheetView.Cards } },
-  play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('Telephony')).toBeInTheDocument()
-  },
-}
-
-export const ViewToggle: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('tab', { name: /card view/i }))
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    const reported = spy.mock.calls.at(-1)?.[0] as Record<string, unknown>
-    expect(reported).toMatchObject({ view: 'cards' })
-  },
-}
 
 export const Empty: Story = {
   args: { costSheets: [], total: 0 },

@@ -36,28 +36,6 @@ export const Populated: Story = {
 
 export const Loading: Story = { args: { plans: [], total: 0, isLoading: true } }
 
-/** The same rows, read as cards. `query.view` drives the layout. */
-export const Cards: Story = {
-  args: { query: { ...fixturePlanQuery, view: 'cards' } },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(await canvas.findByText('Business')).toBeInTheDocument()
-    await expect(canvas.getByText(/3 charges/i)).toBeInTheDocument()
-  },
-}
-
-/** The toggle reports a layout, and leaves the rest of the query untouched. */
-export const ViewToggle: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('tab', { name: /card view/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    const reported = spy.mock.calls.at(-1)?.[0] as Record<string, unknown>
-    expect(reported).toMatchObject({ view: 'cards' })
-  },
-}
-
 export const Empty: Story = {
   args: { plans: [], total: 0 },
   play: async ({ canvasElement }) => {

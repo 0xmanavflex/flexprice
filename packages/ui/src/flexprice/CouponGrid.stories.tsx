@@ -37,23 +37,6 @@ export const Populated: Story = {
 
 export const Loading: Story = { args: { coupons: [], total: 0, isLoading: true } }
 
-export const Cards: Story = {
-  args: { query: { ...fixtureCouponQuery, view: 'cards' } },
-  play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('First three months')).toBeInTheDocument()
-  },
-}
-
-export const ViewToggle: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('tab', { name: /card view/i }))
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    const reported = spy.mock.calls.at(-1)?.[0] as Record<string, unknown>
-    expect(reported).toMatchObject({ view: 'cards' })
-  },
-}
-
 export const Empty: Story = {
   args: { coupons: [], total: 0 },
   play: async ({ canvasElement }) => {

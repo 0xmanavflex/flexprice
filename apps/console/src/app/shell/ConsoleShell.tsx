@@ -20,6 +20,7 @@ import type { CreateEnvironment } from '@fp/domain'
 import { useNavCounts } from '@fp/query'
 import {
   AppShell,
+  EnvironmentSwitcher,
   ShellBreadcrumb,
   ShellCreateMenu,
   type ShellEnvironment,
@@ -128,35 +129,32 @@ export function ConsoleShell({
       navGroups={toNavGroups(ICONS, counts)}
       {...(activeItemId === undefined ? {} : { activeItemId })}
       onNavigate={goTo}
-      environment={environment}
-      environments={environments}
-      onEnvironmentChange={onEnvironmentChange}
-      {...(onEnvironmentCreate ? { onCreateEnvironment: () => setCreatingEnvironment(true) } : {})}
-      onManageEnvironments={() => goTo('settings')}
       user={user}
       onSettings={() => goTo('settings')}
       {...(onSignOut ? { onSignOut } : {})}
       /*
-       * The environment leads the trail, with a mark, as Flux leads with its
-       * workspace. It is stated twice — here and in the switcher — and that is
-       * deliberate: the switcher is where you change it, this is where you
-       * read it, and the one place people look while working is the top of the
-       * page they are working on. Production is red; sandbox is not coloured
-       * at all, because marking the safe state teaches people to ignore marks.
+       * The environment leads the trail, and it is where you change it too — the
+       * switcher moved out of the sidebar and became this first crumb. The one
+       * place people look while working is the top of the page they are working
+       * on, so the most consequential control in the product lives there and
+       * nowhere else. Production is marked; sandbox is amber rather than absent,
+       * because a two-state signal beats colour-versus-nothing.
        */
       breadcrumb={
         <ShellBreadcrumb
           trail={[
             {
               label: environment.name,
-              mark: (
-                <span
-                  aria-hidden
-                  className={`size-2 rounded-full ${
-                    environment.kind === 'production'
-                      ? 'bg-destructive'
-                      : 'bg-muted-foreground/50'
-                  }`}
+              content: (
+                <EnvironmentSwitcher
+                  variant="breadcrumb"
+                  current={environment}
+                  environments={environments}
+                  onChange={onEnvironmentChange}
+                  {...(onEnvironmentCreate
+                    ? { onCreate: () => setCreatingEnvironment(true) }
+                    : {})}
+                  onManage={() => goTo('settings')}
                 />
               ),
             },

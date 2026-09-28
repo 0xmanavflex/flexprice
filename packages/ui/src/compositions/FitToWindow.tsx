@@ -1,4 +1,4 @@
-import { ScanIcon } from 'lucide-react'
+import { Maximize2Icon } from 'lucide-react'
 import { Button } from '@ui/primitives/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/primitives/tooltip'
 import { provenance } from '@ui/provenance'
@@ -12,11 +12,16 @@ import { provenance } from '@ui/provenance'
  * contract, and it is why this is a toggle rather than a page-size option
  * called "auto" — "auto" in a list of numbers cannot express being cancelled
  * by picking a number.
+ *
+ * Icon-only: a maximise glyph beside the pagination is enough, and the label it
+ * used to carry read as clutter in a footer that is otherwise all controls. The
+ * accessible name lives on `aria-label`, and the tooltip still spells out what
+ * it does and whether it is on.
  */
 export const FitToWindowProvenance = provenance({
   source: 'composition',
   composes: ['ui/button', 'ui/tooltip'],
-  note: 'Toggles measured page size. Picking an explicit size cancels it.',
+  note: 'Icon toggle for measured page size. Picking an explicit size cancels it.',
 })
 
 export interface FitToWindowProps {
@@ -31,15 +36,15 @@ export function FitToWindow({ pressed, onPressedChange }: FitToWindowProps) {
         render={
           <Button
             variant="ghost"
-            size="sm"
+            size="icon-sm"
             aria-pressed={pressed}
+            aria-label="Fit to window"
             onClick={() => onPressedChange(!pressed)}
-            className="text-muted-foreground gap-1.5 font-normal"
+            className={pressed ? 'bg-muted text-foreground' : 'text-muted-foreground'}
           />
         }
       >
-        <ScanIcon aria-hidden className="size-4" />
-        Fit to window
+        <Maximize2Icon aria-hidden className="size-4" />
       </TooltipTrigger>
       <TooltipContent>
         {pressed

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { SidebarProvider } from '@ui/primitives/sidebar'
 import { EnvironmentSwitcher } from './EnvironmentSwitcher'
 import type { ShellEnvironment } from './types'
@@ -69,6 +69,31 @@ export const Production: Story = {
     await expect(
       canvas.getByRole('button', { name: /environment: production, production/i }),
     ).toBeInTheDocument()
+  },
+}
+
+/**
+ * The breadcrumb variant: the compact trigger that leads the header's trail.
+ *
+ * Same menu and the same marks as the sidebar row — production keeps its dot
+ * and its "Live" badge — but sized to sit inline beside a chevron rather than
+ * to fill a sidebar row. This is the switcher's home now that it has left the
+ * sidebar.
+ */
+export const InBreadcrumb: Story = {
+  args: { current: two[0]!, variant: 'breadcrumb', onCreate: fn() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Live')).toBeVisible()
+
+    await userEvent.click(
+      canvas.getByRole('button', { name: /environment: production, production/i }),
+    )
+    // The same grouped menu opens, with its management action. `waitFor` so the
+    // visibility check retries while the menu animates open rather than racing it.
+    await waitFor(() =>
+      expect(screen.getByRole('menuitem', { name: 'New environment' })).toBeVisible(),
+    )
   },
 }
 

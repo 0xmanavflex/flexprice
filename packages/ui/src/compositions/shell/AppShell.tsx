@@ -11,23 +11,23 @@ import {
 } from '@ui/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { EnvironmentSwitcher } from './EnvironmentSwitcher'
 import { ShellAccount } from './ShellAccount'
 import { ShellNav } from './ShellNav'
 import { ShellNotifications } from './ShellNotifications'
 import { ShellRailHandle } from './ShellRailHandle'
 import { ShellSearch } from './ShellSearch'
 import { ThemeToggle } from './ThemeToggle'
-import type { ShellEnvironment, ShellNavGroup, ShellNotification, ShellUser } from './types'
+import type { ShellNavGroup, ShellNotification, ShellUser } from './types'
 
 /**
  * The application shell: `@reui/app-shell-3`'s layout, ReUI's Flux template's
  * surface treatment.
  *
- * One inset sidebar that collapses to icons, with nested navigation, search and
+ * One inset sidebar that collapses to icons, with nested navigation and
  * notifications *inside* the sidebar, a pinned slot above the footer, and the
- * account menu at the bottom. The header carries the breadcrumb and whatever
- * one control belongs to the whole page rather than to its content.
+ * account menu at the bottom. The header carries the breadcrumb — which leads
+ * with the environment switcher — and, top-right, search beside whatever one
+ * control belongs to the whole page rather than to its content.
  *
  * This replaces a two-level rail, and the reason is the product's own shape:
  * twenty-four destinations across three deep groups. A rail that swaps its
@@ -55,13 +55,6 @@ export interface AppShellProps {
   navGroups: ShellNavGroup[]
   activeItemId?: string
   onNavigate: (itemId: string) => void
-
-  environment: ShellEnvironment
-  environments: ShellEnvironment[]
-  onEnvironmentChange: (environmentId: string) => void
-  /** Absent means creating one is not offered — better than a dead menu item. */
-  onCreateEnvironment?: () => void
-  onManageEnvironments?: () => void
 
   user: ShellUser
   onProfile?: () => void
@@ -161,11 +154,6 @@ export function AppShell({
   navGroups,
   activeItemId,
   onNavigate,
-  environment,
-  environments,
-  onEnvironmentChange,
-  onCreateEnvironment,
-  onManageEnvironments,
   user,
   onProfile,
   onSettings,
@@ -235,29 +223,16 @@ export function AppShell({
               <ThemeToggle />
             </div>
           </div>
-
           {/*
-            The environment switcher sits at the top, not in the footer where
-            the block puts its workspace picker. It is the most consequential
-            control in the product — editing a live plan is not the same act as
-            editing a sandbox one — and burying it would contradict that.
+            The header is the brand and nothing else now. The environment
+            switcher used to sit here; it has moved to the head of the
+            breadcrumb, where it reads while you work rather than in a corner you
+            stop looking at — and choosing an environment is a navigation, which
+            is what the top of the page is for.
           */}
-          <div className="-mx-1 in-data-[state=collapsed]:mx-0">
-            <EnvironmentSwitcher
-              current={environment}
-              environments={environments}
-              onChange={onEnvironmentChange}
-              {...(onCreateEnvironment ? { onCreate: onCreateEnvironment } : {})}
-              {...(onManageEnvironments ? { onManage: onManageEnvironments } : {})}
-            />
-          </div>
         </SidebarHeader>
 
         <SidebarContent>
-          <div className="py-2">
-            <ShellSearch {...(onSearch ? { onSearch } : {})} />
-          </div>
-
           <ShellNav
             groups={navGroups}
             {...(activeItemId === undefined ? {} : { activeItemId })}
@@ -293,7 +268,16 @@ export function AppShell({
               sheet, and this is the only thing that opens it. */}
           <SidebarTrigger className="-ml-1 md:hidden" />
           {breadcrumb}
-          {headerActions ? <div className="ml-auto flex items-center gap-2">{headerActions}</div> : null}
+          {/*
+            Search and Create sit together, top-right: the two things a person
+            reaches for from any screen. Search leads because it is the more
+            frequent, and `headerActions` — where the Create menu renders — falls
+            in beside it.
+          */}
+          <div className="ml-auto flex items-center gap-2">
+            <ShellSearch {...(onSearch ? { onSearch } : {})} />
+            {headerActions}
+          </div>
         </header>
 
         {/*

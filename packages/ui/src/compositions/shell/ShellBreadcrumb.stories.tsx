@@ -61,3 +61,32 @@ export const TwoLevels: Story = {
     ],
   },
 }
+
+/**
+ * A crumb can host a control in place of its label.
+ *
+ * This is how the environment leads the trail as a switcher rather than a
+ * static word: the crumb's `content` owns it, the control names itself, and the
+ * page still follows behind the chevron.
+ */
+export const ControlAsCrumb: Story = {
+  args: {
+    trail: [
+      {
+        label: 'Sandbox',
+        content: (
+          <button type="button" aria-label="Change environment">
+            Sandbox
+          </button>
+        ),
+      },
+      { label: 'Revenue' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const nav = within(canvasElement).getByRole('navigation', { name: 'breadcrumb' })
+    await expect(within(nav).getByRole('button', { name: 'Change environment' })).toBeVisible()
+    // The control owns its crumb; the current page still follows.
+    await expect(within(nav).getByLabelText('Revenue')).toBeVisible()
+  },
+}

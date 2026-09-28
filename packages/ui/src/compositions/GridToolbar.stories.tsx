@@ -4,7 +4,7 @@ import { Button } from '@ui/primitives/button'
 import { GridToolbar } from './GridToolbar'
 
 /**
- * The bar above a grid: borderless search on the left, controls on the right.
+ * The bar above a grid: a bordered search on the left, controls on the right.
  * Controlled — the route owns the query, so the toolbar and grid cannot
  * disagree about what is shown.
  */
@@ -18,7 +18,7 @@ const meta = {
     placeholder: 'Search…',
     label: 'Search coupons',
     children: (
-      <Button size="sm" variant="ghost">
+      <Button size="sm" variant="outline">
         Filter
       </Button>
     ),

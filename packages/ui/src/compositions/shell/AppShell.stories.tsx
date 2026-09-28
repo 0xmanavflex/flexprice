@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from 'lucide-react'
 import { AppShell } from './AppShell'
+import { EnvironmentSwitcher } from './EnvironmentSwitcher'
 import { ShellBreadcrumb } from './ShellBreadcrumb'
 import { ShellCreateMenu } from './ShellCreateMenu'
 import type { ShellEnvironment, ShellNavGroup, ShellNotification } from './types'
@@ -67,6 +68,31 @@ const notifications: ShellNotification[] = [
 const sandbox: ShellEnvironment = { id: 'env_dev', name: 'Sandbox', kind: 'sandbox' }
 const production: ShellEnvironment = { id: 'env_prod', name: 'Production', kind: 'production' }
 
+/**
+ * The breadcrumb as the shell actually receives it: the environment switcher
+ * leads the trail, then the page's own crumbs. The switcher moved here from the
+ * sidebar, so this is where the production marking now lives.
+ */
+const environmentTrail = (current: ShellEnvironment) => (
+  <ShellBreadcrumb
+    trail={[
+      {
+        label: current.name,
+        content: (
+          <EnvironmentSwitcher
+            variant="breadcrumb"
+            current={current}
+            environments={[sandbox, production]}
+            onChange={fn()}
+          />
+        ),
+      },
+      { label: 'Product Catalog' },
+      { label: 'Features' },
+    ]}
+  />
+)
+
 const meta = {
   title: 'Foundation/Compositions/AppShell',
   component: AppShell,
@@ -89,9 +115,6 @@ const meta = {
     navGroups,
     activeItemId: 'features',
     onNavigate: fn(),
-    environment: sandbox,
-    environments: [sandbox, production],
-    onEnvironmentChange: fn(),
     user: { name: 'Dinesh K', email: 'dinesh@flexprice.io', organization: 'Flexprice' },
     onSignOut: fn(),
     onSearch: fn(),
@@ -182,13 +205,13 @@ export const CountsAreVisible: Story = {
 /**
  * Production is marked, and not only by colour.
  *
- * The marks are the switcher's tint, its "Live" badge, and the dot the app
- * puts at the head of the breadcrumb. There was also a red bar across the top
- * of the window; it was removed — three marks in the places people already
- * look beat a fourth in a place they do not.
+ * The switcher now leads the breadcrumb, carrying the marks: the red dot and
+ * the "Live" badge, in the one place people look while they work. There was
+ * also a red bar across the top of the window; it was removed — a mark where
+ * people already look beats one where they do not.
  */
 export const Production: Story = {
-  args: { environment: production },
+  args: { breadcrumb: environmentTrail(production) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Live')).toBeInTheDocument()
@@ -205,6 +228,7 @@ export const Production: Story = {
  * thing twice, and repetition is how a marker becomes invisible.
  */
 export const SandboxIsNotBadged: Story = {
+  args: { breadcrumb: environmentTrail(sandbox) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText('Live')).not.toBeInTheDocument()

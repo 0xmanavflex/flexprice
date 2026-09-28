@@ -10,12 +10,15 @@ import {
 } from '@ui/primitives/dialog'
 import { Input } from '@ui/primitives/input'
 import { Kbd } from '@ui/primitives/kbd'
-import { SidebarGroup, SidebarGroupContent } from '@ui/primitives/sidebar'
 import { provenance } from '@ui/provenance'
 
 /**
- * Search, as `@reui/app-shell-3` has it: a button in the sidebar that opens a
- * dialog, not a field that sits there collecting focus.
+ * Search, as `@reui/app-shell-3` has it: a button that opens a dialog, not a
+ * field that sits there collecting focus.
+ *
+ * It rides in the top bar beside Create, top-right, so the two things a person
+ * reaches for from any screen — find, and start — sit together rather than one
+ * in the chrome and one in the sidebar.
  *
  * The distinction matters. An always-present input is a tab stop on every
  * screen and a commitment to filtering *something* — but what it searches
@@ -73,34 +76,28 @@ export function ShellSearch({ onSearch, placeholder = 'Search...' }: ShellSearch
 
   return (
     <>
-      <SidebarGroup className="py-0">
-        <SidebarGroupContent className="relative flex items-center">
-          {/*
-            Flux's search, as written. The icon is laid out inline rather than
-            positioned absolutely, which is what lets the whole control shrink
-            to a 32px circle in the rail without the icon drifting off-centre.
-            The label is *hidden* when collapsed, not made transparent — the
-            transparent version left a ghost of the word inside the circle.
-          */}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setOpen(true)}
-            aria-label="Search"
-            aria-keyshortcuts="/ Meta+K Control+K"
-            className="border-border/60 hover:bg-sidebar-accent/80! h-8 w-full justify-start gap-1.5 overflow-hidden rounded-full pl-2 font-normal shadow-none transition-[width,padding] duration-200 ease-linear in-data-[state=collapsed]:mx-auto in-data-[state=collapsed]:w-8! in-data-[state=collapsed]:justify-center in-data-[state=collapsed]:gap-0 in-data-[state=collapsed]:px-0!"
-          >
-            <SearchIcon
-              aria-hidden
-              className="pointer-events-none size-3.5 shrink-0 opacity-50 select-none"
-            />
-            <span className="in-data-[state=collapsed]:hidden">{placeholder}</span>
-          </Button>
-          <Kbd className="absolute top-1/2 right-2 -translate-y-1/2 in-data-[state=collapsed]:hidden">
-            /
-          </Kbd>
-        </SidebarGroupContent>
-      </SidebarGroup>
+      {/*
+        A compact control for the header, sized to sit beside the Create button.
+        The hint and label fold away first as the bar narrows, leaving the icon
+        alone on a phone where the breadcrumb and Create need the room; the
+        button keeps its name for anything reading the tree.
+      */}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        onClick={() => setOpen(true)}
+        aria-label="Search"
+        aria-keyshortcuts="/ Meta+K Control+K"
+        className="text-muted-foreground gap-1.5 font-normal"
+      >
+        <SearchIcon
+          aria-hidden
+          className="pointer-events-none size-4 shrink-0 opacity-60 select-none"
+        />
+        <span className="hidden sm:inline">{placeholder}</span>
+        <Kbd className="ml-1 hidden sm:inline-flex">/</Kbd>
+      </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-md px-4 py-2 **:data-[slot=dialog-close]:top-1/2 **:data-[slot=dialog-close]:right-3 **:data-[slot=dialog-close]:-translate-y-1/2 **:data-[slot=dialog-close]:opacity-60">

@@ -5,17 +5,13 @@ import {
   type CostSheet,
   type CostSheetQuery,
   CostSheetSortField,
-  CostSheetView,
 } from '@fp/domain'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/primitives/card'
 import { Skeleton } from '@ui/primitives/skeleton'
-import { Tabs, TabsList, TabsTrigger } from '@ui/primitives/tabs'
-import { LayoutGridIcon, TableIcon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { GridFooter } from '@ui/compositions/GridFooter'
 import { GridToolbar } from '@ui/compositions/GridToolbar'
@@ -27,14 +23,14 @@ import { CatalogStatusBadge } from './StatusBadge'
 /**
  * The cost sheet list.
  *
- * The same controlled table/cards shape as `CouponGrid`, with a cost sheet's
+ * The same controlled table shape as `CouponGrid`, with a cost sheet's
  * own columns: what it covers, how many prices it groups, and its status.
  * Filtering is passed in through the `filters` slot.
  */
 export const CostSheetGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', 'ui/card', 'ui/tabs'],
-  note: 'Controlled wrapper; the page owns query state. Table and cards over one query.',
+  composes: ['@reui/data-grid'],
+  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
 })
 
 const SORT_OPTIONS = Object.values(CostSheetSortField).map((value) => ({
@@ -182,16 +178,11 @@ export function CostSheetGrid({
   const [fitToWindow, setFitToWindow] = useState(false)
   const capacity = useViewportPageSize({
     containerRef,
-    enabled: fitToWindow && query.view === CostSheetView.Table,
+    enabled: fitToWindow,
     reservedHeight: 104,
   })
 
-  if (
-    fitToWindow &&
-    query.view === CostSheetView.Table &&
-    capacity !== null &&
-    capacity !== query.pageSize
-  ) {
+  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
     onQueryChange({ ...query, pageSize: capacity, page: 1 })
   }
 
@@ -226,19 +217,6 @@ export function CostSheetGrid({
             onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
           }
         />
-        <Tabs
-          value={query.view}
-          onValueChange={(view) => onQueryChange({ ...query, view: view as CostSheetView })}
-        >
-          <TabsList>
-            <TabsTrigger value={CostSheetView.Table} aria-label="Table view">
-              <TableIcon aria-hidden />
-            </TabsTrigger>
-            <TabsTrigger value={CostSheetView.Cards} aria-label="Card view">
-              <LayoutGridIcon aria-hidden />
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </GridToolbar>
 
       <DataGrid
@@ -269,23 +247,11 @@ export function CostSheetGrid({
           dense: true,
         }}
       >
-        {query.view === CostSheetView.Cards ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <CostSheetCards
-              costSheets={costSheets}
-              isLoading={isLoading}
-              onCostSheetClick={onCostSheetClick}
-              onClearFilters={onClearFilters}
-              locale={locale}
-            />
-          </div>
-        ) : (
-          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-            <DataGridScrollArea className="min-h-0 flex-1">
-              <DataGridTable />
-            </DataGridScrollArea>
-          </div>
-        )}
+        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+          <DataGridScrollArea className="min-h-0 flex-1">
+            <DataGridTable />
+          </DataGridScrollArea>
+        </div>
         <GridFooter
           fitToWindow={fitToWindow}
           onFitToWindowChange={setFitToWindow}
@@ -293,124 +259,6 @@ export function CostSheetGrid({
           noun="cost sheets"
         />
       </DataGrid>
-    </div>
-  )
-}
-
-interface CostSheetCardsProps {
-  costSheets: CostSheet[]
-  isLoading: boolean
-  onCostSheetClick?: ((costSheet: CostSheet) => void) | undefined
-  onClearFilters?: (() => void) | undefined
-  locale?: string | undefined
-}
-
-function CostSheetCards({
-  costSheets,
-  isLoading,
-  onCostSheetClick,
-  onClearFilters,
-  locale,
-}: CostSheetCardsProps) {
-  if (isLoading && costSheets.length === 0) {
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Card key={index} size="sm">
-            <CardHeader>
-              <Skeleton className="h-4 w-32" />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <Skeleton className="h-3 w-40" />
-              <Skeleton className="h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  if (costSheets.length === 0) {
-    return (
-      <EmptyState
-        size="inline"
-        isFiltered
-        title="No cost sheets match these filters"
-        description="Try a different search, or clear what is narrowing the list."
-        onClearFilters={
-          onClearFilters ? (
-            <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-              Clear filters
-            </Button>
-          ) : undefined
-        }
-      />
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {costSheets.map((costSheet) => {
-        const clickable = Boolean(onCostSheetClick)
-        return (
-          <Card
-            key={costSheet.id}
-            size="sm"
-            role={clickable ? 'button' : undefined}
-            tabIndex={clickable ? 0 : undefined}
-            onClick={clickable ? () => onCostSheetClick?.(costSheet) : undefined}
-            onKeyDown={
-              clickable
-                ? (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      onCostSheetClick?.(costSheet)
-                    }
-                  }
-                : undefined
-            }
-            className={
-              clickable
-                ? 'cursor-pointer transition hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
-                : undefined
-            }
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-col">
-                  <CardTitle className="truncate">{costSheet.name}</CardTitle>
-                  {costSheet.lookupKey ? (
-                    <CardDescription className="truncate font-mono text-xs">
-                      {costSheet.lookupKey}
-                    </CardDescription>
-                  ) : null}
-                </div>
-                <CatalogStatusBadge status={costSheet.status} />
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              {costSheet.description ? (
-                <CostSheetDetail label="Description">{costSheet.description}</CostSheetDetail>
-              ) : null}
-              <CostSheetDetail label="Prices">
-                <span className="tabular-nums">{pricesLabel(costSheet, locale)}</span>
-              </CostSheetDetail>
-              <CostSheetDetail label="Updated">
-                {formatDate(costSheet.updatedAt, locale)}
-              </CostSheetDetail>
-            </CardContent>
-          </Card>
-        )
-      })}
-    </div>
-  )
-}
-
-function CostSheetDetail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-right">{children}</span>
     </div>
   )
 }

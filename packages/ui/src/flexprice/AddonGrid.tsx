@@ -5,23 +5,13 @@ import {
   type Addon,
   type AddonQuery,
   AddonSortField,
-  AddonView,
 } from '@fp/domain'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@ui/primitives/card'
 import { Skeleton } from '@ui/primitives/skeleton'
-import { Tabs, TabsList, TabsTrigger } from '@ui/primitives/tabs'
-import { LayoutGridIcon, TableIcon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { GridFooter } from '@ui/compositions/GridFooter'
 import { GridToolbar } from '@ui/compositions/GridToolbar'
@@ -33,14 +23,14 @@ import { CatalogStatusBadge } from './StatusBadge'
 /**
  * The add-on list.
  *
- * The same controlled table/cards shape as `PlanGrid`, minus the pricing — an
+ * The same controlled table shape as `PlanGrid`, minus the pricing — an
  * add-on is priced through the charges it shares with a plan, not a headline of
  * its own. Filtering is passed in through the `filters` slot.
  */
 export const AddonGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge', 'ui/card', 'ui/tabs'],
-  note: 'Controlled wrapper; the page owns query state. Table and cards over one query.',
+  composes: ['@reui/data-grid', '@reui/badge'],
+  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
 })
 
 const SORT_OPTIONS = Object.values(AddonSortField).map((value) => ({
@@ -161,11 +151,11 @@ export function AddonGrid({
   const [fitToWindow, setFitToWindow] = useState(false)
   const capacity = useViewportPageSize({
     containerRef,
-    enabled: fitToWindow && query.view === AddonView.Table,
+    enabled: fitToWindow,
     reservedHeight: 104,
   })
 
-  if (fitToWindow && query.view === AddonView.Table && capacity !== null && capacity !== query.pageSize) {
+  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
     onQueryChange({ ...query, pageSize: capacity, page: 1 })
   }
 
@@ -200,19 +190,6 @@ export function AddonGrid({
             onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
           }
         />
-        <Tabs
-          value={query.view}
-          onValueChange={(view) => onQueryChange({ ...query, view: view as AddonView })}
-        >
-          <TabsList>
-            <TabsTrigger value={AddonView.Table} aria-label="Table view">
-              <TableIcon aria-hidden />
-            </TabsTrigger>
-            <TabsTrigger value={AddonView.Cards} aria-label="Card view">
-              <LayoutGridIcon aria-hidden />
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </GridToolbar>
 
       <DataGrid
@@ -245,28 +222,15 @@ export function AddonGrid({
           dense: true,
         }}
       >
-        {/* Bounded scroll region so the pagination footer stays pinned in view —
-            the same pattern the feature and plan grids use. */}
-        {query.view === AddonView.Cards ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <AddonCards
-              addons={addons}
-              isLoading={isLoading}
-              onAddonClick={onAddonClick}
-              onClearFilters={onClearFilters}
-              locale={locale}
-            />
-          </div>
-        ) : (
-          // Wrapper makes ReUI's scroll-area root the flex-1 item (its className
-          // lands on an inner node), so it shrinks and scrolls rather than
-          // pushing the pagination off-screen on a tall list.
-          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-            <DataGridScrollArea className="min-h-0 flex-1">
-              <DataGridTable />
-            </DataGridScrollArea>
-          </div>
-        )}
+        {/* Bounded scroll region so the pagination footer stays pinned in view.
+            The wrapper makes ReUI's scroll-area root the flex-1 item (its
+            className lands on an inner node), so it shrinks and scrolls rather
+            than pushing the pagination off-screen on a tall list. */}
+        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+          <DataGridScrollArea className="min-h-0 flex-1">
+            <DataGridTable />
+          </DataGridScrollArea>
+        </div>
         <GridFooter
           fitToWindow={fitToWindow}
           onFitToWindowChange={setFitToWindow}
@@ -274,116 +238,6 @@ export function AddonGrid({
           noun="add-ons"
         />
       </DataGrid>
-    </div>
-  )
-}
-
-interface AddonCardsProps {
-  addons: Addon[]
-  isLoading: boolean
-  onAddonClick?: ((addon: Addon) => void) | undefined
-  onClearFilters?: (() => void) | undefined
-  locale?: string | undefined
-}
-
-function AddonCards({ addons, isLoading, onAddonClick, onClearFilters, locale }: AddonCardsProps) {
-  if (isLoading && addons.length === 0) {
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Card key={index} size="sm">
-            <CardHeader>
-              <Skeleton className="h-4 w-32" />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <Skeleton className="h-3 w-40" />
-              <Skeleton className="h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  if (addons.length === 0) {
-    return (
-      <EmptyState
-        size="inline"
-        isFiltered
-        title="No add-ons match these filters"
-        description="Try a different search, or clear what is narrowing the list."
-        onClearFilters={
-          onClearFilters ? (
-            <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-              Clear filters
-            </Button>
-          ) : undefined
-        }
-      />
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {addons.map((addon) => {
-        const clickable = Boolean(onAddonClick)
-        return (
-          <Card
-            key={addon.id}
-            size="sm"
-            role={clickable ? 'button' : undefined}
-            tabIndex={clickable ? 0 : undefined}
-            onClick={clickable ? () => onAddonClick?.(addon) : undefined}
-            onKeyDown={
-              clickable
-                ? (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      onAddonClick?.(addon)
-                    }
-                  }
-                : undefined
-            }
-            className={
-              clickable
-                ? 'cursor-pointer transition hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
-                : undefined
-            }
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-col">
-                  <CardTitle className="truncate">{addon.name}</CardTitle>
-                  {addon.lookupKey ? (
-                    <CardDescription className="truncate font-mono text-xs">
-                      {addon.lookupKey}
-                    </CardDescription>
-                  ) : null}
-                </div>
-                <CatalogStatusBadge status={addon.status} />
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              {addon.description ? (
-                <AddonDetail label="Description">
-                  <span className="line-clamp-2">{addon.description}</span>
-                </AddonDetail>
-              ) : null}
-              <AddonDetail label="Created">{formatDate(addon.createdAt, locale)}</AddonDetail>
-              <AddonDetail label="Updated">{formatDate(addon.updatedAt, locale)}</AddonDetail>
-            </CardContent>
-          </Card>
-        )
-      })}
-    </div>
-  )
-}
-
-function AddonDetail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-right">{children}</span>
     </div>
   )
 }

@@ -2,44 +2,33 @@
  * The Flexprice design system.
  *
  * The base theme is the shadcn `nova` preset on the Base UI library, which is
- * what `base-nova` in components.json refers to. It was missing entirely until
- * now: `styles.css` had been hand-written as a bare `@import 'tailwindcss'`
- * and `shadcn init` was never run, so `--background`, `--foreground`,
- * `--primary`, `--border` and `--radius` did not exist.
+ * what `base-nova` in components.json refers to. ReUI's registry items carry
+ * only their *extended* tokens (success, info, warning, invert); they layer on
+ * top of this base.
  *
- * Nothing errored. Tailwind generated the utilities, the classes reached the
- * DOM, and every one of them resolved to nothing — so the console rendered as
- * black text on white with borders and no colour, looking like a design
- * decision rather than a missing stylesheet.
- *
- * ReUI's registry items only carry their *extended* tokens (success, info,
- * warning, invert). They layer on top of this base; they cannot replace it.
+ * The palette is Ferry's: a deep-teal brand on a warm-neutral field, not the
+ * indigo-on-cool-grey it started as. Blue is gone — the primary action, active
+ * navigation, focus rings and links are all the one teal accent, and hover is
+ * that same tone a shade lighter, never a second colour.
  */
 
 @import 'tailwindcss';
 
 /*
- * Tell Tailwind where this package's markup lives.
- *
- * v4 auto-detects sources from the *consuming* project's root — which, for a
- * monorepo, is `apps/console` and does not include `packages/ui/src`. Without
- * this the app renders with the class names in the DOM and none of the
- * corresponding CSS generated: every table, badge and button arrives unstyled,
- * and nothing errors. It looks like a broken stylesheet rather than a missing
- * scan path, which is what makes it slow to diagnose.
- *
- * Resolved relative to this file, so it holds for any app that imports it.
+ * Tell Tailwind where this package's markup lives. v4 auto-detects sources from
+ * the consuming app's root (`apps/console`), which does not include
+ * `packages/ui/src` — without this, classes reach the DOM with no CSS generated.
  */
 @source "./";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/inter";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -91,144 +80,105 @@
 
 :root {
     /*
-     * The brand hue. The console was entirely greyscale — every token
-     * `oklch(x 0 0)` — which read as a wireframe rather than a product. One
-     * confident accent (indigo, ~274°) now carries the primary action, the
-     * active navigation, focus rings and links; everything else stays neutral
-     * so the accent means something. Swap these three lines to rebrand; nothing
-     * else in the system names a colour.
+     * The brand. Not blue — a deep teal (#07383e), from Ferry, on a warm
+     * neutral field. It carries the primary action, active navigation, focus
+     * rings and links; everything else stays neutral so the accent means
+     * something. Swap these three lines to rebrand; nothing else names a colour.
      */
-    --brand: oklch(0.52 0.196 274);
-    --brand-foreground: oklch(0.985 0 0);
-    --brand-muted: oklch(0.955 0.018 274);
+    --brand: #07383e;
+    --brand-foreground: #ffffff;
+    --brand-muted: #eaf5f1;
 
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
+    /* Warm off-white, not pure #fff — a bright white read as harsh. Cards sit a
+       shade brighter (pure white), so the content plane lifts off the page. */
+    --background: oklch(0.995 0.001 85);
+    --foreground: oklch(0.25 0.004 75);
     --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
+    --card-foreground: var(--foreground);
     --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    /* Primary is the brand now, not near-black. White on it clears 5:1. */
+    --popover-foreground: var(--foreground);
     --primary: var(--brand);
     --primary-foreground: var(--brand-foreground);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    /*
-     * Darkened from nova's 0.556 (#737373), which fails WCAG AA against
-     * `--muted` (#f5f5f5) at 4.34:1 — and muted text on a muted surface is one
-     * of the registry's most common pairings, so the failure turned up in a
-     * keyboard hint, an avatar fallback and a badge before this was traced to
-     * the token rather than to the components.
-     *
-     * Darkened again when the sidebar itself was tinted: muted text now also
-     * has to clear 4.5:1 against `--sidebar` (#ededed), which 0.540 missed at
-     * 4.29:1. Each time the darkest surface in the system moves, this is the
-     * token that has to follow it.
-     *
-     * 0.520 is #686868: 4.66:1 on the sidebar, 4.9:1 on `--muted`, 5.9:1 on
-     * `--background`, and still unmistakably secondary text.
-     */
-    --muted-foreground: oklch(0.520 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
+    /* Secondary is the brand's pale wash — a mint, not a grey. */
+    --secondary: var(--brand-muted);
+    --secondary-foreground: var(--brand);
+    --muted: oklch(0.963 0.002 85);
+    /* 0.52, not lighter: secondary text must clear 4.5:1 on the brightest
+       surface it lands on (the near-white background and the muted fills). */
+    --muted-foreground: oklch(0.52 0.006 75);
+    --accent: oklch(0.949 0.003 85);
+    --accent-foreground: var(--foreground);
     --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    /* Focus ring in the brand, so keyboard focus is unmistakable and on-brand. */
-    --ring: oklch(0.55 0.18 274);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    /* Hairlines, not boxes: a light edge (13%) and a slightly firmer input
+       rule (22%), so borders read as edges rather than as drawn boxes. */
+    --border: oklch(0.3 0.005 75 / 13%);
+    --input: oklch(0.3 0.005 75 / 22%);
+    /* Focus ring is the brand teal, never blue. */
+    --ring: var(--brand);
+    --chart-1: oklch(0.6 0.13 155);
+    --chart-2: oklch(0.54 0.14 255);
+    --chart-3: oklch(0.44 0.08 200);
+    --chart-4: oklch(0.75 0.15 75);
+    --chart-5: oklch(0.55 0.1 320);
     --radius: 0.625rem;
-    /*
-     * A shade darker than the page beside it, so the content plane reads as
-     * the thing in front. nova ships both at very nearly white, which is what
-     * made the shell look flat.
-     */
-    --sidebar: oklch(0.945 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
+    /* A shade darker than the page, warm-neutral. */
+    --sidebar: oklch(0.972 0.002 85);
+    /* 0.34: nav text has to clear 4.5:1 on the sidebar and on the near-white
+       page it renders over in stories (0.36 still landed at 4.3–4.45). */
+    --sidebar-foreground: oklch(0.34 0.006 75);
     --sidebar-primary: var(--brand);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    /* The active row wears a faint brand wash instead of a flat grey, so the
-       current page is found by colour before it is read. */
-    --sidebar-accent: oklch(0.905 0.028 274);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.55 0.18 274);
-    --destructive-foreground: var(--color-red-800);
-    --success: var(--color-emerald-500);
-    --success-foreground: var(--color-emerald-900);
-    --info: var(--color-violet-500);
-    --info-foreground: var(--color-violet-900);
-    --warning: var(--color-yellow-500);
-    --warning-foreground: var(--color-yellow-900);
-    --invert: var(--color-zinc-900);
-    --invert-foreground: var(--color-zinc-50);
+    --sidebar-primary-foreground: #ffffff;
+    /* The active row wears a faint teal wash — found by colour, in the brand
+       tone, not a second colour. */
+    --sidebar-accent: oklch(0.93 0.022 190);
+    --sidebar-accent-foreground: var(--foreground);
+    --sidebar-border: oklch(0.3 0.005 75 / 7%);
+    --sidebar-ring: var(--brand);
 }
 
 .dark {
-    /* A touch lighter and less saturated than light mode, so the accent holds
-       up against a dark surface without glowing. */
-    --brand: oklch(0.62 0.17 274);
-    --brand-foreground: oklch(0.985 0 0);
-    --brand-muted: oklch(0.28 0.05 274);
+    /* Teal lightens on dark so the accent reads without glowing. */
+    --brand: #81cec4;
+    --brand-foreground: #07383e;
+    --brand-muted: #173b3b;
 
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    /* Brand-on-dark with light text, rather than the near-white slab it was. */
+    --background: oklch(0.205 0.003 75);
+    --foreground: oklch(0.925 0.003 85);
+    --card: oklch(0.25 0.004 75);
+    --card-foreground: var(--foreground);
+    --popover: oklch(0.265 0.004 75);
+    --popover-foreground: var(--foreground);
     --primary: var(--brand);
     --primary-foreground: var(--brand-foreground);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --secondary: var(--brand-muted);
+    --secondary-foreground: var(--brand);
+    --muted: oklch(0.27 0.004 75);
+    --muted-foreground: oklch(0.7 0.005 85);
+    --accent: oklch(0.3 0.004 75);
+    --accent-foreground: var(--foreground);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.62 0.16 274);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.175 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
+    --input: oklch(1 0 0 / 22%);
+    --ring: var(--brand);
+    --chart-1: oklch(0.7 0.13 155);
+    --chart-2: oklch(0.64 0.14 255);
+    --chart-3: oklch(0.6 0.08 200);
+    --chart-4: oklch(0.78 0.14 75);
+    --chart-5: oklch(0.65 0.1 320);
+    --sidebar: oklch(0.185 0.003 75);
+    --sidebar-foreground: oklch(0.73 0.005 85);
     --sidebar-primary: var(--brand);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.275 0.03 274);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.62 0.16 274);
-    --destructive-foreground: var(--color-red-600);
-    --success: var(--color-emerald-500);
-    --success-foreground: var(--color-emerald-600);
-    --info: var(--color-violet-500);
-    --info-foreground: var(--color-violet-600);
-    --warning: var(--color-yellow-500);
-    --warning-foreground: var(--color-yellow-600);
-    --invert: var(--color-zinc-700);
-    --invert-foreground: var(--color-zinc-50);
+    --sidebar-primary-foreground: #07383e;
+    --sidebar-accent: oklch(0.28 0.015 190);
+    --sidebar-accent-foreground: var(--foreground);
+    --sidebar-border: oklch(1 0 0 / 6%);
+    --sidebar-ring: var(--brand);
 }
 
 /*
- * Buttons and badges are fully curved, as ReUI's Flux template has them.
- *
- * This is a theme decision, so it lives in the theme rather than being spelled
- * onto every call site — a `rounded-full` repeated across forty components is
- * how a radius stops being a decision and becomes forty of them that drift.
- * The registry components stay untouched and upgradeable.
- *
- * Square-cornered exceptions opt out by setting a radius of their own; the
- * rule is deliberately low-specificity so a `rounded-*` utility still wins.
+ * Buttons and badges are fully curved, as ReUI's Flux template has them. A
+ * theme decision, so it lives here rather than being spelled onto every call
+ * site. Registry components stay untouched and upgradeable.
  */
 @layer components {
   [data-slot='button'],
@@ -237,10 +187,8 @@
     border-radius: calc(infinity * 1px);
   }
 
-  /*
-   * Icon buttons inside a menu or a table row are the exception: a circle in a
-   * dense row reads as a status dot, not a control.
-   */
+  /* Icon buttons in a menu or a table row: a circle in a dense row reads as a
+     status dot, not a control. */
   [data-slot='dropdown-menu-item'] [data-slot='button'],
   [data-slot='table'] [data-slot='button'] {
     border-radius: var(--radius-md);
@@ -260,31 +208,35 @@
 }
 
 /*
- * ReUI extended tokens, appended by registry items on install.
- * Do not hand-edit — `pnpm ui:add` maintains this block.
+ * ReUI extended tokens — the status set. Ferry's values: a calmer green, a
+ * warmer/brighter yellow than nova's dull one, a teal-leaning info that does
+ * not clash with the brand.
  */
 :root {
-    --destructive-foreground: var(--color-red-800);
-    --success: var(--color-emerald-500);
-    --success-foreground: var(--color-emerald-900);
-    --info: var(--color-violet-500);
-    --info-foreground: var(--color-violet-900);
-    --warning: var(--color-yellow-500);
-    --warning-foreground: var(--color-yellow-900);
-    --invert: var(--color-zinc-900);
-    --invert-foreground: var(--color-zinc-50);
+    /* Dark foreground, not white: the console's status badges are the light
+       variants (a tinted fill with coloured text), so the text has to be dark
+       enough to read on that light fill — white failed on the light-red one. */
+    --destructive-foreground: oklch(0.44 0.17 27);
+    --success: oklch(0.6 0.13 155);
+    --success-foreground: oklch(0.28 0.06 155);
+    --info: oklch(0.54 0.14 255);
+    --info-foreground: oklch(0.34 0.1 255);
+    --warning: oklch(0.75 0.15 75);
+    --warning-foreground: oklch(0.36 0.09 75);
+    --invert: oklch(0.21 0.005 264);
+    --invert-foreground: oklch(0.98 0 0);
 }
 
 .dark {
-    --destructive-foreground: var(--color-red-600);
-    --success: var(--color-emerald-500);
-    --success-foreground: var(--color-emerald-600);
-    --info: var(--color-violet-500);
-    --info-foreground: var(--color-violet-600);
-    --warning: var(--color-yellow-500);
-    --warning-foreground: var(--color-yellow-600);
-    --invert: var(--color-zinc-700);
-    --invert-foreground: var(--color-zinc-50);
+    --destructive-foreground: oklch(0.85 0.09 27);
+    --success: oklch(0.72 0.13 155);
+    --success-foreground: oklch(0.9 0.08 155);
+    --info: oklch(0.68 0.14 255);
+    --info-foreground: oklch(0.9 0.08 255);
+    --warning: oklch(0.8 0.14 75);
+    --warning-foreground: oklch(0.92 0.08 75);
+    --invert: oklch(0.92 0.004 85);
+    --invert-foreground: oklch(0.21 0.005 264);
 }
 
 @theme inline {
@@ -304,18 +256,14 @@
 }
 
 /*
- * Depth and interaction — the two things a flat, hairline-only surface lacked.
- *
- * Written as `data-slot` selectors (the vendor's public targeting contract) and
- * declared after Tailwind's utilities, so a `className` at the call site still
- * wins and no vendored component is forked to get them.
+ * Depth and interaction. Written as `data-slot` selectors (the vendor's public
+ * targeting contract) and declared after Tailwind's utilities, so a `className`
+ * at the call site still wins and no vendored component is forked to get them.
  */
 @layer components {
-  /*
-   * Lift the surfaces that float above the page — the drawer, menus, popovers,
-   * cards — with one soft, low shadow. Restrained on purpose: a surface should
-   * read as slightly in front, not as a card thrown onto the page.
-   */
+  /* Lift the surfaces that float above the page — drawer, menus, popovers,
+     cards — with one soft, low shadow. Restrained: a surface should read as
+     slightly in front, not as a card thrown onto the page. */
   [data-slot='sheet-content'],
   [data-slot='popover-content'],
   [data-slot='dropdown-menu-content'],
@@ -335,12 +283,10 @@
       0 8px 24px -12px oklch(0 0 0 / 0.5);
   }
 
-  /*
-   * A table row answers the cursor, so a long list reads as something you act on
-   * rather than a static dump. `color-mix` keeps it a wash of the theme's own
-   * muted tone in either mode.
-   */
+  /* A table row answers the cursor — a long list reads as something you act on
+     rather than a static dump. `color-mix` keeps it a wash of the theme's own
+     muted tone in either mode, never a second colour. */
   [data-slot='table-row']:hover {
-    background-color: color-mix(in oklch, var(--muted) 55%, transparent);
+    background-color: color-mix(in oklch, var(--muted) 60%, transparent);
   }
 }

@@ -8,17 +8,13 @@ import {
   CouponCadence,
   CouponSortField,
   CouponType,
-  CouponView,
 } from '@fp/domain'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@ui/primitives/card'
 import { Skeleton } from '@ui/primitives/skeleton'
-import { Tabs, TabsList, TabsTrigger } from '@ui/primitives/tabs'
-import { LayoutGridIcon, TableIcon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { GridFooter } from '@ui/compositions/GridFooter'
 import { GridToolbar } from '@ui/compositions/GridToolbar'
@@ -31,15 +27,15 @@ import { CatalogStatusBadge } from './StatusBadge'
 /**
  * The coupon list.
  *
- * The same controlled table/cards shape as `AddonGrid`, with a coupon's own
+ * The same controlled table shape as `AddonGrid`, with a coupon's own
  * columns: the discount (a `Money` when fixed, a percentage when not), how long
  * it lasts, and how far its redemptions have run against the ceiling. Filtering
  * is passed in through the `filters` slot.
  */
 export const CouponGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', 'ui/card', 'ui/tabs'],
-  note: 'Controlled wrapper; the page owns query state. Table and cards over one query.',
+  composes: ['@reui/data-grid'],
+  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
 })
 
 const SORT_OPTIONS = Object.values(CouponSortField).map((value) => ({
@@ -215,11 +211,11 @@ export function CouponGrid({
   const [fitToWindow, setFitToWindow] = useState(false)
   const capacity = useViewportPageSize({
     containerRef,
-    enabled: fitToWindow && query.view === CouponView.Table,
+    enabled: fitToWindow,
     reservedHeight: 104,
   })
 
-  if (fitToWindow && query.view === CouponView.Table && capacity !== null && capacity !== query.pageSize) {
+  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
     onQueryChange({ ...query, pageSize: capacity, page: 1 })
   }
 
@@ -254,19 +250,6 @@ export function CouponGrid({
             onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
           }
         />
-        <Tabs
-          value={query.view}
-          onValueChange={(view) => onQueryChange({ ...query, view: view as CouponView })}
-        >
-          <TabsList>
-            <TabsTrigger value={CouponView.Table} aria-label="Table view">
-              <TableIcon aria-hidden />
-            </TabsTrigger>
-            <TabsTrigger value={CouponView.Cards} aria-label="Card view">
-              <LayoutGridIcon aria-hidden />
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
       </GridToolbar>
 
       <DataGrid
@@ -301,32 +284,20 @@ export function CouponGrid({
           dense: true,
         }}
       >
-        {/* The table/cards scroll within a bounded region so the pagination
-            footer below stays pinned in view instead of being pushed off the
-            bottom when the list is taller than the screen — the same pattern the
-            feature and plan grids use. */}
-        {query.view === CouponView.Cards ? (
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            <CouponCards
-              coupons={coupons}
-              isLoading={isLoading}
-              onCouponClick={onCouponClick}
-              onClearFilters={onClearFilters}
-              locale={locale}
-            />
-          </div>
-        ) : (
-          // ReUI's DataGridScrollArea puts `className` on an inner node, so its
-          // own root div never becomes the flex-1 item — it sizes to content and
-          // the footer below is pushed off-screen once the list is taller than
-          // the viewport. This wrapper makes the root (`> div`) the flex child
-          // that fills and scrolls, keeping the pagination pinned in view.
-          <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-            <DataGridScrollArea className="min-h-0 flex-1">
-              <DataGridTable />
-            </DataGridScrollArea>
-          </div>
-        )}
+        {/* The table scrolls within a bounded region so the pagination footer
+            below stays pinned in view instead of being pushed off the bottom
+            when the list is taller than the screen.
+
+            ReUI's DataGridScrollArea puts `className` on an inner node, so its
+            own root div never becomes the flex-1 item — it sizes to content and
+            the footer below is pushed off-screen once the list is taller than
+            the viewport. This wrapper makes the root (`> div`) the flex child
+            that fills and scrolls, keeping the pagination pinned in view. */}
+        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
+          <DataGridScrollArea className="min-h-0 flex-1">
+            <DataGridTable />
+          </DataGridScrollArea>
+        </div>
         <GridFooter
           fitToWindow={fitToWindow}
           onFitToWindowChange={setFitToWindow}
@@ -334,117 +305,6 @@ export function CouponGrid({
           noun="coupons"
         />
       </DataGrid>
-    </div>
-  )
-}
-
-interface CouponCardsProps {
-  coupons: Coupon[]
-  isLoading: boolean
-  onCouponClick?: ((coupon: Coupon) => void) | undefined
-  onClearFilters?: (() => void) | undefined
-  locale?: string | undefined
-}
-
-function CouponCards({ coupons, isLoading, onCouponClick, onClearFilters, locale }: CouponCardsProps) {
-  if (isLoading && coupons.length === 0) {
-    return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {Array.from({ length: 6 }).map((_, index) => (
-          <Card key={index} size="sm">
-            <CardHeader>
-              <Skeleton className="h-4 w-32" />
-            </CardHeader>
-            <CardContent className="flex flex-col gap-2">
-              <Skeleton className="h-3 w-40" />
-              <Skeleton className="h-3 w-24" />
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-    )
-  }
-
-  if (coupons.length === 0) {
-    return (
-      <EmptyState
-        size="inline"
-        isFiltered
-        title="No coupons match these filters"
-        description="Try a different search, or clear what is narrowing the list."
-        onClearFilters={
-          onClearFilters ? (
-            <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-              Clear filters
-            </Button>
-          ) : undefined
-        }
-      />
-    )
-  }
-
-  return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
-      {coupons.map((coupon) => {
-        const clickable = Boolean(onCouponClick)
-        return (
-          <Card
-            key={coupon.id}
-            size="sm"
-            role={clickable ? 'button' : undefined}
-            tabIndex={clickable ? 0 : undefined}
-            onClick={clickable ? () => onCouponClick?.(coupon) : undefined}
-            onKeyDown={
-              clickable
-                ? (event) => {
-                    if (event.key === 'Enter' || event.key === ' ') {
-                      event.preventDefault()
-                      onCouponClick?.(coupon)
-                    }
-                  }
-                : undefined
-            }
-            className={
-              clickable
-                ? 'cursor-pointer transition hover:ring-foreground/25 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none'
-                : undefined
-            }
-          >
-            <CardHeader>
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex min-w-0 flex-col">
-                  <CardTitle className="truncate">{coupon.name}</CardTitle>
-                  {coupon.code ? (
-                    <CardDescription className="truncate font-mono text-xs">
-                      {coupon.code}
-                    </CardDescription>
-                  ) : null}
-                </div>
-                <CatalogStatusBadge status={coupon.status} />
-              </div>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-1.5">
-              <CouponDetail label="Discount">
-                <DiscountCell coupon={coupon} locale={locale} />
-              </CouponDetail>
-              <CouponDetail label="Duration">{durationLabel(coupon)}</CouponDetail>
-              <CouponDetail label="Redemptions">
-                <span className="tabular-nums">{redemptionsLabel(coupon, locale)}</span>
-              </CouponDetail>
-              <CouponDetail label="Updated">{formatDate(coupon.updatedAt, locale)}</CouponDetail>
-            </CardContent>
-          </Card>
-        )
-      })}
-    </div>
-  )
-}
-
-function CouponDetail({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3">
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
-      <span className="min-w-0 truncate text-right">{children}</span>
     </div>
   )
 }

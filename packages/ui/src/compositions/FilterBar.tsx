@@ -79,11 +79,10 @@ export function FilterBar({
         onQueryChange(next, flattenFilterConditions(next) as FlatFilter[])
       }}
       trigger={
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-muted-foreground gap-1.5 font-normal"
-        >
+        // The library's own outline button — a border and medium weight, the
+        // same treatment as the Sort trigger beside it. Stripping those made
+        // the control read as plain text rather than something to press.
+        <Button variant="outline" size="sm">
           <FilterIcon aria-hidden className="size-4" />
           Filter
         </Button>
