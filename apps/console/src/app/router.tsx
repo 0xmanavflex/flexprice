@@ -82,6 +82,28 @@ const CostSheetListPage = lazy(() =>
 )
 import { parseCostSheetSearch } from './costSheetSearch'
 import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
+const CustomerListPage = lazy(() =>
+  import('@/pages/customers/CustomerListPage').then((m) => ({ default: m.CustomerListPage })),
+)
+import { parseCustomerSearch } from './customerSearch'
+import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
+const SubscriptionListPage = lazy(() =>
+  import('@/pages/subscriptions/SubscriptionListPage').then((m) => ({
+    default: m.SubscriptionListPage,
+  })),
+)
+import { parseSubscriptionSearch } from './subscriptionSearch'
+import { DEFAULT_SUBSCRIPTION_QUERY, type SubscriptionQuery } from '@fp/domain'
+const PaymentListPage = lazy(() =>
+  import('@/pages/payments/PaymentListPage').then((m) => ({ default: m.PaymentListPage })),
+)
+import { parsePaymentSearch } from './paymentSearch'
+import { DEFAULT_PAYMENT_QUERY, type PaymentQuery } from '@fp/domain'
+const TaxListPage = lazy(() =>
+  import('@/pages/taxes/TaxListPage').then((m) => ({ default: m.TaxListPage })),
+)
+import { parseTaxSearch } from './taxSearch'
+import { DEFAULT_TAX_RATE_QUERY, type TaxRateQuery } from '@fp/domain'
 const FeatureDetailPage = lazy(() =>
   import('@/pages/features/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })),
 )
@@ -285,7 +307,7 @@ function SubscriptionCreateRouteComponent() {
         setOverride(value)
         goToStep('entitlements')
       }}
-      onCancel={() => void navigate({ to: '/subscriptions' })}
+      onCancel={() => void navigate({ to: '/subscriptions', search: {} as never })}
     />
   )
 }
@@ -697,6 +719,94 @@ const homeRoute = createRoute({
   component: HomePage,
 })
 
+/**
+ * Billing lists — customers, subscriptions, payments and taxes. The same
+ * URL-as-query contract as invoices and the catalogue lists: a filtered, sorted,
+ * paged view is a link. Read-only lists for now, except subscriptions, whose
+ * header opens the existing create wizard.
+ */
+const customersRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/customers',
+  validateSearch: (search: Record<string, unknown>): CustomerQuery => parseCustomerSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_CUSTOMER_QUERY)] },
+  component: CustomersRouteComponent,
+})
+
+function CustomersRouteComponent() {
+  const query = useSearch({ from: customersRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <CustomerListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/customers', search: next, replace: true })}
+    />
+  )
+}
+
+const subscriptionsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/subscriptions',
+  validateSearch: (search: Record<string, unknown>): SubscriptionQuery =>
+    parseSubscriptionSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_SUBSCRIPTION_QUERY)] },
+  component: SubscriptionsRouteComponent,
+})
+
+function SubscriptionsRouteComponent() {
+  const query = useSearch({ from: subscriptionsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <SubscriptionListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/subscriptions', search: next, replace: true })}
+      onCreate={() => void navigate({ to: '/subscriptions/new', search: {} as never })}
+    />
+  )
+}
+
+const paymentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/payments',
+  validateSearch: (search: Record<string, unknown>): PaymentQuery => parsePaymentSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_PAYMENT_QUERY)] },
+  component: PaymentsRouteComponent,
+})
+
+function PaymentsRouteComponent() {
+  const query = useSearch({ from: paymentsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <PaymentListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/payments', search: next, replace: true })}
+    />
+  )
+}
+
+const taxesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/taxes',
+  validateSearch: (search: Record<string, unknown>): TaxRateQuery => parseTaxSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_TAX_RATE_QUERY)] },
+  component: TaxesRouteComponent,
+})
+
+function TaxesRouteComponent() {
+  const query = useSearch({ from: taxesRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <TaxListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/taxes', search: next, replace: true })}
+    />
+  )
+}
+
 export const routeTree = rootRoute.addChildren([
   homeRoute,
   featuresRoute,
@@ -717,7 +827,11 @@ export const routeTree = rootRoute.addChildren([
   groupDetailRoute,
   costSheetsRoute,
   costSheetDetailRoute,
+  customersRoute,
+  subscriptionsRoute,
   invoicesRoute,
+  paymentsRoute,
+  taxesRoute,
   subscriptionCreateRoute,
   ...placeholderRoutes,
 ])

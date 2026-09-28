@@ -149,7 +149,11 @@ describe('every destination resolves', () => {
     '/price-units',
     '/groups',
     '/cost-sheets',
+    '/customers',
+    '/subscriptions',
     '/invoices',
+    '/payments',
+    '/taxes',
   ]
 
   const destinations = [...NAV, ...SECONDARY].flatMap((entry) => [

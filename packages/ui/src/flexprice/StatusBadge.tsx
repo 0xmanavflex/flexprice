@@ -95,7 +95,23 @@ export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
  * the glyph only. One shape shared by every catalogue chip so the table reads as
  * one system rather than a colour swatch per column.
  */
-function GlyphBadge({ icon: Icon, tone, label }: { icon: typeof CircleIcon; tone: string; label: string }) {
+export interface GlyphBadgeProps {
+  /** A lucide icon component. */
+  icon: typeof CircleIcon
+  /** A `text-*` colour utility carried by the glyph only, e.g. `text-success`. */
+  tone: string
+  label: string
+}
+
+/**
+ * The one status chip shape: an outline pill, colour on the glyph only.
+ *
+ * Exported so a table that needs a status the shared badges do not cover yet —
+ * a subscription's lifecycle, a payment's state — composes the *same* chip from
+ * its own icon/tone/label map, rather than inventing a differently-shaped
+ * badge. Every status across the console reads as one system this way.
+ */
+export function GlyphBadge({ icon: Icon, tone, label }: GlyphBadgeProps) {
   return (
     <Badge
       variant="outline"

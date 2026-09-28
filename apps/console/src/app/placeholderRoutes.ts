@@ -50,36 +50,10 @@ export const PLACEHOLDER_ROUTES = [
   },
 
   // Billing
-  {
-    path: '/customers',
-    title: 'Customers',
-    description: 'Who you bill, what they are on, and what they owe.',
-    emptyTitle: 'No customers yet',
-    emptyDescription:
-      'Customers are who you bill. Each one carries subscriptions, invoices and a payment history.',
-    cta: 'Create customer',
-    legacy: '/customer-management/customers',
-  },
-  {
-    path: '/subscriptions',
-    title: 'Subscriptions',
-    description: 'Every active, paused and cancelled subscription.',
-    emptyTitle: 'No subscriptions yet',
-    emptyDescription:
-      'A subscription puts a customer on a plan and starts their billing cycle.',
-    cta: 'Create subscription',
-    legacy: '/customer-management/subscriptions',
-  },
-  {
-    path: '/payments',
-    title: 'Payments',
-    description: 'Money received, and anything that failed to collect.',
-    emptyTitle: 'No payments yet',
-    emptyDescription:
-      'Payments appear here as they are collected against invoices, successful or failed.',
-    cta: null,
-    legacy: '/billing/payments',
-  },
+  // `/customers` is a real page now — see `customersRoute` in router.tsx.
+  // `/subscriptions` is a real page now — see `subscriptionsRoute` in router.tsx.
+  // `/payments` is a real page now — see `paymentsRoute` in router.tsx.
+  // `/invoices` is a real page (invoicesRoute); `/taxes` too (taxesRoute).
   {
     path: '/credit-notes',
     title: 'Credit Notes',
@@ -89,16 +63,6 @@ export const PLACEHOLDER_ROUTES = [
       'Credit notes refund or adjust an invoice after it has been issued.',
     cta: 'Create credit note',
     legacy: '/billing/credit-notes',
-  },
-  {
-    path: '/taxes',
-    title: 'Taxes',
-    description: 'Tax rates, and where each one applies.',
-    emptyTitle: 'No tax rates yet',
-    emptyDescription:
-      'Tax rates decide what is added to an invoice, and where each rate applies.',
-    cta: 'Create tax rate',
-    legacy: '/billing/taxes',
   },
   {
     path: '/revenue',
