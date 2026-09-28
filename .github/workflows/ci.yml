@@ -1,0 +1,103 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Two jobs, run in parallel. `checks` is the gate every commit must pass —
+# format, typecheck, lint, build, and every unit + Storybook story test.
+# `e2e` runs the Playwright journeys against a locally-served, mock-backed copy
+# of the console.
+#
+# There is deliberately no deploy step. Watchtower's CI (the pattern this is
+# ported from) deploys to Vercel and runs its journeys against that preview
+# URL, because it tests the real deployment. flexprice-console has no
+# deployment target yet and serves a fully-mocked corpus (MSW) when built with
+# VITE_USE_MOCKS=true — so the system under test here is that local, mocked
+# build. When a deployment lands, the e2e job gains a deploy step and points
+# E2E_BASE_URL at the preview instead of the local server.
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      # `prettier --check .` is intentionally not a gate here yet: the repo has
+      # a large body of pre-existing unformatted files (vendored primitives,
+      # generated fixtures) and no .prettierignore, so a repo-wide check fails
+      # for reasons unrelated to any change. Add it once the repo is formatted
+      # and vendored/generated paths are ignored.
+      - name: Typecheck, lint, build
+        run: pnpm nx run-many -t typecheck lint build
+
+      # Every story runs as a test in a real browser (Vitest browser mode via
+      # Playwright), so the browser has to be installed first. Kept separate
+      # from the test run because a missing binary reads as "Executable doesn't
+      # exist", which looks like a broken test and is not one.
+      - name: Install the browser the story tests run in
+        run: pnpm --filter @fp/ui exec playwright install --with-deps chromium
+
+      - name: Test (unit + every story as a browser + a11y test)
+        run: pnpm nx run-many -t test
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      - name: Install the Playwright browser
+        run: pnpm --filter console exec playwright install --with-deps chromium
+
+      # The Playwright config starts the console itself (VITE_USE_MOCKS=true) and
+      # waits for it, so there is no separate "start the server" step here — the
+      # journeys own their server for as long as they run.
+      - name: Run the journeys against the mocked console
+        run: pnpm --filter console test:e2e
+
+      - name: Keep the failure artifacts
+        if: always() && failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ github.run_id }}
+          path: |
+            apps/console/playwright-report
+            apps/console/test-results
+          retention-days: 7

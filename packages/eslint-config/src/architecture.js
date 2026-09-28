@@ -76,46 +76,55 @@ function layer(files, patterns) {
  * becomes a dependency of everything. Keeping React out is also what lets
  * domain logic be tested as plain functions.
  */
-export const domainRules = layer(['packages/domain/**/*.{ts,tsx}'], [
-  {
-    group: REACT,
-    message:
-      'Domain is pure product vocabulary and must not depend on React. If you need a hook, it belongs in @fp/query or the app.',
-  },
-  {
-    group: [...UI, ...QUERY, ...API, ...SDK, ...ACTIONS, ...ADAPTER],
-    message:
-      'Domain sits below UI, actions, query and the SDK. Importing any of them makes the bottom layer depend on the top.',
-  },
-])
+export const domainRules = layer(
+  ['packages/domain/**/*.{ts,tsx}'],
+  [
+    {
+      group: REACT,
+      message:
+        'Domain is pure product vocabulary and must not depend on React. If you need a hook, it belongs in @fp/query or the app.',
+    },
+    {
+      group: [...UI, ...QUERY, ...API, ...SDK, ...ACTIONS, ...ADAPTER],
+      message:
+        'Domain sits below UI, actions, query and the SDK. Importing any of them makes the bottom layer depend on the top.',
+    },
+  ],
+)
 
 /** Query owns server state. It may reach the SDK; it speaks domain. */
-export const queryRules = layer(['packages/query/**/*.{ts,tsx}'], [
-  {
-    group: [...UI, ...ACTIONS],
-    message:
-      'The data layer must not import UI or actions. If a query needs one, the dependency is pointing the wrong way.',
-  },
-])
+export const queryRules = layer(
+  ['packages/query/**/*.{ts,tsx}'],
+  [
+    {
+      group: [...UI, ...ACTIONS],
+      message:
+        'The data layer must not import UI or actions. If a query needs one, the dependency is pointing the wrong way.',
+    },
+  ],
+)
 
 /**
  * Actions describe what the product can do. They may use domain and query,
  * but not reach past query to the SDK — that would be a second path to the
  * backend with its own error handling and its own retry policy.
  */
-export const actionsRules = layer(['packages/actions/**/*.{ts,tsx}'], [
-  {
-    group: UI,
-    message:
-      'Actions are headless — they describe capabilities, they do not render. Import UI from a page instead.',
-  },
-  {
-    group: [...SDK, ...API],
-    message:
-      'Actions reach the backend through @fp/query, not the SDK directly — otherwise there are two paths to the API with two different error and retry policies.',
-  },
-  { group: ADAPTER, message: ADAPTER_MESSAGE },
-])
+export const actionsRules = layer(
+  ['packages/actions/**/*.{ts,tsx}'],
+  [
+    {
+      group: UI,
+      message:
+        'Actions are headless — they describe capabilities, they do not render. Import UI from a page instead.',
+    },
+    {
+      group: [...SDK, ...API],
+      message:
+        'Actions reach the backend through @fp/query, not the SDK directly — otherwise there are two paths to the API with two different error and retry policies.',
+    },
+    { group: ADAPTER, message: ADAPTER_MESSAGE },
+  ],
+)
 
 /**
  * UI is presentation. It may not fetch, and may not name a transport type.
@@ -168,6 +177,12 @@ export const uiSeamRules = {
     'packages/ui/src/flexprice/**',
     'packages/ui/src/compositions/FilterBar.tsx',
     'packages/ui/src/compositions/GridFooter.tsx',
+    // A seam component's own story is part of the seam: it must build the same
+    // block-primitive inputs (a `FilterField`, a `DataGrid` context) to render
+    // the component in isolation. Only these two stories, for the same reason
+    // FilterBar.tsx and GridFooter.tsx above are allowed.
+    'packages/ui/src/compositions/FilterBar.stories.tsx',
+    'packages/ui/src/compositions/GridFooter.stories.tsx',
   ],
   rules: {
     'no-restricted-imports': [
@@ -187,26 +202,32 @@ export const uiSeamRules = {
 }
 
 /** The adapter sits beside query, below everything else. */
-export const adapterRules = layer(['packages/sdk-adapter/**/*.{ts,tsx}'], [
-  {
-    group: [...UI, ...ACTIONS, ...QUERY],
-    message:
-      'The adapter is a transport-level stopgap. It must not import UI, actions or the query layer.',
-  },
-])
+export const adapterRules = layer(
+  ['packages/sdk-adapter/**/*.{ts,tsx}'],
+  [
+    {
+      group: [...UI, ...ACTIONS, ...QUERY],
+      message:
+        'The adapter is a transport-level stopgap. It must not import UI, actions or the query layer.',
+    },
+  ],
+)
 
 /**
  * Apps compose. A page is exactly where UI, actions and query legitimately
  * meet — but it still goes through the door rather than around it.
  */
-export const appRules = layer(['apps/**/*.{ts,tsx}'], [
-  {
-    group: [...SDK, ...API],
-    message:
-      'Apps talk to the backend through @fp/query. Importing the SDK or @fp/api directly bypasses the retry policy, the error shape and the auth headers.',
-  },
-  { group: ADAPTER, message: ADAPTER_MESSAGE },
-])
+export const appRules = layer(
+  ['apps/**/*.{ts,tsx}'],
+  [
+    {
+      group: [...SDK, ...API],
+      message:
+        'Apps talk to the backend through @fp/query. Importing the SDK or @fp/api directly bypasses the retry policy, the error shape and the auth headers.',
+    },
+    { group: ADAPTER, message: ADAPTER_MESSAGE },
+  ],
+)
 
 /** Every architecture rule, in dependency order. */
 export const architecture = [

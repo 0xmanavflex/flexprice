@@ -62,24 +62,29 @@ export function CouponForm({
       </Field>
 
       {summary ? (
-        <dl className="flex flex-col gap-3 rounded-lg border bg-muted/40 p-3 text-sm">
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted-foreground">Code</dt>
-            <dd className="font-mono">{summary.code || '—'}</dd>
-          </div>
-          <div className="flex items-baseline justify-between gap-3">
-            <dt className="text-muted-foreground">Discount</dt>
-            <dd className="tabular-nums">{summary.discount}</dd>
-          </div>
-          <p className="text-xs text-muted-foreground">
+        <div className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3 text-sm">
+          {/* The note is a sibling of the <dl>, not a child: a <dl> may only
+              directly contain dt/dd (or <div>s that wrap them), so descriptive
+              prose inside it fails axe's definition-list rule. */}
+          <dl className="flex flex-col gap-3">
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted-foreground">Code</dt>
+              <dd className="font-mono">{summary.code || '—'}</dd>
+            </div>
+            <div className="flex items-baseline justify-between gap-3">
+              <dt className="text-muted-foreground">Discount</dt>
+              <dd className="tabular-nums">{summary.discount}</dd>
+            </div>
+          </dl>
+          <p className="text-muted-foreground text-xs">
             The discount and how long it lasts are fixed once a coupon is created.
           </p>
-        </dl>
+        </div>
       ) : null}
 
       <div className="mt-auto flex flex-col gap-3 border-t pt-4">
         {submitError ? (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {submitError}
           </p>
         ) : null}

@@ -1,0 +1,279 @@
+import { Meta } from '@storybook/addon-docs/blocks'
+
+<Meta title="Design System/Introduction" />
+
+export const Swatch = ({ token, value, note }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div
+      aria-hidden
+      style={{
+        height: 52,
+        borderRadius: 10,
+        background: `var(${token})`,
+        border: '1px solid var(--border)',
+      }}
+    />
+    <code style={{ fontSize: 12, fontWeight: 600, color: 'var(--foreground)' }}>{token}</code>
+    {value ? <code style={{ fontSize: 12, color: 'var(--muted-foreground)' }}>{value}</code> : null}
+    {note ? (
+      <span style={{ fontSize: 12, lineHeight: 1.4, color: 'var(--muted-foreground)' }}>
+        {note}
+      </span>
+    ) : null}
+  </div>
+)
+
+export const Grid = ({ children }) => (
+  <div
+    style={{
+      display: 'grid',
+      gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))',
+      gap: 20,
+      margin: '20px 0 8px',
+    }}
+  >
+    {children}
+  </div>
+)
+
+export const Panel = ({ children, dark }) => (
+  <div
+    className={dark ? 'dark' : undefined}
+    style={{
+      background: 'var(--background)',
+      color: 'var(--foreground)',
+      border: '1px solid var(--border)',
+      borderRadius: 16,
+      padding: 20,
+      margin: '16px 0',
+    }}
+  >
+    {children}
+  </div>
+)
+
+# Flexprice Design System
+
+The Flexprice V2 console is one confident indigo on a neutral field. It is built on **ReUI’s `base-nova`** preset — shadcn tokens on the [Base UI](https://base-ui.com/) primitives — extended with Tailwind v4 tokens, a small semantic palette, compact density and restrained depth. Nothing here is decorative for its own sake: the single accent carries meaning precisely because everything around it stays grey.
+
+This section is the source of truth for the design language. The pages beside it are **live** — every swatch, type sample and radius block is filled from the real CSS custom properties, so this documentation cannot drift from the console it describes.
+
+- **[Colors](/story/design-system-colors--default)** — the full palette, brand → semantic → neutral → sidebar, in both modes.
+- **[Typography](/story/design-system-typography--default)** — the type scale, weights and tabular numerals.
+- **[Radius & Elevation](/story/design-system-radius-elevation--default)** — the curvature scale and the depth shadow.
+
+---
+
+## Composition over custom
+
+The library has exactly one rule, and it is enforced by the type system rather than by good intentions. Every component declares where it came from:
+
+- **`reui`** — straight from the registry. We own none of its markup, so an upstream update stays a re-install.
+- **`composition`** — Flexprice behaviour composed over ReUI parts. **This is the preferred way to differ.**
+- **`custom`** — built here because ReUI could not express it. The exception, and it must be argued for.
+
+The asymmetry is the point: `custom` demands a written `reason` and the others do not. A component cannot be quietly custom — TypeScript will not compile it without saying what the registry could not do, recorded at the moment the decision is made rather than at review, when the honest answer has become “it was easier.”
+
+This exists because of what V1 became: **616 component files, 371 of them in a single `molecules/` folder.** A library drifts custom one reasonable-looking component at a time, and the only way to notice is to keep the ratio in view. Thin is the feature.
+
+> **The one-seam architecture.** Block-grade primitives are confined to the `flexprice/` seam — the product components that speak billing (`InvoiceStatusBadge`, `Money`, `Metric`). `primitives/` is vendored ReUI, never hand-edited; `compositions/` is generic behaviour over ReUI parts; `flexprice/` is the only place domain vocabulary is welcome. ReUI blocks render on one surface, and mixing surfaces on a screen looks inconsistent — so the project pins **`SURFACE = 'card'`** and passes it on every registry call, and the library stays coherent by construction.
+
+---
+
+## One accent on a neutral field
+
+The console was once entirely greyscale — every token `oklch(x 0 0)` — which read as a wireframe rather than a product. One indigo hue (**~274°**) now carries the primary action, the active navigation, focus rings and links. Everything else stays neutral so the accent means something.
+
+<Grid>
+  <Swatch token="--brand" value="oklch(0.52 0.196 274)" note="The accent." />
+  <Swatch token="--brand-foreground" value="oklch(0.985 0 0)" note="Text on brand." />
+  <Swatch token="--brand-muted" value="oklch(0.955 0.018 274)" note="Faint brand wash." />
+  <Swatch token="--primary" value="= var(--brand)" note="Primary action." />
+  <Swatch token="--ring" value="oklch(0.55 0.18 274)" note="Focus, on-brand." />
+</Grid>
+
+**To rebrand the entire console, swap three lines** — `--brand`, `--brand-foreground`, `--brand-muted`. Nothing else in the system names a colour; `--primary`, the active sidebar row, the focus ring and the links all resolve back to those three.
+
+---
+
+## Semantic colour
+
+Four meanings, plus an inverting slab. They are carried by **icons, not fills**. Five tinted rows down a dense table is a traffic light — everything shouting at once, which is the same as none of it shouting. So a status is a neutral pill with one coloured glyph in it, and the shape does work colour cannot: dashed for draft, a tick for paid, a slash for void. Someone who cannot tell the hues apart, and a printed page, can still read it.
+
+<Grid>
+  <Swatch token="--success" value="emerald-500" />
+  <Swatch token="--info" value="violet-500" />
+  <Swatch token="--warning" value="yellow-500" />
+  <Swatch token="--destructive" value="oklch(0.577 0.245 27.325)" />
+  <Swatch token="--invert" value="zinc-900" />
+</Grid>
+
+This is not a stylistic preference — it is what the accessibility gate allows. Solid semantic variants were tried and dropped: **white on `--success` measures 2.47:1** against a 4.5:1 threshold. The check caught that, not the eye. Every story in this library runs as a real-browser test with `a11y: 'error'`, so a contrast regression fails the build rather than waiting in a panel for someone to read.
+
+---
+
+## Neutrals & surfaces
+
+The field the accent stands on. The content plane sits a shade in front of the page, and the sidebar a shade behind it, so the shell has depth without a single drawn line.
+
+<Grid>
+  <Swatch token="--background" value="oklch(1 0 0)" />
+  <Swatch token="--foreground" value="oklch(0.145 0 0)" />
+  <Swatch token="--card" value="oklch(1 0 0)" />
+  <Swatch token="--muted" value="oklch(0.97 0 0)" />
+  <Swatch token="--muted-foreground" value="oklch(0.520 0 0)" />
+  <Swatch token="--border" value="oklch(0.922 0 0)" />
+  <Swatch token="--sidebar" value="oklch(0.945 0 0)" />
+  <Swatch token="--sidebar-accent" value="oklch(0.905 0.028 274)" />
+</Grid>
+
+`--muted-foreground` is darkened from nova’s default. Muted text on a muted surface is one of the registry’s most common pairings, and nova’s `#737373` fails AA against `--muted` at 4.34:1. `#686868` clears it on every surface in the system — including the tinted sidebar — while still reading as unmistakably secondary text. Each time the darkest surface moves, this is the token that follows it.
+
+---
+
+## Typography
+
+One family — **Geist Variable** — carries everything. `--font-heading` is aliased to `--font-sans`, so there is no second display face: hierarchy is weight and size, not a change of typeface. The density is compact (ported from “Ferry”), so UI text lives at the small end of the scale — badges, table meta and hints sit at `text-xs` (12px), body at `text-sm` (14px).
+
+<Panel>
+  <div style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted-foreground)' }}>
+    text-xs · 12px
+  </div>
+  <div style={{ fontSize: 14, fontWeight: 500 }}>text-sm · 14px — body & forms</div>
+  <div style={{ fontSize: 20, fontWeight: 600 }}>text-xl · 20px — card titles</div>
+  <div style={{ fontSize: 24, fontWeight: 600 }}>text-2xl · 24px — metric values</div>
+  <div style={{ fontSize: 36, fontWeight: 600, letterSpacing: '-0.01em' }}>text-4xl · 36px</div>
+</Panel>
+
+Every figure — `Money`, `Metric`, the stat cards — is set in `tabular-nums`, so digits share a width and columns of numbers align on the decimal.
+
+<Panel>
+  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
+    <div>
+      <div
+        style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted-foreground)', marginBottom: 6 }}
+      >
+        proportional — drifts
+      </div>
+      <div style={{ textAlign: 'right', fontWeight: 500 }}>
+        <div>1,284,093.00</div>
+        <div>48,250.10</div>
+        <div>312.99</div>
+      </div>
+    </div>
+    <div>
+      <div
+        style={{ fontSize: 12, fontWeight: 500, color: 'var(--muted-foreground)', marginBottom: 6 }}
+      >
+        tabular-nums — aligns
+      </div>
+      <div style={{ textAlign: 'right', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>
+        <div>1,284,093.00</div>
+        <div>48,250.10</div>
+        <div>312.99</div>
+      </div>
+    </div>
+  </div>
+</Panel>
+
+---
+
+## Radius & elevation
+
+A single anchor — `--radius: 0.625rem` — sets the curvature of the whole system, and the rest of the scale derives from it by multiplier. Buttons, badges and kbd are fully pill-shaped by a theme rule, so a `rounded-full` is a decision made once rather than forty that drift.
+
+<div
+  style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-end', margin: '20px 0' }}
+>
+  {[
+    ['--radius-sm', 6],
+    ['--radius-md', 8],
+    ['--radius-lg', 10],
+    ['--radius-xl', 14],
+    ['--radius-2xl', 18],
+    ['--radius-3xl', 22],
+  ].map(([token, px]) => (
+    <div
+      key={token}
+      style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'center' }}
+    >
+      <div
+        aria-hidden
+        style={{
+          height: 64,
+          width: 64,
+          background: 'var(--brand-muted)',
+          border: '1px solid var(--border)',
+          borderRadius: `var(${token})`,
+        }}
+      />
+      <code style={{ fontSize: 11, color: 'var(--muted-foreground)' }}>{px}px</code>
+    </div>
+  ))}
+</div>
+
+Depth is one restrained shadow, on the surfaces that float above the page — sheet, popover, menu, card. It should read as slightly in front, not thrown onto the page.
+
+<div style={{ display: 'flex', gap: 24, margin: '20px 0', flexWrap: 'wrap' }}>
+  <div
+    style={{
+      height: 96,
+      minWidth: 220,
+      flex: 1,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--card)',
+      color: 'var(--card-foreground)',
+      border: '1px solid var(--border)',
+      borderRadius: 14,
+      fontSize: 14,
+      boxShadow: '0 1px 2px -1px oklch(0 0 0 / 0.08), 0 8px 24px -12px oklch(0 0 0 / 0.14)',
+    }}
+  >
+    Floating surface
+  </div>
+</div>
+
+---
+
+## Dark mode is first-class
+
+Dark mode is not an inversion — it is a considered second theme. The accent **lightens and desaturates** (`oklch(0.62 0.17 274)`) so it holds against a dark surface without glowing, and every neutral re-scopes under `.dark`. The depth shadow deepens its alpha so surfaces still separate.
+
+<Panel dark>
+  <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+    <div
+      aria-hidden
+      style={{ height: 44, width: 44, borderRadius: 10, background: 'var(--brand)' }}
+    />
+    <div
+      aria-hidden
+      style={{ height: 44, width: 44, borderRadius: 10, background: 'var(--sidebar-accent)' }}
+    />
+    <div
+      aria-hidden
+      style={{
+        height: 44,
+        width: 44,
+        borderRadius: 10,
+        background: 'var(--card)',
+        border: '1px solid var(--border)',
+      }}
+    />
+    <span style={{ fontSize: 14, color: 'var(--foreground)' }}>
+      The same tokens, re-scoped under <code>.dark</code>.
+    </span>
+  </div>
+</Panel>
+
+---
+
+## How to theme, and how to stay coherent
+
+1. **Rebrand by swapping the three `--brand*` lines.** Everything on-brand resolves back to them.
+2. **Never name a colour at a call site.** Compose with tokens — `bg-primary`, `text-brand`, `bg-brand-muted`, `text-success`, `bg-card`. A literal hex in a component is the drift this system spent a rewrite undoing.
+3. **Do not add tokens.** Meaning that isn’t in the palette belongs in a composition, not a new colour. ReUI’s extended tokens (`success`, `info`, `warning`, `invert`) are maintained by `pnpm ui:add` — that block is not hand-edited.
+4. **Prefer the registry, then composition, and argue for custom.** The provenance type keeps that honest.
+
+Open the pages in this section for the live, exhaustive reference. Every component in the rest of Storybook is built to these tokens — and every one carries its provenance, so you can always see what it is made of.

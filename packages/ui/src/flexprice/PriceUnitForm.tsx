@@ -134,7 +134,12 @@ export function PriceUnitForm({
       >
         {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) =>
           isEdit ? (
-            <Input id={id} value={(defaultValue?.baseCurrency ?? '').toUpperCase()} readOnly disabled />
+            <Input
+              id={id}
+              value={(defaultValue?.baseCurrency ?? '').toUpperCase()}
+              readOnly
+              disabled
+            />
           ) : (
             <Select
               value={baseCurrency || undefined}
@@ -181,6 +186,7 @@ export function PriceUnitForm({
             <Input id={id} value={String(defaultValue?.conversionRate ?? '')} readOnly disabled />
           ) : (
             <NumberField
+              id={id}
               value={conversionRate ?? null}
               onValueChange={(value) =>
                 form.setValue('conversionRate', value as never, {
@@ -195,10 +201,13 @@ export function PriceUnitForm({
               format={{ maximumFractionDigits: 8 }}
               disabled={isSubmitting}
             >
+              {/* `id` goes on the root NumberField, not the input: the
+                  increment/decrement buttons' aria-controls reference the root's
+                  id, so overriding only the input's id leaves them dangling
+                  (axe aria-valid-attr-value). This matches ChargeForm. */}
               <NumberFieldGroup>
                 <NumberFieldDecrement />
                 <NumberFieldInput
-                  id={id}
                   inputMode="decimal"
                   aria-describedby={describedBy}
                   aria-invalid={invalid}
@@ -214,7 +223,7 @@ export function PriceUnitForm({
           foot of the panel rather than floating under the last field. */}
       <div className="mt-auto flex flex-col gap-3 border-t pt-4">
         {submitError ? (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="text-destructive text-sm">
             {submitError}
           </p>
         ) : null}

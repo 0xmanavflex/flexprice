@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { PlanGrid } from './PlanGrid'
 import { fixturePlanQuery, manyPlans, planFixtures } from './planFixtures'
 
@@ -89,8 +89,14 @@ export const PaginationReportsDomainQuery: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('button', { name: /next|go to next page/i }))
 
+    // The grid can also fire onQueryChange as it settles, so the Next click is
+    // not necessarily call[0]. Wait for — then read — the call that reported
+    // page 2, rather than racing whichever call landed first.
     const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    const reported = spy.mock.calls[0]?.[0] as Record<string, unknown>
+    const reportedPage = () =>
+      spy.mock.calls.map((call) => call[0] as Record<string, unknown>).find((q) => q['page'] === 2)
+    await waitFor(() => expect(reportedPage()).toBeDefined())
+    const reported = reportedPage() as Record<string, unknown>
     expect(reported).toMatchObject({ page: 2 })
     expect(Object.keys(reported).sort()).toEqual(Object.keys(fixturePlanQuery).sort())
   },
