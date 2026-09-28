@@ -7,6 +7,7 @@ import './styles.css'
 import { router } from './app/router'
 import { env } from './env'
 
+
 const container = document.getElementById('root')
 if (!container) throw new Error('#root is missing from index.html')
 
