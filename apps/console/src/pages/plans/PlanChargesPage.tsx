@@ -52,7 +52,12 @@ export function PlanChargesPage({ planId, onDone, onCancel }: PlanChargesPagePro
           </Button>
         }
       />
-      <PageBody>
+      {/*
+        The shell content region is overflow-hidden so list pages can pin their
+        own footer. This page reads top to bottom — a tiered charge form is
+        taller than the viewport — so the body owns the vertical scroll.
+      */}
+      <PageBody className="overflow-y-auto">
         <ChargeEditor
           planName={plan.data?.name ?? 'Plan'}
           entityType={PriceEntityType.Plan}
