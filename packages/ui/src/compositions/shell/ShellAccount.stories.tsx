@@ -71,16 +71,14 @@ export const WithoutOrganization: Story = {
 /**
  * No name on file, so the display name *is* the email.
  *
- * The row and the menu both printed it twice, one line under the other, which
- * reads as a bug in the account rather than a gap in the profile. When the two
- * are the same thing there is one line.
+ * The trigger is a plain person icon now, so identity lives only in the menu —
+ * and when the name is the email, the menu prints it once, not twice (which had
+ * read as a bug in the account rather than a gap in the profile).
  */
 export const NameIsTheEmail: Story = {
   args: { user: { name: 'dkinsh123@gmail.com', email: 'dkinsh123@gmail.com' } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getAllByText('dkinsh123@gmail.com')).toHaveLength(1)
-
     await userEvent.click(canvas.getByRole('button', { name: /account: dkinsh123/i }))
     const menu = within(await screen.findByRole('menu'))
     await waitFor(() => expect(menu.getAllByText('dkinsh123@gmail.com')).toHaveLength(1))

@@ -196,11 +196,11 @@ export function AppShell({
       <Sidebar collapsible="icon" variant="inset" aria-label="Main">
         <SidebarHeader className="gap-2">
           {/*
-            The brand mark, and nothing else. Bell and Theme have moved to the
-            top header's utility cluster (beside Search), so the rail is purely
-            product navigation — no utilities competing with it. The environment
-            switcher lives at the head of the breadcrumb, where it reads while
-            you work.
+            The tenant this console is signed in to — its name from `/users/me`
+            (falling back to the product name until that resolves), with the
+            brand mark beside it — so the top of the rail answers "whose data is
+            this". Bell, Theme and the account live in the footer now; the
+            environment switcher leads the breadcrumb.
           */}
           <div className="flex min-h-9 items-center gap-2 px-0.5">
             {logo ?? (
@@ -212,7 +212,7 @@ export function AppShell({
               </span>
             )}
             <span className="truncate text-sm font-medium in-data-[state=collapsed]:hidden">
-              {productName}
+              {user.organization ?? productName}
             </span>
           </div>
         </SidebarHeader>
@@ -230,64 +230,61 @@ export function AppShell({
         </SidebarContent>
 
         <SidebarFooter>
-          <ShellAccount
-            user={user}
-            {...(onProfile ? { onProfile } : {})}
-            {...(onSettings ? { onSettings } : {})}
-            {...(onDocs ? { onDocs } : {})}
-            {...(onSignOut ? { onSignOut } : {})}
-          />
+          {/*
+            Utilities and the account, back in the rail. Bell and Theme sit
+            beside the profile icon, which opens the account menu (profile,
+            settings, docs, sign out). Expanded, a row along the footer;
+            collapsed, they stack down the 64px column.
+          */}
+          <div className="flex items-center gap-0.5 px-1 in-data-[state=collapsed]:flex-col in-data-[state=collapsed]:px-0">
+            <ShellNotifications
+              notifications={notifications}
+              isLoading={notificationsLoading}
+              error={notificationsError}
+              {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
+              {...(onOpenNotification ? { onOpenNotification } : {})}
+            />
+            <ThemeToggle />
+            <ShellAccount
+              user={user}
+              {...(onProfile ? { onProfile } : {})}
+              {...(onSettings ? { onSettings } : {})}
+              {...(onDocs ? { onDocs } : {})}
+              {...(onSignOut ? { onSignOut } : {})}
+            />
+          </div>
         </SidebarFooter>
       </Sidebar>
 
       {/*
-        The content plane is lifted off the sidebar: a border, a rounded
-        corner, and one soft shadow all the way around. Subtle on purpose —
-        the panel should read as sitting slightly in front of the sidebar, not
-        as a card thrown onto it.
+        The content plane is lifted off the sidebar: a border, a rounded corner,
+        and a layered shadow (in `styles.css`, so it can differ by theme) that
+        reads as the panel floating a little in front of the rail — a light 3D
+        depth in both modes rather than a flat seam.
       */}
-      <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border shadow-[0_0_18px_-6px_rgba(0,0,0,0.12)]! lg:peer-data-[variant=inset]:rounded-2xl">
+      <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border lg:peer-data-[variant=inset]:rounded-2xl">
         {/* A rule under the header, so the breadcrumb is not floating over
-            whatever the page happens to start with. */}
-        {/* The bar spans the inset so its rule reaches both edges, but its
-            contents cap and centre at `--shell-max` exactly like the page body
-            below (Page.tsx / DetailShell). So the breadcrumb shares the
-            content's left edge and the Create action the toolbar's right at every
-            width — including past 1600, where a full-width header would otherwise
-            drift hundreds of px away from the centred content. */}
-        <header className="flex h-12 shrink-0 items-center border-b">
-          <div className="mx-auto flex h-full w-full max-w-[var(--shell-max)] items-center gap-2 px-6">
-            {/* The edge handle is desktop-only — below `lg` the sidebar is a
-                sheet, and this is the only thing that opens it. `lg`, not `md`:
-                at exactly 768 `md:hidden` had already taken the trigger away
-                while the sidebar was still a 260px push panel, so a third of the
-                viewport went to navigation with nothing offering to close it. */}
-            <SidebarTrigger className="-ml-1 shrink-0 lg:hidden" />
-            {breadcrumb}
-            {/*
-              Search and Create sit together, top-right: the two things a person
-              reaches for from any screen. Search leads because it is the more
-              frequent, and `headerActions` — where the Create menu renders —
-              falls in beside it.
-
-              `shrink-0` so the cluster can never be squeezed off the edge by a
-              long breadcrumb; the crumbs truncate instead, which is the order
-              of sacrifice that keeps Create reachable at 390.
-            */}
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              <ShellSearch {...(onSearch ? { onSearch } : {})} />
-              {/* Utilities, out of the nav rail and into the header where the
-                  other account-level controls live. */}
-              <ShellNotifications
-                notifications={notifications}
-                isLoading={notificationsLoading}
-                error={notificationsError}
-                {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
-                {...(onOpenNotification ? { onOpenNotification } : {})}
-              />
-              <ThemeToggle />
-              {headerActions}
-            </div>
+            whatever the page happens to start with. The header spans the full
+            width now: the breadcrumb leads at the left edge and Search/Create
+            close it at the right, so on a wide screen the chrome reaches the
+            ends even though the content below caps and centres at `--shell-max`. */}
+        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-6">
+          {/* The edge handle is desktop-only — below `lg` the sidebar is a
+              sheet, and this is the only thing that opens it. `lg`, not `md`: at
+              exactly 768 `md:hidden` had already taken the trigger away while the
+              sidebar was still a 260px push panel, so a third of the viewport
+              went to navigation with nothing offering to close it. */}
+          <SidebarTrigger className="-ml-1 shrink-0 lg:hidden" />
+          {breadcrumb}
+          {/*
+            Search and Create close the header at the right edge. `shrink-0` so
+            the cluster is never squeezed off by a long breadcrumb; the crumbs
+            truncate instead, keeping Create reachable at 390. Bell and Theme
+            used to sit here — they have moved back into the sidebar footer.
+          */}
+          <div className="ml-auto flex shrink-0 items-center gap-1.5">
+            <ShellSearch {...(onSearch ? { onSearch } : {})} />
+            {headerActions}
           </div>
         </header>
 

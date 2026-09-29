@@ -309,6 +309,22 @@
       0 8px 24px -12px oklch(0 0 0 / 0.5);
   }
 
+  /* The content plane floats a little in front of the rail — a layered shadow
+     (a tight contact shadow plus a wide soft one) that reads as light 3D depth.
+     In the dark the shadow alone barely shows against the near-black, so a faint
+     top-edge highlight (an inset light hairline) does the lifting instead. */
+  [data-slot='sidebar-inset'] {
+    box-shadow:
+      0 1px 3px -1px oklch(0 0 0 / 0.08),
+      0 16px 44px -14px oklch(0 0 0 / 0.22);
+  }
+  .dark [data-slot='sidebar-inset'] {
+    box-shadow:
+      inset 0 1px 0 0 oklch(1 0 0 / 0.05),
+      0 2px 6px -2px oklch(0 0 0 / 0.55),
+      0 20px 52px -16px oklch(0 0 0 / 0.8);
+  }
+
   /*
    * One menu surface, wherever it opens.
    *
@@ -390,26 +406,13 @@
     color: var(--sidebar-accent-foreground);
   }
 
-  /* Selected has no fill and no outline: a 3px teal indicator bar at the leading
-     edge, plus the dark-teal text and icon, carry it — in the rail and expanded
-     alike. */
+  /* Selected is carried by the dark-teal text and icon alone — no fill, no
+     outline, no bar. The quietest possible "you are here": the row simply goes
+     teal. (The indicator bar was removed on request.) */
   [data-slot='sidebar-menu-button'][data-active],
   [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'][data-active] {
-    position: relative;
     background-color: transparent !important;
     box-shadow: none !important;
-  }
-  [data-slot='sidebar-menu-button'][data-active]::before,
-  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'][data-active]::before {
-    content: '';
-    position: absolute;
-    inset-inline-start: 0;
-    top: 50%;
-    height: 1rem;
-    width: 3px;
-    transform: translateY(-50%);
-    border-radius: 9999px;
-    background: var(--sidebar-indicator);
   }
 
   /* Dropdowns answer the cursor and read as a control, not flat text — a light

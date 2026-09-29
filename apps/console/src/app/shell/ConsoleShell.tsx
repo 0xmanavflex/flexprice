@@ -25,6 +25,7 @@ import {
   EnvironmentSwitcher,
   ShellBreadcrumb,
   ShellCreateMenu,
+  ShellPromoCard,
   type ShellEnvironment,
   type ShellUser,
 } from '@fp/ui/compositions'
@@ -137,6 +138,18 @@ export function ConsoleShell({
       onSettings={() => goTo('settings')}
       onDocs={() => goTo('docs')}
       {...(onSignOut ? { onSignOut } : {})}
+      /*
+       * A promo card at the foot of the nav (the `pinned` slot, which the
+       * collapsed rail hides). Dismissible, and the dismissal sticks.
+       */
+      pinned={
+        <ShellPromoCard
+          title="Build with the API"
+          description="Meter usage, price it however you sell, and invoice from one catalogue."
+          cta={{ label: 'Read the docs', onClick: () => goTo('docs') }}
+          dismissKey="flexprice.promo.docs"
+        />
+      }
       /*
        * The environment leads the trail, and it is where you change it too — the
        * switcher moved out of the sidebar and became this first crumb. The one
