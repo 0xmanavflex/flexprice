@@ -349,12 +349,13 @@
     background-color: color-mix(in oklch, var(--muted) 60%, transparent);
   }
 
-  /* Hover is a neutral wash, never teal — teal is the selected row's alone, so
-     pointing at a row can never read as selecting it. It recolours the row and
-     its icon to the near-black hover ink. */
+  /* Hover has no fill — pointing at a row simply darkens its text and icon.
+     The teal bar and ink are the selected row's alone, so a hover can never be
+     mistaken for a selection, and the rail stays flat and quiet. A distinct
+     mechanism from the bar, so the two never blur into each other. */
   [data-slot='sidebar-menu-button']:not([data-active]):hover,
   [data-slot='sidebar-menu-sub-button']:not([data-active]):hover {
-    background-color: var(--sidebar-hover) !important;
+    background-color: transparent !important;
     color: var(--sidebar-hover-foreground) !important;
   }
   [data-slot='sidebar-menu-button']:not([data-active]):hover svg,
@@ -372,10 +373,12 @@
     color: var(--sidebar-accent-foreground);
   }
 
-  /* The selected row carries a 3px teal indicator at its leading edge — the one
-     brand mark in the rail, beside the teal wash and the dark-teal ink. */
+  /* Selected has no fill either: a 3px teal indicator bar at the leading edge,
+     plus the dark-teal text and icon, carry it. The rail is bar-and-ink, never
+     a filled pill — quieter, and the bar is the "you are here" mark. */
   [data-slot='sidebar-menu-button'][data-active] {
     position: relative;
+    background-color: transparent !important;
   }
   [data-slot='sidebar-menu-button'][data-active]::before {
     content: '';
