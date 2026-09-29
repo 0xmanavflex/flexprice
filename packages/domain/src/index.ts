@@ -183,11 +183,13 @@ export type { CostSheet, CostSheetQuery } from './costSheet'
 export {
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,
+  CUSTOMER_TAX_TREATMENT_LABEL,
   CustomerSortField,
   CustomerStatus,
+  CustomerTaxTreatment,
   DEFAULT_CUSTOMER_QUERY,
 } from './customer'
-export type { Customer, CustomerQuery } from './customer'
+export type { Customer, CustomerDetail, CustomerQuery } from './customer'
 
 export {
   DEFAULT_SUBSCRIPTION_QUERY,

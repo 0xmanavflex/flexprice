@@ -88,6 +88,11 @@ import { PLACEHOLDER_ROUTES } from './placeholderRoutes'
 const CustomerListPage = lazy(() =>
   import('@/pages/customers/CustomerListPage').then((m) => ({ default: m.CustomerListPage })),
 )
+const CustomerDetailPage = lazy(() =>
+  import('@/pages/customers/CustomerDetailPage').then((m) => ({ default: m.CustomerDetailPage })),
+)
+import { parseCustomerTab } from '@/pages/customers/CustomerDetailPage'
+import type { CustomerTab } from '@fp/ui/flexprice'
 import { parseCustomerSearch } from './customerSearch'
 import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
 const SubscriptionListPage = lazy(() =>
@@ -869,6 +874,47 @@ function CustomersRouteComponent() {
     <CustomerListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/customers', search: next, replace: true })}
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+    />
+  )
+}
+
+/**
+ * A customer's detail page. `/customers/$customerId?tab=` — the id is a path
+ * param, the open section a search param, so a customer's invoices or wallet is
+ * a link. Overview is the default and stays out of the address bar.
+ */
+const customerDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/customers/$customerId',
+  validateSearch: (search: Record<string, unknown>): { tab: CustomerTab } => ({
+    tab: parseCustomerTab(search['tab']),
+  }),
+  search: { middlewares: [stripSearchParams({ tab: 'overview' })] },
+  component: CustomerDetailRouteComponent,
+})
+
+function CustomerDetailRouteComponent() {
+  const { customerId } = customerDetailRoute.useParams()
+  const { tab } = customerDetailRoute.useSearch()
+  const navigate = useNavigate()
+
+  return (
+    <CustomerDetailPage
+      customerId={customerId}
+      tab={tab}
+      onTabChange={(next) =>
+        void navigate({
+          to: '/customers/$customerId',
+          params: { customerId },
+          search: { tab: next },
+          replace: true,
+        })
+      }
+      onNavigateToList={() => void navigate({ to: '/customers', search: {} as never })}
+      onCreateSubscription={() => void navigate({ to: '/subscriptions/new', search: {} as never })}
     />
   )
 }
@@ -1007,6 +1053,7 @@ export const routeTree = rootRoute.addChildren([
     costSheetsRoute,
     costSheetDetailRoute,
     customersRoute,
+    customerDetailRoute,
     subscriptionsRoute,
     invoicesRoute,
     paymentsRoute,

@@ -38,6 +38,44 @@ export interface Customer {
   updatedAt: Date | null
 }
 
+export const CustomerTaxTreatment = {
+  Taxable: 'taxable',
+  Exempt: 'exempt',
+} as const
+export type CustomerTaxTreatment =
+  (typeof CustomerTaxTreatment)[keyof typeof CustomerTaxTreatment]
+
+export const CUSTOMER_TAX_TREATMENT_LABEL: Record<CustomerTaxTreatment, string> = {
+  [CustomerTaxTreatment.Taxable]: 'Taxable',
+  [CustomerTaxTreatment.Exempt]: 'Exempt',
+}
+
+/**
+ * The fuller customer, as the detail page reads it.
+ *
+ * Everything the list model carries, plus the fields a single customer's page
+ * shows: the postal address, a phone number, the billing timezone, whether they
+ * are taxed, and whatever metadata your own system attached. All optional on the
+ * wire, so all default to empty rather than absent — a detail page renders a
+ * dash, not a hole. Deliberately no `plan`, `currency` or `payment method`: a
+ * customer has none of those, they belong to its subscriptions and wallets.
+ */
+export interface CustomerDetail extends Customer {
+  addressLine1: string
+  addressLine2: string
+  addressCity: string
+  addressState: string
+  addressPostalCode: string
+  /** A phone number, from the wire's contact. Empty when unset. */
+  phone: string
+  /** IANA timezone the customer's billing runs in. Empty when unset. */
+  timezone: string
+  /** Whether the customer is taxed. `null` when the API sends no treatment. */
+  taxTreatment: CustomerTaxTreatment | null
+  /** Free-form keys your own system attached to the customer. */
+  metadata: Record<string, string>
+}
+
 export const CustomerSortField = {
   Name: 'name',
   CreatedAt: 'createdAt',

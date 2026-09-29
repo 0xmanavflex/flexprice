@@ -44,6 +44,9 @@ interface SearchBody {
   /** How the plan detail page's subscriptions metric scopes to one plan. */
   plan_id?: string
   planId?: string
+  /** How a customer's invoices scope: the list search narrows by external id. */
+  external_customer_id?: string
+  externalCustomerId?: string
   expand?: string
 }
 
@@ -104,6 +107,19 @@ function page(source: Corpus, body: SearchBody) {
   // than the whole book — the bug an unfiltered mock would hide until production.
   const planId = body.plan_id ?? body.planId
   if (planId) rows = rows.filter((row) => readString(row, 'plan_id') === planId)
+
+  // A customer's invoices. The real invoice search narrows by the customer's
+  // external id; the corpus links invoices by internal `customer_id`, so the
+  // external id is resolved to the customer first, then rows are scoped to it —
+  // an unknown external id scopes to nothing rather than the whole book.
+  const externalCustomerId = body.external_customer_id ?? body.externalCustomerId
+  if (externalCustomerId) {
+    const customer = (corpus.customers as Corpus).items.find(
+      (row) => readString(row, 'external_id') === externalCustomerId,
+    )
+    const customerId = customer ? readString(customer, 'id') : ''
+    rows = rows.filter((row) => readString(row, 'customer_id') === customerId)
+  }
 
   const sort = body.sort?.[0]
   if (sort) {
@@ -1178,6 +1194,36 @@ export const handlers = [
   }),
 
   search('/customers/search', 'customers'),
+
+  // A single customer, for the detail page. The corpus rows already carry the
+  // fuller record (address, timezone, tax treatment, metadata), so the by-id GET
+  // just returns the row the SDK then camelCases.
+  http.get(`${BASE}/customers/:id`, ({ params }) => {
+    const customer = byId('customers', String(params['id']))
+    return customer
+      ? HttpResponse.json(customer)
+      : HttpResponse.json({ message: 'Customer not found' }, { status: 404 })
+  }),
+
+  // A customer's subscriptions, keyed by the *external* id (the endpoint the SDK
+  // calls). The external id resolves to the internal customer, then the
+  // subscriptions are scoped to it — each row keeps its embedded plan and
+  // customer, so the table shows plan names rather than ids.
+  http.get(`${BASE}/customers/external/:externalId/subscriptions`, ({ params }) => {
+    const externalId = String(params['externalId'])
+    const customer = (corpus.customers as Corpus).items.find(
+      (row) => readString(row, 'external_id') === externalId,
+    )
+    const customerId = customer ? readString(customer, 'id') : ''
+    const items = (corpus.subscriptions as Corpus).items.filter(
+      (row) => readString(row, 'customer_id') === customerId,
+    )
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: items.length, offset: 0 },
+    })
+  }),
+
   search('/plans/search', 'plans'),
   search('/features/search', 'features'),
   search('/prices/search', 'prices'),

@@ -137,8 +137,19 @@ export {
 } from './costSheets'
 export type { CostSheetPage, CostSheetWire } from './costSheets'
 
-export { fetchCustomers, toCustomer, toCustomerFilter, useCustomers } from './customers'
-export type { CustomerPage, CustomerWire } from './customers'
+export {
+  fetchCustomer,
+  fetchCustomers,
+  fetchCustomerSubscriptions,
+  toCustomer,
+  toCustomerDetail,
+  toCustomerFilter,
+  useCustomer,
+  useCustomerInvoices,
+  useCustomers,
+  useCustomerSubscriptions,
+} from './customers'
+export type { CustomerDetailWire, CustomerPage, CustomerWire } from './customers'
 
 export {
   fetchSubscriptions,

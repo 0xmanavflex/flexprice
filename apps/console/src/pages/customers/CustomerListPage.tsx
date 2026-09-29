@@ -7,6 +7,8 @@ import { UsersIcon } from 'lucide-react'
 export interface CustomerListPageProps {
   query: CustomerQuery
   onQueryChange: (query: CustomerQuery) => void
+  /** Open a customer's detail page. */
+  onOpenCustomer?: (customerId: string) => void
 }
 
 /**
@@ -16,7 +18,7 @@ export interface CustomerListPageProps {
  * hands the grid plain props. No create surface and no `useState` — the query
  * lives in the URL.
  */
-export function CustomerListPage({ query, onQueryChange }: CustomerListPageProps) {
+export function CustomerListPage({ query, onQueryChange, onOpenCustomer }: CustomerListPageProps) {
   const customers = useCustomers(query)
 
   const failure = toFailure(customers.error)
@@ -42,6 +44,7 @@ export function CustomerListPage({ query, onQueryChange }: CustomerListPageProps
             total={customers.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            {...(onOpenCustomer ? { onCustomerClick: (customer) => onOpenCustomer(customer.id) } : {})}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
             filters={
               <CustomerFilters
