@@ -115,6 +115,8 @@ export interface PlanDetailPageProps {
   /** After archiving or duplicating, where to go. */
   onArchived: () => void
   onDuplicated: (planId: string) => void
+  /** The breadcrumb's way back to the plans list. */
+  onNavigateToList: () => void
 }
 
 /** Formats a date the same way across the page's few date fields. */
@@ -198,6 +200,7 @@ export function PlanDetailPage({
   onOpenCharges,
   onArchived,
   onDuplicated,
+  onNavigateToList,
 }: PlanDetailPageProps) {
   const plan = usePlan(planId)
   const update = useUpdatePlan()
@@ -251,6 +254,7 @@ export function PlanDetailPage({
   return (
     <>
       <DetailShell
+        trail={[{ label: 'Plans', onClick: onNavigateToList }, { label: record.name }]}
         title={record.name}
         badges={
           <Badge variant={isArchived ? 'outline' : 'secondary'}>

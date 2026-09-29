@@ -91,15 +91,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
 
   return (
     <DetailShell
-      breadcrumb={
-        <button
-          type="button"
-          onClick={onNavigateToList}
-          className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
-        >
-          ← Features
-        </button>
-      }
+      trail={[{ label: 'Features', onClick: onNavigateToList }, { label: data.name }]}
       title={data.name}
       badges={
         <>

@@ -565,6 +565,7 @@ function PlanDetailRouteComponent() {
         void navigate({ to: '/plans/$planId/charges', params: { planId }, search: {} as never })
       }
       onArchived={() => void navigate({ to: '/plans', search: {} as never })}
+      onNavigateToList={() => void navigate({ to: '/plans', search: {} as never })}
       onDuplicated={(newId) =>
         void navigate({ to: '/plans/$planId', params: { planId: newId }, search: {} as never })
       }

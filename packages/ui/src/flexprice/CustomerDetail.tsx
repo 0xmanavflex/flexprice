@@ -1,10 +1,11 @@
-import { ArrowLeftIcon, PlusIcon } from 'lucide-react'
+import { PlusIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
   type Invoice,
   type Subscription,
 } from '@fp/domain'
+import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/primitives/button'
 import {
   Table,
@@ -125,19 +126,16 @@ export function CustomerDetail({
     .filter(Boolean)
     .join(' · ')
 
+  // The plan the customer is on, drawn from their subscription — the header's own
+  // "which plan", the way the mockup carries it beside the name.
+  const primaryPlan = subscriptions[0]?.planName
+  const planBadge = primaryPlan && primaryPlan !== '—' ? primaryPlan : null
+
   return (
     <DetailShell
-      breadcrumb={
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={onBack}
-          className="-ml-2 w-fit text-muted-foreground"
-        >
-          <ArrowLeftIcon aria-hidden />
-          Customers
-        </Button>
-      }
+      // A real trail, not a back button: names the list and the customer, and the
+      // list is one click away. The customer's id is already in the URL.
+      trail={[{ label: 'Customers', onClick: onBack }, { label: customer.name }]}
       title={customer.name}
       badges={
         <>
@@ -146,10 +144,10 @@ export function CustomerDetail({
               {customer.externalId}
             </span>
           ) : null}
+          {planBadge ? <Badge variant="secondary">{planBadge}</Badge> : null}
           <CatalogStatusBadge status={customer.status} />
         </>
       }
-      identifier={customer.id}
       {...(subtitle ? { description: subtitle } : {})}
       actions={
         <Button onClick={onCreateSubscription}>

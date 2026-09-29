@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { ChevronRightIcon } from 'lucide-react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { MetricRail, type DetailMetric } from './MetricRail'
@@ -19,7 +20,59 @@ export const DetailShellProvenance = provenance({
   note: 'Shared detail-page shell: breadcrumb, large title, badges, identifier, actions, metric rail, body.',
 })
 
+/** One step in a detail page's breadcrumb. The last is the current page. */
+export interface DetailCrumb {
+  label: string
+  /** Navigates there. The last crumb (the current page) never has one. */
+  onClick?: () => void
+}
+
+/**
+ * The detail page's own breadcrumb — where this record sits, and the way back.
+ *
+ * A real trail ("Customers / Acme Robotics"), not a lone back button: it names
+ * the parent list *and* the record, so the header says which one you are on
+ * without re-reading the title, and the parent is one click away. Rendered above
+ * the title, it replaces the assorted "← Back" links each detail page used to
+ * grow its own.
+ */
+function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
+  return (
+    <nav aria-label="Breadcrumb">
+      <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+        {trail.map((crumb, index) => {
+          const isLast = index === trail.length - 1
+          return (
+            <li key={`${crumb.label}-${index}`} className="flex items-center gap-1.5">
+              {crumb.onClick && !isLast ? (
+                <button
+                  type="button"
+                  onClick={crumb.onClick}
+                  className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                >
+                  {crumb.label}
+                </button>
+              ) : (
+                <span
+                  className={cn(isLast && 'font-medium text-foreground')}
+                  {...(isLast ? { 'aria-current': 'page' as const } : {})}
+                >
+                  {crumb.label}
+                </span>
+              )}
+              {isLast ? null : <ChevronRightIcon aria-hidden className="size-3.5 shrink-0" />}
+            </li>
+          )
+        })}
+      </ol>
+    </nav>
+  )
+}
+
 export interface DetailShellProps {
+  /** The breadcrumb trail. Preferred over `breadcrumb` — every detail page's is the same shape. */
+  trail?: DetailCrumb[]
+  /** A freeform breadcrumb node, for anything the `trail` shape does not fit. */
   breadcrumb?: ReactNode
   title: string
   /** Status and type chips, in a row beside the title. */
@@ -76,6 +129,7 @@ const TAB_STRIP = [
 ].join(' ')
 
 export function DetailShell({
+  trail,
   breadcrumb,
   title,
   badges,
@@ -92,7 +146,7 @@ export function DetailShell({
     // long page is never clipped.
     <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
       <header className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-4 px-6 pt-5 pb-5">
-        {breadcrumb}
+        {trail && trail.length > 0 ? <DetailBreadcrumb trail={trail} /> : breadcrumb}
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-2">
             <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
