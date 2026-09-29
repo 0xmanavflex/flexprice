@@ -349,38 +349,58 @@
     background-color: color-mix(in oklch, var(--muted) 60%, transparent);
   }
 
-  /* Hover has no fill — pointing at a row simply darkens its text and icon.
-     The teal bar and ink are the selected row's alone, so a hover can never be
-     mistaken for a selection, and the rail stays flat and quiet. A distinct
-     mechanism from the bar, so the two never blur into each other. */
+  /*
+   * The sidebar's nav buttons come in two shapes. A leaf row is a
+   * `sidebar-menu-button`; in the collapsed rail a *parent* becomes a
+   * `dropdown-menu-trigger` — Base UI renames the slot when a button is a
+   * dropdown trigger — but it is the same button and still carries `data-active`.
+   * Both are styled together below, the trigger scoped to the sidebar so no
+   * other dropdown trigger (the environment switcher, a menu elsewhere) is
+   * caught. Without the trigger variant the collapsed rail's active parent kept
+   * the vendored teal fill, which is the fill that was showing there.
+   */
+
+  /* Hover has no fill — a thin outline that follows the button's own shape (a
+     ring in the icon rail, a rounded rectangle expanded) via an inset shadow so
+     it never shifts layout, plus darker text and icon. Selected carries the
+     teal bar and ink and NO outline, so the two use different marks and never
+     blur: an outline means "pointing", a bar and teal ink mean "here". */
   [data-slot='sidebar-menu-button']:not([data-active]):hover,
-  [data-slot='sidebar-menu-sub-button']:not([data-active]):hover {
+  [data-slot='sidebar-menu-sub-button']:not([data-active]):hover,
+  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger']:not([data-active]):hover {
     background-color: transparent !important;
     color: var(--sidebar-hover-foreground) !important;
+    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--sidebar-foreground) 24%, transparent);
   }
   [data-slot='sidebar-menu-button']:not([data-active]):hover svg,
-  [data-slot='sidebar-menu-sub-button']:not([data-active]):hover svg {
+  [data-slot='sidebar-menu-sub-button']:not([data-active]):hover svg,
+  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger']:not([data-active]):hover svg {
     color: var(--sidebar-hover-foreground);
   }
 
-  /* Icons rest a step lighter than the row text, so the column reads quiet; the
-     selected row's icon takes the dark-teal accent. */
+  /* Icons rest a step lighter than the row text; the selected row's icon takes
+     the dark-teal accent. */
   [data-slot='sidebar-menu-button'] svg,
-  [data-slot='sidebar-menu-sub-button'] svg {
+  [data-slot='sidebar-menu-sub-button'] svg,
+  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'] svg {
     color: var(--sidebar-icon);
   }
-  [data-slot='sidebar-menu-button'][data-active] svg {
+  [data-slot='sidebar-menu-button'][data-active] svg,
+  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'][data-active] svg {
     color: var(--sidebar-accent-foreground);
   }
 
-  /* Selected has no fill either: a 3px teal indicator bar at the leading edge,
-     plus the dark-teal text and icon, carry it. The rail is bar-and-ink, never
-     a filled pill — quieter, and the bar is the "you are here" mark. */
-  [data-slot='sidebar-menu-button'][data-active] {
+  /* Selected has no fill and no outline: a 3px teal indicator bar at the leading
+     edge, plus the dark-teal text and icon, carry it — in the rail and expanded
+     alike. */
+  [data-slot='sidebar-menu-button'][data-active],
+  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'][data-active] {
     position: relative;
     background-color: transparent !important;
+    box-shadow: none !important;
   }
-  [data-slot='sidebar-menu-button'][data-active]::before {
+  [data-slot='sidebar-menu-button'][data-active]::before,
+  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'][data-active]::before {
     content: '';
     position: absolute;
     inset-inline-start: 0;
