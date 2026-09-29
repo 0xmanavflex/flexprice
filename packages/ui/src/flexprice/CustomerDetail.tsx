@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { PlusIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
@@ -85,6 +86,16 @@ export interface CustomerDetailProps {
   onCreateSubscription: () => void
   subscriptionsLoading?: boolean
   invoicesLoading?: boolean
+  /**
+   * The Usage section's contents — the per-feature quota cards.
+   *
+   * A slot rather than a data prop because the quota read is a separate
+   * endpoint (`GET /customers/usage`) with its own loading and failure states,
+   * and this component does not fetch. Omitted, the section keeps the empty
+   * state it has always had, so nothing about it changes for a caller that has
+   * no quota data to hand.
+   */
+  usage?: ReactNode
   locale?: string
 }
 
@@ -107,6 +118,7 @@ export function CustomerDetail({
   onCreateSubscription,
   subscriptionsLoading = false,
   invoicesLoading = false,
+  usage,
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
@@ -191,10 +203,12 @@ export function CustomerDetail({
       ) : null}
 
       {tab === 'usage' ? (
-        <EmptyState
-          title="No usage to show yet"
-          description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
-        />
+        (usage ?? (
+          <EmptyState
+            title="No usage to show yet"
+            description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
+          />
+        ))
       ) : null}
 
       {tab === 'information' ? (

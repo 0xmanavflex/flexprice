@@ -141,15 +141,23 @@ export {
   fetchCustomer,
   fetchCustomers,
   fetchCustomerSubscriptions,
+  fetchCustomerUsageSummary,
   toCustomer,
   toCustomerDetail,
   toCustomerFilter,
+  toCustomerUsageSummary,
   useCustomer,
   useCustomerInvoices,
   useCustomers,
   useCustomerSubscriptions,
+  useCustomerUsageSummary,
 } from './customers'
-export type { CustomerDetailWire, CustomerPage, CustomerWire } from './customers'
+export type {
+  CustomerDetailWire,
+  CustomerPage,
+  CustomerUsageSummary,
+  CustomerWire,
+} from './customers'
 
 export {
   fetchSubscriptions,

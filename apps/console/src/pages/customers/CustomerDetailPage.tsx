@@ -1,6 +1,13 @@
-import { ApiError, useCustomer, useCustomerInvoices, useCustomerSubscriptions } from '@fp/query'
-import { CUSTOMER_TABS, CustomerDetail, type CustomerTab } from '@fp/ui/flexprice'
-import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
+import type { TenantFeatureUsage } from '@fp/domain'
+import {
+  ApiError,
+  useCustomer,
+  useCustomerInvoices,
+  useCustomerSubscriptions,
+  useCustomerUsageSummary,
+} from '@fp/query'
+import { CUSTOMER_TABS, CustomerDetail, QuotaCard, type CustomerTab } from '@fp/ui/flexprice'
+import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
 
 /**
  * Turns whatever is in `?tab=` into a real section, defaulting to Overview.
@@ -42,6 +49,9 @@ export function CustomerDetailPage({
   const externalId = customer.data?.externalId ?? ''
   const subscriptions = useCustomerSubscriptions(externalId)
   const invoices = useCustomerInvoices(externalId)
+  // Keyed on the *internal* id: `GET /customers/usage` takes that, unlike the
+  // subscription and invoice reads above, which are scoped by the external one.
+  const usage = useCustomerUsageSummary(customerId)
 
   if (customer.isPending) {
     return (
@@ -86,6 +96,14 @@ export function CustomerDetailPage({
       onCreateSubscription={onCreateSubscription}
       subscriptionsLoading={subscriptions.isLoading}
       invoicesLoading={invoices.isLoading}
+      usage={
+        <UsageSection
+          features={usage.data?.features ?? []}
+          isLoading={usage.isLoading}
+          failed={usage.error !== null}
+          onRetry={() => void usage.refetch()}
+        />
+      }
     />
   )
 }
@@ -105,4 +123,114 @@ function failureTitle(error: unknown): string {
     }
   }
   return 'This customer could not be loaded'
+}
+
+/**
+ * A customer's entitlement quotas, one `QuotaCard` per entitled feature.
+ *
+ * Reads `GET /customers/usage`, the only endpoint that answers "how much of
+ * this allowance has been used" per feature. Four of the six readings the
+ * design asks for come straight off it — used quantity, included quantity,
+ * percent used and the reset date — and `remaining` is the difference of two
+ * counts the same response carried.
+ *
+ * The sixth, **overage, has no source**, and this is deliberate rather than
+ * unfinished. `FeatureUsageSummary` carries `is_soft_limit` (whether going over
+ * is billed or blocked) but no overage figure; the only overage in the API is
+ * the monetary commitment overage on `GET /subscriptions/usage`, which is keyed
+ * by meter and line item, not by entitlement, and is a different concept. A
+ * priced one cannot be computed here either — `money.ts` forbids client-side
+ * money arithmetic. So the card's cost slot stays a dash with the reason
+ * printed beside it.
+ *
+ * Units are absent for the same kind of reason: the wire sends `unit_plural`
+ * but `TenantFeatureUsage` does not keep it, so the readings are bare counts
+ * rather than invented nouns.
+ */
+function UsageSection({
+  features,
+  isLoading,
+  failed,
+  onRetry,
+}: {
+  features: TenantFeatureUsage[]
+  isLoading: boolean
+  failed: boolean
+  onRetry: () => void
+}) {
+  if (isLoading) {
+    return (
+      <Section title="Usage" description="What this customer has used of each entitlement.">
+        <LoadingRows />
+      </Section>
+    )
+  }
+
+  if (failed) {
+    return (
+      <Section title="Usage" description="What this customer has used of each entitlement.">
+        <AppFailure
+          title="Usage could not be loaded"
+          detail="The rest of this customer's record still works."
+          onRetry={onRetry}
+        />
+      </Section>
+    )
+  }
+
+  if (features.length === 0) {
+    return (
+      <Section title="Usage" description="What this customer has used of each entitlement.">
+        <EmptyState
+          size="inline"
+          title="No entitlements yet"
+          description="Quotas appear here once this customer is on a plan that grants a feature."
+        />
+      </Section>
+    )
+  }
+
+  return (
+    <Section
+      title="Usage"
+      description="What this customer has used of each entitlement, this billing period."
+    >
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {features.map((feature) => (
+          <QuotaCard
+            key={feature.featureId}
+            feature={feature.featureName || feature.featureId}
+            label={`${feature.featureName || 'Feature'} used this period`}
+            used={toCount(feature.currentUsage)}
+            included={feature.isUnlimited ? null : feature.limit}
+            {...(feature.isUnlimited ? {} : { percentUsed: toCount(feature.usagePercent) })}
+            resetsOn={feature.nextUsageResetAt}
+          />
+        ))}
+      </div>
+      {/*
+        Said once for the grid rather than once per card. Every card labels its
+        own empty Overage slot, so this explains the dashes without repeating
+        itself five times down the page.
+      */}
+      <p role="status" className="text-muted-foreground mt-3 text-xs">
+        Overage is shown as — for every feature: Flexprice reports whether a limit is soft or
+        hard, but does not report an overage quantity or price it per feature.
+      </p>
+    </Section>
+  )
+}
+
+/**
+ * A decimal string the API sent, as a number for display.
+ *
+ * These are counts — events, seats, calls — not money, so reading them as
+ * numbers is display formatting rather than the arithmetic `money.ts` forbids.
+ * `undefined` for anything unparseable, which renders as a dash rather than a
+ * zero: "the API sent something we could not read" is not "nothing was used".
+ */
+function toCount(value: string): number | undefined {
+  if (value === '') return undefined
+  const parsed = Number.parseFloat(value)
+  return Number.isFinite(parsed) ? parsed : undefined
 }

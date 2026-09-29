@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { FilterIcon } from 'lucide-react'
 import { Button } from '@ui/primitives/button'
 import { Filters } from '@ui/components/reui/filters/filters'
@@ -65,6 +65,16 @@ export interface FilterBarProps {
   advancedMode?: 'popover' | 'inline'
   /** A Clear button once the query holds anything (the reference bar has one). */
   showClear?: boolean
+  /**
+   * What opens the chip row's editor. Defaults to the outline "Filter" button
+   * below, which is what every caller before `EntityList` renders.
+   *
+   * Additive and optional on purpose: `EntityList` needs an icon-only trigger
+   * carrying a count badge, and the alternative — each list drawing its own
+   * trigger beside a bar that also draws one — is two Filter buttons. Only the
+   * `basic` chip row draws a trigger at all; `advanced` ignores it, as before.
+   */
+  trigger?: ReactNode
 }
 
 /** A query with nothing in it. Exported so callers can seed state with it. */
@@ -122,6 +132,7 @@ export function FilterBar({
   variant = 'basic',
   advancedMode = 'popover',
   showClear = true,
+  trigger,
 }: FilterBarProps) {
   /*
    * The bar owns the tree; the caller owns what it *means*.
@@ -203,10 +214,12 @@ export function FilterBar({
         // Replaces the row's own "Add filter" button, so the control reads the
         // same as Sort beside it. Only the chip row draws a trigger — the
         // inline builder ignores this, which is why it used to vanish.
-        <Button variant="outline" size="sm">
-          <FilterIcon aria-hidden className="size-4" />
-          Filter
-        </Button>
+        trigger ?? (
+          <Button variant="outline" size="sm">
+            <FilterIcon aria-hidden className="size-4" />
+            Filter
+          </Button>
+        )
       }
     />
   )

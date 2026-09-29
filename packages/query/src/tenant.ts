@@ -163,7 +163,15 @@ export function useUpdateTenant() {
 
 /* ------------------------------------------------------------------------- */
 
-interface FeatureUsageWire {
+/**
+ * One feature's usage against its entitlement.
+ *
+ * Exported because this is not tenant-specific: `TenantBillingUsage.usage` and
+ * `GET /customers/usage` return the *same* `CustomerUsageSummaryResponse`, so
+ * `useCustomerUsageSummary` reads a customer's quotas through this very mapper
+ * rather than growing a second copy that can drift from it.
+ */
+export interface FeatureUsageWire {
   feature?:
     { id?: string | undefined; name?: string | undefined; type?: string | undefined } | undefined
   totalLimit?: number | null | undefined
@@ -221,7 +229,7 @@ function toTenantPlan(wire: TenantSubscriptionWire): TenantPlan {
   }
 }
 
-function toFeatureUsage(wire: FeatureUsageWire): TenantFeatureUsage {
+export function toFeatureUsage(wire: FeatureUsageWire): TenantFeatureUsage {
   return {
     featureId: wire.feature?.id ?? '',
     featureName: wire.feature?.name ?? '',

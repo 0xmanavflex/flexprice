@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { ArrowDownIcon, ArrowUpIcon, ArrowUpDownIcon } from 'lucide-react'
 import { Button } from '@ui/primitives/button'
 import {
@@ -43,6 +44,15 @@ export interface SortMenuProps<T extends string> {
   onChange: (field: T, direction: 'asc' | 'desc') => void
   /** Which edge to line the menu up with. Match the trigger's side. */
   align?: 'start' | 'end'
+  /**
+   * What opens the menu. Defaults to the outline "Sort" button below.
+   *
+   * Additive and optional: `EntityList`'s toolbar is a row of equal icon
+   * buttons, and the label would make Sort the odd one out. Whatever is passed
+   * must still say what the current sort is — the default's `aria-label` is
+   * the model.
+   */
+  trigger?: ReactNode
 }
 
 export function SortMenu<T extends string>({
@@ -51,28 +61,33 @@ export function SortMenu<T extends string>({
   direction,
   onChange,
   align = 'start',
+  trigger,
 }: SortMenuProps<T>) {
   const current = options.find((option) => option.value === field)
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            // The current sort is in the name, so it does not need to be read
-            // off the screen to be known.
-            aria-label={`Sort by ${current?.label ?? field}, ${
-              direction === 'asc' ? 'ascending' : 'descending'
-            }. Change sorting`}
-          />
-        }
-      >
-        <ArrowUpDownIcon aria-hidden className="size-4" />
-        Sort
-      </DropdownMenuTrigger>
+      {trigger ? (
+        <DropdownMenuTrigger render={trigger as never} />
+      ) : (
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              // The current sort is in the name, so it does not need to be read
+              // off the screen to be known.
+              aria-label={`Sort by ${current?.label ?? field}, ${
+                direction === 'asc' ? 'ascending' : 'descending'
+              }. Change sorting`}
+            />
+          }
+        >
+          <ArrowUpDownIcon aria-hidden className="size-4" />
+          Sort
+        </DropdownMenuTrigger>
+      )}
 
       <DropdownMenuContent align={align} sideOffset={8} className="min-w-52">
         <DropdownMenuGroup>

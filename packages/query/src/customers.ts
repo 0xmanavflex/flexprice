@@ -9,11 +9,13 @@ import {
   CustomerTaxTreatment,
   DEFAULT_INVOICE_QUERY,
   type Subscription,
+  type TenantFeatureUsage,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 import { type SubscriptionWire, toSubscription } from './subscriptions'
 import { type InvoicePage, fetchInvoices } from './invoices'
+import { type FeatureUsageWire, toFeatureUsage } from './tenant'
 
 /**
  * Customers: the translation between billing vocabulary and the API.
@@ -223,5 +225,71 @@ export function useCustomerInvoices(externalId: string) {
     queryFn: () =>
       fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, search: externalId, pageSize: 50 }),
     enabled: externalId.length > 0,
+  })
+}
+
+/**
+ * A customer's entitlement usage — the per-feature quotas their detail page shows.
+ *
+ * `GET /customers/usage` (`client.customers.getCustomerUsageSummary`), which
+ * takes the customer as a **query parameter**, not a path segment: there is no
+ * `/customers/{id}/usage`. It is the only endpoint in the API that answers
+ * "how much of this allowance has been used" per feature — `/entitlements/search`
+ * knows the caps but not the usage, and `/events/analytics` knows usage over a
+ * window the caller picks, which is not the same thing as usage within the
+ * entitlement's own reset period.
+ *
+ * The payload is a `CustomerUsageSummaryResponse`, which is byte-for-byte the
+ * `usage` half of `getTenantBillingUsage`. So this reuses `toFeatureUsage`
+ * rather than restating the mapping — including the part that matters most,
+ * that `total_limit: null` is *unlimited* and must not collapse to zero.
+ *
+ * Unlike the tenant route, the generated SDK path for this one is correct, so
+ * it goes through the client with no `fetch` escape hatch.
+ */
+export interface CustomerUsageSummary {
+  features: TenantFeatureUsage[]
+  /** The billing period the usage is measured over. Both ends may be absent. */
+  periodStart: Date | null
+  periodEnd: Date | null
+}
+
+interface CustomerUsageSummaryWire {
+  features?: FeatureUsageWire[] | undefined
+  period?: { startTime?: Date | null | undefined; endTime?: Date | null | undefined } | null | undefined
+}
+
+export function toCustomerUsageSummary(wire: CustomerUsageSummaryWire): CustomerUsageSummary {
+  return {
+    features: (wire.features ?? []).map(toFeatureUsage),
+    periodStart: wire.period?.startTime ?? null,
+    periodEnd: wire.period?.endTime ?? null,
+  }
+}
+
+export async function fetchCustomerUsageSummary(
+  client: Flexprice,
+  customerId: string,
+): Promise<CustomerUsageSummary> {
+  const response = await call(() =>
+    client.customers.getCustomerUsageSummary({ customerId } as never),
+  )
+  return toCustomerUsageSummary(response as CustomerUsageSummaryWire)
+}
+
+/**
+ * One customer's feature quotas, by internal id.
+ *
+ * Keyed on the internal `customerId` — this endpoint takes that, not the
+ * external id the subscription and invoice reads need. Gated on a real id so it
+ * sits idle rather than asking about the empty string.
+ */
+export function useCustomerUsageSummary(customerId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.customers.usage(customerId),
+    queryFn: () => fetchCustomerUsageSummary(client, customerId),
+    enabled: customerId.length > 0,
   })
 }

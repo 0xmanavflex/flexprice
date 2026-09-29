@@ -1141,6 +1141,134 @@ const tenantBilling = {
   ],
 }
 
+/*
+ * ---------------------------------------------------------------------------
+ * `GET /customers/usage` — one customer's entitlement usage.
+ *
+ * The same `CustomerUsageSummaryResponse` shape as the `usage` half of
+ * `/tenants/billing`, because the API returns literally that model for both.
+ * The features are the real ones from the generated features fixture, so a
+ * quota card and the feature catalogue name the same things.
+ *
+ * The rows disagree with each other on purpose, one edge case each:
+ *   - API calls      — the ordinary case, comfortably inside its cap.
+ *   - Tokens processed — PAST its cap on a soft limit, so the over-quota
+ *                        rendering has something to bite on.
+ *   - Active users   — unlimited: `total_limit: null`, which a `?? 0` would
+ *                      print as "0 of 0" for the most generous grant there is.
+ *   - Peak sessions  — nothing used yet: a true zero, not a missing figure.
+ *   - Seats          — a `static` entitlement, so `next_usage_reset_at` is
+ *                      null and the renewal line has nothing to print.
+ *
+ * Every `usage_percent` is the real quotient of the two columns beside it — a
+ * fixture whose percentage disagrees with its own usage is how a broken
+ * percentage survives review. `sources` is `[]` on every row for the reason
+ * given on the tenant fixture: the live element shape was never observed.
+ * ---------------------------------------------------------------------------
+ */
+const CUSTOMER_USAGE_PERIOD_START = '2026-09-01T00:00:00Z'
+const CUSTOMER_USAGE_PERIOD_END = '2026-10-01T00:00:00Z'
+
+const customerUsage = {
+  features: [
+    {
+      feature: {
+        id: 'feat_synth_0000',
+        name: 'API calls',
+        type: 'metered',
+        lookup_key: 'api_calls',
+        unit_singular: 'call',
+        unit_plural: 'calls',
+      },
+      total_limit: 250000,
+      is_unlimited: false,
+      current_usage: '148320',
+      usage_percent: '59.328',
+      is_enabled: true,
+      is_soft_limit: true,
+      next_usage_reset_at: CUSTOMER_USAGE_PERIOD_END,
+      sources: [],
+    },
+    {
+      // Over the included amount. A soft limit bills the excess rather than
+      // blocking it, so the figure past 100% is the one that costs money.
+      feature: {
+        id: 'feat_synth_0001',
+        name: 'Tokens processed',
+        type: 'metered',
+        lookup_key: 'tokens_processed',
+        unit_singular: 'token',
+        unit_plural: 'tokens',
+      },
+      total_limit: 1000000,
+      is_unlimited: false,
+      current_usage: '1243900',
+      usage_percent: '124.39',
+      is_enabled: true,
+      is_soft_limit: true,
+      next_usage_reset_at: CUSTOMER_USAGE_PERIOD_END,
+      sources: [],
+    },
+    {
+      // `total_limit` null, not zero and not absent.
+      feature: {
+        id: 'feat_synth_0003',
+        name: 'Active users',
+        type: 'metered',
+        lookup_key: 'active_users',
+        unit_singular: 'user',
+        unit_plural: 'users',
+      },
+      total_limit: null,
+      is_unlimited: true,
+      current_usage: '3412',
+      usage_percent: '0',
+      is_enabled: true,
+      is_soft_limit: false,
+      next_usage_reset_at: CUSTOMER_USAGE_PERIOD_END,
+      sources: [],
+    },
+    {
+      feature: {
+        id: 'feat_synth_0004',
+        name: 'Peak sessions',
+        type: 'metered',
+        lookup_key: 'peak_sessions',
+        unit_singular: 'session',
+        unit_plural: 'sessions',
+      },
+      total_limit: 500,
+      is_unlimited: false,
+      current_usage: '0',
+      usage_percent: '0',
+      is_enabled: true,
+      is_soft_limit: false,
+      next_usage_reset_at: CUSTOMER_USAGE_PERIOD_END,
+      sources: [],
+    },
+    {
+      // Static: an allowance that does not meter and never resets.
+      feature: {
+        id: 'feat_synth_0006',
+        name: 'Seats',
+        type: 'static',
+        lookup_key: 'seats',
+        unit_singular: 'seat',
+        unit_plural: 'seats',
+      },
+      total_limit: 25,
+      is_unlimited: false,
+      current_usage: '18',
+      usage_percent: '72',
+      is_enabled: true,
+      is_soft_limit: false,
+      next_usage_reset_at: null,
+      sources: [],
+    },
+  ],
+  period: { start_time: CUSTOMER_USAGE_PERIOD_START, end_time: CUSTOMER_USAGE_PERIOD_END },
+}
+
 function findIndexById(rows: Record<string, unknown>[], id: string): number {
   return rows.findIndex((row) => readString(row, 'id') === id)
 }
@@ -1553,6 +1681,26 @@ export const handlers = [
   }),
 
   search('/customers/search', 'customers'),
+
+  /*
+   * Entitlement usage for one customer.
+   *
+   * **Must stay above `/customers/:id`** — the customer is a query parameter
+   * here, not a path segment, so `:id` would otherwise match the literal
+   * "usage" and answer a 404 for it.
+   */
+  http.get(`${BASE}/customers/usage`, ({ request }) => {
+    const customerId = new URL(request.url).searchParams.get('customer_id') ?? ''
+    // Unknown customers get an empty summary, not the demo rows: a customer
+    // with no entitlements and a customer that does not exist both have no
+    // quotas to show, and neither should borrow somebody else's.
+    const known = byId('customers', customerId) !== undefined
+    return HttpResponse.json({
+      ...customerUsage,
+      customer_id: customerId,
+      ...(known ? {} : { features: [] }),
+    })
+  }),
 
   // A single customer, for the detail page. The corpus rows already carry the
   // fuller record (address, timezone, tax treatment, metadata), so the by-id GET

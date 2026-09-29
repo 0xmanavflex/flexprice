@@ -1,6 +1,6 @@
 import { type Feature, type FeatureQuery } from '@fp/domain'
-import { ApiError, useFeatures } from '@fp/query'
-import { FeatureFilters, FeatureGrid } from '@fp/ui/flexprice'
+import { ApiError, useCatalogStats, useFeatures } from '@fp/query'
+import { FeatureGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -27,6 +27,10 @@ export function FeatureListPage({
   onOpenFeature,
 }: FeatureListPageProps) {
   const features = useFeatures(query)
+  // Counts per status for the toolbar's status dropdown. Each is one
+  // `limit: 1` request read for its `pagination.total` — the server's count,
+  // not the twenty-five rows that happen to be on screen.
+  const stats = useCatalogStats('features')
 
   const failure = toFailure(features.error)
   const rows = features.data?.features ?? []
@@ -75,15 +79,11 @@ export function FeatureListPage({
             onFeatureClick={onOpenFeature}
             onCreate={onCreate}
             onClearFilters={clearFilters}
-            filters={
-              <FeatureFilters
-                types={query.types}
-                statuses={query.statuses}
-                onChange={({ types, statuses }) =>
-                  onQueryChange({ ...query, types, statuses, page: 1 })
-                }
-              />
-            }
+            statusCounts={{
+              total: stats.total,
+              published: stats.published,
+              archived: stats.archived,
+            }}
           />
         </ListState>
       </PageBody>

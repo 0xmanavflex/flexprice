@@ -21,6 +21,8 @@ export const queryKeys = {
     list: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['customers', 'list', filter] as const,
     detail: (id: string) => ['customers', 'detail', id] as const,
+    /** Entitlement usage for one customer — `GET /customers/usage`. */
+    usage: (id: string) => ['customers', 'usage', id] as const,
   },
   subscriptions: {
     all: () => ['subscriptions'] as const,
