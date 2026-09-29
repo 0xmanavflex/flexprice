@@ -14,17 +14,27 @@
  * ## `unavailable`
  *
  * A tab marked `unavailable` is one this console cannot build honestly, not one
- * that is merely unfinished. Every one of them is backed by
- * `GET/PUT/DELETE /settings/:key` in the backend, and `settings.go` carries
- * swagger annotations on none of its three handlers — so the route is absent
- * from the OpenAPI document, absent from `@flexprice/sdk` (there is no
- * `settings` module at all), and therefore absent from `@fp/query`, which says
- * so in its own index.
+ * that is merely unfinished. Exactly one qualifies today: **Single sign-on**.
+ *
+ * `GET /settings/saml_config` answers `404 {"code":"not_found","message":"SAML
+ * single sign-on is not available on this deployment"}`. That is the deployment
+ * saying SSO is switched off, not a contract we are missing — so there is
+ * nothing to render and nothing to save, and `useSamlConfig` deliberately
+ * treats *any* read failure the same way. V1 learned that one the hard way: a
+ * 500 rendering an empty SSO form lets the next Save wipe a live config and
+ * lock a tenant out of their own dashboard.
+ *
+ * Everything else on this page used to carry this flag, on the belief that
+ * `/settings/:key` was unreachable because `settings.go` is unannotated and the
+ * generated SDK therefore has no `settings` module. The SDK part is true; the
+ * conclusion was not. The routes exist and answer 200 in production, so
+ * `@fp/api`'s `settings.ts` reaches them with `fetch`, exactly as `session.ts`
+ * already does for the four undocumented auth routes. Absent from the contract
+ * and absent from the server are different claims, and only the first one held.
  *
  * The tab stays listed and stays selectable, because "you cannot get there" and
  * "there is nothing there yet" look identical from outside and only one of them
- * is true. What it renders is `SettingsUnavailable`, which names the missing
- * contract rather than promising a date.
+ * is true.
  */
 export interface SettingsTabSpec {
   id: string
@@ -62,9 +72,9 @@ export const SETTINGS_SECTIONS = [
     id: 'billing',
     label: 'Billing configuration',
     tabs: [
-      { id: 'invoices', label: 'Invoices', unavailable: true },
-      { id: 'subscriptions', label: 'Subscriptions', unavailable: true },
-      { id: 'currencies', label: 'Currencies', unavailable: true },
+      { id: 'invoices', label: 'Invoices' },
+      { id: 'subscriptions', label: 'Subscriptions' },
+      { id: 'currencies', label: 'Currencies' },
       { id: 'taxes', label: 'Taxes' },
     ],
   },
@@ -72,8 +82,8 @@ export const SETTINGS_SECTIONS = [
     id: 'customer-experience',
     label: 'Customer experience',
     tabs: [
-      { id: 'portal', label: 'Portal', unavailable: true },
-      { id: 'onboarding', label: 'Onboarding', unavailable: true },
+      { id: 'portal', label: 'Portal' },
+      { id: 'onboarding', label: 'Onboarding' },
     ],
   },
   {
@@ -82,7 +92,7 @@ export const SETTINGS_SECTIONS = [
     tabs: [
       { id: 'api-keys', label: 'API keys' },
       { id: 'service-accounts', label: 'Service accounts' },
-      { id: 'webhooks', label: 'Webhooks', unavailable: true },
+      { id: 'webhooks', label: 'Webhooks' },
     ],
   },
   {
@@ -90,7 +100,7 @@ export const SETTINGS_SECTIONS = [
     label: 'Notifications & alerts',
     tabs: [
       { id: 'alert-rules', label: 'Alert rules' },
-      { id: 'wallet-alerts', label: 'Wallet alerts', unavailable: true },
+      { id: 'wallet-alerts', label: 'Wallet alerts' },
     ],
   },
   {

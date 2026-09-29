@@ -94,25 +94,25 @@ describe('the settings table itself', () => {
   /**
    * The unavailable set, pinned.
    *
-   * Every id here is a capability behind `GET/PUT/DELETE /settings/:key`, which
-   * has no swagger annotations and so no SDK module. The list shrinks when that
-   * contract lands — and a tab quietly *added* to it is a capability somebody
-   * gave up on, which should be a visible diff rather than a silent one.
+   * It holds exactly one id, and shrinking it to that took undoing a wrong
+   * conclusion. All eight of these were once listed as having "no backend
+   * contract", reasoning from `settings.go` being unannotated to the routes
+   * being unreachable. They answer 200 in production; only the generated SDK
+   * was missing them, and `@fp/api/settings.ts` reaches them with `fetch`.
+   *
+   * What is left is `team/sso`, and its absence is real but different in kind:
+   * the deployment answers 404 "SAML single sign-on is not available on this
+   * deployment". Switched off, not undocumented.
+   *
+   * A tab quietly *added* to this list is a capability somebody gave up on, and
+   * this test exists to make that a visible diff rather than a silent one —
+   * which is precisely how it caught the seven that never belonged.
    */
-  it('marks exactly the tabs with no backend contract', () => {
+  it('marks only the capability this deployment has switched off', () => {
     const unavailable = SECTIONS.flatMap((section) =>
       section.tabs.filter((tab) => tab.unavailable).map((tab) => `${section.id}/${tab.id}`),
     )
 
-    expect(unavailable).toEqual([
-      'team/sso',
-      'billing/invoices',
-      'billing/subscriptions',
-      'billing/currencies',
-      'customer-experience/portal',
-      'customer-experience/onboarding',
-      'developers/webhooks',
-      'notifications/wallet-alerts',
-    ])
+    expect(unavailable).toEqual(['team/sso'])
   })
 })

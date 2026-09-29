@@ -3,6 +3,7 @@ import {
   FlexPriceError,
   RequestAbortedError,
   RequestTimeoutError,
+  ResponseValidationError,
 } from '@flexprice/sdk'
 
 /**
@@ -113,6 +114,30 @@ function isStringMap(value: unknown): value is Record<string, string> {
  */
 export function toApiError(cause: unknown): ApiError {
   if (cause instanceof ApiError) return cause
+
+  /*
+   * A response the server was happy with and the SDK was not.
+   *
+   * This has to come before the `FlexPriceError` branch, because
+   * `ResponseValidationError` extends it — and going through that branch
+   * produced the worst message in the app. The status is the *successful* one,
+   * so `kindForStatus` returned `unknown` and the message fell back to
+   * `statusText`: a schema mismatch rendered an error box titled **"OK"**,
+   * indistinguishable from a 403. That is exactly how we found it — a fixture
+   * sent `tax_rate_type: "PERCENTAGE"` where the SDK's enum accepts only
+   * `"percentage"`, and the screen blamed permissions.
+   *
+   * It is not the caller's fault and retrying cannot fix it: the client and
+   * the server disagree about the contract. Saying so is more useful than any
+   * HTTP status, because the fix is a regenerated SDK or a backend change.
+   */
+  if (cause instanceof ResponseValidationError) {
+    return new ApiError(
+      ErrorKind.Unknown,
+      'Flexprice returned data this version of the console does not understand. This is a version mismatch, not something you did.',
+      { status: cause.statusCode, cause },
+    )
+  }
 
   if (cause instanceof FlexPriceError) {
     const { message, details } = readErrorBody(

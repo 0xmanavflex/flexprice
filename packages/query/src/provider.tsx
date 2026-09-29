@@ -6,6 +6,20 @@ import { createQueryClient } from './client'
 interface FlexpriceContextValue {
   client: Flexprice
   /**
+   * The same auth getters the SDK client was built from.
+   *
+   * Carried for the hooks that cannot go through the client at all: the
+   * `/settings/{key}` family, `/webhooks/dashboard` and `/tenants/billing` are
+   * missing from the OpenAPI document (or, for the last, present at the wrong
+   * path), so `@fp/api` reaches them with `fetch` — and a bare `fetch` has no
+   * `beforeRequest` hook putting the JWT and the environment on it.
+   *
+   * Exposing the getters rather than a token means those hooks authenticate
+   * the same way every other call does, per request, with no caller holding a
+   * credential and nothing to rebuild when the session changes.
+   */
+  auth: AuthSource
+  /**
    * Carried alongside the client because the session-bootstrap routes are not
    * on it: `/auth/login`, `/users/me` and `/environments` are absent from the
    * OpenAPI document, so `@fp/api` reaches them with `fetch` and needs to be
@@ -51,7 +65,7 @@ export function FlexpriceProvider({
 
   const resolvedQueryClient = useMemo(() => queryClient ?? createQueryClient(), [queryClient])
 
-  const value = useMemo(() => ({ client, serverURL }), [client, serverURL])
+  const value = useMemo(() => ({ client, auth, serverURL }), [client, auth, serverURL])
 
   return (
     <QueryClientProvider client={resolvedQueryClient}>
@@ -75,4 +89,17 @@ export function useFlexprice(): Flexprice {
 /** Where this console is pointed. Only the session-bootstrap hooks need it. */
 export function useFlexpriceServerURL(): string {
   return useFlexpriceContext().serverURL
+}
+
+/**
+ * How to authenticate a request the SDK cannot make.
+ *
+ * For the `fetch`-based hooks only — see the note on `FlexpriceContextValue`.
+ * A hook calls `await auth.getToken()` inside its query function, where being
+ * async costs nothing, rather than taking a token as an argument: a token in a
+ * hook signature is a token in a component, and eventually a token in a query
+ * key or a log line.
+ */
+export function useFlexpriceAuth(): AuthSource {
+  return useFlexpriceContext().auth
 }

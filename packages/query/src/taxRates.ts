@@ -12,7 +12,7 @@ import { useFlexprice } from './provider'
 /**
  * Tax rates: the translation between product vocabulary and the API.
  *
- * Reached through `GET /taxrates` (`client.taxRates.getTaxRates`), a paged list
+ * Reached through `GET /taxes/rates` (`client.taxRates.getTaxRates`), a paged list
  * with query params. The wire's `status` carries three values and the domain
  * keeps the two a catalogue shows; the scope enum passes through unchanged.
  */

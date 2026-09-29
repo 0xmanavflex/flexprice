@@ -128,6 +128,29 @@ export const queryKeys = {
     detail: (id: string) => ['tenant', 'detail', id] as const,
     billingUsage: () => ['tenant', 'billingUsage'] as const,
   },
+  /**
+   * The `/settings/{key}` family, keyed by environment first.
+   *
+   * The environment id is in the key because these records **are** per
+   * environment: the sandbox and production have different invoice prefixes,
+   * different portal trees, different currencies. Keying only by the settings
+   * key would file both under one entry, and switching environments would
+   * render the previous one's configuration — briefly, believably, and into a
+   * form whose next save would write it to the wrong environment.
+   *
+   * It is not enough that the console invalidates everything on a switch.
+   * Invalidation marks an entry stale; it does not remove it. A settings
+   * screen mounted after a switch still renders the stale entry while the
+   * refetch is in flight, which is exactly the window a form is filled in.
+   */
+  settings: {
+    all: () => ['settings'] as const,
+    of: (environmentId: string) => ['settings', environmentId] as const,
+    detail: (environmentId: string, key: string) => ['settings', environmentId, key] as const,
+    /** The Svix portal handoff. Environment-scoped like the rest. */
+    webhookDashboard: (environmentId: string) =>
+      ['settings', environmentId, 'webhookDashboard'] as const,
+  },
   alertSettings: {
     all: () => ['alertSettings'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) =>

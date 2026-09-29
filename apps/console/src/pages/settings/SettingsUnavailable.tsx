@@ -5,12 +5,20 @@ import type { SettingsTabSpec } from './sections'
 /**
  * What an unavailable settings tab says, and why it says it in words.
  *
- * Eight tabs in this screen have no API behind them. They are all the same
- * absence: the backend serves them from `GET/PUT/DELETE /settings/:key`, and
- * `settings.go` carries swagger annotations on **none of its three handlers**,
- * so the route never reaches the OpenAPI document, never reaches
- * `@flexprice/sdk` — there is no `settings` module in the generated client at
- * all — and therefore never reaches `@fp/query`, whose index says so.
+ * **One tab uses this now: Single sign-on.** `GET /settings/saml_config`
+ * answers `404 "SAML single sign-on is not available on this deployment"` —
+ * the deployment declining, not a contract we lack. `useSamlConfig` treats any
+ * read failure that way on purpose, because a 500 rendering an empty SSO form
+ * would let the next Save wipe a live config and lock a tenant out.
+ *
+ * Eight tabs used to render this, on the reasoning that `/settings/:key` was
+ * unreachable: `settings.go` is unannotated, so the route is absent from the
+ * OpenAPI document and there is no `settings` module in the generated SDK.
+ * The premise was right and the conclusion was wrong — the routes answer 200
+ * in production, and `@fp/api`'s `settings.ts` now reaches them with `fetch`,
+ * the same way `session.ts` already reached the four undocumented auth routes.
+ * Missing from the contract and missing from the server are different claims.
+ * Worth remembering the next time a generated client is read as the territory.
  *
  * Three things this deliberately is not:
  *
@@ -26,12 +34,7 @@ import type { SettingsTabSpec } from './sections'
  *     sends people hunting for a tab they remember.
  *
  * `EmptyState` carries `role="status"`, so selecting one of these tabs is
- * announced rather than only looking blank — the same treatment
- * `SettingsShell` gives its own unavailable tabs. The copy is written here
- * rather than taken from the shell's built-in state because the shell's
- * sentence ("It is not part of this account or environment") describes a
- * permissions or plan gap, and that is not what is true of these eight: the
- * capability is missing from the contract, not from the account.
+ * announced rather than only looking blank.
  */
 export interface SettingsUnavailableProps {
   tab: SettingsTabSpec
@@ -46,13 +49,11 @@ export function SettingsUnavailable({ tab, what, workaround }: SettingsUnavailab
     <EmptyState
       size="page"
       icon={<PlugZapIcon aria-hidden />}
-      title={`${tab.label} needs a backend contract`}
+      title={`${tab.label} is not enabled on this deployment`}
       description={
-        `${what} There is no API for it to call: these settings are served by ` +
-        `GET/PUT/DELETE /settings/:key, and none of those three handlers is annotated, ` +
-        `so the route is missing from the OpenAPI document and from the generated SDK. ` +
-        `Annotating settings.go and republishing the SDK is what turns this tab on.` +
-        (workaround ? ` ${workaround}` : '')
+        `${what} This Flexprice deployment reports it as switched off, so there is ` +
+        `nothing here to read or change. Turning it on is a server-side change, not ` +
+        `something this console can do.` + (workaround ? ` ${workaround}` : '')
       }
     />
   )

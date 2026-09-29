@@ -26,6 +26,22 @@ export { createEnvironment, fetchCurrentUser, fetchEnvironments, signIn, signUp 
 export type { CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
 
 /**
+ * Tenant settings, the webhook portal, and the tenant's own bill — three more
+ * live routes the OpenAPI document does not describe (or, for the bill,
+ * describes one character wrong). See `settings.ts`, which is a sibling of
+ * `session.ts` in every sense including what deletes it.
+ */
+export {
+  SettingKey,
+  deleteSetting,
+  fetchTenantBilling,
+  fetchWebhookDashboard,
+  getSetting,
+  putSetting,
+} from './settings'
+export type { WebhookDashboard } from './settings'
+
+/**
  * The SDK's request and response models, re-exported so the rest of the
  * workspace has one import path for them and the SDK can be swapped or pinned
  * in one place.

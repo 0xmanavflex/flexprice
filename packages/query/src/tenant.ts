@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ApiError, ErrorKind, type Flexprice, call } from '@fp/api'
+import {
+  ApiError,
+  ErrorKind,
+  type AuthSource,
+  type Flexprice,
+  call,
+  fetchTenantBilling,
+} from '@fp/api'
 import {
   EMPTY_TENANT_BILLING_USAGE,
   type Tenant,
@@ -11,7 +18,7 @@ import {
   emptyAddress,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
  * The tenant, and what Flexprice is billing it for.
@@ -244,47 +251,166 @@ export function toTenantBillingUsage(wire: TenantBillingUsageWire): TenantBillin
 }
 
 /**
+ * The raw body, in the shape the SDK would have produced.
+ *
+ * `/tenants/billing` is reached with `fetch` rather than through the generated
+ * client (see `fetchTenantBillingUsage`), so nothing camelCases its keys or
+ * turns its timestamps into `Date`s. This does both, and then hands off to
+ * `toTenantBillingUsage` — the mapper and its tests stay the ones that will
+ * still be right when the SDK can make this call itself, and deleting this
+ * function is the whole of the cleanup.
+ */
+export function toTenantBillingWire(raw: unknown): TenantBillingUsageWire {
+  const body = asRecord(raw)
+  const usage = asRecord(body['usage'])
+  const period = asRecord(usage['period'])
+
+  return {
+    subscriptions: asArray(body['subscriptions']).map((entry) => {
+      const row = asRecord(entry)
+      return {
+        id: text(row['id']),
+        planId: text(row['plan_id']),
+        plan: { name: text(asRecord(row['plan'])['name']) },
+        subscriptionStatus: text(row['subscription_status']),
+        currency: text(row['currency']),
+        billingPeriod: text(row['billing_period']),
+        currentPeriodStart: asDate(row['current_period_start']),
+        currentPeriodEnd: asDate(row['current_period_end']),
+        cancelAtPeriodEnd: row['cancel_at_period_end'] === true,
+        trialEnd: asDate(row['trial_end']),
+      }
+    }),
+    usage: {
+      customerId: text(usage['customer_id']),
+      features: asArray(usage['features']).map((entry) => {
+        const row = asRecord(entry)
+        const feature = asRecord(row['feature'])
+        return {
+          feature: {
+            id: text(feature['id']),
+            name: text(feature['name']),
+            type: text(feature['type']),
+          },
+          // Preserved as null when null: an unlimited entitlement sends
+          // `total_limit: null`, and a `?? 0` here renders "0 of 0" for
+          // something with no cap at all.
+          totalLimit: typeof row['total_limit'] === 'number' ? row['total_limit'] : null,
+          isUnlimited: row['is_unlimited'] === true,
+          // Decimal strings, as the API sent them. Never parsed to a float.
+          currentUsage: text(row['current_usage']),
+          usagePercent: text(row['usage_percent']),
+          isEnabled: row['is_enabled'] === true,
+          isSoftLimit: row['is_soft_limit'] === true,
+          nextUsageResetAt: asDate(row['next_usage_reset_at']),
+        }
+      }),
+      period: { startTime: asDate(period['start_time']), endTime: asDate(period['end_time']) },
+    },
+  }
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return !!value && typeof value === 'object' && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {}
+}
+
+function asArray(value: unknown): unknown[] {
+  return Array.isArray(value) ? value : []
+}
+
+function text(value: unknown): string {
+  return typeof value === 'string' ? value : ''
+}
+
+function asDate(value: unknown): Date | null {
+  if (typeof value !== 'string' || value.length === 0) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+/**
  * What Flexprice is billing this tenant — plan, and entitlement usage.
  *
- * **This does not work on `@flexprice/sdk@2.1.30`.** The generated client calls
- * `GET /v1/tenant/billing`; the deployed route is `GET /v1/tenants/billing`,
- * plural. Verified live against `api.cloud.flexprice.io`: the SDK method
- * answers 404 `text/plain "404 page not found"`, while the plural path returns
- * `200` with exactly the `{usage, subscriptions}` body `TenantBillingUsage`
- * describes. The OpenAPI path is simply missing an `s`.
+ * **The SDK cannot make this call, for the sake of one character.** Its
+ * generated `tenants.getTenantBillingUsage()` requests `GET
+ * /v1/tenant/billing`; the deployed route is `GET /v1/tenants/billing`,
+ * plural. Verified live against `api.cloud.flexprice.io`: the singular path
+ * answers `404 text/plain "404 page not found"` — a route that does not exist,
+ * not a tenant without billing — while the plural path returns 200 with
+ * exactly the `{usage, subscriptions}` body the SDK's own response model
+ * describes.
  *
- * It is **not** shimmed here on purpose. `@fp/sdk-adapter` is where a route the
- * SDK cannot reach belongs, and every shim there must name the GitHub issue
- * whose closure deletes it — inventing an issue number to get past that check
- * is how a temporary layer becomes permanent. So this calls the method the
- * corrected contract will have, and the fix is one of: correct the path in the
- * backend's OpenAPI document and republish the SDK (preferred — it is a
- * one-character change), or file the removal issue and add a four-line shim.
+ * **The real fix is the backend's OpenAPI path plus an SDK republish.** It is
+ * a one-character change to the document, after which this function and
+ * `@fp/api`'s `fetchTenantBilling` both delete and the call goes back through
+ * the client. It is deliberately not a `@fp/sdk-adapter` shim: every shim
+ * there must name the GitHub issue whose closure removes it, and inventing an
+ * issue number to satisfy that rule is how a temporary layer becomes
+ * permanent.
  *
- * Until then a 404 is reported as *unavailable* rather than *failed*: the query
- * resolves to `null`, so the panel can render an unavailable state next to the
- * other Settings sections that have no API, instead of an error nobody can act
- * on. Every other failure still throws.
+ * A 404 still resolves to `null` rather than throwing. The corrected path
+ * should not produce one, so this now covers the case worth covering: a
+ * deployment that does not bill its tenants through Flexprice at all, where a
+ * panel should render "not billed here" rather than an error nobody can act
+ * on. Every other failure throws.
  */
 export async function fetchTenantBillingUsage(
-  client: Flexprice,
+  serverURL: string,
+  token: string,
+  environmentId: string,
 ): Promise<TenantBillingUsage | null> {
   try {
-    const wire = await call(() => client.tenants.getTenantBillingUsage())
-    return toTenantBillingUsage(wire as TenantBillingUsageWire)
+    return toTenantBillingUsage(
+      toTenantBillingWire(await fetchTenantBilling(serverURL, token, environmentId)),
+    )
   } catch (error) {
     if (error instanceof ApiError && error.kind === ErrorKind.NotFound) return null
     throw error
   }
 }
 
+/**
+ * The tenant's bill.
+ *
+ * Takes no arguments, and the key carries no environment id, unlike the
+ * `/settings/{key}` hooks next door. Both are deliberate: this record is the
+ * tenant's — the same plan and the same entitlement usage whichever
+ * environment is selected — and the environment header this route insists on
+ * is an access check rather than a scope. Keying it per environment would
+ * multiply one answer into as many cache entries as the tenant has
+ * environments, each refetched on every switch.
+ *
+ * The credentials come from the same `AuthSource` the SDK client uses, read
+ * per request inside the query function.
+ */
 export function useTenantBillingUsage() {
-  const client = useFlexprice()
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
 
   return useQuery({
     queryKey: queryKeys.tenant.billingUsage(),
-    queryFn: () => fetchTenantBillingUsage(client),
+    queryFn: async () => {
+      const { token, environmentId } = await credentials(auth)
+      return fetchTenantBillingUsage(serverURL, token, environmentId)
+    },
   })
+}
+
+async function credentials(auth: AuthSource): Promise<{ token: string; environmentId: string }> {
+  const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+
+  if (!token) {
+    throw new ApiError(ErrorKind.Unauthorized, 'Sign in to see billing.')
+  }
+  if (!environmentId) {
+    // The route answers a missing `X-Environment-ID` with a 403 reading
+    // "Access denied", which describes the console mid-sign-in as a
+    // permissions problem. This says what is actually true.
+    throw new ApiError(ErrorKind.Forbidden, 'Choose an environment to see billing.')
+  }
+  return { token, environmentId }
 }
 
 /** A safe value for a panel that would rather render empty than branch on null. */

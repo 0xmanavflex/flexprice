@@ -507,6 +507,619 @@ const alertSettings: Record<string, unknown>[] = [
   },
 ]
 
+/*
+ * ---------------------------------------------------------------------------
+ * `GET|PUT|DELETE /settings/:key`.
+ *
+ * One route, one envelope, several keys. The envelope is the same record every
+ * time — `{id, key, value, environment_id, tenant_id, status, created_at,
+ * updated_at, created_by, updated_by}` — and the *payload* is `value`. A mock
+ * that returned the payload bare would be laxer than the API and would hide
+ * the unwrapping every caller has to do.
+ *
+ * Two tiers, on purpose:
+ *
+ *   - `SETTINGS_DEFAULTS` is what the backend serves a tenant that has never
+ *     written the key. These are the values observed live, unchanged.
+ *   - `settingsStore` is what *this* tenant has saved. Seeded with Northwind's
+ *     own configuration, because a demo of `{custom_currencies: {}}` or
+ *     `{actions: []}` demonstrates nothing.
+ *
+ * `DELETE` clears the override, so the next `GET` returns the default — which
+ * is the behaviour worth being able to try, and it only exists because the two
+ * tiers are distinct.
+ *
+ * `saml_config` is deliberately in neither table. See `SAML_UNAVAILABLE`.
+ * ---------------------------------------------------------------------------
+ */
+
+/** Settings are stored per environment; Sandbox is what the demo opens in. */
+const SETTINGS_ENVIRONMENT_ID = 'env_01KVSNYVPMAP6JJGDF177V2DE6'
+
+type SettingsValue = Record<string, unknown>
+
+/** What a tenant that has never written the key gets back. Observed live. */
+const SETTINGS_DEFAULTS: Record<string, SettingsValue> = {
+  invoice_config: {
+    prefix: 'INV',
+    separator: '-',
+    format: 'YYYYMM',
+    timezone: 'UTC',
+    start_sequence: 1,
+    suffix_length: 5,
+    due_date_days: 1,
+    finalization_delay_seconds: 7200,
+  },
+  subscription_config: {
+    auto_cancellation_enabled: false,
+    grace_period_days: 3,
+  },
+  custom_currency_config: {
+    custom_currencies: {},
+    default_fiat_currency: '',
+  },
+  customer_portal_config: {
+    sections: [],
+  },
+  customer_onboarding: {
+    actions: [],
+    workflow_type: 'customer_onboarding',
+  },
+  wallet_balance_alert_config: {
+    alert_enabled: false,
+    alert_threshold_type: 'absolute',
+    critical: { condition: 'below', threshold: '0' },
+    warning: null,
+    info: null,
+  },
+}
+
+/**
+ * Northwind's saved settings — what the demo actually shows.
+ *
+ * Self-consistent with the rest of this file on purpose: the invoice timezone
+ * is the tenant's own (the Profile tab puts it in Portland), and the onboarding
+ * action subscribes to a plan that exists in the corpus, so the action names
+ * something the console can actually open.
+ */
+const settingsStore: Record<string, SettingsValue> = {
+  // Numbers an invoice "NWS-202609-01001", on net-14 terms — which is what the
+  // billing contact on the Profile tab collects against.
+  invoice_config: {
+    prefix: 'NWS',
+    separator: '-',
+    format: 'YYYYMM',
+    timezone: 'America/Los_Angeles',
+    start_sequence: 1001,
+    suffix_length: 5,
+    due_date_days: 14,
+    finalization_delay_seconds: 3600,
+  },
+  subscription_config: {
+    auto_cancellation_enabled: true,
+    grace_period_days: 7,
+  },
+  /*
+   * A settlement currency and two custom units. `custom_currencies` is a map
+   * keyed by the currency code, and each entry carries the descriptive fields a
+   * price unit does — `conversion_rate` as a decimal *string*, never a float,
+   * so 0.0025 does not arrive as 0.0024999999999998.
+   */
+  custom_currency_config: {
+    custom_currencies: {
+      NWC: {
+        code: 'NWC',
+        name: 'Northwind Credit',
+        symbol: '⛁',
+        precision: 2,
+        conversion_rate: '0.01',
+      },
+      NWT: {
+        code: 'NWT',
+        name: 'Northwind Token',
+        symbol: '◈',
+        precision: 6,
+        conversion_rate: '0.0025',
+      },
+    },
+    default_fiat_currency: 'usd',
+  },
+  /*
+   * The portal's information architecture, kept nested as the API sends it.
+   * Flattening it to a handful of booleans is the tempting mistake: the
+   * ordering and the per-tab metric-card switches *are* the configuration, and
+   * a flat mock would make an editor that cannot round-trip look correct.
+   *
+   * One disabled tab and one disabled section, because "off" is a state the
+   * screen has to render and an all-true fixture never shows it.
+   */
+  customer_portal_config: {
+    sections: [
+      {
+        enabled: true,
+        id: 'usage',
+        label: 'Usage',
+        order: 1,
+        tabs: [
+          {
+            enabled: true,
+            id: 'usage_summary',
+            order: 1,
+            type: 'usage_summary',
+            metric_cards: {
+              show_cost_metrics: true,
+              show_custom_metrics: false,
+              show_revenue_metric: true,
+            },
+          },
+          {
+            enabled: true,
+            id: 'usage_by_feature',
+            order: 2,
+            type: 'feature_usage',
+            metric_cards: {
+              show_cost_metrics: true,
+              show_custom_metrics: true,
+              show_revenue_metric: false,
+            },
+          },
+        ],
+      },
+      {
+        enabled: true,
+        id: 'billing',
+        label: 'Billing',
+        order: 2,
+        tabs: [
+          {
+            enabled: true,
+            id: 'invoices',
+            order: 1,
+            type: 'invoices',
+            metric_cards: {
+              show_cost_metrics: false,
+              show_custom_metrics: false,
+              show_revenue_metric: true,
+            },
+          },
+          {
+            enabled: false,
+            id: 'payment_methods',
+            order: 2,
+            type: 'payment_methods',
+            metric_cards: {
+              show_cost_metrics: false,
+              show_custom_metrics: false,
+              show_revenue_metric: false,
+            },
+          },
+        ],
+      },
+      {
+        enabled: false,
+        id: 'wallet',
+        label: 'Wallet',
+        order: 3,
+        tabs: [
+          {
+            enabled: false,
+            id: 'wallet_balance',
+            order: 1,
+            type: 'wallet',
+            metric_cards: {
+              show_cost_metrics: false,
+              show_custom_metrics: true,
+              show_revenue_metric: false,
+            },
+          },
+        ],
+      },
+    ],
+  },
+  /*
+   * What happens to a customer between signing up and their first invoice.
+   *
+   * The live value had `actions: []`, so the *element* shape was never
+   * observable. These two are authored to the request bodies the wallet and
+   * subscription creates take, which is the closest thing to a contract there
+   * is, and `plan_id` points at a plan the corpus actually contains.
+   */
+  customer_onboarding: {
+    actions: [
+      {
+        id: 'onbact_01M38QONB00000000000001',
+        type: 'create_wallet',
+        enabled: true,
+        order: 1,
+        config: {
+          name: 'Trial credit',
+          currency: 'usd',
+          wallet_type: 'promotional',
+          initial_credits: '25',
+          conversion_rate: '1',
+          auto_topup_enabled: false,
+        },
+      },
+      {
+        id: 'onbact_01M38QONB00000000000002',
+        type: 'create_subscription',
+        enabled: true,
+        order: 2,
+        config: {
+          plan_id: 'plan_synth_0000',
+          currency: 'usd',
+          billing_cadence: 'RECURRING',
+          billing_period: 'MONTHLY',
+          billing_period_count: 1,
+          trial_days: 14,
+          start_date_offset_days: 0,
+        },
+      },
+    ],
+    workflow_type: 'customer_onboarding',
+  },
+  /*
+   * Tenant-wide wallet thresholds, in currency rather than percent — the
+   * alert-rules fixture above already demonstrates the percentage form on one
+   * wallet, and two fixtures carrying the same numbers teach nothing twice.
+   * `info` is null: not every severity is configured, and a panel that assumes
+   * three levels breaks on the tenant who set one.
+   */
+  wallet_balance_alert_config: {
+    alert_enabled: true,
+    alert_threshold_type: 'absolute',
+    critical: { condition: 'below', threshold: '50' },
+    warning: { condition: 'below', threshold: '250' },
+    info: null,
+  },
+}
+
+/**
+ * `GET /taxes/rates`, the one settings panel with no handler at all.
+ *
+ * Without it the request escaped MSW to `mock.flexprice.test` and failed at
+ * DNS, so the Taxes tab sat on "Counting your tax rates…" indefinitely — the
+ * most misleading of the failure modes, because an unhandled route looks
+ * identical to a slow one.
+ *
+ * Authored to the wire: `percentage_value` as a decimal *string*, and
+ * `tax_rate_type`/`tax_rate_status` present because the response carries them
+ * even though the list reads neither.
+ *
+ * Mind the casing, which is not uniform and is not a typo here. `scope` and
+ * `tax_rate_status` are **open** enums in the SDK, upper-case
+ * (`EXTERNAL`/`ONETIME`, `ACTIVE`/`INACTIVE`) and tolerant of a value they do
+ * not know. `tax_rate_type` is a **closed** one whose sole member is the
+ * lower-case `"percentage"` — send `"PERCENTAGE"` and zod rejects the whole
+ * page, the SDK raises a `ResponseValidationError`, and the screen shows a
+ * permission-shaped error titled "OK" (the status text of the 200 it just
+ * refused). That is the exact wrong turn this fixture took first.
+ *
+ * Northwind sells into four jurisdictions and has one rate it has retired.
+ */
+const taxRates: Record<string, unknown>[] = [
+  {
+    id: 'tax_01M38QTAX00000000000001',
+    name: 'US sales tax — Oregon',
+    code: 'US-OR',
+    description: 'Oregon levies no state sales tax; the zero rate is recorded so invoices say so.',
+    percentage_value: '0',
+    tax_rate_type: 'percentage',
+    scope: 'EXTERNAL',
+    tax_rate_status: 'ACTIVE',
+    status: 'published',
+    created_at: '2025-08-12T09:14:00Z',
+    updated_at: '2025-08-12T09:14:00Z',
+  },
+  {
+    id: 'tax_01M38QTAX00000000000002',
+    name: 'UK VAT — standard',
+    code: 'GB-VAT-STD',
+    description: 'Charged on invoices to UK customers without a validated VAT number.',
+    percentage_value: '20',
+    tax_rate_type: 'percentage',
+    scope: 'EXTERNAL',
+    tax_rate_status: 'ACTIVE',
+    status: 'published',
+    created_at: '2025-10-03T11:42:00Z',
+    updated_at: '2026-04-06T08:00:00Z',
+  },
+  {
+    id: 'tax_01M38QTAX00000000000003',
+    name: 'EU VAT — reverse charge',
+    code: 'EU-RC',
+    description: 'Zero-rated; the customer accounts for the VAT in their own member state.',
+    percentage_value: '0',
+    tax_rate_type: 'percentage',
+    scope: 'EXTERNAL',
+    tax_rate_status: 'ACTIVE',
+    status: 'published',
+    created_at: '2026-01-19T14:27:00Z',
+    updated_at: '2026-01-19T14:27:00Z',
+  },
+  {
+    id: 'tax_01M38QTAX00000000000004',
+    name: 'Canada GST',
+    code: 'CA-GST',
+    description: 'Federal goods and services tax, applied on top of any provincial rate.',
+    percentage_value: '5',
+    tax_rate_type: 'percentage',
+    scope: 'EXTERNAL',
+    tax_rate_status: 'ACTIVE',
+    status: 'published',
+    created_at: '2026-03-08T10:05:00Z',
+    updated_at: '2026-08-21T16:33:00Z',
+  },
+  {
+    // Archived, so the status filter on `/taxes` has something to exclude.
+    id: 'tax_01M38QTAX00000000000005',
+    name: 'Setup fee levy',
+    code: 'ONE-SETUP',
+    description: 'Applied to one-off implementation charges. Retired when setup fees were dropped.',
+    percentage_value: '7.5',
+    tax_rate_type: 'percentage',
+    scope: 'ONETIME',
+    tax_rate_status: 'INACTIVE',
+    status: 'archived',
+    created_at: '2025-09-01T08:00:00Z',
+    updated_at: '2026-02-11T12:48:00Z',
+  },
+]
+
+/** Stable identity and authorship per key, so a GET is not a new record each time. */
+const SETTINGS_META: Record<
+  string,
+  { id: string; created_at: string; updated_at: string; created_by: string; updated_by: string }
+> = {
+  invoice_config: {
+    id: 'set_01M38QSET00000000000001',
+    created_at: '2025-08-11T10:04:12Z',
+    updated_at: '2026-07-22T15:48:03Z',
+    created_by: 'user_demo',
+    updated_by: 'user_01M38QUSER0000000000002',
+  },
+  subscription_config: {
+    id: 'set_01M38QSET00000000000002',
+    created_at: '2025-08-11T10:05:30Z',
+    updated_at: '2026-04-09T11:17:44Z',
+    created_by: 'user_demo',
+    updated_by: 'user_demo',
+  },
+  custom_currency_config: {
+    id: 'set_01M38QSET00000000000003',
+    created_at: '2026-01-02T09:20:55Z',
+    updated_at: '2026-06-18T08:02:19Z',
+    created_by: 'user_01M38QUSER0000000000002',
+    updated_by: 'user_01M38QUSER0000000000002',
+  },
+  customer_portal_config: {
+    id: 'set_01M38QSET00000000000004',
+    created_at: '2026-02-27T13:41:07Z',
+    updated_at: '2026-09-11T10:26:38Z',
+    created_by: 'user_demo',
+    updated_by: 'user_01M38QUSER0000000000003',
+  },
+  customer_onboarding: {
+    id: 'set_01M38QSET00000000000005',
+    created_at: '2026-03-16T16:09:21Z',
+    updated_at: '2026-08-30T07:55:12Z',
+    created_by: 'user_01M38QUSER0000000000002',
+    updated_by: 'user_demo',
+  },
+  wallet_balance_alert_config: {
+    id: 'set_01M38QSET00000000000006',
+    created_at: '2026-05-20T12:03:44Z',
+    updated_at: '2026-09-24T18:12:50Z',
+    created_by: 'user_demo',
+    updated_by: 'user_demo',
+  },
+}
+
+function settingsEnvelope(key: string, value: SettingsValue): Record<string, unknown> {
+  const meta = SETTINGS_META[key]
+  return {
+    id: meta?.id ?? `set_mock_${key}`,
+    key,
+    value,
+    environment_id: SETTINGS_ENVIRONMENT_ID,
+    tenant_id: TENANT_ID,
+    status: 'published',
+    created_at: meta?.created_at ?? '2026-01-01T00:00:00Z',
+    updated_at: meta?.updated_at ?? '2026-01-01T00:00:00Z',
+    created_by: meta?.created_by ?? 'user_demo',
+    updated_by: meta?.updated_by ?? 'user_demo',
+  }
+}
+
+/**
+ * What `/settings/saml_config` answers, on every method, exactly as production
+ * does.
+ *
+ * This deployment has no SAML, and the UI is supposed to notice the 404 and
+ * hide the Single sign-on tab. Mocking a working SAML config would make the
+ * mocked build the only place that tab ever appears — and would delete the one
+ * behaviour in this area worth testing. So the 404 is the fixture.
+ */
+const SAML_UNAVAILABLE = {
+  code: 'not_found',
+  message: 'SAML single sign-on is not available on this deployment',
+  http_status_code: 404,
+}
+
+/** Any key outside the table above. A settings store has no wildcard. */
+const SETTING_NOT_FOUND = {
+  code: 'not_found',
+  message: 'Setting not found',
+  http_status_code: 404,
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * `GET /webhooks/dashboard` — the Svix consumer-portal handoff.
+ *
+ * The real response carries a **live Svix credential**, which is why the token
+ * here is visibly fake. A secret-shaped string in a repository is a secret
+ * somebody eventually pastes somewhere, and one that looks real is one nobody
+ * checks. `svix_enabled: false` is the other reachable state — a deployment
+ * with no Svix configured — but the demo wants the panel populated.
+ * ---------------------------------------------------------------------------
+ */
+const WEBHOOK_DEMO_TOKEN = 'sk_app_DEMO_not_a_real_token.us'
+
+const webhookDashboard = {
+  app_id: 'app_01M38QSVIXDEMO0000000001',
+  svix_enabled: true,
+  token: WEBHOOK_DEMO_TOKEN,
+  url: `https://app.svix.com/login#key=${WEBHOOK_DEMO_TOKEN}`,
+}
+
+/*
+ * ---------------------------------------------------------------------------
+ * `GET /tenants/billing` — Flexprice's own bill to Northwind.
+ *
+ * Note which of these numbers disagree with each other, because that is the
+ * point. One entitlement is unlimited (`total_limit: null` — a `?? 0` on it
+ * prints "0" as the cap for the most generous plan there is), one sits at 97.4%
+ * of its cap so the near-the-limit rendering has something to bite on, and no
+ * two rows carry the same figure. Every `usage_percent` is the quotient of the
+ * two columns beside it: a fixture whose percentage disagrees with its own
+ * usage is how a broken percentage calculation survives review.
+ *
+ * `sources` is `[]` on every row deliberately — the live response returned it
+ * empty, so the element shape was never observed, and this file does not invent
+ * records it has not seen.
+ * ---------------------------------------------------------------------------
+ */
+const TENANT_BILLING_PERIOD_START = '2026-09-01T00:00:00Z'
+const TENANT_BILLING_PERIOD_END = '2026-10-01T00:00:00Z'
+
+const tenantBilling = {
+  usage: {
+    customer_id: 'cust_01M38QNWSBILLING00000001',
+    features: [
+      {
+        feature: {
+          id: 'feat_01M38QPLATFORM000000001',
+          name: 'Events ingested',
+          type: 'metered',
+          lookup_key: 'events_ingested',
+          unit_singular: 'event',
+          unit_plural: 'events',
+        },
+        total_limit: 5000000,
+        is_unlimited: false,
+        current_usage: '3182455',
+        usage_percent: '63.65',
+        is_enabled: true,
+        is_soft_limit: true,
+        next_usage_reset_at: TENANT_BILLING_PERIOD_END,
+        sources: [],
+      },
+      {
+        // Near its cap, so the limit column has a row worth warning about.
+        feature: {
+          id: 'feat_01M38QPLATFORM000000002',
+          name: 'Active customers',
+          type: 'metered',
+          lookup_key: 'active_customers',
+          unit_singular: 'customer',
+          unit_plural: 'customers',
+        },
+        total_limit: 500,
+        is_unlimited: false,
+        current_usage: '487',
+        usage_percent: '97.4',
+        is_enabled: true,
+        is_soft_limit: false,
+        next_usage_reset_at: TENANT_BILLING_PERIOD_END,
+        sources: [],
+      },
+      {
+        // The unlimited one: `total_limit` is null, not zero and not absent.
+        feature: {
+          id: 'feat_01M38QPLATFORM000000003',
+          name: 'API requests',
+          type: 'metered',
+          lookup_key: 'api_requests',
+          unit_singular: 'request',
+          unit_plural: 'requests',
+        },
+        total_limit: null,
+        is_unlimited: true,
+        current_usage: '12904331',
+        usage_percent: '0',
+        is_enabled: true,
+        is_soft_limit: false,
+        next_usage_reset_at: TENANT_BILLING_PERIOD_END,
+        sources: [],
+      },
+      {
+        feature: {
+          id: 'feat_01M38QPLATFORM000000004',
+          name: 'Invoices generated',
+          type: 'metered',
+          lookup_key: 'invoices_generated',
+          unit_singular: 'invoice',
+          unit_plural: 'invoices',
+        },
+        total_limit: 10000,
+        is_unlimited: false,
+        current_usage: '1842',
+        usage_percent: '18.42',
+        is_enabled: true,
+        is_soft_limit: true,
+        next_usage_reset_at: TENANT_BILLING_PERIOD_END,
+        sources: [],
+      },
+      {
+        // A static entitlement: counted, never metered, so it never resets.
+        feature: {
+          id: 'feat_01M38QPLATFORM000000005',
+          name: 'Team members',
+          type: 'static',
+          lookup_key: 'team_members',
+          unit_singular: 'seat',
+          unit_plural: 'seats',
+        },
+        total_limit: 25,
+        is_unlimited: false,
+        current_usage: '6',
+        usage_percent: '24',
+        is_enabled: true,
+        is_soft_limit: false,
+        next_usage_reset_at: null,
+        sources: [],
+      },
+    ],
+    // Null here is legitimate: a live tenant on an active monthly plan came
+    // back with no period at all, which is why `PlanUsagePanel` omits the line
+    // rather than printing an epoch. The demo carries one so the populated
+    // branch is the one on screen.
+    period: { start_time: TENANT_BILLING_PERIOD_START, end_time: TENANT_BILLING_PERIOD_END },
+  },
+  subscriptions: [
+    {
+      id: 'subs_01M38QTENANTSUB00000001',
+      customer_id: 'cust_01M38QNWSBILLING00000001',
+      plan_id: 'plan_01M38QFPSCALE0000000001',
+      plan: { id: 'plan_01M38QFPSCALE0000000001', name: 'Scale' },
+      // `subscription_status` is the lifecycle; `status` beside it is the row's
+      // archival state. Not the same field, and the panel reads the first.
+      subscription_status: 'active',
+      status: 'published',
+      currency: 'usd',
+      billing_period: 'MONTHLY',
+      billing_period_count: 1,
+      billing_cadence: 'RECURRING',
+      start_date: '2025-08-11T10:00:00Z',
+      current_period_start: TENANT_BILLING_PERIOD_START,
+      current_period_end: TENANT_BILLING_PERIOD_END,
+      cancel_at_period_end: false,
+      trial_end: null,
+    },
+  ],
+}
+
 function findIndexById(rows: Record<string, unknown>[], id: string): number {
   return rows.findIndex((row) => readString(row, 'id') === id)
 }
@@ -755,12 +1368,7 @@ export const handlers = [
   http.get(`${BASE}/tenant/billing`, () =>
     HttpResponse.text('404 page not found', { status: 404 }),
   ),
-  http.get(`${BASE}/tenants/billing`, () =>
-    HttpResponse.json({
-      subscriptions: [],
-      usage: { features: [], period: null },
-    }),
-  ),
+  http.get(`${BASE}/tenants/billing`, () => HttpResponse.json(tenantBilling)),
 
   http.get(`${BASE}/tenants/:id`, ({ params }) =>
     String(params['id']) === TENANT_ID
@@ -855,6 +1463,87 @@ export const handlers = [
     const index = findIndexById(alertSettings, String(params['id']))
     if (index >= 0) alertSettings.splice(index, 1)
     return new HttpResponse(null, { status: 204 })
+  }),
+
+  /*
+   * `GET|PUT|DELETE /settings/:key`.
+   *
+   * `saml_config` is checked first and on every method, because its 404 is the
+   * contract — see `SAML_UNAVAILABLE`. An unrecognised key 404s too: the store
+   * holds a fixed set of keys, not anything you name.
+   *
+   * These three are registered inside the Settings block rather than beside the
+   * catalogue routes so `:key` cannot shadow a literal path added later; MSW
+   * matches in registration order and `/settings/*` has no siblings.
+   */
+  http.get(`${BASE}/settings/:key`, ({ params }) => {
+    const key = String(params['key'])
+    if (key === 'saml_config') return HttpResponse.json(SAML_UNAVAILABLE, { status: 404 })
+    const value = settingsStore[key] ?? SETTINGS_DEFAULTS[key]
+    if (!value) return HttpResponse.json(SETTING_NOT_FOUND, { status: 404 })
+    return HttpResponse.json(settingsEnvelope(key, value))
+  }),
+
+  /*
+   * The write echoes the `value` it was given back inside the envelope — and
+   * keeps it, so the next GET agrees with what the screen just said happened.
+   * An echo-only mock leaves a saved form reverting on the next refetch, which
+   * looks exactly like a backend that silently dropped the write.
+   */
+  http.put(`${BASE}/settings/:key`, async ({ request, params }) => {
+    const key = String(params['key'])
+    if (key === 'saml_config') return HttpResponse.json(SAML_UNAVAILABLE, { status: 404 })
+    if (!SETTINGS_DEFAULTS[key]) return HttpResponse.json(SETTING_NOT_FOUND, { status: 404 })
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    // The body is `{ value: {...} }`; a caller that sends the payload bare is
+    // tolerated rather than silently storing `{value: undefined}`.
+    const next = (body['value'] ?? body) as SettingsValue
+    settingsStore[key] = next
+    const meta = SETTINGS_META[key]
+    if (meta) meta.updated_at = new Date().toISOString()
+    return HttpResponse.json(settingsEnvelope(key, next))
+  }),
+
+  /*
+   * Delete clears the tenant's override; it does not delete the setting. The
+   * next GET returns `SETTINGS_DEFAULTS[key]`, which is the whole reason the
+   * defaults are a separate table from the seeded values.
+   */
+  http.delete(`${BASE}/settings/:key`, ({ params }) => {
+    const key = String(params['key'])
+    if (key === 'saml_config') return HttpResponse.json(SAML_UNAVAILABLE, { status: 404 })
+    if (!SETTINGS_DEFAULTS[key]) return HttpResponse.json(SETTING_NOT_FOUND, { status: 404 })
+    delete settingsStore[key]
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // The Svix handoff. The token is visibly fake on purpose — see the fixture.
+  http.get(`${BASE}/webhooks/dashboard`, () => HttpResponse.json(webhookDashboard)),
+
+  /*
+   * `GET /taxes/rates` — note the path. `@fp/query`'s docstring calls it
+   * `/taxrates`, but the generated client puts the request on `/taxes/rates`,
+   * and the request is what MSW has to match. Mocking the path the prose
+   * describes rather than the one the client sends is how a handler ends up
+   * looking correct while every request sails past it; that is exactly what
+   * happened here first, and the symptom was the Taxes tab sitting on
+   * "Counting your tax rates…" forever, because an unhandled route is
+   * indistinguishable from a slow one.
+   *
+   * Paging only. The request model has `limit`/`offset` and an `order`
+   * *direction*, but no sort field and no name search, which is why
+   * `fetchTaxRates` filters by status and search on the page. Filtering here
+   * would be the laxer-than-reality mock that makes that client-side filter
+   * look unnecessary right up until somebody removes it.
+   */
+  http.get(`${BASE}/taxes/rates`, ({ request }) => {
+    const url = new URL(request.url)
+    const limit = Number(url.searchParams.get('limit') ?? 25)
+    const offset = Number(url.searchParams.get('offset') ?? 0)
+    return HttpResponse.json({
+      items: taxRates.slice(offset, offset + limit),
+      pagination: { total: taxRates.length, limit, offset },
+    })
   }),
 
   // ---- end Settings -----------------------------------------------------

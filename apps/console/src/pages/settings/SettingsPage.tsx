@@ -13,12 +13,19 @@ import {
 import { AlertRulesPanel } from './AlertRulesPanel'
 import { ApiKeysPanel } from './ApiKeysPanel'
 import { AppearancePanel } from './AppearancePanel'
+import { CurrenciesPanel } from './CurrenciesPanel'
 import { EnvironmentsPanel } from './EnvironmentsPanel'
+import { InvoicesPanel } from './InvoicesPanel'
+import { OnboardingPanel } from './OnboardingPanel'
+import { PortalPanel } from './PortalPanel'
 import { MembersPanel } from './MembersPanel'
 import { PlanUsagePanel } from './PlanUsagePanel'
 import { ProfilePanel } from './ProfilePanel'
 import { RolesPanel } from './RolesPanel'
 import { ServiceAccountsPanel } from './ServiceAccountsPanel'
+import { SubscriptionsPanel } from './SubscriptionsPanel'
+import { WalletAlertsPanel } from './WalletAlertsPanel'
+import { WebhooksPanel } from './WebhooksPanel'
 import { SettingsUnavailable, UNAVAILABLE_COPY } from './SettingsUnavailable'
 import { TaxesPanel } from './TaxesPanel'
 import {
@@ -163,14 +170,28 @@ function SettingsPanel({ section, tabId }: { section: SettingsSectionSpec; tabId
       return <MembersPanel />
     case 'team/roles':
       return <RolesPanel />
+    case 'billing/invoices':
+      return <InvoicesPanel />
+    case 'billing/subscriptions':
+      return <SubscriptionsPanel />
+    case 'billing/currencies':
+      return <CurrenciesPanel />
     case 'billing/taxes':
       return <TaxesPanel />
+    case 'customer-experience/portal':
+      return <PortalPanel />
+    case 'customer-experience/onboarding':
+      return <OnboardingPanel />
     case 'developers/api-keys':
       return <ApiKeysPanel />
     case 'developers/service-accounts':
       return <ServiceAccountsPanel />
+    case 'developers/webhooks':
+      return <WebhooksPanel />
     case 'notifications/alert-rules':
       return <AlertRulesPanel />
+    case 'notifications/wallet-alerts':
+      return <WalletAlertsPanel />
     case 'appearance/theme':
       return <AppearancePanel />
     default:

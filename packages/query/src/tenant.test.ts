@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { TenantStatus, isOverLimit } from '@fp/domain'
-import { toTenant, toTenantBillingUsage, toUpdateTenantRequest } from './tenant'
+import {
+  toTenant,
+  toTenantBillingUsage,
+  toTenantBillingWire,
+  toUpdateTenantRequest,
+} from './tenant'
 
 /** `GET /tenants/{id}` as it came back live, after the SDK camelCased it. */
 const tenantWire = {
@@ -233,5 +238,99 @@ describe('isOverLimit', () => {
     const metered = usage.features[0]
     expect(metered && isOverLimit({ ...metered, currentUsage: '1000001' })).toBe(true)
     expect(metered && isOverLimit({ ...metered, currentUsage: '1000000' })).toBe(false)
+  })
+})
+
+/**
+ * `GET /tenants/billing` — plural, the path the SDK does not have.
+ *
+ * Reached with `fetch`, so this body is the raw JSON: snake_case keys and
+ * timestamps as strings, neither of which a generated client is there to
+ * convert. Trimmed to the fields the mapper reads, from the live response.
+ */
+const rawBilling = {
+  usage: {
+    customer_id: 'cust_01',
+    features: [
+      {
+        feature: { id: 'feat_01', name: 'Events', type: 'metered' },
+        total_limit: 1_000_000,
+        is_unlimited: false,
+        current_usage: '12345',
+        usage_percent: '1.2',
+        is_enabled: true,
+        is_soft_limit: false,
+        next_usage_reset_at: '2026-10-01T00:00:00Z',
+      },
+      {
+        feature: { id: 'feat_02', name: 'Seats', type: 'static' },
+        total_limit: null,
+        is_unlimited: true,
+        current_usage: '3',
+        usage_percent: '0',
+        is_enabled: true,
+        is_soft_limit: false,
+        next_usage_reset_at: null,
+      },
+    ],
+    period: null,
+  },
+  subscriptions: [
+    {
+      id: 'subs_01',
+      plan_id: 'plan_01',
+      plan: { id: 'plan_01', name: 'Free' },
+      subscription_status: 'active',
+      status: 'published',
+      currency: 'usd',
+      billing_period: 'MONTHLY',
+      current_period_start: '2026-09-01T00:00:00Z',
+      current_period_end: '2026-10-01T00:00:00Z',
+      cancel_at_period_end: false,
+      trial_end: null,
+    },
+  ],
+}
+
+describe('toTenantBillingWire', () => {
+  it('normalises the raw body into the shape the SDK would have produced', () => {
+    const usage = toTenantBillingUsage(toTenantBillingWire(rawBilling))
+
+    expect(usage.plans[0]).toMatchObject({
+      subscriptionId: 'subs_01',
+      planId: 'plan_01',
+      planName: 'Free',
+      // `subscription_status`, not `status` — the latter is the row's archival
+      // state, which is not what a plan card means by status.
+      status: 'active',
+      billingPeriod: 'MONTHLY',
+      cancelAtPeriodEnd: false,
+    })
+  })
+
+  it('turns the timestamp strings into dates, and the absent ones into null', () => {
+    const usage = toTenantBillingUsage(toTenantBillingWire(rawBilling))
+
+    expect(usage.plans[0]?.currentPeriodStart).toEqual(new Date('2026-09-01T00:00:00Z'))
+    expect(usage.plans[0]?.trialEnd).toBeNull()
+    // `period` came back null on the live tenant even with an active monthly
+    // subscription, so both ends are genuinely optional.
+    expect(usage.periodStart).toBeNull()
+  })
+
+  it('keeps an unlimited entitlement’s null limit rather than calling it zero', () => {
+    const usage = toTenantBillingUsage(toTenantBillingWire(rawBilling))
+
+    expect(usage.features[1]).toMatchObject({ limit: null, isUnlimited: true })
+    expect(usage.features[0]).toMatchObject({ limit: 1_000_000, currentUsage: '12345' })
+  })
+
+  it('survives a body with nothing in it', () => {
+    expect(toTenantBillingUsage(toTenantBillingWire(null))).toEqual({
+      plans: [],
+      features: [],
+      periodStart: null,
+      periodEnd: null,
+    })
   })
 })

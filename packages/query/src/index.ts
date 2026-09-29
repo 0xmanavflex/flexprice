@@ -23,7 +23,12 @@ export { createQueryClient, shouldRetry } from './client'
 // which the boundary rule forbids. The error shape is part of the door.
 export { ApiError, ErrorKind } from '@fp/api'
 
-export { FlexpriceProvider, useFlexprice, useFlexpriceServerURL } from './provider'
+export {
+  FlexpriceProvider,
+  useFlexprice,
+  useFlexpriceAuth,
+  useFlexpriceServerURL,
+} from './provider'
 export type { FlexpriceProviderProps } from './provider'
 
 export {
@@ -178,12 +183,15 @@ export {
 export type { CreditGrantWire } from './creditGrants'
 
 /**
- * Settings. Five surfaces, five modules — and one absence worth naming here
- * rather than in a bug report: everything behind `GET/PUT/DELETE /settings/:key`
- * (invoice config, subscription config, custom currencies, customer portal,
- * onboarding automation, wallet-balance alerts, SAML) has **no SDK module**,
- * because `settings.go` carries no swagger annotations. Those screens render an
- * unavailable state; there is no hook here to give them, deliberately.
+ * Settings.
+ *
+ * This file used to carry a note saying that everything behind
+ * `GET/PUT/DELETE /settings/:key` had no SDK module, and therefore no hook,
+ * and that those screens should render an unavailable state. The first half
+ * was true and the conclusion was wrong: the routes are live and answer 200
+ * today — only SAML is genuinely absent, and only because the deployment does
+ * not mount it. `settings.ts` is the correction, reaching them the way
+ * `session.ts` reaches the other undocumented routes.
  */
 export {
   fetchMembers,
@@ -223,6 +231,7 @@ export type { ApiKeyPage, ApiKeyQuery, ApiKeyWire, CreateApiKeyWire } from './ap
 export {
   fetchTenant,
   fetchTenantBillingUsage,
+  toTenantBillingWire,
   tenantBillingUsageOrEmpty,
   toTenant,
   toTenantBillingUsage,
@@ -232,6 +241,49 @@ export {
   useUpdateTenant,
 } from './tenant'
 export type { TenantBillingUsageWire, TenantWire } from './tenant'
+
+/**
+ * The `/settings/{key}` family: one query hook and two mutations per key,
+ * plus the SAML read and the Svix portal handoff. Every one of them takes the
+ * active environment id — these records are per environment, and so are their
+ * cache entries. See `settings.ts`.
+ */
+export {
+  toCustomCurrencyConfig,
+  toCustomCurrencyConfigRequest,
+  toCustomerOnboarding,
+  toCustomerOnboardingRequest,
+  toCustomerPortalConfig,
+  toCustomerPortalConfigRequest,
+  toInvoiceConfig,
+  toInvoiceConfigRequest,
+  toSamlConfig,
+  toSubscriptionConfig,
+  toSubscriptionConfigRequest,
+  toWalletAlertConfig,
+  toWalletAlertConfigRequest,
+  useCustomCurrencyConfig,
+  useCustomerOnboarding,
+  useCustomerPortalConfig,
+  useInvoiceConfig,
+  useResetCustomCurrencyConfig,
+  useResetCustomerOnboarding,
+  useResetCustomerPortalConfig,
+  useResetInvoiceConfig,
+  useResetSubscriptionConfig,
+  useResetWalletAlertConfig,
+  useSamlConfig,
+  useSubscriptionConfig,
+  useUpdateCustomCurrencyConfig,
+  useUpdateCustomerOnboarding,
+  useUpdateCustomerPortalConfig,
+  useUpdateInvoiceConfig,
+  useUpdateSubscriptionConfig,
+  useUpdateWalletAlertConfig,
+  useWalletAlertConfig,
+  useWebhookDashboard,
+} from './settings'
+export type { WebhookDashboard } from './settings'
 
 export {
   fetchAlertSettings,

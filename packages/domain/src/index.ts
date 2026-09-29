@@ -306,6 +306,99 @@ export type {
   CreateAlertSetting,
 } from './alertSetting'
 
+/**
+ * The seven `/settings/{key}` records — invoice numbering, subscription
+ * dunning, custom currencies, the customer portal, onboarding automation,
+ * wallet alerts and SAML.
+ *
+ * Enumerated here rather than `export *`-ed, like everything else in this
+ * file, so that what the package offers is readable in one place. The keys
+ * themselves live in `settings/`, one file each — and mind that the
+ * tenant-wide wallet alert config is not the per-entity `alertSetting.ts`
+ * above.
+ */
+export {
+  CUSTOMER_ONBOARDING_WORKFLOW,
+  INVOICE_NUMBER_FORMATS,
+  INVOICE_NUMBER_FORMAT_LABEL,
+  ONBOARDING_ACTION_LABEL,
+  ONBOARDING_WALLET_TYPE_LABEL,
+  OnboardingAction,
+  OnboardingBillingCycle,
+  OnboardingWalletType,
+  PORTAL_TAB_TYPE_LABEL,
+  PortalTabType,
+  SAML_DEFAULT_ROLES,
+  SAML_DEFAULT_ROLE_LABEL,
+  SAML_UNAVAILABLE,
+  createCustomerActionSchema,
+  createFeatureAndPriceActionSchema,
+  createSubscriptionActionSchema,
+  createWalletActionSchema,
+  customCurrencyConfigSchema,
+  customerOnboardingSchema,
+  customerPortalConfigSchema,
+  defaultCustomCurrencyConfig,
+  defaultCustomerOnboarding,
+  defaultInvoiceConfig,
+  defaultSamlConfig,
+  defaultSubscriptionConfig,
+  defaultWalletAlertConfig,
+  emptyCustomCurrency,
+  emptyCustomerPortalConfig,
+  emptyOnboardingAction,
+  invoiceConfigSchema,
+  onboardingActionSchema,
+  orderedSections,
+  orderedTabs,
+  portalMetricCardsSchema,
+  portalSectionSchema,
+  portalTabLabel,
+  portalTabSchema,
+  portalThemeSchema,
+  portalUsageGraphSchema,
+  previewInvoiceNumber,
+  quotedFiatCurrencies,
+  rolloutToSubscriptionsActionSchema,
+  samlConfigSchema,
+  splitDelay,
+  subscriptionConfigSchema,
+  visibleTabTypes,
+  walletAlertConfigSchema,
+  withMetricCards,
+  withSectionEnabled,
+  withSectionOrder,
+  withTabEnabled,
+  withTabOrder,
+  withUsageGraph,
+} from './settings'
+export type {
+  CreateCustomerAction,
+  CreateFeatureAndPriceAction,
+  CreateSubscriptionAction,
+  CreateWalletAction,
+  CustomCurrencyConfig,
+  CustomCurrencyDefinition,
+  CustomerOnboarding,
+  CustomerPortalConfig,
+  InvoiceConfig,
+  InvoiceNumberFormat,
+  OnboardingActionConfig,
+  PortalMetricCards,
+  PortalSection,
+  PortalTab,
+  PortalTheme,
+  PortalUsageGraph,
+  RolloutToSubscriptionsAction,
+  SamlConfig,
+  SamlConfigDraft,
+  SamlDefaultRole,
+  SamlSettings,
+  SubscriptionConfig,
+  WalletAlertConfig,
+  WalletAlertThreshold,
+} from './settings'
+
 export { resetRequestSchema, setPasswordSchema, signInSchema } from './auth'
 export type { ResetRequest, SetPassword, SignInCredentials } from './auth'
 export {
