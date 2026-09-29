@@ -35,7 +35,13 @@ export {
 } from './session'
 export type { CurrentUser, SessionCredentials } from './session'
 
-export { fetchInvoices, isServerFilterable, toInvoice, toInvoiceFilter, useInvoices } from './invoices'
+export {
+  fetchInvoices,
+  isServerFilterable,
+  toInvoice,
+  toInvoiceFilter,
+  useInvoices,
+} from './invoices'
 export type { InvoicePage, InvoiceWire } from './invoices'
 
 export { toOverrideLineItem } from './priceOverrides'
@@ -117,7 +123,13 @@ export type { PriceUnitPage, PriceUnitWire } from './priceUnits'
 export { fetchGroups, toGroup, toGroupFilter, useGroup, useGroups } from './groups'
 export type { GroupPage, GroupWire } from './groups'
 
-export { fetchCostSheets, toCostSheet, toCostSheetFilter, useCostSheet, useCostSheets } from './costSheets'
+export {
+  fetchCostSheets,
+  toCostSheet,
+  toCostSheetFilter,
+  useCostSheet,
+  useCostSheets,
+} from './costSheets'
 export type { CostSheetPage, CostSheetWire } from './costSheets'
 
 export { fetchCustomers, toCustomer, toCustomerFilter, useCustomers } from './customers'
@@ -164,6 +176,76 @@ export {
   useDeleteCreditGrant,
 } from './creditGrants'
 export type { CreditGrantWire } from './creditGrants'
+
+/**
+ * Settings. Five surfaces, five modules — and one absence worth naming here
+ * rather than in a bug report: everything behind `GET/PUT/DELETE /settings/:key`
+ * (invoice config, subscription config, custom currencies, customer portal,
+ * onboarding automation, wallet-balance alerts, SAML) has **no SDK module**,
+ * because `settings.go` carries no swagger annotations. Those screens render an
+ * unavailable state; there is no hook here to give them, deliberately.
+ */
+export {
+  fetchMembers,
+  toCreateServiceAccountRequest,
+  toInviteMemberRequest,
+  toMember,
+  toMemberFilter,
+  useCreateServiceAccount,
+  useDeleteServiceAccount,
+  useInviteMember,
+  useMembers,
+  useRemoveMember,
+  useRenameServiceAccount,
+  useServiceAccounts,
+  useTeamMembers,
+  useUpdateMemberRoles,
+  useUpdateOwnProfile,
+  useUserInfo,
+} from './users'
+export type { MemberPage, UserWire } from './users'
+
+export { toRole, toRoleDetail, toRoleList, useRole, useRoles } from './roles'
+export type { RoleWire } from './roles'
+
+export {
+  DEFAULT_API_KEY_QUERY,
+  fetchApiKeys,
+  toApiKey,
+  toCreateApiKeyRequest,
+  toCreatedApiKey,
+  useApiKeys,
+  useCreateApiKey,
+  useDeleteApiKey,
+} from './apiKeys'
+export type { ApiKeyPage, ApiKeyQuery, ApiKeyWire, CreateApiKeyWire } from './apiKeys'
+
+export {
+  fetchTenant,
+  fetchTenantBillingUsage,
+  tenantBillingUsageOrEmpty,
+  toTenant,
+  toTenantBillingUsage,
+  toUpdateTenantRequest,
+  useTenant,
+  useTenantBillingUsage,
+  useUpdateTenant,
+} from './tenant'
+export type { TenantBillingUsageWire, TenantWire } from './tenant'
+
+export {
+  fetchAlertSettings,
+  toAlertSetting,
+  toAlertSettingFilter,
+  toCreateAlertSettingRequest,
+  toUpdateAlertSettingRequest,
+  useAlertSetting,
+  useAlertSettings,
+  useCreateAlertSetting,
+  useDeleteAlertSetting,
+  useUpdateAlertSetting,
+} from './alertSettings'
+export type { AlertSettingPage, AlertSettingWire } from './alertSettings'
 
 export { useNavCounts } from './counts'
 export type { CountableId } from './counts'

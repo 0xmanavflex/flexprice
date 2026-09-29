@@ -164,6 +164,7 @@ describe('every destination resolves', () => {
     '/invoices',
     '/payments',
     '/taxes',
+    '/settings',
   ]
 
   const destinations = [...NAV, ...SECONDARY].flatMap((entry) => [

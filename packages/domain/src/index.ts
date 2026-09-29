@@ -218,6 +218,94 @@ export {
 } from './taxRate'
 export type { TaxRate, TaxRateQuery } from './taxRate'
 
+/**
+ * Settings: who is in the organisation, what they may do, and what it pays.
+ */
+export {
+  DEFAULT_MEMBER_QUERY,
+  DEFAULT_SERVICE_ACCOUNT_QUERY,
+  MEMBER_TYPE_LABEL,
+  MemberType,
+  createServiceAccountSchema,
+  emptyInvite,
+  emptyServiceAccount,
+  inviteMemberSchema,
+  isServiceAccount,
+  matchesMemberQuery,
+  memberDisplayName,
+  renameMemberSchema,
+} from './user'
+export type { CreateServiceAccount, InviteMember, Member, MemberQuery, RenameMember } from './user'
+
+export {
+  RoleAudience,
+  SUPER_ADMIN_ROLE_ID,
+  grantsEverything,
+  isRoleSelected,
+  isSuperAdminRole,
+  normalizeRoleSelection,
+  summarizePermissions,
+  toggleRole,
+} from './role'
+export type { Role, RolePermission } from './role'
+
+export {
+  API_KEY_STATUS_LABEL,
+  API_KEY_TYPE_LABEL,
+  ApiKeyStatus,
+  ApiKeyType,
+  ISSUABLE_API_KEY_TYPES,
+  createApiKeySchema,
+  emptyApiKey,
+  isActive,
+  isExpired,
+} from './apiKey'
+export type { ApiKey, CreateApiKey, CreatedApiKey } from './apiKey'
+
+export {
+  EMPTY_TENANT_BILLING_USAGE,
+  TenantStatus,
+  emptyAddress,
+  formatAddress,
+  isEmptyAddress,
+  isOverLimit,
+  toUpdateTenantDraft,
+  updateTenantSchema,
+} from './tenant'
+export type {
+  Tenant,
+  TenantAddress,
+  TenantBillingUsage,
+  TenantFeatureUsage,
+  TenantPlan,
+  UpdateTenant,
+} from './tenant'
+
+export {
+  ALERT_CONDITION_LABEL,
+  ALERT_ENTITY_TYPE_LABEL,
+  ALERT_SEVERITY_LABEL,
+  ALERT_SEVERITY_ORDER,
+  ALERT_THRESHOLD_TYPE_LABEL,
+  AlertCondition,
+  AlertEntityType,
+  AlertSeverity,
+  AlertThresholdType,
+  alertSettingConfigSchema,
+  configuredSeverities,
+  createAlertSettingSchema,
+  emptyAlertSettingConfig,
+  toAlertSettingConfig,
+  DEFAULT_ALERT_SETTING_QUERY,
+} from './alertSetting'
+export type {
+  AlertSetting,
+  AlertSettingConfig,
+  AlertSettingQuery,
+  AlertThreshold,
+  CreateAlertSetting,
+} from './alertSetting'
+
 export { resetRequestSchema, setPasswordSchema, signInSchema } from './auth'
 export type { ResetRequest, SetPassword, SignInCredentials } from './auth'
 export {

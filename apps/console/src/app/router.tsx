@@ -107,6 +107,10 @@ const TaxListPage = lazy(() =>
 )
 import { parseTaxSearch } from './taxSearch'
 import { DEFAULT_TAX_RATE_QUERY, type TaxRateQuery } from '@fp/domain'
+const SettingsPage = lazy(() =>
+  import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
+)
+import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from './settingsSearch'
 const FeatureDetailPage = lazy(() =>
   import('@/pages/features/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })),
 )
@@ -915,6 +919,54 @@ function TaxesRouteComponent() {
   )
 }
 
+/**
+ * Settings, with both navigation levels in the address bar.
+ *
+ * The section rail and the tab strip inside it are each a search param, so a
+ * link lands on the exact panel rather than one level short of it. `parseSettingsSearch`
+ * is total and resolves the tab *against* the section, so a stale or
+ * hand-edited pair (`?section=developers&tab=members` — two real ids that do
+ * not go together) degrades to something coherent instead of rendering blank.
+ *
+ * `stripSearchParams` keeps the default pair out of the URL, so the address is
+ * `/settings` rather than `/settings?section=organization&tab=profile`.
+ */
+const settingsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/settings',
+  validateSearch: (search: Record<string, unknown>): SettingsQuery => parseSettingsSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_SETTINGS_QUERY)] },
+  component: SettingsRouteComponent,
+})
+
+function SettingsRouteComponent() {
+  const { section, tab } = useSearch({ from: settingsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <SettingsPage
+      sectionId={section}
+      tabId={tab}
+      /*
+       * One navigation for both ids. Changing section also changes tab — the
+       * shell reports only the section, and the page picks that section's
+       * first tab — and writing them separately would put an impossible pair
+       * in the URL for one render and cost two entries of history.
+       *
+       * `replace` because flipping through tabs should not fill the Back
+       * stack, same as every list route here.
+       */
+      onNavigate={(nextSection, nextTab) =>
+        void navigate({
+          to: '/settings',
+          search: { section: nextSection, tab: nextTab },
+          replace: true,
+        })
+      }
+    />
+  )
+}
+
 export const routeTree = rootRoute.addChildren([
   signInRoute,
   shellRoute.addChildren([
@@ -942,6 +994,7 @@ export const routeTree = rootRoute.addChildren([
     invoicesRoute,
     paymentsRoute,
     taxesRoute,
+    settingsRoute,
     subscriptionCreateRoute,
     ...placeholderRoutes,
   ]),

@@ -137,3 +137,5 @@ export {
   EnvironmentCreateDialogProvenance,
 } from './EnvironmentCreateDialog'
 export type { EnvironmentCreateDialogProps } from './EnvironmentCreateDialog'
+export { SettingsShell, SettingsShellProvenance } from './SettingsShell'
+export type { SettingsSection, SettingsShellProps, SettingsTab } from './SettingsShell'

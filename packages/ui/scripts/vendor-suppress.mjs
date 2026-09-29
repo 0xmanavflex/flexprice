@@ -31,6 +31,16 @@ const VENDORED = [
   // fixture data. They are a starting point to adapt, not code we maintain —
   // same rule, same treatment.
   'src/components/blocks/**/*.{ts,tsx}',
+  /*
+   * Registry hooks land here, and every file in `hooks/` comes from the
+   * registry — `use-mobile` and `use-file-upload` are both declared
+   * `registryDependencies` of the blocks that pulled them in. The directory was
+   * missing from this list, so installing `settings-7` dropped an unsuppressed
+   * `use-file-upload.ts` that fails `exactOptionalPropertyTypes` and broke
+   * typecheck for the whole workspace. If a hand-written hook ever belongs
+   * here, move it out or narrow this glob — do not let it be suppressed.
+   */
+  'src/hooks/**/*.{ts,tsx}',
   // `c-*` examples are the same: vendored reference use-cases we read and adapt,
   // authored against looser settings than our strict tsconfig.
   'src/components/examples/**/*.{ts,tsx}',

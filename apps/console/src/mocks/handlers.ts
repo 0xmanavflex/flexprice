@@ -238,6 +238,279 @@ const environments: Record<string, unknown>[] = [
   },
 ]
 
+/*
+ * ---------------------------------------------------------------------------
+ * Settings.
+ *
+ * The capture environment had no people, roles, keys or alert rules in it, so
+ * unlike the catalogue corpora these rows are **authored**. They are authored
+ * to the wire shapes the generated SDK parses, not to the domain models the
+ * hooks return, because MSW sits on the wire: `SecretResponse`, `TenantResponse`
+ * and `AlertSettingsResponse` are snake_case and the SDK remaps them to
+ * camelCase after parsing, so a camelCase mock here would arrive as a record of
+ * undefineds and render a table of dashes that nothing in the type system would
+ * catch. `UserResponse` is the exception — it is flat single-word keys with no
+ * remapping at all, and it genuinely has **no `created_at` and no `status`**,
+ * which is why the members table has no "Joined" column.
+ *
+ * They are also mutable: invite, rename, role change and delete all write back
+ * into these arrays, so a settings screen can be used end to end under mocks
+ * rather than merely looked at. Same choice as the environments handler above,
+ * for the same reason — a create that only echoes leaves the list disagreeing
+ * with what the screen just said happened.
+ * ---------------------------------------------------------------------------
+ */
+
+const TENANT_ID = 'tenant_demo'
+const TENANT_REF = { id: TENANT_ID, name: 'Northwind Systems' }
+
+/** `UserResponse`: flat, single-word keys, no snake_case, no timestamps. */
+const users: Record<string, unknown>[] = [
+  {
+    id: 'user_demo',
+    name: 'Dana Whitfield',
+    email: 'demo@flexprice.io',
+    type: 'user',
+    roles: ['super_admin'],
+    tenant: TENANT_REF,
+  },
+  {
+    id: 'user_01M38QUSER0000000000002',
+    name: 'Amara Osei',
+    email: 'amara@northwind.example',
+    type: 'user',
+    roles: ['all_writer'],
+    tenant: TENANT_REF,
+  },
+  {
+    id: 'user_01M38QUSER0000000000003',
+    name: 'Tomas Lind',
+    email: 'tomas@northwind.example',
+    type: 'user',
+    roles: ['all_reader', 'event_reader'],
+    tenant: TENANT_REF,
+  },
+  {
+    id: 'user_01M38QUSER0000000000004',
+    name: '',
+    email: 'finance@northwind.example',
+    type: 'user',
+    roles: ['all_reader'],
+    tenant: TENANT_REF,
+  },
+  {
+    id: 'svc_01M38QSVC00000000000001',
+    name: 'usage-ingest',
+    email: '',
+    type: 'service_account',
+    roles: ['event_ingestor'],
+    tenant: TENANT_REF,
+  },
+  {
+    id: 'svc_01M38QSVC00000000000002',
+    name: 'billing-reconciler',
+    email: '',
+    type: 'service_account',
+    roles: ['all_reader'],
+    tenant: TENANT_REF,
+  },
+]
+
+/**
+ * `GET /rbac/roles` answers `{ roles: [...] }` — not the `{items, pagination}`
+ * envelope every other list uses, and with no total. The route has no response
+ * model in the OpenAPI document, so the SDK validates nothing and this shape is
+ * the only contract there is. `permissions` is an object keyed by resource, not
+ * an array.
+ */
+const roles: Record<string, unknown>[] = [
+  {
+    id: 'super_admin',
+    name: 'Super admin',
+    description: 'Every action on every resource, including managing members.',
+    permissions: { '*': ['*'] },
+  },
+  {
+    id: 'all_writer',
+    name: 'Writer',
+    description: 'Can read and change everything except members and roles.',
+    permissions: {
+      plan: ['read', 'write'],
+      customer: ['read', 'write'],
+      invoice: ['read', 'write'],
+      subscription: ['read', 'write'],
+      event: ['read', 'write'],
+    },
+  },
+  {
+    id: 'all_reader',
+    name: 'Reader',
+    description: 'Can see everything and change nothing.',
+    permissions: {
+      plan: ['read'],
+      customer: ['read'],
+      invoice: ['read'],
+      subscription: ['read'],
+      event: ['read'],
+    },
+  },
+  {
+    id: 'event_ingestor',
+    name: 'Event ingestor',
+    description: 'Can send usage events and nothing else. The right role for a meter.',
+    permissions: { event: ['write'] },
+  },
+  {
+    id: 'event_reader',
+    name: 'Event reader',
+    description: 'Can read raw usage events, to trace a bill back to what caused it.',
+    permissions: { event: ['read'] },
+  },
+]
+
+/**
+ * A service account cannot hold every role a person can — `all_writer` is
+ * filtered out of the live service-account list. Reproduced, because the Roles
+ * tab renders the difference.
+ */
+const SERVICE_ACCOUNT_ROLE_IDS = ['super_admin', 'all_reader', 'event_ingestor', 'event_reader']
+
+/** `SecretResponse`: snake_case on the wire. `null` means never, not unknown. */
+const apiKeys: Record<string, unknown>[] = [
+  {
+    id: 'key_01M38QKEY00000000000001',
+    name: 'Production ingest',
+    display_id: 'fp_live_••••4f2a',
+    type: 'private_key',
+    status: 'published',
+    roles: ['event_ingestor'],
+    user_id: 'svc_01M38QSVC00000000000001',
+    user_type: 'service_account',
+    service_account_name: 'usage-ingest',
+    provider: 'flexprice',
+    created_at: '2026-03-04T09:12:00Z',
+    updated_at: '2026-03-04T09:12:00Z',
+    expires_at: null,
+    last_used_at: '2026-09-28T22:41:07Z',
+  },
+  {
+    id: 'key_01M38QKEY00000000000002',
+    name: 'Pricing page',
+    display_id: 'fp_pub_••••91c7',
+    type: 'publishable_key',
+    status: 'published',
+    roles: ['all_reader'],
+    user_id: 'user_demo',
+    user_type: 'user',
+    service_account_name: '',
+    provider: 'flexprice',
+    created_at: '2026-06-19T14:03:00Z',
+    updated_at: '2026-06-19T14:03:00Z',
+    expires_at: '2027-06-19T00:00:00Z',
+    last_used_at: null,
+  },
+  {
+    id: 'key_01M38QKEY00000000000003',
+    name: 'Migration script',
+    display_id: 'fp_live_••••0dd1',
+    type: 'private_key',
+    status: 'archived',
+    roles: ['all_writer'],
+    user_id: 'user_01M38QUSER0000000000002',
+    user_type: 'user',
+    service_account_name: '',
+    provider: 'flexprice',
+    created_at: '2025-11-02T08:00:00Z',
+    updated_at: '2026-01-15T11:22:00Z',
+    expires_at: '2026-02-01T00:00:00Z',
+    last_used_at: '2026-01-14T19:55:00Z',
+  },
+]
+
+/** `TenantResponse`: `billing_details`, and an address whose keys are prefixed. */
+const tenant: Record<string, unknown> = {
+  id: TENANT_ID,
+  name: 'Northwind Systems',
+  status: 'published',
+  billing_details: {
+    email: 'billing@northwind.example',
+    help_email: 'support@northwind.example',
+    phone: '+1 555 0142',
+    address: {
+      address_line1: '188 Harborside Way',
+      address_line2: 'Floor 4',
+      address_city: 'Portland',
+      address_state: 'OR',
+      address_postal_code: '97209',
+      address_country: 'US',
+    },
+  },
+  created_at: '2025-08-11T10:00:00Z',
+  updated_at: '2026-09-02T16:30:00Z',
+}
+
+/** `AlertSettingsResponse`: per-entity rules, thresholds as decimal strings. */
+const alertSettings: Record<string, unknown>[] = [
+  {
+    id: 'alert_01M38QALERT000000000001',
+    entity_id: 'wallet_01M38QWAL00000000000001',
+    entity_type: 'wallet',
+    parent_entity_id: 'cust_01M38QCUST0000000000001',
+    parent_entity_type: 'customer',
+    enabled: true,
+    status: 'published',
+    config: {
+      alert_enabled: true,
+      alert_threshold_type: 'percentage',
+      info: null,
+      warning: { condition: 'below', threshold: '25' },
+      critical: { condition: 'below', threshold: '10' },
+    },
+    created_at: '2026-05-20T12:00:00Z',
+    updated_at: '2026-08-01T09:30:00Z',
+  },
+  {
+    id: 'alert_01M38QALERT000000000002',
+    entity_id: 'feat_01M38QFEAT0000000000001',
+    entity_type: 'feature',
+    parent_entity_id: '',
+    parent_entity_type: '',
+    enabled: true,
+    status: 'published',
+    config: {
+      alert_enabled: true,
+      alert_threshold_type: 'percentage',
+      info: { condition: 'above', threshold: '50' },
+      warning: { condition: 'above', threshold: '80' },
+      critical: { condition: 'above', threshold: '95' },
+    },
+    created_at: '2026-06-02T08:15:00Z',
+    updated_at: '2026-06-02T08:15:00Z',
+  },
+  {
+    id: 'alert_01M38QALERT000000000003',
+    entity_id: 'subs_01M38QSUB00000000000001',
+    entity_type: 'subscription',
+    parent_entity_id: '',
+    parent_entity_type: '',
+    enabled: false,
+    status: 'published',
+    config: {
+      alert_enabled: false,
+      alert_threshold_type: 'absolute',
+      info: null,
+      warning: { condition: 'above', threshold: '10000' },
+      critical: null,
+    },
+    created_at: '2026-02-14T17:45:00Z',
+    updated_at: '2026-07-19T13:10:00Z',
+  },
+]
+
+function findIndexById(rows: Record<string, unknown>[], id: string): number {
+  return rows.findIndex((row) => readString(row, 'id') === id)
+}
+
 export const handlers = [
   // Environments. Unlike the create handlers further down — which echo the
   // record back and leave the corpus alone — this one appends, because the
@@ -305,6 +578,286 @@ export const handlers = [
 
   // Charges and entitlements, scoped by entity — the plan detail page's tabs.
   search('/entitlements/search', 'entitlements'),
+
+  /*
+   * ---- Settings ---------------------------------------------------------
+   *
+   * `/users/me` and `/users/:id` are registered in that order on purpose: MSW
+   * matches in registration order, and `:id` would otherwise swallow `me` and
+   * try to rename the current user to whatever a role update sent.
+   */
+
+  http.get(`${BASE}/users/me`, () => HttpResponse.json(users[0])),
+
+  /*
+   * `POST /users/search` honours `type` and the paging window, and **ignores
+   * `filters` and `roles`** — because the real endpoint does. Verified live: a
+   * `contains` filter came back with a row that cannot match it. Honouring them
+   * here would be the laxer-than-reality mock that hides the bug until
+   * production, and the Members tab is built around the truth (it narrows the
+   * page it received, and says so on screen).
+   */
+  http.post(`${BASE}/users/search`, async ({ request }) => {
+    const body = ((await request.json().catch(() => ({}))) ?? {}) as {
+      type?: string
+      limit?: number
+      offset?: number
+    }
+    // A missing `type` returns nothing on the live API, rather than everyone.
+    const rows = body.type ? users.filter((row) => readString(row, 'type') === body.type) : []
+    const offset = body.offset ?? 0
+    const limit = body.limit ?? 25
+
+    return HttpResponse.json({
+      items: rows.slice(offset, offset + limit),
+      pagination: { total: rows.length, limit, offset },
+    })
+  }),
+
+  http.post(`${BASE}/users`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const type = readString(body, 'type') || 'user'
+    const created = {
+      id: `${type === 'service_account' ? 'svc' : 'user'}_mock_${Date.now()}`,
+      name: readString(body, 'name'),
+      email: readString(body, 'email'),
+      type,
+      roles: Array.isArray(body['roles']) ? body['roles'] : [],
+      tenant: TENANT_REF,
+    }
+    users.push(created)
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
+  http.put(`${BASE}/users/me`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const me = users[0]
+    if (me) me['name'] = readString(body, 'name')
+    return HttpResponse.json(me)
+  }),
+
+  http.put(`${BASE}/users/:id/roles`, async ({ request, params }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const index = findIndexById(users, String(params['id']))
+    const row = users[index]
+    if (!row) return new HttpResponse(null, { status: 404 })
+    row['roles'] = Array.isArray(body['roles']) ? body['roles'] : []
+    return HttpResponse.json(row)
+  }),
+
+  // 204 with an empty body, not a 200 with `{}`: the generated client matches
+  // this one on status alone, and a 200 falls through to no matcher at all.
+  http.post(`${BASE}/users/:id/remove`, ({ params }) => {
+    const index = findIndexById(users, String(params['id']))
+    if (index >= 0) users.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.put(`${BASE}/users/:id`, async ({ request, params }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const index = findIndexById(users, String(params['id']))
+    const row = users[index]
+    if (!row) return new HttpResponse(null, { status: 404 })
+    row['name'] = readString(body, 'name')
+    return HttpResponse.json(row)
+  }),
+
+  http.delete(`${BASE}/users/:id`, ({ params }) => {
+    const index = findIndexById(users, String(params['id']))
+    if (index >= 0) users.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // RBAC answers `{roles}` / `{role}`, not the `{items, pagination}` envelope.
+  http.get(`${BASE}/rbac/roles`, ({ request }) => {
+    const audience = new URL(request.url).searchParams.get('user_type')
+    const rows =
+      audience === 'service_account'
+        ? roles.filter((role) => SERVICE_ACCOUNT_ROLE_IDS.includes(readString(role, 'id')))
+        : roles
+    return HttpResponse.json({ roles: rows })
+  }),
+  http.get(`${BASE}/rbac/roles/:id`, ({ params }) => {
+    const role = roles.find((row) => readString(row, 'id') === String(params['id']))
+    return role ? HttpResponse.json({ role }) : new HttpResponse(null, { status: 404 })
+  }),
+
+  http.get(`${BASE}/secrets/api/keys`, ({ request }) => {
+    const url = new URL(request.url)
+    const status = url.searchParams.get('status')
+    const limit = Number(url.searchParams.get('limit') ?? 25)
+    const offset = Number(url.searchParams.get('offset') ?? 0)
+    const rows = status ? apiKeys.filter((row) => readString(row, 'status') === status) : apiKeys
+
+    return HttpResponse.json({
+      items: rows.slice(offset, offset + limit),
+      pagination: { total: rows.length, limit, offset },
+    })
+  }),
+
+  /*
+   * The create response inverts what you would guess: the **secret string** is
+   * under `api_key`, and the **key record** is under `secret`. Shaped that way
+   * because that is what the API sends, and `toCreatedApiKey` reads it that
+   * way. This is the only time the material is ever returned.
+   */
+  http.post(`${BASE}/secrets/api/keys`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const type = readString(body, 'type') || 'private_key'
+    const expiresAt = readString(body, 'expires_at')
+    const record = {
+      id: `key_mock_${Date.now()}`,
+      name: readString(body, 'name'),
+      display_id: `fp_${type === 'publishable_key' ? 'pub' : 'live'}_••••${Date.now() % 10000}`,
+      type,
+      status: 'published',
+      roles: [],
+      user_id: 'user_demo',
+      user_type: 'user',
+      service_account_name: '',
+      provider: 'flexprice',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+      expires_at: expiresAt || null,
+      last_used_at: null,
+    }
+    apiKeys.unshift(record)
+
+    return HttpResponse.json(
+      {
+        api_key: `fp_${type === 'publishable_key' ? 'pub' : 'live'}_sk_${Math.random().toString(36).slice(2)}${Date.now().toString(36)}`,
+        secret: record,
+      },
+      { status: 201 },
+    )
+  }),
+
+  http.delete(`${BASE}/secrets/api/keys/:id`, ({ params }) => {
+    const index = findIndexById(apiKeys, String(params['id']))
+    if (index >= 0) apiKeys.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  /*
+   * The tenant billing-usage route, reproduced as it actually behaves.
+   *
+   * `@flexprice/sdk@2.1.30` requests `GET /v1/tenant/billing` — singular — and
+   * the deployed route is `GET /v1/tenants/billing`. So the singular path
+   * answers 404 here too, exactly as it does live (same `text/plain` body), and
+   * the Plan & usage panel renders the unavailable state naming the typo.
+   *
+   * Serving the data from the singular path instead would make the mocked build
+   * the only place this screen has ever worked, and would quietly delete the
+   * one bug this panel exists to report. The plural handler below is where the
+   * data lives, ready for the day the OpenAPI path gains its `s` — nothing
+   * requests it today.
+   */
+  http.get(`${BASE}/tenant/billing`, () =>
+    HttpResponse.text('404 page not found', { status: 404 }),
+  ),
+  http.get(`${BASE}/tenants/billing`, () =>
+    HttpResponse.json({
+      subscriptions: [],
+      usage: { features: [], period: null },
+    }),
+  ),
+
+  http.get(`${BASE}/tenants/:id`, ({ params }) =>
+    String(params['id']) === TENANT_ID
+      ? HttpResponse.json(tenant)
+      : // Asking for anybody else's tenant is a 403 on the live API, not a 404.
+        HttpResponse.json(
+          { code: 'permission_denied', message: 'Forbidden', http_status_code: 403 },
+          { status: 403 },
+        ),
+  ),
+
+  // Note the path: no id. The tenant being updated is the token's own.
+  http.put(`${BASE}/tenants/update`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    if (typeof body['name'] === 'string') tenant['name'] = body['name']
+    if (body['billing_details'] && typeof body['billing_details'] === 'object') {
+      tenant['billing_details'] = body['billing_details']
+    }
+    tenant['updated_at'] = new Date().toISOString()
+    return HttpResponse.json(tenant)
+  }),
+
+  // `/alerts/setting` — plural noun, singular setting. That is the real path.
+  http.post(`${BASE}/alerts/setting/search`, async ({ request }) => {
+    const body = ((await request.json().catch(() => ({}))) ?? {}) as {
+      entity_type?: string
+      entity_id?: string
+      enabled?: boolean
+      limit?: number
+      offset?: number
+    }
+    let rows = [...alertSettings]
+    if (body.entity_type) {
+      rows = rows.filter((row) => readString(row, 'entity_type') === body.entity_type)
+    }
+    if (body.entity_id) {
+      rows = rows.filter((row) => readString(row, 'entity_id') === body.entity_id)
+    }
+    if (body.enabled !== undefined) {
+      rows = rows.filter((row) => row['enabled'] === body.enabled)
+    }
+    const offset = body.offset ?? 0
+    const limit = body.limit ?? 25
+
+    return HttpResponse.json({
+      items: rows.slice(offset, offset + limit),
+      pagination: { total: rows.length, limit, offset },
+    })
+  }),
+
+  http.post(`${BASE}/alerts/setting`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const created = {
+      id: `alert_mock_${Date.now()}`,
+      entity_id: readString(body, 'entity_id'),
+      entity_type: readString(body, 'entity_type'),
+      parent_entity_id: readString(body, 'parent_entity_id'),
+      parent_entity_type: readString(body, 'parent_entity_type'),
+      enabled: true,
+      status: 'published',
+      config: body['config'] ?? {},
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    }
+    alertSettings.push(created)
+    return HttpResponse.json(created, { status: 201 })
+  }),
+
+  http.get(`${BASE}/alerts/setting/:id`, ({ params }) => {
+    const row = alertSettings.find((entry) => readString(entry, 'id') === String(params['id']))
+    return row ? HttpResponse.json(row) : new HttpResponse(null, { status: 404 })
+  }),
+
+  /*
+   * The update takes `{ config }` and nothing else — no `entity_id`, no
+   * `entity_type`. An alert cannot be repointed at a different entity after it
+   * is created, which is why the editor shows what it watches as read-only.
+   */
+  http.put(`${BASE}/alerts/setting/:id`, async ({ request, params }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const index = findIndexById(alertSettings, String(params['id']))
+    const row = alertSettings[index]
+    if (!row) return new HttpResponse(null, { status: 404 })
+    const config = (body['config'] ?? {}) as Record<string, unknown>
+    row['config'] = config
+    row['enabled'] = config['alert_enabled'] ?? row['enabled']
+    row['updated_at'] = new Date().toISOString()
+    return HttpResponse.json(row)
+  }),
+
+  http.delete(`${BASE}/alerts/setting/:id`, ({ params }) => {
+    const index = findIndexById(alertSettings, String(params['id']))
+    if (index >= 0) alertSettings.splice(index, 1)
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  // ---- end Settings -----------------------------------------------------
 
   // Entities the capture environment had nothing in are deliberately absent.
   // An empty list from a real endpoint is a state worth seeing; a fabricated

@@ -1,3 +1,5 @@
+// @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
+// Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
 import * as React from "react"
 
 const MOBILE_BREAKPOINT = 768

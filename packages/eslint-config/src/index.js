@@ -11,11 +11,22 @@ import { architecture } from './architecture.js'
  * upstream fix stays a re-install, so linting them to our standards would only
  * ever produce edits that the next install destroys.
  */
+/**
+ * Where registry code lands.
+ *
+ * This list must stay in step with `VENDORED` in
+ * `packages/ui/scripts/vendor-suppress.mjs` — that one decides which files get
+ * a `@ts-nocheck` header, this one decides which files are allowed to have
+ * one. They drifted once: `src/hooks/**` was in neither, so installing a block
+ * that pulled in `use-file-upload` broke typecheck, and adding it to only the
+ * suppress list then broke lint on the very header that fixed it.
+ */
 const VENDORED = [
   'packages/ui/src/components/reui/**',
   'packages/ui/src/primitives/**',
   'packages/ui/src/components/blocks/**',
   'packages/ui/src/components/examples/**',
+  'packages/ui/src/hooks/**',
 ]
 
 export const config = [

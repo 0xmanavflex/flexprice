@@ -158,16 +158,7 @@ export const PLACEHOLDER_ROUTES = [
     cta: 'Connect an integration',
     legacy: '/tools/integrations',
   },
-  {
-    path: '/settings',
-    title: 'Settings',
-    description: 'Your organisation, its members, and how billing behaves by default.',
-    emptyTitle: 'Nothing configured yet',
-    emptyDescription:
-      'Your organisation, its members, and how billing behaves by default.',
-    cta: null,
-    legacy: '/settings',
-  },
+  // `/settings` is a real page now — see `settingsRoute` in router.tsx.
   {
     path: '/docs',
     title: 'Documentation',

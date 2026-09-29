@@ -18,7 +18,8 @@ export const queryKeys = {
   },
   customers: {
     all: () => ['customers'] as const,
-    list: (filter: Readonly<Record<string, unknown>> = {}) => ['customers', 'list', filter] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['customers', 'list', filter] as const,
     detail: (id: string) => ['customers', 'detail', id] as const,
   },
   subscriptions: {
@@ -100,5 +101,37 @@ export const queryKeys = {
     all: () => ['creditGrants'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['creditGrants', 'list', filter] as const,
+  },
+  // Settings. People and service accounts share one key space because they
+  // share one endpoint: inviting a member and creating a service account both
+  // have to invalidate the other screen's list, and a single prefix is what
+  // makes that one call rather than two that can drift apart.
+  members: {
+    all: () => ['members'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['members', 'list', filter] as const,
+    /** The signed-in member's own record, which has no id in its route. */
+    me: () => ['members', 'me'] as const,
+  },
+  roles: {
+    all: () => ['roles'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['roles', 'list', filter] as const,
+    detail: (id: string) => ['roles', 'detail', id] as const,
+  },
+  apiKeys: {
+    all: () => ['apiKeys'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['apiKeys', 'list', filter] as const,
+  },
+  // The organisation and the bill Flexprice sends it are one prefix: editing
+  // the tenant can change the billing contact the usage panel prints.
+  tenant: {
+    all: () => ['tenant'] as const,
+    detail: (id: string) => ['tenant', 'detail', id] as const,
+    billingUsage: () => ['tenant', 'billingUsage'] as const,
+  },
+  alertSettings: {
+    all: () => ['alertSettings'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['alertSettings', 'list', filter] as const,
+    detail: (id: string) => ['alertSettings', 'detail', id] as const,
   },
 } as const
