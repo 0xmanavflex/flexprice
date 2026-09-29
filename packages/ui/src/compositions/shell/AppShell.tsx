@@ -176,63 +176,45 @@ export function AppShell({
 }: AppShellProps) {
   return (
     <SidebarProvider
+      // The sidebar remembers whether it is expanded or the compact 64px icon
+      // rail (the provider persists the choice), and both are polished — the
+      // rail is a quiet column of icons with flyouts. Width lives in styles.css;
+      // colours too. (To make the rail the first-load default for everyone, pass
+      // `defaultOpen={false}` here.)
       className={cn('bg-sidebar h-screen', FLUX)}
-      /*
-       * Width only. The sidebar's colours live in `styles.css` under `:root`
-       * and `.dark` — set here, they were a fixed light grey that survived the
-       * theme switch, so dark mode rendered light text on a light sidebar.
-       */
       style={{ '--sidebar-width': '260px' } as CSSProperties}
     >
       {/*
-        Collapsed, a tooltip is the only thing naming a row — so it cannot wait
-        600ms, which is Base UI's default when no provider sets one. Without
-        this the icon rail feels broken before it feels slow.
+        Collapsed, a tooltip is the only thing naming a row. ~300ms is the
+        hover-intent delay: prompt enough that the rail never feels broken, long
+        enough that sweeping the cursor down the column does not flash a tooltip
+        on every icon it passes.
       */}
 
-      <TooltipProvider delay={0}>
+      <TooltipProvider delay={300}>
       <ShellRailHandle />
       <Sidebar collapsible="icon" variant="inset" aria-label="Main">
         <SidebarHeader className="gap-2">
-          <div className="flex items-center justify-between gap-2 in-data-[state=collapsed]:flex-col in-data-[state=collapsed]:items-start">
-            <div className="flex min-h-9 items-center gap-2 px-0.5">
-              {logo ?? (
-                <span
-                  aria-hidden
-                  className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold"
-                >
-                  F
-                </span>
-              )}
-              <span className="truncate text-sm font-medium in-data-[state=collapsed]:hidden">
-                {productName}
-              </span>
-            </div>
-
-            {/*
-              Only the bell. There was a collapse trigger beside it, which the
-              edge handle now replaces — and two controls that do the same
-              thing, one of them permanently in the corner of the rail, is one
-              too many for a 48px column.
-            */}
-            <div className="flex items-center gap-0.5 in-data-[state=collapsed]:flex-col">
-              <ShellNotifications
-                notifications={notifications}
-                isLoading={notificationsLoading}
-                error={notificationsError}
-                {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
-                {...(onOpenNotification ? { onOpenNotification } : {})}
-              />
-              <ThemeToggle />
-            </div>
-          </div>
           {/*
-            The header is the brand and nothing else now. The environment
-            switcher used to sit here; it has moved to the head of the
-            breadcrumb, where it reads while you work rather than in a corner you
-            stop looking at — and choosing an environment is a navigation, which
-            is what the top of the page is for.
+            The brand mark, and nothing else. Bell and Theme have moved to the
+            top header's utility cluster (beside Search), so the rail is purely
+            product navigation — no utilities competing with it. The environment
+            switcher lives at the head of the breadcrumb, where it reads while
+            you work.
           */}
+          <div className="flex min-h-9 items-center gap-2 px-0.5">
+            {logo ?? (
+              <span
+                aria-hidden
+                className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold"
+              >
+                F
+              </span>
+            )}
+            <span className="truncate text-sm font-medium in-data-[state=collapsed]:hidden">
+              {productName}
+            </span>
+          </div>
         </SidebarHeader>
 
         <SidebarContent>
@@ -292,8 +274,18 @@ export function AppShell({
               long breadcrumb; the crumbs truncate instead, which is the order
               of sacrifice that keeps Create reachable at 390.
             */}
-            <div className="ml-auto flex shrink-0 items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
               <ShellSearch {...(onSearch ? { onSearch } : {})} />
+              {/* Utilities, out of the nav rail and into the header where the
+                  other account-level controls live. */}
+              <ShellNotifications
+                notifications={notifications}
+                isLoading={notificationsLoading}
+                error={notificationsError}
+                {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
+                {...(onOpenNotification ? { onOpenNotification } : {})}
+              />
+              <ThemeToggle />
               {headerActions}
             </div>
           </div>

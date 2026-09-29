@@ -20,7 +20,7 @@ import {
   useSidebar,
 } from '@ui/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
-import { MENU_CONTENT, MENU_ITEM, MENU_LABEL } from './menuSurface'
+import { MENU_ITEM, MENU_LABEL } from './menuSurface'
 import type { ShellNavGroup, ShellNavItem } from './types'
 
 /**
@@ -69,7 +69,7 @@ function Count({ value }: { value: number }) {
   // aria-hidden (the row states the count in its own label), so this is purely
   // visual.
   return (
-    <SidebarMenuBadge aria-hidden className="font-normal text-sidebar-foreground/55">
+    <SidebarMenuBadge aria-hidden className="text-[var(--sidebar-count)] text-xs font-normal">
       {value}
     </SidebarMenuBadge>
   )
@@ -110,14 +110,24 @@ function CollapsedParent({
           {item.icon}
           <span>{item.label}</span>
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="right" align="start" sideOffset={8} className={MENU_CONTENT}>
+        <DropdownMenuContent side="right" align="start" sideOffset={8} className="w-56">
           <DropdownMenuGroup>
-            <DropdownMenuLabel className={MENU_LABEL}>{item.label}</DropdownMenuLabel>
+            {/* A muted section heading, not a row: 12px medium, so it labels the
+                flyout without reading as something to click. */}
+            <DropdownMenuLabel className={cn(MENU_LABEL, 'font-medium')}>
+              {item.label}
+            </DropdownMenuLabel>
             {children.map((child) => (
               <DropdownMenuItem
                 key={child.id}
                 onClick={() => onNavigate(child.id)}
-                className={cn(MENU_ITEM, child.id === activeItemId && 'bg-accent font-medium')}
+                // Selected wears the rail's teal wash and ink, so a flyout row
+                // and a rail row read as the same "selected"; hover stays neutral.
+                className={cn(
+                  MENU_ITEM,
+                  child.id === activeItemId &&
+                    'bg-[var(--sidebar-accent)] font-medium text-[var(--sidebar-accent-foreground)]',
+                )}
               >
                 {child.label}
                 {child.count !== undefined ? (

@@ -127,18 +127,31 @@
        centres in a readable column instead of a table sprawling to 2270px with
        its values scattered across the screen. Tune here, once. */
     --shell-max: 1600px;
-    /* A shade darker than the page, warm-neutral. */
-    --sidebar: oklch(0.972 0.002 85);
-    /* 0.34: nav text has to clear 4.5:1 on the sidebar and on the near-white
-       page it renders over in stories (0.36 still landed at 4.3–4.45). */
-    --sidebar-foreground: oklch(0.34 0.006 75);
+    /* A quiet neutral rail, so the content stays the focus: a white ground,
+       zinc text, and teal reserved for the selected row alone. Deliberately
+       cooler and calmer than the warm content area. Hex as specified, so the
+       tokens match the design exactly. Row text is #52525b; icons sit a step
+       lighter (#71717a) and hover/active recolour them — see @layer components.
+       Contrast checks (all clear 4.5:1): #52525b on #fff 7.7:1, #0f4c4a on
+       #e6f3f2 8.8:1, #27272a on #f4f7f7 14:1. */
+    --sidebar: #ffffff;
+    --sidebar-foreground: #52525b;
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: #ffffff;
-    /* The active row wears a faint teal wash — found by colour, in the brand
-       tone, not a second colour. */
-    --sidebar-accent: oklch(0.93 0.022 190);
-    --sidebar-accent-foreground: var(--foreground);
-    --sidebar-border: oklch(0.3 0.005 75 / 7%);
+    /* Selected: a light teal wash with dark-teal text, plus a teal indicator
+       bar (the @layer rule). The one place the rail carries brand colour. */
+    --sidebar-accent: #e6f3f2;
+    --sidebar-accent-foreground: #0f4c4a;
+    /* The teal of the active indicator bar. */
+    --sidebar-indicator: #0f766e;
+    /* Hover — a neutral wash, never teal, so pointing at a row never reads as
+       selecting it. */
+    --sidebar-hover: #f4f7f7;
+    --sidebar-hover-foreground: #27272a;
+    /* Icons a step lighter than the row text; the count quieter still. */
+    --sidebar-icon: #71717a;
+    --sidebar-count: #71717a;
+    --sidebar-border: #e4e4e7;
     --sidebar-ring: var(--brand);
 }
 
@@ -171,12 +184,19 @@
     --chart-3: oklch(0.6 0.08 200);
     --chart-4: oklch(0.78 0.14 75);
     --chart-5: oklch(0.65 0.1 320);
+    /* The same quiet-rail idea in the dark: a near-black ground, zinc text,
+       teal only on the selected row. Derived to hold the light-mode contrasts. */
     --sidebar: oklch(0.185 0.003 75);
-    --sidebar-foreground: oklch(0.73 0.005 85);
+    --sidebar-foreground: oklch(0.72 0.004 285);
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: #07383e;
-    --sidebar-accent: oklch(0.28 0.015 190);
-    --sidebar-accent-foreground: var(--foreground);
+    --sidebar-accent: oklch(0.34 0.03 190);
+    --sidebar-accent-foreground: oklch(0.9 0.06 185);
+    --sidebar-indicator: oklch(0.7 0.1 185);
+    --sidebar-hover: oklch(0.26 0.004 285);
+    --sidebar-hover-foreground: oklch(0.96 0.003 285);
+    --sidebar-icon: oklch(0.62 0.004 285);
+    --sidebar-count: oklch(0.6 0.004 285);
     --sidebar-border: oklch(1 0 0 / 6%);
     --sidebar-ring: var(--brand);
 }
@@ -329,14 +349,44 @@
     background-color: color-mix(in oklch, var(--muted) 60%, transparent);
   }
 
-  /* Hover is a fainter wash of the *same* teal the selected row uses, not a
-     separate neutral grey — so pointing at a row and selecting it read as one
-     scale, the hover simply weaker. A neutral hover beside a teal selection was
-     what made it look like it did not belong. Well under the full
-     `--sidebar-accent` the active row carries, so the two never blur. */
+  /* Hover is a neutral wash, never teal — teal is the selected row's alone, so
+     pointing at a row can never read as selecting it. It recolours the row and
+     its icon to the near-black hover ink. */
   [data-slot='sidebar-menu-button']:not([data-active]):hover,
   [data-slot='sidebar-menu-sub-button']:not([data-active]):hover {
-    background-color: color-mix(in oklch, var(--sidebar-accent) 60%, transparent) !important;
+    background-color: var(--sidebar-hover) !important;
+    color: var(--sidebar-hover-foreground) !important;
+  }
+  [data-slot='sidebar-menu-button']:not([data-active]):hover svg,
+  [data-slot='sidebar-menu-sub-button']:not([data-active]):hover svg {
+    color: var(--sidebar-hover-foreground);
+  }
+
+  /* Icons rest a step lighter than the row text, so the column reads quiet; the
+     selected row's icon takes the dark-teal accent. */
+  [data-slot='sidebar-menu-button'] svg,
+  [data-slot='sidebar-menu-sub-button'] svg {
+    color: var(--sidebar-icon);
+  }
+  [data-slot='sidebar-menu-button'][data-active] svg {
+    color: var(--sidebar-accent-foreground);
+  }
+
+  /* The selected row carries a 3px teal indicator at its leading edge — the one
+     brand mark in the rail, beside the teal wash and the dark-teal ink. */
+  [data-slot='sidebar-menu-button'][data-active] {
+    position: relative;
+  }
+  [data-slot='sidebar-menu-button'][data-active]::before {
+    content: '';
+    position: absolute;
+    inset-inline-start: 0;
+    top: 50%;
+    height: 1rem;
+    width: 3px;
+    transform: translateY(-50%);
+    border-radius: 9999px;
+    background: var(--sidebar-indicator);
   }
 
   /* Dropdowns answer the cursor and read as a control, not flat text — a light
@@ -357,6 +407,7 @@
    */
   [data-slot='sidebar-wrapper'] {
     --sidebar-width: 232px !important;
+    --sidebar-width-icon: 4rem !important; /* 64px rail, from 48px */
   }
   [data-slot='sidebar-menu-button'],
   [data-slot='sidebar-menu-sub-button'] {
@@ -364,6 +415,12 @@
   }
   [data-slot='sidebar-menu-button'][data-active] {
     font-weight: 400 !important;
+  }
+  /* The section heading ('Workspace'): the vendored `/70` wash of the new,
+     lighter row text computed to ~3.6:1, under the 4.5:1 floor. A solid muted
+     colour restores it as a quiet-but-legible heading (≈4.8:1 on white). */
+  [data-slot='sidebar-group-label'] {
+    color: var(--sidebar-icon) !important;
   }
 
   /* The grid is a dense list of records, not a document: its cells read a size
