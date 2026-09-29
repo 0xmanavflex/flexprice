@@ -3,6 +3,11 @@ import { FilterIcon } from 'lucide-react'
 import { Button } from '@ui/primitives/button'
 import { Filters } from '@ui/components/reui/filters/filters'
 import { createFilterQuery, flattenFilterConditions } from '@ui/components/reui/filters/filters-query'
+import {
+  getFilterOperator,
+  operatorTakesValue,
+  resolveFilterOperators,
+} from '@ui/components/reui/filters/filters-operators'
 import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
 import { provenance } from '@ui/provenance'
 
@@ -67,10 +72,46 @@ export function emptyFilterQuery(): FilterQuery {
   return createFilterQuery()
 }
 
-/** What a query means once half-built rules are dropped. Two queries with the
- *  same signature select the same records, whatever drafts are open. */
-function committedSignature(query: FilterQuery): string {
-  return JSON.stringify(flattenFilterConditions(query))
+/** Whether a stored value counts as absent, matching the primitive's own
+ *  `missing-value` test: nothing chosen, or every entry blank. */
+function isBlankFilterValue(value: unknown): boolean {
+  return value === undefined || value === null || value === ''
+}
+
+/**
+ * What a query means once half-built rules are dropped. Two queries with the
+ * same signature select the same records, whatever drafts are open.
+ *
+ * A condition is only counted when it actually FILTERS: its operator takes no
+ * value (so an empty value list is complete), or it carries at least one
+ * non-blank value. A value-taking operator with an empty value list matches
+ * everything — a no-op indistinguishable from no condition at all — and a
+ * caller drops it, echoing back the same committed query it started from.
+ *
+ * `flattenFilterConditions` alone is NOT that test: it only skips a rule with
+ * no operator (`isFilterRuleComplete`), so a rule with an operator but no value
+ * yet — the state every rule passes through between the condition step and the
+ * value step — still reaches it and flattens to a `values: []` condition. Left
+ * to `flattenFilterConditions`, that half-built rule made `seen` disagree with
+ * the empty query the caller echoes back, tripping the re-seed below and wiping
+ * the chip the user was midway through filling in the instant they chose its
+ * operator. Deciding "same records" here, with the schema's arity, is what
+ * keeps the draft alive across the operator step as well as the field step.
+ */
+function committedSignature(query: FilterQuery, fields: FilterField[]): string {
+  const runnable = flattenFilterConditions(query).filter((condition) => {
+    const field = fields.find((entry) => entry.id === condition.field)
+    // `resolveFilterOperators` handles the array, the resolver-function and the
+    // fall-back-to-catalog forms `FilterField.operators` can take.
+    const operator = field
+      ? getFilterOperator(resolveFilterOperators(field), condition.operator)
+      : undefined
+    // Unresolved operators fall back to "takes a value" (arity `one`), so an
+    // unknown operator with no value is treated as half-built, not committed.
+    if (!operatorTakesValue(operator)) return true
+    return condition.values.length > 0 && !condition.values.every(isBlankFilterValue)
+  })
+  return JSON.stringify(runnable)
 }
 
 export function FilterBar({
@@ -98,19 +139,43 @@ export function FilterBar({
    * caller still only ever hears about rules that are finished.
    */
   const [draft, setDraft] = useState<FilterQuery>(query)
-  const incoming = committedSignature(query)
+  /*
+   * The last committed signature the CALLER's `query` prop has delivered — not
+   * what the bar last emitted. It advances only in the render guard below, when
+   * the prop itself moves, so it is a faithful record of what the caller has
+   * actually committed to and nothing the bar does optimistically can run ahead
+   * of it.
+   */
+  const incoming = committedSignature(query, fields)
   const [seen, setSeen] = useState(incoming)
 
   /*
    * Re-seed only when the committed meaning changes from outside — a URL, the
-   * back button, a Clear elsewhere. Comparing signatures rather than trees is
-   * what stops an open draft being wiped by the caller's own echo of the
-   * change that draft just produced. Adjusting state during render is the
-   * documented way to react to a changed prop without a wasted commit.
+   * back button, a Clear elsewhere. Two guards, because a controlled caller
+   * echoes every change back and the echo may be a render (or several) behind:
+   *
+   *   1. `incoming !== seen` — the prop's committed meaning actually moved.
+   *      Until it does, the bar's own optimistic advance cannot be mistaken for
+   *      an outside edit, which is what an echo that lands a commit LATE (a URL
+   *      round trip, `navigate` resolving on a microtask) otherwise looks like:
+   *      the bar has emitted and re-rendered, but the prop still holds the
+   *      pre-emit value, so a guard keyed on "what we emitted" would wrongly
+   *      wipe the draft — and the chip and its open editor with it — in the gap.
+   *   2. `incoming !== committedSignature(draft)` — and the new meaning differs
+   *      from what the draft already commits to. When they agree, the prop is
+   *      merely the bar's own change arriving; re-seeding would replace an
+   *      identical draft and close a popover mid-edit for nothing.
+   *
+   * Comparing signatures rather than trees is what lets a half-built rule (the
+   * chip between its condition and its value) survive the caller's echo of the
+   * empty query it flattens to. Adjusting state during render is the documented
+   * way to react to a changed prop without a wasted commit.
    */
   if (incoming !== seen) {
     setSeen(incoming)
-    setDraft(query)
+    if (incoming !== committedSignature(draft, fields)) {
+      setDraft(query)
+    }
   }
 
   return (
@@ -122,6 +187,9 @@ export function FilterBar({
       fields={fields}
       query={draft}
       onQueryChange={(next: FilterQuery) => {
+        // Optimistic: the draft owns the tree between commits, and `seen` is
+        // left to the render guard so the caller's echo — however late — is
+        // recognised as an echo rather than an outside edit.
         setDraft(next)
         /*
          * `flattenFilterConditions` skips a half-built rule, so a rule whose
@@ -129,7 +197,6 @@ export function FilterBar({
          * filter everything to nothing.
          */
         const flat = flattenFilterConditions(next) as FlatFilter[]
-        setSeen(JSON.stringify(flat))
         onQueryChange(next, flat)
       }}
       trigger={

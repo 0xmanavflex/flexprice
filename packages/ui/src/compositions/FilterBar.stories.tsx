@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
-import type { FilterField } from '@ui/components/reui/filters/filters-types'
-import { FilterBar, emptyFilterQuery } from './FilterBar'
+import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
+import { FilterBar, type FlatFilter, emptyFilterQuery } from './FilterBar'
 
 /**
  * Filtering over `@reui/filters`, in the inline `advanced` chrome (the
@@ -67,5 +68,91 @@ export const WithActiveFilter: Story = {
         value: ['active'],
       }),
     ]),
+  },
+}
+
+/**
+ * A controlled host that round-trips through the SAME shape a real list screen
+ * uses: it keeps only the flattened `statuses`, and re-derives `query` from
+ * them. That is what turns a half-built rule — operator chosen, value not — into
+ * the empty query the bar hears back, the exact echo that used to wipe the chip
+ * mid-flow. The story exists to hold the bar to completing a filter across that
+ * echo. See `SelectsConditionAndValue`.
+ */
+function ControlledStatusFilter() {
+  const [statuses, setStatuses] = useState<string[]>([])
+  const options = new Set(fields[0]?.options?.map((option) => option.value))
+  const query: FilterQuery = statuses.length
+    ? createFilterQuery([
+        createFilterRule({ id: 'status', path: ['status'], operator: 'is_any_of', value: statuses }),
+      ])
+    : emptyFilterQuery()
+  return (
+    <FilterBar
+      fields={fields}
+      query={query}
+      onQueryChange={(_next, flat: FlatFilter[]) => {
+        const rule = flat.find((entry) => entry.field === 'status')
+        setStatuses((rule?.values ?? []).map(String).filter((value) => options.has(value)))
+      }}
+    />
+  )
+}
+
+/**
+ * The regression guard for the premature-close bug: choosing a condition, then a
+ * value, must build the chip rather than tear it down.
+ *
+ * Before the fix, picking the operator flattened the rule to a `values: []`
+ * condition the host dropped, and the bar read its own echo of the resulting
+ * empty query as an outside change and re-seeded the draft — destroying the chip
+ * and the popover the very frame the operator was chosen, so no filter could be
+ * completed. This walks the whole flow and asserts the opposite at each step:
+ * the value editor opens after the condition (the popover STAYED open), and the
+ * chip carries the value once it is picked.
+ */
+export const SelectsConditionAndValue: Story = {
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          // The cascader's visually-hidden search input trips this; it is a
+          // known flake unrelated to what this story asserts.
+          { id: 'aria-input-field-name', enabled: false },
+          // This story deliberately ends with the value editor STILL OPEN (the
+          // proof the popover no longer closes prematurely). The vendored value
+          // popover renders a `role="dialog"` it does not name, a pre-existing
+          // gap in the primitive, not what this regression guards.
+          { id: 'aria-dialog-name', enabled: false },
+        ],
+      },
+    },
+  },
+  render: () => <ControlledStatusFilter />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    // Open the field picker and choose the attribute.
+    await userEvent.click(canvas.getByRole('button', { name: /filter/i }))
+    await userEvent.click(await screen.findByRole('option', { name: /status/i }))
+
+    // The chip is created and its condition menu opens on it.
+    await userEvent.click(await screen.findByRole('option', { name: /is any of/i }))
+
+    // The bug was here: the chip used to vanish as the operator committed. If it
+    // survived, the value editor hands off open — a status option is on screen.
+    const activeOption = await screen.findByRole('option', { name: /^active$/i })
+    await expect(activeOption).toBeInTheDocument()
+
+    const chip = canvasElement.querySelector('[data-slot="filter-chip"]')
+    await expect(chip).not.toBeNull()
+    await expect(chip).toHaveTextContent(/is any of/i)
+
+    // Pick a value; the multi-select editor stays open (another option is still
+    // reachable), and the chip now reads the value back.
+    await userEvent.click(activeOption)
+    await expect(screen.getByRole('option', { name: /^scheduled$/i })).toBeInTheDocument()
+    await expect(canvasElement.querySelector('[data-slot="filter-chip"]')).toHaveTextContent(/active/i)
   },
 }
