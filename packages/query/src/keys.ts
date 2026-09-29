@@ -32,6 +32,11 @@ export const queryKeys = {
     all: () => ['counts'] as const,
     of: (entity: string) => ['counts', entity] as const,
   },
+  events: {
+    all: () => ['events'] as const,
+    analytics: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['events', 'analytics', filter] as const,
+  },
   features: {
     all: () => ['features'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['features', 'list', filter] as const,

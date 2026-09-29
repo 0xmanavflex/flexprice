@@ -9,7 +9,19 @@
  */
 
 export { DashboardHome, DashboardHomeProvenance } from './DashboardHome'
-export type { DashboardHomeProps } from './DashboardHome'
+export type {
+  ApiPanel,
+  DashboardHomeProps,
+  EventPoint,
+  EventsPanel,
+  FilterOption,
+  InvoicesPanel,
+  PanelStatus,
+  SubscriptionDay,
+  SubscriptionsPanel,
+  UsagePanel,
+  UsageRow,
+} from './DashboardHome'
 export { RevenueDashboard, RevenueDashboardProvenance } from './RevenueDashboard'
 export type { RevenueDashboardProps } from './RevenueDashboard'
 export { CUSTOMER_TABS, CustomerDetail, CustomerDetailProvenance } from './CustomerDetail'
@@ -144,3 +156,39 @@ export {
 export type { EnvironmentCreateDialogProps } from './EnvironmentCreateDialog'
 export { SettingsShell, SettingsShellProvenance } from './SettingsShell'
 export type { SettingsSection, SettingsShellProps, SettingsTab } from './SettingsShell'
+
+/*
+ * The shared chart library.
+ *
+ * Seven presentational, fully controlled charts behind one import, so the
+ * Overview and Revenue dashboards draw the same marks from the same validated
+ * palette rather than each growing its own. None of them takes a colour: they
+ * take a `ChartTone`, and `charts.tsx` owns the one mapping to `--chart-1..5`
+ * and the status tokens.
+ */
+export {
+  MetricChart,
+  BlurredEmpty,
+  TrendBadge,
+  ChartsProvenance,
+  seriesTone,
+  toneColor,
+} from './charts'
+export type {
+  BlurredEmptyAction,
+  BlurredEmptyProps,
+  ChartTone,
+  MetricChartProps,
+  MetricPoint,
+  MetricTab,
+} from './charts'
+export { PillColumns, PillColumnsProvenance } from './PillColumns'
+export type { PillColumn, PillColumnsProps, PillSeries } from './PillColumns'
+export { HalfDonut, HalfDonutProvenance } from './HalfDonut'
+export type { DonutSlice, HalfDonutProps } from './HalfDonut'
+export { SegmentMeter, SegmentMeterProvenance } from './SegmentMeter'
+export type { SegmentMeterProps, SegmentMeterRow } from './SegmentMeter'
+export { SplitMeter, SplitMeterProvenance } from './SplitMeter'
+export type { SplitMeterPart, SplitMeterProps } from './SplitMeter'
+export { ArcGauge, ArcGaugeProvenance } from './ArcGauge'
+export type { ArcGaugeProps } from './ArcGauge'

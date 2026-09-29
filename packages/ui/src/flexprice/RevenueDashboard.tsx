@@ -1,233 +1,517 @@
-import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
-import { money } from '@fp/domain'
-import { Button } from '@ui/primitives/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/primitives/table'
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@ui/primitives/chart'
-import type { ChartConfig } from '@ui/primitives/chart'
+import type { ReactNode } from 'react'
+import type { Money as MoneyValue } from '@fp/domain'
 import { Section } from '@ui/compositions/Section'
-import { Metric } from './Metric'
-import { Money } from './Money'
+import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { ArcGauge } from './ArcGauge'
+import { BlurredEmpty, MetricChart, seriesTone } from './charts'
+import type { MetricTab } from './charts'
+import { HalfDonut } from './HalfDonut'
+import { Money } from './Money'
+import { SplitMeter } from './SplitMeter'
 
 /**
- * Revenue — the report behind the overview's headline number.
+ * Revenue — built on the shared chart library, and on what the API can answer.
  *
- * Where Home answers "how is billing going", this answers "where does the money
- * come from, and what does it cost to make". The same parts as the overview
- * (`Metric`, `Section`, the `Chart` primitive, `Table`, `Money`) so the two read
- * as one product: a KPI strip, the contract/usage mix month over month, revenue
- * by customer split the same way, and gross margin by feature once cost sheets
- * are in.
+ * This surface replaces one that carried its own numbers: a KPI strip reading
+ * "$482,900.00 net revenue", a six-month contract/usage mix, five named
+ * customers with their spend, and a gross margin of 68%. Not one of those
+ * figures came from anywhere. They were a design, and a design's figures are a
+ * design — which is the whole reason this dashboard was rebuilt rather than
+ * wired: there was nothing behind it to wire.
  *
- * Representative sample data, held here the way `DashboardHome` holds its own.
- * Each series maps to a query the app will own (revenue-by-period,
- * revenue-by-customer, margin-by-feature); wiring is swapping these constants for
- * props.
+ * So the rule is `DashboardHome`'s rule, applied to a harder page: **every
+ * number here is read from the API or absent.** On Revenue the rule bites
+ * hardest, because the two things the page is named after are the two the
+ * platform does not return:
+ *
+ *   - **Revenue per period.** `POST /events/analytics` prices a window *as a
+ *     whole* — one `subtotal` for the range you asked about — and its per-bucket
+ *     points carry event counts and metered quantities, not money. So there is
+ *     no revenue line to draw. The chart plots the volume that *is* bucketed,
+ *     and the caption says what that volume was priced at and why the line is
+ *     not money. Apportioning the subtotal across the buckets would produce a
+ *     beautiful revenue curve that no invoice would agree with.
+ *   - **Gross margin.** Margin is revenue minus the cost of serving it. Cost
+ *     sheets record the cost side, but nothing in the API aggregates the two,
+ *     and `Money` has no `add` by design (`@fp/domain/money`), so the browser
+ *     cannot do it either. The panel keeps its place and shows an em-dash with
+ *     the reason — the same choice `DashboardHome` makes for processing lag and
+ *     request latency, and for the same reason: deleting the panel would make
+ *     "we do not measure this" and "this is not a thing" look identical.
+ *
+ * Presentational, and holding no queries, so its story can exercise the ready,
+ * empty and unavailable states as first-class cases rather than as whatever the
+ * network happened to do. `RevenuePage` decides which status each panel is in;
+ * that decision is the honesty, and it belongs next to the hooks.
  */
 export const RevenueDashboardProvenance = provenance({
   source: 'composition',
-  composes: ['flexprice/Metric', 'flexprice/Money', 'ui/section', 'ui/chart', 'ui/table'],
-  note: 'The Revenue report: KPI strip, contract/usage mix, revenue by customer, margin by feature. Sample data, ready to wire.',
+  composes: [
+    'flexprice/charts',
+    'flexprice/HalfDonut',
+    'flexprice/SplitMeter',
+    'flexprice/ArcGauge',
+    'flexprice/Money',
+    'compositions/Section',
+  ],
+  note: 'Revenue: metered volume over time, the usage mix by feature, collections by invoice state, and gross margin shown as unavailable. Every figure is API-sourced or explicitly absent.',
 })
 
-interface MixPoint {
-  month: string
-  contract: number
-  usage: number
+/* ---- What the page is told ---------------------------------------------- */
+
+/**
+ * Why a panel is showing what it is showing.
+ *
+ * `empty` and `unavailable` are different claims and get different treatments:
+ * `empty` means the API answered and there is nothing yet, which deserves an
+ * invitation; `unavailable` means the question cannot be asked at all, which
+ * deserves an explanation and no invitation.
+ *
+ * Declared here rather than imported from `DashboardHome` so the two surfaces
+ * can be edited independently — they agree on the vocabulary, not on a file.
+ */
+export type RevenuePanelStatus = 'loading' | 'ready' | 'empty' | 'unavailable'
+
+/** One categorical slice of the mix. The tone is assigned here, not by the page. */
+export interface RevenueMixSlice {
+  id: string
+  label: string
+  value: number
 }
-
-const MIX: MixPoint[] = [
-  { month: 'Apr', contract: 82000, usage: 24000 },
-  { month: 'May', contract: 91000, usage: 29000 },
-  { month: 'Jun', contract: 104000, usage: 38000 },
-  { month: 'Jul', contract: 118000, usage: 44000 },
-  { month: 'Aug', contract: 131000, usage: 56000 },
-  { month: 'Sep', contract: 154000, usage: 68000 },
-]
-
-interface CustomerRevenue {
-  name: string
-  contract: string
-  usage: string
-  net: string
-}
-
-const BY_CUSTOMER: CustomerRevenue[] = [
-  { name: 'Acme Robotics', contract: '52000.00', usage: '32200.00', net: '84200.00' },
-  { name: 'Globex AI', contract: '28000.00', usage: '33800.00', net: '61800.00' },
-  { name: 'Initech Cloud', contract: '31000.00', usage: '12100.00', net: '43100.00' },
-  { name: 'Umbrella Health', contract: '26000.00', usage: '12900.00', net: '38900.00' },
-  { name: 'Hooli Search', contract: '9500.00', usage: '22000.00', net: '31500.00' },
-]
-
-interface FeatureMargin {
-  feature: string
-  margin: number
-}
-
-const MARGIN_BY_FEATURE: FeatureMargin[] = [
-  { feature: 'API Calls', margin: 82 },
-  { feature: 'Storage', margin: 74 },
-  { feature: 'Compute Minutes', margin: 61 },
-  { feature: 'AI Tokens', margin: 48 },
-  { feature: 'Documents Processed', margin: 39 },
-]
-
-const mixConfig = {
-  contract: { label: 'Contract', color: 'var(--chart-1)' },
-  usage: { label: 'Usage', color: 'var(--chart-2)' },
-} satisfies ChartConfig
-
-const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
 export interface RevenueDashboardProps {
+  /** Words for the window, e.g. "last 30 days". Used in the panels' subtitles. */
+  rangeLabel: string
+
+  /**
+   * The metric panel: tabs across the top, one line below.
+   *
+   * Fully controlled from the page, because which metric you are reading is the
+   * kind of thing that belongs in the URL.
+   */
+  chart: {
+    status: RevenuePanelStatus
+    tabs: MetricTab[]
+    activeTab: string
+    onTabChange: (id: string) => void
+  }
+
+  /**
+   * What the analytics API priced this window's metered usage at.
+   *
+   * `null` when it sent no subtotal. Not zero — "the server did not price this"
+   * and "this was worth nothing" are different sentences.
+   */
+  meteredRevenue: MoneyValue | null
+
+  /** Metered volume by feature. Categorical, so `series-*` tones in fixed order. */
+  mix: {
+    status: RevenuePanelStatus
+    slices: RevenueMixSlice[]
+    /** Events across every feature in the window — the centre figure. */
+    total: number
+  }
+
+  /**
+   * Gross margin.
+   *
+   * `status` is `unavailable` in the console today and `reason` says why. The
+   * ready branch exists so the panel is a wiring change rather than a rewrite
+   * the day an aggregate lands; nothing in the app can reach it now.
+   */
+  margin: {
+    status: RevenuePanelStatus
+    /** Percentage points, 0–100. Only read when `status` is `ready`. */
+    percent: number | null
+    /** One sentence naming what is missing. Shown when the status is not ready. */
+    reason: string
+  }
+
+  /** Invoices finalised in the window, by the state the domain derives. */
+  collections: {
+    status: RevenuePanelStatus
+    paid: number
+    open: number
+    overdue: number
+  }
+
   /** Where a link on the report leads. No-op by default, so it renders in isolation. */
   onNavigate?: (path: string) => void
 }
 
-export function RevenueDashboard({ onNavigate }: RevenueDashboardProps) {
+/* ---- Formatting --------------------------------------------------------- */
+
+const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
+const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
+
+/** The dash a number takes when there is nothing true to put there. */
+const NOTHING = '—'
+
+/* ---- Shared parts ------------------------------------------------------- */
+
+/**
+ * What a panel says when Flexprice cannot answer the question.
+ *
+ * Named and explained, never "coming soon" and never a zero. `role="status"` so
+ * it is announced rather than merely blank.
+ */
+function Unavailable({ what, className }: { what: string; className?: string }) {
+  return (
+    <p role="status" className={cn('text-muted-foreground text-xs', className)}>
+      {what}
+    </p>
+  )
+}
+
+/**
+ * A panel's figure when the panel has nothing to show.
+ *
+ * The em-dash is deliberately the same size the real figure would be, so an
+ * absent number reads as absent rather than as a layout that collapsed.
+ */
+function AbsentFigure({ caption }: { caption: string }) {
+  return (
+    <div className="flex flex-col items-center gap-1 py-8 text-center">
+      <span aria-hidden className="text-muted-foreground text-4xl leading-none font-semibold">
+        {NOTHING}
+      </span>
+      <Unavailable what={caption} className="max-w-[34ch] text-balance" />
+    </div>
+  )
+}
+
+/* ---- 1. The metric panel ------------------------------------------------ */
+
+/**
+ * The texture behind the first-run message.
+ *
+ * `BlurredEmpty` renders its child inert, `aria-hidden` and blurred, so this is
+ * a shape rather than a claim — the component's own docstring makes that the
+ * condition for feeding it placeholder numbers, and the labels are blank so
+ * even the axis asserts nothing.
+ */
+const PLACEHOLDER_POINTS = [18, 26, 21, 34, 29, 41, 38, 52, 47, 61, 55, 68, 74, 71].map(
+  (value) => ({ label: '', value }),
+)
+
+/**
+ * The caption under the plot: the one money figure on this page, and why it is
+ * not the line above it.
+ *
+ * `<Money>` rather than a formatted string, because the component is where
+ * currency presentation lives — and `MetricChart.caption` takes a string, which
+ * is why this is rendered beside the chart rather than passed into it.
+ */
+function MeteredRevenueNote({
+  revenue,
+  rangeLabel,
+}: {
+  revenue: MoneyValue | null
+  rangeLabel: string
+}) {
+  return (
+    <p className="text-muted-foreground text-xs">
+      {revenue === null ? (
+        <>
+          The analytics API returned no priced subtotal for the {rangeLabel}, so there is no revenue
+          figure for this window.
+        </>
+      ) : (
+        <>
+          Metered usage in the {rangeLabel} priced at{' '}
+          <span className="text-foreground font-medium tabular-nums">
+            <Money value={revenue} />
+          </span>
+          . The API prices the window as a whole and returns no per-period figure, so the line above
+          plots volume, not money.
+        </>
+      )}
+    </p>
+  )
+}
+
+function MetricPanel({
+  chart,
+  meteredRevenue,
+  rangeLabel,
+  onGetStarted,
+  onSeePlans,
+}: {
+  chart: RevenueDashboardProps['chart']
+  meteredRevenue: MoneyValue | null
+  rangeLabel: string
+  onGetStarted: () => void
+  onSeePlans: () => void
+}) {
+  if (chart.status === 'unavailable') {
+    return (
+      <Section
+        title="Metered volume"
+        description={`Usage and billing activity, ${rangeLabel}.`}
+        className="min-h-[19rem] justify-center"
+      >
+        <AbsentFigure caption="Usage analytics could not be loaded for this window." />
+      </Section>
+    )
+  }
+
+  if (chart.status === 'empty' || chart.status === 'loading') {
+    const placeholder: MetricTab[] = [
+      { id: 'placeholder', label: 'Metered usage', value: NOTHING, points: PLACEHOLDER_POINTS },
+    ]
+
+    return (
+      <BlurredEmpty
+        title="No revenue yet"
+        description="Price a plan and send your first usage events — this chart then plots the volume behind every invoice."
+        action={{ label: 'Create a plan', onClick: onSeePlans }}
+        secondaryAction={{ label: 'Add a feature', onClick: onGetStarted }}
+      >
+        <MetricChart
+          tabs={placeholder}
+          activeTab="placeholder"
+          onTabChange={() => undefined}
+          height={260}
+        />
+      </BlurredEmpty>
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-2">
+      <MetricChart
+        tabs={chart.tabs}
+        activeTab={chart.activeTab}
+        onTabChange={chart.onTabChange}
+        height={260}
+      />
+      <MeteredRevenueNote revenue={meteredRevenue} rangeLabel={rangeLabel} />
+    </div>
+  )
+}
+
+/* ---- 2. Revenue mix ----------------------------------------------------- */
+
+/**
+ * Where the metered volume comes from, by feature.
+ *
+ * Sliced by **event count**, not by metered quantity, and that is a
+ * deliberate correction rather than a convenience: one feature is measured in
+ * tokens and the next in API calls, so a donut whose centre added those two
+ * together would be a total of nothing. Every feature's events are the same
+ * kind of thing, so they sum, and the centre figure is a number that exists.
+ *
+ * Revenue per feature would be the better slice and is not on offer — the
+ * analytics response carries one subtotal for the whole window, not one per
+ * item — which the description says rather than leaving the title to imply it.
+ */
+function MixPanel({
+  mix,
+  rangeLabel,
+  onViewFeatures,
+  className,
+}: {
+  mix: RevenueDashboardProps['mix']
+  rangeLabel: string
+  onViewFeatures: () => void
+  className?: string | undefined
+}) {
+  return (
+    <Section
+      title="Revenue mix"
+      description={`Metered events by feature, ${rangeLabel}. Per-feature revenue is not returned — only one subtotal for the window — so the mix is shown by volume.`}
+      {...(className !== undefined ? { className } : {})}
+    >
+      {mix.status === 'ready' && mix.slices.length > 0 ? (
+        <HalfDonut
+          /*
+           * Categorical tones in fixed order, except the folded tail: a
+           * remainder is not a category, so it takes `neutral` — the tone
+           * `charts.tsx` reserves for exactly that — rather than borrowing a
+           * series slot and reading as one more feature.
+           */
+          slices={mix.slices.map((slice, index) => ({
+            ...slice,
+            tone: slice.id === 'other' ? ('neutral' as const) : seriesTone(index),
+          }))}
+          centerLabel="Events"
+          centerValue={compact.format(mix.total)}
+          format={(value) => compact.format(value)}
+          label={`Metered events by feature, ${rangeLabel}`}
+        />
+      ) : mix.status === 'unavailable' ? (
+        <AbsentFigure caption="Usage analytics could not be loaded for this window." />
+      ) : (
+        <AbsentFigure caption={`No metered events were ingested in the ${rangeLabel}.`} />
+      )}
+      <button
+        type="button"
+        onClick={onViewFeatures}
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded-sm text-xs underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        All features
+      </button>
+    </Section>
+  )
+}
+
+/* ---- 3. Gross margin ---------------------------------------------------- */
+
+/**
+ * Where a margin stops being healthy.
+ *
+ * `ArcGauge` does not threshold — it takes a tone and paints it, because where
+ * "bad" starts is a product question and a shared chart component is the wrong
+ * place to answer it. This surface is the right place, and answering it once
+ * here is what keeps the gauge from being asked to guess.
+ */
+function marginTone(percent: number): 'good' | 'warning' | 'critical' {
+  if (percent >= 60) return 'good'
+  if (percent >= 40) return 'warning'
+  return 'critical'
+}
+
+function MarginPanel({
+  margin,
+  onCostSheets,
+}: {
+  margin: RevenueDashboardProps['margin']
+  onCostSheets: () => void
+}) {
+  return (
+    <Section
+      title="Gross margin"
+      description="Revenue after what it costs to serve the usage behind it."
+    >
+      {margin.status === 'ready' && margin.percent !== null ? (
+        <ArcGauge
+          value={margin.percent}
+          max={100}
+          display={`${Math.round(margin.percent)}%`}
+          caption="of metered revenue kept"
+          tone={marginTone(margin.percent)}
+          label="Gross margin on metered revenue"
+        />
+      ) : (
+        <AbsentFigure caption={margin.reason} />
+      )}
+      <button
+        type="button"
+        onClick={onCostSheets}
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded-sm text-xs underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        Cost sheets
+      </button>
+    </Section>
+  )
+}
+
+/* ---- 4. Collections ----------------------------------------------------- */
+
+/**
+ * How much of what was invoiced has been collected.
+ *
+ * `total` is deliberately **omitted**, and the choice matters. Given a total,
+ * `SplitMeter` draws the shortfall as unfilled track — the right mark for a
+ * drawdown against a commitment. Here the three parts are the states the domain
+ * derives, and every finalised invoice is in exactly one of them, so they are
+ * exhaustive: a ceiling would draw a gap that can never open. The honest
+ * drawdown — amount collected against amount billed — would need the two money
+ * totals summed across invoices, which is precisely what `Money` refuses.
+ *
+ * Status tones rather than categorical ones, because paid, open and overdue are
+ * states and not merely three different things.
+ */
+function CollectionsPanel({
+  collections,
+  rangeLabel,
+  onViewInvoices,
+  className,
+}: {
+  collections: RevenueDashboardProps['collections']
+  rangeLabel: string
+  onViewInvoices: () => void
+  className?: string | undefined
+}) {
+  const total = collections.paid + collections.open + collections.overdue
+
+  return (
+    <Section
+      title="Collections"
+      description={`Invoices finalised ${rangeLabel}, by state.`}
+      {...(className !== undefined ? { className } : {})}
+    >
+      {collections.status === 'ready' && total > 0 ? (
+        <SplitMeter
+          parts={[
+            { id: 'paid', label: 'Paid', value: collections.paid, tone: 'good' },
+            { id: 'open', label: 'Open', value: collections.open, tone: 'warning' },
+            { id: 'overdue', label: 'Overdue', value: collections.overdue, tone: 'critical' },
+          ]}
+          title="Finalised invoices"
+          value={whole.format(total)}
+          format={(value) => whole.format(value)}
+          label={`Collections: ${total} invoices finalised ${rangeLabel}, by state`}
+        />
+      ) : collections.status === 'unavailable' ? (
+        <AbsentFigure caption="Invoices could not be loaded." />
+      ) : (
+        <AbsentFigure caption={`No invoices were finalised in the ${rangeLabel}.`} />
+      )}
+      <button
+        type="button"
+        onClick={onViewInvoices}
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded-sm text-xs underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        View invoices
+      </button>
+    </Section>
+  )
+}
+
+/* ---- The surface -------------------------------------------------------- */
+
+export function RevenueDashboard({
+  rangeLabel,
+  chart,
+  meteredRevenue,
+  mix,
+  margin,
+  collections,
+  onNavigate,
+}: RevenueDashboardProps): ReactNode {
   const go = (path: string) => onNavigate?.(path)
 
   return (
     <div className="flex flex-col gap-5">
-      {/* KPI strip. */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <Metric
-          label="Net revenue"
-          value={<Money value={money('482900.00', 'USD')} />}
-          hint="This quarter, net of credits"
-          change={{ label: '12.4%', direction: 'up', sentiment: 'positive' }}
-        />
-        <Metric
-          label="Contract revenue"
-          value={<Money value={money('298600.00', 'USD')} />}
-          hint="Recurring plan fees"
-          change={{ label: '8.0%', direction: 'up', sentiment: 'positive' }}
-        />
-        <Metric
-          label="Usage revenue"
-          value={<Money value={money('184300.00', 'USD')} />}
-          hint="Metered charges"
-          change={{ label: '22%', direction: 'up', sentiment: 'positive' }}
-        />
-        <Metric
-          label="Gross margin"
-          value="68%"
-          hint="After provider costs"
-          change={{ label: '3.1 pts', direction: 'up', sentiment: 'positive' }}
-        />
-      </div>
+      <MetricPanel
+        chart={chart}
+        meteredRevenue={meteredRevenue}
+        rangeLabel={rangeLabel}
+        onGetStarted={() => go('/features')}
+        onSeePlans={() => go('/plans')}
+      />
 
-      {/* Contract vs usage, month over month. */}
-      <Section title="Revenue mix" description="Contract and usage revenue, last 6 months.">
-        <ChartContainer config={mixConfig} className="aspect-auto h-[260px] w-full">
-          <BarChart accessibilityLayer data={MIX} margin={{ left: 4, right: 4, top: 8 }}>
-            <CartesianGrid vertical={false} />
-            <XAxis dataKey="month" tickLine={false} axisLine={false} tickMargin={8} />
-            <ChartTooltip
-              cursor={false}
-              content={
-                <ChartTooltipContent
-                  indicator="dot"
-                  formatter={(value, name) => (
-                    <div className="flex w-full items-center justify-between gap-3">
-                      <span className="text-muted-foreground capitalize">{name}</span>
-                      <span className="font-mono font-medium tabular-nums">
-                        ${compact.format(Number(value))}
-                      </span>
-                    </div>
-                  )}
-                />
-              }
-            />
-            <Bar dataKey="contract" stackId="rev" fill="var(--color-contract)" radius={[0, 0, 0, 0]} />
-            <Bar dataKey="usage" stackId="rev" fill="var(--color-usage)" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ChartContainer>
-        <div className="flex items-center gap-4 text-xs text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2 rounded-full bg-[var(--chart-1)]" />
-            Contract
-          </span>
-          <span className="flex items-center gap-1.5">
-            <span aria-hidden className="size-2 rounded-full bg-[var(--chart-2)]" />
-            Usage
-          </span>
-        </div>
-      </Section>
-
+      {/*
+       * Two panels abreast rather than three, and the reason is the legends.
+       * Both of these charts read their parts out in words beneath the mark,
+       * and a legend is the one part of a chart that cannot be made narrower —
+       * it is the text. At a third of the row the donut's five feature names
+       * run into each other; at a half they fit. Gross margin takes the full
+       * width below instead, which costs nothing, because an em-dash and one
+       * sentence are all it has to lay out.
+       */}
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <Section
-          title="Revenue by customer"
-          description="Net revenue, split into contract and usage."
-          actions={
-            <Button variant="ghost" size="sm" onClick={() => go('/customers')}>
-              View all
-            </Button>
-          }
-        >
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Customer</TableHead>
-                <TableHead className="text-right">Contract</TableHead>
-                <TableHead className="text-right">Usage</TableHead>
-                <TableHead className="text-right">Net</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {BY_CUSTOMER.map((customer) => (
-                <TableRow key={customer.name}>
-                  <TableCell className="font-medium">{customer.name}</TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    <Money value={money(customer.contract, 'USD')} />
-                  </TableCell>
-                  <TableCell className="text-right text-muted-foreground">
-                    <Money value={money(customer.usage, 'USD')} />
-                  </TableCell>
-                  <TableCell className="text-right">
-                    <Money value={money(customer.net, 'USD')} />
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </Section>
-
-        <Section
-          title="Gross margin by feature"
-          description="Revenue after the cost of serving each metered feature."
-          actions={
-            <Button variant="ghost" size="sm" onClick={() => go('/cost-sheets')}>
-              Cost sheets
-            </Button>
-          }
-        >
-          <ul className="flex flex-col gap-3">
-            {MARGIN_BY_FEATURE.map((entry) => (
-              <li key={entry.feature} className="flex flex-col gap-1.5">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-medium">{entry.feature}</span>
-                  <span className="tabular-nums text-muted-foreground">{entry.margin}%</span>
-                </div>
-                <div aria-hidden className="h-2 w-full overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-[var(--chart-1)]"
-                    style={{ width: `${entry.margin}%` }}
-                  />
-                </div>
-              </li>
-            ))}
-          </ul>
-        </Section>
+        <MixPanel mix={mix} rangeLabel={rangeLabel} onViewFeatures={() => go('/features')} />
+        <CollectionsPanel
+          collections={collections}
+          rangeLabel={rangeLabel}
+          onViewInvoices={() => go('/invoices')}
+        />
       </div>
+
+      <MarginPanel margin={margin} onCostSheets={() => go('/cost-sheets')} />
     </div>
   )
 }

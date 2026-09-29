@@ -315,3 +315,12 @@ export type { CountableId } from './counts'
 
 export { useCatalogStats } from './catalogStats'
 export type { CatalogEntity, CatalogStats } from './catalogStats'
+
+export { toUsageAnalytics, useUsageAnalytics, UsageWindowSize } from './events'
+export type {
+  FeatureUsageRow,
+  UsageAnalytics,
+  UsageAnalyticsQuery,
+  UsagePoint,
+  UsageWindow,
+} from './events'

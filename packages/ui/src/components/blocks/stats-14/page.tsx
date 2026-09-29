@@ -1,0 +1,11 @@
+// @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
+// Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
+import { Stats } from "./components/stats"
+
+export function Page() {
+  return (
+    <div className="flex w-full items-center justify-center p-10 md:p-20">
+      <Stats />
+    </div>
+  )
+}

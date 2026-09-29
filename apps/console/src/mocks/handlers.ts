@@ -160,19 +160,24 @@ function applyFeatureExpand(result: ReturnType<typeof page>, expand: string | un
 const search = (path: string, key: string) =>
   http.post(`${BASE}${path}`, async ({ request }) => {
     const body = ((await request.json().catch(() => ({}))) ?? {}) as SearchBody
-    const result = page(corpus[key] as Corpus, body)
+    if (demoEmpty()) return HttpResponse.json(emptyPage(body))
+    const result = page(sourceFor(key), body)
     return HttpResponse.json(key === 'features' ? applyFeatureExpand(result, body.expand) : result)
   })
 
 const list = (path: string, key: string) =>
   http.get(`${BASE}${path}`, ({ request }) => {
     const url = new URL(request.url)
-    return HttpResponse.json(
-      page(corpus[key] as Corpus, {
-        limit: Number(url.searchParams.get('limit') ?? 25),
-        offset: Number(url.searchParams.get('offset') ?? 0),
-      }),
-    )
+    const window = {
+      limit: Number(url.searchParams.get('limit') ?? 25),
+      offset: Number(url.searchParams.get('offset') ?? 0),
+    }
+    // The GET lists honour the empty-tenant switch for the same reason the
+    // search endpoints do: a brand-new tenant with a populated Payments table
+    // is not a brand-new tenant, and a half-empty demo world is worse than
+    // either state on its own.
+    if (demoEmpty()) return HttpResponse.json(emptyPage(window))
+    return HttpResponse.json(page(corpus[key] as Corpus, window))
   })
 
 /** Finds one row in a corpus by id — the by-id GET endpoints read it. */
@@ -1140,6 +1145,334 @@ function findIndexById(rows: Record<string, unknown>[], id: string): number {
   return rows.findIndex((row) => readString(row, 'id') === id)
 }
 
+/* ---- The overview's demo data ------------------------------------------
+ *
+ * The Home dashboard reads three things the captured corpus cannot answer as
+ * it stands:
+ *
+ *   - **Usage analytics.** `POST /events/analytics` was never captured, so
+ *     there is no fixture for it at all.
+ *   - **Recent subscriptions** and **recent invoices.** The capture is months
+ *     old. A "last 7 days" window over it is legitimately empty, which makes
+ *     the populated design impossible to see under mocks.
+ *
+ * Both are solved here, in the mock world, rather than by editing the generated
+ * fixtures — those descend from real API responses and six other surfaces read
+ * them. Everything below is derived from the Northwind corpus (same customers,
+ * same plans, same features) and is **self-consistent by construction**: a
+ * series sums to its own total, a total is the sum of its parts, and the
+ * priced subtotal is computed from the usage it claims to price.
+ */
+
+const DAY_MS = 86_400_000
+
+/**
+ * Pretend this tenant has only just signed up.
+ *
+ * A mock-world switch, not app logic: with it set, every list and the analytics
+ * endpoint answer "nothing yet", which is the only way to *see* the first-run
+ * design end to end in a browser. Handlers run in the page, so reading storage
+ * here is safe; it is wrapped because a locked-down context throws on access.
+ */
+function demoEmpty(): boolean {
+  try {
+    return globalThis.localStorage?.getItem('fp-demo-empty') === '1'
+  } catch {
+    return false
+  }
+}
+
+function emptyPage(body: SearchBody): Corpus {
+  return {
+    items: [],
+    pagination: { total: 0, limit: Number(body.limit ?? 25), offset: Number(body.offset ?? 0) },
+  }
+}
+
+/** Midnight UTC, `daysAgo` days back — the grid every recent-activity mock sits on. */
+function dayStart(daysAgo: number): Date {
+  const date = new Date(Date.now() - daysAgo * DAY_MS)
+  date.setUTCHours(0, 0, 0, 0)
+  return date
+}
+
+/**
+ * A stable pseudo-random number in [0, 1) for a seed.
+ *
+ * Deterministic on purpose. A "+12% vs prior week" delta compares two windows
+ * of this data, so if the numbers moved between renders the screen would be
+ * reporting a trend that is really just the mock reshuffling itself.
+ */
+function noise(seed: string): number {
+  let hash = 2166136261
+  for (let index = 0; index < seed.length; index += 1) {
+    hash ^= seed.charCodeAt(index)
+    hash = Math.imul(hash, 16777619)
+  }
+  return ((hash >>> 0) % 100_000) / 100_000
+}
+
+/** The five metered features the overview charts, taken from the real corpus. */
+const ANALYTICS_FEATURES = (corpus.features as Corpus).items
+  .filter((row) => readString(row, 'type') === 'metered')
+  .slice(0, 5)
+  .map((row, index) => ({
+    row,
+    id: readString(row, 'id'),
+    lookupKey: readString(row, 'lookup_key'),
+    eventName: readString(row, 'lookup_key'),
+    // Deliberately distinct magnitudes and multipliers, so no two rows on the
+    // finished screen can share a number and read as copy-paste.
+    eventsPerDay: [428_000, 96_500, 61_200, 18_400, 7_300][index] ?? 5_000,
+    multiplier: [1, 18.4, 6.2, 1, 3.5][index] ?? 1,
+    rate: [0.00042, 0.0000075, 0.000018, 0.02, 0.006][index] ?? 0.001,
+  }))
+
+const WINDOW_MS: Record<string, number> = {
+  HOUR: 3_600_000,
+  DAY: DAY_MS,
+  WEEK: 7 * DAY_MS,
+}
+
+/**
+ * The analytics response for one window.
+ *
+ * Each point is the feature's daily rate scaled to the bucket and wobbled by a
+ * seeded amount; the item totals are sums of those points, and the subtotal is
+ * each item's usage priced at that feature's rate. Nothing is asserted that is
+ * not computed from something else here.
+ */
+function usageAnalytics(startTime: Date, endTime: Date, windowSize: string) {
+  const step = WINDOW_MS[windowSize] ?? DAY_MS
+  const buckets: number[] = []
+  for (
+    let cursor = startTime.getTime();
+    cursor < endTime.getTime() && buckets.length < 400;
+    cursor += step
+  ) {
+    buckets.push(cursor)
+  }
+
+  const items = ANALYTICS_FEATURES.map((feature) => {
+    const scale = step / DAY_MS
+    const points = buckets.map((bucket) => {
+      const wobble = 0.72 + 0.56 * noise(`${feature.lookupKey}:${bucket}`)
+      const eventCount = Math.round(feature.eventsPerDay * scale * wobble)
+      return {
+        timestamp: new Date(bucket).toISOString(),
+        event_count: eventCount,
+        usage: String(Math.round(eventCount * feature.multiplier)),
+      }
+    })
+
+    return {
+      feature_id: feature.id,
+      event_name: feature.eventName,
+      feature: feature.row,
+      event_count: points.reduce((sum, point) => sum + point.event_count, 0),
+      total_usage: String(points.reduce((sum, point) => sum + Number(point.usage), 0)),
+      points,
+    }
+  })
+
+  const subtotal = items.reduce(
+    (sum, item, index) => sum + Number(item.total_usage) * (ANALYTICS_FEATURES[index]?.rate ?? 0),
+    0,
+  )
+
+  return { items, subtotal: subtotal.toFixed(2), total_cost: subtotal.toFixed(2), currency: 'USD' }
+}
+
+/**
+ * Subscriptions created over the last two weeks, by plan.
+ *
+ * Two weeks rather than one because the panel shows a change against the prior
+ * week, and a delta is only honest if the period it compares against is made of
+ * the same kind of rows.
+ */
+function recentSubscriptionRows(): Record<string, unknown>[] {
+  const templates = (corpus.subscriptions as Corpus).items
+  const plans = (corpus.plans as Corpus).items.slice(0, 4)
+  const rows: Record<string, unknown>[] = []
+  let created = 0
+
+  for (let daysAgo = 13; daysAgo >= 0; daysAgo -= 1) {
+    // Both weeks are drawn from the same distribution, with one extra on the
+    // busier recent days. The "vs prior week" change is then a real property of
+    // the rows — a modest number nobody chose — rather than a headline figure
+    // written into the component and dressed up as a measurement.
+    // Seeded on the day of the week, so the two weeks are structurally
+    // comparable and the change between them is the lift below rather than the
+    // two windows happening to draw different numbers.
+    const base = 3 + Math.floor(noise(`subscriptions:${daysAgo % 7}`) * 4)
+    const perDay = daysAgo < 7 && noise(`lift:${daysAgo}`) > 0.62 ? base + 1 : base
+
+    for (let index = 0; index < perDay; index += 1) {
+      const template = templates[created % templates.length] ?? {}
+      const plan = plans[(created + daysAgo) % plans.length] ?? {}
+      const at = new Date(dayStart(daysAgo).getTime() + (index + 1) * 3_600_000).toISOString()
+
+      rows.push({
+        ...template,
+        id: `subs_recent_${daysAgo}_${index}`,
+        subscription_status: 'active',
+        status: 'published',
+        plan_id: readString(plan, 'id'),
+        plan,
+        start_date: at,
+        created_at: at,
+        updated_at: at,
+      })
+      created += 1
+    }
+  }
+
+  return rows
+}
+
+/**
+ * How long each customer has to pay.
+ *
+ * Northwind's own default is net-14 — `settingsStore.invoice_config` sets
+ * `due_date_days: 14`, and the Invoice settings tab shows it — but terms are
+ * negotiated per account, so this spread is what a real book looks like. It is
+ * also what makes an *overdue* invoice reachable inside a seven-day window: on
+ * net-14 terms nothing issued this week can be late yet, and a fixture that
+ * asserted otherwise (as this one used to, with invoices due four days before
+ * they were issued) would be describing an impossible book.
+ */
+const INVOICE_TERM_DAYS = [14, 21, 7, 1, 3, 30]
+
+/**
+ * Nine weeks of finalised invoices.
+ *
+ * Nine rather than one, and that is the fixture bug this replaces. The old
+ * version issued every invoice inside the last seven days and *asserted* the
+ * split — 34 paid, 15 open, 7 overdue — which made every window over it the
+ * same window: the overview's "last 7 days" and Revenue's "last 30 days" would
+ * have quoted an identical 56/34/15/7 at each other as though they were two
+ * findings, and Revenue's prior-period change would have had nothing to compare
+ * against. Sixty-three days of issuance gives the two surfaces genuinely
+ * different measurements of the same book, and gives a 30-day window a 30-day
+ * window before it.
+ *
+ * Nothing about the split is asserted any more. Each row carries an issue date,
+ * a term, and whether it has settled; *overdue* then falls out of
+ * `deriveInvoiceStatus` reading the due date this file actually wrote, exactly
+ * as it does against the live API. Older invoices settle more often than recent
+ * ones, which is the only editorial claim here and the one that makes the
+ * collections meter move at all.
+ */
+function recentInvoiceRows(): Record<string, unknown>[] {
+  const templates = (corpus.invoices as Corpus).items
+  const customers = (corpus.customers as Corpus).items
+  const rows: Record<string, unknown>[] = []
+  let issued = 0
+
+  // Newest first, so the first page of a newest-first list is the recent world
+  // even before the handler sorts it.
+  for (let daysAgo = 0; daysAgo < 63; daysAgo += 1) {
+    const perDay = 1 + Math.floor(noise(`invoices:${daysAgo}`) * 3)
+
+    for (let index = 0; index < perDay; index += 1) {
+      const template = templates[issued % templates.length] ?? {}
+      const customer = customers[issued % customers.length] ?? {}
+      const at = new Date(dayStart(daysAgo).getTime() + (index + 1) * 3_600_000)
+      const termDays = INVOICE_TERM_DAYS[issued % INVOICE_TERM_DAYS.length] ?? 14
+
+      /*
+       * Settlement rises with age: about two in five of this week's invoices
+       * have been paid, against nine in ten of those from two months ago.
+       * Seeded, so the "vs prior period" change on Revenue is a property of
+       * the book rather than the mock reshuffling itself between renders.
+       *
+       * The curve and the term spread above were chosen together, against the
+       * two windows that actually read this book: they leave the overview's
+       * seven days and Revenue's thirty with six different figures rather than
+       * one repeated, and with no two of paid/open/overdue equal in either —
+       * the coincidence that looks exactly like a copy-paste bug.
+       */
+      const settledOdds = 0.42 + (Math.min(daysAgo, 35) / 35) * 0.5
+      const settled = noise(`settled:${daysAgo}:${index}`) < settledOdds
+
+      // Clean, plausible amounts — the captured corpus carries some synthesized
+      // values in the 1e16 range that would flatten any axis they landed on.
+      const total = (185 + ((issued * 53) % 87) * 35).toFixed(2)
+      const period = new Date(at.getTime() - 30 * DAY_MS)
+
+      rows.push({
+        ...template,
+        id: `inv_recent_${daysAgo}_${index}`,
+        invoice_status: 'FINALIZED',
+        payment_status: settled ? 'SUCCEEDED' : 'PENDING',
+        status: 'published',
+        currency: 'USD',
+        customer_id: readString(customer, 'id'),
+        customer,
+        subtotal: total,
+        total,
+        amount_due: total,
+        amount_paid: settled ? total : '0.00',
+        amount_remaining: settled ? '0.00' : total,
+        line_items: [],
+        issue_date: at.toISOString(),
+        created_at: at.toISOString(),
+        updated_at: at.toISOString(),
+        period_start: period.toISOString(),
+        period_end: at.toISOString(),
+        due_date: new Date(at.getTime() + termDays * DAY_MS).toISOString(),
+      })
+      issued += 1
+    }
+  }
+
+  /*
+   * Numbered the way this tenant's own settings say it numbers invoices:
+   * prefix `NWS`, `YYYYMM`, a five-digit suffix from sequence 1001. Assigned
+   * oldest-first, because a sequence that ran backwards through time would be
+   * the first thing anyone reading the Invoices list noticed.
+   */
+  const oldestFirst = [...rows].sort((left, right) =>
+    readString(left, 'issue_date').localeCompare(readString(right, 'issue_date')),
+  )
+  oldestFirst.forEach((row, sequence) => {
+    const yearMonth = readString(row, 'issue_date').slice(0, 7).replace('-', '')
+    row['invoice_number'] = `NWS-${yearMonth}-${String(1001 + sequence).padStart(5, '0')}`
+  })
+
+  return rows
+}
+
+/**
+ * Corpora the dashboard's recent rows are prepended to.
+ *
+ * Prepended, not replacing: the older captured rows stay exactly where they
+ * were, so every other list still shows the world it always showed and only
+ * gains some recent activity at the top.
+ */
+const DASHBOARD_CORPUS: Record<string, Corpus> = {
+  subscriptions: (() => {
+    const extra = recentSubscriptionRows()
+    const base = corpus.subscriptions as Corpus
+    return {
+      items: [...extra, ...base.items],
+      pagination: { ...base.pagination, total: base.pagination.total + extra.length },
+    }
+  })(),
+  invoices: (() => {
+    const extra = recentInvoiceRows()
+    const base = corpus.invoices as Corpus
+    return {
+      items: [...extra, ...base.items],
+      pagination: { ...base.pagination, total: base.pagination.total + extra.length },
+    }
+  })(),
+}
+
+function sourceFor(key: string): Corpus {
+  return DASHBOARD_CORPUS[key] ?? (corpus[key] as Corpus)
+}
+
 export const handlers = [
   // Environments. Unlike the create handlers further down — which echo the
   // record back and leave the corpus alone — this one appends, because the
@@ -1191,6 +1524,32 @@ export const handlers = [
       { code: 'permission_denied', message: 'Failed to get user', http_status_code: 403 },
       { status: 403 },
     )
+  }),
+
+  /*
+   * Usage analytics — the overview's event series, revenue and per-feature
+   * usage. `POST /events/analytics`, the path `client.events.getUsageAnalytics`
+   * posts to. Answers snake_case, as the live API does; the SDK's inbound
+   * schema is what turns it camelCase again.
+   *
+   * An empty tenant answers `items: []` and **no subtotal** — not a zero.
+   * "Nothing has been ingested" and "this usage was worth nothing" are
+   * different sentences, and the panel renders them differently.
+   */
+  http.post(`${BASE}/events/analytics`, async ({ request }) => {
+    if (demoEmpty()) return HttpResponse.json({ items: [] })
+
+    const body = (await request.json().catch(() => ({}))) as {
+      start_time?: string
+      end_time?: string
+      window_size?: string
+    }
+    const endTime = body.end_time ? new Date(body.end_time) : new Date()
+    const startTime = body.start_time
+      ? new Date(body.start_time)
+      : new Date(endTime.getTime() - 7 * DAY_MS)
+
+    return HttpResponse.json(usageAnalytics(startTime, endTime, body.window_size ?? 'DAY'))
   }),
 
   search('/customers/search', 'customers'),
@@ -1346,7 +1705,8 @@ export const handlers = [
     const status = url.searchParams.get('status')
     const limit = Number(url.searchParams.get('limit') ?? 25)
     const offset = Number(url.searchParams.get('offset') ?? 0)
-    const rows = status ? apiKeys.filter((row) => readString(row, 'status') === status) : apiKeys
+    const all = demoEmpty() ? [] : apiKeys
+    const rows = status ? all.filter((row) => readString(row, 'status') === status) : all
 
     return HttpResponse.json({
       items: rows.slice(offset, offset + limit),

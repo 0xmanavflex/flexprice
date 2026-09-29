@@ -115,11 +115,19 @@
     --input: oklch(0.3 0.005 75 / 22%);
     /* Focus ring is the brand teal, never blue. */
     --ring: var(--brand);
-    --chart-1: oklch(0.6 0.13 155);
-    --chart-2: oklch(0.54 0.14 255);
-    --chart-3: oklch(0.44 0.08 200);
-    --chart-4: oklch(0.75 0.15 75);
-    --chart-5: oklch(0.55 0.1 320);
+    /* Series colours, blue-led, in a fixed order that is never cycled.
+       These are VALIDATED values, not picks — the ordering clears every hard
+       gate in both modes (worst adjacent CVD ΔE 9.1 light / 8.4 dark, worst
+       adjacent normal-vision ΔE 22.9 / 19.8). Re-deriving them by eye breaks
+       that, so they stay verbatim and in hex rather than being converted.
+       Re-check with the dataviz validator before changing any of them.
+       Slot 1 is the primary series: the events area chart, the usage bars and
+       the first plan all read from it. */
+    --chart-1: #2a78d6;
+    --chart-2: #eb6834;
+    --chart-3: #1baf7a;
+    --chart-4: #eda100;
+    --chart-5: #e87ba4;
     --radius: 0.625rem;
     /* The one content measure the shell, the list bodies and the detail pages
        all cap to and centre within. Below it every surface fills the width
@@ -179,11 +187,13 @@
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 22%);
     --ring: var(--brand);
-    --chart-1: oklch(0.7 0.13 155);
-    --chart-2: oklch(0.64 0.14 255);
-    --chart-3: oklch(0.6 0.08 200);
-    --chart-4: oklch(0.78 0.14 75);
-    --chart-5: oklch(0.65 0.1 320);
+    /* The same eight hues re-stepped for the dark surface — a selected
+       palette, never an automatic flip of the light one. */
+    --chart-1: #3987e5;
+    --chart-2: #d95926;
+    --chart-3: #199e70;
+    --chart-4: #c98500;
+    --chart-5: #d55181;
     /* The same quiet-rail idea in the dark: a near-black ground, zinc text,
        teal only on the selected row. Derived to hold the light-mode contrasts. */
     --sidebar: oklch(0.185 0.003 75);
