@@ -134,6 +134,9 @@ const PlaceholderPage = lazy(() =>
   import('@/pages/PlaceholderPage').then((m) => ({ default: m.PlaceholderPage })),
 )
 const HomePage = lazy(() => import('@/pages/home/HomePage').then((m) => ({ default: m.HomePage })))
+const RevenuePage = lazy(() =>
+  import('@/pages/revenue/RevenuePage').then((m) => ({ default: m.RevenuePage })),
+)
 /*
  * Not lazy, unlike every other page.
  *
@@ -832,6 +835,19 @@ const homeRoute = createRoute({
 })
 
 /**
+ * Revenue — a report page, not a list.
+ *
+ * The contract/usage mix, revenue by customer and margin by feature, from the
+ * `RevenueDashboard` surface. It carries no query state yet; the surface renders
+ * representative data until the revenue queries land.
+ */
+const revenueRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/revenue',
+  component: RevenuePage,
+})
+
+/**
  * Billing lists — customers, subscriptions, payments and taxes. The same
  * URL-as-query contract as invoices and the catalogue lists: a filtered, sorted,
  * paged view is a link. Read-only lists for now, except subscriptions, whose
@@ -971,6 +987,7 @@ export const routeTree = rootRoute.addChildren([
   signInRoute,
   shellRoute.addChildren([
     homeRoute,
+    revenueRoute,
     featuresRoute,
     featureCreateRoute,
     featureDetailRoute,

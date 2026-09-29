@@ -179,9 +179,11 @@ export function toNavGroups(
   icons: Record<string, React.ReactNode> = {},
   counts: Partial<Record<string, number>> = {},
 ): ShellNavGroup[] {
-  // Only the primary Workspace tree. The former "Quick links" group (Settings +
-  // Documentation, from `SECONDARY`) is no longer a sidebar section: Settings and
-  // Documentation now live in the footer account menu. `SECONDARY` remains for
-  // route resolution — see the note on that constant.
-  return [{ id: 'main', title: 'Workspace', items: toItems(NAV, icons, counts) }]
+  // The single primary tree, with no group heading. A lone group needs no label
+  // — "Workspace" over the only section on screen named the obvious and cost a
+  // row of vertical space at the top of the rail. The former "Quick links" group
+  // (Settings + Documentation, from `SECONDARY`) is likewise gone: both now live
+  // in the footer account menu. `SECONDARY` remains for route resolution — see
+  // the note on that constant.
+  return [{ id: 'main', items: toItems(NAV, icons, counts) }]
 }

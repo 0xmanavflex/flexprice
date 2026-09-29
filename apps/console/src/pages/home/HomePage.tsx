@@ -1,21 +1,21 @@
+import { useNavigate } from '@tanstack/react-router'
 import { DashboardHome } from '@fp/ui/flexprice'
 
 /**
- * Home.
+ * Home — the console overview.
  *
- * Renders the ReUI `dashboard-4` block as installed — its own layout and sample
- * data, unchanged. This replaces the Home placeholder; the block is a starting
- * point that will later read real revenue and usage.
- *
- * The shell's content region is `overflow-hidden` (list pages scroll their own
- * grid); a page that reads top to bottom owns its scroll. The block is taller
- * than the viewport, so it is wrapped here in `h-full overflow-y-auto` — the
- * same pattern the shell documents for forms — rather than editing the block.
+ * `DashboardHome` is the surface; this route component gives it the one thing it
+ * cannot have on its own, a way to navigate, and the scroll region it reads top
+ * to bottom in. The shell's content region is `overflow-hidden` (list pages
+ * scroll their own grid), so a page that reads top to bottom owns its scroll —
+ * the same pattern the shell documents for forms.
  */
 export function HomePage() {
+  const navigate = useNavigate()
+
   return (
     <div className="h-full overflow-y-auto">
-      <DashboardHome />
+      <DashboardHome onNavigate={(path) => void navigate({ to: path, search: {} as never })} />
     </div>
   )
 }

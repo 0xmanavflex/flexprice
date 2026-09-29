@@ -94,10 +94,12 @@ describe('the tree itself', () => {
 describe('the secondary destinations', () => {
   // The "Quick links" group is gone: Settings and Documentation moved to the
   // footer account menu, so the sidebar renders only the primary tree now.
-  it('renders only the Workspace group, with no Quick links group', () => {
+  it('renders a single unlabelled primary group, with no Quick links group', () => {
     const groups = toNavGroups()
     expect(groups).toHaveLength(1)
-    expect(groups[0]?.title).toBe('Workspace')
+    // The lone primary tree carries no heading — no "Workspace" label over the
+    // only section on screen.
+    expect(groups[0]?.title).toBeUndefined()
     expect(groups.some((group) => group.title === 'Quick links')).toBe(false)
     expect(groups.some((group) => group.collapsible)).toBe(false)
   })
@@ -152,6 +154,7 @@ describe('breadcrumbForPath', () => {
 describe('every destination resolves', () => {
   const BUILT = [
     '/',
+    '/revenue',
     '/features',
     '/plans',
     '/addons',

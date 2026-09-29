@@ -14,6 +14,9 @@ export type { FieldProps } from './Field'
 export { Section, SectionProvenance } from './Section'
 export type { SectionProps } from './Section'
 
+export { ResourceNavigation, ResourceNavigationProvenance } from './ResourceNavigation'
+export type { ResourceNavItem, ResourceNavigationProps } from './ResourceNavigation'
+
 export { EmptyState, EmptyStateProvenance } from './EmptyState'
 export type { EmptyStateProps } from './EmptyState'
 

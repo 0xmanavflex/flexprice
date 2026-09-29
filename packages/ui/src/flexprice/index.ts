@@ -9,6 +9,9 @@
  */
 
 export { DashboardHome, DashboardHomeProvenance } from './DashboardHome'
+export type { DashboardHomeProps } from './DashboardHome'
+export { RevenueDashboard, RevenueDashboardProvenance } from './RevenueDashboard'
+export type { RevenueDashboardProps } from './RevenueDashboard'
 export { InvoiceGrid, InvoiceGridProvenance } from './InvoiceGrid'
 export type { InvoiceGridProps } from './InvoiceGrid'
 export { InvoiceFilters, InvoiceFiltersProvenance } from './InvoiceFilters'

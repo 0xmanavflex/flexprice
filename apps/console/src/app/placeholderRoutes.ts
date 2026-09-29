@@ -64,16 +64,7 @@ export const PLACEHOLDER_ROUTES = [
     cta: 'Create credit note',
     legacy: '/billing/credit-notes',
   },
-  {
-    path: '/revenue',
-    title: 'Revenue',
-    description: 'Recognised revenue, billed and unbilled.',
-    emptyTitle: 'No revenue to report yet',
-    emptyDescription:
-      'Recognised and deferred revenue appear here once invoices have been issued.',
-    cta: null,
-    legacy: '/revenue',
-  },
+  // `/revenue` is a real page now — see `revenueRoute` in router.tsx.
 
   // Developers
   {
