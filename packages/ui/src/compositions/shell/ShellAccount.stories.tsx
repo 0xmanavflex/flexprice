@@ -67,3 +67,22 @@ export const OffersDocumentation: Story = {
 export const WithoutOrganization: Story = {
   args: { user: { name: 'Dinesh K', email: 'dinesh@flexprice.io' } },
 }
+
+/**
+ * No name on file, so the display name *is* the email.
+ *
+ * The row and the menu both printed it twice, one line under the other, which
+ * reads as a bug in the account rather than a gap in the profile. When the two
+ * are the same thing there is one line.
+ */
+export const NameIsTheEmail: Story = {
+  args: { user: { name: 'dkinsh123@gmail.com', email: 'dkinsh123@gmail.com' } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText('dkinsh123@gmail.com')).toHaveLength(1)
+
+    await userEvent.click(canvas.getByRole('button', { name: /account: dkinsh123/i }))
+    const menu = within(await screen.findByRole('menu'))
+    await waitFor(() => expect(menu.getAllByText('dkinsh123@gmail.com')).toHaveLength(1))
+  },
+}

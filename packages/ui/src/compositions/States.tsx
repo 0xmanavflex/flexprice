@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Button } from '@ui/primitives/button'
 import { Skeleton } from '@ui/primitives/skeleton'
-import { EmptyState } from './EmptyState'
+import { ListOfferProvider, type ListOffer } from './EmptyState'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -67,7 +67,7 @@ export function ErrorState({ title, description, onRetry, action }: ErrorStatePr
   return (
     <div
       role="alert"
-      className="flex flex-col items-start gap-3 rounded-xl border border-destructive/20 bg-destructive/10 p-6"
+      className="border-destructive/20 bg-destructive/10 flex flex-col items-start gap-3 rounded-xl border p-6"
     >
       {/*
         `-foreground` on a tinted surface, and plain foreground for the body.
@@ -75,10 +75,10 @@ export function ErrorState({ title, description, onRetry, action }: ErrorStatePr
         `text-muted-foreground` measures 4.33:1 — both under AA. ReUI's own
         `-light` variants pair the tint with `-foreground` for this reason.
       */}
-      <p className="text-sm font-medium text-destructive-foreground dark:text-destructive">
+      <p className="text-destructive-foreground dark:text-destructive text-sm font-medium">
         {title}
       </p>
-      {description ? <p className="text-sm text-foreground/80">{description}</p> : null}
+      {description ? <p className="text-foreground/80 text-sm">{description}</p> : null}
       <div className="flex gap-2">
         {onRetry ? (
           <Button type="button" variant="outline" size="sm" onClick={onRetry}>
@@ -97,8 +97,20 @@ export interface ListStateProps {
   isEmpty: boolean
   isFiltered: boolean
   onRetry?: () => void
-  /** What to offer when nothing exists yet. */
+  /**
+   * What to offer when nothing exists yet.
+   *
+   * Rendered twice, from one node: pinned at the end of the grid's toolbar,
+   * and again in the empty table body on the first run. A list whose only
+   * create button lives in its empty state loses it the moment the first
+   * record exists.
+   */
   createAction?: ReactNode
+  /**
+   * Kept because pages pass the same handler to the grid, which owns the
+   * filtered miss now — its empty body renders "clear filters" without taking
+   * the toolbar down with it, which is the whole point.
+   */
   onClearFilters?: () => void
   emptyTitle: string
   emptyDescription?: string
@@ -113,10 +125,15 @@ export interface ListStateProps {
  * Picks the right state for a list, in the order that matters.
  *
  * Error before loading, because a failed refetch must not be hidden behind a
- * skeleton. Filtered-empty before empty, because "no results" and "nothing
- * here yet" are different situations with different offers, and showing
- * "create your first" to someone who just typed a search is the confusion this
- * prevents.
+ * skeleton. Both replace the list, because there is nothing to show and no
+ * toolbar can act on it.
+ *
+ * Empty does not. An empty list is still a list: it keeps its toolbar, its
+ * filters and its footer, and says "nothing here yet" in the table body where
+ * the rows would be. The distinction between "no results" and "nothing here
+ * yet" survives — the page states which one it is, and the grid's empty body
+ * renders the right offer — so nobody is shown "create your first" because
+ * they typed a search.
  */
 export function ListState({
   isLoading,
@@ -125,7 +142,6 @@ export function ListState({
   isFiltered,
   onRetry,
   createAction,
-  onClearFilters,
   emptyTitle,
   emptyDescription,
   emptyIcon,
@@ -146,31 +162,29 @@ export function ListState({
 
   if (isLoading) return <LoadingRows />
 
-  if (isEmpty) {
-    return isFiltered ? (
-      <EmptyState
-        size="inline"
-        title="Nothing matches these filters"
-        description="Try a different search, or clear the filters to see everything."
-        isFiltered
-        onClearFilters={
-          onClearFilters ? (
-            <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-              Clear filters
-            </Button>
-          ) : null
-        }
-      />
-    ) : (
-      <EmptyState
-        title={emptyTitle}
-        {...(emptyDescription ? { description: emptyDescription } : {})}
-        {...(emptyIcon ? { icon: emptyIcon } : {})}
-        {...(emptySecondaryAction ? { secondaryAction: emptySecondaryAction } : {})}
-        {...(createAction ? { action: createAction } : {})}
-      />
-    )
+  /*
+   * Empty does *not* mean "render something else instead".
+   *
+   * It used to: an empty list returned an `EmptyState` in place of `children`,
+   * and since the toolbar, the search box, the filters and the pagination are
+   * all children of the grid, an empty list was a page with no way to search
+   * it, no way to filter it, and — worst — no way to create the first record
+   * the empty state was inviting you to create. The invitation and the button
+   * that answers it were in different components, and only one of them
+   * survived.
+   *
+   * So the grid always renders, and what the page would have said is published
+   * instead: the toolbar pins the create action at its end, and the grid's own
+   * empty table body says "nothing here yet" where the rows would be.
+   */
+  const offer: ListOffer = {
+    isFirstRun: isEmpty && !isFiltered,
+    title: emptyTitle,
+    description: emptyDescription,
+    ...(emptyIcon ? { icon: emptyIcon } : {}),
+    ...(emptySecondaryAction ? { secondaryAction: emptySecondaryAction } : {}),
+    ...(createAction ? { action: createAction } : {}),
   }
 
-  return <>{children}</>
+  return <ListOfferProvider value={offer}>{children}</ListOfferProvider>
 }

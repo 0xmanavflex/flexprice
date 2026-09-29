@@ -61,12 +61,19 @@ export interface ShellBreadcrumbProps {
   trail: ShellCrumb[]
 }
 
-/** Oldest crumbs give up their labels first; the current page always keeps its. */
-function labelVisibility(index: number, total: number): string {
+/**
+ * Oldest crumbs give up their labels first; the current page always keeps its.
+ *
+ * `null` means the label is always shown. Otherwise the pair is the class that
+ * hides the *label* and the class that hides the *separator that belongs to
+ * it* — they must move together, or a dropped crumb leaves a chevron pointing
+ * at nothing.
+ */
+function labelVisibility(index: number, total: number): { label: string; separator: string } {
   const fromEnd = total - 1 - index
-  if (fromEnd === 0) return ''
-  if (fromEnd === 1) return 'hidden truncate md:inline'
-  return 'hidden truncate lg:inline'
+  if (fromEnd === 0) return { label: '', separator: '' }
+  if (fromEnd === 1) return { label: 'hidden md:inline', separator: 'hidden md:flex' }
+  return { label: 'hidden lg:inline', separator: 'hidden lg:flex' }
 }
 
 export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
@@ -74,11 +81,21 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
 
   return (
     <Breadcrumb className="min-w-0">
-      <BreadcrumbList className="flex-nowrap">
+      <BreadcrumbList className="min-w-0 flex-nowrap">
         {trail.map((crumb, index) => {
           const isLast = index === trail.length - 1
+          const visibility = labelVisibility(index, trail.length)
+          /*
+           * `truncate` and never `wrap-break-word`.
+           *
+           * The primitive's `<ol>` sets `overflow-wrap: break-word`, and with
+           * `flex-nowrap` and `min-w-0` children that broke *inside* words —
+           * "Custome/rs", "Subscrip/tions" — which doubled the h-12 header to
+           * two lines on a phone. An ellipsis is the honest way to run out of
+           * room.
+           */
           const label = (
-            <span className={cn('min-w-0', labelVisibility(index, trail.length))}>
+            <span className={cn('min-w-0 truncate whitespace-nowrap', visibility.label)}>
               {crumb.label}
             </span>
           )
@@ -95,7 +112,20 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
 
           return (
             <Fragment key={`${crumb.label}-${index}`}>
-              <BreadcrumbItem className="flex min-w-0 items-center gap-1.5">
+              <BreadcrumbItem
+                className={cn(
+                  'flex items-center gap-1.5',
+                  /*
+                   * The environment crumb gets a floor the page crumb does
+                   * not. Both shrink, and at 390 the environment lost the
+                   * race and rendered as "Sa…" — on a billing console the
+                   * difference between a sandbox and production is the one
+                   * thing that must never be a guess.
+                   */
+                  crumb.content ? 'min-w-20' : 'min-w-0',
+                  crumb.mark || crumb.content ? '' : visibility.separator,
+                )}
+              >
                 {crumb.content ? (
                   crumb.content
                 ) : isLast || !crumb.onClick ? (
@@ -119,7 +149,15 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
               </BreadcrumbItem>
 
               {isLast ? null : (
-                <BreadcrumbSeparator className="[&>svg]:size-3.5 shrink-0">
+                <BreadcrumbSeparator
+                  className={cn(
+                    'shrink-0 [&>svg]:size-3.5',
+                    // A crumb that keeps a mark is still on screen, so its
+                    // separator stays. One that drops to nothing takes its
+                    // separator with it.
+                    crumb.mark || crumb.content ? '' : visibility.separator,
+                  )}
+                >
                   <ChevronRightIcon aria-hidden />
                 </BreadcrumbSeparator>
               )}

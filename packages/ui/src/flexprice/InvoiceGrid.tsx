@@ -1,14 +1,6 @@
 import { useMemo, useRef, useState, type ReactNode } from 'react'
-import {
-  type ColumnDef,
-  type PaginationState,
-  useTable,
-} from '@tanstack/react-table'
-import {
-  type Invoice,
-  type InvoiceQuery,
-  InvoiceSortField,
-} from '@fp/domain'
+import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
+import { type Invoice, type InvoiceQuery, InvoiceSortField } from '@fp/domain'
 import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
 import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
@@ -63,6 +55,8 @@ export interface InvoiceGridProps {
   error?: string | null
   onRetry?: () => void
   onInvoiceClick?: (invoice: Invoice) => void
+  /** The advanced filter, dropped into the toolbar. */
+  filters?: ReactNode
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for money and dates. Supplied by the app, never read from a global. */
@@ -108,7 +102,7 @@ const SORT_OPTIONS = Object.values(InvoiceSortField).map((value) => ({
 /** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
 function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
   const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="whitespace-nowrap tabular-nums text-muted-foreground">{text}</span>
+  return <span className="text-muted-foreground whitespace-nowrap tabular-nums">{text}</span>
 }
 
 export function InvoiceGrid({
@@ -120,6 +114,7 @@ export function InvoiceGrid({
   error = null,
   onRetry,
   onInvoiceClick,
+  filters,
   onClearFilters,
   locale,
 }: InvoiceGridProps) {
@@ -131,8 +126,18 @@ export function InvoiceGrid({
           meta: { skeleton: <Skeleton className="h-4 w-24" /> },
           accessorFn: (row: Invoice) => row.number,
           header: ({ column }: never) => <DataGridColumnHeader title="Invoice" column={column} />,
+          // Truncated, the same way `Money` is, and for the same reason. The
+          // column is fixed at 140px and the `td` clips nothing — it computes
+          // `overflow: visible`, so a long value is *painted over* the customer
+          // name beside it rather than merely being wide. That is not an edge
+          // case: the API returns an empty `invoiceNumber` for generated
+          // invoices, so `number` falls back to a 30-character ULID on every
+          // such row. Clipped, the row still scans; the full value stays in the
+          // title attribute, so it is recoverable on hover and to a reader.
           cell: ({ row }: { row: { original: Invoice } }) => (
-            <span className="tabular-nums">{row.original.number}</span>
+            <span className="block max-w-full truncate tabular-nums" title={row.original.number}>
+              {row.original.number}
+            </span>
           ),
           enableSorting: true,
           size: 140,
@@ -222,7 +227,10 @@ export function InvoiceGrid({
     getRowId: (row: Invoice) => row.id,
     state: { pagination },
     onPaginationChange: (updater: unknown) => {
-      const next = typeof updater === 'function' ? (updater as (p: PaginationState) => PaginationState)(pagination) : (updater as PaginationState)
+      const next =
+        typeof updater === 'function'
+          ? (updater as (p: PaginationState) => PaginationState)(pagination)
+          : (updater as PaginationState)
       onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
     },
   } as never)
@@ -268,6 +276,7 @@ export function InvoiceGrid({
         placeholder="Search invoice # or customer..."
         label="Search invoices"
       >
+        {filters}
         <SortMenu
           align="end"
           options={SORT_OPTIONS}

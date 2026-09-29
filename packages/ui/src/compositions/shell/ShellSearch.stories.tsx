@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { ShellSearch } from './ShellSearch'
 
 /**
@@ -38,5 +38,29 @@ export const OpensADialogAndReports: Story = {
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.type(dialog.getByRole('searchbox', { name: 'Search' }), 'acme{Enter}')
     await expect(args.onSearch).toHaveBeenCalledWith('acme')
+  },
+}
+
+/**
+ * Without `onSearch` there is no field.
+ *
+ * An input that takes a query, closes the dialog and drops it teaches that
+ * search is broken rather than absent — and it was doing exactly that in the
+ * console, where no global search endpoint is wired. The unavailable state
+ * says so, and names the per-list search boxes that do work. The `/` hint and
+ * the shortcuts are not advertised either.
+ */
+export const NotAvailableYet: Story = {
+  render: () => <ShellSearch />,
+  play: async ({ canvasElement }) => {
+    const trigger = within(canvasElement).getByRole('button', { name: 'Search' })
+    await expect(trigger).not.toHaveAttribute('aria-keyshortcuts')
+
+    await userEvent.click(trigger)
+    const dialog = within(await screen.findByRole('dialog'))
+    // `waitFor`, so the check retries while the dialog animates open.
+    await waitFor(() => expect(dialog.getByText(/available yet/)).toBeVisible())
+    // Nothing that could swallow a query.
+    await expect(dialog.queryByRole('searchbox')).not.toBeInTheDocument()
   },
 }

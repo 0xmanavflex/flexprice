@@ -129,6 +129,42 @@ export const WithActions: Story = {
 export const Empty: Story = {
   args: { charges: [], onAdd: fn() },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('No charges yet')).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No charges yet')).toBeInTheDocument()
+    // With an add flow wired, the copy may ask for a charge.
+    await expect(canvas.getByText(/add a fixed base or a usage charge/i)).toBeInTheDocument()
+  },
+}
+
+/**
+ * Empty on a surface with no add flow — the add-on page.
+ *
+ * The instruction is dropped with the action: telling someone to add a charge
+ * on a surface that offers no way to do it is worse than saying nothing.
+ */
+export const EmptyWithoutAddAction: Story = {
+  args: { charges: [] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No charges yet')).toBeInTheDocument()
+    await expect(canvas.queryByRole('button', { name: /add charges/i })).not.toBeInTheDocument()
+    await expect(canvas.queryByText(/add a fixed base or a usage charge/i)).not.toBeInTheDocument()
+  },
+}
+
+/**
+ * The caller names its own entity.
+ *
+ * This table is shared by plans, add-ons and cost sheets, so it must not say
+ * "A plan" — which is what the add-on page used to show, verbatim.
+ */
+export const EmptyWithCallerCopy: Story = {
+  args: { charges: [], emptyDescription: 'This add-on bills nothing until it has a charge.' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByText('This add-on bills nothing until it has a charge.'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText(/a plan bills nothing/i)).not.toBeInTheDocument()
   },
 }

@@ -240,10 +240,22 @@ function Items({
   activeItemId?: string
   onNavigate: (id: string) => void
 }) {
-  const { state, isMobile } = useSidebar()
+  const { state, isMobile, setOpenMobile } = useSidebar()
   // The rail only exists on desktop; on mobile the sidebar is a sheet and is
   // always at full width, so the dropdown branch would be wrong there.
   const isRail = state === 'collapsed' && !isMobile
+
+  /*
+   * On a phone the sheet covers three-quarters of the screen, so leaving it
+   * open after a destination is chosen reads as a tap that did nothing — the
+   * route changed behind a drawer nobody asked to keep. Every row navigates
+   * through here, including a parent that redirects to its first child, so
+   * this is the one place the dismissal belongs.
+   */
+  const navigate = (id: string) => {
+    if (isMobile) setOpenMobile(false)
+    onNavigate(id)
+  }
 
   return (
     <SidebarMenu>
@@ -254,14 +266,14 @@ function Items({
               key={item.id}
               item={item}
               isActive={item.id === activeItemId}
-              onNavigate={onNavigate}
+              onNavigate={navigate}
             />
           )
         }
         const props = {
           item,
           ...(activeItemId === undefined ? {} : { activeItemId }),
-          onNavigate,
+          onNavigate: navigate,
         }
         return isRail ? (
           <CollapsedParent key={item.id} {...props} />

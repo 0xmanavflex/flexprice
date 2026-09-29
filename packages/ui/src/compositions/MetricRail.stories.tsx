@@ -13,7 +13,12 @@ const meta = {
   parameters: { layout: 'padded' },
   args: {
     metrics: [
-      { label: 'Active subscriptions', value: '128', hint: '+12 this month', sentiment: 'positive' },
+      {
+        label: 'Active subscriptions',
+        value: '128',
+        hint: '+12 this month',
+        sentiment: 'positive',
+      },
       { label: 'MRR', value: '$4,210' },
       { label: 'Starts at', value: '$29', hint: 'per month' },
       { label: 'Charges', value: '3' },
@@ -40,5 +45,43 @@ export const LeadsWithNumbers: Story = {
   play: async ({ canvasElement }) => {
     // The value, not the label, is the large element — a KPI, not a field.
     await expect(within(canvasElement).getByText('128')).toBeInTheDocument()
+  },
+}
+
+/**
+ * Omit the rail rather than fake it.
+ *
+ * This is the shape an unpriced add-on used to open on: two zeros and two
+ * em-dashes, no information, and ~310px of a 390px phone screen spent before
+ * any real content. A rail where every tile is blank is not a rail.
+ */
+export const OmittedWhenEveryTileIsBlank: Story = {
+  args: {
+    metrics: [
+      { label: 'Charges', value: '0' },
+      { label: 'Starts at', value: '—' },
+      { label: 'Currency', value: '—' },
+      { label: 'Entitlements', value: '0' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText('Charges')).not.toBeInTheDocument()
+    await expect(canvas.queryByText('Entitlements')).not.toBeInTheDocument()
+  },
+}
+
+/** One real number is enough to earn the rail — the blank tiles ride along. */
+export const OneRealValueKeepsTheRail: Story = {
+  args: {
+    metrics: [
+      { label: 'Charges', value: '0' },
+      { label: 'Entitlements', value: '4' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('4')).toBeInTheDocument()
+    await expect(canvas.getByText('Charges')).toBeInTheDocument()
   },
 }

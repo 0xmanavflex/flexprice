@@ -1,5 +1,8 @@
-// @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
+// @ts-nocheck — vendored from the ReUI registry.
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
+//
+// ADAPTED — one deviation from stock, in SheetContent's width ladder for
+// `side="right"`. See the comment there. Everything else is registry source.
 "use client"
 
 import * as React from "react"
@@ -54,8 +57,21 @@ function SheetContent({
       <SheetPrimitive.Popup
         data-slot="sheet-content"
         data-side={side}
+        /*
+         * ADAPTED width ladder for `side="right"` — the editor-drawer side.
+         *
+         * Stock is `w-3/4` capped at `sm:max-w-sm`, which is wrong at both
+         * ends. On a 390px phone it leaves a dead 98px strip of blurred page
+         * behind a ~260px-wide input; and it never grows past 384px, so the
+         * multi-field plan and coupon editors get 27% of a 1440 screen and 20%
+         * of a 1920 one. Full width below `sm`, then a cap that steps up with
+         * the viewport: 448 -> 576 -> 672.
+         *
+         * `left` stays stock: its only consumer is the mobile sidebar, which
+         * is meant to leave part of the page visible behind it.
+         */
         className={cn(
-          "fixed z-50 flex flex-col gap-4 bg-popover bg-clip-padding text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-3/4 data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-sm",
+          "fixed z-50 flex flex-col gap-4 bg-popover bg-clip-padding text-sm text-popover-foreground shadow-lg transition duration-200 ease-in-out data-ending-style:opacity-0 data-starting-style:opacity-0 data-[side=bottom]:inset-x-0 data-[side=bottom]:bottom-0 data-[side=bottom]:h-auto data-[side=bottom]:border-t data-[side=bottom]:data-ending-style:translate-y-[2.5rem] data-[side=bottom]:data-starting-style:translate-y-[2.5rem] data-[side=left]:inset-y-0 data-[side=left]:left-0 data-[side=left]:h-full data-[side=left]:w-3/4 data-[side=left]:border-r data-[side=left]:data-ending-style:translate-x-[-2.5rem] data-[side=left]:data-starting-style:translate-x-[-2.5rem] data-[side=right]:inset-y-0 data-[side=right]:right-0 data-[side=right]:h-full data-[side=right]:w-full data-[side=right]:border-l data-[side=right]:data-ending-style:translate-x-[2.5rem] data-[side=right]:data-starting-style:translate-x-[2.5rem] data-[side=top]:inset-x-0 data-[side=top]:top-0 data-[side=top]:h-auto data-[side=top]:border-b data-[side=top]:data-ending-style:translate-y-[-2.5rem] data-[side=top]:data-starting-style:translate-y-[-2.5rem] data-[side=left]:sm:max-w-sm data-[side=right]:sm:max-w-md data-[side=right]:lg:max-w-xl data-[side=right]:2xl:max-w-2xl",
           className
         )}
         {...props}

@@ -6,6 +6,23 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-09-29
+
+From a live-data UI audit run against production at five viewports (1920 / 1440
+/ 1280 / 768 / 390). Findings and measurements in `docs/audit/`.
+
+- 2026-09-29 — primitives/sheet: `side="right"` width ladder adapted — `w-full` below `sm`, then `sm:max-w-md lg:max-w-xl 2xl:max-w-2xl` (was `w-3/4` capped at `max-w-sm`). Stock was wrong at both ends: 292px on a 390 phone behind a dead 98px strip, and a fixed 384px on desktop — 20% of a 1920 screen for the multi-field plan and coupon editors. **This is a hand-edit of a vendored file, against `component-guardrails.md` §2**: the house-rule route (`styles.css` `data-slot`) cannot win here, because `@layer components` loses to the stock `data-[side=right]:sm:max-w-sm` utility. Declared, not discovered — the file carries an `ADAPTED` header, and a `pnpm ui:add sheet --overwrite` will silently revert it.
+- 2026-09-29 — compositions/DetailShell: the tab strip scrolls (`overflow-x: auto` + scroll-snap + a `max-sm` edge fade) instead of clipping. At 390 the last tab — Information, the only place a plan's ID and description live — painted outside the strip and was unreachable by touch. Also raised inactive tab text from `text-foreground/60` (4.14:1, below the 4.5:1 floor) to `/70` (5.65:1) in light mode.
+- 2026-09-29 — compositions/MetricRail: renders `null` when every tile is empty or zero. Add-on detail was showing Charges `0` / Starts at `—` / Currency `—` / Entitlements `0` — four tiles of nothing eating ~310px of the first screen on a phone — which the rail's own rule already forbade.
+- 2026-09-29 — compositions/shell: mobile-sheet breakpoint `md` → `lg`. At exactly 768 the hamburger was `md:hidden` while the 260px push sidebar was still mounted, so a tablet had neither affordance and lost 34% of its width. Moved in all four places (sidebar primitive, `SidebarTrigger`, `SidebarInset`, rail handle) — a half-move is the bug.
+- 2026-09-29 — compositions/shell/ShellBreadcrumb: crumb labels `truncate whitespace-nowrap`; a crumb that hides its label now hides its separator too (orphan `› ›` at 390); crumbs carrying content get `min-w-20` so the environment name wins the shrink race — it was truncating to "Sa…" on a billing console.
+- 2026-09-29 — compositions/shell/ShellSearch: with no `onSearch`, the dialog states that search is unavailable and binds **no** shortcuts, instead of offering an input that silently discarded the query. API unchanged when `onSearch` is supplied.
+- 2026-09-29 — compositions/shell/ShellNav, ShellAccount, ShellRailHandle: the mobile drawer closes on navigation; the account menu stops printing the same email twice; the rail handle gains a visible focus ring and returns `null` on mobile (its subtree was painting a stray 2×16 tick over the content card on every page).
+- 2026-09-29 — compositions/GridToolbar, States, EmptyState: search no longer collapses to 53px at 390 (the row wraps below `sm` and search carries a floor); the first-run empty state keeps the toolbar mounted rather than replacing the whole surface; empty blocks centre in the available height instead of pinning to the top.
+- 2026-09-29 — flexprice/InvoiceGrid, PaymentGrid: the invoice number truncates like `Money` does. With no invoice number the API returns `""`, so the cell fell back to a 30-char ULID and painted over the customer name — measured 136px of overrun at 1280.
+- 2026-09-29 — flexprice/InvoiceFilters: new. Status facet for the invoice list, which had none. Offers only `STORED_INVOICE_STATUSES` — `Paid` and `Overdue` are derived by `deriveInvoiceStatus`, so filtering by them sent no status at all and returned every invoice under a chip claiming otherwise.
+- 2026-09-29 — flexprice/ChargeTable: `emptyDescription` is a prop. The default copy said "**A plan** bills nothing until it has a charge" on the add-on page, and instructed the reader to add a charge on a surface with no add flow.
+
 ## 2026-09-28
 
 - 2026-09-28 — theme: rebranded from indigo (~274°) to Ferry's deep-teal (`#07383e` light / `#81cec4` dark) on warm-neutral surfaces; background is a warm off-white (pure white read as harsh); focus ring, active nav and hover are all the one teal tone, never blue; status set retuned (calmer green, warmer/brighter yellow). Font switched to Inter. One rebrand knob remains `--brand` in `styles.css`.

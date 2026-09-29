@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { Button } from '@ui/primitives/button'
+import { ListOfferProvider } from './EmptyState'
 import { GridToolbar } from './GridToolbar'
 
 /**
@@ -75,5 +76,91 @@ export const WithQueryClears: Story = {
     const clear = within(canvasElement).getByRole('button', { name: 'Clear search' })
     await userEvent.click(clear)
     await expect(args.onSearchChange).toHaveBeenCalledWith('')
+  },
+}
+
+/**
+ * Narrow: the search keeps a whole row, and its width.
+ *
+ * On one unwrapping row the search is the only item that can give up space,
+ * so it absorbed every shortfall — 163px at a 768px viewport and 53px at
+ * 390px, which renders the placeholder as "Sear". It now has a floor, and the
+ * controls drop to a row of their own rather than squeezing it.
+ */
+export const NarrowWrapsInsteadOfSqueezing: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ width: 320 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const input = canvas.getByRole('textbox', { name: 'Search coupons' })
+    const create = canvas.getByRole('button', { name: 'New coupon' })
+
+    // Wide enough to read what it is for, at a width where it used to be 53px.
+    await expect(input.getBoundingClientRect().width).toBeGreaterThan(180)
+    // The floor holds even when the row is tighter than the field wants.
+    const group = input.closest('[data-slot="input-group"]') as HTMLElement
+    await expect(group.getBoundingClientRect().width).toBeGreaterThanOrEqual(180)
+
+    // And the controls are on the row beneath it, not beside it.
+    await expect(create.getBoundingClientRect().top).toBeGreaterThan(
+      input.getBoundingClientRect().bottom - 1,
+    )
+  },
+}
+
+/** Wide: one row, search left and capped, controls and CTA pinned right. */
+export const WideStaysOnOneRow: Story = {
+  decorators: [
+    (Story) => (
+      <div style={{ width: 1100 }}>
+        <Story />
+      </div>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const input = canvas.getByRole('textbox', { name: 'Search coupons' })
+    const create = canvas.getByRole('button', { name: 'New coupon' })
+
+    const inputBox = input.getBoundingClientRect()
+    const createBox = create.getBoundingClientRect()
+
+    // Same row.
+    await expect(createBox.top).toBeLessThan(inputBox.bottom)
+    // Search on the left and capped; the CTA at the far end.
+    await expect(inputBox.width).toBeLessThanOrEqual(320)
+    await expect(createBox.left).toBeGreaterThan(inputBox.right)
+  },
+}
+
+/**
+ * The create action can come from the list rather than the grid.
+ *
+ * A list states what creating one means once, on `ListState`; the toolbar
+ * pins it and the empty table body offers it. Twelve grids do not each need
+ * a prop for it, and none of them can forget it.
+ */
+export const TakesTheCreateActionFromTheList: Story = {
+  args: { action: undefined },
+  decorators: [
+    (Story) => (
+      <ListOfferProvider
+        value={{
+          isFirstRun: true,
+          title: 'No coupons yet',
+          action: <Button size="sm">New coupon</Button>,
+        }}
+      >
+        <Story />
+      </ListOfferProvider>
+    ),
+  ],
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('button', { name: 'New coupon' })).toBeVisible()
   },
 }

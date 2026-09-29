@@ -74,10 +74,7 @@ export function WorkflowStepper({
 }: WorkflowStepperProps) {
   // ReUI addresses steps by 1-based index; ids are translated at this boundary
   // and nowhere else.
-  const currentIndex = Math.max(
-    1,
-    steps.findIndex((step) => step.id === currentStep) + 1,
-  )
+  const currentIndex = Math.max(1, steps.findIndex((step) => step.id === currentStep) + 1)
 
   return (
     <Stepper
@@ -118,6 +115,23 @@ export function WorkflowStepper({
             step={index + 1}
             completed={step.status === 'complete'}
             disabled={step.status === 'locked'}
+            /*
+             * ReUI decides the state as `completed || step < activeStep`, so
+             * the `completed` prop can *add* completion but never withhold it:
+             * every step behind the current one draws as a filled, finished
+             * circle whether or not a single field was filled in. Opening
+             * `?step=credits` therefore claimed Customer, Plan, Prices and
+             * Entitlements were done when nothing had been entered — the
+             * interface telling the user something untrue about their own
+             * work, which is worse than telling them nothing.
+             *
+             * The attribute is left as ReUI computes it (it is a styling hook,
+             * not something assistive tech reads); what is corrected is the
+             * one thing that is visible. `StepperIndicator` is the only
+             * sub-part whose look depends on the state — the separator and
+             * title carry `data-state` but style the same either way — so a
+             * single class on it is the whole fix, not a fork.
+             */
           >
             <StepperTrigger
               /**
@@ -140,7 +154,15 @@ export function WorkflowStepper({
                 step.status === 'locked' ? ' (not available yet)' : ''
               }`}
             >
-              <StepperIndicator>{index + 1}</StepperIndicator>
+              <StepperIndicator
+                className={
+                  step.status !== 'complete' && index + 1 < currentIndex
+                    ? 'bg-accent! text-accent-foreground!'
+                    : undefined
+                }
+              >
+                {index + 1}
+              </StepperIndicator>
               <StepperTitle>{step.title}</StepperTitle>
             </StepperTrigger>
             {index < steps.length - 1 ? <StepperSeparator /> : null}

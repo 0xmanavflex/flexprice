@@ -130,29 +130,12 @@ export function AddonDetailPage({ addonId, onNavigateToList }: AddonDetailPagePr
   }
 
   const data = addon.data
-  const charges = prices.data ?? []
-  const start = startingCharge(charges)
-  const currency = charges.find((charge) => charge.currency)?.currency?.toUpperCase() ?? null
-
-  const metrics: DetailMetric[] = [
-    { label: 'Charges', value: prices.isPending ? '—' : String(charges.length) },
-    {
-      label: 'Starts at',
-      value: prices.isPending
-        ? '—'
-        : start
-          ? formatMoney(start.money)
-          : charges.length > 0
-            ? 'Usage-based'
-            : '—',
-      ...(start ? { hint: BILLING_PERIOD_LABEL[start.charge.billingPeriod] } : {}),
-    },
-    { label: 'Currency', value: currency ?? '—' },
-    {
-      label: 'Entitlements',
-      value: entitlements.isPending ? '—' : String((entitlements.data ?? []).length),
-    },
-  ]
+  const metrics = buildMetrics({
+    charges: prices.data ?? [],
+    chargesPending: prices.isPending,
+    entitlementCount: (entitlements.data ?? []).length,
+    entitlementsPending: entitlements.isPending,
+  })
 
   const closeEditor = () => {
     setEditing(false)
@@ -170,7 +153,7 @@ export function AddonDetailPage({ addonId, onNavigateToList }: AddonDetailPagePr
           <button
             type="button"
             onClick={onNavigateToList}
-            className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
+            className="text-muted-foreground hover:text-foreground w-fit text-xs transition-colors"
           >
             ← Add-ons
           </button>
@@ -244,8 +227,18 @@ function PricesTab({ addonId }: { addonId: string }) {
 
   return (
     <>
-      {/* No add flow yet — an add-on has no charges builder route — so onAdd is omitted. */}
-      <ChargeTable charges={charges.data ?? []} onTerminate={(charge) => setTarget(charge)} />
+      {/*
+        No add flow yet — an add-on has no charges builder route — so `onAdd` is
+        omitted, and with it the "add a charge" instruction: telling someone to
+        do a thing this surface offers no way to do is worse than saying
+        nothing. The empty copy names the add-on rather than inheriting the
+        table's plan wording.
+      */}
+      <ChargeTable
+        charges={charges.data ?? []}
+        emptyDescription="This add-on bills nothing until it has a charge."
+        onTerminate={(charge) => setTarget(charge)}
+      />
       <ConfirmDialog
         open={target !== null}
         onOpenChange={(open) => {
@@ -405,6 +398,67 @@ function InformationTab({ addon }: { addon: Addon }) {
         />
       </CardContent>
     </Card>
+  )
+}
+
+/**
+ * The rail, with every tile that has no number in it left out.
+ *
+ * An add-on with no prices used to open on "Charges 0 · Starts at — ·
+ * Currency — · Entitlements 0": four tiles carrying nothing, which on a 390px
+ * phone ate roughly 310px of the first screen before any real content. The
+ * house rule is that a rail tile is a number the add-on *has*, not a field it
+ * is missing — so an unpriced add-on simply has fewer tiles, and one with
+ * neither charges nor entitlements has no rail at all, the way feature detail
+ * already omits it. `MetricRail` drops a rail whose every tile is blank, so
+ * the loading '—' row does not flash an empty instrument panel either.
+ */
+function buildMetrics({
+  charges,
+  chargesPending,
+  entitlementCount,
+  entitlementsPending,
+}: {
+  charges: Charge[]
+  chargesPending: boolean
+  entitlementCount: number
+  entitlementsPending: boolean
+}): DetailMetric[] {
+  const start = startingCharge(charges)
+  const currency = charges.find((charge) => charge.currency)?.currency?.toUpperCase() ?? null
+
+  const chargesMetric: DetailMetric | null = chargesPending
+    ? { label: 'Charges', value: '—' }
+    : charges.length > 0
+      ? { label: 'Charges', value: charges.length.toLocaleString() }
+      : null
+
+  const startsAtMetric: DetailMetric | null = chargesPending
+    ? { label: 'Starts at', value: '—' }
+    : start
+      ? {
+          label: 'Starts at',
+          value: formatMoney(start.money),
+          hint: BILLING_PERIOD_LABEL[start.charge.billingPeriod],
+        }
+      : charges.length > 0
+        ? { label: 'Starts at', value: 'Usage-based', sentiment: 'muted' }
+        : null
+
+  const currencyMetric: DetailMetric | null = chargesPending
+    ? { label: 'Currency', value: '—' }
+    : currency
+      ? { label: 'Currency', value: currency }
+      : null
+
+  const entitlementsMetric: DetailMetric | null = entitlementsPending
+    ? { label: 'Entitlements', value: '—' }
+    : entitlementCount > 0
+      ? { label: 'Entitlements', value: entitlementCount.toLocaleString() }
+      : null
+
+  return [chargesMetric, startsAtMetric, currencyMetric, entitlementsMetric].filter(
+    (metric): metric is DetailMetric => metric !== null,
   )
 }
 

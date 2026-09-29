@@ -66,6 +66,17 @@ export function ShellAccount({
 }: ShellAccountProps) {
   const { isMobile } = useSidebar()
 
+  /*
+   * A display name that fell back to the email address is not a second fact.
+   *
+   * Nothing guarantees a person has a name on file, and when they do not the
+   * console hands us the email for both — so the menu printed
+   * "dkinsh123@gmail.com" twice, one line above the other, and the repetition
+   * read as a bug in the account rather than a gap in the profile.
+   */
+  const nameIsEmail = user.name.trim().toLowerCase() === user.email.trim().toLowerCase()
+  const secondary = user.organization ?? (nameIsEmail ? undefined : user.email)
+
   return (
     <SidebarMenu>
       <SidebarMenuItem>
@@ -91,17 +102,14 @@ export function ShellAccount({
 
               <div className="flex min-w-0 flex-col in-data-[state=collapsed]:hidden">
                 <span className="truncate text-xs font-medium">{user.name}</span>
-                <span className="inline-flex min-w-0 items-center gap-1">
-                  {user.organization ? (
-                    <span
-                      aria-hidden
-                      className="bg-primary/70 size-1.5 shrink-0 rounded-full"
-                    />
-                  ) : null}
-                  <span className="text-muted-foreground truncate text-[10px]">
-                    {user.organization ?? user.email}
+                {secondary ? (
+                  <span className="inline-flex min-w-0 items-center gap-1">
+                    {user.organization ? (
+                      <span aria-hidden className="bg-primary/70 size-1.5 shrink-0 rounded-full" />
+                    ) : null}
+                    <span className="text-muted-foreground truncate text-[10px]">{secondary}</span>
                   </span>
-                </span>
+                ) : null}
               </div>
             </div>
 
@@ -126,9 +134,11 @@ export function ShellAccount({
             <DropdownMenuGroup>
               <DropdownMenuLabel className="flex min-w-0 flex-col px-2.5 py-1.5">
                 <span className="truncate text-sm font-medium">{user.name}</span>
-                <span className="text-muted-foreground truncate text-xs font-normal">
-                  {user.email}
-                </span>
+                {nameIsEmail ? null : (
+                  <span className="text-muted-foreground truncate text-xs font-normal">
+                    {user.email}
+                  </span>
+                )}
               </DropdownMenuLabel>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />

@@ -55,7 +55,7 @@ export interface PaymentGridProps {
 /** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
 function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
   const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="tabular-nums text-muted-foreground">{text}</span>
+  return <span className="text-muted-foreground tabular-nums">{text}</span>
 }
 
 export function PaymentGrid({
@@ -87,7 +87,7 @@ export function PaymentGrid({
           // the decimal and scans as money rather than as text.
           cell: ({ row }: { row: { original: Payment } }) => (
             <div className="text-right tabular-nums">
-              <Money value={row.original.amount} {...(locale ? { locale } : {})} />
+              <Money value={row.original.amount} {...(locale ? { locale } : {})} truncate />
             </div>
           ),
           enableSorting: true,

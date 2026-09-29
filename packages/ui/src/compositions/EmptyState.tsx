@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { IconStack } from '@ui/components/reui/icon-stack'
 import {
   Empty,
@@ -30,6 +30,12 @@ import { provenance } from '@ui/provenance'
  * space; an empty table body inside a page that already has a heading and a
  * toolbar does not, and giving it one pushes the toolbar off screen.
  *
+ * Which is why a list's first run is rendered *here*, in the grid's own empty
+ * body, rather than by swapping the grid out for a page-sized empty state: see
+ * `ListOffer` below. A `size="page"` block fills the height it is given and
+ * centres in it, so a page with nothing on it reads as deliberate rather than
+ * as a table that failed to load.
+ *
  * `role="status"` so the change is announced when a filter empties a list — a
  * sighted user watches the rows vanish, and nobody else is told.
  */
@@ -38,6 +44,49 @@ export const EmptyStateProvenance = provenance({
   composes: ['@reui/icon-stack', 'ui/empty'],
   note: 'Empty + IconStack, after empty-state-1. Distinguishes "none yet" from "none matching".',
 })
+
+/**
+ * What a list offers: the create action, and the copy for its first run.
+ *
+ * Published by `ListState` and read in two places — `GridToolbar` pins the
+ * action at the end of the toolbar, and this component swaps a grid's
+ * filtered-miss copy for the first-run copy when the list is empty because
+ * nothing has been created yet.
+ *
+ * It is a context rather than a prop because the empty body belongs to the
+ * *grid*, several components below the page that knows what creating one
+ * means. Threading `createAction` and the first-run sentence through twelve
+ * grids would put the same four props on every one of them and still leave a
+ * grid free to forget one. The page states its offer once; the two places that
+ * can act on it pick it up.
+ */
+export interface ListOffer {
+  /**
+   * The list is empty, and no filter is responsible.
+   *
+   * The distinction the whole file exists for, decided by the page: a grid
+   * cannot tell "nothing matched your search" from "nothing exists yet",
+   * because from inside the table both are zero rows.
+   */
+  isFirstRun: boolean
+  title: string
+  description?: string | undefined
+  icon?: ReactNode
+  /** Usually "New thing" — the same node the toolbar pins at its end. */
+  action?: ReactNode
+  secondaryAction?: ReactNode
+}
+
+const ListOfferContext = createContext<ListOffer | null>(null)
+
+export function ListOfferProvider({ value, children }: { value: ListOffer; children: ReactNode }) {
+  return <ListOfferContext.Provider value={value}>{children}</ListOfferContext.Provider>
+}
+
+/** The surrounding list's offer, or `null` outside one. */
+export function useListOffer(): ListOffer | null {
+  return useContext(ListOfferContext)
+}
 
 export interface EmptyStateProps {
   title: string
@@ -72,23 +121,55 @@ export function EmptyState({
   guides,
 }: EmptyStateProps) {
   const isPage = size === 'page'
-  const actions = isFiltered ? onClearFilters : action
+
+  /*
+   * A grid's empty body is written for a filtered miss, because that is the
+   * only emptiness a grid can describe. When the page says the list is empty
+   * for the first time instead, its own copy and its create button take that
+   * slot — in place, so the toolbar above and the pagination below stay where
+   * they are. Replacing the whole grid with a page-sized empty state is what
+   * used to happen, and it took the search box and the create button with it.
+   */
+  const offer = useListOffer()
+  const firstRun = isFiltered && offer?.isFirstRun ? offer : null
+
+  const shown = firstRun ?? { title, description, icon, action, secondaryAction }
+  /* A first-run offer is not a filtered miss, whatever slot it renders in. */
+  const showsFilterMiss = isFiltered && firstRun === null
+  const actions = showsFilterMiss ? onClearFilters : shown.action
 
   return (
     <Empty
       role="status"
       className={cn(
-        'flex-none border-0 bg-transparent',
-        isPage ? 'gap-6 px-6 py-14' : 'gap-3 px-6 py-10',
+        'border-0 bg-transparent',
+        // `flex-1` with the primitive's own `justify-center`: the block sits in
+        // the middle of the space it is given rather than pinned to the top of
+        // it, which reads as a table that failed to load.
+        isPage
+          ? 'flex-1 justify-center gap-6 px-6 py-14'
+          : // A table body is as wide as the *table*, which on a narrow screen
+            // is wider than the screen — centring in it puts half the sentence
+            // past the right edge, reachable only by scrolling the columns.
+            // Sticky at the left of the scroll port, never wider than the
+            // viewport: the message stays where the reader is.
+            'sticky left-0 w-full max-w-[calc(100vw-3.5rem)] flex-none gap-3 px-6 py-10',
+        // Inside a table body there is no flex parent to stretch into — a `td`
+        // is a `td`, and a table is only as tall as its rows — so the room to
+        // be centred in is asked for directly. The subtraction is the chrome
+        // above and below a list: header, toolbar, column headings, footer.
+        // Measured at 272px on the tightest of them (390px wide, where the
+        // toolbar takes two rows), so it never overflows into a scroll.
+        firstRun ? 'min-h-[calc(100vh-17rem)] justify-center py-12' : null,
       )}
     >
       <EmptyHeader className={cn('max-w-[27rem]', isPage ? 'gap-4' : 'gap-2')}>
         {isPage ? (
           <EmptyMedia className="mb-0">
-            <IconStack aria-hidden>{icon}</IconStack>
+            <IconStack aria-hidden>{shown.icon}</IconStack>
           </EmptyMedia>
-        ) : icon ? (
-          <EmptyMedia className="mb-0 text-muted-foreground">{icon}</EmptyMedia>
+        ) : shown.icon ? (
+          <EmptyMedia className="text-muted-foreground mb-0">{shown.icon}</EmptyMedia>
         ) : null}
 
         <div className="flex flex-col items-center gap-1.5">
@@ -98,29 +179,29 @@ export function EmptyState({
               isPage ? 'text-lg font-semibold' : 'text-sm font-medium',
             )}
           >
-            {title}
+            {shown.title}
           </EmptyTitle>
-          {description ? (
+          {shown.description ? (
             <EmptyDescription
-              className={cn('max-w-[24rem]', isPage ? 'text-sm/relaxed' : 'text-xs')}
+              className={cn('max-w-[24rem]', isPage || firstRun ? 'text-sm/relaxed' : 'text-xs')}
             >
-              {description}
+              {shown.description}
             </EmptyDescription>
           ) : null}
         </div>
       </EmptyHeader>
 
-      {actions || secondaryAction ? (
+      {actions || shown.secondaryAction ? (
         <EmptyContent className="max-w-none gap-0">
           <div className="flex flex-wrap items-center justify-center gap-2">
             {actions}
             {/* Only on the first-run state: a filtered miss has one way out. */}
-            {isFiltered ? null : secondaryAction}
+            {showsFilterMiss ? null : shown.secondaryAction}
           </div>
         </EmptyContent>
       ) : null}
 
-      {guides && isPage && !isFiltered ? (
+      {guides && isPage && !showsFilterMiss ? (
         <div className="w-full max-w-[34rem] space-y-3 pt-4">
           <p className="text-muted-foreground text-sm">Quick guides</p>
           {guides}

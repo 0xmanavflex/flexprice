@@ -6,6 +6,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@ui/primitives/input-group'
+import { useListOffer } from './EmptyState'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -50,7 +51,13 @@ export interface GridToolbarProps {
   heading?: string
   /** Filter, Sort, and anything else. Aligned to the end, before the CTA. */
   children?: ReactNode
-  /** The primary create action, pinned to the very end after filter and sort. */
+  /**
+   * The primary create action, pinned to the very end after filter and sort.
+   *
+   * Optional because a list page can state it once on `ListState` instead, and
+   * the toolbar picks it up from there — the empty table body needs the same
+   * node, and declaring it twice is how the two drift apart.
+   */
   action?: ReactNode
 }
 
@@ -63,8 +70,27 @@ export function GridToolbar({
   children,
   action,
 }: GridToolbarProps) {
+  /*
+   * A list states its create action once, on `ListState`. The toolbar is
+   * where it belongs on a list that has rows — the empty body only exists
+   * before the first one — so it is picked up here rather than threaded
+   * through every grid. A grid that passes its own `action` keeps it.
+   */
+  const offer = useListOffer()
+  const createAction = action ?? offer?.action
+
   return (
-    <div role="search" className="flex items-center gap-2">
+    /*
+     * One row while it fits, two when it does not.
+     *
+     * Search is the only thing here that can give up width, so on one row it
+     * absorbs every shortfall: it measured 53px at 390px wide, which is the
+     * magnifier and four letters of "Search". A floor stops that, and wrapping
+     * gives the row somewhere to put the overflow — the search takes the first
+     * line and the controls drop under it, right-aligned, rather than the
+     * field being squeezed to nothing.
+     */
+    <div role="search" className="flex flex-wrap items-center gap-2">
       {/*
         The page's one `<h1>` — the entity's name — but styled as a compact
         label rather than a hero, because the breadcrumb already carries the
@@ -77,7 +103,7 @@ export function GridToolbar({
       {/* Constrained, not full-width: a search that stretches the whole bar
           reads as one big empty field. Capped at a comfortable width, with the
           controls pinned to the right by `ml-auto`. */}
-      <InputGroup className="w-full max-w-xs">
+      <InputGroup className="w-full min-w-[11.25rem] sm:w-auto sm:max-w-xs sm:grow sm:basis-[11.25rem]">
         <InputGroupAddon align="inline-start">
           <SearchIcon aria-hidden />
         </InputGroupAddon>
@@ -101,10 +127,10 @@ export function GridToolbar({
         ) : null}
       </InputGroup>
 
-      {children || action ? (
-        <div className="ml-auto flex shrink-0 items-center gap-2">
+      {children || createAction ? (
+        <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
           {children ? <div className="flex items-center gap-1.5">{children}</div> : null}
-          {action}
+          {createAction}
         </div>
       ) : null}
     </div>

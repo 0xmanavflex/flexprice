@@ -264,7 +264,7 @@ export function AppShell({
         the panel should read as sitting slightly in front of the sidebar, not
         as a card thrown onto it.
       */}
-      <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border shadow-[0_0_18px_-6px_rgba(0,0,0,0.12)]! md:peer-data-[variant=inset]:rounded-2xl">
+      <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border shadow-[0_0_18px_-6px_rgba(0,0,0,0.12)]! lg:peer-data-[variant=inset]:rounded-2xl">
         {/* A rule under the header, so the breadcrumb is not floating over
             whatever the page happens to start with. */}
         {/* The bar spans the inset so its rule reaches both edges, but its
@@ -275,17 +275,24 @@ export function AppShell({
             drift hundreds of px away from the centred content. */}
         <header className="flex h-12 shrink-0 items-center border-b">
           <div className="mx-auto flex h-full w-full max-w-[var(--shell-max)] items-center gap-2 px-6">
-            {/* The edge handle is desktop-only — on mobile the sidebar is a
-                sheet, and this is the only thing that opens it. */}
-            <SidebarTrigger className="-ml-1 md:hidden" />
+            {/* The edge handle is desktop-only — below `lg` the sidebar is a
+                sheet, and this is the only thing that opens it. `lg`, not `md`:
+                at exactly 768 `md:hidden` had already taken the trigger away
+                while the sidebar was still a 260px push panel, so a third of the
+                viewport went to navigation with nothing offering to close it. */}
+            <SidebarTrigger className="-ml-1 shrink-0 lg:hidden" />
             {breadcrumb}
             {/*
               Search and Create sit together, top-right: the two things a person
               reaches for from any screen. Search leads because it is the more
               frequent, and `headerActions` — where the Create menu renders —
               falls in beside it.
+
+              `shrink-0` so the cluster can never be squeezed off the edge by a
+              long breadcrumb; the crumbs truncate instead, which is the order
+              of sacrifice that keeps Create reachable at 390.
             */}
-            <div className="ml-auto flex items-center gap-2">
+            <div className="ml-auto flex shrink-0 items-center gap-2">
               <ShellSearch {...(onSearch ? { onSearch } : {})} />
               {headerActions}
             </div>

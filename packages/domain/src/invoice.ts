@@ -95,6 +95,33 @@ export function deriveInvoiceStatus({
 }
 
 /** Statuses that should pull a billing operator's eye. */
+/**
+ * The statuses the API actually stores, as opposed to the ones this module
+ * works out for itself.
+ *
+ * `deriveInvoiceStatus` above computes `Paid` from a payment status and
+ * `Overdue` from a due date — neither is a field on an invoice, so neither can
+ * be asked of the API. That distinction is not transport trivia: it is the
+ * reason the function exists, and anything offering the reader a status to
+ * *filter* by has to respect it.
+ *
+ * Offering a derived status as a filter is worse than omitting it. The request
+ * carries no status at all, the API answers with every invoice, and the screen
+ * shows an unfiltered list under a chip insisting it is filtered — a wrong
+ * answer presented as a right one.
+ */
+export const STORED_INVOICE_STATUSES: readonly InvoiceStatus[] = [
+  InvoiceStatus.Draft,
+  InvoiceStatus.Open,
+  InvoiceStatus.Void,
+  InvoiceStatus.Skipped,
+]
+
+/** True when the API can be asked for this status directly. */
+export function isStoredInvoiceStatus(status: InvoiceStatus): boolean {
+  return STORED_INVOICE_STATUSES.includes(status)
+}
+
 export function needsAttention(status: InvoiceStatus): boolean {
   return status === InvoiceStatus.Overdue
 }

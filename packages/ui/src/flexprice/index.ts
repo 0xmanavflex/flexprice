@@ -11,6 +11,8 @@
 export { DashboardHome, DashboardHomeProvenance } from './DashboardHome'
 export { InvoiceGrid, InvoiceGridProvenance } from './InvoiceGrid'
 export type { InvoiceGridProps } from './InvoiceGrid'
+export { InvoiceFilters, InvoiceFiltersProvenance } from './InvoiceFilters'
+export type { InvoiceFiltersProps } from './InvoiceFilters'
 export { PriceOverrideForm, PriceOverrideFormProvenance } from './PriceOverrideForm'
 export type { PriceOverrideFormProps } from './PriceOverrideForm'
 export { FeatureGrid, FeatureGridProvenance } from './FeatureGrid'
@@ -83,7 +85,10 @@ export { SubscriptionGrid, SubscriptionGridProvenance } from './SubscriptionGrid
 export type { SubscriptionGridProps } from './SubscriptionGrid'
 export { SubscriptionFilters, SubscriptionFiltersProvenance } from './SubscriptionFilters'
 export type { SubscriptionFiltersProps } from './SubscriptionFilters'
-export { SubscriptionStatusBadge, SubscriptionStatusBadgeProvenance } from './SubscriptionStatusBadge'
+export {
+  SubscriptionStatusBadge,
+  SubscriptionStatusBadgeProvenance,
+} from './SubscriptionStatusBadge'
 export { PaymentGrid, PaymentGridProvenance } from './PaymentGrid'
 export type { PaymentGridProps } from './PaymentGrid'
 export { PaymentFilters, PaymentFiltersProvenance } from './PaymentFilters'

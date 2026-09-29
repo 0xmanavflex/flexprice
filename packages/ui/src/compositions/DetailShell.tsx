@@ -35,6 +35,46 @@ export interface DetailShellProps {
   className?: string
 }
 
+/**
+ * Makes a detail page's tab strip reachable on a phone, and legible anywhere.
+ *
+ * The vendored `TabsList` is `inline-flex w-fit` with overflow left visible,
+ * so at 390px the four-tab strip (Overview / Entitlements / Credit Grants /
+ * Information) paints its later children outside the 373px strip, where the
+ * viewport clips them — "Information" could not be reached by touch scroll at
+ * all, and on the plan page that tab is the only place the plan ID and
+ * description live. A whole field of data was simply inaccessible on a phone.
+ *
+ * Written as a descendant rule on the body rather than a prop, because the
+ * page owns its `<Tabs>` and every detail page needs this — a prop is one each
+ * page can forget. `data-slot` is the vendor's public targeting contract, so
+ * this composes over the registry instead of forking it.
+ *
+ * The strip scrolls horizontally, snaps to whole tabs, and hides its
+ * scrollbar (an 8px-tall bar inside a 32px pill reads as damage). Below `sm`,
+ * where it always overflows, the edges fade so there is a visible signal that
+ * the strip continues; above `sm` it usually fits, so no fade is drawn.
+ *
+ * The second rule is contrast. Stock paints an inactive tab `text-foreground/60`,
+ * which over the muted pill is 4.14:1 — under the 4.5:1 floor, on the only
+ * control that says what else is on the page. Raised to /70 (5.65:1) in light;
+ * dark keeps the vendor's `muted-foreground`, and hover still resolves to full
+ * foreground, so only the failing state moves.
+ */
+const TAB_STRIP = [
+  '[&_[data-slot=tabs-list]]:max-w-full',
+  '[&_[data-slot=tabs-list]]:overflow-x-auto',
+  '[&_[data-slot=tabs-list]]:snap-x',
+  '[&_[data-slot=tabs-list]]:[scrollbar-width:none]',
+  '[&_[data-slot=tabs-list]]:[&::-webkit-scrollbar]:hidden',
+  '[&_[data-slot=tabs-list]>*]:snap-start',
+  'max-sm:[&_[data-slot=tabs-list]]:[mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-10px),transparent)]',
+  '[&_[data-slot=tabs-trigger]:not([data-active])]:text-foreground/70',
+  '[&_[data-slot=tabs-trigger]:not([data-active]):hover]:text-foreground',
+  'dark:[&_[data-slot=tabs-trigger]:not([data-active])]:text-muted-foreground',
+  'dark:[&_[data-slot=tabs-trigger]:not([data-active]):hover]:text-foreground',
+].join(' ')
+
 export function DetailShell({
   breadcrumb,
   title,
@@ -60,10 +100,10 @@ export function DetailShell({
               {badges}
             </div>
             {identifier ? (
-              <span className="font-mono text-xs text-muted-foreground">{identifier}</span>
+              <span className="text-muted-foreground font-mono text-xs">{identifier}</span>
             ) : null}
             {description ? (
-              <div className="max-w-3xl text-sm text-muted-foreground">{description}</div>
+              <div className="text-muted-foreground max-w-3xl text-sm">{description}</div>
             ) : null}
           </div>
           {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
@@ -72,8 +112,17 @@ export function DetailShell({
       </header>
       {/* Header and body each cap at `--shell-max` and centre, so they align
           with each other and with the shell header, and the detail page fills a
-          1440 screen but stops sprawling edge-to-edge at 2560. */}
-      <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-h-0 flex-1 flex-col gap-6 px-6 pb-10">
+          1440 screen but stops sprawling edge-to-edge at 2560.
+
+          `TAB_STRIP` rides along here because the page owns its `<Tabs>`: the
+          rule is a `data-slot` descendant selector rather than a prop, so no
+          detail page can forget it and clip its last tab off a phone. */}
+      <div
+        className={cn(
+          'mx-auto flex w-full max-w-[var(--shell-max)] min-h-0 flex-1 flex-col gap-6 px-6 pb-10',
+          TAB_STRIP,
+        )}
+      >
         {children}
       </div>
     </div>

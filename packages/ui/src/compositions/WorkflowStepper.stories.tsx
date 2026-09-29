@@ -92,7 +92,9 @@ export const LockedStepsAreNotNavigable: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.click(canvas.getByRole('button', { name: /Credits/ }), { pointerEventsCheck: 0 })
+    await userEvent.click(canvas.getByRole('button', { name: /Credits/ }), {
+      pointerEventsCheck: 0,
+    })
 
     await expect(args.onStepChange).not.toHaveBeenCalled()
   },
@@ -106,6 +108,44 @@ export const SelectingTheCurrentStepIsANoOp: Story = {
     await userEvent.click(canvas.getByRole('button', { name: /Prices/ }))
 
     await expect(args.onStepChange).not.toHaveBeenCalled()
+  },
+}
+
+/**
+ * Walked past is not the same as filled in.
+ *
+ * ReUI fills every circle behind the current step, so a wizard whose earlier
+ * steps collect nothing claimed they were done. Here the user is on Credits
+ * and only Prices was actually completed, so Customer, Plan and Entitlements
+ * must not read as finished.
+ */
+export const OnlyRealCompletionReadsAsDone: Story = {
+  args: {
+    currentStep: 'credits',
+    steps: [
+      { id: 'customer', title: 'Customer', status: 'upcoming' },
+      { id: 'plan', title: 'Plan', status: 'upcoming' },
+      { id: 'prices', title: 'Prices', status: 'complete' },
+      { id: 'entitlements', title: 'Entitlements', status: 'upcoming' },
+      { id: 'credits', title: 'Credits', status: 'current' },
+      { id: 'review', title: 'Review', status: 'locked' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const circles = [...canvasElement.querySelectorAll('[data-slot="stepper-indicator"]')]
+    await expect(circles).toHaveLength(6)
+
+    const fill = (i: number) => getComputedStyle(circles[i] as Element).backgroundColor
+    const done = fill(2)
+
+    // Walked past, nothing entered — not drawn as finished.
+    await expect(fill(0)).not.toBe(done)
+    await expect(fill(1)).not.toBe(done)
+    await expect(fill(3)).not.toBe(done)
+
+    // Where the user is still stands out, and a locked step still does not.
+    await expect(fill(4)).toBe(done)
+    await expect(fill(5)).not.toBe(done)
   },
 }
 

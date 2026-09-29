@@ -30,6 +30,17 @@ import { provenance } from '@ui/provenance'
  * work without first clicking into the sidebar. `/` is shown, since it is the
  * one worth learning; ⌘K is bound as well because it is what everyone reaches
  * for first and failing silently would teach the wrong thing.
+ *
+ * Without `onSearch` there is no field at all.
+ *
+ * The console has no global search endpoint yet, and the shell was rendering
+ * the full control anyway: a `/` hint, two bound shortcuts, and an input that
+ * took a query, closed the dialog and dropped it. An input that eats what you
+ * typed is worse than no input, because it teaches that search is broken
+ * rather than absent — so the unavailable state says so in words, points at
+ * the per-list search boxes that do work, and the shortcuts and the hint are
+ * not advertised. This is the same choice as `notifications={[]}` beside it:
+ * the honest empty state, until the endpoint exists.
  */
 export const ShellSearchProvenance = provenance({
   source: 'composition',
@@ -48,8 +59,13 @@ export interface ShellSearchProps {
 // reaches wider, or the two read as the same box twice.
 export function ShellSearch({ onSearch, placeholder = 'Search everything' }: ShellSearchProps) {
   const [open, setOpen] = useState(false)
+  const available = onSearch !== undefined
 
   useEffect(() => {
+    // Nothing to reach, so nothing is bound: a shortcut that opens an
+    // apology is still a shortcut that interrupted what you were typing.
+    if (!available) return
+
     function onKeyDown(event: KeyboardEvent) {
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
@@ -75,7 +91,7 @@ export function ShellSearch({ onSearch, placeholder = 'Search everything' }: She
     }
     window.addEventListener('keydown', onKeyDown)
     return () => window.removeEventListener('keydown', onKeyDown)
-  }, [])
+  }, [available])
 
   return (
     <>
@@ -91,7 +107,7 @@ export function ShellSearch({ onSearch, placeholder = 'Search everything' }: She
         size="sm"
         onClick={() => setOpen(true)}
         aria-label="Search"
-        aria-keyshortcuts="/ Meta+K Control+K"
+        {...(available ? { 'aria-keyshortcuts': '/ Meta+K Control+K' } : {})}
         className="text-muted-foreground gap-1.5 font-normal"
       >
         <SearchIcon
@@ -99,37 +115,62 @@ export function ShellSearch({ onSearch, placeholder = 'Search everything' }: She
           className="pointer-events-none size-4 shrink-0 opacity-60 select-none"
         />
         <span className="hidden sm:inline">{placeholder}</span>
-        <Kbd className="ml-1 hidden sm:inline-flex">/</Kbd>
+        {available ? <Kbd className="ml-1 hidden sm:inline-flex">/</Kbd> : null}
       </Button>
 
       <Dialog open={open} onOpenChange={setOpen}>
-        <DialogContent className="max-w-md px-4 py-2 **:data-[slot=dialog-close]:top-1/2 **:data-[slot=dialog-close]:right-3 **:data-[slot=dialog-close]:-translate-y-1/2 **:data-[slot=dialog-close]:opacity-60">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Search</DialogTitle>
-            <DialogDescription>
-              Search customers, invoices, plans and features.
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            role="search"
-            className="relative flex items-center gap-3"
-            onSubmit={(event) => {
-              event.preventDefault()
-              const term = new FormData(event.currentTarget).get('q')?.toString() ?? ''
-              onSearch?.(term)
-              setOpen(false)
-            }}
-          >
-            <SearchIcon aria-hidden className="pointer-events-none size-4 opacity-60" />
-            <Input
-              type="search"
-              name="q"
-              autoFocus
-              aria-label="Search"
-              placeholder="Type to search…"
-              className="h-10 border-none p-0 shadow-none outline-none focus-visible:ring-0"
-            />
-          </form>
+        {/*
+          `w-[calc(100%-2rem)]`, because `max-w-md` alone never engages below
+          448px: on a 390px phone the dialog was exactly 390 wide at x=0, its
+          rounded corners flush against both edges of the screen.
+        */}
+        <DialogContent className="w-[calc(100%-2rem)] max-w-md px-4 py-2 **:data-[slot=dialog-close]:top-1/2 **:data-[slot=dialog-close]:right-3 **:data-[slot=dialog-close]:-translate-y-1/2 **:data-[slot=dialog-close]:opacity-60">
+          {available ? (
+            <>
+              <DialogHeader className="sr-only">
+                <DialogTitle>Search</DialogTitle>
+                <DialogDescription>
+                  Search customers, invoices, plans and features.
+                </DialogDescription>
+              </DialogHeader>
+              <form
+                role="search"
+                className="relative flex items-center gap-3"
+                onSubmit={(event) => {
+                  event.preventDefault()
+                  const term = new FormData(event.currentTarget).get('q')?.toString() ?? ''
+                  onSearch(term)
+                  setOpen(false)
+                }}
+              >
+                <SearchIcon aria-hidden className="pointer-events-none size-4 opacity-60" />
+                <Input
+                  type="search"
+                  name="q"
+                  autoFocus
+                  aria-label="Search"
+                  placeholder="Type to search…"
+                  className="h-10 border-none p-0 shadow-none outline-none focus-visible:ring-0"
+                />
+              </form>
+            </>
+          ) : (
+            <div className="flex items-start gap-3 py-2 pr-6">
+              <SearchIcon
+                aria-hidden
+                className="text-muted-foreground pointer-events-none mt-0.5 size-4 shrink-0 opacity-60"
+              />
+              <DialogHeader className="items-start gap-1 text-left">
+                <DialogTitle className="text-sm font-medium">
+                  Search isn&rsquo;t available yet
+                </DialogTitle>
+                <DialogDescription className="text-muted-foreground text-sm">
+                  There is nothing to search across the whole console for now. Each list —
+                  customers, invoices, plans, features — has its own search box in its toolbar.
+                </DialogDescription>
+              </DialogHeader>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

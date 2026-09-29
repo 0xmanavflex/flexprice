@@ -15,6 +15,8 @@ import {
   LandmarkIcon,
   PuzzleIcon,
   SettingsIcon,
+  CalculatorIcon,
+  FolderTreeIcon,
 } from 'lucide-react'
 import type { CreateEnvironment } from '@fp/domain'
 import { useNavCounts } from '@fp/query'
@@ -65,6 +67,8 @@ const CREATE_ICONS: Record<string, ReactNode> = {
   feature: <FileTextIcon className="size-4" />,
   invoice: <ReceiptIcon className="size-4" />,
   payment: <CreditCardIcon className="size-4" />,
+  group: <FolderTreeIcon className="size-4" />,
+  'cost-sheet': <CalculatorIcon className="size-4" />,
 }
 
 export interface ConsoleShellProps {

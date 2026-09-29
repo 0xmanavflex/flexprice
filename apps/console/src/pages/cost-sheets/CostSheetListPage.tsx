@@ -2,13 +2,18 @@ import { type CostSheet, type CostSheetQuery } from '@fp/domain'
 import { ApiError, useCostSheets } from '@fp/query'
 import { CostSheetFilters, CostSheetGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
+import { Button } from '@fp/ui/primitives'
 import { SheetIcon } from 'lucide-react'
+import { env } from '@/env'
 
 export interface CostSheetListPageProps {
   query: CostSheetQuery
   onQueryChange: (query: CostSheetQuery) => void
   onOpenCostSheet: (costSheet: CostSheet) => void
 }
+
+/** Where a cost sheet is created today. No origin configured, no link. */
+const LEGACY_PATH = '/product-catalog/cost-sheets'
 
 /**
  * The wiring layer, and nothing else — the same shape as `CouponListPage`.
@@ -17,6 +22,12 @@ export interface CostSheetListPageProps {
  * `useState`: the query lives in the URL. Read-only for now — creating and
  * editing a cost sheet is a later surface, the same way coupons shipped a list
  * before its editor.
+ *
+ * The create action is a hand-off for the same reason as `GroupListPage`:
+ * this page replaced a placeholder that linked out to where a cost sheet can
+ * be made, the real list dropped that link, and nothing in the console
+ * replaced it. `POST /costs` exists in the SDK and is not wired here yet, so
+ * the offer points at the dashboard that can serve it today.
  */
 export function CostSheetListPage({
   query,
@@ -24,6 +35,8 @@ export function CostSheetListPage({
   onOpenCostSheet,
 }: CostSheetListPageProps) {
   const costSheets = useCostSheets(query)
+
+  const createHref = env.legacyConsoleUrl ? `${env.legacyConsoleUrl}${LEGACY_PATH}` : null
 
   const failure = toFailure(costSheets.error)
   const rows = costSheets.data?.costSheets ?? []
@@ -40,9 +53,28 @@ export function CostSheetListPage({
           isFiltered={isFiltered}
           onRetry={() => void costSheets.refetch()}
           onClearFilters={clearFilters}
+          {...(createHref
+            ? {
+                createAction: (
+                  <Button
+                    size="sm"
+                    render={
+                      // A new tab, so nothing open in the console is lost.
+                      <a href={createHref} rel="noreferrer" target="_blank" />
+                    }
+                  >
+                    New cost sheet
+                  </Button>
+                ),
+              }
+            : {})}
           emptyIcon={<SheetIcon aria-hidden />}
           emptyTitle="No cost sheets yet"
-          emptyDescription="Cost sheets record what usage costs you, so margin can be measured against what you charge. They appear here once created."
+          emptyDescription={
+            createHref
+              ? 'Cost sheets record what usage costs you, so margin can be measured against what you charge. Create the first in the current dashboard.'
+              : 'Cost sheets record what usage costs you, so margin can be measured against what you charge. Creating one is not in this console yet — use POST /costs, or the current dashboard.'
+          }
         >
           <CostSheetGrid
             costSheets={rows}

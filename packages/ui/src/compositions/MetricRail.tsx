@@ -52,27 +52,56 @@ const ARROW: Record<NonNullable<DetailMetric['sentiment']>, string> = {
   muted: '',
 }
 
+/**
+ * The values that are the *absence* of a number, not a number.
+ *
+ * An em-dash is the placeholder a tile shows while it has nothing; a bare
+ * zero is a count that has never happened. Neither is worth a tile on its own.
+ */
+const BLANK_VALUES = new Set(['', '—', '–', '-', '0'])
+
+/** Whether a tile's headline value carries no information. */
+function isBlank(value: ReactNode): boolean {
+  if (value === null || value === undefined || value === false) return true
+  if (typeof value === 'number') return value === 0
+  if (typeof value === 'string') return BLANK_VALUES.has(value.trim())
+  // A node we cannot read — a badge, a formatted amount — is assumed real.
+  return false
+}
+
 export function MetricRail({ metrics, className }: MetricRailProps) {
+  /*
+   * Omit the rail rather than fake it.
+   *
+   * A rail of "0 / — / — / 0" is four tiles of nothing, and on a 390px phone
+   * it ate ~310px of the first screen before any real content. The house rule
+   * is that a tile is a number the record *has*, not a field it is missing —
+   * so a rail where every tile is blank is not a rail, and the page opens on
+   * its content instead. Enforced here rather than at each caller, so the rule
+   * holds on every detail page without each one remembering it.
+   */
+  if (metrics.length === 0 || metrics.every((metric) => isBlank(metric.value))) return null
+
   const cols = COLUMNS[Math.min(metrics.length, 5)] ?? COLUMNS[4]
   return (
     <dl
       className={cn(
-        'grid gap-px overflow-hidden rounded-xl border bg-border shadow-xs',
+        'bg-border grid gap-px overflow-hidden rounded-xl border shadow-xs',
         cols,
         className,
       )}
     >
       {metrics.map((metric) => (
-        <div key={metric.label} className="flex flex-col gap-1.5 bg-card p-4">
-          <dt className="text-xs font-medium text-muted-foreground">{metric.label}</dt>
+        <div key={metric.label} className="bg-card flex flex-col gap-1.5 p-4">
+          <dt className="text-muted-foreground text-xs font-medium">{metric.label}</dt>
           {/* Value and hint both live in the <dd> so the group is dt+dd only —
               a hint as a sibling of dt/dd breaks axe's definition-list rule. */}
           <dd className="flex flex-col gap-1">
-            <span className="text-2xl leading-none font-semibold tabular-nums text-foreground">
+            <span className="text-foreground text-2xl leading-none font-semibold tabular-nums">
               {metric.value}
             </span>
             {metric.hint ? (
-              <span className="text-xs text-muted-foreground">
+              <span className="text-muted-foreground text-xs">
                 {metric.sentiment ? ARROW[metric.sentiment] : ''}
                 {metric.hint}
               </span>

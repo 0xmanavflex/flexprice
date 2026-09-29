@@ -27,11 +27,21 @@ export const ShellRailHandleProvenance = provenance({
 })
 
 const BAR =
-  'bg-foreground/40 block h-2 w-0.5 transition-all duration-100 ease-linear group-hover/rail:bg-foreground/60 motion-reduce:transition-none'
+  'bg-foreground/40 block h-2 w-0.5 group-focus-visible/rail:bg-foreground/60 transition-all duration-100 ease-linear group-hover/rail:bg-foreground/60 motion-reduce:transition-none'
 
 export function ShellRailHandle() {
-  const { state, toggleSidebar } = useSidebar()
+  const { state, toggleSidebar, isMobile } = useSidebar()
   const isOpen = state === 'expanded'
+
+  /*
+   * Not rendered at all below `lg`, rather than hidden with a class.
+   *
+   * There is no seam to sit on while the sidebar is a sheet, and a `hidden`
+   * button still keeps its bars in the tree — which is how two grey ticks
+   * ended up measurable just inside the content card's left edge. Removing the
+   * subtree is the only thing that reliably suppresses its descendants.
+   */
+  if (isMobile) return null
 
   return (
     <button
@@ -46,7 +56,7 @@ export function ShellRailHandle() {
           ? 'var(--sidebar-width)'
           : 'calc(var(--sidebar-width-icon) + var(--spacing) * 4)',
       }}
-      className="group/rail fixed top-1/2 z-30 hidden h-12 w-7 -translate-y-1/2 cursor-pointer items-center pl-2 outline-none transition-[left] duration-200 ease-linear motion-reduce:transition-none md:flex"
+      className="group/rail focus-visible:ring-ring fixed top-1/2 z-30 hidden h-12 w-7 -translate-y-1/2 cursor-pointer items-center rounded-md pl-2 transition-[left] duration-200 ease-linear outline-none focus-visible:ring-2 motion-reduce:transition-none lg:flex"
     >
       <span className="flex flex-col items-center">
         {/* The chevron points where the sidebar is going, not where it is. */}
@@ -55,7 +65,9 @@ export function ShellRailHandle() {
           className={cn(
             BAR,
             'origin-bottom rounded-t-full',
-            isOpen ? 'group-hover/rail:rotate-40' : 'group-hover/rail:-rotate-40',
+            isOpen
+              ? 'group-hover/rail:rotate-40 group-focus-visible/rail:rotate-40'
+              : 'group-hover/rail:-rotate-40 group-focus-visible/rail:-rotate-40',
           )}
         />
         <span
@@ -63,7 +75,9 @@ export function ShellRailHandle() {
           className={cn(
             BAR,
             'origin-top rounded-b-full',
-            isOpen ? 'group-hover/rail:-rotate-40' : 'group-hover/rail:rotate-40',
+            isOpen
+              ? 'group-hover/rail:-rotate-40 group-focus-visible/rail:-rotate-40'
+              : 'group-hover/rail:rotate-40 group-focus-visible/rail:rotate-40',
           )}
         />
       </span>
@@ -75,7 +89,7 @@ export function ShellRailHandle() {
       */}
       <span
         aria-hidden
-        className="border-border bg-foreground text-background pointer-events-none absolute left-full -ml-2 -translate-x-0.5 rounded-md border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap opacity-0 shadow-xs shadow-black/5 transition-all duration-200 ease-out group-hover/rail:translate-x-0 group-hover/rail:opacity-100"
+        className="border-border bg-foreground text-background pointer-events-none absolute left-full -ml-2 -translate-x-0.5 rounded-md border px-2 py-0.5 text-[11px] font-medium whitespace-nowrap opacity-0 shadow-xs shadow-black/5 transition-all duration-200 ease-out group-hover/rail:translate-x-0 group-hover/rail:opacity-100 group-focus-visible/rail:translate-x-0 group-focus-visible/rail:opacity-100"
       >
         {isOpen ? 'Collapse' : 'Expand'}
       </span>

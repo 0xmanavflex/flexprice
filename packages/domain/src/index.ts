@@ -32,7 +32,9 @@ export {
   InvoiceSortField,
   InvoiceStatus,
   deriveInvoiceStatus,
+  isStoredInvoiceStatus,
   needsAttention,
+  STORED_INVOICE_STATUSES,
 } from './invoice'
 export type { Invoice, InvoiceQuery, InvoiceStatusInput } from './invoice'
 

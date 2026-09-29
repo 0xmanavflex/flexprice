@@ -1,8 +1,8 @@
 import { type InvoiceQuery } from '@fp/domain'
 import { ApiError, useInvoices } from '@fp/query'
 import { ReceiptIcon } from 'lucide-react'
-import { InvoiceGrid } from '@fp/ui/flexprice'
-import { EmptyState, PageBody } from '@fp/ui/compositions'
+import { InvoiceFilters, InvoiceGrid } from '@fp/ui/flexprice'
+import { ListState, PageBody } from '@fp/ui/compositions'
 
 export interface InvoiceListPageProps {
   query: InvoiceQuery
@@ -30,18 +30,31 @@ export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) 
     <>
       <PageBody>
         {/*
-         * The first-run state belongs to the page, not the table: with no
-         * invoices at all there is nothing to put a header row above, and the
-         * useful thing to say is that invoices arrive from subscriptions
-         * rather than being made here.
+         * Through `ListState`, like every other list — not a hand-rolled early
+         * return, which is what this was.
+         *
+         * The distinction matters here more than anywhere else in the console.
+         * Replacing the grid with a first-run panel also removes the toolbar,
+         * and the toolbar is where the status filter lives. An invoice the
+         * default query does not return — a skipped one, say — then leaves the
+         * ledger looking empty with no control on screen to go and find it.
+         * The reader is told "no invoices yet" and given no way to discover
+         * that this is false. `ListState` keeps the toolbar up and puts the
+         * first-run copy inside the table body instead.
          */}
-        {!invoices.isPending && !invoices.error && rows.length === 0 && !isFiltered ? (
-          <EmptyState
-            icon={<ReceiptIcon aria-hidden />}
-            title="No invoices yet"
-            description="Invoices are produced when a subscription's billing period closes. Create a plan and subscribe a customer, and the first one will appear here."
-          />
-        ) : (
+        <ListState
+          isLoading={invoices.isPending}
+          error={
+            invoices.error ? { message: toMessage(invoices.error) ?? '', canRetry: true } : null
+          }
+          isEmpty={rows.length === 0 && !isFiltered}
+          isFiltered={isFiltered}
+          onRetry={() => void invoices.refetch()}
+          emptyIcon={<ReceiptIcon aria-hidden />}
+          emptyTitle="No invoices yet"
+          emptyDescription="Invoices are produced when a subscription's billing period closes. Create a plan and subscribe a customer, and the first one will appear here."
+          onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+        >
           <InvoiceGrid
             invoices={rows}
             total={invoices.data?.total ?? 0}
@@ -51,8 +64,20 @@ export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) 
             error={toMessage(invoices.error)}
             onRetry={() => void invoices.refetch()}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+            /*
+             * The status facet, in the toolbar beside Sort — the same slot
+             * every other list screen fills. Without it the ledger could only
+             * be narrowed by hand-editing the URL, which is how a tenant whose
+             * only invoice was skipped ended up looking at an empty list.
+             */
+            filters={
+              <InvoiceFilters
+                statuses={query.statuses}
+                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
+              />
+            }
           />
-        )}
+        </ListState>
       </PageBody>
     </>
   )

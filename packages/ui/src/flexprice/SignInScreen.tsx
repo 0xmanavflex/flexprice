@@ -41,7 +41,7 @@ import { SignInForm, type SignInFormProps } from './SignInForm'
 export const SignInScreenProvenance = provenance({
   source: Source.REUI,
   registry: ['auth-6'],
-  note: 'ReUI auth-6 layout, grid background and provider row; form, copy and behaviour are ours. Testimonial and trust-brand logos replaced — they were claims about third parties.',
+  note: "ReUI auth-6 layout, grid background, provider row AND the block's own sidebar (Unsplash photo, Slack wordmark, testimonial, six brand wordmarks) as shipped. Form, copy and behaviour are ours. The sidebar content is ReUI demo material — third-party marks and a quote from no real customer — and must be replaced before this screen faces a customer.",
 })
 
 /** One provider button, as the block draws them. */
@@ -225,7 +225,7 @@ export function SignInScreen({
         screen is put in front of a customer — the logos are other companies'
         trademarks and the quote is not a real Flexprice customer's.
       */}
-      <aside className="bg-muted/25 border-border/70 relative flex min-h-136 overflow-hidden px-8 py-10 sm:px-12 lg:min-h-svh lg:border-l lg:px-14 lg:py-12">
+      <aside className="bg-muted/25 border-border/70 relative hidden min-h-136 overflow-hidden px-8 py-10 sm:px-12 lg:flex lg:min-h-svh lg:border-l lg:px-14 lg:py-12">
         <AuthGridBackground />
 
         <div className="relative z-10 flex min-h-full w-full flex-col justify-between gap-10">
