@@ -121,6 +121,12 @@
     --chart-4: oklch(0.75 0.15 75);
     --chart-5: oklch(0.55 0.1 320);
     --radius: 0.625rem;
+    /* The one content measure the shell, the list bodies and the detail pages
+       all cap to and centre within. Below it every surface fills the width
+       (a 1440 screen is edge-to-edge); above it — 1920, 2560 — the content
+       centres in a readable column instead of a table sprawling to 2270px with
+       its values scattered across the screen. Tune here, once. */
+    --shell-max: 1600px;
     /* A shade darker than the page, warm-neutral. */
     --sidebar: oklch(0.972 0.002 85);
     /* 0.34: nav text has to clear 4.5:1 on the sidebar and on the near-white

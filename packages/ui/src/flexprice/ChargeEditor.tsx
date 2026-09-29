@@ -174,7 +174,7 @@ export function ChargeEditor({
   const canSave = charges.length > 0
 
   return (
-    <div className="w-full max-w-3xl">
+    <div className="mx-auto w-full max-w-3xl">
       <Card className="w-full gap-0 p-0">
         <Stepper value={step} onValueChange={setStep}>
           <CardHeader className="gap-x-4 gap-y-1 border-b px-5 py-4">

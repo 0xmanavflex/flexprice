@@ -51,7 +51,7 @@ export function DetailShell({
     // content region (which is `overflow-hidden`): header + body together, so a
     // long page is never clipped.
     <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
-      <header className="flex flex-col gap-4 px-6 pt-5 pb-5">
+      <header className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-4 px-6 pt-5 pb-5">
         {breadcrumb}
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-2">
@@ -70,7 +70,12 @@ export function DetailShell({
         </div>
         {metrics && metrics.length > 0 ? <MetricRail metrics={metrics} /> : null}
       </header>
-      <div className="flex min-h-0 flex-1 flex-col gap-6 px-6 pb-10">{children}</div>
+      {/* Header and body each cap at `--shell-max` and centre, so they align
+          with each other and with the shell header, and the detail page fills a
+          1440 screen but stops sprawling edge-to-edge at 2560. */}
+      <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-h-0 flex-1 flex-col gap-6 px-6 pb-10">
+        {children}
+      </div>
     </div>
   )
 }

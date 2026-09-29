@@ -267,20 +267,28 @@ export function AppShell({
       <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border shadow-[0_0_18px_-6px_rgba(0,0,0,0.12)]! md:peer-data-[variant=inset]:rounded-2xl">
         {/* A rule under the header, so the breadcrumb is not floating over
             whatever the page happens to start with. */}
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-4">
-          {/* The edge handle is desktop-only — on mobile the sidebar is a
-              sheet, and this is the only thing that opens it. */}
-          <SidebarTrigger className="-ml-1 md:hidden" />
-          {breadcrumb}
-          {/*
-            Search and Create sit together, top-right: the two things a person
-            reaches for from any screen. Search leads because it is the more
-            frequent, and `headerActions` — where the Create menu renders — falls
-            in beside it.
-          */}
-          <div className="ml-auto flex items-center gap-2">
-            <ShellSearch {...(onSearch ? { onSearch } : {})} />
-            {headerActions}
+        {/* The bar spans the inset so its rule reaches both edges, but its
+            contents cap and centre at `--shell-max` exactly like the page body
+            below (Page.tsx / DetailShell). So the breadcrumb shares the
+            content's left edge and the Create action the toolbar's right at every
+            width — including past 1600, where a full-width header would otherwise
+            drift hundreds of px away from the centred content. */}
+        <header className="flex h-12 shrink-0 items-center border-b">
+          <div className="mx-auto flex h-full w-full max-w-[var(--shell-max)] items-center gap-2 px-6">
+            {/* The edge handle is desktop-only — on mobile the sidebar is a
+                sheet, and this is the only thing that opens it. */}
+            <SidebarTrigger className="-ml-1 md:hidden" />
+            {breadcrumb}
+            {/*
+              Search and Create sit together, top-right: the two things a person
+              reaches for from any screen. Search leads because it is the more
+              frequent, and `headerActions` — where the Create menu renders —
+              falls in beside it.
+            */}
+            <div className="ml-auto flex items-center gap-2">
+              <ShellSearch {...(onSearch ? { onSearch } : {})} />
+              {headerActions}
+            </div>
           </div>
         </header>
 

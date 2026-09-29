@@ -1,0 +1,1212 @@
+{
+  "home-360": {
+    "path": "/",
+    "url": "http://localhost:4322/",
+    "innerWidth": 360,
+    "innerHeight": 740,
+    "docScrollWidth": 360,
+    "bodyScrollWidth": 360,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 360
+    }
+  },
+  "plans-360": {
+    "path": "/plans",
+    "url": "http://localhost:4322/plans?pageSize=10",
+    "innerWidth": 360,
+    "innerHeight": 740,
+    "docScrollWidth": 360,
+    "bodyScrollWidth": 360,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [
+      {
+        "tag": "div",
+        "cls": "",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "presentation",
+        "text": "PlanStatusChargesCreatedUpdatedGlobex 12"
+      },
+      {
+        "tag": "div",
+        "cls": "relative min-w-full align-top",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "",
+        "text": "PlanStatusChargesCreatedUpdatedGlobex 12"
+      },
+      {
+        "tag": "table",
+        "cls": "text-foreground caption-bottom text-left align-middle text-sm font-normal rtl:text-right w-full min-w-full table-auto bo",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "",
+        "text": "PlanStatusChargesCreatedUpdatedGlobex 12"
+      },
+      {
+        "tag": "colgroup",
+        "cls": "",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "col",
+        "cls": "",
+        "left": 453,
+        "right": 556,
+        "width": 103,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "thead",
+        "cls": "sticky top-0 z-40 bg-background/90 backdrop-blur-xs",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "",
+        "text": "PlanStatusChargesCreatedUpdated"
+      },
+      {
+        "tag": "tr",
+        "cls": "[&>th]:border-b bg-transparent",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "",
+        "text": "PlanStatusChargesCreatedUpdated"
+      },
+      {
+        "tag": "th",
+        "cls": "text-foreground relative text-left align-middle font-medium rtl:text-right [&:has([role=checkbox])]:pe-0 px-2 h-8",
+        "left": 453,
+        "right": 556,
+        "width": 103,
+        "role": "",
+        "text": "Updated"
+      },
+      {
+        "tag": "tbody",
+        "cls": "h-2",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "tbody",
+        "cls": "",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "",
+        "text": "Globex 12plan_premier_12Published3 charg"
+      },
+      {
+        "tag": "tr",
+        "cls": "hover:bg-muted/40 data-[state=selected]:bg-muted/50 cursor-pointer",
+        "left": 25,
+        "right": 556,
+        "width": 531,
+        "role": "",
+        "text": "Globex 12plan_premier_12Published3 charg"
+      },
+      {
+        "tag": "td",
+        "cls": "align-middle px-2 py-1.5",
+        "left": 453,
+        "right": 556,
+        "width": 103,
+        "role": "",
+        "text": "Jun 15, 2026"
+      }
+    ],
+    "internalScrollers": [
+      {
+        "tag": "div",
+        "cls": "size-full base-ui-disable-scrollbar",
+        "scrollWidth": 531,
+        "clientWidth": 310
+      }
+    ],
+    "contentPlane": {
+      "left": 0,
+      "width": 360
+    },
+    "grid": {
+      "width": 531,
+      "scrollWidth": 531
+    }
+  },
+  "features-360": {
+    "path": "/features",
+    "url": "http://localhost:4322/features?pageSize=10",
+    "innerWidth": 360,
+    "innerHeight": 740,
+    "docScrollWidth": 360,
+    "bodyScrollWidth": 360,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [
+      {
+        "tag": "div",
+        "cls": "",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "presentation",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "div",
+        "cls": "relative min-w-full align-top",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "table",
+        "cls": "text-foreground caption-bottom text-left align-middle text-sm font-normal rtl:text-right w-full min-w-full table-auto bo",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "colgroup",
+        "cls": "",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "col",
+        "cls": "",
+        "left": 643,
+        "right": 746,
+        "width": 103,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "thead",
+        "cls": "sticky top-0 z-40 bg-background/90 backdrop-blur-xs",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "tr",
+        "cls": "[&>th]:border-b bg-transparent",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "th",
+        "cls": "text-foreground relative text-left align-middle font-medium rtl:text-right [&:has([role=checkbox])]:pe-0 px-2 h-8",
+        "left": 643,
+        "right": 746,
+        "width": 103,
+        "role": "",
+        "text": "Updated"
+      },
+      {
+        "tag": "tbody",
+        "cls": "h-2",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "tbody",
+        "cls": "",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "",
+        "text": "Active usersMeteredPublishedCount of uni"
+      },
+      {
+        "tag": "tr",
+        "cls": "hover:bg-muted/40 data-[state=selected]:bg-muted/50 cursor-pointer",
+        "left": 25,
+        "right": 746,
+        "width": 721,
+        "role": "",
+        "text": "Active usersMeteredPublishedCount of uni"
+      },
+      {
+        "tag": "td",
+        "cls": "align-middle px-2 py-1.5",
+        "left": 643,
+        "right": 746,
+        "width": 103,
+        "role": "",
+        "text": "May 28, 2026"
+      }
+    ],
+    "internalScrollers": [
+      {
+        "tag": "div",
+        "cls": "size-full base-ui-disable-scrollbar",
+        "scrollWidth": 721,
+        "clientWidth": 310
+      }
+    ],
+    "contentPlane": {
+      "left": 0,
+      "width": 360
+    },
+    "grid": {
+      "width": 721,
+      "scrollWidth": 721
+    }
+  },
+  "plan-detail-360": {
+    "path": "/plans/plan_synth_0011",
+    "url": "http://localhost:4322/plans/plan_synth_0011",
+    "innerWidth": 360,
+    "innerHeight": 740,
+    "docScrollWidth": 360,
+    "bodyScrollWidth": 360,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [
+      {
+        "tag": "div",
+        "cls": "group/tabs-list inline-flex w-fit items-center justify-center rounded-lg p-[3px] text-muted-foreground group-data-horizo",
+        "left": 25,
+        "right": 398,
+        "width": 373,
+        "role": "tablist",
+        "text": "OverviewEntitlementsCredit GrantsInforma"
+      },
+      {
+        "tag": "button",
+        "cls": "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-center gap-1.5 rounded-md border border-transparent ",
+        "left": 306,
+        "right": 395,
+        "width": 89,
+        "role": "tab",
+        "text": "Information"
+      }
+    ],
+    "internalScrollers": [
+      {
+        "tag": "div",
+        "cls": "flex min-h-0 flex-1 flex-col overflow-y-auto",
+        "scrollWidth": 397,
+        "clientWidth": 358
+      }
+    ],
+    "contentPlane": {
+      "left": 0,
+      "width": 360
+    }
+  },
+  "charges-360": {
+    "path": "/plans/plan_synth_0011/charges",
+    "url": "http://localhost:4322/plans/plan_synth_0011/charges",
+    "innerWidth": 360,
+    "innerHeight": 740,
+    "docScrollWidth": 360,
+    "bodyScrollWidth": 360,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 360
+    }
+  },
+  "signin-360": {
+    "path": "/sign-in",
+    "url": "http://localhost:4322/sign-in",
+    "innerWidth": 360,
+    "innerHeight": 740,
+    "docScrollWidth": 360,
+    "bodyScrollWidth": 360,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 360
+    }
+  },
+  "home-768": {
+    "path": "/",
+    "url": "http://localhost:4322/",
+    "innerWidth": 768,
+    "innerHeight": 1024,
+    "docScrollWidth": 768,
+    "bodyScrollWidth": 768,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 528
+    }
+  },
+  "plans-768": {
+    "path": "/plans",
+    "url": "http://localhost:4322/plans?pageSize=16",
+    "innerWidth": 768,
+    "innerHeight": 1024,
+    "docScrollWidth": 768,
+    "bodyScrollWidth": 768,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [
+      {
+        "tag": "div",
+        "cls": "",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "presentation",
+        "text": "PlanStatusChargesCreatedUpdatedGlobex 12"
+      },
+      {
+        "tag": "div",
+        "cls": "relative min-w-full align-top",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "",
+        "text": "PlanStatusChargesCreatedUpdatedGlobex 12"
+      },
+      {
+        "tag": "table",
+        "cls": "text-foreground caption-bottom text-left align-middle text-sm font-normal rtl:text-right w-full min-w-full table-auto bo",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "",
+        "text": "PlanStatusChargesCreatedUpdatedGlobex 12"
+      },
+      {
+        "tag": "colgroup",
+        "cls": "",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "col",
+        "cls": "",
+        "left": 689,
+        "right": 792,
+        "width": 103,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "thead",
+        "cls": "sticky top-0 z-40 bg-background/90 backdrop-blur-xs",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "",
+        "text": "PlanStatusChargesCreatedUpdated"
+      },
+      {
+        "tag": "tr",
+        "cls": "[&>th]:border-b bg-transparent",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "",
+        "text": "PlanStatusChargesCreatedUpdated"
+      },
+      {
+        "tag": "th",
+        "cls": "text-foreground relative text-left align-middle font-medium rtl:text-right [&:has([role=checkbox])]:pe-0 px-2 h-8",
+        "left": 689,
+        "right": 792,
+        "width": 103,
+        "role": "",
+        "text": "Updated"
+      },
+      {
+        "tag": "tbody",
+        "cls": "h-2",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "tbody",
+        "cls": "",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "",
+        "text": "Globex 12plan_premier_12Published3 charg"
+      },
+      {
+        "tag": "tr",
+        "cls": "hover:bg-muted/40 data-[state=selected]:bg-muted/50 cursor-pointer",
+        "left": 257,
+        "right": 792,
+        "width": 535,
+        "role": "",
+        "text": "Globex 12plan_premier_12Published3 charg"
+      },
+      {
+        "tag": "td",
+        "cls": "align-middle px-2 py-1.5",
+        "left": 689,
+        "right": 792,
+        "width": 103,
+        "role": "",
+        "text": "Jun 15, 2026"
+      }
+    ],
+    "internalScrollers": [
+      {
+        "tag": "div",
+        "cls": "size-full base-ui-disable-scrollbar",
+        "scrollWidth": 535,
+        "clientWidth": 478
+      }
+    ],
+    "contentPlane": {
+      "left": 232,
+      "width": 528
+    },
+    "grid": {
+      "width": 535,
+      "scrollWidth": 535
+    }
+  },
+  "features-768": {
+    "path": "/features",
+    "url": "http://localhost:4322/features?pageSize=16",
+    "innerWidth": 768,
+    "innerHeight": 1024,
+    "docScrollWidth": 768,
+    "bodyScrollWidth": 768,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [
+      {
+        "tag": "div",
+        "cls": "",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "presentation",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "div",
+        "cls": "relative min-w-full align-top",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "table",
+        "cls": "text-foreground caption-bottom text-left align-middle text-sm font-normal rtl:text-right w-full min-w-full table-auto bo",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "colgroup",
+        "cls": "",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "col",
+        "cls": "",
+        "left": 883,
+        "right": 986,
+        "width": 103,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "thead",
+        "cls": "sticky top-0 z-40 bg-background/90 backdrop-blur-xs",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "tr",
+        "cls": "[&>th]:border-b bg-transparent",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "",
+        "text": "FeatureTypeStatusMeasured byUnitCreatedU"
+      },
+      {
+        "tag": "th",
+        "cls": "text-foreground relative text-left align-middle font-medium rtl:text-right [&:has([role=checkbox])]:pe-0 px-2 h-8",
+        "left": 883,
+        "right": 986,
+        "width": 103,
+        "role": "",
+        "text": "Updated"
+      },
+      {
+        "tag": "tbody",
+        "cls": "h-2",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "",
+        "text": ""
+      },
+      {
+        "tag": "tbody",
+        "cls": "",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "",
+        "text": "Active usersMeteredPublishedCount of uni"
+      },
+      {
+        "tag": "tr",
+        "cls": "hover:bg-muted/40 data-[state=selected]:bg-muted/50 cursor-pointer",
+        "left": 257,
+        "right": 986,
+        "width": 729,
+        "role": "",
+        "text": "Active usersMeteredPublishedCount of uni"
+      },
+      {
+        "tag": "td",
+        "cls": "align-middle px-2 py-1.5",
+        "left": 883,
+        "right": 986,
+        "width": 103,
+        "role": "",
+        "text": "May 28, 2026"
+      }
+    ],
+    "internalScrollers": [
+      {
+        "tag": "div",
+        "cls": "size-full base-ui-disable-scrollbar",
+        "scrollWidth": 729,
+        "clientWidth": 478
+      }
+    ],
+    "contentPlane": {
+      "left": 232,
+      "width": 528
+    },
+    "grid": {
+      "width": 729,
+      "scrollWidth": 729
+    }
+  },
+  "plan-detail-768": {
+    "path": "/plans/plan_synth_0011",
+    "url": "http://localhost:4322/plans/plan_synth_0011",
+    "innerWidth": 768,
+    "innerHeight": 1024,
+    "docScrollWidth": 768,
+    "bodyScrollWidth": 768,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 528
+    }
+  },
+  "charges-768": {
+    "path": "/plans/plan_synth_0011/charges",
+    "url": "http://localhost:4322/plans/plan_synth_0011/charges",
+    "innerWidth": 768,
+    "innerHeight": 1024,
+    "docScrollWidth": 768,
+    "bodyScrollWidth": 768,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 528
+    }
+  },
+  "signin-768": {
+    "path": "/sign-in",
+    "url": "http://localhost:4322/sign-in",
+    "innerWidth": 768,
+    "innerHeight": 1024,
+    "docScrollWidth": 768,
+    "bodyScrollWidth": 768,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 768
+    }
+  },
+  "home-1024": {
+    "path": "/",
+    "url": "http://localhost:4322/",
+    "innerWidth": 1024,
+    "innerHeight": 768,
+    "docScrollWidth": 1024,
+    "bodyScrollWidth": 1024,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 784
+    }
+  },
+  "plans-1024": {
+    "path": "/plans",
+    "url": "http://localhost:4322/plans?pageSize=11",
+    "innerWidth": 1024,
+    "innerHeight": 768,
+    "docScrollWidth": 1024,
+    "bodyScrollWidth": 1024,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 784
+    },
+    "grid": {
+      "width": 734,
+      "scrollWidth": 734
+    }
+  },
+  "features-1024": {
+    "path": "/features",
+    "url": "http://localhost:4322/features?pageSize=10",
+    "innerWidth": 1024,
+    "innerHeight": 768,
+    "docScrollWidth": 1024,
+    "bodyScrollWidth": 1024,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 784
+    },
+    "grid": {
+      "width": 734,
+      "scrollWidth": 734
+    }
+  },
+  "plan-detail-1024": {
+    "path": "/plans/plan_synth_0011",
+    "url": "http://localhost:4322/plans/plan_synth_0011",
+    "innerWidth": 1024,
+    "innerHeight": 768,
+    "docScrollWidth": 1024,
+    "bodyScrollWidth": 1024,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 784
+    }
+  },
+  "charges-1024": {
+    "path": "/plans/plan_synth_0011/charges",
+    "url": "http://localhost:4322/plans/plan_synth_0011/charges",
+    "innerWidth": 1024,
+    "innerHeight": 768,
+    "docScrollWidth": 1024,
+    "bodyScrollWidth": 1024,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 784
+    }
+  },
+  "signin-1024": {
+    "path": "/sign-in",
+    "url": "http://localhost:4322/sign-in",
+    "innerWidth": 1024,
+    "innerHeight": 768,
+    "docScrollWidth": 1024,
+    "bodyScrollWidth": 1024,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 1024
+    }
+  },
+  "home-1280": {
+    "path": "/",
+    "url": "http://localhost:4322/",
+    "innerWidth": 1280,
+    "innerHeight": 800,
+    "docScrollWidth": 1280,
+    "bodyScrollWidth": 1280,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1040
+    }
+  },
+  "plans-1280": {
+    "path": "/plans",
+    "url": "http://localhost:4322/plans?pageSize=12",
+    "innerWidth": 1280,
+    "innerHeight": 800,
+    "docScrollWidth": 1280,
+    "bodyScrollWidth": 1280,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1040
+    },
+    "grid": {
+      "width": 990,
+      "scrollWidth": 990
+    }
+  },
+  "features-1280": {
+    "path": "/features",
+    "url": "http://localhost:4322/features?pageSize=17",
+    "innerWidth": 1280,
+    "innerHeight": 800,
+    "docScrollWidth": 1280,
+    "bodyScrollWidth": 1280,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1040
+    },
+    "grid": {
+      "width": 990,
+      "scrollWidth": 990
+    }
+  },
+  "plan-detail-1280": {
+    "path": "/plans/plan_synth_0011",
+    "url": "http://localhost:4322/plans/plan_synth_0011",
+    "innerWidth": 1280,
+    "innerHeight": 800,
+    "docScrollWidth": 1280,
+    "bodyScrollWidth": 1280,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1040
+    }
+  },
+  "charges-1280": {
+    "path": "/plans/plan_synth_0011/charges",
+    "url": "http://localhost:4322/plans/plan_synth_0011/charges",
+    "innerWidth": 1280,
+    "innerHeight": 800,
+    "docScrollWidth": 1280,
+    "bodyScrollWidth": 1280,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1040
+    }
+  },
+  "signin-1280": {
+    "path": "/sign-in",
+    "url": "http://localhost:4322/sign-in",
+    "innerWidth": 1280,
+    "innerHeight": 800,
+    "docScrollWidth": 1280,
+    "bodyScrollWidth": 1280,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 1280
+    }
+  },
+  "home-1440": {
+    "path": "/",
+    "url": "http://localhost:4322/",
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "docScrollWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1200
+    }
+  },
+  "plans-1440": {
+    "path": "/plans",
+    "url": "http://localhost:4322/plans?pageSize=14",
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "docScrollWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1200
+    },
+    "grid": {
+      "width": 1150,
+      "scrollWidth": 1150
+    }
+  },
+  "features-1440": {
+    "path": "/features",
+    "url": "http://localhost:4322/features?pageSize=21",
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "docScrollWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1200
+    },
+    "grid": {
+      "width": 1150,
+      "scrollWidth": 1150
+    }
+  },
+  "plan-detail-1440": {
+    "path": "/plans/plan_synth_0011",
+    "url": "http://localhost:4322/plans/plan_synth_0011",
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "docScrollWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1200
+    }
+  },
+  "charges-1440": {
+    "path": "/plans/plan_synth_0011/charges",
+    "url": "http://localhost:4322/plans/plan_synth_0011/charges",
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "docScrollWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1200
+    }
+  },
+  "signin-1440": {
+    "path": "/sign-in",
+    "url": "http://localhost:4322/sign-in",
+    "innerWidth": 1440,
+    "innerHeight": 900,
+    "docScrollWidth": 1440,
+    "bodyScrollWidth": 1440,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 1440
+    }
+  },
+  "home-1920": {
+    "path": "/",
+    "url": "http://localhost:4322/",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "docScrollWidth": 1920,
+    "bodyScrollWidth": 1920,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1680
+    }
+  },
+  "plans-1920": {
+    "path": "/plans",
+    "url": "http://localhost:4322/plans?pageSize=18",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "docScrollWidth": 1920,
+    "bodyScrollWidth": 1920,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1680
+    },
+    "grid": {
+      "width": 1630,
+      "scrollWidth": 1630
+    }
+  },
+  "features-1920": {
+    "path": "/features",
+    "url": "http://localhost:4322/features?pageSize=26",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "docScrollWidth": 1920,
+    "bodyScrollWidth": 1920,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1680
+    },
+    "grid": {
+      "width": 1630,
+      "scrollWidth": 1630
+    }
+  },
+  "plan-detail-1920": {
+    "path": "/plans/plan_synth_0011",
+    "url": "http://localhost:4322/plans/plan_synth_0011",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "docScrollWidth": 1920,
+    "bodyScrollWidth": 1920,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1680
+    }
+  },
+  "charges-1920": {
+    "path": "/plans/plan_synth_0011/charges",
+    "url": "http://localhost:4322/plans/plan_synth_0011/charges",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "docScrollWidth": 1920,
+    "bodyScrollWidth": 1920,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 1680
+    }
+  },
+  "signin-1920": {
+    "path": "/sign-in",
+    "url": "http://localhost:4322/sign-in",
+    "innerWidth": 1920,
+    "innerHeight": 1080,
+    "docScrollWidth": 1920,
+    "bodyScrollWidth": 1920,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 1920
+    }
+  },
+  "home-2560": {
+    "path": "/",
+    "url": "http://localhost:4322/",
+    "innerWidth": 2560,
+    "innerHeight": 1440,
+    "docScrollWidth": 2560,
+    "bodyScrollWidth": 2560,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 2320
+    }
+  },
+  "plans-2560": {
+    "path": "/plans",
+    "url": "http://localhost:4322/plans",
+    "innerWidth": 2560,
+    "innerHeight": 1440,
+    "docScrollWidth": 2560,
+    "bodyScrollWidth": 2560,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 2320
+    }
+  },
+  "features-2560": {
+    "path": "/features",
+    "url": "http://localhost:4322/features",
+    "innerWidth": 2560,
+    "innerHeight": 1440,
+    "docScrollWidth": 2560,
+    "bodyScrollWidth": 2560,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 2320
+    }
+  },
+  "plan-detail-2560": {
+    "path": "/plans/plan_synth_0011",
+    "url": "http://localhost:4322/plans/plan_synth_0011",
+    "innerWidth": 2560,
+    "innerHeight": 1440,
+    "docScrollWidth": 2560,
+    "bodyScrollWidth": 2560,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 2320
+    }
+  },
+  "charges-2560": {
+    "path": "/plans/plan_synth_0011/charges",
+    "url": "http://localhost:4322/plans/plan_synth_0011/charges",
+    "innerWidth": 2560,
+    "innerHeight": 1440,
+    "docScrollWidth": 2560,
+    "bodyScrollWidth": 2560,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 232,
+      "width": 2320
+    }
+  },
+  "signin-2560": {
+    "path": "/sign-in",
+    "url": "http://localhost:4322/sign-in",
+    "innerWidth": 2560,
+    "innerHeight": 1440,
+    "docScrollWidth": 2560,
+    "bodyScrollWidth": 2560,
+    "horizontalOverflow": false,
+    "overflowBy": 0,
+    "offenders": [],
+    "internalScrollers": [],
+    "contentPlane": {
+      "left": 0,
+      "width": 2560
+    }
+  }
+}

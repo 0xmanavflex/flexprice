@@ -1,0 +1,131 @@
+{
+  "plan-detail-360": {
+    "iw": 360,
+    "scrollW": 360,
+    "overflow": false,
+    "offenders": [
+      {
+        "tag": "div",
+        "cls": "group/tabs-list inline-flex w-fit items-center justify-center rounded-",
+        "right": 398,
+        "width": 373,
+        "text": "OverviewEntitlementsCredit Gra"
+      },
+      {
+        "tag": "button",
+        "cls": "relative inline-flex h-[calc(100%-1px)] flex-1 items-center justify-ce",
+        "right": 395,
+        "width": 89,
+        "text": "Information"
+      }
+    ],
+    "scrollers": []
+  },
+  "charges-360": {
+    "iw": 360,
+    "scrollW": 360,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "plan-detail-768": {
+    "iw": 768,
+    "scrollW": 768,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "charges-768": {
+    "iw": 768,
+    "scrollW": 768,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "plan-detail-1024": {
+    "iw": 1024,
+    "scrollW": 1024,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "charges-1024": {
+    "iw": 1024,
+    "scrollW": 1024,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "plan-detail-1280": {
+    "iw": 1280,
+    "scrollW": 1280,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "charges-1280": {
+    "iw": 1280,
+    "scrollW": 1280,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "plan-detail-1440": {
+    "iw": 1440,
+    "scrollW": 1440,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "charges-1440": {
+    "iw": 1440,
+    "scrollW": 1440,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "plan-detail-1920": {
+    "iw": 1920,
+    "scrollW": 1920,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "charges-1920": {
+    "iw": 1920,
+    "scrollW": 1920,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "plan-detail-2560": {
+    "iw": 2560,
+    "scrollW": 2560,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "charges-2560": {
+    "iw": 2560,
+    "scrollW": 2560,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": []
+  },
+  "plans-2560": {
+    "iw": 2560,
+    "scrollW": 2560,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": [],
+    "tableWidth": 2270
+  },
+  "features-2560": {
+    "iw": 2560,
+    "scrollW": 2560,
+    "overflow": false,
+    "offenders": [],
+    "scrollers": [],
+    "tableWidth": 2270
+  }
+}

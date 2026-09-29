@@ -75,10 +75,24 @@ export function PageBody({
       className={cn(
         // `min-h-0` so a list page's grid can fill this region and scroll
         // itself, rather than pushing the pagination footer off the bottom.
+        // `overflow-y-auto` so a page whose content is *not* a self-scrolling
+        // grid — a tall form, a reading surface — scrolls here rather than being
+        // clipped by the shell's `overflow-hidden` content region. It is inert on
+        // a grid page: the grid is `min-h-0 flex-1`, absorbs the slack, and this
+        // never overflows to scroll.
         // Tighter top padding pulls the content up under the header, so a list
         // does not open with a band of empty space above its toolbar.
-        'flex min-h-0 flex-1 flex-col gap-4 px-6 pt-3 pb-5',
-        width === 'narrow' ? 'mx-auto w-full max-w-3xl' : 'w-full max-w-[1440px]',
+        'flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-6 pt-3 pb-5',
+        // A form or reading surface takes a narrow measure; a data grid a wider
+        // one. Both centre and cap at `--shell-max`: below it the page fills the
+        // width (a 1440 screen is edge-to-edge), above it the content centres in
+        // a readable column rather than the table sprawling across a 2560 screen.
+        // This replaces both the old `max-w-[1440px]` (which capped but pinned
+        // left, leaving a dead band) and the bare `w-full` (which fixed the band
+        // but let big screens stretch the rows apart).
+        width === 'narrow'
+          ? 'mx-auto w-full max-w-3xl'
+          : 'mx-auto w-full max-w-[var(--shell-max)]',
         className,
       )}
     >
