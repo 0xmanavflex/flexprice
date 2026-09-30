@@ -124,6 +124,8 @@ export {
   SubscriptionStatusBadge,
   SubscriptionStatusBadgeProvenance,
 } from './SubscriptionStatusBadge'
+export { CreditNoteGrid, CreditNoteGridProvenance } from './CreditNoteGrid'
+export type { CreditNoteGridProps } from './CreditNoteGrid'
 export { PaymentGrid, PaymentGridProvenance } from './PaymentGrid'
 export type { PaymentGridProps } from './PaymentGrid'
 export { PaymentStatusBadge, PaymentStatusBadgeProvenance } from './PaymentStatusBadge'
