@@ -218,3 +218,5 @@ export type { QuotaCardAction, QuotaCardProps } from './QuotaCard'
 /* The billing grids' migration onto EntityList. Appended — the grids and their
    props were already exported above; this is the one new type the move added. */
 export type { RevenueByCustomerGap } from './RevenueDashboard'
+export { WorkflowGrid, WorkflowGridProvenance } from './WorkflowGrid'
+export type { WorkflowGridProps } from './WorkflowGrid'
