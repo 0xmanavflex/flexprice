@@ -145,22 +145,37 @@ export function DetailShell({
     // content region (which is `overflow-hidden`): header + body together, so a
     // long page is never clipped.
     <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
-      <header className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-4 px-6 pt-5 pb-5">
+      <header className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-5 px-6 pt-5 pb-5">
         {trail && trail.length > 0 ? <DetailBreadcrumb trail={trail} /> : breadcrumb}
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div className="flex min-w-0 flex-col gap-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-              <h1 className="truncate text-2xl font-semibold tracking-tight">{title}</h1>
-              {badges}
+            {/*
+             * Title and badges on one row, anchored: `leading-tight` pulls the
+             * title's line box in so the small chips centre on the letters rather
+             * than floating in the slack above and below a full-height line — the
+             * "hanging pill" look. The badges are their own group so they keep an
+             * even gap among themselves and wrap together under a long title.
+             */}
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+              <h1 className="min-w-0 truncate text-2xl font-semibold leading-tight tracking-tight">
+                {title}
+              </h1>
+              {badges ? (
+                <div className="flex flex-wrap items-center gap-1.5">{badges}</div>
+              ) : null}
             </div>
             {identifier ? (
-              <span className="text-muted-foreground font-mono text-xs">{identifier}</span>
+              <span className="font-mono text-xs text-muted-foreground">{identifier}</span>
             ) : null}
             {description ? (
-              <div className="text-muted-foreground max-w-3xl text-sm">{description}</div>
+              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+                {description}
+              </p>
             ) : null}
           </div>
-          {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+          {actions ? (
+            <div className="flex shrink-0 items-center gap-2 sm:pt-0.5">{actions}</div>
+          ) : null}
         </div>
         {metrics && metrics.length > 0 ? <MetricRail metrics={metrics} /> : null}
       </header>

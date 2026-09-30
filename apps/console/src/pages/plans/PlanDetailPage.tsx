@@ -58,6 +58,7 @@ import {
   type DetailMetric,
   DetailShell,
   LoadingRows,
+  ResourceNavigation,
   Section,
 } from '@fp/ui/compositions'
 import {
@@ -68,10 +69,6 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
 } from '@fp/ui/primitives'
 import { CopyIcon, EyeOffIcon, MoreHorizontalIcon, PencilIcon, RefreshCwIcon } from 'lucide-react'
 
@@ -311,26 +308,28 @@ export function PlanDetailPage({
         }
       >
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          {/* LEFT — changes with the tab. */}
+          {/* LEFT — changes with the tab. The section strip is the shared
+              `ResourceNavigation` line nav, the same one the customer page uses. */}
           <div className="min-w-0">
-            <Tabs value={tab} onValueChange={(value) => onTabChange(value as PlanTab)}>
-              <TabsList>
-                <TabsTrigger value="overview">Overview</TabsTrigger>
-                <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
-                <TabsTrigger value="credit-grants">Credit Grants</TabsTrigger>
-                <TabsTrigger value="information">Information</TabsTrigger>
-              </TabsList>
+            <ResourceNavigation
+              items={[
+                { id: 'overview', label: 'Overview' },
+                { id: 'entitlements', label: 'Entitlements' },
+                { id: 'credit-grants', label: 'Credit Grants' },
+                { id: 'information', label: 'Information' },
+              ]}
+              value={tab}
+              onChange={(id) => onTabChange(id as PlanTab)}
+              label="Plan sections"
+            />
 
-              <TabsContent value="overview" className="pt-4">
+            <div className="pt-5">
+              {tab === 'overview' ? (
                 <OverviewTab planId={planId} onOpenCharges={onOpenCharges} />
-              </TabsContent>
-              <TabsContent value="entitlements" className="pt-4">
-                <EntitlementsTab planId={planId} />
-              </TabsContent>
-              <TabsContent value="credit-grants" className="pt-4">
-                <CreditGrantsTab planId={planId} />
-              </TabsContent>
-              <TabsContent value="information" className="pt-4">
+              ) : null}
+              {tab === 'entitlements' ? <EntitlementsTab planId={planId} /> : null}
+              {tab === 'credit-grants' ? <CreditGrantsTab planId={planId} /> : null}
+              {tab === 'information' ? (
                 <InformationTab
                   name={record.name}
                   lookupKey={record.lookupKey}
@@ -341,8 +340,8 @@ export function PlanDetailPage({
                   updatedAt={record.updatedAt}
                   onEdit={() => setEditing(true)}
                 />
-              </TabsContent>
-            </Tabs>
+              ) : null}
+            </div>
           </div>
 
           {/* RIGHT — the plan's pricing, persistent across every tab. */}

@@ -152,9 +152,9 @@ export function CustomerDetail({
       badges={
         <>
           {customer.externalId ? (
-            <span className="rounded-md border px-1.5 py-0.5 font-mono text-xs text-muted-foreground">
+            <Badge variant="outline" className="font-mono font-normal text-muted-foreground">
               {customer.externalId}
-            </span>
+            </Badge>
           ) : null}
           {planBadge ? <Badge variant="secondary">{planBadge}</Badge> : null}
           <CatalogStatusBadge status={customer.status} />

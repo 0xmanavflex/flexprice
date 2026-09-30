@@ -17,6 +17,7 @@ import {
   EmptyState,
   LoadingRows,
   PageBody,
+  ResourceNavigation,
   Section,
 } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -26,6 +27,8 @@ export interface FeatureDetailPageProps {
   featureId: string
   onNavigateToList: () => void
 }
+
+type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
 
 /**
  * One feature, in full.
@@ -51,6 +54,7 @@ export interface FeatureDetailPageProps {
  */
 export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
+  const [tab, setTab] = useState<FeatureTab>('overview')
 
   if (feature.isPending) {
     return (
@@ -102,52 +106,86 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
       identifier={data.lookupKey || data.id}
       {...(data.description ? { description: data.description } : {})}
     >
-      {isMetered ? (
-        <Section title="Event details" description="What this feature meters, and how usage is measured.">
-          <DetailList
-            items={[
-              {
-                label: 'Event name',
-                value: data.eventName ? (
-                  <span className="font-mono text-xs">{data.eventName}</span>
-                ) : (
-                  '—'
-                ),
-              },
-              {
-                label: 'Aggregation',
-                value: data.aggregationType ? AGGREGATION_LABEL[data.aggregationType] : '—',
-              },
-              { label: 'Unit (singular)', value: data.unitSingular || '—' },
-              { label: 'Unit (plural)', value: data.unitPlural || '—' },
-            ]}
-          />
-        </Section>
-      ) : null}
+      {/* The shared line nav, the same section strip the customer and plan pages use. */}
+      <ResourceNavigation
+        items={[
+          { id: 'overview', label: 'Overview' },
+          { id: 'charges', label: 'Charges' },
+          { id: 'entitlements', label: 'Entitlements' },
+          { id: 'information', label: 'Information' },
+        ]}
+        value={tab}
+        onChange={(id) => setTab(id as FeatureTab)}
+        label="Feature sections"
+      />
 
-      {isMetered ? <IngestEventSection feature={data} /> : null}
+      <div className="flex flex-col gap-6 pt-5">
+        {tab === 'overview' ? (
+          isMetered ? (
+            <>
+              <Section
+                title="Event details"
+                description="What this feature meters, and how usage is measured."
+              >
+                <DetailList
+                  items={[
+                    {
+                      label: 'Event name',
+                      value: data.eventName ? (
+                        <span className="font-mono text-xs">{data.eventName}</span>
+                      ) : (
+                        '—'
+                      ),
+                    },
+                    {
+                      label: 'Aggregation',
+                      value: data.aggregationType ? AGGREGATION_LABEL[data.aggregationType] : '—',
+                    },
+                    { label: 'Unit (singular)', value: data.unitSingular || '—' },
+                    { label: 'Unit (plural)', value: data.unitPlural || '—' },
+                  ]}
+                />
+              </Section>
+              <IngestEventSection feature={data} />
+            </>
+          ) : (
+            <Section title="Overview" description="How this feature behaves.">
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                This is a boolean feature — it gates access to functionality rather than metering
+                usage, so it carries no event name or aggregation.
+              </p>
+            </Section>
+          )
+        ) : null}
 
-      <Section title="Charges" description="Prices across the catalogue that meter this feature.">
-        <EmptyState
-          size="inline"
-          icon={<ReceiptIcon aria-hidden />}
-          title="No linked charges to show yet"
-          description="Plans and add-ons that price this feature will appear here once the linked-price view is wired up."
-        />
-      </Section>
+        {tab === 'charges' ? (
+          <Section title="Charges" description="Prices across the catalogue that meter this feature.">
+            <EmptyState
+              size="inline"
+              icon={<ReceiptIcon aria-hidden />}
+              title="No linked charges to show yet"
+              description="Plans and add-ons that price this feature will appear here once the linked-price view is wired up."
+            />
+          </Section>
+        ) : null}
 
-      <Section title="Entitlements" description="Plans and add-ons that grant this feature.">
-        <EmptyState
-          size="inline"
-          icon={<GaugeIcon aria-hidden />}
-          title="No entitlements to show yet"
-          description="Plans and add-ons that grant this feature will appear here once the entitlement view is wired up."
-        />
-      </Section>
+        {tab === 'entitlements' ? (
+          <Section title="Entitlements" description="Plans and add-ons that grant this feature.">
+            <EmptyState
+              size="inline"
+              icon={<GaugeIcon aria-hidden />}
+              title="No entitlements to show yet"
+              description="Plans and add-ons that grant this feature will appear here once the entitlement view is wired up."
+            />
+          </Section>
+        ) : null}
 
-      <Section title="Information" description="Every attribute of this feature.">
-        <DetailList items={informationItems(data, isMetered)} />
-      </Section>
+        {tab === 'information' ? (
+          <Section title="Information" description="Every attribute of this feature.">
+            <DetailList items={informationItems(data, isMetered)} />
+          </Section>
+        ) : null}
+      </div>
     </DetailShell>
   )
 }
