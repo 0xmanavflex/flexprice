@@ -9,6 +9,7 @@ import {
   deriveInvoiceStatus,
   isZeroMoney,
   moneyOr,
+  toPaymentStatus,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
@@ -106,6 +107,10 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
       hasOutstandingBalance: !isZeroMoney(amountRemaining),
       ...(now ? { now } : {}),
     }),
+    // The same field `deriveInvoiceStatus` reads above, kept rather than
+    // consumed: the derivation answers "does this need attention", the column
+    // answers "what happened to the money", and they are not the same question.
+    paymentStatus: toPaymentStatus(wire.paymentStatus),
     total: moneyOr(wire.total, currency),
     amountDue: moneyOr(wire.amountDue, currency),
     amountRemaining,

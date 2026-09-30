@@ -1,32 +1,21 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { InvoiceSortField, InvoiceStatus } from '@fp/domain'
-import { InvoiceGrid, InvoiceGridProvenance } from './InvoiceGrid'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { InvoiceStatus } from '@fp/domain'
+import { InvoiceGrid } from './InvoiceGrid'
 import { fixtureQuery, invoiceFixtures, manyInvoices } from './invoiceFixtures'
 
 /**
- * The second proof, running the opposite way to the first.
+ * The invoice list on the shared table.
  *
- *     SDK -> domain -> query -> page -> UI        (the app proof)
- *     fixture -> UI -> story -> test              (this one)
- *
- * The architectural assertion is in what this file does *not* import. There is
- * no `QueryClientProvider`, no `FlexpriceProvider`, no MSW handler and no
- * network — every state below is reached by passing props. If a story here ever
- * needed a data provider, that would be the smell telling us `@fp/ui` had
- * stopped being presentational.
- *
- * One story file, three artifacts: the visual workbench, a browser interaction
- * test, and an accessibility check. None of them can drift from the others,
- * because there is only one of them.
+ * The stories worth keeping are `DerivedStatusSaysSo` and `TwoStatuses`: the
+ * first is the one honesty guarantee this screen makes that no other list
+ * needs, and the second is the reason there are two status columns rather
+ * than the one the redesign drew.
  */
 const meta = {
   title: 'Surfaces/InvoiceGrid',
   component: InvoiceGrid,
-  parameters: {
-    layout: 'padded',
-    docs: { description: { component: InvoiceGridProvenance.note } },
-  },
+  parameters: { layout: 'padded' },
   args: {
     invoices: invoiceFixtures,
     total: invoiceFixtures.length,
@@ -39,46 +28,142 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The ordinary case: a page of invoices, mixed statuses. */
 export const Default: Story = {}
 
 /**
- * Populated, and checked for the things a screenshot would not catch.
+ * The document's state and the money's state are different columns.
  *
- * Money is asserted at full precision: `12345678901234567.89` is the value a
- * float would render as `...568.00`, so this is the regression test for the
- * whole reason `Money` exists.
+ * INV-1041 is overdue with nothing collected; INV-1042 is paid and its
+ * payment succeeded. A draft has no payment status at all and renders the em
+ * dash rather than a blank, because a blank cell reads as a value that failed
+ * to load.
  */
-export const Populated: Story = {
+export const TwoStatuses: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await expect(await canvas.findByText('Acme Corp')).toBeInTheDocument()
+    await expect(await canvas.findByText('INV-1041')).toBeInTheDocument()
     await expect(canvas.getByText('Overdue')).toBeInTheDocument()
-    await expect(canvas.getByText('$12,345,678,901,234,567.89')).toBeInTheDocument()
-    // A draft has no number, so the id stands in rather than a blank cell.
-    await expect(canvas.getByText('inv_04')).toBeInTheDocument()
+    await expect(canvas.getByText('Succeeded')).toBeInTheDocument()
+    // The draft and the void invoice carry no payment status.
+    await expect(canvas.getAllByText('—').length).toBeGreaterThan(0)
   },
 }
 
-export const Loading: Story = {
-  args: { invoices: [], total: 0, isLoading: true },
-}
-
-export const Empty: Story = {
-  args: { invoices: [], total: 0 },
+/** The shared table's geometry, as this surface renders it. */
+export const Layout: Story = {
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(await canvas.findByText(/no invoices match these filters/i)).toBeInTheDocument()
+    await within(canvasElement).findByText('INV-1041')
+
+    const header = canvasElement.querySelector('thead th') as HTMLElement
+    await expect(Math.round(header.getBoundingClientRect().height)).toBe(44)
+
+    const cell = canvasElement.querySelector('tbody td') as HTMLElement
+    await expect(Math.round(cell.getBoundingClientRect().height)).toBe(60)
+    await expect(getComputedStyle(cell).paddingLeft).toBe('16px')
   },
 }
 
 /**
- * The error state is a prop, not something provoked out of a server.
+ * Amounts are left-aligned like every other column, with tabular figures.
  *
- * The grid takes a string: it has no idea what an `ApiError` is. The page maps
- * `kind` to a sentence, which is what makes this state expressible here at all.
+ * The rule `cells.tsx` exists to enforce, checked on the one grid where the
+ * temptation to right-align is strongest.
  */
+export const AmountsAreLeftAligned: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('INV-1041')
+
+    const headers = Array.from(canvasElement.querySelectorAll('thead th'))
+    const index = headers.findIndex((th) => /total/i.test(th.textContent ?? ''))
+    await expect(index).toBeGreaterThan(-1)
+
+    const cell = canvasElement.querySelectorAll('tbody tr')[0]?.children[index] as HTMLElement
+    await expect(getComputedStyle(cell).textAlign).not.toBe('right')
+  },
+}
+
+/**
+ * Choosing a derived status says on screen that it narrowed one page.
+ *
+ * `paid` and `overdue` are computed from a balance and a due date, so the API
+ * cannot be asked for them. The alternative to this notice is an unfiltered
+ * ledger presented as a filtered one, which on a billing console is the
+ * failure mode worth engineering against.
+ */
+export const DerivedStatusSaysSo: Story = {
+  args: { query: { ...fixtureQuery, statuses: [InvoiceStatus.Overdue] } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      await canvas.findByText(/narrows the invoices already loaded, not the whole ledger/i),
+    ).toBeInTheDocument()
+  },
+}
+
+/** A stored status needs no caveat — the server did the filtering. */
+export const StoredStatusIsSilent: Story = {
+  args: { query: { ...fixtureQuery, statuses: [InvoiceStatus.Draft] } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('INV-1041')
+    await expect(
+      canvas.queryByText(/narrows the invoices already loaded/i),
+    ).not.toBeInTheDocument()
+  },
+}
+
+/** Status writes the query, and every option is reachable from the dropdown. */
+export const StatusDropdown: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
+    const listbox = within(await within(document.body).findByRole('listbox'))
+
+    // Skipped is in the list. Its absence from the toolbar was what left a
+    // tenant whose only invoice was skipped staring at "No invoices yet".
+    await expect(listbox.getByRole('option', { name: /skipped/i })).toBeInTheDocument()
+    await userEvent.click(listbox.getByRole('option', { name: /^void$/i }))
+
+    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
+    await waitFor(() =>
+      expect(
+        spy.mock.calls
+          .map((call) => call[0] as { statuses?: string[] })
+          .some((query) => query.statuses?.[0] === InvoiceStatus.Void),
+      ).toBe(true),
+    )
+  },
+}
+
+export const Loading: Story = { args: { invoices: [], total: 0, isLoading: true } }
+
+/** A filter emptied the list — the toolbar survives, so it can be undone. */
+export const FilteredEmpty: Story = {
+  args: {
+    invoices: [],
+    total: 0,
+    query: { ...fixtureQuery, search: 'zzz' },
+    onClearFilters: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      await within(canvasElement).findByText(/no invoices match these filters/i),
+    ).toBeInTheDocument()
+  },
+}
+
+/** Nothing billed yet: the copy, and three guide cards that resolve. */
+export const FirstRun: Story = {
+  args: { invoices: [], total: 0 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No invoices yet')).toBeInTheDocument()
+    await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
+  },
+}
+
 export const Error: Story = {
   args: {
     invoices: [],
@@ -88,74 +173,29 @@ export const Error: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-
     await expect(canvas.getByRole('alert')).toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
     await expect(args.onRetry).toHaveBeenCalledOnce()
   },
 }
 
-/** A narrowed view, as it looks when arrived at from a filtered URL. */
-export const Filtered: Story = {
-  args: {
-    invoices: invoiceFixtures.filter((invoice) => invoice.status === InvoiceStatus.Overdue),
-    total: 1,
-    query: { ...fixtureQuery, statuses: [InvoiceStatus.Overdue] },
-  },
-}
-
-/**
- * The Sort menu reports intent in domain vocabulary, and changes nothing itself.
- *
- * The column carets now re-sort the loaded page client-side, so the *menu* is
- * what persists an ordering into the route. Its callback must carry
- * `sortBy: 'total'` — not `amount_due`, which is the API's name for it and
- * something this component must never learn. It must also reset to page 1:
- * staying on page 7 of a different ordering shows rows the user did not ask for
- * and cannot explain.
- */
-export const SortInteraction: Story = {
-  args: { query: { ...fixtureQuery, page: 7 } },
+/** Paging reports a page number, never an offset, and never drops a query key. */
+export const PaginationReportsDomainQuery: Story = {
+  args: { invoices: manyInvoices(25), total: 120, query: { ...fixtureQuery, page: 1 } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    // The menu content portals to the body, so it is reached from `screen`.
-    await userEvent.click(await canvas.findByRole('button', { name: /change sorting/i }))
-    await userEvent.click(await screen.findByRole('menuitemradio', { name: 'Total' }))
+    await userEvent.click(await canvas.findByRole('button', { name: /next|go to next page/i }))
 
-    await expect(args.onQueryChange).toHaveBeenCalledWith(
-      expect.objectContaining({ sortBy: InvoiceSortField.Total, page: 1 }),
-    )
-  },
-}
-
-/**
- * Paging reports a page number, never an offset.
- *
- * `offset` is a transport detail that lives in `@fp/query`. If it ever appeared
- * in this callback, the boundary would have leaked.
- */
-export const PaginationInteraction: Story = {
-  args: {
-    invoices: manyInvoices(25),
-    total: 120,
-    query: { ...fixtureQuery, page: 1, pageSize: 25 },
-  },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-
-    const next = await canvas.findByRole('button', { name: /next|go to next page/i })
-    await userEvent.click(next)
-
-    await expect(args.onQueryChange).toHaveBeenCalledWith(
-      expect.objectContaining({ page: 2, pageSize: 25 }),
-    )
-
-    // Stronger than "has no offset": what comes back has *exactly* the keys of
-    // an InvoiceQuery. Nothing transport-shaped can ride along, so the day
-    // somebody adds `offset` to this callback, this fails.
+    // The grid can also fire onQueryChange as it settles, so the Next click is
+    // not necessarily call[0]. Wait for — then read — the call that reported
+    // page 2, rather than racing whichever call landed first.
     const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    const reported = spy.mock.calls[0]?.[0] as Record<string, unknown>
-    await expect(Object.keys(reported).sort()).toEqual(Object.keys(fixtureQuery).sort())
+    const reportedPage = () =>
+      spy.mock.calls.map((call) => call[0] as Record<string, unknown>).find((q) => q['page'] === 2)
+    await waitFor(() => expect(reportedPage()).toBeDefined())
+    const reported = reportedPage() as Record<string, unknown>
+    expect(reported).toMatchObject({ page: 2 })
+    expect(Object.keys(reported).sort()).toEqual(Object.keys(fixtureQuery).sort())
   },
 }

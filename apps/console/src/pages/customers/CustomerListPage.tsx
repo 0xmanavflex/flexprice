@@ -1,6 +1,6 @@
 import { type CustomerQuery } from '@fp/domain'
 import { ApiError, useCustomers } from '@fp/query'
-import { CustomerFilters, CustomerGrid } from '@fp/ui/flexprice'
+import { CustomerGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { UsersIcon } from 'lucide-react'
 
@@ -46,12 +46,6 @@ export function CustomerListPage({ query, onQueryChange, onOpenCustomer }: Custo
             onQueryChange={onQueryChange}
             {...(onOpenCustomer ? { onCustomerClick: (customer) => onOpenCustomer(customer.id) } : {})}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-            filters={
-              <CustomerFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
           />
         </ListState>
       </PageBody>

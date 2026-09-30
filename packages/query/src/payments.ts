@@ -6,6 +6,7 @@ import {
   type PaymentQuery,
   PaymentStatus,
   moneyOr,
+  toPaymentStatus,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
@@ -32,6 +33,7 @@ export interface PaymentWire {
   currency?: string | undefined
   paymentStatus?: string | undefined
   paymentMethodType?: string | undefined
+  paymentGateway?: string | undefined
   destinationType?: string | undefined
   invoiceNumber?: string | undefined
   createdAt?: Date | undefined
@@ -39,31 +41,24 @@ export interface PaymentWire {
 }
 
 /**
- * The wire's nine statuses onto the domain's six.
+ * Unknown states are read as still in flight.
  *
- * The three "in flight" shapes collapse to `pending`, and both refund shapes to
- * `refunded`. Anything unrecognised is treated as `pending` — an unknown state
- * is one still resolving, not one to render blank or crash on.
+ * The wire-to-domain table itself lives in `@fp/domain` — an invoice carries
+ * the same `payment_status` and has to fold it the same way. What is local to
+ * *this* list is the fallback: the domain reports an unrecognised value as
+ * absent, and a payment row with no status at all is less useful than one that
+ * says "pending", because a payment the API has told us about but whose state
+ * this build does not know is, from a collections desk, exactly a payment that
+ * has not finished.
  */
-const WIRE_STATUS: Record<string, PaymentStatus> = {
-  INITIATED: PaymentStatus.Pending,
-  PENDING: PaymentStatus.Pending,
-  PROCESSING: PaymentStatus.Pending,
-  SUCCEEDED: PaymentStatus.Succeeded,
-  OVERPAID: PaymentStatus.Overpaid,
-  FAILED: PaymentStatus.Failed,
-  REFUNDED: PaymentStatus.Refunded,
-  PARTIALLY_REFUNDED: PaymentStatus.Refunded,
-  VOIDED: PaymentStatus.Voided,
-}
-
 export function toPayment(wire: PaymentWire): Payment {
   return {
     id: wire.id ?? '',
     // The amount and its currency, joined — never the two strings apart.
     amount: moneyOr(wire.amount, wire.currency),
-    status: WIRE_STATUS[wire.paymentStatus ?? ''] ?? PaymentStatus.Pending,
+    status: toPaymentStatus(wire.paymentStatus) ?? PaymentStatus.Pending,
     methodType: wire.paymentMethodType ?? '',
+    gateway: wire.paymentGateway ?? '',
     invoiceNumber: wire.invoiceNumber ?? '',
     createdAt: wire.createdAt ?? null,
     succeededAt: wire.succeededAt ?? null,

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type CreatePlan, type PlanQuery } from '@fp/domain'
-import { ApiError, useCreatePlan, usePlans } from '@fp/query'
-import { PlanEditorSheet, PlanFilters, PlanGrid } from '@fp/ui/flexprice'
+import { ApiError, useCatalogStats, useCreatePlan, usePlans } from '@fp/query'
+import { PlanEditorSheet, PlanGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -26,6 +26,10 @@ export interface PlanListPageProps {
 export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageProps) {
   const plans = usePlans(query)
   const create = useCreatePlan()
+  // Counts per status for the toolbar's dropdown. Each is one `limit: 1`
+  // request read for its `pagination.total` — the server's count, not the
+  // twenty-five rows that happen to be on screen.
+  const stats = useCatalogStats('plans')
 
   const [creating, setCreating] = useState(false)
 
@@ -73,12 +77,11 @@ export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageP
             onPlanClick={(plan) => onOpenPlan(plan.id)}
             onCreate={() => setCreating(true)}
             onClearFilters={clearFilters}
-            filters={
-              <PlanFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
+            statusCounts={{
+              total: stats.total,
+              published: stats.published,
+              archived: stats.archived,
+            }}
           />
         </ListState>
       </PageBody>

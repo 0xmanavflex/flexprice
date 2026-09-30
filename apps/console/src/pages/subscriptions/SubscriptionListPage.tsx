@@ -1,6 +1,6 @@
 import { type SubscriptionQuery } from '@fp/domain'
 import { ApiError, useSubscriptions } from '@fp/query'
-import { SubscriptionFilters, SubscriptionGrid } from '@fp/ui/flexprice'
+import { SubscriptionGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { RefreshCwIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -46,12 +46,6 @@ export function SubscriptionListPage({ query, onQueryChange, onCreate }: Subscri
             onQueryChange={onQueryChange}
             onCreate={onCreate}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-            filters={
-              <SubscriptionFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
           />
         </ListState>
       </PageBody>

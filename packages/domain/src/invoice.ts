@@ -1,4 +1,5 @@
 import type { Money } from './money'
+import type { PaymentStatus } from './payment'
 
 /**
  * What an invoice *is*, to this product.
@@ -25,6 +26,21 @@ export interface Invoice {
   /** Display name, already resolved. The UI never joins data. */
   customerName: string
   status: InvoiceStatus
+  /**
+   * What the *money* did, as opposed to what the document did.
+   *
+   * {@link Invoice.status} already folds the API's two status fields into the
+   * one question a billing operator asks, and that fold is lossy on purpose:
+   * a finalized invoice whose only payment attempt failed and one nobody has
+   * tried to collect are both `open`. The first needs chasing today. So the
+   * payment side is also carried through unfolded, and the list shows both —
+   * one column for the document, one for the collection.
+   *
+   * `null` when the API sends no payment status, or sends one this build does
+   * not recognise. Never inferred from the balance: "we were not told" and
+   * "nothing has been attempted" are different facts.
+   */
+  paymentStatus: PaymentStatus | null
   total: Money
   amountDue: Money
   amountRemaining: Money

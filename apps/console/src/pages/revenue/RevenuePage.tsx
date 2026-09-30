@@ -89,9 +89,69 @@ interface Window {
   end: Date
 }
 
-/** The margin panel's sentence. Stated here because this layer knows the API. */
+/**
+ * The margin panel's sentence. Stated here because this layer knows the API.
+ *
+ * Corrected: the previous wording claimed "no endpoint returns the margin",
+ * and that is not true. `POST /costs/analytics`
+ * (`client.costs.getDetailedCostAnalytics`) returns `total_revenue`,
+ * `total_cost`, `margin` and `margin_percent` outright. What is true is that
+ * nothing in this repo calls it — there is no hook, and it is not in the mock
+ * handlers either — so the figure is unwired rather than unavailable. Saying
+ * "the API cannot" when the truth is "we have not" sends the next person to
+ * the wrong team.
+ */
 const MARGIN_UNAVAILABLE =
-  'Gross margin needs cost and revenue aggregated together. Cost sheets record the cost side, but no endpoint returns the margin, and totals cannot be summed in the browser.'
+  'Gross margin is not wired up yet. The cost analytics endpoint does return revenue, cost and margin together, but no hook in this console calls it, so there is no figure to show rather than no figure to be had.'
+
+/**
+ * Why the per-customer table cannot be drawn, column by column.
+ *
+ * Each `blocker` names the specific capability, so the screen doubles as the
+ * spec for the backend work. Findings from a sweep of `@flexprice/sdk`
+ * 2.1.30: there is no `POST /analytics/revenue` at all; `POST
+ * /events/analytics` cannot group by customer (`group_by` takes only
+ * `source`, `feature_id` and `properties.*`); `POST /costs/analytics` answers
+ * for the tenant or for a single `external_customer_id`; and the one
+ * per-customer revenue figure that exists — `total_revenue_amount` from `GET
+ * /customers/{id}/invoices/summary` — is a lifetime total, split by currency,
+ * one HTTP call per customer, and unwired.
+ */
+const REVENUE_BY_CUSTOMER_UNAVAILABLE =
+  'No endpoint returns revenue grouped by customer. The figures below could only be assembled one request per customer, or by summing invoices in the browser — which this console does not do, because a total it recomputes will eventually disagree with the invoice the customer was actually charged.'
+
+const REVENUE_BY_CUSTOMER_GAPS = [
+  {
+    column: 'Plan',
+    blocker:
+      'A customer record carries no plan; a plan belongs to their subscriptions. Needs a joined list view, or one subscriptions request per customer.',
+  },
+  {
+    column: 'Net revenue',
+    blocker:
+      'Available per customer only as a lifetime total, from GET /customers/{id}/invoices/summary — one call each, not windowed to the range above, and split per currency.',
+  },
+  {
+    column: 'Contract',
+    blocker:
+      'No endpoint splits recognised revenue into fixed and usage components. The invoice summary splits only what is still unpaid.',
+  },
+  {
+    column: 'Usage',
+    blocker:
+      'POST /events/analytics prices a window as a whole and cannot group by customer, so usage revenue per customer has no source.',
+  },
+  {
+    column: 'Cost',
+    blocker:
+      'POST /costs/analytics returns cost per customer, but one external_customer_id per request, and its per-meter items would have to be summed to get a row total.',
+  },
+  {
+    column: 'Margin %',
+    blocker:
+      'Returned by POST /costs/analytics for the tenant or for a single customer. Needs the same per-customer fan-out as Cost, plus a hook — there is none today.',
+  },
+]
 
 export function RevenuePage() {
   const navigate = useNavigate()
@@ -197,6 +257,11 @@ export function RevenuePage() {
            */
           margin={{ status: 'unavailable', percent: null, reason: MARGIN_UNAVAILABLE }}
           collections={collections}
+          byCustomer={{
+            status: 'unavailable',
+            reason: REVENUE_BY_CUSTOMER_UNAVAILABLE,
+            columns: REVENUE_BY_CUSTOMER_GAPS,
+          }}
           onNavigate={(path) => void navigate({ to: path, search: {} as never })}
         />
       </PageBody>

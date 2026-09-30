@@ -137,7 +137,35 @@ export interface RevenueDashboardProps {
   }
 
   /** Where a link on the report leads. No-op by default, so it renders in isolation. */
+  /**
+   * Revenue broken down per customer.
+   *
+   * `columns` is the table that was asked for, and `status` says whether it
+   * can be drawn. Today it cannot, and `RevenuePage` says why — so the shape
+   * ships as a list of named gaps rather than as a grid. See
+   * {@link RevenueByCustomerPanel}.
+   */
+  byCustomer: {
+    status: RevenuePanelStatus
+    /** Prose shown above the gap list. */
+    reason: string
+    /** One entry per column the table would have, and what it waits on. */
+    columns: RevenueByCustomerGap[]
+  }
   onNavigate?: (path: string) => void
+}
+
+/**
+ * One column of the revenue-by-customer table, and the capability it needs.
+ *
+ * `blocker` is deliberately a sentence naming an endpoint rather than a
+ * vague "not available yet": the point of showing this at all is that a
+ * reader — or whoever picks up the backend ticket — can tell from the screen
+ * exactly what would have to exist.
+ */
+export interface RevenueByCustomerGap {
+  column: string
+  blocker: string
 }
 
 /* ---- Formatting --------------------------------------------------------- */
@@ -407,6 +435,86 @@ function MarginPanel({
   )
 }
 
+/* ---- 3b. Revenue by customer -------------------------------------------- */
+
+/**
+ * The table that is not here, and precisely why.
+ *
+ * The redesign asks for a per-customer grid: Customer, Plan, Net revenue,
+ * Contract, Usage, Cost, Margin %. Five of those seven are money, and the
+ * audit behind this panel found that **no endpoint returns revenue grouped by
+ * customer**. Three separate findings, and they are not the same kind of gap:
+ *
+ *   - `POST /analytics/revenue` is **absent from the SDK but live on the
+ *     server**, where it answers `403 "Enable the revenue_analytics_config
+ *     setting to use revenue analytics"`. So it is switched off for this
+ *     environment rather than missing — and `GET
+ *     /settings/revenue_analytics_config` answers `400 Unknown setting key`,
+ *     so it is not the console's own settings API that turns it on. Somebody
+ *     with backend access has to, and that is a far more actionable sentence
+ *     than "no endpoint exists".
+ *   - `POST /events/analytics` exists, but its `group_by` accepts only
+ *     `source`, `feature_id` and `properties.*` — never a customer.
+ *   - `POST /costs/analytics` exists, is in the SDK as
+ *     `costs.getDetailedCostAnalytics`, and **does return `total_revenue`,
+ *     `total_cost`, `margin` and `margin_percent`** — but for the tenant as a
+ *     whole, or one `external_customer_id` per request.
+ *
+ * So this could only be drawn by issuing one request per row and stitching
+ * the answers together, or by summing invoice totals in the browser — which
+ * `money.ts` refuses outright, on the grounds that a UI which recomputes a
+ * total will eventually disagree with the invoice the customer was charged.
+ *
+ * Rather than a grid of plausible numbers, the panel renders the columns as
+ * what they are: a list of named gaps. That is the version a reader can act
+ * on. The alternative — the version this dashboard replaced — was five named
+ * customers with their spend, and not one of those figures came from
+ * anywhere.
+ */
+function RevenueByCustomerPanel({
+  byCustomer,
+  onViewCustomers,
+}: {
+  byCustomer: RevenueDashboardProps['byCustomer']
+  onViewCustomers: () => void
+}) {
+  return (
+    <Section
+      title="Revenue by customer"
+      description="What each customer is worth, and what it costs to serve them."
+    >
+      {byCustomer.status === 'unavailable' ? (
+        <div className="flex flex-col gap-4">
+          <Unavailable what={byCustomer.reason} className="max-w-[80ch] text-balance" />
+          {/*
+            A description list, not a table: a table here would be a table of
+            em dashes, which reads as "these customers earned nothing" rather
+            than "this cannot be asked". Each row names the column and the
+            capability it waits on.
+          */}
+          <dl className="divide-border/60 divide-y text-xs">
+            {byCustomer.columns.map((gap) => (
+              <div key={gap.column} className="grid gap-1 py-2 sm:grid-cols-[10rem_1fr] sm:gap-4">
+                <dt className="text-foreground font-medium">{gap.column}</dt>
+                <dd className="text-muted-foreground text-balance">{gap.blocker}</dd>
+              </div>
+            ))}
+          </dl>
+        </div>
+      ) : (
+        <AbsentFigure caption={byCustomer.reason} />
+      )}
+      <button
+        type="button"
+        onClick={onViewCustomers}
+        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded-sm text-xs underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
+      >
+        All customers
+      </button>
+    </Section>
+  )
+}
+
 /* ---- 4. Collections ----------------------------------------------------- */
 
 /**
@@ -479,6 +587,7 @@ export function RevenueDashboard({
   mix,
   margin,
   collections,
+  byCustomer,
   onNavigate,
 }: RevenueDashboardProps): ReactNode {
   const go = (path: string) => onNavigate?.(path)
@@ -512,6 +621,10 @@ export function RevenueDashboard({
       </div>
 
       <MarginPanel margin={margin} onCostSheets={() => go('/cost-sheets')} />
+      <RevenueByCustomerPanel
+        byCustomer={byCustomer}
+        onViewCustomers={() => go('/customers')}
+      />
     </div>
   )
 }

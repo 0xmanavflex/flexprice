@@ -36,6 +36,7 @@ export interface SubscriptionWire {
   subscriptionStatus?: string | undefined
   currency?: string | undefined
   billingPeriod?: string | undefined
+  currentPeriodStart?: Date | undefined
   currentPeriodEnd?: Date | undefined
   startDate?: Date | undefined
   createdAt?: Date | undefined
@@ -61,6 +62,7 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
     status,
     currency: (wire.currency ?? '').toUpperCase(),
     billingPeriodLabel: BILLING_PERIOD_LABEL[(wire.billingPeriod ?? '') as BillingPeriod] ?? '—',
+    currentPeriodStart: wire.currentPeriodStart ?? null,
     currentPeriodEnd: wire.currentPeriodEnd ?? null,
     startDate: wire.startDate ?? null,
     createdAt: wire.createdAt ?? null,

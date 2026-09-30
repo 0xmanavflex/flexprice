@@ -39,6 +39,16 @@ export interface Subscription {
   currency: string
   /** The billing cadence as a word — "Monthly", "Half-yearly". */
   billingPeriodLabel: string
+  /**
+   * The cycle currently being billed.
+   *
+   * Both ends, because half a period is not a period: the list's "Current
+   * period" column needs a range, and `currentPeriodEnd` alone can only be
+   * labelled "Renews". The API has carried `current_period_start` all along
+   * (`SubscriptionResponse.currentPeriodStart`); the read model simply was not
+   * asking for it.
+   */
+  currentPeriodStart: Date | null
   currentPeriodEnd: Date | null
   startDate: Date | null
   createdAt: Date | null

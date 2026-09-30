@@ -1,6 +1,6 @@
 import { type Group, type GroupQuery } from '@fp/domain'
 import { ApiError, useGroups } from '@fp/query'
-import { GroupFilters, GroupGrid } from '@fp/ui/flexprice'
+import { GroupGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { LayersIcon } from 'lucide-react'
@@ -36,6 +36,28 @@ export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPa
 
   const createHref = env.legacyConsoleUrl ? `${env.legacyConsoleUrl}${LEGACY_PATH}` : null
 
+  /*
+   * Built once and handed to the grid, which is now the only thing that
+   * renders it.
+   *
+   * `ListState` still publishes a `createAction` through its offer context,
+   * but `EntityList` does not read that context — it takes `primaryAction`
+   * and `empty.actions` directly. Leaving the button only on `ListState`
+   * would have quietly removed the one route to creating a group.
+   */
+  const createAction = createHref ? (
+    <Button
+      size="sm"
+      render={
+        // A new tab: following a link out of the console should not discard
+        // what is open in it.
+        <a href={createHref} rel="noreferrer" target="_blank" />
+      }
+    >
+      New group
+    </Button>
+  ) : null
+
   const failure = toFailure(groups.error)
   const rows = groups.data?.groups ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -51,22 +73,7 @@ export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPa
           isFiltered={isFiltered}
           onRetry={() => void groups.refetch()}
           onClearFilters={clearFilters}
-          {...(createHref
-            ? {
-                createAction: (
-                  <Button
-                    size="sm"
-                    render={
-                      // A new tab: following a link out of the console should
-                      // not discard what is open in it.
-                      <a href={createHref} rel="noreferrer" target="_blank" />
-                    }
-                  >
-                    New group
-                  </Button>
-                ),
-              }
-            : {})}
+          {...(createAction ? { createAction } : {})}
           emptyIcon={<LayersIcon aria-hidden />}
           emptyTitle="No groups yet"
           emptyDescription={
@@ -82,12 +89,7 @@ export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPa
             onQueryChange={onQueryChange}
             onGroupClick={onOpenGroup}
             onClearFilters={clearFilters}
-            filters={
-              <GroupFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
+            {...(createAction ? { primaryAction: createAction, emptyActions: createAction } : {})}
           />
         </ListState>
       </PageBody>

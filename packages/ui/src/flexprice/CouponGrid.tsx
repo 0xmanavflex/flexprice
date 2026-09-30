@@ -1,47 +1,128 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
+import { useMemo } from 'react'
+import { ArchiveIcon, BookOpenIcon, CopyIcon, PencilIcon, TicketPercentIcon } from 'lucide-react'
 import {
   COUPON_CADENCE_LABEL,
   COUPON_SORT_LABEL,
+  COUPON_STATUS_LABEL,
   type Coupon,
-  type CouponQuery,
   CouponCadence,
+  type CouponQuery,
   CouponSortField,
-  CouponType,
+  CouponStatus,
+  DEFAULT_COUPON_QUERY,
+  formatMoney,
 } from '@fp/domain'
-import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
-import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
-import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import { Skeleton } from '@ui/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
-import { GridFooter } from '@ui/compositions/GridFooter'
-import { GridToolbar } from '@ui/compositions/GridToolbar'
-import { SortMenu } from '@ui/compositions/SortMenu'
-import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
-import { Money } from './Money'
-import { CatalogStatusBadge } from './StatusBadge'
+import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
+import {
+  type EntityColumn,
+  dateColumn,
+  idColumn,
+  pillColumn,
+  textColumn,
+} from './cells'
 
 /**
- * The coupon list.
+ * The coupon list, over the shared `EntityList`.
  *
- * The same controlled table shape as `AddonGrid`, with a coupon's own
- * columns: the discount (a `Money` when fixed, a percentage when not), how long
- * it lasts, and how far its redemptions have run against the ceiling. Filtering
- * is passed in through the `filters` slot.
+ * The one catalogue list whose columns the redesign asked for all exist: a
+ * coupon's discount, cadence, redemption ceiling and validity window are all
+ * on the read model already. Nothing here is dashed for want of a field.
+ *
+ * **The "Expired" tab is not here.** `CouponStatus` is `published | archived`;
+ * expiry is a date passing, not a status the API stores or can count. It could
+ * be derived per row from `redeemBefore`, but then the dropdown would carry a
+ * number counted from the twenty-five rows on screen while every other option
+ * carries the server's total — two kinds of number in one control, one of them
+ * wrong. So the dropdown offers what the server can actually count, and expiry
+ * stays visible in the "Valid until" column where a date belongs.
+ *
+ * Status is in the toolbar's dropdown and *not* in the filter builder, so two
+ * controls cannot disagree about `query.statuses`.
  */
 export const CouponGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid'],
-  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
+  composes: ['flexprice/EntityList'],
+  note: 'Coupon columns and actions over the shared list table.',
 })
 
 const SORT_OPTIONS = Object.values(CouponSortField).map((value) => ({
   value,
   label: COUPON_SORT_LABEL[value],
 }))
+
+/** `all` is a value, not the absence of one — a Select with an empty value
+ *  renders its placeholder and reads as unset. */
+const STATUS_ALL = 'all'
+
+/**
+ * What the coupon takes off — an amount, or a percentage.
+ *
+ * `formatMoney` rather than any arithmetic here: `money.ts` forbids doing sums
+ * on money in the browser, and a discount is exactly the figure someone would
+ * be tempted to convert. `percentageOff` arrives as the API's own string
+ * (`"10"`, never `0.1`), so it is printed, not scaled.
+ */
+function discountLabel(coupon: Coupon, locale?: string): string | null {
+  if (coupon.amountOff) return formatMoney(coupon.amountOff, locale)
+  if (coupon.percentageOff) return `${coupon.percentageOff}%`
+  return null
+}
+
+/**
+ * How long the discount lasts.
+ *
+ * Only `repeated` reads with a number beside it. The unit is **periods**, not
+ * months — the spec's "· N mo" would be asserting a billing cadence the field
+ * does not carry, and a quarterly plan's three periods are nine months.
+ */
+function durationLabel(coupon: Coupon): string {
+  const base = COUPON_CADENCE_LABEL[coupon.cadence]
+  if (coupon.cadence !== CouponCadence.Repeated || coupon.durationInPeriods === null) return base
+  const periods = coupon.durationInPeriods
+  return `${base} · ${periods} ${periods === 1 ? 'period' : 'periods'}`
+}
+
+/** Used against the ceiling. A null ceiling is unlimited, said out loud —
+ *  a blank there would read as a redemption cap that failed to load. */
+function redemptionsLabel(coupon: Coupon, locale?: string): string {
+  const format = (value: number) => new Intl.NumberFormat(locale).format(value)
+  const used = format(coupon.totalRedemptions)
+  return coupon.maxRedemptions === null
+    ? `${used} / Unlimited`
+    : `${used} / ${format(coupon.maxRedemptions)}`
+}
+
+/** Every URL requested and returned 200; all three are in the docs sitemap. */
+const GUIDES: EntityGuide[] = [
+  {
+    title: 'What a coupon is',
+    description: 'Fixed amounts and percentages, and how a discount is redeemed.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/coupons/overview',
+    icon: <BookOpenIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Creating a coupon',
+    description: 'Set the discount, the cadence and the redemption window.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/coupons/create',
+    icon: <TicketPercentIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Applying a discount',
+    description: 'Put a coupon on a subscription and see it on the next invoice.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/coupons/apply-discount-on-subscription',
+    icon: <PencilIcon aria-hidden className="size-4" />,
+  },
+]
+
+/** Counts per status, from the server. Undefined where not yet known — a
+ *  confident "0" that has not been confirmed is worse than no number. */
+export interface CouponStatusCounts {
+  total?: number | undefined
+  published?: number | undefined
+  archived?: number | undefined
+}
 
 export interface CouponGridProps {
   coupons: Coupon[]
@@ -54,43 +135,15 @@ export interface CouponGridProps {
   onCouponClick?: (coupon: Coupon) => void
   /** The primary create action; renders a "New coupon" CTA at the toolbar's end. */
   onCreate?: () => void
-  filters?: ReactNode
+  /** Row menu: rename the coupon — the one field the API will take. */
+  onEdit?: ((coupon: Coupon) => void) | undefined
+  /** Row menu: archive the coupon. Rendered destructive, under a separator. */
+  onArchive?: ((coupon: Coupon) => void) | undefined
+  /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
+  /** Fills the counts beside each status option. */
+  statusCounts?: CouponStatusCounts | undefined
   locale?: string
-}
-
-/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
-function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
-  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="tabular-nums text-muted-foreground">{text}</span>
-}
-
-/** The discount, drawn from whichever of the two fields the type populates. */
-function DiscountCell({ coupon, locale }: { coupon: Coupon; locale?: string | undefined }) {
-  if (coupon.type === CouponType.Percentage) {
-    return <span className="tabular-nums">{coupon.percentageOff ?? '0'}%</span>
-  }
-  return coupon.amountOff ? (
-    <Money value={coupon.amountOff} {...(locale ? { locale } : {})} />
-  ) : (
-    <span>—</span>
-  )
-}
-
-/** "One-time", "Forever", or "Repeating · 3 periods". */
-function durationLabel(coupon: Coupon): string {
-  if (coupon.cadence === CouponCadence.Repeated && coupon.durationInPeriods) {
-    const unit = coupon.durationInPeriods === 1 ? 'period' : 'periods'
-    return `${COUPON_CADENCE_LABEL[coupon.cadence]} · ${coupon.durationInPeriods} ${unit}`
-  }
-  return COUPON_CADENCE_LABEL[coupon.cadence]
-}
-
-/** "213 / 500", or "87 / ∞" when redemptions are unlimited. */
-function redemptionsLabel(coupon: Coupon, locale?: string): string {
-  const format = (n: number) => new Intl.NumberFormat(locale).format(n)
-  const cap = coupon.maxRedemptions === null ? '∞' : format(coupon.maxRedemptions)
-  return `${format(coupon.totalRedemptions)} / ${cap}`
 }
 
 export function CouponGrid({
@@ -103,222 +156,162 @@ export function CouponGrid({
   onRetry,
   onCouponClick,
   onCreate,
-  filters,
+  onEdit,
+  onArchive,
   onClearFilters,
+  statusCounts,
   locale,
 }: CouponGridProps) {
-  const columns = useMemo<ColumnDef<never, Coupon>[]>(
-    () =>
-      [
-        {
-          id: 'name',
-          meta: { skeleton: <Skeleton className="h-4 w-40" /> },
-          accessorFn: (row: Coupon) => row.name,
-          header: ({ column }: never) => <DataGridColumnHeader title="Coupon" column={column} />,
-          cell: ({ row }: { row: { original: Coupon } }) => (
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate">{row.original.name}</span>
-              {row.original.code ? (
-                <span className="truncate font-mono text-xs text-muted-foreground">
-                  {row.original.code}
-                </span>
-              ) : null}
-            </div>
-          ),
-          enableSorting: true,
-          size: 260,
-        },
-        {
-          id: 'discount',
-          meta: { skeleton: <Skeleton className="h-4 w-16" /> },
-          accessorFn: (row: Coupon) => (row.type === CouponType.Percentage ? row.percentageOff : row.amountOff?.amount),
-          header: ({ column }: never) => <DataGridColumnHeader title="Discount" column={column} />,
-          cell: ({ row }: { row: { original: Coupon } }) => (
-            <span className="tabular-nums">
-              <DiscountCell coupon={row.original} locale={locale} />
-            </span>
-          ),
-          enableSorting: true,
-          size: 120,
-        },
-        {
-          id: 'duration',
-          meta: { skeleton: <Skeleton className="h-4 w-28" /> },
-          accessorFn: (row: Coupon) => row.cadence,
-          header: ({ column }: never) => <DataGridColumnHeader title="Duration" column={column} />,
-          cell: ({ row }: { row: { original: Coupon } }) => (
-            <span className="text-muted-foreground">{durationLabel(row.original)}</span>
-          ),
-          enableSorting: true,
-          size: 180,
-        },
-        {
-          id: 'redemptions',
-          meta: { skeleton: <Skeleton className="h-4 w-16" /> },
-          accessorFn: (row: Coupon) => row.totalRedemptions,
-          header: ({ column }: never) => <DataGridColumnHeader title="Redemptions" column={column} />,
-          cell: ({ row }: { row: { original: Coupon } }) => (
-            <span className="tabular-nums text-muted-foreground">
-              {redemptionsLabel(row.original, locale)}
-            </span>
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-        {
-          id: 'status',
-          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
-          accessorFn: (row: Coupon) => row.status,
-          header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
-          cell: ({ row }: { row: { original: Coupon } }) => (
-            <CatalogStatusBadge status={row.original.status} />
-          ),
-          enableSorting: true,
-          size: 120,
-        },
-        {
-          id: 'updatedAt',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Coupon) => row.updatedAt,
-          header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
-          cell: ({ row }: { row: { original: Coupon } }) => (
-            <DateCell value={row.original.updatedAt} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-      ] as never,
+  const columns = useMemo<EntityColumn<Coupon>[]>(
+    () => [
+      textColumn<Coupon>('name', 'Coupon', (row) => row.name, {
+        width: 220,
+        sortable: true,
+        sortValue: CouponSortField.Name,
+        hideable: false,
+      }),
+      idColumn<Coupon>('code', 'Code', (row) => row.code, { width: 150 }),
+      textColumn<Coupon>('discount', 'Discount', (row) => discountLabel(row, locale), {
+        width: 130,
+      }),
+      textColumn<Coupon>('duration', 'Duration', durationLabel, { width: 180 }),
+      textColumn<Coupon>(
+        'redemptions',
+        'Redemptions',
+        (row) => redemptionsLabel(row, locale),
+        { width: 140 },
+      ),
+      dateColumn<Coupon>('redeemBefore', 'Valid until', (row) => row.redeemBefore, {
+        width: 140,
+        ...(locale ? { locale } : {}),
+      }),
+      pillColumn<Coupon>(
+        'status',
+        'Status',
+        (row) => ({
+          label: COUPON_STATUS_LABEL[row.status],
+          tone: row.status === CouponStatus.Published ? 'success' : 'neutral',
+        }),
+        { width: 130 },
+      ),
+      // Real, and on the old grid, but not in the redesign's default layout.
+      // One click away in the `⋯` menu rather than dropped.
+      dateColumn<Coupon>('updatedAt', 'Updated', (row) => row.updatedAt, {
+        width: 140,
+        sortable: true,
+        sortValue: CouponSortField.UpdatedAt,
+        hiddenByDefault: true,
+        ...(locale ? { locale } : {}),
+      }),
+    ],
     [locale],
   )
 
-  const pagination: PaginationState = {
-    pageIndex: query.page - 1,
-    pageSize: query.pageSize,
-  }
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
-  const table = useTable({
-    features: dataGridFeatures,
-    data: coupons,
-    columns,
-    manualPagination: true,
-    rowCount: total,
-    getRowId: (row: Coupon) => row.id,
-    state: { pagination },
-    onPaginationChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (p: PaginationState) => PaginationState)(pagination)
-          : (updater as PaginationState)
-      onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
-    },
-  } as never)
+  const isDefaultSort =
+    query.sortBy === DEFAULT_COUPON_QUERY.sortBy &&
+    query.sortDirection === DEFAULT_COUPON_QUERY.sortDirection
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [fitToWindow, setFitToWindow] = useState(false)
-  const capacity = useViewportPageSize({
-    containerRef,
-    enabled: fitToWindow,
-    reservedHeight: 104,
-  })
-
-  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
-    onQueryChange({ ...query, pageSize: capacity, page: 1 })
-  }
-
-  if (error) {
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
-        <p className="text-sm">{error}</p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
-    )
+  const rowActions = (coupon: Coupon): EntityRowAction[] => {
+    const actions: EntityRowAction[] = []
+    if (onCouponClick) {
+      actions.push({
+        label: 'View coupon',
+        icon: <TicketPercentIcon aria-hidden className="size-4" />,
+        onSelect: () => onCouponClick(coupon),
+      })
+    }
+    if (onEdit) {
+      actions.push({
+        label: 'Rename coupon',
+        icon: <PencilIcon aria-hidden className="size-4" />,
+        onSelect: () => onEdit(coupon),
+      })
+    }
+    actions.push({
+      label: 'Copy coupon ID',
+      icon: <CopyIcon aria-hidden className="size-4" />,
+      onSelect: () => void navigator.clipboard?.writeText(coupon.id),
+    })
+    if (onArchive && coupon.status !== CouponStatus.Archived) {
+      actions.push({
+        label: 'Archive coupon',
+        icon: <ArchiveIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onArchive(coupon),
+      })
+    }
+    return actions
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
-      <GridToolbar
-        heading="Coupons"
-        search={query.search}
-        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search coupons…"
-        label="Search coupons"
-        action={
-          onCreate ? (
-            <Button size="sm" onClick={onCreate}>
-              New coupon
-            </Button>
-          ) : undefined
-        }
-      >
-        {filters}
-        <SortMenu
-          align="end"
-          options={SORT_OPTIONS}
-          field={query.sortBy}
-          direction={query.sortDirection}
-          onChange={(sortBy, sortDirection) =>
-            onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
-          }
-        />
-      </GridToolbar>
-
-      <DataGrid
-        table={table as never}
-        recordCount={total}
-        isLoading={isLoading}
-        emptyMessage={
-          <EmptyState
-            size="inline"
-            isFiltered
-            title="No coupons match these filters"
-            description="Try a different search, or clear what is narrowing the list."
-            onClearFilters={
-              onClearFilters ? (
-                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-        {...(onCouponClick ? { onRowClick: onCouponClick } : {})}
-        tableLayout={{
-          headerSticky: true,
-          columnsVisibility: true,
-          // Auto, so the columns spread to fill the width instead of leaving a
-          // band of empty table on the right. The `size` hints still set the
-          // proportions; the name cell truncates so a long value cannot blow the
-          // column out.
-          width: 'auto',
-          rowBorder: false,
-          dense: true,
-        }}
-      >
-        {/* The table scrolls within a bounded region so the pagination footer
-            below stays pinned in view instead of being pushed off the bottom
-            when the list is taller than the screen.
-
-            ReUI's DataGridScrollArea puts `className` on an inner node, so its
-            own root div never becomes the flex-1 item — it sizes to content and
-            the footer below is pushed off-screen once the list is taller than
-            the viewport. This wrapper makes the root (`> div`) the flex child
-            that fills and scrolls, keeping the pagination pinned in view. */}
-        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-          <DataGridScrollArea className="min-h-0 flex-1">
-            <DataGridTable />
-          </DataGridScrollArea>
-        </div>
-        <GridFooter
-          fitToWindow={fitToWindow}
-          onFitToWindowChange={setFitToWindow}
-          pageSize={query.pageSize}
-          noun="coupons"
-        />
-      </DataGrid>
-    </div>
+    <EntityList<Coupon>
+      label="Coupons"
+      noun="coupons"
+      rows={coupons}
+      total={total}
+      columns={columns}
+      getRowId={(coupon) => coupon.id}
+      page={query.page}
+      pageSize={query.pageSize}
+      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+      search={query.search}
+      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+      searchPlaceholder="Search coupons…"
+      status={{
+        value: statusValue,
+        label: 'Status',
+        onChange: (value) =>
+          onQueryChange({
+            ...query,
+            statuses: value === STATUS_ALL ? [] : [value as CouponStatus],
+            page: 1,
+          }),
+        options: [
+          {
+            value: STATUS_ALL,
+            label: 'All',
+            ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }),
+          },
+          {
+            value: CouponStatus.Published,
+            label: COUPON_STATUS_LABEL[CouponStatus.Published],
+            ...(statusCounts?.published === undefined ? {} : { count: statusCounts.published }),
+          },
+          {
+            value: CouponStatus.Archived,
+            label: COUPON_STATUS_LABEL[CouponStatus.Archived],
+            ...(statusCounts?.archived === undefined ? {} : { count: statusCounts.archived }),
+          },
+        ],
+      }}
+      sort={{
+        options: SORT_OPTIONS,
+        field: query.sortBy,
+        direction: query.sortDirection,
+        activeCount: isDefaultSort ? 0 : 1,
+        onChange: (sortBy, sortDirection) =>
+          onQueryChange({ ...query, sortBy: sortBy as CouponSortField, sortDirection, page: 1 }),
+      }}
+      selectable
+      rowActions={rowActions}
+      exportFileName="coupons"
+      primaryAction={onCreate ? <Button onClick={onCreate}>New coupon</Button> : undefined}
+      {...(onCouponClick ? { onRowClick: onCouponClick } : {})}
+      isLoading={isLoading}
+      error={error}
+      {...(onRetry ? { onRetry } : {})}
+      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      {...(onClearFilters ? { onClearFilters } : {})}
+      filteredEmptyTitle="No coupons match these filters"
+      empty={{
+        title: 'No coupons yet',
+        description:
+          'A coupon takes an amount or a percentage off a subscription — once, for a few periods, or forever. Create one and apply it at checkout or on an existing subscription.',
+        ...(onCreate ? { actions: <Button onClick={onCreate}>New coupon</Button> } : {}),
+        guides: GUIDES,
+      }}
+    />
   )
 }

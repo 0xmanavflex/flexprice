@@ -1,6 +1,6 @@
 import { type PaymentQuery } from '@fp/domain'
 import { ApiError, usePayments } from '@fp/query'
-import { PaymentFilters, PaymentGrid } from '@fp/ui/flexprice'
+import { PaymentGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { CreditCardIcon } from 'lucide-react'
 
@@ -44,12 +44,6 @@ export function PaymentListPage({ query, onQueryChange }: PaymentListPageProps) 
             query={query}
             onQueryChange={onQueryChange}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-            filters={
-              <PaymentFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
           />
         </ListState>
       </PageBody>

@@ -1,43 +1,98 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
+import { useMemo } from 'react'
+import { BookOpenIcon, CopyIcon, ReceiptIcon, UserIcon } from 'lucide-react'
 import {
   CUSTOMER_SORT_LABEL,
+  CUSTOMER_STATUS_LABEL,
   type Customer,
   type CustomerQuery,
   CustomerSortField,
+  CustomerStatus,
+  DEFAULT_CUSTOMER_QUERY,
 } from '@fp/domain'
-import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
-import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
-import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import { Skeleton } from '@ui/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
-import { GridFooter } from '@ui/compositions/GridFooter'
-import { GridToolbar } from '@ui/compositions/GridToolbar'
-import { SortMenu } from '@ui/compositions/SortMenu'
-import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
-import { CatalogStatusBadge } from './StatusBadge'
+import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
+import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from './cells'
 
 /**
- * The customer list, as a *controlled*, table-only grid.
+ * The customer list, on the shared `EntityList`.
  *
- * The same shape as `InvoiceGrid`: the page owns the query and keeps it in the
- * URL, the grid holds no state and fetches nothing. A billing list is a ledger,
- * not a catalogue — so there is no card view and no layout toggle, only a table
- * over one query. Filtering is passed in through the `filters` slot.
+ * Migrated from a hand-assembled `DataGrid`. Everything that used to be here
+ * and is not about customers — the `useTable` call, the `tableLayout`, the
+ * toolbar, the footer, the fit-to-window state — now lives once in
+ * `EntityList`. What is left is the part that is genuinely about a customer.
+ *
+ * ## The columns that are not here
+ *
+ * The redesign asks for Plan, MRR, Wallet balance and Subscriptions on this
+ * table. None of them are shipped, and the reason is worth stating because it
+ * will come up again every time someone reads the spec beside the screen.
+ *
+ * `Customer` carries no money and no relations — deliberately, and its own
+ * docstring says so: *"no `plan`, `currency` or `payment method`: a customer
+ * has none of those, they belong to its subscriptions and wallets."* The
+ * search endpoint behind this list (`POST /customers/search`) returns exactly
+ * that record. A plan, a wallet balance or a subscription count would each be
+ * a join the list endpoint does not perform, and MRR is not a field anywhere
+ * in the API — it cannot even be assembled, because `money.ts` forbids summing
+ * amounts in the browser and calls a sum the API did not send "an API gap".
+ *
+ * So they are **omitted rather than dashed**. The rule this follows, which the
+ * other four billing grids follow too:
+ *
+ *   an em dash means *this row has no value*;
+ *   a column no row can ever fill is removed, not dashed.
+ *
+ * Four permanently-empty columns would not be honest restraint — they would be
+ * four columns quietly asserting that these customers happen to have no plan
+ * and no revenue, which is a different and much more damaging claim than "we
+ * do not offer this yet". When the joined list view lands, they come back.
  */
 export const CustomerGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge'],
-  note: 'Controlled, table-only wrapper: the page owns query state, the grid renders and reports intent.',
+  composes: ['flexprice/EntityList'],
+  note: 'Customer columns and actions over the shared list table.',
 })
 
 const SORT_OPTIONS = Object.values(CustomerSortField).map((value) => ({
   value,
   label: CUSTOMER_SORT_LABEL[value],
 }))
+
+/** `all` is a value, not the absence of one — a Select with an empty value
+ *  renders its placeholder and reads as unset. */
+const STATUS_ALL = 'all'
+
+/**
+ * The three cards under the first-run empty state.
+ *
+ * Every URL was requested and returned 200. Worth re-checking whenever these
+ * change: the docs site namespaces everything under `/docs/` or
+ * `/api-reference/`, and a plausible-looking guess such as
+ * `docs.flexprice.io/customers` simply 404s. A dead link in an empty state is
+ * worse than no link, because the empty state is where someone has already
+ * admitted they do not know what to do next.
+ */
+const GUIDES: EntityGuide[] = [
+  {
+    title: 'What a customer is',
+    description: 'The record you bill against, and how it ties back to your own system.',
+    href: 'https://docs.flexprice.io/docs/customers/overview',
+    icon: <BookOpenIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Creating one over the API',
+    description: 'The fields that matter, including the external id that keeps them in sync.',
+    href: 'https://docs.flexprice.io/api-reference/customers/create-a-customer',
+    icon: <UserIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Archiving a customer',
+    description: 'What happens to their subscriptions and invoices when you do.',
+    href: 'https://docs.flexprice.io/docs/customers/archive',
+    icon: <ReceiptIcon aria-hidden className="size-4" />,
+  },
+]
 
 export interface CustomerGridProps {
   customers: Customer[]
@@ -50,17 +105,12 @@ export interface CustomerGridProps {
   error?: string | null
   onRetry?: () => void
   onCustomerClick?: (customer: Customer) => void
-  filters?: ReactNode
+  /** The primary create action; renders a "New customer" CTA at the toolbar's end. */
+  onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for dates. Supplied by the app, never read from a global. */
   locale?: string
-}
-
-/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
-function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
-  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 export function CustomerGrid({
@@ -72,207 +122,152 @@ export function CustomerGrid({
   error = null,
   onRetry,
   onCustomerClick,
-  filters,
+  onCreate,
   onClearFilters,
   locale,
 }: CustomerGridProps) {
-  const columns = useMemo<ColumnDef<never, Customer>[]>(
-    () =>
-      [
-        {
-          id: 'name',
-          meta: { skeleton: <Skeleton className="h-4 w-40" /> },
-          accessorFn: (row: Customer) => row.name,
-          header: ({ column }: never) => <DataGridColumnHeader title="Customer" column={column} />,
-          // The name leads, the email sits under it as a muted subtitle — the
-          // two facts a billing operator scans a customer by, in one cell.
-          cell: ({ row }: { row: { original: Customer } }) => (
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate">{row.original.name}</span>
-              {row.original.email ? (
-                <span className="truncate text-xs text-muted-foreground">{row.original.email}</span>
-              ) : null}
-            </div>
-          ),
-          enableSorting: true,
-          size: 280,
-        },
-        {
-          id: 'externalId',
-          meta: { skeleton: <Skeleton className="h-4 w-28" /> },
-          accessorFn: (row: Customer) => row.externalId,
-          header: ({ column }: never) => <DataGridColumnHeader title="External ID" column={column} />,
-          cell: ({ row }: { row: { original: Customer } }) =>
-            row.original.externalId ? (
-              <span className="truncate font-mono text-xs text-muted-foreground">
-                {row.original.externalId}
-              </span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            ),
-          enableSorting: true,
-          size: 180,
-        },
-        {
-          id: 'country',
-          meta: { skeleton: <Skeleton className="h-4 w-10" /> },
-          accessorFn: (row: Customer) => row.addressCountry,
-          header: ({ column }: never) => <DataGridColumnHeader title="Country" column={column} />,
-          cell: ({ row }: { row: { original: Customer } }) =>
-            row.original.addressCountry ? (
-              <span className="tabular-nums">{row.original.addressCountry.toUpperCase()}</span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            ),
-          enableSorting: true,
-          size: 120,
-        },
-        {
-          id: 'status',
-          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
-          accessorFn: (row: Customer) => row.status,
-          header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
-          cell: ({ row }: { row: { original: Customer } }) => (
-            <CatalogStatusBadge status={row.original.status} />
-          ),
-          enableSorting: true,
-          size: 120,
-        },
-        {
-          id: 'createdAt',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Customer) => row.createdAt,
-          header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
-          cell: ({ row }: { row: { original: Customer } }) => (
-            <DateCell value={row.original.createdAt} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-      ] as never,
+  const columns = useMemo<EntityColumn<Customer>[]>(
+    () => [
+      textColumn<Customer>('name', 'Customer', (row) => row.name, {
+        width: 240,
+        sortable: true,
+        sortValue: CustomerSortField.Name,
+        // The column the list is *for*. Hiding it leaves a table of
+        // attributes belonging to nobody.
+        hideable: false,
+      }),
+      // Its own column rather than a subtitle under the name. Stacked, it was
+      // unsortable, unexportable and clipped twice as often; beside the name
+      // it is a value like any other — and it is the field support actually
+      // searches by.
+      textColumn<Customer>('email', 'Email', (row) => row.email, { width: 220 }),
+      idColumn<Customer>('externalId', 'External ID', (row) => row.externalId, { width: 180 }),
+      // Uppercased because ISO 3166-1 alpha-2 is uppercase; the API is not
+      // always consistent about sending it that way.
+      textColumn<Customer>(
+        'country',
+        'Country',
+        (row) => (row.addressCountry ? row.addressCountry.toUpperCase() : null),
+        { width: 100 },
+      ),
+      pillColumn<Customer>('status', 'Status', (row) => ({
+        label: CUSTOMER_STATUS_LABEL[row.status],
+        tone: row.status === CustomerStatus.Published ? 'success' : 'neutral',
+      })),
+      dateColumn<Customer>('createdAt', 'Created', (row) => row.createdAt, {
+        width: 140,
+        sortable: true,
+        sortValue: CustomerSortField.CreatedAt,
+        ...(locale ? { locale } : {}),
+      }),
+    ],
     [locale],
   )
 
-  const pagination: PaginationState = {
-    pageIndex: query.page - 1,
-    pageSize: query.pageSize,
-  }
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
-  const table = useTable({
-    features: dataGridFeatures,
-    data: customers,
-    columns,
-    // Server-side: `data` is exactly one page, so the grid must not re-page it.
-    // `rowCount` is what makes getPageCount() correct.
-    manualPagination: true,
-    rowCount: total,
-    getRowId: (row: Customer) => row.id,
-    state: { pagination },
-    onPaginationChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (p: PaginationState) => PaginationState)(pagination)
-          : (updater as PaginationState)
-      onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
-    },
-  } as never)
+  const isDefaultSort =
+    query.sortBy === DEFAULT_CUSTOMER_QUERY.sortBy &&
+    query.sortDirection === DEFAULT_CUSTOMER_QUERY.sortDirection
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [fitToWindow, setFitToWindow] = useState(false)
-  const capacity = useViewportPageSize({
-    containerRef,
-    enabled: fitToWindow,
-    reservedHeight: 104,
-  })
-
-  // `null` means "no measurement yet" — keep whatever size is already set.
-  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
-    onQueryChange({ ...query, pageSize: capacity, page: 1 })
-  }
-
-  if (error) {
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
-        <p className="text-sm">{error}</p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
-    )
+  const rowActions = (customer: Customer): EntityRowAction[] => {
+    const actions: EntityRowAction[] = []
+    if (onCustomerClick) {
+      actions.push({
+        label: 'View customer',
+        icon: <UserIcon aria-hidden className="size-4" />,
+        onSelect: () => onCustomerClick(customer),
+      })
+    }
+    actions.push({
+      label: 'Copy customer ID',
+      icon: <CopyIcon aria-hidden className="size-4" />,
+      onSelect: () => void navigator.clipboard?.writeText(customer.id),
+    })
+    return actions
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
-      <GridToolbar
-        heading="Customers"
-        search={query.search}
-        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search customers…"
-        label="Search customers"
-      >
-        {filters}
-        <SortMenu
-          align="end"
-          options={SORT_OPTIONS}
-          field={query.sortBy}
-          direction={query.sortDirection}
-          onChange={(sortBy, sortDirection) =>
-            onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
-          }
-        />
-      </GridToolbar>
-
-      <DataGrid
-        table={table as never}
-        recordCount={total}
-        isLoading={isLoading}
-        emptyMessage={
-          <EmptyState
-            size="inline"
-            isFiltered
-            title="No customers match these filters"
-            description="Try a different search, or clear what is narrowing the list."
-            onClearFilters={
-              onClearFilters ? (
-                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-        {...(onCustomerClick ? { onRowClick: onCustomerClick } : {})}
-        tableLayout={{
-          headerSticky: true,
-          columnsVisibility: true,
-          // Auto, so the columns spread to fill the width instead of leaving a
-          // band of empty table on the right. The `size` hints still set the
-          // proportions; the name cell truncates so a long value cannot blow the
-          // column out.
-          width: 'auto',
-          rowBorder: false,
-          dense: true,
-        }}
-      >
-        {/* ReUI's DataGridScrollArea puts `className` on an inner node, so its
-            own root div never becomes the flex-1 item — it sizes to content and
-            the footer below is pushed off-screen once the list is taller than
-            the viewport. This wrapper makes the root (`> div`) the flex child
-            that fills and scrolls, keeping the pagination pinned in view. */}
-        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-          <DataGridScrollArea className="min-h-0 flex-1">
-            <DataGridTable />
-          </DataGridScrollArea>
-        </div>
-        <GridFooter
-          fitToWindow={fitToWindow}
-          onFitToWindowChange={setFitToWindow}
-          pageSize={query.pageSize}
-          noun="customers"
-        />
-      </DataGrid>
-    </div>
+    <EntityList<Customer>
+      label="Customers"
+      noun="customers"
+      rows={customers}
+      total={total}
+      columns={columns}
+      getRowId={(customer) => customer.id}
+      page={query.page}
+      pageSize={query.pageSize}
+      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+      search={query.search}
+      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+      searchPlaceholder="Search customers…"
+      /*
+       * Status lives here and nowhere else.
+       *
+       * It used to be the single field in `CustomerFilters`' builder. Offering
+       * it in both places gives two controls writing `query.statuses`, and the
+       * first thing that happens is they disagree — so the builder is not
+       * mounted on this list at all. `CustomerFilter` on the wire has no other
+       * enumerable facet to put in one.
+       *
+       * No counts. `fetchCustomers` narrows status *on the page it received*,
+       * because the search endpoint has no status field — so there is no
+       * server total per status to read, and the only number available would
+       * be a count of the twenty-five rows on screen. The dropdown shows no
+       * number rather than a confident wrong one.
+       */
+      status={{
+        value: statusValue,
+        label: 'Status',
+        onChange: (value) =>
+          onQueryChange({
+            ...query,
+            statuses: value === STATUS_ALL ? [] : [value as CustomerStatus],
+            page: 1,
+          }),
+        options: [
+          { value: STATUS_ALL, label: 'All' },
+          {
+            value: CustomerStatus.Published,
+            label: CUSTOMER_STATUS_LABEL[CustomerStatus.Published],
+          },
+          {
+            value: CustomerStatus.Archived,
+            label: CUSTOMER_STATUS_LABEL[CustomerStatus.Archived],
+          },
+        ],
+      }}
+      sort={{
+        options: SORT_OPTIONS,
+        field: query.sortBy,
+        direction: query.sortDirection,
+        activeCount: isDefaultSort ? 0 : 1,
+        onChange: (sortBy, sortDirection) =>
+          onQueryChange({
+            ...query,
+            sortBy: sortBy as CustomerSortField,
+            sortDirection,
+            page: 1,
+          }),
+      }}
+      selectable
+      rowActions={rowActions}
+      exportFileName="customers"
+      primaryAction={onCreate ? <Button onClick={onCreate}>New customer</Button> : undefined}
+      {...(onCustomerClick ? { onRowClick: onCustomerClick } : {})}
+      isLoading={isLoading}
+      error={error}
+      {...(onRetry ? { onRetry } : {})}
+      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      {...(onClearFilters ? { onClearFilters } : {})}
+      filteredEmptyTitle="No customers match these filters"
+      empty={{
+        title: 'Nobody to bill yet',
+        description:
+          'A customer is who an invoice is addressed to. Create one — or send your first event with a new external id and Flexprice will create it for you.',
+        ...(onCreate ? { actions: <Button onClick={onCreate}>New customer</Button> } : {}),
+        guides: GUIDES,
+      }}
+    />
   )
 }

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Addon, type AddonQuery, type CreateAddon } from '@fp/domain'
-import { ApiError, useAddons, useCreateAddon, useUpdateAddon } from '@fp/query'
-import { AddonEditorSheet, AddonFilters, AddonGrid } from '@fp/ui/flexprice'
+import { ApiError, useAddons, useCatalogStats, useCreateAddon, useUpdateAddon } from '@fp/query'
+import { AddonEditorSheet, AddonGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PuzzleIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -24,6 +24,9 @@ type Editing = { mode: 'create' } | { mode: 'edit'; addon: Addon } | null
  */
 export function AddonListPage({ query, onQueryChange, onOpenAddon }: AddonListPageProps) {
   const addons = useAddons(query)
+  // The server's counts for the status dropdown — one `limit: 1` request each,
+  // read for `pagination.total`, never counted off the page on screen.
+  const stats = useCatalogStats('addons')
   const create = useCreateAddon()
   const update = useUpdateAddon()
 
@@ -73,13 +76,15 @@ export function AddonListPage({ query, onQueryChange, onOpenAddon }: AddonListPa
             onQueryChange={onQueryChange}
             onAddonClick={onOpenAddon}
             onCreate={() => setEditing({ mode: 'create' })}
+            // The editor sheet this page already owns, reached from the row
+            // menu as well as from a row.
+            onEdit={(addon) => setEditing({ mode: 'edit', addon })}
             onClearFilters={clearFilters}
-            filters={
-              <AddonFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
+            statusCounts={{
+              total: stats.total,
+              published: stats.published,
+              archived: stats.archived,
+            }}
           />
         </ListState>
       </PageBody>

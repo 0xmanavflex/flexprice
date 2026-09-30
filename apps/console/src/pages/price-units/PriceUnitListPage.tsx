@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type CreatePriceUnit, type PriceUnit, type PriceUnitQuery } from '@fp/domain'
 import { ApiError, useCreatePriceUnit, usePriceUnits, useUpdatePriceUnit } from '@fp/query'
-import { PriceUnitEditorSheet, PriceUnitFilters, PriceUnitGrid } from '@fp/ui/flexprice'
+import { PriceUnitEditorSheet, PriceUnitGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { CoinsIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -81,13 +81,11 @@ export function PriceUnitListPage({
             onQueryChange={onQueryChange}
             onPriceUnitClick={onOpenPriceUnit}
             onCreate={() => setEditing({ mode: 'create' })}
+            // The editor sheet this page already owns. Only the name is
+            // editable once a unit exists; the sheet renders the rest
+            // read-only.
+            onEdit={(priceUnit) => setEditing({ mode: 'edit', priceUnit })}
             onClearFilters={clearFilters}
-            filters={
-              <PriceUnitFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
           />
         </ListState>
       </PageBody>

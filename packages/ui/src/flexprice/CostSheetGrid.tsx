@@ -1,42 +1,91 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
+import { useMemo } from 'react'
+import { BookOpenIcon, CopyIcon, ScrollTextIcon, SheetIcon, TrendingUpIcon } from 'lucide-react'
 import {
   COST_SHEET_SORT_LABEL,
+  COST_SHEET_STATUS_LABEL,
   type CostSheet,
   type CostSheetQuery,
   CostSheetSortField,
+  CostSheetStatus,
+  DEFAULT_COST_SHEET_QUERY,
 } from '@fp/domain'
-import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
-import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
-import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
-import { Button } from '@ui/primitives/button'
-import { Skeleton } from '@ui/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
-import { GridFooter } from '@ui/compositions/GridFooter'
-import { GridToolbar } from '@ui/compositions/GridToolbar'
-import { SortMenu } from '@ui/compositions/SortMenu'
-import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
-import { CatalogStatusBadge } from './StatusBadge'
+import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
+import {
+  type EntityColumn,
+  dateColumn,
+  idColumn,
+  numberColumn,
+  pillColumn,
+  textColumn,
+} from './cells'
 
 /**
- * The cost sheet list.
+ * The cost sheet list, over the shared `EntityList`.
  *
- * The same controlled table shape as `CouponGrid`, with a cost sheet's
- * own columns: what it covers, how many prices it groups, and its status.
- * Filtering is passed in through the `filters` slot.
+ * **Two of the redesign's columns are not here, and the redesign's own gap
+ * list says why:** `Provider` and `Margin target` have no field on the API's
+ * cost sheet. Margin target is the tempting one — it could be computed from a
+ * sheet's prices against a plan's — but `money.ts` forbids money arithmetic in
+ * the browser, and `priceCount` has already collapsed the prices to a count,
+ * so there is nothing here to compute from even if it were allowed. Both are
+ * omitted rather than dashed on every row.
+ *
+ * **The "Draft" tab is not here either.** `CostSheetStatus` is
+ * `published | archived`; there is no draft state for the server to filter or
+ * count. A third option that always shows nothing is worse than two that work.
+ *
+ * **No counts beside the status options.** `useCatalogStats` covers plans,
+ * features, add-ons, coupons and price units — not cost sheets — and the only
+ * other number available is how many of the twenty-five rows on screen match,
+ * which is not the same question. So the options carry no number, which the
+ * shared table supports by design.
  */
 export const CostSheetGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid'],
-  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
+  composes: ['flexprice/EntityList'],
+  note: 'Cost sheet columns and actions over the shared list table.',
 })
 
 const SORT_OPTIONS = Object.values(CostSheetSortField).map((value) => ({
   value,
   label: COST_SHEET_SORT_LABEL[value],
 }))
+
+/** `all` is a value, not the absence of one — a Select with an empty value
+ *  renders its placeholder and reads as unset. */
+const STATUS_ALL = 'all'
+
+/**
+ * Every URL requested and returned 200.
+ *
+ * There is no narrative docs page for cost sheets: the concept lives in the
+ * AI cost-tracking guides (which is where margin is explained) and in the
+ * `/costs` API reference. Each card is titled by what its page actually
+ * covers rather than by the entity — a card promising "what a cost sheet is"
+ * that lands on a page never using the phrase is a dead link that happens to
+ * return 200.
+ */
+const GUIDES: EntityGuide[] = [
+  {
+    title: 'Cost against revenue',
+    description: 'How measuring what usage costs you turns into a margin you can watch.',
+    href: 'https://docs.flexprice.io/docs/ai-cost-tracking/overview',
+    icon: <TrendingUpIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Recording usage costs',
+    description: 'Getting the per-unit costs in, so there is something to compare against.',
+    href: 'https://docs.flexprice.io/docs/ai-cost-tracking/ingesting-ai-usage',
+    icon: <ScrollTextIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Cost sheets in the API',
+    description: 'The create endpoint, and the shape of a sheet and its prices.',
+    href: 'https://docs.flexprice.io/api-reference/costs/create-costsheet',
+    icon: <BookOpenIcon aria-hidden className="size-4" />,
+  },
+]
 
 export interface CostSheetGridProps {
   costSheets: CostSheet[]
@@ -47,22 +96,14 @@ export interface CostSheetGridProps {
   error?: string | null
   onRetry?: () => void
   onCostSheetClick?: (costSheet: CostSheet) => void
-  filters?: ReactNode
+  /** The primary action. Cost sheets are still created in the legacy console,
+   *  so this is a link rather than a handler — the page supplies the node. */
+  primaryAction?: React.ReactNode
+  /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
+  /** Up to two 32px buttons under the first-run empty state. */
+  emptyActions?: React.ReactNode
   locale?: string
-}
-
-/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
-function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
-  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="tabular-nums text-muted-foreground">{text}</span>
-}
-
-/** "12 prices", "1 price", or "—" when the sheet groups none. */
-function pricesLabel(costSheet: CostSheet, locale?: string): string {
-  if (costSheet.priceCount === 0) return '—'
-  const count = new Intl.NumberFormat(locale).format(costSheet.priceCount)
-  return `${count} ${costSheet.priceCount === 1 ? 'price' : 'prices'}`
 }
 
 export function CostSheetGrid({
@@ -74,194 +115,140 @@ export function CostSheetGrid({
   error = null,
   onRetry,
   onCostSheetClick,
-  filters,
+  primaryAction,
   onClearFilters,
+  emptyActions,
   locale,
 }: CostSheetGridProps) {
-  const columns = useMemo<ColumnDef<never, CostSheet>[]>(
-    () =>
-      [
-        {
-          id: 'name',
-          meta: { skeleton: <Skeleton className="h-4 w-40" /> },
-          accessorFn: (row: CostSheet) => row.name,
-          header: ({ column }: never) => <DataGridColumnHeader title="Cost sheet" column={column} />,
-          cell: ({ row }: { row: { original: CostSheet } }) => (
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate">{row.original.name}</span>
-              {row.original.lookupKey ? (
-                <span className="truncate font-mono text-xs text-muted-foreground">
-                  {row.original.lookupKey}
-                </span>
-              ) : null}
-            </div>
-          ),
-          enableSorting: true,
-          size: 260,
-        },
-        {
-          id: 'description',
-          meta: { skeleton: <Skeleton className="h-4 w-48" /> },
-          accessorFn: (row: CostSheet) => row.description,
-          header: ({ column }: never) => (
-            <DataGridColumnHeader title="Description" column={column} />
-          ),
-          cell: ({ row }: { row: { original: CostSheet } }) =>
-            row.original.description ? (
-              <span className="truncate text-muted-foreground">{row.original.description}</span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            ),
-          enableSorting: true,
-          size: 280,
-        },
-        {
-          id: 'prices',
-          meta: { skeleton: <Skeleton className="h-4 w-16" /> },
-          accessorFn: (row: CostSheet) => row.priceCount,
-          header: ({ column }: never) => <DataGridColumnHeader title="Prices" column={column} />,
-          cell: ({ row }: { row: { original: CostSheet } }) => (
-            <span className="tabular-nums text-muted-foreground">
-              {pricesLabel(row.original, locale)}
-            </span>
-          ),
-          enableSorting: true,
-          size: 120,
-        },
-        {
-          id: 'status',
-          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
-          accessorFn: (row: CostSheet) => row.status,
-          header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
-          cell: ({ row }: { row: { original: CostSheet } }) => (
-            <CatalogStatusBadge status={row.original.status} />
-          ),
-          enableSorting: true,
-          size: 120,
-        },
-        {
-          id: 'updatedAt',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: CostSheet) => row.updatedAt,
-          header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
-          cell: ({ row }: { row: { original: CostSheet } }) => (
-            <DateCell value={row.original.updatedAt} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-      ] as never,
+  const columns = useMemo<EntityColumn<CostSheet>[]>(
+    () => [
+      textColumn<CostSheet>('name', 'Cost sheet', (row) => row.name, {
+        width: 240,
+        sortable: true,
+        sortValue: CostSheetSortField.Name,
+        hideable: false,
+      }),
+      idColumn<CostSheet>('lookupKey', 'Key', (row) => row.lookupKey, { width: 170 }),
+      textColumn<CostSheet>('description', 'Description', (row) => row.description, {
+        width: 280,
+        muted: true,
+      }),
+      numberColumn<CostSheet>('priceCount', 'Line items', (row) => row.priceCount, {
+        width: 120,
+        ...(locale ? { locale } : {}),
+      }),
+      pillColumn<CostSheet>(
+        'status',
+        'Status',
+        (row) => ({
+          label: COST_SHEET_STATUS_LABEL[row.status],
+          tone: row.status === CostSheetStatus.Published ? 'success' : 'neutral',
+        }),
+        { width: 130 },
+      ),
+      dateColumn<CostSheet>('updatedAt', 'Updated', (row) => row.updatedAt, {
+        width: 140,
+        sortable: true,
+        sortValue: CostSheetSortField.UpdatedAt,
+        ...(locale ? { locale } : {}),
+      }),
+      // Real, and on the old grid, but not in the redesign's default layout.
+      dateColumn<CostSheet>('createdAt', 'Created', (row) => row.createdAt, {
+        width: 140,
+        sortable: true,
+        sortValue: CostSheetSortField.CreatedAt,
+        hiddenByDefault: true,
+        ...(locale ? { locale } : {}),
+      }),
+    ],
     [locale],
   )
 
-  const pagination: PaginationState = {
-    pageIndex: query.page - 1,
-    pageSize: query.pageSize,
-  }
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
-  const table = useTable({
-    features: dataGridFeatures,
-    data: costSheets,
-    columns,
-    manualPagination: true,
-    rowCount: total,
-    getRowId: (row: CostSheet) => row.id,
-    state: { pagination },
-    onPaginationChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (p: PaginationState) => PaginationState)(pagination)
-          : (updater as PaginationState)
-      onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
-    },
-  } as never)
+  const isDefaultSort =
+    query.sortBy === DEFAULT_COST_SHEET_QUERY.sortBy &&
+    query.sortDirection === DEFAULT_COST_SHEET_QUERY.sortDirection
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [fitToWindow, setFitToWindow] = useState(false)
-  const capacity = useViewportPageSize({
-    containerRef,
-    enabled: fitToWindow,
-    reservedHeight: 104,
-  })
-
-  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
-    onQueryChange({ ...query, pageSize: capacity, page: 1 })
-  }
-
-  if (error) {
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
-        <p className="text-sm">{error}</p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
-    )
+  const rowActions = (costSheet: CostSheet): EntityRowAction[] => {
+    const actions: EntityRowAction[] = []
+    if (onCostSheetClick) {
+      actions.push({
+        label: 'View cost sheet',
+        icon: <SheetIcon aria-hidden className="size-4" />,
+        onSelect: () => onCostSheetClick(costSheet),
+      })
+    }
+    actions.push({
+      label: 'Copy cost sheet ID',
+      icon: <CopyIcon aria-hidden className="size-4" />,
+      onSelect: () => void navigator.clipboard?.writeText(costSheet.id),
+    })
+    return actions
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
-      <GridToolbar
-        heading="Cost sheets"
-        search={query.search}
-        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search cost sheets…"
-        label="Search cost sheets"
-      >
-        {filters}
-        <SortMenu
-          align="end"
-          options={SORT_OPTIONS}
-          field={query.sortBy}
-          direction={query.sortDirection}
-          onChange={(sortBy, sortDirection) =>
-            onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
-          }
-        />
-      </GridToolbar>
-
-      <DataGrid
-        table={table as never}
-        recordCount={total}
-        isLoading={isLoading}
-        emptyMessage={
-          <EmptyState
-            size="inline"
-            isFiltered
-            title="No cost sheets match these filters"
-            description="Try a different search, or clear what is narrowing the list."
-            onClearFilters={
-              onClearFilters ? (
-                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-        {...(onCostSheetClick ? { onRowClick: onCostSheetClick } : {})}
-        tableLayout={{
-          headerSticky: true,
-          columnsVisibility: true,
-          width: 'auto',
-          rowBorder: false,
-          dense: true,
-        }}
-      >
-        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-          <DataGridScrollArea className="min-h-0 flex-1">
-            <DataGridTable />
-          </DataGridScrollArea>
-        </div>
-        <GridFooter
-          fitToWindow={fitToWindow}
-          onFitToWindowChange={setFitToWindow}
-          pageSize={query.pageSize}
-          noun="cost sheets"
-        />
-      </DataGrid>
-    </div>
+    <EntityList<CostSheet>
+      label="Cost sheets"
+      noun="cost sheets"
+      rows={costSheets}
+      total={total}
+      columns={columns}
+      getRowId={(costSheet) => costSheet.id}
+      page={query.page}
+      pageSize={query.pageSize}
+      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+      search={query.search}
+      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+      searchPlaceholder="Search cost sheets…"
+      status={{
+        value: statusValue,
+        label: 'Status',
+        onChange: (value) =>
+          onQueryChange({
+            ...query,
+            statuses: value === STATUS_ALL ? [] : [value as CostSheetStatus],
+            page: 1,
+          }),
+        // No counts: nothing can supply an honest one for this entity.
+        options: [
+          { value: STATUS_ALL, label: 'All' },
+          {
+            value: CostSheetStatus.Published,
+            label: COST_SHEET_STATUS_LABEL[CostSheetStatus.Published],
+          },
+          {
+            value: CostSheetStatus.Archived,
+            label: COST_SHEET_STATUS_LABEL[CostSheetStatus.Archived],
+          },
+        ],
+      }}
+      sort={{
+        options: SORT_OPTIONS,
+        field: query.sortBy,
+        direction: query.sortDirection,
+        activeCount: isDefaultSort ? 0 : 1,
+        onChange: (sortBy, sortDirection) =>
+          onQueryChange({ ...query, sortBy: sortBy as CostSheetSortField, sortDirection, page: 1 }),
+      }}
+      selectable
+      rowActions={rowActions}
+      exportFileName="cost-sheets"
+      primaryAction={primaryAction}
+      {...(onCostSheetClick ? { onRowClick: onCostSheetClick } : {})}
+      isLoading={isLoading}
+      error={error}
+      {...(onRetry ? { onRetry } : {})}
+      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      {...(onClearFilters ? { onClearFilters } : {})}
+      filteredEmptyTitle="No cost sheets match these filters"
+      empty={{
+        title: 'No cost sheets yet',
+        description:
+          'A cost sheet records what each unit of usage costs you, so margin can be measured against what you charge for it.',
+        ...(emptyActions ? { actions: emptyActions } : {}),
+        guides: GUIDES,
+      }}
+    />
   )
 }

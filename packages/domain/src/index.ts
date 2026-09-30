@@ -206,6 +206,7 @@ export {
   PAYMENT_STATUS_LABEL,
   PaymentSortField,
   PaymentStatus,
+  toPaymentStatus,
 } from './payment'
 export type { Payment, PaymentQuery } from './payment'
 

@@ -1,44 +1,97 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
+import { useMemo } from 'react'
+import { BookOpenIcon, CalendarClockIcon, CopyIcon, LayersIcon, RepeatIcon } from 'lucide-react'
 import {
+  DEFAULT_SUBSCRIPTION_QUERY,
   SUBSCRIPTION_SORT_LABEL,
+  SUBSCRIPTION_STATUS_LABEL,
   type Subscription,
   type SubscriptionQuery,
   SubscriptionSortField,
+  SubscriptionStatus,
 } from '@fp/domain'
-import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
-import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
-import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import { Skeleton } from '@ui/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
-import { GridFooter } from '@ui/compositions/GridFooter'
-import { GridToolbar } from '@ui/compositions/GridToolbar'
-import { SortMenu } from '@ui/compositions/SortMenu'
-import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
-import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
+import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
+import { type EntityColumn, type PillTone, dateColumn, pillColumn, textColumn } from './cells'
 
 /**
- * The subscription list, as a *controlled* grid.
+ * The subscription list, on the shared `EntityList`.
  *
- * The same table-only shape as `InvoiceGrid` — a billing ledger reads as one
- * dense table, not as a wall of cards — with the `GridToolbar` search and
- * `filters` slot the catalogue grids carry. It holds no state and performs no
- * fetching: it receives a `query` and emits `onQueryChange`, so a sorted,
- * filtered, paged view is a link, and every state is reachable from props.
+ * ## MRR is not here
+ *
+ * The redesign asks for it. There is no MRR field on `SubscriptionResponse`,
+ * and a case-insensitive sweep of the whole SDK for `mrr` or `arr` returns
+ * nothing at all — the concept does not exist in this API. It also cannot be
+ * assembled on the client: a subscription's recurring amount lives across its
+ * line items, and `money.ts` refuses arithmetic on principle, because a UI
+ * that recomputes a total will eventually disagree with the invoice the
+ * customer was actually charged.
+ *
+ * Omitted rather than dashed, on the rule the billing grids share: an em dash
+ * says *this row has no value*, so a column no row can ever fill is removed
+ * instead. A permanently blank MRR column would assert that these
+ * subscriptions are worth nothing, which is worse than saying nothing.
+ *
+ * ## "Past due" is not a status
+ *
+ * The redesign's tab list has one. `SubscriptionStatus` is `active`,
+ * `trialing`, `paused`, `cancelled`, `incomplete` — and `subscriptionStatus`
+ * on the wire is the same set. Past due is a property of an *invoice*: it is
+ * a finalized invoice with a balance and a due date in the past. Offering it
+ * here would send a request the API cannot filter, get every subscription
+ * back, and show an unfiltered list under a control insisting it was
+ * filtered.
+ *
+ * So the option is dropped, and `Incomplete` — which is real, and was
+ * previously unreachable from the toolbar — takes a place in the dropdown
+ * instead. Finding past-due accounts is the Invoices list's job, where the
+ * concept is genuinely defined.
  */
 export const SubscriptionGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge'],
-  note: 'Controlled wrapper: the page owns query state, the grid only renders and reports intent.',
+  composes: ['flexprice/EntityList'],
+  note: 'Subscription columns and actions over the shared list table.',
 })
 
 const SORT_OPTIONS = Object.values(SubscriptionSortField).map((value) => ({
   value,
   label: SUBSCRIPTION_SORT_LABEL[value],
 }))
+
+const STATUS_ALL = 'all'
+
+/** How each lifecycle state reads at a glance. Only `active` is a success and
+ *  only `cancelled` is a dead end; the rest are states you watch, not states
+ *  you celebrate or mourn. */
+const STATUS_TONE: Record<SubscriptionStatus, PillTone> = {
+  [SubscriptionStatus.Active]: 'success',
+  [SubscriptionStatus.Trialing]: 'info',
+  [SubscriptionStatus.Paused]: 'warning',
+  [SubscriptionStatus.Cancelled]: 'neutral',
+  [SubscriptionStatus.Incomplete]: 'warning',
+}
+
+/** Every URL requested and confirmed 200. */
+const GUIDES: EntityGuide[] = [
+  {
+    title: 'Subscribing a customer',
+    description: 'Putting someone on a plan, and what the first billing period does.',
+    href: 'https://docs.flexprice.io/docs/subscriptions/customers-create-subscription',
+    icon: <BookOpenIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'How plans price a subscription',
+    description: 'Charges, entitlements, and what the customer is actually billed for.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/overview',
+    icon: <LayersIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Billing period settings',
+    description: 'Anchors, proration and when a cycle closes.',
+    href: 'https://docs.flexprice.io/docs/settings/settings#subscription-configuration',
+    icon: <CalendarClockIcon aria-hidden className="size-4" />,
+  },
+]
 
 export interface SubscriptionGridProps {
   subscriptions: Subscription[]
@@ -53,17 +106,10 @@ export interface SubscriptionGridProps {
   onSubscriptionClick?: (subscription: Subscription) => void
   /** The primary create action; renders a "New subscription" CTA at the toolbar's end. */
   onCreate?: () => void
-  filters?: ReactNode
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for dates. Supplied by the app, never read from a global. */
   locale?: string
-}
-
-/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
-function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
-  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 export function SubscriptionGrid({
@@ -76,224 +122,156 @@ export function SubscriptionGrid({
   onRetry,
   onSubscriptionClick,
   onCreate,
-  filters,
   onClearFilters,
   locale,
 }: SubscriptionGridProps) {
-  const columns = useMemo<ColumnDef<never, Subscription>[]>(
-    () =>
-      [
-        {
-          id: 'customer',
-          meta: { skeleton: <Skeleton className="h-4 w-40" /> },
-          accessorFn: (row: Subscription) => row.customerName,
-          header: ({ column }: never) => <DataGridColumnHeader title="Customer" column={column} />,
-          cell: ({ row }: { row: { original: Subscription } }) => (
-            <span className="truncate">{row.original.customerName}</span>
-          ),
-          enableSorting: true,
-          size: 240,
-        },
-        {
-          id: 'plan',
-          meta: { skeleton: <Skeleton className="h-4 w-32" /> },
-          accessorFn: (row: Subscription) => row.planName,
-          header: ({ column }: never) => <DataGridColumnHeader title="Plan" column={column} />,
-          cell: ({ row }: { row: { original: Subscription } }) => (
-            <span className="truncate text-muted-foreground">{row.original.planName}</span>
-          ),
-          enableSorting: true,
-          size: 200,
-        },
-        {
-          id: 'status',
-          meta: { skeleton: <Skeleton className="h-4 w-20 rounded-full" /> },
-          accessorFn: (row: Subscription) => row.status,
-          header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
-          cell: ({ row }: { row: { original: Subscription } }) => (
-            <SubscriptionStatusBadge status={row.original.status} />
-          ),
-          enableSorting: true,
-          size: 130,
-        },
-        {
-          id: 'billingPeriod',
-          meta: { skeleton: <Skeleton className="h-4 w-20" /> },
-          accessorFn: (row: Subscription) => row.billingPeriodLabel,
-          header: ({ column }: never) => (
-            <DataGridColumnHeader title="Billing period" column={column} />
-          ),
-          cell: ({ row }: { row: { original: Subscription } }) => (
-            <span className="text-muted-foreground">{row.original.billingPeriodLabel}</span>
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-        {
-          id: 'currentPeriodEnd',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Subscription) => row.currentPeriodEnd,
-          header: ({ column }: never) => <DataGridColumnHeader title="Renews" column={column} />,
-          cell: ({ row }: { row: { original: Subscription } }) => (
-            <DateCell value={row.original.currentPeriodEnd} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-        {
-          id: 'startDate',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Subscription) => row.startDate,
-          header: ({ column }: never) => <DataGridColumnHeader title="Started" column={column} />,
-          cell: ({ row }: { row: { original: Subscription } }) => (
-            <DateCell value={row.original.startDate} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-      ] as never,
-    [locale],
+  /**
+   * The cycle currently being billed, as one cell.
+   *
+   * Both ends or nothing: "4 Sep – 4 Oct 2026" is a period, and a lone end
+   * date is a renewal date wearing a period's label. When only one end is
+   * known the column dashes, because a half-open range is a guess about the
+   * other half.
+   *
+   * The en dash is the range dash, and the two dates are deliberately not
+   * abbreviated differently from every other date on the page — `dateStyle:
+   * 'medium'` is what `dateColumn` uses, so the column reads as dates rather
+   * than as a code.
+   */
+  const formatPeriod = useMemo(() => {
+    const format = new Intl.DateTimeFormat(locale, { dateStyle: 'medium' })
+    return (row: Subscription): string | null => {
+      const { currentPeriodStart: start, currentPeriodEnd: end } = row
+      if (!start || !end) return null
+      return `${format.format(start)} – ${format.format(end)}`
+    }
+  }, [locale])
+
+  const columns = useMemo<EntityColumn<Subscription>[]>(
+    () => [
+      textColumn<Subscription>('customer', 'Customer', (row) => row.customerName, {
+        width: 220,
+        // Who is being billed. Hiding it leaves a list of anonymous plans.
+        hideable: false,
+      }),
+      textColumn<Subscription>('plan', 'Plan', (row) => row.planName, { width: 180 }),
+      textColumn<Subscription>('billing', 'Billing', (row) => row.billingPeriodLabel, {
+        width: 120,
+      }),
+      pillColumn<Subscription>('status', 'Status', (row) => ({
+        label: SUBSCRIPTION_STATUS_LABEL[row.status],
+        tone: STATUS_TONE[row.status],
+      })),
+      textColumn<Subscription>('currentPeriod', 'Current period', formatPeriod, {
+        width: 220,
+        muted: true,
+      }),
+      dateColumn<Subscription>('startDate', 'Started', (row) => row.startDate, {
+        width: 140,
+        sortable: true,
+        sortValue: SubscriptionSortField.StartDate,
+        ...(locale ? { locale } : {}),
+      }),
+    ],
+    [formatPeriod, locale],
   )
 
-  // TanStack's state, derived from the query rather than stored beside it.
-  // One source of truth: change the URL and the grid follows.
-  const pagination: PaginationState = {
-    pageIndex: query.page - 1,
-    pageSize: query.pageSize,
-  }
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
-  const table = useTable({
-    features: dataGridFeatures,
-    data: subscriptions,
-    columns,
-    // Server-side: `data` is exactly one page, so the grid must not re-page it.
-    // `rowCount` is what makes getPageCount() correct.
-    manualPagination: true,
-    rowCount: total,
-    getRowId: (row: Subscription) => row.id,
-    state: { pagination },
-    onPaginationChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (p: PaginationState) => PaginationState)(pagination)
-          : (updater as PaginationState)
-      onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
-    },
-  } as never)
+  const isDefaultSort =
+    query.sortBy === DEFAULT_SUBSCRIPTION_QUERY.sortBy &&
+    query.sortDirection === DEFAULT_SUBSCRIPTION_QUERY.sortDirection
 
-  /*
-   * Measured paging. Hooks run before the error branch below, because a
-   * component may not change how many hooks it calls between renders — and an
-   * error is exactly when that would otherwise happen.
-   */
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [fitToWindow, setFitToWindow] = useState(false)
-  const capacity = useViewportPageSize({
-    containerRef,
-    enabled: fitToWindow,
-    // The toolbar above and the pagination footer below are not rows.
-    reservedHeight: 104,
-  })
-
-  // `null` means "no measurement yet" — keep whatever size is already set.
-  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
-    onQueryChange({ ...query, pageSize: capacity, page: 1 })
-  }
-
-  if (error) {
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
-        <p className="text-sm">{error}</p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
-    )
+  const rowActions = (subscription: Subscription): EntityRowAction[] => {
+    const actions: EntityRowAction[] = []
+    if (onSubscriptionClick) {
+      actions.push({
+        label: 'View subscription',
+        icon: <RepeatIcon aria-hidden className="size-4" />,
+        onSelect: () => onSubscriptionClick(subscription),
+      })
+    }
+    actions.push({
+      label: 'Copy subscription ID',
+      icon: <CopyIcon aria-hidden className="size-4" />,
+      onSelect: () => void navigator.clipboard?.writeText(subscription.id),
+    })
+    return actions
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
-      <GridToolbar
-        heading="Subscriptions"
-        search={query.search}
-        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search subscriptions…"
-        label="Search subscriptions"
-        action={
-          onCreate ? (
-            <Button size="sm" onClick={onCreate}>
-              New subscription
-            </Button>
-          ) : undefined
-        }
-      >
-        {filters}
-        <SortMenu
-          align="end"
-          options={SORT_OPTIONS}
-          field={query.sortBy}
-          direction={query.sortDirection}
-          onChange={(sortBy, sortDirection) =>
-            onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
-          }
-        />
-      </GridToolbar>
-
-      <DataGrid
-        table={table as never}
-        recordCount={total}
-        isLoading={isLoading}
-        emptyMessage={
-          <EmptyState
-            size="inline"
-            isFiltered
-            title="No subscriptions match these filters"
-            description="Try a different search, or clear what is narrowing the list."
-            onClearFilters={
-              onClearFilters ? (
-                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-        {...(onSubscriptionClick ? { onRowClick: onSubscriptionClick } : {})}
-        tableLayout={{
-          headerSticky: true,
-          columnsVisibility: true,
-          // Auto, so the columns spread to fill the width instead of leaving a
-          // band of empty table on the right. The `size` hints still set the
-          // proportions; the name cells truncate so a long value cannot blow a
-          // column out.
-          width: 'auto',
-          /*
-           * No horizontal rules, and tighter rows — the same quiet ledger the
-           * invoice grid uses. Rows separate by rhythm and alignment once every
-           * column is aligned.
-           */
-          rowBorder: false,
-          dense: true,
-        }}
-      >
-        {/* Bounded scroll region so the pagination footer below stays pinned in
-            view. The wrapper makes ReUI's scroll-area root the flex-1 item — its
-            className lands on an inner node — so it shrinks and scrolls instead
-            of pushing the footer off-screen on a tall list. */}
-        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-          <DataGridScrollArea className="min-h-0 flex-1">
-            <DataGridTable />
-          </DataGridScrollArea>
-        </div>
-        <GridFooter
-          fitToWindow={fitToWindow}
-          onFitToWindowChange={setFitToWindow}
-          pageSize={query.pageSize}
-          noun="subscriptions"
-        />
-      </DataGrid>
-    </div>
+    <EntityList<Subscription>
+      label="Subscriptions"
+      noun="subscriptions"
+      rows={subscriptions}
+      total={total}
+      columns={columns}
+      getRowId={(subscription) => subscription.id}
+      page={query.page}
+      pageSize={query.pageSize}
+      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+      search={query.search}
+      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+      searchPlaceholder="Search subscriptions…"
+      /*
+       * Status in the dropdown, and not also in a filter builder — two
+       * controls writing `query.statuses` disagree on first interaction.
+       *
+       * No counts: `fetchSubscriptions` narrows status on the page it
+       * received rather than pushing it down, so there is no per-status
+       * server total to read. `SubscriptionFilter` does carry a
+       * `subscription_status` array, so honest counts are available the day
+       * the fetch sends it — until then the dropdown shows no number rather
+       * than counting the rows it happens to hold.
+       */
+      status={{
+        value: statusValue,
+        label: 'Status',
+        onChange: (value) =>
+          onQueryChange({
+            ...query,
+            statuses: value === STATUS_ALL ? [] : [value as SubscriptionStatus],
+            page: 1,
+          }),
+        options: [
+          { value: STATUS_ALL, label: 'All' },
+          ...Object.values(SubscriptionStatus).map((value) => ({
+            value,
+            label: SUBSCRIPTION_STATUS_LABEL[value],
+          })),
+        ],
+      }}
+      sort={{
+        options: SORT_OPTIONS,
+        field: query.sortBy,
+        direction: query.sortDirection,
+        activeCount: isDefaultSort ? 0 : 1,
+        onChange: (sortBy, sortDirection) =>
+          onQueryChange({
+            ...query,
+            sortBy: sortBy as SubscriptionSortField,
+            sortDirection,
+            page: 1,
+          }),
+      }}
+      selectable
+      rowActions={rowActions}
+      exportFileName="subscriptions"
+      primaryAction={onCreate ? <Button onClick={onCreate}>New subscription</Button> : undefined}
+      {...(onSubscriptionClick ? { onRowClick: onSubscriptionClick } : {})}
+      isLoading={isLoading}
+      error={error}
+      {...(onRetry ? { onRetry } : {})}
+      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      {...(onClearFilters ? { onClearFilters } : {})}
+      filteredEmptyTitle="No subscriptions match these filters"
+      empty={{
+        title: 'Nobody is on a plan yet',
+        description:
+          'A subscription puts a customer on a plan and starts their billing cycle. Once one is running, invoices appear on their own as each period closes.',
+        ...(onCreate ? { actions: <Button onClick={onCreate}>New subscription</Button> } : {}),
+        guides: GUIDES,
+      }}
+    />
   )
 }

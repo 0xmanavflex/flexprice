@@ -1,42 +1,127 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
+import { useMemo } from 'react'
 import {
+  ArchiveIcon,
+  BookOpenIcon,
+  CopyIcon,
+  CopyPlusIcon,
+  LayersIcon,
+  PencilIcon,
+  ReceiptTextIcon,
+  SquareStackIcon,
+} from 'lucide-react'
+import {
+  BILLING_PERIOD_SHORT,
+  DEFAULT_PLAN_QUERY,
   PLAN_SORT_LABEL,
+  PLAN_STATUS_LABEL,
   type Plan,
   type PlanQuery,
   PlanSortField,
+  PlanStatus,
 } from '@fp/domain'
-import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
-import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
-import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import { Skeleton } from '@ui/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
-import { GridFooter } from '@ui/compositions/GridFooter'
-import { GridToolbar } from '@ui/compositions/GridToolbar'
-import { SortMenu } from '@ui/compositions/SortMenu'
-import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
-import { CatalogStatusBadge } from './StatusBadge'
+import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
+import {
+  type EntityColumn,
+  dateColumn,
+  idColumn,
+  numberColumn,
+  pillColumn,
+  textColumn,
+} from './cells'
 
 /**
- * The plan list.
+ * The plan list, over the shared `EntityList`.
  *
- * The same controlled shape as `FeatureGrid`: a dense table for scanning,
- * over one query. Filtering is passed in through the `filters` slot, so this
- * component never learns what a plan status is.
+ * Migrated the same way `FeatureGrid` was: the `useTable` call, the
+ * `tableLayout`, the toolbar, the footer and the fit-to-window state are gone,
+ * because none of them were about plans. What is left is which columns a plan
+ * has, what a row's menu offers, and how a `PlanQuery` maps onto the shared
+ * table's flat callbacks.
+ *
+ * **Two of the redesign's columns are not here, deliberately.** `Subscribers`
+ * has no field on `PlanWire` — counting one costs a `querySubscription` per
+ * row, twenty-five requests to paint a column — and `Trial` has no field at
+ * all. The redesign's own gap list names the first; the second turned up
+ * checking. A column of em dashes on every row is worse than no column: it
+ * takes width and promises a number that never arrives. `Charges` is the count
+ * the API can give; the "N fixed, N usage" split the spec asks for needs the
+ * price types, which `chargeCount` has already collapsed.
+ *
+ * Status is in the toolbar's dropdown and *not* in the filter builder, so two
+ * controls cannot disagree about `query.statuses`.
  */
 export const PlanGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge'],
-  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
+  composes: ['flexprice/EntityList'],
+  note: 'Plan columns and actions over the shared list table.',
 })
 
 const SORT_OPTIONS = Object.values(PlanSortField).map((value) => ({
   value,
   label: PLAN_SORT_LABEL[value],
 }))
+
+/** `all` is a value, not the absence of one — a Select with an empty value
+ *  renders its placeholder and reads as unset. */
+const STATUS_ALL = 'all'
+
+/** Indexed by the raw wire period, which is a plain string on `PlanHeadline`. */
+const PERIOD_SHORT: Record<string, string | undefined> = BILLING_PERIOD_SHORT
+
+/**
+ * The headline price, as a pricing page writes it — `$29 /mo`.
+ *
+ * `amount` is the string the API already formatted, never a float this side
+ * re-derives (`money.ts` forbids client-side money arithmetic), and `period`
+ * is the raw billing enum. An unrecognised period falls back to the bare
+ * amount rather than printing the enum at someone.
+ */
+function headlinePrice(plan: Plan): string | null {
+  if (!plan.headline) return null
+  const short = PERIOD_SHORT[plan.headline.period]
+  return short ? `${plan.headline.amount} /${short}` : plan.headline.amount
+}
+
+/**
+ * The three cards under the first-run empty state.
+ *
+ * Every URL was requested and returned 200, and every one appears in
+ * `docs.flexprice.io/sitemap.xml`. Worth re-checking when these change: the
+ * real site namespaces everything under `/docs/` or `/api-reference/`, and a
+ * guessed path like `docs.flexprice.io/plans` 404s. A dead link in an empty
+ * state is worse than no link, because the empty state is where someone has
+ * already admitted they do not know what to do next.
+ */
+const GUIDES: EntityGuide[] = [
+  {
+    title: 'What a plan is',
+    description: 'How a plan groups charges into something a customer can subscribe to.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/overview',
+    icon: <BookOpenIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Creating your first plan',
+    description: 'Name it, price it, and publish it so someone can subscribe.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/create',
+    icon: <SquareStackIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Pricing models',
+    description: 'Flat fee, package and volume tiers, and when each one fits.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/plans/pricing',
+    icon: <ReceiptTextIcon aria-hidden className="size-4" />,
+  },
+]
+
+/** Counts per status, from the server. Undefined where not yet known — a
+ *  confident "0" that has not been confirmed is worse than no number. */
+export interface PlanStatusCounts {
+  total?: number | undefined
+  published?: number | undefined
+  archived?: number | undefined
+}
 
 export interface PlanGridProps {
   plans: Plan[]
@@ -49,23 +134,19 @@ export interface PlanGridProps {
   onPlanClick?: (plan: Plan) => void
   /** The primary create action; renders a "New plan" CTA at the toolbar's end. */
   onCreate?: () => void
-  /** Filter controls, rendered beside Sort. */
-  filters?: ReactNode
+  /** Row menu: open the plan's editor. Left out of the menu when absent. */
+  onEdit?: ((plan: Plan) => void) | undefined
+  /** Row menu: clone the plan. `useClonePlan` backs this. */
+  onDuplicate?: ((plan: Plan) => void) | undefined
+  /** Row menu: jump to the plan's charges editor. */
+  onAddCharges?: ((plan: Plan) => void) | undefined
+  /** Row menu: archive the plan. Rendered destructive, under a separator. */
+  onArchive?: ((plan: Plan) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
+  /** Fills the counts beside each status option. */
+  statusCounts?: PlanStatusCounts | undefined
   locale?: string
-}
-
-/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
-function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
-  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="tabular-nums text-muted-foreground">{text}</span>
-}
-
-/** "2 charges", "1 charge", or the muted note that a plan bills nothing yet. */
-function charges(count: number): ReactNode {
-  if (count === 0) return <span className="text-muted-foreground">No charges</span>
-  return `${count} charge${count === 1 ? '' : 's'}`
 }
 
 export function PlanGrid({
@@ -78,199 +159,180 @@ export function PlanGrid({
   onRetry,
   onPlanClick,
   onCreate,
-  filters,
+  onEdit,
+  onDuplicate,
+  onAddCharges,
+  onArchive,
   onClearFilters,
+  statusCounts,
   locale,
 }: PlanGridProps) {
-  const columns = useMemo<ColumnDef<never, Plan>[]>(
-    () =>
-      [
-        {
-          id: 'name',
-          meta: { skeleton: <Skeleton className="h-4 w-40" /> },
-          accessorFn: (row: Plan) => row.name,
-          header: ({ column }: never) => <DataGridColumnHeader title="Plan" column={column} />,
-          cell: ({ row }: { row: { original: Plan } }) => (
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate">{row.original.name}</span>
-              {row.original.lookupKey ? (
-                <span className="truncate text-xs text-muted-foreground">
-                  {row.original.lookupKey}
-                </span>
-              ) : null}
-            </div>
-          ),
-          enableSorting: true,
-          size: 260,
-        },
-        {
-          id: 'status',
-          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
-          accessorFn: (row: Plan) => row.status,
-          header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
-          cell: ({ row }: { row: { original: Plan } }) => (
-            <CatalogStatusBadge status={row.original.status} />
-          ),
-          enableSorting: true,
-          size: 120,
-        },
-        {
-          id: 'charges',
-          meta: { skeleton: <Skeleton className="h-4 w-20" /> },
-          accessorFn: (row: Plan) => row.chargeCount,
-          header: ({ column }: never) => <DataGridColumnHeader title="Charges" column={column} />,
-          cell: ({ row }: { row: { original: Plan } }) => charges(row.original.chargeCount),
-          enableSorting: true,
-          size: 140,
-        },
-        {
-          id: 'createdAt',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Plan) => row.createdAt,
-          header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
-          cell: ({ row }: { row: { original: Plan } }) => (
-            <DateCell value={row.original.createdAt} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-        {
-          id: 'updatedAt',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Plan) => row.updatedAt,
-          header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
-          cell: ({ row }: { row: { original: Plan } }) => (
-            <DateCell value={row.original.updatedAt} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-      ] as never,
+  const columns = useMemo<EntityColumn<Plan>[]>(
+    () => [
+      textColumn<Plan>('name', 'Plan', (row) => row.name, {
+        width: 240,
+        sortable: true,
+        sortValue: PlanSortField.Name,
+        // The column the list is *for*. Hiding it leaves a table of
+        // attributes belonging to nothing.
+        hideable: false,
+      }),
+      idColumn<Plan>('lookupKey', 'Lookup key', (row) => row.lookupKey, { width: 180 }),
+      textColumn<Plan>('basePrice', 'Base price', headlinePrice, { width: 140 }),
+      numberColumn<Plan>('charges', 'Charges', (row) => row.chargeCount, {
+        width: 110,
+        ...(locale ? { locale } : {}),
+      }),
+      pillColumn<Plan>(
+        'status',
+        'Status',
+        (row) => ({
+          label: PLAN_STATUS_LABEL[row.status],
+          tone: row.status === PlanStatus.Published ? 'success' : 'neutral',
+        }),
+        { width: 130 },
+      ),
+      dateColumn<Plan>('updatedAt', 'Updated', (row) => row.updatedAt, {
+        width: 140,
+        sortable: true,
+        sortValue: PlanSortField.UpdatedAt,
+        ...(locale ? { locale } : {}),
+      }),
+      // Created is real and was on the old grid, but the redesign's default
+      // layout does not spend a column on it. Kept one click away in the `⋯`
+      // menu rather than dropped, so nothing that existed is lost.
+      dateColumn<Plan>('createdAt', 'Created', (row) => row.createdAt, {
+        width: 140,
+        sortable: true,
+        sortValue: PlanSortField.CreatedAt,
+        hiddenByDefault: true,
+        ...(locale ? { locale } : {}),
+      }),
+    ],
     [locale],
   )
 
-  const pagination: PaginationState = {
-    pageIndex: query.page - 1,
-    pageSize: query.pageSize,
-  }
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
-  const table = useTable({
-    features: dataGridFeatures,
-    data: plans,
-    columns,
-    manualPagination: true,
-    rowCount: total,
-    getRowId: (row: Plan) => row.id,
-    state: { pagination },
-    onPaginationChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (p: PaginationState) => PaginationState)(pagination)
-          : (updater as PaginationState)
-      onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
-    },
-  } as never)
+  const isDefaultSort =
+    query.sortBy === DEFAULT_PLAN_QUERY.sortBy &&
+    query.sortDirection === DEFAULT_PLAN_QUERY.sortDirection
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  // On by default: the pagination footer sits just below the last row rather
-  // than the page size overflowing the viewport.
-  const [fitToWindow, setFitToWindow] = useState(true)
-  const capacity = useViewportPageSize({
-    containerRef,
-    enabled: fitToWindow,
-    reservedHeight: 104,
-  })
-
-  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
-    onQueryChange({ ...query, pageSize: capacity, page: 1 })
-  }
-
-  if (error) {
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
-        <p className="text-sm">{error}</p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
-    )
+  const rowActions = (plan: Plan): EntityRowAction[] => {
+    const actions: EntityRowAction[] = []
+    if (onPlanClick) {
+      actions.push({
+        label: 'View plan',
+        icon: <LayersIcon aria-hidden className="size-4" />,
+        onSelect: () => onPlanClick(plan),
+      })
+    }
+    if (onEdit) {
+      actions.push({
+        label: 'Edit plan',
+        icon: <PencilIcon aria-hidden className="size-4" />,
+        onSelect: () => onEdit(plan),
+      })
+    }
+    if (onDuplicate) {
+      actions.push({
+        label: 'Duplicate plan',
+        icon: <CopyPlusIcon aria-hidden className="size-4" />,
+        onSelect: () => onDuplicate(plan),
+      })
+    }
+    if (onAddCharges) {
+      actions.push({
+        label: 'Add charges',
+        icon: <ReceiptTextIcon aria-hidden className="size-4" />,
+        onSelect: () => onAddCharges(plan),
+      })
+    }
+    actions.push({
+      label: 'Copy plan ID',
+      icon: <CopyIcon aria-hidden className="size-4" />,
+      onSelect: () => void navigator.clipboard?.writeText(plan.id),
+    })
+    // Offered only where it would do something: archiving an archived plan is
+    // a menu item that reports success and changes nothing.
+    if (onArchive && plan.status !== PlanStatus.Archived) {
+      actions.push({
+        label: 'Archive plan',
+        icon: <ArchiveIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onArchive(plan),
+      })
+    }
+    return actions
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
-      <GridToolbar
-        heading="Plans"
-        search={query.search}
-        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search plans…"
-        label="Search plans"
-        action={
-          onCreate ? (
-            <Button size="sm" onClick={onCreate}>
-              New plan
-            </Button>
-          ) : undefined
-        }
-      >
-        {filters}
-        <SortMenu
-          align="end"
-          options={SORT_OPTIONS}
-          field={query.sortBy}
-          direction={query.sortDirection}
-          onChange={(sortBy, sortDirection) =>
-            onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
-          }
-        />
-      </GridToolbar>
-
-      <DataGrid
-        table={table as never}
-        recordCount={total}
-        isLoading={isLoading}
-        emptyMessage={
-          <EmptyState
-            size="inline"
-            isFiltered
-            title="No plans match these filters"
-            description="Try a different search, or clear what is narrowing the list."
-            onClearFilters={
-              onClearFilters ? (
-                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-        {...(onPlanClick ? { onRowClick: onPlanClick } : {})}
-        tableLayout={{
-          headerSticky: true,
-          columnsVisibility: true,
-          // Auto, so columns fill the width rather than leaving an empty band on
-          // the right; the name cell truncates so a long value stays contained.
-          width: 'auto',
-          rowBorder: false,
-          dense: true,
-        }}
-      >
-        {/* Wrapper makes ReUI's scroll-area root the flex-1 item (its className
-            lands on an inner node), so it shrinks and scrolls rather than
-            pushing the pagination off-screen on a tall list. */}
-        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-          <DataGridScrollArea className="min-h-0 flex-1">
-            <DataGridTable />
-          </DataGridScrollArea>
-        </div>
-        <GridFooter
-          fitToWindow={fitToWindow}
-          onFitToWindowChange={setFitToWindow}
-          pageSize={query.pageSize}
-          noun="plans"
-        />
-      </DataGrid>
-    </div>
+    <EntityList<Plan>
+      label="Plans"
+      noun="plans"
+      rows={plans}
+      total={total}
+      columns={columns}
+      getRowId={(plan) => plan.id}
+      page={query.page}
+      pageSize={query.pageSize}
+      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+      search={query.search}
+      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+      searchPlaceholder="Search plans…"
+      status={{
+        value: statusValue,
+        label: 'Status',
+        onChange: (value) =>
+          onQueryChange({
+            ...query,
+            statuses: value === STATUS_ALL ? [] : [value as PlanStatus],
+            page: 1,
+          }),
+        options: [
+          {
+            value: STATUS_ALL,
+            label: 'All',
+            ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }),
+          },
+          {
+            value: PlanStatus.Published,
+            label: PLAN_STATUS_LABEL[PlanStatus.Published],
+            ...(statusCounts?.published === undefined ? {} : { count: statusCounts.published }),
+          },
+          {
+            value: PlanStatus.Archived,
+            label: PLAN_STATUS_LABEL[PlanStatus.Archived],
+            ...(statusCounts?.archived === undefined ? {} : { count: statusCounts.archived }),
+          },
+        ],
+      }}
+      sort={{
+        options: SORT_OPTIONS,
+        field: query.sortBy,
+        direction: query.sortDirection,
+        activeCount: isDefaultSort ? 0 : 1,
+        onChange: (sortBy, sortDirection) =>
+          onQueryChange({ ...query, sortBy: sortBy as PlanSortField, sortDirection, page: 1 }),
+      }}
+      selectable
+      rowActions={rowActions}
+      exportFileName="plans"
+      primaryAction={onCreate ? <Button onClick={onCreate}>New plan</Button> : undefined}
+      {...(onPlanClick ? { onRowClick: onPlanClick } : {})}
+      isLoading={isLoading}
+      error={error}
+      {...(onRetry ? { onRetry } : {})}
+      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      {...(onClearFilters ? { onClearFilters } : {})}
+      filteredEmptyTitle="No plans match these filters"
+      empty={{
+        title: 'No plans yet',
+        description:
+          'A plan is what a customer subscribes to — a set of charges sold together under one name. Create one, price it, and it is ready to sell.',
+        ...(onCreate ? { actions: <Button onClick={onCreate}>New plan</Button> } : {}),
+        guides: GUIDES,
+      }}
+    />
   )
 }

@@ -41,6 +41,36 @@ export const PAYMENT_STATUS_LABEL: Record<PaymentStatus, string> = {
   [PaymentStatus.Voided]: 'Voided',
 }
 
+/**
+ * The wire's nine payment states onto the domain's six.
+ *
+ * Lives here rather than in the transport layer because two resources need the
+ * same collapse: a payment's own `payment_status`, and the `payment_status` an
+ * invoice carries about itself. Two copies of this table is how the Payments
+ * list and the Invoices list end up disagreeing about whether
+ * `PARTIALLY_REFUNDED` counts as a refund.
+ *
+ * Anything unrecognised comes back absent rather than guessed, and a cell
+ * renders that as an em dash. An unknown state is not `pending`.
+ */
+const WIRE_PAYMENT_STATUS: Record<string, PaymentStatus> = {
+  INITIATED: PaymentStatus.Pending,
+  PENDING: PaymentStatus.Pending,
+  PROCESSING: PaymentStatus.Pending,
+  SUCCEEDED: PaymentStatus.Succeeded,
+  OVERPAID: PaymentStatus.Overpaid,
+  FAILED: PaymentStatus.Failed,
+  REFUNDED: PaymentStatus.Refunded,
+  PARTIALLY_REFUNDED: PaymentStatus.Refunded,
+  VOIDED: PaymentStatus.Voided,
+}
+
+/** The wire's payment status as the domain's, or `null` when it says nothing
+ *  this build understands. */
+export function toPaymentStatus(wire: string | null | undefined): PaymentStatus | null {
+  return WIRE_PAYMENT_STATUS[wire ?? ''] ?? null
+}
+
 /** The read model the list renders. */
 export interface Payment {
   id: string
@@ -48,6 +78,16 @@ export interface Payment {
   status: PaymentStatus
   /** How the money moved — card, ACH, and so on. Empty when the API omits it. */
   methodType: string
+  /**
+   * Who moved it — the processor the payment was taken through.
+   *
+   * `PaymentResponse.paymentGateway` on the wire. Distinct from
+   * {@link Payment.methodType}: "card" is what the customer presented, Stripe
+   * is who charged it, and a collections view chasing a failure needs the
+   * second to know where to go and look. Empty when the API omits it — which
+   * it does for anything not collected through a gateway at all.
+   */
+  gateway: string
   /** The invoice this was collected against. Empty when unlinked. */
   invoiceNumber: string
   createdAt: Date | null

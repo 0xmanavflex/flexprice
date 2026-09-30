@@ -1,42 +1,84 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
+import { useMemo } from 'react'
+import { BookOpenIcon, CopyIcon, PencilIcon, PlusIcon, PuzzleIcon } from 'lucide-react'
 import {
   ADDON_SORT_LABEL,
+  ADDON_STATUS_LABEL,
   type Addon,
   type AddonQuery,
   AddonSortField,
+  AddonStatus,
+  DEFAULT_ADDON_QUERY,
 } from '@fp/domain'
-import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
-import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
-import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import { Button } from '@ui/primitives/button'
-import { Skeleton } from '@ui/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
-import { GridFooter } from '@ui/compositions/GridFooter'
-import { GridToolbar } from '@ui/compositions/GridToolbar'
-import { SortMenu } from '@ui/compositions/SortMenu'
-import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
 import { provenance } from '@ui/provenance'
-import { CatalogStatusBadge } from './StatusBadge'
+import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
+import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from './cells'
 
 /**
- * The add-on list.
+ * The add-on list, over the shared `EntityList`.
  *
- * The same controlled table shape as `PlanGrid`, minus the pricing — an
- * add-on is priced through the charges it shares with a plan, not a headline of
- * its own. Filtering is passed in through the `filters` slot.
+ * **Three of the redesign's seven columns are not here.** An add-on's read
+ * model is the name/key/status shell and nothing else — `AddonWire` carries no
+ * `type`, no price and no subscriber count, because an add-on's charges are
+ * the surface it shares with a plan and are attached after the shell exists.
+ * So `Type (Recurring/One-time)`, `Price` and `Subscribers` have no field to
+ * read. The redesign's gap list names `Subscribers`; the other two turned up
+ * checking `AddonWire`.
+ *
+ * They are omitted rather than dashed. A column whose every row is an em dash
+ * spends width promising a value that will never arrive, and three of them
+ * would leave a table that looks broken rather than one that is honest.
+ * `Description` takes their place — it is real, it was on the previous grid,
+ * and without it an add-on row is four columns of metadata with nothing
+ * saying what the add-on *is*.
+ *
+ * Status is in the toolbar's dropdown and *not* in the filter builder, so two
+ * controls cannot disagree about `query.statuses`.
  */
 export const AddonGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge'],
-  note: 'Controlled wrapper; the page owns query state. A dense table over one query.',
+  composes: ['flexprice/EntityList'],
+  note: 'Add-on columns and actions over the shared list table.',
 })
 
 const SORT_OPTIONS = Object.values(AddonSortField).map((value) => ({
   value,
   label: ADDON_SORT_LABEL[value],
 }))
+
+/** `all` is a value, not the absence of one — a Select with an empty value
+ *  renders its placeholder and reads as unset. */
+const STATUS_ALL = 'all'
+
+/** Every URL requested and returned 200; all three are in the docs sitemap. */
+const GUIDES: EntityGuide[] = [
+  {
+    title: 'What an add-on is',
+    description: 'A priced extra a customer buys alongside a plan, never on its own.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/addons/overview',
+    icon: <BookOpenIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Creating an add-on',
+    description: 'Name it, give it a lookup key, then attach its charges.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/addons/create',
+    icon: <PuzzleIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Adding one to a subscription',
+    description: 'Put an add-on on a live subscription and see it billed.',
+    href: 'https://docs.flexprice.io/docs/product-catalogue/addons/add-to-subscription',
+    icon: <PlusIcon aria-hidden className="size-4" />,
+  },
+]
+
+/** Counts per status, from the server. Undefined where not yet known — a
+ *  confident "0" that has not been confirmed is worse than no number. */
+export interface AddonStatusCounts {
+  total?: number | undefined
+  published?: number | undefined
+  archived?: number | undefined
+}
 
 export interface AddonGridProps {
   addons: Addon[]
@@ -49,16 +91,13 @@ export interface AddonGridProps {
   onAddonClick?: (addon: Addon) => void
   /** The primary create action; renders a "New add-on" CTA at the toolbar's end. */
   onCreate?: () => void
-  filters?: ReactNode
+  /** Row menu: open the add-on's editor. Left out of the menu when absent. */
+  onEdit?: ((addon: Addon) => void) | undefined
+  /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
+  /** Fills the counts beside each status option. */
+  statusCounts?: AddonStatusCounts | undefined
   locale?: string
-}
-
-
-/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
-function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
-  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="tabular-nums text-muted-foreground">{text}</span>
 }
 
 export function AddonGrid({
@@ -71,189 +110,148 @@ export function AddonGrid({
   onRetry,
   onAddonClick,
   onCreate,
-  filters,
+  onEdit,
   onClearFilters,
+  statusCounts,
   locale,
 }: AddonGridProps) {
-  const columns = useMemo<ColumnDef<never, Addon>[]>(
-    () =>
-      [
-        {
-          id: 'name',
-          meta: { skeleton: <Skeleton className="h-4 w-40" /> },
-          accessorFn: (row: Addon) => row.name,
-          header: ({ column }: never) => <DataGridColumnHeader title="Add-on" column={column} />,
-          cell: ({ row }: { row: { original: Addon } }) => (
-            <div className="flex min-w-0 flex-col">
-              <span className="truncate">{row.original.name}</span>
-              {row.original.lookupKey ? (
-                <span className="truncate text-xs text-muted-foreground">
-                  {row.original.lookupKey}
-                </span>
-              ) : null}
-            </div>
-          ),
-          enableSorting: true,
-          size: 280,
-        },
-        {
-          id: 'status',
-          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
-          accessorFn: (row: Addon) => row.status,
-          header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
-          cell: ({ row }: { row: { original: Addon } }) => (
-            <CatalogStatusBadge status={row.original.status} />
-          ),
-          enableSorting: true,
-          size: 120,
-        },
-        {
-          id: 'createdAt',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Addon) => row.createdAt,
-          header: ({ column }: never) => <DataGridColumnHeader title="Created" column={column} />,
-          cell: ({ row }: { row: { original: Addon } }) => (
-            <DateCell value={row.original.createdAt} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-        {
-          id: 'updatedAt',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Addon) => row.updatedAt,
-          header: ({ column }: never) => <DataGridColumnHeader title="Updated" column={column} />,
-          cell: ({ row }: { row: { original: Addon } }) => (
-            <DateCell value={row.original.updatedAt} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-      ] as never,
+  const columns = useMemo<EntityColumn<Addon>[]>(
+    () => [
+      textColumn<Addon>('name', 'Add-on', (row) => row.name, {
+        width: 240,
+        sortable: true,
+        sortValue: AddonSortField.Name,
+        hideable: false,
+      }),
+      idColumn<Addon>('lookupKey', 'Key', (row) => row.lookupKey, { width: 180 }),
+      textColumn<Addon>('description', 'Description', (row) => row.description, {
+        width: 280,
+        muted: true,
+      }),
+      pillColumn<Addon>(
+        'status',
+        'Status',
+        (row) => ({
+          label: ADDON_STATUS_LABEL[row.status],
+          tone: row.status === AddonStatus.Published ? 'success' : 'neutral',
+        }),
+        { width: 130 },
+      ),
+      dateColumn<Addon>('updatedAt', 'Updated', (row) => row.updatedAt, {
+        width: 140,
+        sortable: true,
+        sortValue: AddonSortField.UpdatedAt,
+        ...(locale ? { locale } : {}),
+      }),
+      // Real, and on the old grid, but not in the redesign's default layout.
+      dateColumn<Addon>('createdAt', 'Created', (row) => row.createdAt, {
+        width: 140,
+        sortable: true,
+        sortValue: AddonSortField.CreatedAt,
+        hiddenByDefault: true,
+        ...(locale ? { locale } : {}),
+      }),
+    ],
     [locale],
   )
 
-  const pagination: PaginationState = {
-    pageIndex: query.page - 1,
-    pageSize: query.pageSize,
-  }
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
-  const table = useTable({
-    features: dataGridFeatures,
-    data: addons,
-    columns,
-    manualPagination: true,
-    rowCount: total,
-    getRowId: (row: Addon) => row.id,
-    state: { pagination },
-    onPaginationChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (p: PaginationState) => PaginationState)(pagination)
-          : (updater as PaginationState)
-      onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
-    },
-  } as never)
+  const isDefaultSort =
+    query.sortBy === DEFAULT_ADDON_QUERY.sortBy &&
+    query.sortDirection === DEFAULT_ADDON_QUERY.sortDirection
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [fitToWindow, setFitToWindow] = useState(false)
-  const capacity = useViewportPageSize({
-    containerRef,
-    enabled: fitToWindow,
-    reservedHeight: 104,
-  })
-
-  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
-    onQueryChange({ ...query, pageSize: capacity, page: 1 })
-  }
-
-  if (error) {
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
-        <p className="text-sm">{error}</p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
-    )
+  const rowActions = (addon: Addon): EntityRowAction[] => {
+    const actions: EntityRowAction[] = []
+    if (onAddonClick) {
+      actions.push({
+        label: 'View add-on',
+        icon: <PuzzleIcon aria-hidden className="size-4" />,
+        onSelect: () => onAddonClick(addon),
+      })
+    }
+    if (onEdit) {
+      actions.push({
+        label: 'Edit add-on',
+        icon: <PencilIcon aria-hidden className="size-4" />,
+        onSelect: () => onEdit(addon),
+      })
+    }
+    actions.push({
+      label: 'Copy add-on ID',
+      icon: <CopyIcon aria-hidden className="size-4" />,
+      onSelect: () => void navigator.clipboard?.writeText(addon.id),
+    })
+    return actions
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
-      <GridToolbar
-        heading="Add-ons"
-        search={query.search}
-        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search add-ons…"
-        label="Search add-ons"
-        action={
-          onCreate ? (
-            <Button size="sm" onClick={onCreate}>
-              New add-on
-            </Button>
-          ) : undefined
-        }
-      >
-        {filters}
-        <SortMenu
-          align="end"
-          options={SORT_OPTIONS}
-          field={query.sortBy}
-          direction={query.sortDirection}
-          onChange={(sortBy, sortDirection) =>
-            onQueryChange({ ...query, sortBy, sortDirection, page: 1 })
-          }
-        />
-      </GridToolbar>
-
-      <DataGrid
-        table={table as never}
-        recordCount={total}
-        isLoading={isLoading}
-        emptyMessage={
-          <EmptyState
-            size="inline"
-            isFiltered
-            title="No add-ons match these filters"
-            description="Try a different search, or clear what is narrowing the list."
-            onClearFilters={
-              onClearFilters ? (
-                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-        {...(onAddonClick ? { onRowClick: onAddonClick } : {})}
-        tableLayout={{
-          headerSticky: true,
-          columnsVisibility: true,
-          // Auto, so columns fill the width rather than leaving an empty band on
-          // the right; the name cell truncates so a long value stays contained.
-          width: 'auto',
-          rowBorder: false,
-          dense: true,
-        }}
-      >
-        {/* Bounded scroll region so the pagination footer stays pinned in view.
-            The wrapper makes ReUI's scroll-area root the flex-1 item (its
-            className lands on an inner node), so it shrinks and scrolls rather
-            than pushing the pagination off-screen on a tall list. */}
-        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-          <DataGridScrollArea className="min-h-0 flex-1">
-            <DataGridTable />
-          </DataGridScrollArea>
-        </div>
-        <GridFooter
-          fitToWindow={fitToWindow}
-          onFitToWindowChange={setFitToWindow}
-          pageSize={query.pageSize}
-          noun="add-ons"
-        />
-      </DataGrid>
-    </div>
+    <EntityList<Addon>
+      label="Add-ons"
+      noun="add-ons"
+      rows={addons}
+      total={total}
+      columns={columns}
+      getRowId={(addon) => addon.id}
+      page={query.page}
+      pageSize={query.pageSize}
+      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+      search={query.search}
+      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+      searchPlaceholder="Search add-ons…"
+      status={{
+        value: statusValue,
+        label: 'Status',
+        onChange: (value) =>
+          onQueryChange({
+            ...query,
+            statuses: value === STATUS_ALL ? [] : [value as AddonStatus],
+            page: 1,
+          }),
+        options: [
+          {
+            value: STATUS_ALL,
+            label: 'All',
+            ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }),
+          },
+          {
+            value: AddonStatus.Published,
+            label: ADDON_STATUS_LABEL[AddonStatus.Published],
+            ...(statusCounts?.published === undefined ? {} : { count: statusCounts.published }),
+          },
+          {
+            value: AddonStatus.Archived,
+            label: ADDON_STATUS_LABEL[AddonStatus.Archived],
+            ...(statusCounts?.archived === undefined ? {} : { count: statusCounts.archived }),
+          },
+        ],
+      }}
+      sort={{
+        options: SORT_OPTIONS,
+        field: query.sortBy,
+        direction: query.sortDirection,
+        activeCount: isDefaultSort ? 0 : 1,
+        onChange: (sortBy, sortDirection) =>
+          onQueryChange({ ...query, sortBy: sortBy as AddonSortField, sortDirection, page: 1 }),
+      }}
+      selectable
+      rowActions={rowActions}
+      exportFileName="add-ons"
+      primaryAction={onCreate ? <Button onClick={onCreate}>New add-on</Button> : undefined}
+      {...(onAddonClick ? { onRowClick: onAddonClick } : {})}
+      isLoading={isLoading}
+      error={error}
+      {...(onRetry ? { onRetry } : {})}
+      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      {...(onClearFilters ? { onClearFilters } : {})}
+      filteredEmptyTitle="No add-ons match these filters"
+      empty={{
+        title: 'No add-ons yet',
+        description:
+          'An add-on is a priced extra sold alongside a plan — extra seats, a support tier, a burst of capacity. Create the shell here, then give it charges.',
+        ...(onCreate ? { actions: <Button onClick={onCreate}>New add-on</Button> } : {}),
+        guides: GUIDES,
+      }}
+    />
   )
 }

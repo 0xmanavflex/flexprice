@@ -1,6 +1,6 @@
 import { type TaxRateQuery } from '@fp/domain'
 import { ApiError, useTaxRates } from '@fp/query'
-import { TaxRateFilters, TaxRateGrid } from '@fp/ui/flexprice'
+import { TaxRateGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { PercentIcon } from 'lucide-react'
@@ -75,12 +75,6 @@ export function TaxListPage({ query, onQueryChange }: TaxListPageProps) {
             query={query}
             onQueryChange={onQueryChange}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-            filters={
-              <TaxRateFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
           />
         </ListState>
       </PageBody>

@@ -1,6 +1,6 @@
 import { type CostSheet, type CostSheetQuery } from '@fp/domain'
 import { ApiError, useCostSheets } from '@fp/query'
-import { CostSheetFilters, CostSheetGrid } from '@fp/ui/flexprice'
+import { CostSheetGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { SheetIcon } from 'lucide-react'
@@ -38,6 +38,27 @@ export function CostSheetListPage({
 
   const createHref = env.legacyConsoleUrl ? `${env.legacyConsoleUrl}${LEGACY_PATH}` : null
 
+  /*
+   * Built once and handed to the grid, which is now the only thing that
+   * renders it.
+   *
+   * `ListState` still publishes a `createAction` through its offer context,
+   * but `EntityList` does not read that context — it takes `primaryAction`
+   * and `empty.actions` directly. Leaving the button only on `ListState`
+   * would have quietly removed the one route to creating a cost sheet.
+   */
+  const createAction = createHref ? (
+    <Button
+      size="sm"
+      render={
+        // A new tab, so nothing open in the console is lost.
+        <a href={createHref} rel="noreferrer" target="_blank" />
+      }
+    >
+      New cost sheet
+    </Button>
+  ) : null
+
   const failure = toFailure(costSheets.error)
   const rows = costSheets.data?.costSheets ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -53,21 +74,7 @@ export function CostSheetListPage({
           isFiltered={isFiltered}
           onRetry={() => void costSheets.refetch()}
           onClearFilters={clearFilters}
-          {...(createHref
-            ? {
-                createAction: (
-                  <Button
-                    size="sm"
-                    render={
-                      // A new tab, so nothing open in the console is lost.
-                      <a href={createHref} rel="noreferrer" target="_blank" />
-                    }
-                  >
-                    New cost sheet
-                  </Button>
-                ),
-              }
-            : {})}
+          {...(createAction ? { createAction } : {})}
           emptyIcon={<SheetIcon aria-hidden />}
           emptyTitle="No cost sheets yet"
           emptyDescription={
@@ -83,12 +90,7 @@ export function CostSheetListPage({
             onQueryChange={onQueryChange}
             onCostSheetClick={onOpenCostSheet}
             onClearFilters={clearFilters}
-            filters={
-              <CostSheetFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
+            {...(createAction ? { primaryAction: createAction, emptyActions: createAction } : {})}
           />
         </ListState>
       </PageBody>

@@ -91,7 +91,50 @@ const MIX_SLICES = [
 ]
 
 const MARGIN_UNAVAILABLE =
-  'Gross margin needs cost and revenue aggregated together. Cost sheets record the cost side, but no endpoint returns the margin, and totals cannot be summed in the browser.'
+  'Gross margin is not wired up yet. The cost analytics endpoint does return revenue, cost and margin together, but no hook in this console calls it, so there is no figure to show rather than no figure to be had.'
+
+/**
+ * The per-customer table's gap list.
+ *
+ * Kept verbatim from what `RevenuePage` passes, because the point of the
+ * story is that the screen names real endpoints — a story with placeholder
+ * blockers would not catch the sentence going stale.
+ */
+const BY_CUSTOMER_UNAVAILABLE =
+  'No endpoint returns revenue grouped by customer. The figures below could only be assembled one request per customer, or by summing invoices in the browser — which this console does not do, because a total it recomputes will eventually disagree with the invoice the customer was actually charged.'
+
+const BY_CUSTOMER_GAPS = [
+  {
+    column: 'Plan',
+    blocker:
+      'A customer record carries no plan; a plan belongs to their subscriptions. Needs a joined list view, or one subscriptions request per customer.',
+  },
+  {
+    column: 'Net revenue',
+    blocker:
+      'Available per customer only as a lifetime total, from GET /customers/{id}/invoices/summary — one call each, not windowed to the range above, and split per currency.',
+  },
+  {
+    column: 'Contract',
+    blocker:
+      'No endpoint splits recognised revenue into fixed and usage components. The invoice summary splits only what is still unpaid.',
+  },
+  {
+    column: 'Usage',
+    blocker:
+      'POST /events/analytics prices a window as a whole and cannot group by customer, so usage revenue per customer has no source.',
+  },
+  {
+    column: 'Cost',
+    blocker:
+      'POST /costs/analytics returns cost per customer, but one external_customer_id per request, and its per-meter items would have to be summed to get a row total.',
+  },
+  {
+    column: 'Margin %',
+    blocker:
+      'Returned by POST /costs/analytics for the tenant or for a single customer. Needs the same per-customer fan-out as Cost, plus a hook — there is none today.',
+  },
+]
 
 const ready = {
   rangeLabel: 'last 30 days',
@@ -104,6 +147,11 @@ const ready = {
   },
   margin: { status: 'unavailable' as const, percent: null, reason: MARGIN_UNAVAILABLE },
   collections: { status: 'ready' as const, paid: 52, open: 19, overdue: 6 },
+  byCustomer: {
+    status: 'unavailable' as const,
+    reason: BY_CUSTOMER_UNAVAILABLE,
+    columns: BY_CUSTOMER_GAPS,
+  },
   onNavigate: fn(),
 }
 
@@ -165,7 +213,10 @@ export const MarginIsNotDerivable: Story = {
   args: ready,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText(/no endpoint returns the margin/)).toBeInTheDocument()
+    // The sentence has to say *we have not wired it*, not *the API cannot*.
+    // POST /costs/analytics returns margin outright, so the older wording
+    // sent the reader to the wrong team.
+    await expect(canvas.getByText(/Gross margin is not wired up yet/)).toBeInTheDocument()
     await expect(
       canvas.queryByRole('button', { name: /Gross margin on metered revenue/ }),
     ).not.toBeInTheDocument()
@@ -234,5 +285,37 @@ export const OpensCostSheets: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Cost sheets' }))
     await expect(args.onNavigate).toHaveBeenCalledWith('/cost-sheets')
+  },
+}
+
+/**
+ * The per-customer table names its gaps instead of inventing numbers.
+ *
+ * This is the story worth keeping. The surface this replaced listed five
+ * customers and what each had spent, and none of those figures came from
+ * anywhere — so the assertion is not that the panel renders, it is that the
+ * panel renders *no money at all* while still telling the reader which
+ * endpoint each missing column is waiting on.
+ */
+export const RevenueByCustomerIsNotDerivable: Story = {
+  args: ready,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    await expect(await canvas.findByText('Revenue by customer')).toBeInTheDocument()
+
+    // Every column of the asked-for table is accounted for by name.
+    for (const gap of BY_CUSTOMER_GAPS) {
+      await expect(canvas.getByText(gap.column)).toBeInTheDocument()
+    }
+
+    // The blockers name real routes, so the screen doubles as the backend spec.
+    await expect(canvas.getByText(/GET \/customers\/\{id\}\/invoices\/summary/)).toBeInTheDocument()
+    await expect(canvas.getAllByText(/POST \/costs\/analytics/).length).toBeGreaterThan(0)
+
+    // And not one currency figure anywhere in the panel.
+    const panel = canvas.getByText('Revenue by customer').closest('section')
+    await expect(panel).not.toBeNull()
+    await expect((panel as HTMLElement).textContent ?? '').not.toMatch(/[$£€]\s?\d/)
   },
 }

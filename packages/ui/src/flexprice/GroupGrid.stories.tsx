@@ -7,12 +7,28 @@ import {
   type GroupQuery,
   GroupStatus,
 } from '@fp/domain'
+import { Button } from '@ui/primitives/button'
 import { GroupGrid } from './GroupGrid'
 
 /**
- * The group list — the same controlled table shape as the other grids.
- * The page owns the query; the grid renders rows and reports a domain query
- * back. Groups as plain domain values, no client, no provider, no network.
+ * Wait for an open popup to finish unmounting.
+ *
+ * While a Base UI popup is open it mounts `data-base-ui-focus-guard` spans
+ * that are `aria-hidden` *and* `tabindex="0"` — which is exactly what axe's
+ * `aria-hidden-focus` rule forbids. The a11y scan runs when the play function
+ * returns, so a story that returns while the popup is still closing is scanned
+ * mid-animation and fails intermittently. This is not a suppression: it makes
+ * the scan look at the settled DOM, which is the state being asserted about.
+ */
+async function popupClosed(role: 'menu' | 'listbox') {
+  await waitFor(() => expect(within(document.body).queryByRole(role)).toBeNull())
+}
+
+
+/**
+ * The group list, over the shared `EntityList`.
+ *
+ * Groups as plain domain values — no client, no provider, no network.
  */
 const groupFixtures: Group[] = [
   {
@@ -26,7 +42,6 @@ const groupFixtures: Group[] = [
     updatedAt: new Date('2026-02-02T00:00:00Z'),
   },
   {
-    // A single member — the row that proves the noun is singularised.
     id: 'grp_02',
     name: 'Core feature',
     lookupKey: 'core_feature',
@@ -101,25 +116,111 @@ export const Default: Story = {}
 export const Populated: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+
     await expect(await canvas.findByText('Enterprise prices')).toBeInTheDocument()
-    await expect(canvas.getByText('enterprise_prices')).toBeInTheDocument()
-    // The count carries the kind it holds, singularised at one.
-    await expect(canvas.getByText('12 prices')).toBeInTheDocument()
-    await expect(canvas.getByText('1 feature')).toBeInTheDocument()
-    // Published and Archived both render.
-    await expect(canvas.getAllByText('Published').length).toBeGreaterThan(0)
-    await expect(canvas.getByText('Archived')).toBeInTheDocument()
+
+    // A group holds prices or features — and only those two. There is no
+    // plan group and no add-on group in `GroupEntityType`.
+    await expect(canvas.getAllByText('Prices').length).toBeGreaterThan(0)
+    await expect(canvas.getAllByText('Features').length).toBeGreaterThan(0)
+
+    // The ID column is the one the truncation rule was written for.
+    await expect(canvas.getByText('grp_01')).toBeInTheDocument()
+  },
+}
+
+/**
+ * The entity filter is not offered.
+ *
+ * `GroupQuery` has no `entityTypes` field and `toGroupFilter` sends none, so a
+ * filter could only narrow the twenty-five rows already fetched while the
+ * footer kept reporting the server's total.
+ */
+export const NoEntityFilter: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('Enterprise prices')
+
+    await expect(canvas.queryByRole('button', { name: /filter/i })).toBeNull()
+    // The type is still a column, which is where it can be read honestly.
+    await expect(canvas.getByRole('columnheader', { name: /entity type/i })).toBeInTheDocument()
+  },
+}
+
+/** No counts: `useCatalogStats` does not cover groups. */
+export const StatusDropdownHasNoCounts: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('Enterprise prices')
+
+    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
+    const listbox = within(await within(document.body).findByRole('listbox'))
+    const published = listbox.getByRole('option', { name: /published/i })
+    await expect(published.textContent).not.toMatch(/\d/)
+
+    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
+    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
+    await waitFor(() =>
+      expect(
+        spy.mock.calls
+          .map((call) => call[0] as { statuses?: string[] })
+          .some((query) => query.statuses?.[0] === 'archived'),
+      ).toBe(true),
+    )
+    await popupClosed('listbox')
+  },
+}
+
+/** The shared table's geometry, as this surface renders it. */
+export const Layout: Story = {
+  play: async ({ canvasElement }) => {
+    await within(canvasElement).findByText('Enterprise prices')
+
+    const header = canvasElement.querySelector('thead th') as HTMLElement
+    await expect(Math.round(header.getBoundingClientRect().height)).toBe(44)
+
+    const cell = canvasElement.querySelector('tbody td') as HTMLElement
+    await expect(Math.round(cell.getBoundingClientRect().height)).toBe(60)
+    await expect(getComputedStyle(cell).paddingLeft).toBe('16px')
   },
 }
 
 export const Loading: Story = { args: { groups: [], total: 0, isLoading: true } }
 
-export const Empty: Story = {
-  args: { groups: [], total: 0 },
+/** A filter emptied the list — the toolbar survives, so it can be undone. */
+export const FilteredEmpty: Story = {
+  args: {
+    groups: [],
+    total: 0,
+    query: { ...fixtureGroupQuery, search: 'zzz' },
+    onClearFilters: fn(),
+  },
   play: async ({ canvasElement }) => {
     await expect(
       await within(canvasElement).findByText(/no groups match these filters/i),
     ).toBeInTheDocument()
+  },
+}
+
+/**
+ * Nothing created yet.
+ *
+ * Creating a group still happens in the legacy console, so the page hands the
+ * grid a link rather than a handler — and the grid renders it in both the
+ * toolbar and the empty state, which is the only route to a first group.
+ */
+export const FirstRun: Story = {
+  args: {
+    groups: [],
+    total: 0,
+    primaryAction: <Button>New group</Button>,
+    emptyActions: <Button>New group</Button>,
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No groups yet')).toBeInTheDocument()
+    await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
+    await expect(canvas.getAllByRole('button', { name: /new group/i }).length).toBe(2)
   },
 }
 
@@ -138,16 +239,14 @@ export const Error: Story = {
   },
 }
 
-/** Paging reports a page number, never an offset. */
+/** Paging reports a page number, never an offset, and never drops a query key. */
 export const PaginationReportsDomainQuery: Story = {
   args: { groups: manyGroups(25), total: 120, query: { ...fixtureGroupQuery, page: 1 } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
+
     await userEvent.click(await canvas.findByRole('button', { name: /next|go to next page/i }))
 
-    // The grid can also fire onQueryChange as it settles, so the Next click is
-    // not necessarily call[0]. Wait for — then read — the call that reported
-    // page 2, rather than racing whichever call landed first.
     const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
     const reportedPage = () =>
       spy.mock.calls.map((call) => call[0] as Record<string, unknown>).find((q) => q['page'] === 2)

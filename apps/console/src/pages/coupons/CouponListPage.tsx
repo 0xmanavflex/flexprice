@@ -1,6 +1,6 @@
 import { type Coupon, type CouponQuery } from '@fp/domain'
-import { ApiError, useCoupons } from '@fp/query'
-import { CouponFilters, CouponGrid } from '@fp/ui/flexprice'
+import { ApiError, useCatalogStats, useCoupons } from '@fp/query'
+import { CouponGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { TicketPercentIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -20,6 +20,9 @@ export interface CouponListPageProps {
  */
 export function CouponListPage({ query, onQueryChange, onCreate, onOpenCoupon }: CouponListPageProps) {
   const coupons = useCoupons(query)
+  // The server's counts for the status dropdown — one `limit: 1` request each,
+  // read for `pagination.total`, never counted off the page on screen.
+  const stats = useCatalogStats('coupons')
 
   const failure = toFailure(coupons.error)
   const rows = coupons.data?.coupons ?? []
@@ -48,12 +51,11 @@ export function CouponListPage({ query, onQueryChange, onCreate, onOpenCoupon }:
             onCouponClick={onOpenCoupon}
             onCreate={onCreate}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-            filters={
-              <CouponFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
+            statusCounts={{
+              total: stats.total,
+              published: stats.published,
+              archived: stats.archived,
+            }}
           />
         </ListState>
       </PageBody>

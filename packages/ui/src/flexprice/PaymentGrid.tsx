@@ -1,37 +1,114 @@
-import { useMemo, useRef, useState, type ReactNode } from 'react'
-import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
-import { type Payment, type PaymentQuery } from '@fp/domain'
-import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
-import { DataGridColumnHeader } from '@ui/components/reui/data-grid/data-grid-column-header'
-import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
-import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
-import { Button } from '@ui/primitives/button'
-import { Skeleton } from '@ui/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
-import { GridFooter } from '@ui/compositions/GridFooter'
-import { GridToolbar } from '@ui/compositions/GridToolbar'
-import { useViewportPageSize } from '@ui/compositions/useViewportPageSize'
+import { useMemo } from 'react'
+import { BanknoteIcon, CopyIcon, CreditCardIcon, ReceiptIcon } from 'lucide-react'
+import {
+  DEFAULT_PAYMENT_QUERY,
+  PAYMENT_SORT_LABEL,
+  PAYMENT_STATUS_LABEL,
+  type Payment,
+  type PaymentQuery,
+  PaymentSortField,
+  PaymentStatus,
+} from '@fp/domain'
 import { provenance } from '@ui/provenance'
-import { Money } from './Money'
-import { PaymentStatusBadge } from './PaymentStatusBadge'
+import {
+  type EntityColumn,
+  type PillTone,
+  dateColumn,
+  idColumn,
+  moneyColumn,
+  pillColumn,
+  textColumn,
+} from './cells'
+import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
 
 /**
- * The payment list, as a *controlled* grid.
+ * The payment list, on the shared `EntityList`.
  *
- * The same controlled, table-only shape as `InvoiceGrid`: it holds no state and
- * performs no fetching, receiving a `query` and emitting `onQueryChange` so the
- * page can keep that query in the URL. There is no view toggle and there are no
- * cards — a payment is a ledger row, and a row is all it wants to be.
+ * ## Customer is not here
  *
- * Search and the status filter (through the `filters` slot) narrow the list the
- * same way the catalogue grids do; the amount is a `Money`, so the column is
- * exact and never a float.
+ * The redesign asks for it, and it is the column a collections desk would
+ * most like. `PaymentResponse` does not carry a customer: not a name, not
+ * even a `customer_id`. What it carries is `destination_id` plus
+ * `destination_type` — the thing the money was paid *against*, which for
+ * every payment this list shows is an invoice. Resolving a name therefore
+ * means fetching each row's invoice and reading the customer off that: a
+ * join, per row, per page.
+ *
+ * Omitted rather than dashed, on the rule the billing grids share — a column
+ * no row can ever fill is removed, because a column of em dashes reads as
+ * "these payments happen to have no customer" rather than "we cannot tell you
+ * yet". The **Invoice** column is here instead, and it is the honest version
+ * of the same lookup: it is a real field, and it is the thing you would click
+ * to find the customer anyway.
+ *
+ * ## Gateway is here, and was not before
+ *
+ * `paymentGateway` has been on `PaymentResponse` all along and the read model
+ * simply was not asking for it. It is a different fact from **Method**:
+ * "card" is what the customer presented, Stripe is who charged it, and a
+ * failure you are chasing needs the second to know where to go and look.
  */
 export const PaymentGridProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/badge'],
-  note: 'Controlled wrapper: the page owns query state, the grid only renders and reports intent.',
+  composes: ['flexprice/EntityList'],
+  note: 'Payment columns and actions over the shared list table.',
 })
+
+const SORT_OPTIONS = Object.values(PaymentSortField).map((value) => ({
+  value,
+  label: PAYMENT_SORT_LABEL[value],
+}))
+
+const STATUS_ALL = 'all'
+
+const STATUS_TONE: Record<PaymentStatus, PillTone> = {
+  [PaymentStatus.Pending]: 'warning',
+  [PaymentStatus.Succeeded]: 'success',
+  [PaymentStatus.Overpaid]: 'info',
+  [PaymentStatus.Failed]: 'danger',
+  [PaymentStatus.Refunded]: 'neutral',
+  [PaymentStatus.Voided]: 'neutral',
+}
+
+/**
+ * The wire's `CARD`, `ACH_DEBIT` and friends, as words.
+ *
+ * Title-cased from the enum rather than mapped through a lookup: the set is
+ * open — a gateway can report a method this build has never heard of — and a
+ * lookup would render the new one blank. Splitting on the underscore is not
+ * elegant, but it degrades into something readable instead of into nothing.
+ */
+function humanise(value: string): string | null {
+  if (!value) return null
+  return value
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/** Every URL requested and confirmed 200. */
+const GUIDES: EntityGuide[] = [
+  {
+    title: 'Recording a payment',
+    description: 'Registering money that arrived, against the invoice it settles.',
+    href: 'https://docs.flexprice.io/api-reference/payments/create-payment',
+    icon: <BanknoteIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Correcting one',
+    description: 'Amending a payment that was recorded against the wrong invoice or amount.',
+    href: 'https://docs.flexprice.io/api-reference/payments/update-payment',
+    icon: <CreditCardIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Marking an invoice settled',
+    description: 'Updating payment status when the money moved outside Flexprice.',
+    href: 'https://docs.flexprice.io/api-reference/invoices/update-invoice-payment-status',
+    icon: <ReceiptIcon aria-hidden className="size-4" />,
+  },
+]
 
 export interface PaymentGridProps {
   payments: Payment[]
@@ -44,18 +121,10 @@ export interface PaymentGridProps {
   error?: string | null
   onRetry?: () => void
   onPaymentClick?: (payment: Payment) => void
-  /** The advanced filter, dropped into the toolbar. */
-  filters?: ReactNode
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
-  /** Locale for money and dates. Supplied by the app, never read from a global. */
+  /** Locale for dates and amounts. Supplied by the app, never read from a global. */
   locale?: string
-}
-
-/** A date, de-emphasised: secondary metadata reads as muted, tabular figures. */
-function DateCell({ value, locale }: { value: Date | null; locale?: string }): ReactNode {
-  const text = value ? new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value) : '—'
-  return <span className="text-muted-foreground tabular-nums">{text}</span>
 }
 
 export function PaymentGrid({
@@ -67,193 +136,134 @@ export function PaymentGrid({
   error = null,
   onRetry,
   onPaymentClick,
-  filters,
   onClearFilters,
   locale,
 }: PaymentGridProps) {
-  const columns = useMemo<ColumnDef<never, Payment>[]>(
-    () =>
-      [
-        {
-          id: 'amount',
-          meta: {
-            skeleton: <Skeleton className="ml-auto h-4 w-20" />,
-            headerClassName: 'text-right [&>div]:justify-end',
-          },
-          accessorFn: (row: Payment) => row.amount.amount,
-          header: ({ column }: never) => <DataGridColumnHeader title="Amount" column={column} />,
-          // Money is formatted from the exact decimal; it never becomes a float.
-          // Right-aligned with tabular figures so a column of amounts lines up on
-          // the decimal and scans as money rather than as text.
-          cell: ({ row }: { row: { original: Payment } }) => (
-            <div className="text-right tabular-nums">
-              <Money value={row.original.amount} {...(locale ? { locale } : {})} truncate />
-            </div>
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-        {
-          id: 'status',
-          meta: { skeleton: <Skeleton className="h-4 w-16 rounded-full" /> },
-          accessorFn: (row: Payment) => row.status,
-          header: ({ column }: never) => <DataGridColumnHeader title="Status" column={column} />,
-          cell: ({ row }: { row: { original: Payment } }) => (
-            <PaymentStatusBadge status={row.original.status} />
-          ),
-          enableSorting: true,
-          size: 130,
-        },
-        {
-          id: 'method',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Payment) => row.methodType,
-          header: ({ column }: never) => <DataGridColumnHeader title="Method" column={column} />,
-          cell: ({ row }: { row: { original: Payment } }) => (
-            <span className="text-muted-foreground">{row.original.methodType || '—'}</span>
-          ),
-          enableSorting: true,
-          size: 160,
-        },
-        {
-          id: 'invoice',
-          meta: { skeleton: <Skeleton className="h-4 w-28" /> },
-          accessorFn: (row: Payment) => row.invoiceNumber,
-          header: ({ column }: never) => <DataGridColumnHeader title="Invoice" column={column} />,
-          cell: ({ row }: { row: { original: Payment } }) =>
-            row.original.invoiceNumber ? (
-              <span className="font-mono text-xs">{row.original.invoiceNumber}</span>
-            ) : (
-              <span className="text-muted-foreground">—</span>
-            ),
-          enableSorting: true,
-          size: 160,
-        },
-        {
-          id: 'createdAt',
-          meta: { skeleton: <Skeleton className="h-4 w-24" /> },
-          accessorFn: (row: Payment) => row.createdAt,
-          header: ({ column }: never) => <DataGridColumnHeader title="Date" column={column} />,
-          cell: ({ row }: { row: { original: Payment } }) => (
-            <DateCell value={row.original.createdAt} {...(locale ? { locale } : {})} />
-          ),
-          enableSorting: true,
-          size: 140,
-        },
-      ] as never,
+  const columns = useMemo<EntityColumn<Payment>[]>(
+    () => [
+      idColumn<Payment>('id', 'Payment ID', (row) => row.id, {
+        width: 200,
+        // The only thing that identifies the row at all.
+        hideable: false,
+      }),
+      moneyColumn<Payment>('amount', 'Amount', (row) => row.amount, {
+        width: 150,
+        ...(locale ? { locale } : {}),
+      }),
+      pillColumn<Payment>('status', 'Status', (row) => ({
+        label: PAYMENT_STATUS_LABEL[row.status],
+        tone: STATUS_TONE[row.status],
+      })),
+      textColumn<Payment>('method', 'Method', (row) => humanise(row.methodType), { width: 130 }),
+      textColumn<Payment>('gateway', 'Gateway', (row) => humanise(row.gateway), { width: 130 }),
+      textColumn<Payment>('invoice', 'Invoice', (row) => row.invoiceNumber, { width: 160 }),
+      // When it was taken, not when it landed: `succeededAt` is null for
+      // everything still in flight and for everything that failed, which is
+      // exactly the half of this list anyone is looking for.
+      dateColumn<Payment>('createdAt', 'Date', (row) => row.createdAt, {
+        width: 140,
+        sortable: true,
+        sortValue: PaymentSortField.CreatedAt,
+        ...(locale ? { locale } : {}),
+      }),
+    ],
     [locale],
   )
 
-  // TanStack's state, derived from the query rather than stored beside it.
-  const pagination: PaginationState = {
-    pageIndex: query.page - 1,
-    pageSize: query.pageSize,
-  }
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
-  const table = useTable({
-    features: dataGridFeatures,
-    data: payments,
-    columns,
-    // Server-side: `data` is exactly one page, so the grid must not re-page it.
-    // `rowCount` is what makes getPageCount() correct.
-    manualPagination: true,
-    rowCount: total,
-    getRowId: (row: Payment) => row.id,
-    state: { pagination },
-    onPaginationChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (p: PaginationState) => PaginationState)(pagination)
-          : (updater as PaginationState)
-      onQueryChange({ ...query, page: next.pageIndex + 1, pageSize: next.pageSize })
-    },
-  } as never)
+  const isDefaultSort =
+    query.sortBy === DEFAULT_PAYMENT_QUERY.sortBy &&
+    query.sortDirection === DEFAULT_PAYMENT_QUERY.sortDirection
 
-  const containerRef = useRef<HTMLDivElement>(null)
-  const [fitToWindow, setFitToWindow] = useState(false)
-  const capacity = useViewportPageSize({
-    containerRef,
-    enabled: fitToWindow,
-    // The toolbar above and the pagination footer below are not rows.
-    reservedHeight: 104,
-  })
-
-  // `null` means "no measurement yet" — keep whatever size is already set.
-  if (fitToWindow && capacity !== null && capacity !== query.pageSize) {
-    onQueryChange({ ...query, pageSize: capacity, page: 1 })
-  }
-
-  if (error) {
-    return (
-      <div role="alert" className="flex flex-col items-start gap-3 rounded-lg border p-6">
-        <p className="text-sm">{error}</p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
-    )
+  const rowActions = (payment: Payment): EntityRowAction[] => {
+    const actions: EntityRowAction[] = []
+    if (onPaymentClick) {
+      actions.push({
+        label: 'View payment',
+        icon: <BanknoteIcon aria-hidden className="size-4" />,
+        onSelect: () => onPaymentClick(payment),
+      })
+    }
+    actions.push({
+      label: 'Copy payment ID',
+      icon: <CopyIcon aria-hidden className="size-4" />,
+      onSelect: () => void navigator.clipboard?.writeText(payment.id),
+    })
+    return actions
   }
 
   return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 flex-col gap-3">
-      <GridToolbar
-        heading="Payments"
-        search={query.search}
-        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-        placeholder="Search payments…"
-        label="Search payments"
-      >
-        {filters}
-      </GridToolbar>
-
-      <DataGrid
-        table={table as never}
-        recordCount={total}
-        isLoading={isLoading}
-        emptyMessage={
-          <EmptyState
-            size="inline"
-            isFiltered
-            title="No payments match these filters"
-            description="Try a different search, or clear what is narrowing the list."
-            onClearFilters={
-              onClearFilters ? (
-                <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                  Clear filters
-                </Button>
-              ) : undefined
-            }
-          />
-        }
-        {...(onPaymentClick ? { onRowClick: onPaymentClick } : {})}
-        tableLayout={{
-          headerSticky: true,
-          columnsVisibility: true,
-          // Auto, so the columns spread to fill the width instead of leaving a
-          // band of empty table on the right.
-          width: 'auto',
-          rowBorder: false,
-          dense: true,
-        }}
-      >
-        {/* ReUI's DataGridScrollArea puts `className` on an inner node, so this
-            wrapper makes the root (`> div`) the flex child that fills and
-            scrolls, keeping the pagination footer pinned in view when the list
-            is taller than the viewport. */}
-        <div className="flex min-h-0 flex-1 flex-col [&>div]:flex [&>div]:min-h-0 [&>div]:flex-1 [&>div]:flex-col">
-          <DataGridScrollArea className="min-h-0 flex-1">
-            <DataGridTable />
-          </DataGridScrollArea>
-        </div>
-        <GridFooter
-          fitToWindow={fitToWindow}
-          onFitToWindowChange={setFitToWindow}
-          pageSize={query.pageSize}
-          noun="payments"
-        />
-      </DataGrid>
-    </div>
+    <EntityList<Payment>
+      label="Payments"
+      noun="payments"
+      rows={payments}
+      total={total}
+      columns={columns}
+      getRowId={(payment) => payment.id}
+      page={query.page}
+      pageSize={query.pageSize}
+      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+      search={query.search}
+      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+      searchPlaceholder="Search by invoice number…"
+      /*
+       * Every real state, not the redesign's five. `Overpaid` and `Voided`
+       * are values the domain can hold and rows can arrive in; leaving them
+       * out of the dropdown would make those rows visible in the list but
+       * unreachable from the control that exists to find them.
+       *
+       * No counts: `GET /payments` filters neither status nor search, so
+       * `fetchPayments` narrows the page it received. There is no per-status
+       * server total to read, and counting the rows on screen would be a
+       * number about this page dressed up as a number about the ledger.
+       */
+      status={{
+        value: statusValue,
+        label: 'Status',
+        onChange: (value) =>
+          onQueryChange({
+            ...query,
+            statuses: value === STATUS_ALL ? [] : [value as PaymentStatus],
+            page: 1,
+          }),
+        options: [
+          { value: STATUS_ALL, label: 'All' },
+          ...Object.values(PaymentStatus).map((value) => ({
+            value,
+            label: PAYMENT_STATUS_LABEL[value],
+          })),
+        ],
+      }}
+      sort={{
+        options: SORT_OPTIONS,
+        field: query.sortBy,
+        direction: query.sortDirection,
+        activeCount: isDefaultSort ? 0 : 1,
+        onChange: (sortBy, sortDirection) =>
+          onQueryChange({
+            ...query,
+            sortBy: sortBy as PaymentSortField,
+            sortDirection,
+            page: 1,
+          }),
+      }}
+      selectable
+      rowActions={rowActions}
+      exportFileName="payments"
+      {...(onPaymentClick ? { onRowClick: onPaymentClick } : {})}
+      isLoading={isLoading}
+      error={error}
+      {...(onRetry ? { onRetry } : {})}
+      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      {...(onClearFilters ? { onClearFilters } : {})}
+      filteredEmptyTitle="No payments match these filters"
+      empty={{
+        title: 'No money has moved yet',
+        description:
+          'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
+        guides: GUIDES,
+      }}
+    />
   )
 }

@@ -1,7 +1,7 @@
-import { type InvoiceQuery } from '@fp/domain'
+import { type Invoice, type InvoiceQuery, isStoredInvoiceStatus } from '@fp/domain'
 import { ApiError, useInvoices } from '@fp/query'
 import { ReceiptIcon } from 'lucide-react'
-import { InvoiceFilters, InvoiceGrid } from '@fp/ui/flexprice'
+import { InvoiceGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 
 export interface InvoiceListPageProps {
@@ -24,7 +24,28 @@ export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) 
   const invoices = useInvoices(query)
 
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
-  const rows = invoices.data?.invoices ?? []
+  const fetched = invoices.data?.invoices ?? []
+
+  /*
+   * `paid` and `overdue` are derived, so the request went out without them.
+   *
+   * `deriveInvoiceStatus` computes the first from a payment status and the
+   * second from a balance plus a due date in the past; neither is a field, so
+   * `toInvoiceFilter` drops them and the API answers with everything. Without
+   * the pass below the reader would get an unfiltered ledger under a control
+   * insisting it was filtered — the one failure mode a billing console must
+   * not have.
+   *
+   * So the narrowing happens here, over the page that came back, and the grid
+   * says on screen that that is what it did. `total` is corrected to match,
+   * because a footer reading "1 – 3 of 847" under three rows is the same lie
+   * in a different place.
+   */
+  const derived = query.statuses.filter((status) => !isStoredInvoiceStatus(status))
+  const narrowed: Invoice[] =
+    derived.length > 0 ? fetched.filter((invoice) => derived.includes(invoice.status)) : fetched
+  const rows = narrowed
+  const total = derived.length > 0 ? narrowed.length : (invoices.data?.total ?? 0)
 
   return (
     <>
@@ -57,7 +78,7 @@ export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) 
         >
           <InvoiceGrid
             invoices={rows}
-            total={invoices.data?.total ?? 0}
+            total={total}
             query={query}
             onQueryChange={onQueryChange}
             isLoading={invoices.isPending}
@@ -70,12 +91,6 @@ export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) 
              * be narrowed by hand-editing the URL, which is how a tenant whose
              * only invoice was skipped ended up looking at an empty list.
              */
-            filters={
-              <InvoiceFilters
-                statuses={query.statuses}
-                onStatusesChange={(statuses) => onQueryChange({ ...query, statuses, page: 1 })}
-              />
-            }
           />
         </ListState>
       </PageBody>
