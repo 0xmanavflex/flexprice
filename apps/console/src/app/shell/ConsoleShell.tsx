@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import {
   BarChart3Icon,
   BookOpenIcon,
@@ -18,7 +18,6 @@ import {
   CalculatorIcon,
   FolderTreeIcon,
 } from 'lucide-react'
-import type { CreateEnvironment } from '@fp/domain'
 import { useNavCounts } from '@fp/query'
 import {
   AppShell,
@@ -29,7 +28,6 @@ import {
   type ShellEnvironment,
   type ShellUser,
 } from '@fp/ui/compositions'
-import { EnvironmentCreateDialog } from '@fp/ui/pages'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import {
   breadcrumbForPath,
@@ -78,9 +76,6 @@ export interface ConsoleShellProps {
   environment: ShellEnvironment
   environments: ShellEnvironment[]
   onEnvironmentChange: (id: string) => void
-  /** Absent means the console offers no way to create one. */
-  onEnvironmentCreate?: (draft: CreateEnvironment) => void
-  canCreateProduction?: boolean
   user: ShellUser
   onSignOut?: () => void
   /** One control belonging to the page as a whole, rendered in the header. */
@@ -105,14 +100,11 @@ export function ConsoleShell({
   environment,
   environments,
   onEnvironmentChange,
-  onEnvironmentCreate,
-  canCreateProduction = false,
   user,
   onSignOut,
   headerActions,
   children,
 }: ConsoleShellProps) {
-  const [creatingEnvironment, setCreatingEnvironment] = useState(false)
   const activeItemId = navEntryForPath(pathname)
   const openGroup = groupForNavId(activeItemId)
   const counts = useNavCounts(openGroup ? (GROUP_COUNTS[openGroup] ?? []) : [])
@@ -169,9 +161,7 @@ export function ConsoleShell({
                   current={environment}
                   environments={environments}
                   onChange={onEnvironmentChange}
-                  {...(onEnvironmentCreate
-                    ? { onCreate: () => setCreatingEnvironment(true) }
-                    : {})}
+                  onCreate={() => onNavigate('/environments/new')}
                   onManage={() => goTo('settings')}
                 />
               ),
@@ -209,17 +199,6 @@ export function ConsoleShell({
       notifications={[]}
     >
       {children}
-
-      <EnvironmentCreateDialog
-        open={creatingEnvironment}
-        onOpenChange={setCreatingEnvironment}
-        canCreateProduction={canCreateProduction}
-        productionUnavailableReason="Set up with your account contact."
-        onSubmit={(draft) => {
-          onEnvironmentCreate?.(draft)
-          setCreatingEnvironment(false)
-        }}
-      />
     </AppShell>
   )
 }

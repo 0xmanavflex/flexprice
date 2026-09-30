@@ -17,6 +17,8 @@ describe('navEntryForPath', () => {
     ['/invoices', 'invoices'],
     ['/invoices?page=2', 'invoices'],
     ['/customers', 'customers'],
+    ['/customers/new', 'customers'],
+    ['/customers/cus_1/edit', 'customers'],
   ])('resolves %s to %s', (path, id) => {
     expect(navEntryForPath(path)).toBe(id)
   })
@@ -186,8 +188,7 @@ describe('every destination resolves', () => {
   ])
 
   it.each(destinations)('%s has a route', (path) => {
-    const routed =
-      BUILT.includes(path) || PLACEHOLDER_ROUTES.some((route) => route.path === path)
+    const routed = BUILT.includes(path) || PLACEHOLDER_ROUTES.some((route) => route.path === path)
     expect(routed, `${path} is in the sidebar but has no route`).toBe(true)
   })
 

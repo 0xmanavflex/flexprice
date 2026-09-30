@@ -1,7 +1,6 @@
-import { useState } from 'react'
-import { type CreatePlan, type PlanQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, useCreatePlan, usePlans, useUpdatePlan } from '@fp/query'
-import { PlanEditorDialog, PlanGrid } from '@fp/ui/pages'
+import { type PlanQuery } from '@fp/domain'
+import { ApiError, useCatalogStats, usePlans, useUpdatePlan } from '@fp/query'
+import { PlanGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -11,49 +10,31 @@ export interface PlanListPageProps {
   onQueryChange: (query: PlanQuery) => void
   /** Open a plan's detail page. A row click, and where a new plan lands. */
   onOpenPlan: (planId: string) => void
+  /** Start the full-page create flow. */
+  onCreatePlan: () => void
 }
 
 /**
- * The plan surface: a list, and a drawer to create one's details.
- *
- * Replaces V1's `Plans.tsx`. The list stays URL-driven — a filtered view is a
- * link — and a row now opens the plan's *detail page*, the hub where charges,
- * entitlements and credit grants are added. Creating a plan is still the one
- * piece of local state, a drawer over the list; on success it navigates to the
- * new plan's detail page, because a plan that bills nothing yet is only half
- * made and the next step is to price it.
+ * The plan surface: the list. Creating a plan is a full page (`/plans/new`).
  */
-export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageProps) {
+export function PlanListPage({
+  query,
+  onQueryChange,
+  onOpenPlan,
+  onCreatePlan,
+}: PlanListPageProps) {
   const plans = usePlans(query)
-  const create = useCreatePlan()
   const update = useUpdatePlan()
   // Counts per status for the toolbar's dropdown. Each is one `limit: 1`
   // request read for its `pagination.total` — the server's count, not the
   // twenty-five rows that happen to be on screen.
   const stats = useCatalogStats('plans')
 
-  const [creating, setCreating] = useState(false)
-
   const failure = toFailure(plans.error)
   const rows = plans.data?.plans ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
-
-  const close = () => {
-    setCreating(false)
-    create.reset()
-  }
-
-  const submit = (draft: CreatePlan) => {
-    create.mutate(draft, {
-      onSuccess: (result) => {
-        close()
-        const id = (result as { id?: string }).id
-        if (id) onOpenPlan(id)
-      },
-    })
-  }
 
   return (
     <>
@@ -65,7 +46,7 @@ export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageP
           isFiltered={isFiltered}
           onRetry={() => void plans.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={() => setCreating(true)}>New plan</Button>}
+          createAction={<Button onClick={() => onCreatePlan()}>New plan</Button>}
           emptyIcon={<PackageIcon aria-hidden />}
           emptyTitle="No plans yet"
           emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants — create the first to start selling."
@@ -82,9 +63,12 @@ export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageP
                   id: plan.id,
                   draft: { name, lookupKey: plan.lookupKey, description: plan.description },
                 })
-                .then(() => undefined, () => undefined)
+                .then(
+                  () => undefined,
+                  () => undefined,
+                )
             }
-            onCreate={() => setCreating(true)}
+            onCreate={() => onCreatePlan()}
             onClearFilters={clearFilters}
             statusCounts={{
               total: stats.total,
@@ -94,17 +78,6 @@ export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageP
           />
         </ListState>
       </PageBody>
-
-      <PlanEditorDialog
-        open={creating}
-        onOpenChange={(open) => {
-          if (!open) close()
-        }}
-        mode="create"
-        onSubmit={submit}
-        isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error)}
-      />
     </>
   )
 }
@@ -128,23 +101,4 @@ function toFailure(error: unknown): { message: string; canRetry: boolean } | nul
     }
   }
   return { message: 'Something went wrong loading plans.', canRetry: true }
-}
-
-/** A save failure, as a sentence the form can show inline. */
-function toSubmitError(error: unknown): string | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'invalid':
-        return error.message || 'Check the details and try again.'
-      case 'forbidden':
-        return 'You do not have permission to change plans here.'
-      case 'network':
-        return 'Could not reach Flexprice. Check your connection and try again.'
-      default:
-        return 'Could not save the plan. Try again.'
-    }
-  }
-  return 'Could not save the plan. Try again.'
 }

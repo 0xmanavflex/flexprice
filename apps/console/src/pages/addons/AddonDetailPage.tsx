@@ -2,7 +2,6 @@ import { useState } from 'react'
 import {
   type Addon,
   type Charge,
-  type CreateAddon,
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreditGrant,
@@ -39,21 +38,24 @@ import {
   useUpdateEntitlement,
 } from '@fp/query'
 import {
-  AddonEditorDialog,
   CatalogStatusBadge,
   ChargeTable,
-  CreditGrantDialog,
+  CreditGrantCreateForm,
+  CreditGrantEditForm,
   CreditGrantTable,
-  EntitlementDialog,
+  EntitlementCreateForm,
+  EntitlementEditForm,
   EntitlementTable,
   type FeatureOption,
 } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
+  ContextualSection,
   DetailList,
   type DetailMetric,
   DetailShell,
+  InlineField,
   LoadingRows,
   PageBody,
 } from '@fp/ui/compositions'
@@ -70,6 +72,7 @@ import { PencilIcon } from 'lucide-react'
 
 export interface AddonDetailPageProps {
   addonId: string
+  onEdit: (addonId: string) => void
   onNavigateToList: () => void
 }
 
@@ -86,19 +89,22 @@ type AddonTab = 'overview' | 'entitlements' | 'credit-grants' | 'information'
  * itself. An add-on shares a plan's charges, entitlements, and credit grants, so
  * it reuses the exact same read tables and editors rather than restating them.
  *
+ * Name and description edit in place (`InlineField`); Edit opens the dedicated
+ * edit page. Adding or editing an entitlement or credit grant swaps that tab's
+ * table for its form in place (`ContextualSection`) rather than opening a dialog.
+ *
  * The page fetches and composes; every relational section is a presentational
  * component from `@fp/ui`, and every destructive action passes through a
  * `ConfirmDialog` — a charge is terminated, an entitlement or grant removed, only
  * after a confirming beat.
  */
-export function AddonDetailPage({ addonId, onNavigateToList }: AddonDetailPageProps) {
+export function AddonDetailPage({ addonId, onEdit, onNavigateToList }: AddonDetailPageProps) {
   const addon = useAddon(addonId)
   const update = useUpdateAddon()
   // Fetched here too (deduped by react-query) so the rail can carry real counts.
   const prices = usePrices(PriceEntityType.Addon, addonId)
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
 
-  const [editing, setEditing] = useState(false)
   const [tab, setTab] = useState<AddonTab>('overview')
 
   if (addon.isPending) {
@@ -143,78 +149,66 @@ export function AddonDetailPage({ addonId, onNavigateToList }: AddonDetailPagePr
     entitlementsPending: entitlements.isPending,
   })
 
-  const closeEditor = () => {
-    setEditing(false)
-    update.reset()
-  }
-
-  const submit = (draft: CreateAddon) => {
-    update.mutate({ id: data.id, draft }, { onSuccess: closeEditor })
-  }
-
   return (
-    <>
-      <DetailShell
-        breadcrumb={
-          <button
-            type="button"
-            onClick={onNavigateToList}
-            className="text-muted-foreground hover:text-foreground w-fit text-xs transition-colors"
-          >
-            ← Add-ons
-          </button>
-        }
-        title={data.name}
-        badges={<CatalogStatusBadge status={data.status} />}
-        identifier={data.lookupKey || data.id}
-        {...(data.description ? { description: data.description } : {})}
-        actions={
-          <Button onClick={() => setEditing(true)}>
-            <PencilIcon aria-hidden className="size-4" />
-            Edit
-          </Button>
-        }
-        metrics={metrics}
-      >
-        <Tabs value={tab} onValueChange={(value) => setTab(value as AddonTab)}>
-          <TabsList>
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
-            <TabsTrigger value="credit-grants">Credit Grants</TabsTrigger>
-            <TabsTrigger value="information">Information</TabsTrigger>
-          </TabsList>
+    <DetailShell
+      breadcrumb={
+        <button
+          type="button"
+          onClick={onNavigateToList}
+          className="text-muted-foreground hover:text-foreground w-fit text-xs transition-colors"
+        >
+          ← Add-ons
+        </button>
+      }
+      title={data.name}
+      badges={<CatalogStatusBadge status={data.status} />}
+      identifier={data.lookupKey || data.id}
+      {...(data.description ? { description: data.description } : {})}
+      actions={
+        <Button variant="outline" size="sm" onClick={() => onEdit(addonId)}>
+          <PencilIcon aria-hidden className="size-4" />
+          Edit
+        </Button>
+      }
+      metrics={metrics}
+    >
+      <Tabs value={tab} onValueChange={(value) => setTab(value as AddonTab)}>
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
+          <TabsTrigger value="credit-grants">Credit Grants</TabsTrigger>
+          <TabsTrigger value="information">Information</TabsTrigger>
+        </TabsList>
 
-          <TabsContent value="overview" className="pt-4">
-            <PricesTab addonId={addonId} />
-          </TabsContent>
-          <TabsContent value="entitlements" className="pt-4">
-            <EntitlementsTab addonId={addonId} />
-          </TabsContent>
-          <TabsContent value="credit-grants" className="pt-4">
-            <CreditGrantsTab addonId={addonId} />
-          </TabsContent>
-          <TabsContent value="information" className="pt-4">
-            <InformationTab addon={data} />
-          </TabsContent>
-        </Tabs>
-      </DetailShell>
-
-      <AddonEditorDialog
-        open={editing}
-        onOpenChange={(open) => {
-          if (!open) closeEditor()
-        }}
-        mode="edit"
-        defaultValue={{
-          name: data.name,
-          lookupKey: data.lookupKey,
-          description: data.description,
-        }}
-        onSubmit={submit}
-        isSubmitting={update.isPending}
-        submitError={toSubmitError(update.error)}
-      />
-    </>
+        <TabsContent value="overview" className="pt-4">
+          <PricesTab addonId={addonId} />
+        </TabsContent>
+        <TabsContent value="entitlements" className="pt-4">
+          <EntitlementsTab addonId={addonId} />
+        </TabsContent>
+        <TabsContent value="credit-grants" className="pt-4">
+          <CreditGrantsTab addonId={addonId} />
+        </TabsContent>
+        <TabsContent value="information" className="pt-4">
+          <InformationTab
+            addon={data}
+            onSave={(patch) =>
+              update
+                .mutateAsync({
+                  id: data.id,
+                  draft: {
+                    name: data.name,
+                    lookupKey: data.lookupKey,
+                    description: data.description,
+                    ...patch,
+                  },
+                })
+                .then(() => undefined)
+            }
+          />
+        </TabsContent>
+      </Tabs>
+    </DetailShell>
   )
 }
 
@@ -306,49 +300,52 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
     remove.reset()
   }
 
+  const form = adding ? (
+    <EntitlementCreateForm
+      features={options}
+      onSubmit={submit}
+      onCancel={() => setAdding(false)}
+      isSubmitting={create.isPending}
+      submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
+    />
+  ) : editing ? (
+    <EntitlementEditForm
+      feature={
+        editingFeature
+          ? toOption(editingFeature)
+          : {
+              id: editing.featureId,
+              name: editing.featureName ?? 'Feature',
+              type: editing.featureType,
+            }
+      }
+      defaultValue={entitlementToEdit(editing)}
+      onSubmit={submitEdit}
+      onCancel={() => setEditing(null)}
+      isSubmitting={updateEntitlement.isPending}
+      submitError={updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null}
+    />
+  ) : undefined
+
   return (
     <>
-      <EntitlementTable
-        entitlements={entitlements.data ?? []}
-        onAdd={() => setAdding(true)}
-        onEdit={(entitlement) => setEditing(entitlement)}
-        onDelete={(entitlement) => setTarget(entitlement)}
-      />
-      <EntitlementDialog
-        open={adding}
-        onOpenChange={setAdding}
-        mode="create"
-        features={options}
-        onSubmit={submit}
-        isSubmitting={create.isPending}
-        submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
-      />
-      <EntitlementDialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null)
+      <ContextualSection
+        title="Entitlements"
+        formTitle={editing ? 'Edit entitlement' : 'Add entitlement'}
+        backLabel="Entitlements"
+        form={form}
+        onBack={() => {
+          setAdding(false)
+          setEditing(null)
         }}
-        mode="edit"
-        {...(editing
-          ? {
-              editing: {
-                feature: editingFeature
-                  ? toOption(editingFeature)
-                  : {
-                      id: editing.featureId,
-                      name: editing.featureName ?? 'Feature',
-                      type: editing.featureType,
-                    },
-                defaultValue: entitlementToEdit(editing),
-              },
-            }
-          : {})}
-        onEditSubmit={submitEdit}
-        isSubmitting={updateEntitlement.isPending}
-        submitError={
-          updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null
-        }
-      />
+      >
+        <EntitlementTable
+          entitlements={entitlements.data ?? []}
+          onAdd={() => setAdding(true)}
+          onEdit={(entitlement) => setEditing(entitlement)}
+          onDelete={(entitlement) => setTarget(entitlement)}
+        />
+      </ContextualSection>
       <ConfirmDialog
         open={target !== null}
         onOpenChange={(open) => {
@@ -397,32 +394,42 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
     remove.reset()
   }
 
+  const form = adding ? (
+    <CreditGrantCreateForm
+      onSubmit={submit}
+      onCancel={() => setAdding(false)}
+      isSubmitting={create.isPending}
+      submitError={create.isError ? 'Could not create the grant. Try again.' : null}
+    />
+  ) : editing ? (
+    <CreditGrantEditForm
+      defaultValue={creditGrantToEdit(editing)}
+      onSubmit={submitEdit}
+      onCancel={() => setEditing(null)}
+      isSubmitting={updateGrant.isPending}
+      submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
+    />
+  ) : undefined
+
   return (
     <>
-      <CreditGrantTable
-        grants={grants.data ?? []}
-        onAdd={() => setAdding(true)}
-        onEdit={(grant) => setEditing(grant)}
-        onDelete={(grant) => setTarget(grant)}
-      />
-      <CreditGrantDialog
-        open={adding}
-        onOpenChange={setAdding}
-        onSubmit={submit}
-        isSubmitting={create.isPending}
-        submitError={create.isError ? 'Could not create the grant. Try again.' : null}
-      />
-      <CreditGrantDialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null)
+      <ContextualSection
+        title="Credit grants"
+        formTitle={editing ? 'Edit credit grant' : 'Add credit grant'}
+        backLabel="Credit grants"
+        form={form}
+        onBack={() => {
+          setAdding(false)
+          setEditing(null)
         }}
-        mode="edit"
-        {...(editing ? { defaultValue: creditGrantToEdit(editing) } : {})}
-        onEditSubmit={submitEdit}
-        isSubmitting={updateGrant.isPending}
-        submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
-      />
+      >
+        <CreditGrantTable
+          grants={grants.data ?? []}
+          onAdd={() => setAdding(true)}
+          onEdit={(grant) => setEditing(grant)}
+          onDelete={(grant) => setTarget(grant)}
+        />
+      </ContextualSection>
       <ConfirmDialog
         open={target !== null}
         onOpenChange={(open) => {
@@ -442,16 +449,29 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   )
 }
 
-/** Information — the add-on record itself, its attributes shown once. */
-function InformationTab({ addon }: { addon: Addon }) {
+/** Information — name and description edit in place; the rest is read-only. */
+function InformationTab({
+  addon,
+  onSave,
+}: {
+  addon: Addon
+  onSave: (patch: { name?: string; description?: string }) => Promise<void>
+}) {
   return (
     <Card className="max-w-2xl">
-      <CardContent className="pt-5">
+      <CardContent className="flex flex-col gap-4 pt-5">
+        <InlineField label="Name" value={addon.name} required onSave={(name) => onSave({ name })} />
+        <InlineField
+          label="Description"
+          value={addon.description ?? ''}
+          multiline
+          placeholder="Add a description"
+          onSave={(description) => onSave({ description })}
+        />
         <DetailList
           items={[
             { label: 'Status', value: <CatalogStatusBadge status={addon.status} /> },
             { label: 'Lookup key', value: addon.lookupKey || '—' },
-            { label: 'Description', value: addon.description || '—', full: true },
             { label: 'Add-on ID', value: <span className="font-mono text-xs">{addon.id}</span> },
             { label: 'Created', value: formatDate(addon.createdAt) },
             { label: 'Updated', value: formatDate(addon.updatedAt) },
@@ -573,23 +593,4 @@ function failureTitle(error: unknown): string {
     }
   }
   return 'This add-on could not be loaded.'
-}
-
-/** A save failure, as a sentence the editor can show inline. */
-function toSubmitError(error: unknown): string | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'invalid':
-        return error.message || 'Check the details and try again.'
-      case 'forbidden':
-        return 'You do not have permission to change add-ons here.'
-      case 'network':
-        return 'Could not reach Flexprice. Check your connection and try again.'
-      default:
-        return 'Could not save the add-on. Try again.'
-    }
-  }
-  return 'Could not save the add-on. Try again.'
 }

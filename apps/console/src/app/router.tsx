@@ -4,7 +4,9 @@ import {
   createRouter,
   redirect,
   stripSearchParams,
+  useCanGoBack,
   useNavigate,
+  useRouter,
   useRouterState,
   useSearch,
 } from '@tanstack/react-router'
@@ -44,6 +46,9 @@ import { parseFeatureSearch } from './featureSearch'
 import { DEFAULT_PLAN_QUERY, type PlanQuery } from '@fp/domain'
 const PlanListPage = lazy(() =>
   import('@/pages/plans/PlanListPage').then((m) => ({ default: m.PlanListPage })),
+)
+const PlanFormPage = lazy(() =>
+  import('@/pages/plans/PlanFormPage').then((m) => ({ default: m.PlanFormPage })),
 )
 const PlanDetailPage = lazy(() =>
   import('@/pages/plans/PlanDetailPage').then((m) => ({ default: m.PlanDetailPage })),
@@ -86,6 +91,9 @@ const CustomerDetailPage = lazy(() =>
   import('@/pages/customers/CustomerDetailPage').then((m) => ({ default: m.CustomerDetailPage })),
 )
 import { parseCustomerTab } from '@/pages/customers/CustomerDetailPage'
+const CustomerFormPage = lazy(() =>
+  import('@/pages/customers/CustomerFormPage').then((m) => ({ default: m.CustomerFormPage })),
+)
 import type { CustomerTab } from '@fp/ui/pages'
 import { parseCustomerSearch } from './customerSearch'
 import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
@@ -153,6 +161,15 @@ const FeatureFormPage = lazy(() =>
 const FeatureDetailPage = lazy(() =>
   import('@/pages/features/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })),
 )
+const AddonFormPage = lazy(() =>
+  import('@/pages/addons/AddonFormPage').then((m) => ({ default: m.AddonFormPage })),
+)
+const CouponFormPage = lazy(() =>
+  import('@/pages/coupons/CouponFormPage').then((m) => ({ default: m.CouponFormPage })),
+)
+const CostSheetFormPage = lazy(() =>
+  import('@/pages/cost-sheets/CostSheetFormPage').then((m) => ({ default: m.CostSheetFormPage })),
+)
 const AddonDetailPage = lazy(() =>
   import('@/pages/addons/AddonDetailPage').then((m) => ({ default: m.AddonDetailPage })),
 )
@@ -160,6 +177,20 @@ const PriceUnitDetailPage = lazy(() =>
   import('@/pages/price-units/PriceUnitDetailPage').then((m) => ({
     default: m.PriceUnitDetailPage,
   })),
+)
+const PriceUnitFormPage = lazy(() =>
+  import('@/pages/price-units/PriceUnitFormPage').then((m) => ({ default: m.PriceUnitFormPage })),
+)
+const GroupFormPage = lazy(() =>
+  import('@/pages/groups/GroupFormPage').then((m) => ({ default: m.GroupFormPage })),
+)
+const EnvironmentFormPage = lazy(() =>
+  import('@/pages/environments/EnvironmentFormPage').then((m) => ({
+    default: m.EnvironmentFormPage,
+  })),
+)
+const TaxFormPage = lazy(() =>
+  import('@/pages/taxes/TaxFormPage').then((m) => ({ default: m.TaxFormPage })),
 )
 const GroupDetailPage = lazy(() =>
   import('@/pages/groups/GroupDetailPage').then((m) => ({ default: m.GroupDetailPage })),
@@ -219,8 +250,6 @@ function ShellLayout() {
       environment={environments.current}
       environments={environments.environments}
       onEnvironmentChange={environments.select}
-      onEnvironmentCreate={environments.create}
-      canCreateProduction={environments.canCreateProduction}
       /*
        * The email is the name until `/users/me` says otherwise: it is the one
        * thing the person definitely recognises as theirs, and it is what they
@@ -607,6 +636,72 @@ function PlansRouteComponent() {
       onOpenPlan={(planId) =>
         void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
       }
+      onCreatePlan={() => void navigate({ to: '/plans/new' })}
+    />
+  )
+}
+
+/**
+ * Plan create and edit are full pages: `/plans/new` and `/plans/$planId/edit`,
+ * the step in `?step=` so a half-finished flow is a link.
+ */
+const planCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/plans/new',
+  validateSearch: (search: Record<string, unknown>): { step?: string } =>
+    typeof search.step === 'string' ? { step: search.step } : {},
+  component: PlanCreateRouteComponent,
+})
+
+function PlanCreateRouteComponent() {
+  const navigate = useNavigate()
+  const { step } = planCreateRoute.useSearch()
+
+  return (
+    <PlanFormPage
+      mode="create"
+      {...(step ? { step } : {})}
+      onStepChange={(next) =>
+        void navigate({ to: '/plans/new', search: { step: next }, replace: true })
+      }
+      onCancel={() => void navigate({ to: '/plans', search: {} as never })}
+      onDone={(planId) =>
+        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+      }
+    />
+  )
+}
+
+const planEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/plans/$planId/edit',
+  validateSearch: (search: Record<string, unknown>): { step?: string } =>
+    typeof search.step === 'string' ? { step: search.step } : {},
+  component: PlanEditRouteComponent,
+})
+
+function PlanEditRouteComponent() {
+  const { planId } = planEditRoute.useParams()
+  const { step } = planEditRoute.useSearch()
+  const navigate = useNavigate()
+  const toDetail = (id: string) =>
+    void navigate({ to: '/plans/$planId', params: { planId: id }, search: {} as never })
+
+  return (
+    <PlanFormPage
+      mode="edit"
+      planId={planId}
+      {...(step ? { step } : {})}
+      onStepChange={(next) =>
+        void navigate({
+          to: '/plans/$planId/edit',
+          params: { planId },
+          search: { step: next },
+          replace: true,
+        })
+      }
+      onCancel={() => toDetail(planId)}
+      onDone={toDetail}
     />
   )
 }
@@ -648,11 +743,160 @@ function PlanDetailRouteComponent() {
           replace: true,
         })
       }
+      onEdit={(id) => void navigate({ to: '/plans/$planId/edit', params: { planId: id } })}
       onArchived={() => void navigate({ to: '/plans', search: {} as never })}
       onNavigateToList={() => void navigate({ to: '/plans', search: {} as never })}
       onDuplicated={(newId) =>
         void navigate({ to: '/plans/$planId', params: { planId: newId }, search: {} as never })
       }
+    />
+  )
+}
+
+/**
+ * Cancel on a full-page form returns to wherever the user came from (the list
+ * or the detail page), and falls back to `fallback` on a direct visit.
+ */
+function useCancelToList(fallback: string, params?: Record<string, string>) {
+  const router = useRouter()
+  const canGoBack = useCanGoBack()
+  const navigate = useNavigate()
+  return () => {
+    if (canGoBack) router.history.back()
+    else void navigate({ to: fallback, ...(params ? { params } : {}), search: {} as never })
+  }
+}
+
+const addonCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/addons/new',
+  component: AddonCreateRouteComponent,
+})
+
+function AddonCreateRouteComponent() {
+  const navigate = useNavigate()
+  const cancel = useCancelToList('/addons')
+
+  return (
+    <AddonFormPage
+      mode="create"
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
+      onDone={(addonId) => void navigate({ to: '/addons/$addonId', params: { addonId } })}
+    />
+  )
+}
+
+const addonEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/addons/$addonId/edit',
+  component: AddonEditRouteComponent,
+})
+
+function AddonEditRouteComponent() {
+  const { addonId } = addonEditRoute.useParams()
+  const navigate = useNavigate()
+  const toDetail = (id: string) =>
+    void navigate({ to: '/addons/$addonId', params: { addonId: id } })
+  const cancel = useCancelToList('/addons/$addonId', { addonId })
+
+  return (
+    <AddonFormPage
+      mode="edit"
+      addonId={addonId}
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
+      onDone={toDetail}
+    />
+  )
+}
+
+const couponCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/coupons/new',
+  component: CouponCreateRouteComponent,
+})
+
+function CouponCreateRouteComponent() {
+  const navigate = useNavigate()
+  const cancel = useCancelToList('/coupons')
+
+  return (
+    <CouponFormPage
+      mode="create"
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/coupons', search: {} as never })}
+      onDone={(couponId) => void navigate({ to: '/coupons/$couponId', params: { couponId } })}
+    />
+  )
+}
+
+const couponEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/coupons/$couponId/edit',
+  component: CouponEditRouteComponent,
+})
+
+function CouponEditRouteComponent() {
+  const { couponId } = couponEditRoute.useParams()
+  const navigate = useNavigate()
+  const toDetail = (id: string) =>
+    void navigate({ to: '/coupons/$couponId', params: { couponId: id } })
+  const cancel = useCancelToList('/coupons/$couponId', { couponId })
+
+  return (
+    <CouponFormPage
+      mode="edit"
+      couponId={couponId}
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/coupons', search: {} as never })}
+      onDone={toDetail}
+    />
+  )
+}
+
+const costSheetCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/cost-sheets/new',
+  component: CostSheetCreateRouteComponent,
+})
+
+function CostSheetCreateRouteComponent() {
+  const navigate = useNavigate()
+  const cancel = useCancelToList('/cost-sheets')
+
+  return (
+    <CostSheetFormPage
+      mode="create"
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
+      onDone={(costSheetId) =>
+        void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId } })
+      }
+    />
+  )
+}
+
+const costSheetEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/cost-sheets/$costSheetId/edit',
+  component: CostSheetEditRouteComponent,
+})
+
+function CostSheetEditRouteComponent() {
+  const { costSheetId } = costSheetEditRoute.useParams()
+  const navigate = useNavigate()
+  const toDetail = (id: string) =>
+    void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId: id } })
+  const cancel = useCancelToList('/cost-sheets/$costSheetId', { costSheetId })
+
+  return (
+    <CostSheetFormPage
+      mode="edit"
+      costSheetId={costSheetId}
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
+      onDone={toDetail}
     />
   )
 }
@@ -683,6 +927,10 @@ function AddonsRouteComponent() {
       onOpenAddon={(addon) =>
         void navigate({ to: '/addons/$addonId', params: { addonId: addon.id } })
       }
+      onCreateAddon={() => void navigate({ to: '/addons/new' })}
+      onEditAddon={(addon) =>
+        void navigate({ to: '/addons/$addonId/edit', params: { addonId: addon.id } })
+      }
     />
   )
 }
@@ -701,6 +949,7 @@ function AddonDetailRouteComponent() {
   return (
     <AddonDetailPage
       addonId={addonId}
+      onEdit={(id) => void navigate({ to: '/addons/$addonId/edit', params: { addonId: id } })}
       onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
     />
   )
@@ -733,6 +982,7 @@ function CouponsRouteComponent() {
       onOpenCoupon={(coupon) =>
         void navigate({ to: '/coupons/$couponId', params: { couponId: coupon.id } })
       }
+      onCreateCoupon={() => void navigate({ to: '/coupons/new' })}
     />
   )
 }
@@ -750,6 +1000,7 @@ function CouponDetailRouteComponent() {
   return (
     <CouponDetailPage
       couponId={couponId}
+      onEdit={(id) => void navigate({ to: '/coupons/$couponId/edit', params: { couponId: id } })}
       onBack={() => void navigate({ to: '/coupons', search: {} as never })}
     />
   )
@@ -781,6 +1032,30 @@ function PriceUnitsRouteComponent() {
       onQueryChange={(next) => void navigate({ to: '/price-units', search: next, replace: true })}
       onOpenPriceUnit={(priceUnit) =>
         void navigate({ to: '/price-units/$priceUnitId', params: { priceUnitId: priceUnit.id } })
+      }
+      onCreatePriceUnit={() => void navigate({ to: '/price-units/new' })}
+    />
+  )
+}
+
+/** Price unit create is a full page; there is no edit page (only the name changes, in place on the detail). */
+const priceUnitCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/price-units/new',
+  component: PriceUnitCreateRouteComponent,
+})
+
+function PriceUnitCreateRouteComponent() {
+  const navigate = useNavigate()
+  const toList = () => void navigate({ to: '/price-units', search: {} as never })
+
+  return (
+    <PriceUnitFormPage
+      onCancel={toList}
+      onDone={(id) =>
+        id
+          ? void navigate({ to: '/price-units/$priceUnitId', params: { priceUnitId: id } })
+          : toList()
       }
     />
   )
@@ -830,8 +1105,48 @@ function GroupsRouteComponent() {
       onOpenGroup={(group) =>
         void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })
       }
+      onCreateGroup={() => void navigate({ to: '/groups/new' })}
     />
   )
+}
+
+/** Group create is a compact full page. Groups have no update route, so there is no edit. */
+const groupCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/groups/new',
+  component: GroupCreateRouteComponent,
+})
+
+function GroupCreateRouteComponent() {
+  const navigate = useNavigate()
+  const toList = () => void navigate({ to: '/groups', search: {} as never })
+
+  return (
+    <GroupFormPage
+      onCancel={toList}
+      onDone={(id) =>
+        id ? void navigate({ to: '/groups/$groupId', params: { groupId: id } }) : toList()
+      }
+    />
+  )
+}
+
+/** Environment create: `/environments/new`, opened from the switcher and from Settings. */
+const environmentCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/environments/new',
+  component: EnvironmentCreateRouteComponent,
+})
+
+function EnvironmentCreateRouteComponent() {
+  const navigate = useNavigate()
+  const toEnvironments = () =>
+    void navigate({
+      to: '/settings',
+      search: { section: 'organization', tab: 'environments' },
+    })
+
+  return <EnvironmentFormPage onCancel={toEnvironments} onDone={toEnvironments} />
 }
 
 /** The group detail page. `/groups/$groupId` — a read-only view for now. */
@@ -872,6 +1187,13 @@ function CostSheetsRouteComponent() {
       onOpenCostSheet={(costSheet) =>
         void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId: costSheet.id } })
       }
+      onCreateCostSheet={() => void navigate({ to: '/cost-sheets/new' })}
+      onEditCostSheet={(costSheet) =>
+        void navigate({
+          to: '/cost-sheets/$costSheetId/edit',
+          params: { costSheetId: costSheet.id },
+        })
+      }
     />
   )
 }
@@ -890,6 +1212,9 @@ function CostSheetDetailRouteComponent() {
   return (
     <CostSheetDetailPage
       costSheetId={costSheetId}
+      onEdit={(id) =>
+        void navigate({ to: '/cost-sheets/$costSheetId/edit', params: { costSheetId: id } })
+      }
       onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
     />
   )
@@ -946,6 +1271,79 @@ function CustomersRouteComponent() {
       onOpenCustomer={(customerId) =>
         void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
       }
+      onCreateCustomer={() => void navigate({ to: '/customers/new' })}
+      onEditCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId/edit', params: { customerId } })
+      }
+    />
+  )
+}
+
+/**
+ * Customer create and edit are full pages: `/customers/new` and
+ * `/customers/$customerId/edit`, the step in `?step=` so a half-finished form is a link.
+ */
+const customerCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/customers/new',
+  validateSearch: (search: Record<string, unknown>): { step?: string } =>
+    typeof search.step === 'string' ? { step: search.step } : {},
+  component: CustomerCreateRouteComponent,
+})
+
+function CustomerCreateRouteComponent() {
+  const navigate = useNavigate()
+  const { step } = customerCreateRoute.useSearch()
+
+  return (
+    <CustomerFormPage
+      mode="create"
+      {...(step ? { step } : {})}
+      onStepChange={(next) =>
+        void navigate({ to: '/customers/new', search: { step: next }, replace: true })
+      }
+      onCancel={() => void navigate({ to: '/customers', search: {} as never })}
+      onDone={(customerId) =>
+        void navigate({
+          to: '/customers/$customerId',
+          params: { customerId },
+          search: {} as never,
+        })
+      }
+    />
+  )
+}
+
+const customerEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/customers/$customerId/edit',
+  validateSearch: (search: Record<string, unknown>): { step?: string } =>
+    typeof search.step === 'string' ? { step: search.step } : {},
+  component: CustomerEditRouteComponent,
+})
+
+function CustomerEditRouteComponent() {
+  const { customerId } = customerEditRoute.useParams()
+  const { step } = customerEditRoute.useSearch()
+  const navigate = useNavigate()
+  const toDetail = (id: string) =>
+    void navigate({ to: '/customers/$customerId', params: { customerId: id }, search: {} as never })
+
+  return (
+    <CustomerFormPage
+      mode="edit"
+      customerId={customerId}
+      {...(step ? { step } : {})}
+      onStepChange={(next) =>
+        void navigate({
+          to: '/customers/$customerId/edit',
+          params: { customerId },
+          search: { step: next },
+          replace: true,
+        })
+      }
+      onCancel={() => toDetail(customerId)}
+      onDone={toDetail}
     />
   )
 }
@@ -983,7 +1381,9 @@ function CustomerDetailRouteComponent() {
         })
       }
       onNavigateToList={() => void navigate({ to: '/customers', search: {} as never })}
-      onCreateSubscription={() => void navigate({ to: '/subscriptions/new', search: {} as never })}
+      onEdit={(id) =>
+        void navigate({ to: '/customers/$customerId/edit', params: { customerId: id } })
+      }
     />
   )
 }
@@ -1153,8 +1553,40 @@ function TaxesRouteComponent() {
     <TaxListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/taxes', search: next, replace: true })}
+      onCreateTaxRate={() => void navigate({ to: '/taxes/new' })}
+      onEditTaxRate={(taxRate) =>
+        void navigate({ to: '/taxes/$taxRateId/edit', params: { taxRateId: taxRate.id } })
+      }
     />
   )
+}
+
+/** Tax rate create and edit are full pages. Both go back to the list. */
+const taxCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/taxes/new',
+  component: TaxCreateRouteComponent,
+})
+
+function TaxCreateRouteComponent() {
+  const navigate = useNavigate()
+  const toList = () => void navigate({ to: '/taxes', search: {} as never })
+
+  return <TaxFormPage mode="create" onCancel={toList} onDone={toList} />
+}
+
+const taxEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/taxes/$taxRateId/edit',
+  component: TaxEditRouteComponent,
+})
+
+function TaxEditRouteComponent() {
+  const { taxRateId } = taxEditRoute.useParams()
+  const navigate = useNavigate()
+  const toList = () => void navigate({ to: '/taxes', search: {} as never })
+
+  return <TaxFormPage mode="edit" taxRateId={taxRateId} onCancel={toList} onDone={toList} />
 }
 
 const eventsRoute = createRoute({
@@ -1260,18 +1692,31 @@ export const routeTree = rootRoute.addChildren([
     featureEditRoute,
     featureDetailRoute,
     plansRoute,
+    planCreateRoute,
+    planEditRoute,
     planDetailRoute,
     addonsRoute,
+    addonCreateRoute,
+    addonEditRoute,
     addonDetailRoute,
     couponsRoute,
+    couponCreateRoute,
+    couponEditRoute,
     couponDetailRoute,
     priceUnitsRoute,
+    priceUnitCreateRoute,
     priceUnitDetailRoute,
     groupsRoute,
+    groupCreateRoute,
     groupDetailRoute,
+    environmentCreateRoute,
     costSheetsRoute,
+    costSheetCreateRoute,
+    costSheetEditRoute,
     costSheetDetailRoute,
     customersRoute,
+    customerCreateRoute,
+    customerEditRoute,
     customerDetailRoute,
     subscriptionsRoute,
     invoicesRoute,
@@ -1283,6 +1728,8 @@ export const routeTree = rootRoute.addChildren([
     integrationsRoute,
     usageSyncsRoute,
     taxesRoute,
+    taxCreateRoute,
+    taxEditRoute,
     eventsRoute,
     settingsRoute,
     subscriptionCreateRoute,

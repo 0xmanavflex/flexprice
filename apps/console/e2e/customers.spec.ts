@@ -27,40 +27,49 @@ test.describe('the customers list', () => {
     await page.getByRole('menuitem', { name: item }).click()
   }
 
-  test('creates a customer from a dialog', async ({ page }) => {
+  test('creates a customer on its own page and lands on its detail', async ({ page }) => {
     await page.goto('/customers')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
 
     await page.getByRole('button', { name: 'New customer' }).first().click()
-    const dialog = page.getByRole('dialog', { name: 'New customer' })
-    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/\/customers\/new/)
+    await expect(page.getByRole('heading', { level: 1, name: 'Create customer' })).toBeVisible()
+    await expect(page.getByRole('dialog')).toHaveCount(0)
 
-    await dialog.getByRole('button', { name: 'Create customer' }).click()
-    await expect(dialog.getByText('Enter a name')).toBeVisible()
+    // Step 1 is gated on its own fields.
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page.getByText('Enter a name')).toBeVisible()
 
-    await dialog.getByLabel('Name', { exact: false }).first().fill('Acme Robotics')
-    await dialog.getByLabel('External ID').fill('acme_robotics')
+    await page.getByLabel('Name', { exact: false }).first().fill('Acme Robotics')
+    await page.getByLabel('External ID').fill('acme_robotics')
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page).toHaveURL(/step=address/)
+    await page.getByRole('button', { name: 'Next' }).click()
+    await expect(page).toHaveURL(/step=additional/)
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/customers$/))
-    await dialog.getByRole('button', { name: 'Create customer' }).click()
+    await page.getByRole('button', { name: 'Create customer' }).click()
     await request
-    await expect(dialog).toBeHidden()
+    await expect(page).toHaveURL(/\/customers\/(?!new)[^/]+$/)
   })
 
-  test('edits a customer from the row menu', async ({ page }) => {
+  test('edits a customer on its own prepopulated page', async ({ page }) => {
     await page.goto('/customers')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
 
     await openRowMenu(page, 'Edit customer')
-    const dialog = page.getByRole('dialog', { name: 'Edit customer' })
-    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
+    await expect(page.getByRole('heading', { level: 1, name: /^Edit / })).toBeVisible()
+    await expect(page.getByLabel('Name', { exact: false }).first()).not.toHaveValue('', {
+      timeout: 20_000,
+    })
 
-    await dialog.getByLabel('Phone').fill('+1 555 0100')
+    await page.getByLabel('Phone').fill('+1 555 0100')
 
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/customers$/))
-    await dialog.getByRole('button', { name: 'Save changes' }).click()
+    await page.getByRole('button', { name: 'Save changes' }).click()
     await request
-    await expect(dialog).toBeHidden()
+    await expect(page).toHaveURL(/\/customers\/(?!new)[^/]+$/)
   })
 
   test('renames a customer inline', async ({ page }) => {
@@ -90,5 +99,57 @@ test.describe('the customers list', () => {
     await dialog.getByRole('button', { name: 'Delete customer' }).click()
     await request
     await expect(dialog).toBeHidden()
+  })
+})
+
+test.describe('a customer detail page', () => {
+  const openFirstCustomer = async (page: Page) => {
+    await page.goto('/customers')
+    const first = new CatalogListPage(page, {
+      heading: 'Customers',
+      searchLabel: 'Search customers',
+    })
+      .rows()
+      .first()
+    await expect(first).toBeVisible({ timeout: 20_000 })
+    await first.getByRole('button', { name: 'Row actions' }).click()
+    await page.getByRole('menuitem', { name: 'View customer' }).click()
+    await expect(page).toHaveURL(/\/customers\/[^/]+$/)
+  }
+
+  test('edits phone inline on the Information tab', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('button', { name: 'Information' }).click()
+
+    await page.getByRole('button', { name: 'Edit Phone' }).click()
+    await page.getByRole('textbox', { name: 'Phone' }).fill('+1 555 0199')
+    const request = page.waitForRequest(isWrite('PUT', /\/v1\/customers$/))
+    await page.getByRole('textbox', { name: 'Phone' }).press('Enter')
+    await request
+  })
+
+  test('opens the full edit page from the header', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('button', { name: 'Edit customer' }).click()
+    await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
+  })
+
+  test('creates a subscription inside the Subscriptions section', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('button', { name: 'Create subscription' }).first().click()
+
+    // Same page, same customer, Subscriptions tab: nothing navigated away.
+    await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)
+    await expect(page.getByRole('heading', { level: 2, name: 'Create subscription' })).toBeVisible()
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page.getByRole('heading', { level: 2, name: 'Subscriptions' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Create subscription' }).first().click()
+    for (let i = 0; i < 4; i += 1) await page.getByRole('button', { name: 'Next' }).click()
+    await page.getByRole('button', { name: 'Create Subscription', exact: true }).click()
+    await expect(page.getByRole('heading', { level: 2, name: 'Subscriptions' })).toBeVisible()
+    await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)
   })
 })

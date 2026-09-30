@@ -77,7 +77,7 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
         <button
           type="button"
           onClick={onNavigateToList}
-          className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground w-fit text-xs transition-colors"
         >
           ← Groups
         </button>

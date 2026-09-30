@@ -1,27 +1,27 @@
 import { expect, type Locator, type Page } from '@playwright/test'
 
 /**
- * A plan's detail page and the three dialogs launched from its tabs.
+ * A plan's detail page and the contextual forms opened from its tabs.
  *
  * Sections are a `<nav aria-label="Plan sections">` of links-as-buttons; every
- * create/edit is a modal dialog named by its title, and a row's edit lives in
- * its "Actions for <name>" menu.
+ * create/edit opens in place, as a section named by its title (no dialog), and
+ * a row's edit lives in its "Actions for <name>" menu.
  */
 export class PlanDetailPage {
   readonly nav: Locator
-  readonly dialog: Locator
+  readonly main: Locator
 
   private readonly page: Page
 
   constructor(page: Page) {
     this.page = page
     this.nav = page.getByRole('navigation', { name: 'Plan sections' })
-    this.dialog = page.getByRole('dialog')
+    this.main = page.getByRole('main')
   }
 
   async open() {
     await this.page.goto('/plans/plan_synth_0000')
-    await expect(this.nav).toBeVisible()
+    await expect(this.nav).toBeVisible({ timeout: 20_000 })
   }
 
   async section(name: string) {

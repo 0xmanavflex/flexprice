@@ -23,11 +23,8 @@ import type { ShellCreateAction } from '@fp/ui/compositions'
  * that is the same dead end one level up, and it is worse than the menu being
  * short, because it was advertised.
  *
- * Groups and cost sheets are here now that their lists offer to create one.
- * Both hand off to the current dashboard, because `POST /groups` and
- * `POST /costs` are not wired to a drawer in V2 yet, and both drop their
- * offer when no legacy origin is configured — so these two entries lead to a
- * create button exactly when the page they land on has one.
+ * Group opens its own compact create page (`/groups/new`); cost sheets are
+ * here too and open their own full-page create form.
  */
 export interface CreateAction extends ShellCreateAction {
   /** Where the flow begins. Routed by the app, so this stays plain data. */
@@ -36,12 +33,12 @@ export interface CreateAction extends ShellCreateAction {
 
 export const CREATE_ACTIONS: CreateAction[] = [
   { id: 'subscription', label: 'New subscription', path: '/subscriptions/new' },
-  { id: 'customer', label: 'New customer', path: '/customers' },
+  { id: 'customer', label: 'New customer', path: '/customers/new' },
 
-  { id: 'plan', label: 'New plan', path: '/plans', startsGroup: true },
+  { id: 'plan', label: 'New plan', path: '/plans/new', startsGroup: true },
   { id: 'feature', label: 'New feature', path: '/features/new' },
-  { id: 'group', label: 'New group', path: '/groups' },
-  { id: 'cost-sheet', label: 'New cost sheet', path: '/cost-sheets' },
+  { id: 'group', label: 'New group', path: '/groups/new' },
+  { id: 'cost-sheet', label: 'New cost sheet', path: '/cost-sheets/new' },
 
   { id: 'invoice', label: 'New invoice', path: '/invoices', startsGroup: true },
   { id: 'payment', label: 'Record a payment', path: '/payments' },

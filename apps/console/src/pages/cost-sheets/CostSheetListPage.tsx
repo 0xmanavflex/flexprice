@@ -1,13 +1,7 @@
 import { useState } from 'react'
-import { type CostSheet, type CostSheetQuery, type CreateCostSheet, costSheetToEdit } from '@fp/domain'
-import {
-  ApiError,
-  useCostSheets,
-  useCreateCostSheet,
-  useDeleteCostSheet,
-  useUpdateCostSheet,
-} from '@fp/query'
-import { CostSheetEditorDialog, CostSheetGrid } from '@fp/ui/pages'
+import { type CostSheet, type CostSheetQuery } from '@fp/domain'
+import { ApiError, useCostSheets, useDeleteCostSheet, useUpdateCostSheet } from '@fp/query'
+import { CostSheetGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { SheetIcon } from 'lucide-react'
@@ -16,51 +10,33 @@ export interface CostSheetListPageProps {
   query: CostSheetQuery
   onQueryChange: (query: CostSheetQuery) => void
   onOpenCostSheet: (costSheet: CostSheet) => void
+  onCreateCostSheet: () => void
+  onEditCostSheet: (costSheet: CostSheet) => void
 }
 
-/** Which record the dialog is editing — a new one, or an existing cost sheet. */
-type Editing = { mode: 'create' } | { mode: 'edit'; costSheet: CostSheet } | null
-
 /**
- * The cost sheet surface: a list, a dialog to create or edit one, inline rename
- * in the name cell, and a confirmed delete.
+ * The cost sheet surface: a list, inline rename in the name cell, and a
+ * confirmed delete. Create and edit are full pages (`CostSheetFormPage`).
  *
- * The list stays URL-driven; the dialog and the pending delete are the only
- * local state, because a half-typed cost sheet is not worth a URL.
+ * The list stays URL-driven; the pending delete is the only local state.
  */
 export function CostSheetListPage({
   query,
   onQueryChange,
   onOpenCostSheet,
+  onCreateCostSheet,
+  onEditCostSheet,
 }: CostSheetListPageProps) {
   const costSheets = useCostSheets(query)
-  const create = useCreateCostSheet()
   const update = useUpdateCostSheet()
   const remove = useDeleteCostSheet()
 
-  const [editing, setEditing] = useState<Editing>(null)
   const [deleting, setDeleting] = useState<CostSheet | null>(null)
 
   const failure = toFailure(costSheets.error)
   const rows = costSheets.data?.costSheets ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
-
-  const active = editing?.mode === 'create' ? create : update
-
-  const close = () => {
-    setEditing(null)
-    create.reset()
-    update.reset()
-  }
-
-  const submit = (draft: CreateCostSheet) => {
-    if (editing?.mode === 'create') {
-      create.mutate(draft, { onSuccess: close })
-    } else if (editing?.mode === 'edit') {
-      update.mutate({ id: editing.costSheet.id, draft }, { onSuccess: close })
-    }
-  }
 
   const closeDelete = () => {
     setDeleting(null)
@@ -77,7 +53,7 @@ export function CostSheetListPage({
           isFiltered={isFiltered}
           onRetry={() => void costSheets.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={() => setEditing({ mode: 'create' })}>New cost sheet</Button>}
+          createAction={<Button onClick={onCreateCostSheet}>New cost sheet</Button>}
           emptyIcon={<SheetIcon aria-hidden />}
           emptyTitle="No cost sheets yet"
           emptyDescription="Cost sheets record what usage costs you, so margin can be measured against what you charge. Create the first to start."
@@ -89,29 +65,18 @@ export function CostSheetListPage({
             onQueryChange={onQueryChange}
             onCostSheetClick={onOpenCostSheet}
             onRename={(costSheet, name) =>
-              update
-                .mutateAsync({ id: costSheet.id, draft: { name } })
-                .then(() => undefined, () => undefined)
+              update.mutateAsync({ id: costSheet.id, draft: { name } }).then(
+                () => undefined,
+                () => undefined,
+              )
             }
-            onCreate={() => setEditing({ mode: 'create' })}
-            onEdit={(costSheet) => setEditing({ mode: 'edit', costSheet })}
+            onCreate={onCreateCostSheet}
+            onEdit={onEditCostSheet}
             onDelete={setDeleting}
             onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
-
-      <CostSheetEditorDialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) close()
-        }}
-        mode={editing?.mode ?? 'create'}
-        {...(editing?.mode === 'edit' ? { defaultValue: costSheetToEdit(editing.costSheet) } : {})}
-        onSubmit={submit}
-        isSubmitting={active.isPending}
-        submitError={toSubmitError(active.error)}
-      />
 
       <ConfirmDialog
         open={deleting !== null}

@@ -17,6 +17,14 @@ export interface SubscriptionCreatePageProps {
   override: PriceOverride | undefined
   onOverrideChange: (override: PriceOverride) => void
   onCancel: () => void
+  /**
+   * Render inside another page (a customer's Subscriptions section) instead of
+   * as a page of its own: no `<main>` or heading, the Customer step dropped
+   * because the customer is already known, and the last step offers
+   * "Create Subscription" (`onCreate`).
+   */
+  embedded?: boolean
+  onCreate?: () => void
 }
 
 /**
@@ -56,22 +64,37 @@ export function SubscriptionCreatePage({
   override,
   onOverrideChange,
   onCancel,
+  embedded = false,
+  onCreate,
 }: SubscriptionCreatePageProps) {
-  const index = SUBSCRIPTION_STEPS.findIndex((entry) => entry.id === step)
-  const current = SUBSCRIPTION_STEPS[index]
-  const previous = index > 0 ? SUBSCRIPTION_STEPS[index - 1] : undefined
-  const next = SUBSCRIPTION_STEPS[index + 1]
+  const steps = embedded
+    ? SUBSCRIPTION_STEPS.filter((entry) => entry.id !== 'customer')
+    : SUBSCRIPTION_STEPS
+  const index = steps.findIndex((entry) => entry.id === step)
+  const current = steps[index]
+  const previous = index > 0 ? steps[index - 1] : undefined
+  const next = steps[index + 1]
 
   // Prices is the only step that collects anything today, so it is the only one
   // that can be complete. When the rest land, each adds its own condition here.
   const completed = new Set<SubscriptionStepId>(override ? ['prices'] : [])
 
+  const Shell = embedded ? 'div' : 'main'
+
   return (
-    <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto p-6">
-      <h1 className="text-xl font-semibold">New subscription</h1>
+    <Shell
+      className={
+        embedded
+          ? 'flex flex-col gap-8'
+          : 'mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto p-6'
+      }
+    >
+      {embedded ? null : <h1 className="text-xl font-semibold">New subscription</h1>}
 
       <WorkflowStepper
-        steps={toSteps(step, furthestReached, completed)}
+        steps={toSteps(step, furthestReached, completed).filter((entry) =>
+          steps.some((kept) => kept.id === entry.id),
+        )}
         currentStep={step}
         onStepChange={(id) => onStepChange(id as SubscriptionStepId)}
         aria-label="Subscription setup"
@@ -105,11 +128,12 @@ export function SubscriptionCreatePage({
           <WizardFooter
             {...(previous ? { onBack: () => onStepChange(previous.id) } : {})}
             {...(next ? { onNext: () => onStepChange(next.id) } : {})}
+            {...(embedded && !next && onCreate ? { onCreate } : {})}
             onCancel={onCancel}
           />
         </div>
       </WorkflowStepper>
-    </main>
+    </Shell>
   )
 }
 
@@ -149,10 +173,12 @@ function toSteps(
 function WizardFooter({
   onBack,
   onNext,
+  onCreate,
   onCancel,
 }: {
   onBack?: () => void
   onNext?: () => void
+  onCreate?: () => void
   onCancel: () => void
 }) {
   return (
@@ -173,6 +199,11 @@ function WizardFooter({
           <Button type="button" onClick={onNext}>
             Next
             <ArrowRightIcon aria-hidden className="size-4" />
+          </Button>
+        ) : null}
+        {onCreate ? (
+          <Button type="button" onClick={onCreate}>
+            Create Subscription
           </Button>
         ) : null}
       </div>

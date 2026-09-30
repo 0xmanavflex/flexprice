@@ -2575,7 +2575,13 @@ export const handlers = [
     const body = await readBody(request)
     const row = { ...body, id: `cost_new_${Date.now()}`, status: 'published', prices: [] }
     costSheetStore.unshift(row)
-    return HttpResponse.json(row, { status: 201 })
+    return HttpResponse.json({ costsheet: row }, { status: 201 })
+  }),
+  http.get(`${BASE}/costs/:id`, ({ params }) => {
+    const row = costSheetStore.find((item) => item['id'] === params['id'])
+    return row
+      ? HttpResponse.json({ costsheet: row })
+      : HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
   }),
   http.put(`${BASE}/costs/:id`, async ({ request, params }) =>
     patchRow(costSheetStore, String(params['id']), await readBody(request)),

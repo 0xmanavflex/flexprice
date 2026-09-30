@@ -1,5 +1,5 @@
 import { type Charge, type CostSheet, PriceEntityType } from '@fp/domain'
-import { ApiError, useCostSheet, usePrices } from '@fp/query'
+import { ApiError, useCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
 import { CatalogStatusBadge, ChargeTable } from '@fp/ui/pages'
 import {
   AppFailure,
@@ -7,14 +7,17 @@ import {
   DetailList,
   DetailShell,
   EmptyState,
+  InlineField,
   LoadingRows,
   PageBody,
   Section,
 } from '@fp/ui/compositions'
-import { ReceiptIcon } from 'lucide-react'
+import { Button } from '@fp/ui/primitives'
+import { PencilIcon, ReceiptIcon } from 'lucide-react'
 
 export interface CostSheetDetailPageProps {
   costSheetId: string
+  onEdit: (costSheetId: string) => void
   onNavigateToList: () => void
 }
 
@@ -34,9 +37,14 @@ export interface CostSheetDetailPageProps {
  * a list price nor a total for a cost sheet. Inventing one would be exactly the
  * fabricated metric the detail-page audit warns against.
  */
-export function CostSheetDetailPage({ costSheetId, onNavigateToList }: CostSheetDetailPageProps) {
+export function CostSheetDetailPage({
+  costSheetId,
+  onEdit,
+  onNavigateToList,
+}: CostSheetDetailPageProps) {
   const costSheet = useCostSheet(costSheetId)
   const prices = usePrices(PriceEntityType.CostSheet, costSheetId)
+  const update = useUpdateCostSheet()
 
   if (costSheet.isPending) {
     return (
@@ -81,7 +89,7 @@ export function CostSheetDetailPage({ costSheetId, onNavigateToList }: CostSheet
         <button
           type="button"
           onClick={onNavigateToList}
-          className="w-fit text-xs text-muted-foreground transition-colors hover:text-foreground"
+          className="text-muted-foreground hover:text-foreground w-fit text-xs transition-colors"
         >
           ← Cost Sheets
         </button>
@@ -90,14 +98,43 @@ export function CostSheetDetailPage({ costSheetId, onNavigateToList }: CostSheet
       badges={<CatalogStatusBadge status={data.status} />}
       identifier={data.lookupKey || data.id}
       {...(data.description ? { description: data.description } : {})}
+      actions={
+        <Button variant="outline" size="sm" onClick={() => onEdit(costSheetId)}>
+          <PencilIcon aria-hidden className="size-4" />
+          Edit
+        </Button>
+      }
       metrics={costSheetMetrics(data, charges)}
     >
       <Section title="Information" description="Every attribute of this cost sheet.">
+        <div className="mb-4 grid gap-4 sm:grid-cols-2">
+          <InlineField
+            label="Name"
+            value={data.name}
+            required
+            onSave={(name) =>
+              update.mutateAsync({
+                id: data.id,
+                draft: { name, lookupKey: data.lookupKey, description: data.description },
+              })
+            }
+          />
+          <InlineField
+            label="Description"
+            value={data.description ?? ''}
+            multiline
+            placeholder="No description"
+            onSave={(description) =>
+              update.mutateAsync({
+                id: data.id,
+                draft: { name: data.name, lookupKey: data.lookupKey, description },
+              })
+            }
+          />
+        </div>
         <DetailList
           items={[
-            { label: 'Name', value: data.name },
             { label: 'Lookup key', value: data.lookupKey || '—' },
-            { label: 'Description', value: data.description || '—', full: true },
             { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
             { label: 'Cost sheet ID', value: <span className="font-mono text-xs">{data.id}</span> },
             { label: 'Created', value: formatDate(data.createdAt) },
@@ -143,7 +180,9 @@ function costSheetMetrics(data: CostSheet, charges: Charge[] | null): DetailMetr
   ]
 
   if (charges && charges.length > 0) {
-    const currencies = [...new Set(charges.map((charge) => charge.currency.toUpperCase()).filter(Boolean))]
+    const currencies = [
+      ...new Set(charges.map((charge) => charge.currency.toUpperCase()).filter(Boolean)),
+    ]
     const [only] = currencies
     if (currencies.length === 1 && only) {
       metrics.push({ label: 'Currency', value: only })

@@ -17,7 +17,11 @@ export interface SubscriptionListPageProps {
  * Fetches, turns an error into a sentence, and hands the grid plain props. No
  * `useState`: the query lives in the URL, so a filtered list is a link.
  */
-export function SubscriptionListPage({ query, onQueryChange, onCreate }: SubscriptionListPageProps) {
+export function SubscriptionListPage({
+  query,
+  onQueryChange,
+  onCreate,
+}: SubscriptionListPageProps) {
   const subscriptions = useSubscriptions(query)
 
   const failure = toFailure(subscriptions.error)

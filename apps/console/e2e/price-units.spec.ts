@@ -1,0 +1,58 @@
+import { expect, test } from '@playwright/test'
+
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(
+    (value) => {
+      try {
+        window.localStorage.setItem('flexprice.session', value)
+      } catch {
+        /* private-mode browser: the guard falls back to sign-in, tested elsewhere */
+      }
+    },
+    JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }),
+  )
+})
+
+test.describe('price unit create', () => {
+  test('creates a price unit on its own page', async ({ page }) => {
+    await page.goto('/price-units')
+    await page.getByRole('button', { name: 'New price unit' }).first().click()
+    await expect(page).toHaveURL(/\/price-units\/new$/)
+    await expect(page.getByRole('heading', { name: 'Create price unit' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Create price unit' }).click()
+    await expect(page.getByText('Enter a name')).toBeVisible()
+
+    await page.getByLabel('Name', { exact: false }).first().fill('Credits')
+    await page.getByLabel('Code').fill('CRD')
+    await page.getByLabel('Symbol').fill('C')
+    await page.getByLabel('Base currency').click()
+    await page.getByRole('option', { name: /^USD/ }).first().click()
+    await page.getByLabel('Conversion rate').fill('0.5')
+
+    const request = page.waitForRequest(
+      (r) => r.method() === 'POST' && /\/v1\/prices\/units$/.test(new URL(r.url()).pathname),
+    )
+    await page.getByRole('button', { name: 'Create price unit' }).click()
+    await request
+    await expect(page).not.toHaveURL(/\/price-units\/new$/)
+  })
+
+  test('cancel returns to the list', async ({ page }) => {
+    await page.goto('/price-units/new')
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page).toHaveURL(/\/price-units$/)
+  })
+})
+
+test.describe('environment create', () => {
+  test('opens as a full page from Settings and returns on cancel', async ({ page }) => {
+    await page.goto('/settings?section=organization&tab=environments')
+    await page.getByRole('button', { name: 'New environment' }).click()
+    await expect(page).toHaveURL(/\/environments\/new$/)
+    await expect(page.getByRole('heading', { name: 'Create environment' })).toBeVisible()
+
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page).toHaveURL(/\/settings/)
+  })
+})

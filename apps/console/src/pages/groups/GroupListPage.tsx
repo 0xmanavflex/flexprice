@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Group, type GroupQuery } from '@fp/domain'
-import { ApiError, useCreateGroup, useDeleteGroup, useGroups } from '@fp/query'
-import { GroupEditorDialog, GroupGrid } from '@fp/ui/pages'
+import { ApiError, useDeleteGroup, useGroups } from '@fp/query'
+import { GroupGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { LayersIcon } from 'lucide-react'
@@ -10,32 +10,31 @@ export interface GroupListPageProps {
   query: GroupQuery
   onQueryChange: (query: GroupQuery) => void
   onOpenGroup: (group: Group) => void
+  onCreateGroup: () => void
 }
 
 /**
- * The group surface: a list, a dialog to create one, and a confirmed delete.
+ * The group surface: a list, a compact full page to create one (`/groups/new`), and a confirmed delete.
  *
  * The API has no group update, so there is no edit and no inline rename — a
- * wrong name means delete and recreate. The list stays URL-driven; the dialog
- * and the pending delete are the only local state.
+ * wrong name means delete and recreate. The list stays URL-driven; the pending
+ * delete is the only local state.
  */
-export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPageProps) {
+export function GroupListPage({
+  query,
+  onQueryChange,
+  onOpenGroup,
+  onCreateGroup,
+}: GroupListPageProps) {
   const groups = useGroups(query)
-  const create = useCreateGroup()
   const remove = useDeleteGroup()
 
-  const [creating, setCreating] = useState(false)
   const [deleting, setDeleting] = useState<Group | null>(null)
 
   const failure = toFailure(groups.error)
   const rows = groups.data?.groups ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
-
-  const closeCreate = () => {
-    setCreating(false)
-    create.reset()
-  }
 
   const closeDelete = () => {
     setDeleting(null)
@@ -52,7 +51,7 @@ export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPa
           isFiltered={isFiltered}
           onRetry={() => void groups.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={() => setCreating(true)}>New group</Button>}
+          createAction={<Button onClick={onCreateGroup}>New group</Button>}
           emptyIcon={<LayersIcon aria-hidden />}
           emptyTitle="No groups yet"
           emptyDescription="Groups bundle prices or features so they report and invoice together — a product line, a region. Create the first to start."
@@ -63,22 +62,12 @@ export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPa
             query={query}
             onQueryChange={onQueryChange}
             onGroupClick={onOpenGroup}
-            onCreate={() => setCreating(true)}
+            onCreate={onCreateGroup}
             onDelete={setDeleting}
             onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
-
-      <GroupEditorDialog
-        open={creating}
-        onOpenChange={(open) => {
-          if (!open) closeCreate()
-        }}
-        onSubmit={(draft) => create.mutate(draft, { onSuccess: closeCreate })}
-        isSubmitting={create.isPending}
-        submitError={toSubmitError(create.error)}
-      />
 
       <ConfirmDialog
         open={deleting !== null}

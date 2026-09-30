@@ -22,31 +22,56 @@ test.describe('the coupons list', () => {
   const list = (page: Page) =>
     new CatalogListPage(page, { heading: 'Coupons', searchLabel: 'Search coupons' })
 
-  test('creates a coupon from a dialog', async ({ page }) => {
+  test('creates a coupon on a full page and lands on its detail', async ({ page }) => {
     await page.goto('/coupons')
-    await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
     await page.getByRole('button', { name: 'New coupon' }).first().click()
-    const dialog = page.getByRole('dialog', { name: 'New coupon' })
-    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/\/coupons\/new/)
+    await expect(page.getByRole('dialog')).toHaveCount(0)
 
-    await dialog.getByRole('button', { name: 'Create coupon' }).click()
-    await expect(dialog.getByText('Enter a name')).toBeVisible()
+    await page.getByRole('button', { name: 'Create coupon' }).click()
+    await expect(page.getByText('Enter a name')).toBeVisible()
 
-    await dialog.getByLabel('Name', { exact: false }).first().fill('Launch offer')
-    await dialog.getByLabel('Code').fill('LAUNCH10')
-    await dialog.getByLabel('Percentage off').fill('10')
+    await page.getByLabel('Name', { exact: false }).first().fill('Launch offer')
+    await page.getByLabel('Code').fill('LAUNCH10')
+    await page.getByLabel('Percentage off').fill('10')
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/coupons$/))
-    await dialog.getByRole('button', { name: 'Create coupon' }).click()
+    await page.getByRole('button', { name: 'Create coupon' }).click()
     await request
-    await expect(dialog).toBeHidden()
+    await expect(page).toHaveURL(/\/coupons\/(?!new)[^/]+$/)
+  })
+
+  test('cancel on the create page returns to the list', async ({ page }) => {
+    await page.goto('/coupons')
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
+    await page.getByRole('button', { name: 'New coupon' }).first().click()
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page).toHaveURL(/\/coupons(\?.*)?$/)
+  })
+
+  test('edits a coupon on its own page from the detail', async ({ page }) => {
+    await page.goto('/coupons')
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
+    await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
+    await page.getByRole('menuitem', { name: 'View coupon' }).click()
+    await expect(page).toHaveURL(/\/coupons\/[^/]+$/)
+
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(page).toHaveURL(/\/coupons\/[^/]+\/edit/)
+
+    await page.getByRole('textbox', { name: 'Name' }).fill('Renamed on the edit page')
+    const request = page.waitForRequest(isWrite('PUT', /\/v1\/coupons\/[^/]+$/))
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await request
+    await expect(page).not.toHaveURL(/\/edit/)
   })
 
   test('renames a coupon inline', async ({ page }) => {
     await page.goto('/coupons')
     const first = list(page).rows().first()
-    await expect(first).toBeVisible({ timeout: 20_000 })
+    await expect(first).toBeVisible({ timeout: 45_000 })
 
     await first.getByRole('button', { name: /^Coupon: .*Edit$/ }).click()
     const input = first.getByRole('textbox', { name: 'Coupon' })

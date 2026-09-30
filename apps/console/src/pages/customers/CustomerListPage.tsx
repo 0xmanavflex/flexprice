@@ -1,14 +1,7 @@
 import { useState } from 'react'
-import { type CreateCustomer, type Customer, type CustomerQuery, customerToEdit } from '@fp/domain'
-import {
-  ApiError,
-  useCreateCustomer,
-  useCustomer,
-  useCustomers,
-  useDeleteCustomer,
-  useUpdateCustomer,
-} from '@fp/query'
-import { CustomerEditorDialog, CustomerGrid } from '@fp/ui/pages'
+import { type Customer, type CustomerQuery } from '@fp/domain'
+import { ApiError, useCustomers, useDeleteCustomer, useUpdateCustomer } from '@fp/query'
+import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { UsersIcon } from 'lucide-react'
@@ -18,58 +11,40 @@ export interface CustomerListPageProps {
   onQueryChange: (query: CustomerQuery) => void
   /** Open a customer's detail page. */
   onOpenCustomer?: (customerId: string) => void
+  /** Go to the full-page create form. */
+  onCreateCustomer: () => void
+  /** Go to the full-page edit form. */
+  onEditCustomer: (customerId: string) => void
 }
 
-/** Which record the dialog is editing — a new customer, or an existing one. */
-type Editing = { mode: 'create' } | { mode: 'edit'; customer: Customer } | null
-
 /**
- * The customer surface: a list, a dialog to create or edit a customer, inline
- * rename in the name cell, and a confirmed delete.
+ * The customer surface: a list, links to the full-page create and edit forms,
+ * inline rename in the name cell, and a confirmed delete.
  *
- * The list row omits the address, so editing loads the full customer before
- * the dialog opens, rather than seeding it with blanks that a save would send.
- * The list stays URL-driven; the dialog and the pending delete are the only
- * local state.
+ * The list stays URL-driven; the pending delete is the only local state.
  */
-export function CustomerListPage({ query, onQueryChange, onOpenCustomer }: CustomerListPageProps) {
+export function CustomerListPage({
+  query,
+  onQueryChange,
+  onOpenCustomer,
+  onCreateCustomer,
+  onEditCustomer,
+}: CustomerListPageProps) {
   const customers = useCustomers(query)
-  const create = useCreateCustomer()
   const update = useUpdateCustomer()
   const remove = useDeleteCustomer()
 
-  const [editing, setEditing] = useState<Editing>(null)
   const [deleting, setDeleting] = useState<Customer | null>(null)
-
-  const detail = useCustomer(editing?.mode === 'edit' ? editing.customer.id : '')
 
   const failure = toFailure(customers.error)
   const rows = customers.data?.customers ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
 
-  const active = editing?.mode === 'create' ? create : update
-
-  const close = () => {
-    setEditing(null)
-    create.reset()
-    update.reset()
-  }
-
-  const submit = (draft: CreateCustomer) => {
-    if (editing?.mode === 'create') {
-      create.mutate(draft, { onSuccess: close })
-    } else if (editing?.mode === 'edit') {
-      update.mutate({ id: editing.customer.id, draft }, { onSuccess: close })
-    }
-  }
-
   const closeDelete = () => {
     setDeleting(null)
     remove.reset()
   }
-
-  const dialogOpen = editing?.mode === 'create' || (editing?.mode === 'edit' && !!detail.data)
 
   return (
     <>
@@ -81,7 +56,7 @@ export function CustomerListPage({ query, onQueryChange, onOpenCustomer }: Custo
           isFiltered={isFiltered}
           onRetry={() => void customers.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={() => setEditing({ mode: 'create' })}>New customer</Button>}
+          createAction={<Button onClick={onCreateCustomer}>New customer</Button>}
           emptyIcon={<UsersIcon aria-hidden />}
           emptyTitle="No customers yet"
           emptyDescription="Customers are who you bill. Each carries subscriptions, invoices and a payment history."
@@ -91,33 +66,24 @@ export function CustomerListPage({ query, onQueryChange, onOpenCustomer }: Custo
             total={customers.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
-            {...(onOpenCustomer ? { onCustomerClick: (customer) => onOpenCustomer(customer.id) } : {})}
+            {...(onOpenCustomer
+              ? { onCustomerClick: (customer) => onOpenCustomer(customer.id) }
+              : {})}
             onRename={(customer, name) =>
               update
                 .mutateAsync({ id: customer.id, draft: { externalId: customer.externalId, name } })
-                .then(() => undefined, () => undefined)
+                .then(
+                  () => undefined,
+                  () => undefined,
+                )
             }
-            onCreate={() => setEditing({ mode: 'create' })}
-            onEdit={(customer) => setEditing({ mode: 'edit', customer })}
+            onCreate={onCreateCustomer}
+            onEdit={(customer) => onEditCustomer(customer.id)}
             onDelete={setDeleting}
             onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
-
-      <CustomerEditorDialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          if (!open) close()
-        }}
-        mode={editing?.mode ?? 'create'}
-        {...(editing?.mode === 'edit' && detail.data
-          ? { defaultValue: customerToEdit(detail.data) }
-          : {})}
-        onSubmit={submit}
-        isSubmitting={active.isPending}
-        submitError={toSubmitError(active.error)}
-      />
 
       <ConfirmDialog
         open={deleting !== null}

@@ -9,20 +9,15 @@ import {
   BillingModel,
   type Charge,
   type CreateCharge,
-  type CreatePlan,
   type CreditGrant,
   CreditGrantScope,
-  DEFAULT_FEATURE_QUERY,
-  DEFAULT_PRICE_UNIT_QUERY,
   type Entitlement,
   EntitlementEntityType,
-  FeatureType,
   type Money,
   PLAN_STATUS_LABEL,
   PriceEntityType,
   PriceType,
   PlanStatus,
-  PriceUnitStatus,
   chargeToDraft,
   compareMoney,
   creditGrantToEdit,
@@ -40,10 +35,8 @@ import {
   useDeleteCreditGrant,
   useDeleteEntitlement,
   useEntitlements,
-  useFeatures,
   usePlan,
   usePlanSubscriptions,
-  usePriceUnits,
   usePrices,
   useSyncPlanPrices,
   useTerminatePrice,
@@ -54,24 +47,25 @@ import {
   toUpdatePriceRequest,
 } from '@fp/query'
 import {
-  ChargeEditorDialog,
+  ChargeForm,
   ChargeTable,
-  CreditGrantDialog,
+  CreditGrantCreateForm,
+  CreditGrantEditForm,
   CreditGrantTable,
-  EntitlementDialog,
-  type FeatureOption,
+  EntitlementCreateForm,
+  EntitlementEditForm,
   EntitlementTable,
-  type MeterOption,
-  type PriceUnitOption,
-  PlanEditorDialog,
+  type FeatureOption,
   PlanPreviewCard,
 } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
+  ContextualSection,
   DetailList,
   type DetailMetric,
   DetailShell,
+  InlineField,
   LoadingRows,
   ResourceNavigation,
   Section,
@@ -86,6 +80,7 @@ import {
   DropdownMenuTrigger,
 } from '@fp/ui/primitives'
 import { CopyIcon, EyeOffIcon, MoreHorizontalIcon, PencilIcon, RefreshCwIcon } from 'lucide-react'
+import { usePlanFormOptions } from './planFormOptions'
 
 /**
  * A plan's detail page — the hub where a plan is completed.
@@ -125,6 +120,8 @@ export interface PlanDetailPageProps {
   /** After archiving or duplicating, where to go. */
   onArchived: () => void
   onDuplicated: (planId: string) => void
+  /** Open the full-page edit form. */
+  onEdit: (planId: string) => void
   /** The breadcrumb's way back to the plans list. */
   onNavigateToList: () => void
 }
@@ -172,6 +169,7 @@ export function PlanDetailPage({
   onTabChange,
   onArchived,
   onDuplicated,
+  onEdit,
   onNavigateToList,
 }: PlanDetailPageProps) {
   const plan = usePlan(planId)
@@ -185,7 +183,6 @@ export function PlanDetailPage({
   const charges = usePrices(PriceEntityType.Plan, planId)
   const subscriptions = usePlanSubscriptions(planId)
 
-  const [editing, setEditing] = useState(false)
   const [archiving, setArchiving] = useState(false)
 
   if (plan.isPending) {
@@ -246,7 +243,7 @@ export function PlanDetailPage({
               }
             />
             <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => setEditing(true)}>
+              <DropdownMenuItem onClick={() => onEdit(planId)}>
                 <PencilIcon aria-hidden className="size-4" />
                 Edit details
               </DropdownMenuItem>
@@ -308,7 +305,19 @@ export function PlanDetailPage({
                   status={PLAN_STATUS_LABEL[record.status]}
                   createdAt={record.createdAt}
                   updatedAt={record.updatedAt}
-                  onEdit={() => setEditing(true)}
+                  readOnly={isArchived}
+                  onSave={(patch) =>
+                    update.mutateAsync({
+                      id: planId,
+                      draft: {
+                        name: record.name,
+                        lookupKey: record.lookupKey,
+                        description: record.description,
+                        ...patch,
+                      },
+                    })
+                  }
+                  onEdit={() => onEdit(planId)}
                 />
               ) : null}
             </div>
@@ -320,21 +329,6 @@ export function PlanDetailPage({
           </aside>
         </div>
       </DetailShell>
-
-      <PlanEditorDialog
-        open={editing}
-        onOpenChange={setEditing}
-        mode="edit"
-        defaultValue={{
-          name: record.name,
-          lookupKey: record.lookupKey,
-          description: record.description,
-        }}
-        onSubmit={(draft: CreatePlan) =>
-          update.mutate({ id: planId, draft }, { onSuccess: () => setEditing(false) })
-        }
-        isSubmitting={update.isPending}
-      />
 
       <ConfirmDialog
         open={archiving}
@@ -422,82 +416,90 @@ function buildMetrics({
 /**
  * Overview — the charges the plan bills.
  *
- * Add opens the charge dialog empty; a row's Edit opens it on that charge, saved
- * as a new price version; terminate ends a charge behind a confirm. The live
- * customer-facing preview lives in the detail page's persistent right rail.
+ * Add and a row's Edit swap the Charges section for the charge form in place
+ * (`ContextualSection`): the plan, its tabs and its preview stay put, Cancel or
+ * a save swaps the table back, refetched. An edit is saved as a new price
+ * version; terminate ends a charge behind a confirm. The live customer-facing
+ * preview lives in the detail page's persistent right rail.
  */
 function OverviewTab({ planId }: { planId: string }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
-  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
-  const priceUnits = usePriceUnits({ ...DEFAULT_PRICE_UNIT_QUERY, pageSize: 100 })
+  const { meters, units } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const terminate = useTerminatePrice()
-  const [adding, setAdding] = useState(false)
-  const [editing, setEditing] = useState<Charge | null>(null)
+  const [form, setForm] = useState<'add' | Charge | null>(null)
   const [terminating, setTerminating] = useState<Charge | null>(null)
-
-  // A usage charge bills against a meter; only metered features have one.
-  const meters: MeterOption[] = (features.data?.features ?? [])
-    .filter((f) => f.type === FeatureType.Metered && f.meterId)
-    .map((f) => ({ id: f.meterId as string, name: f.name }))
-  const units: PriceUnitOption[] = (priceUnits.data?.priceUnits ?? [])
-    .filter((unit) => unit.status === PriceUnitStatus.Published)
-    .map((unit) => ({ code: unit.code, name: unit.name, baseCurrency: unit.baseCurrency }))
 
   if (charges.isPending) return <LoadingRows />
 
   const rows = charges.data ?? []
+  const editing = form !== null && form !== 'add' ? form : null
 
-  const submitCreate = (draft: CreateCharge) => {
-    create.mutate(
-      { entityType: PriceEntityType.Plan, entityId: planId, charges: [draft] },
-      { onSuccess: () => setAdding(false) },
-    )
+  const close = () => {
+    setForm(null)
+    create.reset()
+    updatePrice.reset()
   }
 
-  const submitEdit = (draft: CreateCharge) => {
-    if (!editing) return
-    updatePrice.mutate(
-      { id: editing.id, body: toUpdatePriceRequest(draft) },
-      { onSuccess: () => setEditing(null) },
+  const submit = (draft: CreateCharge) => {
+    if (editing) {
+      updatePrice.mutate(
+        { id: editing.id, body: toUpdatePriceRequest(draft) },
+        { onSuccess: close },
+      )
+      return
+    }
+    create.mutate(
+      { entityType: PriceEntityType.Plan, entityId: planId, charges: [draft] },
+      { onSuccess: close },
     )
   }
 
   return (
     <>
-      <Section title="Charges" description="What this plan bills, and how.">
+      <ContextualSection
+        title="Charges"
+        description="What this plan bills, and how."
+        backLabel="Charges"
+        onBack={close}
+        formTitle={editing ? 'Edit charge' : 'Add charge'}
+        formDescription={
+          editing
+            ? 'Update the price. Everything else about a charge is fixed once created.'
+            : 'A fixed fee, or usage billed against a metered feature.'
+        }
+        form={
+          form === null ? undefined : (
+            <ChargeForm
+              key={editing ? `edit:${editing.id}` : 'create'}
+              mode={editing ? 'edit' : 'create'}
+              {...(editing ? { defaultValue: chargeToDraft(editing) } : {})}
+              meters={meters}
+              priceUnits={units}
+              onSubmit={submit}
+              onCancel={close}
+              isSubmitting={create.isPending || updatePrice.isPending}
+              submitError={
+                editing
+                  ? updatePrice.isError
+                    ? 'Could not save the price. Try again.'
+                    : null
+                  : create.isError
+                    ? 'The charge was rejected. Check it and try again.'
+                    : null
+              }
+            />
+          )
+        }
+      >
         <ChargeTable
           charges={rows}
-          onAdd={() => setAdding(true)}
-          onEdit={(charge) => setEditing(charge)}
+          onAdd={() => setForm('add')}
+          onEdit={(charge) => setForm(charge)}
           onTerminate={(charge) => setTerminating(charge)}
         />
-      </Section>
-
-      <ChargeEditorDialog
-        open={adding}
-        onOpenChange={setAdding}
-        mode="create"
-        meters={meters}
-        priceUnits={units}
-        onSubmit={submitCreate}
-        isSubmitting={create.isPending}
-        submitError={create.isError ? 'The charge was rejected. Check it and try again.' : null}
-      />
-      <ChargeEditorDialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null)
-        }}
-        mode="edit"
-        {...(editing ? { defaultValue: chargeToDraft(editing) } : {})}
-        meters={meters}
-        priceUnits={units}
-        onSubmit={submitEdit}
-        isSubmitting={updatePrice.isPending}
-        submitError={updatePrice.isError ? 'Could not save the price. Try again.' : null}
-      />
+      </ContextualSection>
 
       <ConfirmDialog
         open={terminating !== null}
@@ -526,83 +528,90 @@ function OverviewTab({ planId }: { planId: string }) {
 /** Entitlements — what the plan includes of each feature. */
 function EntitlementsTab({ planId }: { planId: string }) {
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
-  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
+  const { featureOptions, allFeatures } = usePlanFormOptions()
   const create = useCreateBulkEntitlements()
   const updateEntitlement = useUpdateEntitlement()
   const remove = useDeleteEntitlement()
-  const [adding, setAdding] = useState(false)
-  const [editing, setEditing] = useState<Entitlement | null>(null)
+  const [form, setForm] = useState<'add' | Entitlement | null>(null)
   const [removing, setRemoving] = useState<Entitlement | null>(null)
 
   // Only features not already entitled can be added — a feature is granted once.
   const granted = new Set((entitlements.data ?? []).map((e) => e.featureId))
-  const toOption = (f: NonNullable<typeof features.data>['features'][number]): FeatureOption => ({
-    id: f.id,
-    name: f.name,
-    type: f.type,
-    ...(f.type === FeatureType.Metered && f.unitPlural ? { unit: f.unitPlural } : {}),
-  })
-  const allFeatures = features.data?.features ?? []
-  const options = allFeatures.filter((f) => !granted.has(f.id)).map(toOption)
+  const options = featureOptions.filter((f) => !granted.has(f.id))
+  const editing = form !== null && form !== 'add' ? form : null
   const editingFeature = editing ? allFeatures.find((f) => f.id === editing.featureId) : undefined
+  const editingOption: FeatureOption | undefined = editing
+    ? (featureOptions.find((f) => f.id === editing.featureId) ?? {
+        id: editing.featureId,
+        name: editing.featureName ?? editingFeature?.name ?? 'Feature',
+        type: editing.featureType,
+      })
+    : undefined
 
   if (entitlements.isPending) return <LoadingRows />
 
-  const submit = (draft: CreateEntitlement) => {
-    create.mutate(
-      { entityType: EntitlementEntityType.Plan, entityId: planId, entitlements: [draft] },
-      { onSuccess: () => setAdding(false) },
-    )
-  }
-
-  const submitEdit = (draft: EditEntitlement) => {
-    if (!editing) return
-    updateEntitlement.mutate({ id: editing.id, draft }, { onSuccess: () => setEditing(null) })
+  const close = () => {
+    setForm(null)
+    create.reset()
+    updateEntitlement.reset()
   }
 
   return (
     <>
-      <EntitlementTable
-        entitlements={entitlements.data ?? []}
-        onAdd={() => setAdding(true)}
-        onEdit={(entitlement) => setEditing(entitlement)}
-        onDelete={(entitlement) => setRemoving(entitlement)}
-      />
-      <EntitlementDialog
-        open={adding}
-        onOpenChange={setAdding}
-        mode="create"
-        features={options}
-        onSubmit={submit}
-        isSubmitting={create.isPending}
-        submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
-      />
-      <EntitlementDialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null)
-        }}
-        mode="edit"
-        {...(editing
-          ? {
-              editing: {
-                feature: editingFeature
-                  ? toOption(editingFeature)
-                  : {
-                      id: editing.featureId,
-                      name: editing.featureName ?? 'Feature',
-                      type: editing.featureType,
-                    },
-                defaultValue: entitlementToEdit(editing),
-              },
-            }
-          : {})}
-        onEditSubmit={submitEdit}
-        isSubmitting={updateEntitlement.isPending}
-        submitError={
-          updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null
+      <ContextualSection
+        title="Entitlements"
+        description="What this plan includes of each feature."
+        backLabel="Entitlements"
+        onBack={close}
+        formTitle={editing ? 'Edit entitlement' : 'Add entitlement'}
+        formDescription={
+          editing
+            ? 'Change what this entitlement grants.'
+            : 'Grant a feature to everyone on this plan.'
         }
-      />
+        form={
+          form === null ? undefined : editing && editingOption ? (
+            <EntitlementEditForm
+              key={editing.id}
+              feature={editingOption}
+              defaultValue={entitlementToEdit(editing)}
+              onSubmit={(draft: EditEntitlement) =>
+                updateEntitlement.mutate({ id: editing.id, draft }, { onSuccess: close })
+              }
+              onCancel={close}
+              isSubmitting={updateEntitlement.isPending}
+              submitError={
+                updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null
+              }
+            />
+          ) : (
+            <EntitlementCreateForm
+              features={options}
+              onSubmit={(draft: CreateEntitlement) =>
+                create.mutate(
+                  {
+                    entityType: EntitlementEntityType.Plan,
+                    entityId: planId,
+                    entitlements: [draft],
+                  },
+                  { onSuccess: close },
+                )
+              }
+              onCancel={close}
+              isSubmitting={create.isPending}
+              submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
+            />
+          )
+        }
+      >
+        <EntitlementTable
+          entitlements={entitlements.data ?? []}
+          onAdd={() => setForm('add')}
+          onEdit={(entitlement) => setForm(entitlement)}
+          onDelete={(entitlement) => setRemoving(entitlement)}
+        />
+      </ContextualSection>
+
       <ConfirmDialog
         open={removing !== null}
         onOpenChange={(open) => {
@@ -632,50 +641,66 @@ function CreditGrantsTab({ planId }: { planId: string }) {
   const create = useCreateCreditGrant()
   const updateGrant = useUpdateCreditGrant()
   const remove = useDeleteCreditGrant()
-  const [adding, setAdding] = useState(false)
-  const [editing, setEditing] = useState<CreditGrant | null>(null)
+  const [form, setForm] = useState<'add' | CreditGrant | null>(null)
   const [removing, setRemoving] = useState<CreditGrant | null>(null)
 
   if (grants.isPending) return <LoadingRows />
 
-  const submit = (grant: CreateCreditGrant) => {
-    create.mutate(
-      { scope: CreditGrantScope.Plan, id: planId, grant },
-      { onSuccess: () => setAdding(false) },
-    )
-  }
-
-  const submitEdit = (draft: EditCreditGrant) => {
-    if (!editing) return
-    updateGrant.mutate({ id: editing.id, draft }, { onSuccess: () => setEditing(null) })
+  const editing = form !== null && form !== 'add' ? form : null
+  const close = () => {
+    setForm(null)
+    create.reset()
+    updateGrant.reset()
   }
 
   return (
     <>
-      <CreditGrantTable
-        grants={grants.data ?? []}
-        onAdd={() => setAdding(true)}
-        onEdit={(grant) => setEditing(grant)}
-        onDelete={(grant) => setRemoving(grant)}
-      />
-      <CreditGrantDialog
-        open={adding}
-        onOpenChange={setAdding}
-        onSubmit={submit}
-        isSubmitting={create.isPending}
-        submitError={create.isError ? 'Could not create the grant. Try again.' : null}
-      />
-      <CreditGrantDialog
-        open={editing !== null}
-        onOpenChange={(open) => {
-          if (!open) setEditing(null)
-        }}
-        mode="edit"
-        {...(editing ? { defaultValue: creditGrantToEdit(editing) } : {})}
-        onEditSubmit={submitEdit}
-        isSubmitting={updateGrant.isPending}
-        submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
-      />
+      <ContextualSection
+        title="Credit grants"
+        description="Balances this plan hands its subscribers."
+        backLabel="Credit grants"
+        onBack={close}
+        formTitle={editing ? 'Edit credit grant' : 'Add credit grant'}
+        formDescription={
+          editing
+            ? 'Rename the grant or change when it ends. Its credits and schedule are fixed.'
+            : 'Hand subscribers a balance of credits to spend against usage.'
+        }
+        form={
+          form === null ? undefined : editing ? (
+            <CreditGrantEditForm
+              key={editing.id}
+              defaultValue={creditGrantToEdit(editing)}
+              onSubmit={(draft: EditCreditGrant) =>
+                updateGrant.mutate({ id: editing.id, draft }, { onSuccess: close })
+              }
+              onCancel={close}
+              isSubmitting={updateGrant.isPending}
+              submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
+            />
+          ) : (
+            <CreditGrantCreateForm
+              onSubmit={(grant: CreateCreditGrant) =>
+                create.mutate(
+                  { scope: CreditGrantScope.Plan, id: planId, grant },
+                  { onSuccess: close },
+                )
+              }
+              onCancel={close}
+              isSubmitting={create.isPending}
+              submitError={create.isError ? 'Could not create the grant. Try again.' : null}
+            />
+          )
+        }
+      >
+        <CreditGrantTable
+          grants={grants.data ?? []}
+          onAdd={() => setForm('add')}
+          onEdit={(grant) => setForm(grant)}
+          onDelete={(grant) => setRemoving(grant)}
+        />
+      </ContextualSection>
+
       <ConfirmDialog
         open={removing !== null}
         onOpenChange={(open) => {
@@ -699,7 +724,10 @@ function CreditGrantsTab({ planId }: { planId: string }) {
   )
 }
 
-/** Information — the plan record itself, as a shared detail list. */
+/**
+ * Information — the plan record itself. Name, lookup key and description edit
+ * in place; "Edit" opens the full edit page.
+ */
 function InformationTab({
   name,
   lookupKey,
@@ -708,6 +736,8 @@ function InformationTab({
   status,
   createdAt,
   updatedAt,
+  readOnly,
+  onSave,
   onEdit,
 }: {
   name: string
@@ -717,31 +747,61 @@ function InformationTab({
   status: string
   createdAt: Date | null
   updatedAt: Date | null
+  readOnly: boolean
+  onSave: (patch: { name?: string; lookupKey?: string; description?: string }) => Promise<unknown>
   onEdit: () => void
 }) {
   return (
     <Section
       title="Plan details"
-      description="Every attribute of this plan."
+      description="Click the pencil to change a value in place."
       className="max-w-3xl"
       actions={
         <Button variant="outline" size="sm" onClick={onEdit}>
           <PencilIcon aria-hidden className="size-4" />
-          Edit
+          Edit plan
         </Button>
       }
     >
-      <DetailList
-        items={[
-          { label: 'Name', value: name },
-          { label: 'Lookup key', value: lookupKey || '—' },
-          { label: 'Status', value: status },
-          { label: 'Plan ID', value: <span className="font-mono text-xs">{planId}</span> },
-          { label: 'Description', value: description || '—', full: true },
-          { label: 'Created', value: formatDate(createdAt) },
-          { label: 'Updated', value: formatDate(updatedAt) },
-        ]}
-      />
+      <div className="flex flex-col gap-5">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <InlineField
+            label="Name"
+            value={name}
+            required
+            readOnly={readOnly}
+            onSave={(next) => onSave({ name: next })}
+          />
+          <InlineField
+            label="Lookup key"
+            value={lookupKey}
+            placeholder="No lookup key"
+            readOnly={readOnly}
+            validate={(next) =>
+              next === '' || /^[a-z0-9_]+$/.test(next)
+                ? null
+                : 'Use lowercase letters, numbers and underscores'
+            }
+            onSave={(next) => onSave({ lookupKey: next })}
+          />
+        </div>
+        <InlineField
+          label="Description"
+          value={description}
+          placeholder="No description"
+          multiline
+          readOnly={readOnly}
+          onSave={(next) => onSave({ description: next })}
+        />
+        <DetailList
+          items={[
+            { label: 'Status', value: status },
+            { label: 'Plan ID', value: <span className="font-mono text-xs">{planId}</span> },
+            { label: 'Created', value: formatDate(createdAt) },
+            { label: 'Updated', value: formatDate(updatedAt) },
+          ]}
+        />
+      </div>
     </Section>
   )
 }

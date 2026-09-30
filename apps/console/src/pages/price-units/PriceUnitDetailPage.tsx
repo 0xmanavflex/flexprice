@@ -1,9 +1,14 @@
-import { useState } from 'react'
-import { type CreatePriceUnit, formatMoney, money } from '@fp/domain'
+import { formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
-import { CatalogStatusBadge, PriceUnitEditorDialog } from '@fp/ui/pages'
-import { AppFailure, DetailList, DetailShell, LoadingRows, Section } from '@fp/ui/compositions'
-import { Button } from '@fp/ui/primitives'
+import { CatalogStatusBadge } from '@fp/ui/pages'
+import {
+  AppFailure,
+  DetailList,
+  DetailShell,
+  InlineField,
+  LoadingRows,
+  Section,
+} from '@fp/ui/compositions'
 
 export interface PriceUnitDetailPageProps {
   priceUnitId: string
@@ -23,13 +28,13 @@ const SAMPLE_QUANTITY = 1000
  * one **Information** list of every attribute. No tabs and no rail: the earlier
  * version rendered the same four fields three times over, which this replaces.
  *
- * The name (and metadata) is all the backend lets change, so the header's Edit
- * opens a drawer that shows the rest read-only.
+ * The name is all the backend lets change, so it is edited in place (the pencil
+ * beside it); everything else is shown read-only in the lists below. There is no
+ * Edit page, because there is nothing else to edit.
  */
 export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnitDetailPageProps) {
   const priceUnit = usePriceUnit(priceUnitId)
   const update = useUpdatePriceUnit()
-  const [editing, setEditing] = useState(false)
 
   if (priceUnit.isPending) {
     return (
@@ -68,108 +73,99 @@ export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnit
   // back to an em dash rather than render an empty box.
   const symbolDisplay = data.symbol.trim() ? data.symbol : '—'
 
-  const closeEditor = () => {
-    setEditing(false)
-    update.reset()
-  }
-
-  // The update payload is name-only; the rest is shown so the drawer reads like
-  // the unit it edits. The rate is a string on the domain model and a number on
-  // the form, so it is parsed with a positive fallback to satisfy the schema.
-  const submit = (draft: CreatePriceUnit) => {
-    update.mutate({ id: data.id, draft }, { onSuccess: closeEditor })
-  }
-
   return (
-    <>
-      <DetailShell
-        breadcrumb={
-          <button
-            type="button"
-            onClick={onNavigateToList}
-            className="-ml-1 inline-flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
-          >
-            ← Price Units
-          </button>
-        }
-        title={data.name}
-        badges={<CatalogStatusBadge status={data.status} />}
-        identifier={data.code || data.id}
-        actions={<Button onClick={() => setEditing(true)}>Edit</Button>}
-      >
-        <Section
-          title="Conversion"
-          description={
-            conversion
-              ? `How ${codeLabel === 'unit' ? 'this unit' : codeLabel} converts into ${baseCurrency}.`
-              : 'How this unit converts into its base currency.'
-          }
+    <DetailShell
+      breadcrumb={
+        <button
+          type="button"
+          onClick={onNavigateToList}
+          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -ml-1 inline-flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
         >
-          {conversion ? (
-            <div className="rounded-lg border bg-muted/40 p-4">
-              <p className="text-xs font-medium text-muted-foreground">Worked example</p>
-              <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg tabular-nums">
-                <span className="font-semibold">1 {codeLabel}</span>
-                <span className="text-muted-foreground">=</span>
-                <span>{conversion.unit}</span>
-                <span aria-hidden className="px-1 text-muted-foreground">
-                  →
-                </span>
-                <span className="font-semibold">
-                  {SAMPLE_QUANTITY.toLocaleString()} {codeLabel}
-                </span>
-                <span className="text-muted-foreground">=</span>
-                <span>{conversion.total}</span>
-              </p>
-            </div>
-          ) : (
-            <p className="text-sm text-muted-foreground">
-              This unit has no conversion rate and base currency set, so an example can't be shown.
+          ← Price Units
+        </button>
+      }
+      title={data.name}
+      badges={<CatalogStatusBadge status={data.status} />}
+      identifier={data.code || data.id}
+    >
+      <Section
+        title="Details"
+        description="Click the pencil to rename it. Its other fields are fixed once created."
+      >
+        <InlineField
+          label="Name"
+          value={data.name}
+          required
+          onSave={(name) =>
+            update.mutateAsync({
+              id: data.id,
+              draft: {
+                name,
+                code: data.code,
+                symbol: data.symbol,
+                baseCurrency: data.baseCurrency.toUpperCase(),
+                // Display-only: the update payload is name-only, so this only has to satisfy the schema.
+                conversionRate: Number(data.conversionRate) || 1,
+              },
+            })
+          }
+        />
+      </Section>
+
+      <Section
+        title="Conversion"
+        description={
+          conversion
+            ? `How ${codeLabel === 'unit' ? 'this unit' : codeLabel} converts into ${baseCurrency}.`
+            : 'How this unit converts into its base currency.'
+        }
+      >
+        {conversion ? (
+          <div className="bg-muted/40 rounded-lg border p-4">
+            <p className="text-muted-foreground text-xs font-medium">Worked example</p>
+            <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg tabular-nums">
+              <span className="font-semibold">1 {codeLabel}</span>
+              <span className="text-muted-foreground">=</span>
+              <span>{conversion.unit}</span>
+              <span aria-hidden className="text-muted-foreground px-1">
+                →
+              </span>
+              <span className="font-semibold">
+                {SAMPLE_QUANTITY.toLocaleString()} {codeLabel}
+              </span>
+              <span className="text-muted-foreground">=</span>
+              <span>{conversion.total}</span>
             </p>
-          )}
-        </Section>
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            This unit has no conversion rate and base currency set, so an example can't be shown.
+          </p>
+        )}
+      </Section>
 
-        <Section title="Information" description="Every attribute of this price unit.">
-          <DetailList
-            items={[
-              { label: 'Name', value: data.name },
-              {
-                label: 'Code',
-                value: data.code ? <span className="font-mono">{data.code}</span> : '—',
-              },
-              { label: 'Symbol', value: symbolDisplay },
-              { label: 'Base currency', value: baseCurrency ?? '—' },
-              {
-                label: 'Conversion rate',
-                value: <span className="tabular-nums">{data.conversionRate || '—'}</span>,
-              },
-              { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-              { label: 'Price unit ID', value: <span className="font-mono text-xs">{data.id}</span> },
-              { label: 'Created', value: formatDate(data.createdAt) },
-              { label: 'Updated', value: formatDate(data.updatedAt) },
-            ]}
-          />
-        </Section>
-      </DetailShell>
-
-      <PriceUnitEditorDialog
-        open={editing}
-        onOpenChange={(open) => {
-          if (!open) closeEditor()
-        }}
-        mode="edit"
-        defaultValue={{
-          name: data.name,
-          code: data.code,
-          symbol: data.symbol,
-          baseCurrency: data.baseCurrency.toUpperCase(),
-          conversionRate: Number(data.conversionRate) || 1,
-        }}
-        onSubmit={submit}
-        isSubmitting={update.isPending}
-        submitError={toSubmitError(update.error)}
-      />
-    </>
+      <Section title="Information" description="Every attribute of this price unit.">
+        <DetailList
+          items={[
+            { label: 'Name', value: data.name },
+            {
+              label: 'Code',
+              value: data.code ? <span className="font-mono">{data.code}</span> : '—',
+            },
+            { label: 'Symbol', value: symbolDisplay },
+            { label: 'Base currency', value: baseCurrency ?? '—' },
+            {
+              label: 'Conversion rate',
+              value: <span className="tabular-nums">{data.conversionRate || '—'}</span>,
+            },
+            { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
+            { label: 'Price unit ID', value: <span className="font-mono text-xs">{data.id}</span> },
+            { label: 'Created', value: formatDate(data.createdAt) },
+            { label: 'Updated', value: formatDate(data.updatedAt) },
+          ]}
+        />
+      </Section>
+    </DetailShell>
   )
 }
 
@@ -229,23 +225,4 @@ function failureTitle(error: unknown): string {
     }
   }
   return 'This price unit could not be loaded.'
-}
-
-/** A save failure, as a sentence the editor can show inline. */
-function toSubmitError(error: unknown): string | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'invalid':
-        return error.message || 'Check the details and try again.'
-      case 'forbidden':
-        return 'You do not have permission to change price units here.'
-      case 'network':
-        return 'Could not reach Flexprice. Check your connection and try again.'
-      default:
-        return 'Could not save the price unit. Try again.'
-    }
-  }
-  return 'Could not save the price unit. Try again.'
 }

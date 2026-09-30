@@ -7,8 +7,6 @@ import {
   CouponCadence,
   CouponStatus,
   CouponType,
-  type EditCoupon,
-  formatMoney,
 } from '@fp/domain'
 import {
   ApiError,
@@ -17,7 +15,7 @@ import {
   useCouponAssociations,
   useUpdateCoupon,
 } from '@fp/query'
-import { CatalogStatusBadge, CouponEditorDialog, Money } from '@fp/ui/pages'
+import { CatalogStatusBadge, Money } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
@@ -26,6 +24,7 @@ import {
   type DetailMetric,
   DetailShell,
   EmptyState,
+  InlineField,
   LoadingRows,
   Section,
 } from '@fp/ui/compositions'
@@ -44,6 +43,7 @@ import { ChevronLeftIcon, LinkIcon } from 'lucide-react'
 export interface CouponDetailPageProps {
   couponId: string
   onBack: () => void
+  onEdit: (couponId: string) => void
 }
 
 /**
@@ -58,15 +58,15 @@ export interface CouponDetailPageProps {
  * "Where used" (the subscriptions this coupon is applied to, from
  * `/coupons/associations`) is promoted above the attribute list: it is the
  * question V1 could not answer and the most useful thing on the page. The
- * header's Edit opens a rename drawer — the discount is immutable — and Archive
+ * header's Edit opens the dedicated edit page (the discount is immutable) and the
+ * name also edits in place; Archive
  * soft-deletes behind a confirmation.
  */
-export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
+export function CouponDetailPage({ couponId, onBack, onEdit }: CouponDetailPageProps) {
   const coupon = useCoupon(couponId)
   const update = useUpdateCoupon()
   const archive = useArchiveCoupon()
 
-  const [editing, setEditing] = useState(false)
   const [archiving, setArchiving] = useState(false)
 
   if (coupon.isPending) {
@@ -91,15 +91,6 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
   const record = coupon.data
   const isArchived = record.status === CouponStatus.Archived
 
-  const closeEdit = () => {
-    setEditing(false)
-    update.reset()
-  }
-
-  const submitEdit = (draft: EditCoupon) => {
-    update.mutate({ id: record.id, draft }, { onSuccess: closeEdit })
-  }
-
   const confirmArchive = () => {
     archive.mutate(record.id, { onSuccess: () => setArchiving(false) })
   }
@@ -111,7 +102,7 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
           <button
             type="button"
             onClick={onBack}
-            className="-ml-1 inline-flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-sm text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -ml-1 inline-flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
           >
             <ChevronLeftIcon aria-hidden className="size-4" />
             Coupons
@@ -125,7 +116,7 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
               variant="outline"
               size="sm"
               radius="full"
-              className="border-border/60 bg-transparent px-2 font-normal text-foreground dark:bg-transparent"
+              className="border-border/60 text-foreground bg-transparent px-2 font-normal dark:bg-transparent"
             >
               {COUPON_TYPE_LABEL[record.type]}
             </Badge>
@@ -134,7 +125,7 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
         identifier={record.code || record.id}
         actions={
           <>
-            <Button variant="outline" onClick={() => setEditing(true)}>
+            <Button variant="outline" onClick={() => onEdit(record.id)}>
               Edit
             </Button>
             {isArchived ? null : (
@@ -149,7 +140,14 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
         {/* The most useful content first: where this coupon is in force. */}
         <CouponUsage couponId={record.id} />
 
-        <Section title="Details">
+        <Section title="Details" description="Click the pencil to rename in place.">
+          <InlineField
+            label="Name"
+            value={record.name}
+            required
+            readOnly={isArchived}
+            onSave={(name) => update.mutateAsync({ id: record.id, draft: { name } })}
+          />
           <DetailList items={detailItems(record)} />
         </Section>
 
@@ -159,18 +157,6 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
           </Section>
         ) : null}
       </DetailShell>
-
-      <CouponEditorDialog
-        open={editing}
-        onOpenChange={(open) => {
-          if (!open) closeEdit()
-        }}
-        defaultValue={{ name: record.name }}
-        summary={{ code: record.code, discount: discountText(record) }}
-        onSubmit={submitEdit}
-        isSubmitting={update.isPending}
-        submitError={toSubmitError(update.error)}
-      />
 
       <ConfirmDialog
         open={archiving}
@@ -237,12 +223,6 @@ function couponMetrics(coupon: Coupon): DetailMetric[] {
   return metrics
 }
 
-/** The discount, drawn from whichever field the type populates. */
-function discountText(coupon: Coupon): string {
-  if (coupon.type === CouponType.Percentage) return `${coupon.percentageOff ?? '0'}% off`
-  return coupon.amountOff ? `${formatMoney(coupon.amountOff)} off` : '—'
-}
-
 /** "One-time", "Forever", or "Repeating · 3 periods". */
 function cadenceText(coupon: Coupon): string {
   if (coupon.cadence === CouponCadence.Repeated && coupon.durationInPeriods) {
@@ -254,7 +234,9 @@ function cadenceText(coupon: Coupon): string {
 
 function formatDate(value: Date | null): string {
   if (!value) return 'Not set'
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(value)
+  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(
+    value,
+  )
 }
 
 /**
@@ -297,7 +279,7 @@ function CouponUsage({ couponId }: { couponId: string }) {
       {associations.isPending ? (
         <LoadingRows />
       ) : associations.error ? (
-        <p className="text-sm text-muted-foreground">Could not load where this coupon is used.</p>
+        <p className="text-muted-foreground text-sm">Could not load where this coupon is used.</p>
       ) : rows.length === 0 ? (
         <EmptyState
           size="inline"

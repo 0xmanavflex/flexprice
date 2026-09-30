@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import type { TenantFeatureUsage } from '@fp/domain'
 import {
   ApiError,
@@ -5,8 +6,10 @@ import {
   useCustomerInvoices,
   useCustomerSubscriptions,
   useCustomerUsageSummary,
+  useUpdateCustomer,
 } from '@fp/query'
 import { CUSTOMER_TABS, CustomerDetail, QuotaCard, type CustomerTab } from '@fp/ui/pages'
+import { CustomerSubscriptionCreate } from '@/pages/subscriptions/CustomerSubscriptionCreate'
 import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
 
 /**
@@ -26,7 +29,8 @@ export interface CustomerDetailPageProps {
   tab: CustomerTab
   onTabChange: (tab: CustomerTab) => void
   onNavigateToList: () => void
-  onCreateSubscription: () => void
+  /** Open the full Edit page. */
+  onEdit: (customerId: string) => void
 }
 
 /**
@@ -43,7 +47,7 @@ export function CustomerDetailPage({
   tab,
   onTabChange,
   onNavigateToList,
-  onCreateSubscription,
+  onEdit,
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
   const externalId = customer.data?.externalId ?? ''
@@ -52,6 +56,9 @@ export function CustomerDetailPage({
   // Keyed on the *internal* id: `GET /customers/usage` takes that, unlike the
   // subscription and invoice reads above, which are scoped by the external one.
   const usage = useCustomerUsageSummary(customerId)
+  const update = useUpdateCustomer()
+  // Subscription creation happens inside the Subscriptions section, in place.
+  const [creatingSubscription, setCreatingSubscription] = useState(false)
 
   if (customer.isPending) {
     return (
@@ -93,7 +100,31 @@ export function CustomerDetailPage({
       tab={tab}
       onTabChange={onTabChange}
       onBack={onNavigateToList}
-      onCreateSubscription={onCreateSubscription}
+      onCreateSubscription={() => {
+        onTabChange('subscriptions')
+        setCreatingSubscription(true)
+      }}
+      onEdit={() => onEdit(customer.data.id)}
+      onUpdateField={(patch) =>
+        update.mutateAsync({
+          id: customer.data.id,
+          draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
+        })
+      }
+      {...(creatingSubscription
+        ? {
+            subscriptionForm: (
+              <CustomerSubscriptionCreate
+                onCancel={() => setCreatingSubscription(false)}
+                onCreated={() => {
+                  void subscriptions.refetch()
+                  setCreatingSubscription(false)
+                }}
+              />
+            ),
+            onCancelSubscriptionCreate: () => setCreatingSubscription(false),
+          }
+        : {})}
       subscriptionsLoading={subscriptions.isLoading}
       invoicesLoading={invoices.isLoading}
       usage={
@@ -214,8 +245,8 @@ function UsageSection({
         itself five times down the page.
       */}
       <p role="status" className="text-muted-foreground mt-3 text-xs">
-        Overage is shown as — for every feature: Flexprice reports whether a limit is soft or
-        hard, but does not report an overage quantity or price it per feature.
+        Overage is shown as — for every feature: Flexprice reports whether a limit is soft or hard,
+        but does not report an overage quantity or price it per feature.
       </p>
     </Section>
   )

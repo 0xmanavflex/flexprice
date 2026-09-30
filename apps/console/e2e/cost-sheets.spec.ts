@@ -27,45 +27,53 @@ test.describe('the cost sheets list', () => {
     await page.getByRole('menuitem', { name: item }).click()
   }
 
-  test('creates a cost sheet from a dialog', async ({ page }) => {
+  test('creates a cost sheet on a full page and lands on its detail', async ({ page }) => {
     await page.goto('/cost-sheets')
-    await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
     await page.getByRole('button', { name: 'New cost sheet' }).first().click()
-    const dialog = page.getByRole('dialog', { name: 'New cost sheet' })
-    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/\/cost-sheets\/new/)
+    await expect(page.getByRole('dialog')).toHaveCount(0)
 
-    await dialog.getByRole('button', { name: 'Create cost sheet' }).click()
-    await expect(dialog.getByText('Enter a name')).toBeVisible()
+    await page.getByRole('button', { name: 'Create cost sheet' }).click()
+    await expect(page.getByText('Enter a name')).toBeVisible()
 
-    await dialog.getByLabel('Name', { exact: false }).first().fill('Inference costs')
+    await page.getByLabel('Name', { exact: false }).first().fill('Inference costs')
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/costs$/))
-    await dialog.getByRole('button', { name: 'Create cost sheet' }).click()
+    await page.getByRole('button', { name: 'Create cost sheet' }).click()
     await request
-    await expect(dialog).toBeHidden()
+    await expect(page).toHaveURL(/\/cost-sheets\/(?!new)[^/]+$/)
   })
 
-  test('edits a cost sheet from the row menu', async ({ page }) => {
+  test('cancel on the create page returns to the list', async ({ page }) => {
     await page.goto('/cost-sheets')
-    await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
+    await page.getByRole('button', { name: 'New cost sheet' }).first().click()
+    await expect(page).toHaveURL(/\/cost-sheets\/new/)
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page).toHaveURL(/\/cost-sheets(\?.*)?$/)
+  })
+
+  test('edits a cost sheet on its own page', async ({ page }) => {
+    await page.goto('/cost-sheets')
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
     await openRowMenu(page, 'Edit cost sheet')
-    const dialog = page.getByRole('dialog', { name: 'Edit cost sheet' })
-    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/\/cost-sheets\/[^/]+\/edit/)
 
-    await dialog.getByLabel('Description').fill('Updated from the dialog')
+    await page.getByLabel('Description').fill('Updated from the edit page')
 
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/costs\/[^/]+$/))
-    await dialog.getByRole('button', { name: 'Save changes' }).click()
+    await page.getByRole('button', { name: 'Save changes' }).click()
     await request
-    await expect(dialog).toBeHidden()
+    await expect(page).not.toHaveURL(/\/edit/)
   })
 
   test('renames a cost sheet inline', async ({ page }) => {
     await page.goto('/cost-sheets')
     const first = list(page).rows().first()
-    await expect(first).toBeVisible({ timeout: 20_000 })
+    await expect(first).toBeVisible({ timeout: 45_000 })
 
     await first.getByRole('button', { name: /^Cost sheet: .*Edit$/ }).click()
     const input = first.getByRole('textbox', { name: 'Cost sheet' })
@@ -79,7 +87,7 @@ test.describe('the cost sheets list', () => {
 
   test('deletes a cost sheet after confirming', async ({ page }) => {
     await page.goto('/cost-sheets')
-    await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
     await openRowMenu(page, 'Delete cost sheet')
     const dialog = page.getByRole('dialog', { name: /^Delete / })

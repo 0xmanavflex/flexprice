@@ -27,24 +27,30 @@ test.describe('the groups list', () => {
     await page.getByRole('menuitem', { name: item }).click()
   }
 
-  test('creates a group from a dialog', async ({ page }) => {
+  test('creates a group on its own page', async ({ page }) => {
     await page.goto('/groups')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })
 
     await page.getByRole('button', { name: 'New group' }).first().click()
-    const dialog = page.getByRole('dialog', { name: 'New group' })
-    await expect(dialog).toBeVisible()
+    await expect(page).toHaveURL(/\/groups\/new$/)
+    await expect(page.getByRole('heading', { name: 'Create group' })).toBeVisible()
 
-    await dialog.getByRole('button', { name: 'Create group' }).click()
-    await expect(dialog.getByText('Enter a name')).toBeVisible()
+    await page.getByRole('button', { name: 'Create group' }).click()
+    await expect(page.getByText('Enter a name')).toBeVisible()
 
-    await dialog.getByLabel('Name', { exact: false }).first().fill('EU region')
-    await dialog.getByLabel('Lookup key').fill('eu-region')
+    await page.getByLabel('Name', { exact: false }).first().fill('EU region')
+    await page.getByLabel('Lookup key').fill('eu-region')
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/groups$/))
-    await dialog.getByRole('button', { name: 'Create group' }).click()
+    await page.getByRole('button', { name: 'Create group' }).click()
     await request
-    await expect(dialog).toBeHidden()
+    await expect(page).not.toHaveURL(/\/groups\/new$/)
+  })
+
+  test('cancel returns to the list without saving', async ({ page }) => {
+    await page.goto('/groups/new')
+    await page.getByRole('button', { name: 'Cancel' }).click()
+    await expect(page).toHaveURL(/\/groups$/)
   })
 
   test('deletes a group after confirming', async ({ page }) => {

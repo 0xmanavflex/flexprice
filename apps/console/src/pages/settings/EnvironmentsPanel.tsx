@@ -1,13 +1,7 @@
-import { useState } from 'react'
-import {
-  ENVIRONMENT_TYPE_DESCRIPTION,
-  ENVIRONMENT_TYPE_LABEL,
-  type CreateEnvironment,
-  EnvironmentType,
-} from '@fp/domain'
-import { useCreateEnvironment, useEnvironmentList } from '@fp/query'
+import { useNavigate } from '@tanstack/react-router'
+import { ENVIRONMENT_TYPE_DESCRIPTION, ENVIRONMENT_TYPE_LABEL, EnvironmentType } from '@fp/domain'
+import { useEnvironmentList } from '@fp/query'
 import { LoadingRows, Section } from '@fp/ui/compositions'
-import { EnvironmentForm } from '@fp/ui/pages'
 import {
   Badge,
   Button,
@@ -20,7 +14,7 @@ import {
 } from '@fp/ui/primitives'
 import { env } from '@/env'
 import { useSession } from '@/app/session'
-import { PanelError, WidePanel, mutationMessage, toFailure } from './panelKit'
+import { PanelError, WidePanel, toFailure } from './panelKit'
 
 /** The token the mocked build signs every request with — the same one `useEnvironments` uses. */
 const MOCK_TOKEN = 'mock-session-token'
@@ -28,33 +22,19 @@ const MOCK_TOKEN = 'mock-session-token'
 /**
  * The environments this token may work in, and a way to make another.
  *
- * ## The bug this panel exists partly to not repeat
- *
- * Creating an environment from the shell's switcher is a known open defect:
- * the dialog closes whether the call succeeded or failed, so hitting the
- * tenant limit — "You have reached the maximum limit of 2 development
- * environment(s)", a real 400 on the live tenant — looks exactly like success
- * until you notice the list did not grow. `EnvironmentForm` has taken
- * `isSubmitting` and `submitError` props all along; the switcher never passed
- * them.
- *
- * Here they are passed. The form stays open on failure with the API's own
- * sentence under it, and closes only once the list has actually gained a row.
- * The API's message is used verbatim rather than being mapped to a generic
- * one, because "maximum limit of 2 development environment(s)" tells the
- * reader the rule and the number, and no sentence written here could.
+ * Creating one is the full page at `/environments/new` — the same page the
+ * switcher opens — so there is one create flow, and it keeps the API's own
+ * failure sentence (a tenant limit is a real 400) on screen.
  */
 export function EnvironmentsPanel() {
   const { session } = useSession()
   const token = env.apiKey ?? session?.token ?? (env.useMocks ? MOCK_TOKEN : null)
 
   const list = useEnvironmentList(token)
-  const create = useCreateEnvironment(token)
-  const [isCreating, setIsCreating] = useState(false)
+  const navigate = useNavigate()
 
   const failure = toFailure(list.error, 'your environments')
   const environments = list.data ?? []
-  const createError = mutationMessage(create.error, 'The environment could not be created.')
 
   if (!token) {
     return (
@@ -85,11 +65,9 @@ export function EnvironmentsPanel() {
         title="Environments"
         description="Separate places to work. Production bills real customers; a sandbox charges nobody."
         actions={
-          isCreating ? null : (
-            <Button size="sm" onClick={() => setIsCreating(true)}>
-              New environment
-            </Button>
-          )
+          <Button size="sm" onClick={() => void navigate({ to: '/environments/new' })}>
+            New environment
+          </Button>
         }
       >
         {list.isPending ? (
@@ -137,32 +115,6 @@ export function EnvironmentsPanel() {
           </Table>
         )}
       </Section>
-
-      {isCreating ? (
-        <Section
-          title="New environment"
-          description="A sandbox is the safe default. Production is real customers and real money."
-        >
-          <EnvironmentForm
-            isSubmitting={create.isPending}
-            submitError={createError}
-            onCancel={() => {
-              setIsCreating(false)
-              create.reset()
-            }}
-            onSubmit={(draft: CreateEnvironment) =>
-              create.mutate(draft, {
-                // Closed only on success. A form that closes on failure is how
-                // the switcher lost the tenant-limit error.
-                onSuccess: () => {
-                  setIsCreating(false)
-                  create.reset()
-                },
-              })
-            }
-          />
-        </Section>
-      ) : null}
     </WidePanel>
   )
 }
