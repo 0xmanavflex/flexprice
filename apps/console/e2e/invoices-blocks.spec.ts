@@ -25,5 +25,5 @@ test('an invoice opens the billing detail block', async ({ page }) => {
   await page.goto('/invoices/inv_demo')
 
   await expect(page.getByRole('heading').first()).toBeVisible()
-  await expect(page.getByText("Account Activity")).toBeVisible()
+  await expect(page.getByRole("tab", { name: "Payments" })).toBeVisible()
 })
