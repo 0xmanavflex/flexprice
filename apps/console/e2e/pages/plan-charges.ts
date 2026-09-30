@@ -3,9 +3,8 @@ import { expect, type Locator, type Page } from '@playwright/test'
 /**
  * A plan's detail page and the contextual forms opened from its tabs.
  *
- * Sections are a `<nav aria-label="Plan sections">` of links-as-buttons; every
- * create/edit opens in place, as a section named by its title (no dialog), and
- * a row's edit lives in its "Actions for <name>" menu.
+ * Sections are tabs; every create/edit opens in a dialog (`main` here is that
+ * dialog), and a row's edit lives in its "Actions for <name>" menu.
  */
 export class PlanDetailPage {
   readonly nav: Locator
@@ -15,8 +14,9 @@ export class PlanDetailPage {
 
   constructor(page: Page) {
     this.page = page
-    this.nav = page.getByRole('navigation', { name: 'Plan sections' })
-    this.main = page.getByRole('main')
+    this.nav = page.getByRole('tablist')
+    // Add and edit open in a dialog, which portals outside <main>.
+    this.main = page.getByRole('dialog')
   }
 
   async open() {
@@ -25,7 +25,7 @@ export class PlanDetailPage {
   }
 
   async section(name: string) {
-    await this.nav.getByRole('button', { name }).click()
+    await this.page.getByRole('tab', { name }).click()
   }
 
   rowMenu(): Locator {

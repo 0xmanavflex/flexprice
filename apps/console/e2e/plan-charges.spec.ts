@@ -21,19 +21,22 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await plan.open()
 
     await page
-      .getByRole('button', { name: /^Add charges$/ })
+      .getByRole('button', { name: /^Add charge$/ })
       .first()
       .click()
     await expect(plan.main.getByRole('heading', { name: 'Add charge' })).toBeVisible()
+    // The type step comes first: Fixed is preselected.
+    await plan.main.getByRole('radio', { name: /Fixed/ }).click()
+    await plan.main.getByRole('button', { name: 'Continue' }).click()
     await plan.main.getByLabel('Amount').fill('49.00')
     await plan.main.getByRole('button', { name: /^Create charge$/ }).click()
-    await expect(plan.main.getByRole('button', { name: 'Cancel' })).toBeHidden()
+    await expect(plan.main).toBeHidden()
 
     await plan.chooseRowAction(0, 'Edit')
     await expect(plan.main.getByRole('heading', { name: 'Edit charge' })).toBeVisible()
     await expect(plan.main.getByText('Changing the price creates a new version')).toBeVisible()
     await plan.main.getByRole('button', { name: 'Save new version' }).click()
-    await expect(plan.main.getByRole('button', { name: 'Cancel' })).toBeHidden()
+    await expect(plan.main).toBeHidden()
   })
 
   test('adds then edits an entitlement', async ({ page }) => {
@@ -46,18 +49,18 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await plan.main.getByRole('combobox', { name: 'Feature' }).click()
     await page.getByRole('option').first().click()
     await plan.main.getByRole('button', { name: /^Create entitlement$/ }).click()
-    await expect(plan.main.getByRole('button', { name: 'Cancel' })).toBeHidden()
+    await expect(plan.main).toBeHidden()
 
     await plan.chooseRowAction(0, 'Edit')
     await expect(plan.main.getByRole('heading', { name: 'Edit entitlement' })).toBeVisible()
     await plan.main.getByRole('button', { name: /^Save/ }).click()
-    await expect(plan.main.getByRole('button', { name: 'Cancel' })).toBeHidden()
+    await expect(plan.main).toBeHidden()
   })
 
   test('adds then edits a credit grant', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()
-    await plan.section('Credit Grants')
+    await plan.section('Credit grants')
 
     await page
       .getByRole('button', { name: /^Add credit grant$/ })
@@ -67,13 +70,13 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await plan.main.getByLabel('Name').fill('Welcome credits')
     await plan.main.getByLabel('Credits').fill('500')
     await plan.main.getByRole('button', { name: 'Create credit grant' }).click()
-    await expect(plan.main.getByRole('button', { name: 'Cancel' })).toBeHidden()
+    await expect(plan.main).toBeHidden()
 
     await plan.chooseRowAction(0, 'Edit')
     await expect(plan.main.getByRole('heading', { name: 'Edit credit grant' })).toBeVisible()
     await plan.main.getByLabel('Name').fill('Renamed grant')
     await plan.main.getByRole('button', { name: 'Save changes' }).click()
-    await expect(plan.main.getByRole('button', { name: 'Cancel' })).toBeHidden()
+    await expect(plan.main).toBeHidden()
   })
 
   test('creates a plan on a full page, staging a charge', async ({ page }) => {
@@ -117,7 +120,8 @@ test.describe('plan charges, entitlements and credit grants', () => {
   test('opens the stepped edit page from Edit configuration', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()
-    await page.getByRole('button', { name: 'Edit configuration' }).click()
+    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('menuitem', { name: 'Edit configuration' }).click()
     await expect(page).toHaveURL(/\/plans\/plan_synth_0000\/edit$/)
   })
 

@@ -326,7 +326,8 @@ test.describe('live flows', () => {
     await expect(page.getByRole('heading', { name: `${name}-edited` })).toBeVisible({
       timeout: 30_000,
     })
-    await page.getByRole('button', { name: 'Archive', exact: true }).click()
+    await page.getByRole('button', { name: 'Coupon actions' }).click()
+    await page.getByRole('menuitem', { name: 'Archive' }).click()
     await confirm('Archive coupon')
     await expect(page.getByText('Archived').first()).toBeVisible({ timeout: 30_000 })
   })
@@ -468,13 +469,14 @@ test.describe('live flows', () => {
     await page.getByRole('button', { name: /^Save/ }).last().click()
     await expect(page.getByRole('heading', { name: plan })).toBeVisible({ timeout: 30_000 })
 
-    // Charges, entitlements and grants open in place on the plan page.
-    const inPlace = page.getByRole('main')
-    const settled = async () =>
-      expect(inPlace.getByRole('button', { name: 'Cancel' })).toHaveCount(0, { timeout: 30_000 })
+    // Charges, entitlements and grants open in a dialog on the plan page.
+    const inPlace = page.getByRole('dialog')
+    const settled = async () => expect(inPlace).toHaveCount(0, { timeout: 30_000 })
 
     // Fixed charge.
-    await page.getByRole('button', { name: 'Add charges' }).first().click()
+    await page.getByRole('button', { name: 'Add charge', exact: true }).first().click()
+    await inPlace.getByRole('radio', { name: /Fixed/ }).click()
+    await inPlace.getByRole('button', { name: 'Continue' }).click()
     await fill(inPlace, 'Display name', 'Base fee')
     await fill(inPlace, 'Amount (USD)', '25')
     await inPlace.getByRole('button', { name: 'Create charge' }).click()
@@ -482,8 +484,9 @@ test.describe('live flows', () => {
     await expect(page.getByText('Base fee').first()).toBeVisible({ timeout: 30_000 })
 
     // Usage charge on the metered feature.
-    await page.getByRole('button', { name: 'Add charges' }).first().click()
-    await inPlace.getByRole('tab', { name: 'Usage' }).click()
+    await page.getByRole('button', { name: 'Add charge', exact: true }).first().click()
+    await inPlace.getByRole('radio', { name: /Usage/ }).click()
+    await inPlace.getByRole('button', { name: 'Continue' }).click()
     await inPlace.getByRole('combobox', { name: /Metered feature/ }).click()
     await page.getByRole('option', { name: feature }).first().click()
     await fill(inPlace, 'Display name', 'Per call')
@@ -500,7 +503,7 @@ test.describe('live flows', () => {
     await settled()
 
     // Entitlement.
-    await page.getByRole('button', { name: 'Entitlements', exact: true }).click()
+    await page.getByRole('tab', { name: 'Entitlements', exact: true }).click()
     await page.getByRole('button', { name: 'Add entitlement' }).first().click()
     await field(inPlace, 'Feature').click()
     await page.getByRole('option', { name: flag }).first().click()
@@ -514,14 +517,14 @@ test.describe('live flows', () => {
     await settled()
 
     // Credit grant.
-    await page.getByRole('button', { name: 'Credit Grants', exact: true }).click()
+    await page.getByRole('tab', { name: 'Credit grants', exact: true }).click()
     await page
       .getByRole('button', { name: /Add credit grant|Add grant/ })
       .first()
       .click()
     await fill(inPlace, 'Name', `${run}-grant`)
     await fill(inPlace, 'Credits', '100')
-    await choose(inPlace, 'Credit type', /One-time|One time/i)
+    await inPlace.getByRole('radio', { name: /One-time/ }).click()
     await choose(inPlace, 'Expiry', /Never/i)
     await inPlace.getByRole('button', { name: 'Create credit grant' }).click()
     await settled()

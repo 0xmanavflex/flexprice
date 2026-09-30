@@ -87,6 +87,8 @@ export interface ChargeFormProps {
   submitError?: string | null
   /** Overrides the submit label, e.g. "Add charge" when the charge is staged, not saved. */
   submitLabel?: string
+  /** Hides the Fixed/Usage tabs when the type was already chosen (e.g. by a dialog's first step). */
+  lockType?: boolean
 }
 
 const BILLING_MODELS = [BillingModel.FlatFee, BillingModel.Package, BillingModel.Tiered] as const
@@ -123,6 +125,7 @@ export function ChargeForm({
   isSubmitting = false,
   submitError = null,
   submitLabel,
+  lockType = false,
 }: ChargeFormProps) {
   const isEdit = mode === 'edit'
   const form = useForm<CreateCharge>({
@@ -216,7 +219,7 @@ export function ChargeForm({
             unaffected. Currency, period, meter and invoice timing are fixed once a charge exists.
           </AlertDescription>
         </Alert>
-      ) : (
+      ) : lockType ? null : (
         <Tabs value={type} onValueChange={(next) => reseed(next as PriceType, billingModel)}>
           <TabsList aria-label="Charge type">
             {[PriceType.Fixed, PriceType.Usage].map((value) => (

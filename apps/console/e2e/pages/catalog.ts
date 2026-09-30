@@ -35,9 +35,9 @@ export class CatalogListPage {
 
   /** Open the first record, whatever it happens to be under the fixtures. */
   async openFirstRow() {
-    // The whole row is clickable (`onRowClick`); the first cell is plain text,
-    // so clicking it navigates rather than hitting an interactive control.
-    await this.rows().first().getByRole('cell').first().click()
+    // The whole row is clickable (`onRowClick`), but the select and name cells
+    // are interactive (checkbox, inline rename); the third cell is plain text.
+    await this.rows().first().getByRole('cell').nth(2).click()
   }
 }
 

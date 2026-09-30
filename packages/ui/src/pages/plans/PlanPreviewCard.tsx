@@ -46,13 +46,13 @@ export interface PlanPreviewCardProps {
 }
 
 /** A charge's label, falling back to the meter name, then the billing model. */
-function chargeLabel(charge: CreateCharge, meterLabel: (id: string) => string): string {
+export function chargeLabel(charge: CreateCharge, meterLabel: (id: string) => string): string {
   if (charge.displayName) return charge.displayName
   if (charge.type === PriceType.Usage && charge.meterId) return meterLabel(charge.meterId)
   return charge.type === PriceType.Fixed ? 'Base fee' : 'Usage charge'
 }
 
-function money(amount: number, currency: string, locale?: string): string {
+export function money(amount: number, currency: string, locale?: string): string {
   try {
     return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount)
   } catch {
@@ -61,7 +61,7 @@ function money(amount: number, currency: string, locale?: string): string {
 }
 
 /** A short human line describing how a charge prices, e.g. "$2 per 1,000". */
-function pricingSummary(charge: CreateCharge, currency: string, locale?: string): string {
+export function pricingSummary(charge: CreateCharge, currency: string, locale?: string): string {
   switch (charge.billingModel) {
     case BillingModel.FlatFee: {
       const amount = Number(charge.amount || 0)

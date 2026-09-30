@@ -142,7 +142,8 @@ test.describe('the features list', () => {
     await page.getByRole('button', { name: 'Cancel' }).click()
 
     // The multi-step configuration is the dedicated flow.
-    await page.getByRole('button', { name: 'Edit configuration' }).click()
+    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('menuitem', { name: 'Edit configuration' }).click()
     await expect(page).toHaveURL(/\/edit$/)
   })
 })

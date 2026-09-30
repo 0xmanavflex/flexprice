@@ -1,28 +1,7 @@
 import { useState } from 'react'
-import {
-  AGGREGATION_LABEL,
-  FEATURE_STATUS_LABEL,
-  FEATURE_TYPE_LABEL,
-  FeatureType,
-  needsAggregationTarget,
-  type Feature,
-} from '@fp/domain'
 import { ApiError, useFeature, useUpdateFeature } from '@fp/query'
-import { CatalogStatusBadge, FeatureTypeBadge } from '@fp/ui/pages'
-import {
-  AppFailure,
-  type DetailItem,
-  DetailList,
-  DetailShell,
-  EmptyState,
-  LoadingRows,
-  PageBody,
-  ResourceNavigation,
-  EditableFields,
-  Section,
-} from '@fp/ui/compositions'
-import { Button } from '@fp/ui/primitives'
-import { CheckIcon, CopyIcon, GaugeIcon, PencilIcon, ReceiptIcon } from 'lucide-react'
+import { FeatureDetailView, type FeatureTab } from '@fp/ui/pages'
+import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 
 export interface FeatureDetailPageProps {
   onEdit: (featureId: string) => void
@@ -30,29 +9,13 @@ export interface FeatureDetailPageProps {
   onNavigateToList: () => void
 }
 
-type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
-
 /**
- * One feature, in full.
+ * One feature, in full: data and mutations here, the view in `@fp/ui`.
  *
- * Built on the shared `DetailShell`: a breadcrumb, a large title with its type
- * and status badges, the identifier, and the description. There is **no rail**.
- * A rail is for money and counts — events over time, plans using a feature — and
- * V2 has no hook that can derive any of those for a feature yet. Faking one out
- * of Type/Status/Aggregation/Unit is exactly the metadata restatement the audit
- * called out, so the header simply carries none; `DetailShell` renders nothing
- * where the rail would be.
- *
- * For a **metered** feature the page leads with what it meters (once, in "Event
- * details") and a ready-to-run "Ingest an event" cURL built from the feature's
- * own event name and aggregation — the one genuinely useful thing this page can
- * offer a developer today. Charges and Entitlements are honest empty states:
- * there is no linked-price or entitlement read hook yet, so they say what will
- * appear rather than inventing rows.
- *
- * Name and description edit in place (per value, or all at once from the header
- * Edit). Type and meter configuration is a genuine multi-step journey, so
- * "Edit configuration" opens the same stepped form Create uses, prefilled.
+ * Name and description save for real (per value, or together from the header
+ * Edit, which opens Information). "Edit configuration" opens the stepped form.
+ * The usage chart, plans-attached list and usage alerts are demo content in the
+ * view, labelled as such: V2 has no read hook for any of them yet.
  */
 export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
@@ -95,271 +58,31 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
   }
 
   const data = feature.data
-  const isMetered = data.type === FeatureType.Metered
 
   return (
-    <DetailShell
-      trail={[{ label: 'Features', onClick: onNavigateToList }, { label: data.name }]}
-      title={data.name}
-      badges={
-        <>
-          <FeatureTypeBadge type={data.type} />
-          <CatalogStatusBadge status={data.status} />
-        </>
-      }
-      identifier={data.lookupKey || data.id}
-      actions={
-        <>
-          <Button
-            variant="outline"
-            size="sm"
-            disabled={editing || data.status === 'archived'}
-            onClick={() => {
-              setTab('overview')
-              setEditing(true)
-            }}
-          >
-            <PencilIcon aria-hidden className="size-4" />
-            Edit
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => onEdit(featureId)}>
-            Edit configuration
-          </Button>
-        </>
-      }
-      {...(data.description ? { description: data.description } : {})}
-    >
-      {/* The shared line nav, the same section strip the customer and plan pages use. */}
-      <ResourceNavigation
-        items={[
-          { id: 'overview', label: 'Overview' },
-          { id: 'charges', label: 'Charges' },
-          { id: 'entitlements', label: 'Entitlements' },
-          { id: 'information', label: 'Information' },
-        ]}
-        value={tab}
-        onChange={(id) => setTab(id as FeatureTab)}
-        label="Feature sections"
-      />
-
-      <div className="flex flex-col gap-6 pt-5">
-        {tab === 'overview' ? (
-          <Section
-            title="Details"
-            description="Use the pencil on a value, or Edit above to change them together."
-          >
-            <EditableFields
-              editing={editing}
-              onEditingChange={setEditing}
-              fields={[
-                {
-                  key: 'name',
-                  label: 'Name',
-                  value: data.name,
-                  required: true,
-                  readOnly: data.status === 'archived',
-                },
-                {
-                  key: 'description',
-                  label: 'Description',
-                  value: data.description,
-                  placeholder: 'No description',
-                  multiline: true,
-                },
-              ]}
-              onSave={(changes) =>
-                update.mutateAsync({
-                  id: data.id,
-                  draft: {
-                    name: changes.name ?? data.name,
-                    ...(changes.description !== undefined
-                      ? { description: changes.description }
-                      : {}),
-                  },
-                })
-              }
-            />
-          </Section>
-        ) : null}
-        {tab === 'overview' ? (
-          isMetered ? (
-            <>
-              <Section
-                title="Event details"
-                description="What this feature meters, and how usage is measured."
-              >
-                <DetailList
-                  items={[
-                    {
-                      label: 'Event name',
-                      value: data.eventName ? (
-                        <span className="font-mono text-xs">{data.eventName}</span>
-                      ) : (
-                        '—'
-                      ),
-                    },
-                    {
-                      label: 'Aggregation',
-                      value: data.aggregationType ? AGGREGATION_LABEL[data.aggregationType] : '—',
-                    },
-                    { label: 'Unit (singular)', value: data.unitSingular || '—' },
-                    { label: 'Unit (plural)', value: data.unitPlural || '—' },
-                  ]}
-                />
-              </Section>
-              <IngestEventSection feature={data} />
-            </>
-          ) : (
-            <Section title="Overview" description="How this feature behaves.">
-              <p className="text-muted-foreground text-sm leading-relaxed">
-                This is a boolean feature — it gates access to functionality rather than metering
-                usage, so it carries no event name or aggregation.
-              </p>
-            </Section>
-          )
-        ) : null}
-
-        {tab === 'charges' ? (
-          <Section
-            title="Charges"
-            description="Prices across the catalogue that meter this feature."
-          >
-            <EmptyState
-              size="inline"
-              icon={<ReceiptIcon aria-hidden />}
-              title="No linked charges to show yet"
-              description="Plans and add-ons that price this feature will appear here once the linked-price view is wired up."
-            />
-          </Section>
-        ) : null}
-
-        {tab === 'entitlements' ? (
-          <Section title="Entitlements" description="Plans and add-ons that grant this feature.">
-            <EmptyState
-              size="inline"
-              icon={<GaugeIcon aria-hidden />}
-              title="No entitlements to show yet"
-              description="Plans and add-ons that grant this feature will appear here once the entitlement view is wired up."
-            />
-          </Section>
-        ) : null}
-
-        {tab === 'information' ? (
-          <Section title="Information" description="Every attribute of this feature.">
-            <DetailList items={informationItems(data, isMetered)} />
-          </Section>
-        ) : null}
-      </div>
-    </DetailShell>
-  )
-}
-
-/**
- * The "Ingest an event" developer aid, ported from V1's `FeatureDetails`.
- *
- * A read-only cURL that a developer can copy, drop their key and customer id
- * into, and fire — pre-filled with this feature's own event name so the meter
- * actually matches. When the aggregation sums or averages a field (anything but
- * a plain count), the body carries a placeholder property to make that explicit.
- */
-function IngestEventSection({ feature }: { feature: Feature }) {
-  const command = buildIngestCurl(feature)
-  return (
-    <Section
-      title="Ingest an event"
-      description="Send a usage event to Flexprice for this feature. Fill in the placeholders, then run it from your terminal or backend."
-      actions={<CopyButton value={command} />}
-    >
-      <pre className="bg-muted/50 text-foreground overflow-x-auto rounded-lg border p-4 font-mono text-xs leading-relaxed">
-        <code>{command}</code>
-      </pre>
-    </Section>
-  )
-}
-
-/** Builds the ingest cURL from the feature's event name and aggregation. */
-function buildIngestCurl(feature: Feature): string {
-  const eventName = feature.eventName || 'your_event_name'
-  const needsField =
-    feature.aggregationType != null && needsAggregationTarget(feature.aggregationType)
-  const properties = needsField ? '{ "your_property": "<value>" }' : '{}'
-  return [
-    `curl --request POST \\`,
-    `  --url https://api.cloud.flexprice.io/v1/events \\`,
-    `  --header 'Content-Type: application/json' \\`,
-    `  --header 'x-api-key: <your_api_key>' \\`,
-    `  --data '{`,
-    `    "event_name": "${eventName}",`,
-    `    "external_customer_id": "<your_customer_id>",`,
-    `    "properties": ${properties},`,
-    `    "source": "api"`,
-    `  }'`,
-  ].join('\n')
-}
-
-/** Copy-to-clipboard, with a brief confirmation. A nice-to-have on the snippet. */
-function CopyButton({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false)
-  return (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={() => {
-        const done = navigator.clipboard?.writeText(value)
-        if (done) {
-          void done.then(() => {
-            setCopied(true)
-            window.setTimeout(() => setCopied(false), 1500)
-          })
-        }
+    <FeatureDetailView
+      feature={data}
+      tab={tab}
+      onTabChange={setTab}
+      onBack={onNavigateToList}
+      onEdit={() => {
+        setTab('information')
+        setEditing(true)
       }}
-    >
-      {copied ? (
-        <CheckIcon aria-hidden className="size-4" />
-      ) : (
-        <CopyIcon aria-hidden className="size-4" />
-      )}
-      {copied ? 'Copied' : 'Copy'}
-    </Button>
-  )
-}
-
-/** The full attribute set, once. Meter ID only appears for metered features. */
-function informationItems(feature: Feature, isMetered: boolean): DetailItem[] {
-  return [
-    { label: 'Name', value: feature.name },
-    {
-      label: 'Lookup key',
-      value: feature.lookupKey ? (
-        <span className="font-mono text-xs">{feature.lookupKey}</span>
-      ) : (
-        '—'
-      ),
-    },
-    { label: 'Type', value: FEATURE_TYPE_LABEL[feature.type] },
-    { label: 'Status', value: FEATURE_STATUS_LABEL[feature.status] },
-    { label: 'Feature ID', value: <span className="font-mono text-xs">{feature.id}</span> },
-    ...(isMetered
-      ? [
-          {
-            label: 'Meter ID',
-            value: feature.meterId ? (
-              <span className="font-mono text-xs">{feature.meterId}</span>
-            ) : (
-              '—'
-            ),
+      onEditConfiguration={() => onEdit(featureId)}
+      editing={editing}
+      onEditingChange={setEditing}
+      onSave={(changes) =>
+        update.mutateAsync({
+          id: data.id,
+          draft: {
+            name: changes.name ?? data.name,
+            ...(changes.description !== undefined ? { description: changes.description } : {}),
           },
-        ]
-      : []),
-    { label: 'Description', value: feature.description || '—', full: true },
-    { label: 'Created', value: formatDate(feature.createdAt) },
-    { label: 'Updated', value: formatDate(feature.updatedAt) },
-  ]
-}
-
-function formatDate(value: Date | null): string {
-  if (!value) return '—'
-  return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
+        })
+      }
+    />
+  )
 }
 
 function failureTitle(error: unknown): string {

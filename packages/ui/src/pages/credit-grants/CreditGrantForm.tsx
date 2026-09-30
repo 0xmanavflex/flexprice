@@ -1,7 +1,6 @@
 import { Controller, useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
-  CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
   CREDIT_GRANT_PERIOD_LABEL,
@@ -16,6 +15,7 @@ import {
   emptyCreditGrant,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
+import { ChoiceCards } from '@ui/compositions/DetailKit'
 import { DateInput } from '@ui/compositions/DateInput'
 import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
@@ -142,120 +142,143 @@ export function CreditGrantCreateForm({
   const errors = form.formState.errors
   const cadence = form.watch('cadence')
   const expirationType = form.watch('expirationType')
+  const credits = form.watch('credits')
+  const rate = form.watch('conversionRate')
+  const period = form.watch('period')
+  const duration = form.watch('expirationDuration')
+  const durationUnit = form.watch('expirationDurationUnit')
+
+  const creditsNumber = Number(credits)
+  const rateNumber = Number(rate)
+  const dollarValue =
+    creditsNumber > 0 && rateNumber > 0
+      ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(
+          creditsNumber * rateNumber,
+        )
+      : null
+
+  const expiry =
+    expirationType === CreditGrantExpiryType.Never
+      ? 'never expire'
+      : expirationType === CreditGrantExpiryType.BillingCycle
+        ? 'expire at the end of the billing cycle'
+        : `expire after ${duration && duration > 0 ? duration : '?'} ${(
+            CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL[
+              durationUnit ?? CreditGrantExpiryDurationUnit.Day
+            ] ?? ''
+          ).toLowerCase()}`
+  const summary = `${
+    cadence === CreditGrantCadence.Recurring
+      ? `Every ${period ? (CREDIT_GRANT_PERIOD_LABEL[period] ?? period).toLowerCase() : 'period'}, subscribers receive`
+      : 'Subscribers receive once'
+  } ${creditsNumber > 0 ? creditsNumber.toLocaleString() : 'some'} credits${
+    dollarValue ? ` (${dollarValue})`: ''
+  }. Credits ${expiry}; priority ${form.watch('priority') ?? 0}.`
 
   return (
     <form
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
       noValidate
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-5"
     >
-      <Field label="Name" required error={errors.name?.message}>
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-        )}
-      </Field>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Credits" required error={errors.credits?.message}>
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              inputMode="decimal"
-              placeholder="e.g. 500"
-              disabled={isSubmitting}
-              {...field}
-              {...form.register('credits')}
-            />
-          )}
-        </Field>
-        <Field label="Credit type" required>
-          {({ id }) => (
-            <Controller
-              control={form.control}
-              name="cadence"
-              render={({ field }) => (
-                <OptionSelect
-                  id={id}
-                  value={field.value}
-                  onValueChange={field.onChange}
-                  options={optionsOf(Object.values(CreditGrantCadence), CREDIT_GRANT_CADENCE_LABEL)}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          )}
-        </Field>
-      </div>
-
-      {cadence === CreditGrantCadence.Recurring ? (
-        <Field label="Refreshes every" required error={messageOf(errors, 'period')}>
-          {({ id }) => (
-            <Controller
-              control={form.control}
-              name="period"
-              render={({ field }) => (
-                <OptionSelect
-                  id={id}
-                  value={field.value ?? ''}
-                  onValueChange={field.onChange}
-                  options={optionsOf(Object.values(CreditGrantPeriod), CREDIT_GRANT_PERIOD_LABEL)}
-                  placeholder="Choose a period"
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          )}
-        </Field>
-      ) : null}
-
-      <Field label="Expiry" required>
-        {({ id }) => (
-          <Controller
-            control={form.control}
-            name="expirationType"
-            render={({ field }) => (
-              <OptionSelect
-                id={id}
-                value={field.value}
-                onValueChange={field.onChange}
-                options={optionsOf(
-                  Object.values(CreditGrantExpiryType),
-                  CREDIT_GRANT_EXPIRY_TYPE_LABEL,
-                )}
-                disabled={isSubmitting}
-              />
-            )}
+      <Controller
+        control={form.control}
+        name="cadence"
+        render={({ field }) => (
+          <ChoiceCards
+            label="Grant type"
+            value={field.value}
+            onChange={field.onChange}
+            choices={[
+              {
+                value: CreditGrantCadence.OneTime,
+                title: 'One-time',
+                description: 'Issued once when a customer starts on the plan.',
+              },
+              {
+                value: CreditGrantCadence.Recurring,
+                title: 'Recurring',
+                description: 'Refreshed on a schedule while the plan is active.',
+              },
+            ]}
           />
         )}
-      </Field>
+      />
 
-      {expirationType === CreditGrantExpiryType.Duration ? (
-        <div className="grid grid-cols-2 gap-3">
-          <Field label="Duration" required error={messageOf(errors, 'expirationDuration')}>
+      <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
+        <div className="flex flex-col gap-4">
+          <Field label="Name" required error={errors.name?.message}>
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            )}
+          </Field>
+          <Field label="Credits" required error={errors.credits?.message}>
             {({ id, ...field }) => (
               <Input
                 id={id}
-                type="number"
-                min={1}
+                inputMode="decimal"
+                placeholder="e.g. 500"
                 disabled={isSubmitting}
                 {...field}
-                {...form.register('expirationDuration', { valueAsNumber: true })}
+                {...form.register('credits')}
               />
             )}
           </Field>
-          <Field label="Unit">
+          <Field
+            label="Conversion rate"
+            hint={dollarValue ? `Worth ${dollarValue}.` : 'Optional. 1 credit = this much currency.'}
+            error={messageOf(errors, 'conversionRate')}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                inputMode="decimal"
+                placeholder="e.g. 0.01"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('conversionRate')}
+              />
+            )}
+          </Field>
+          {cadence === CreditGrantCadence.Recurring ? (
+            <Field label="Refreshes every" required error={messageOf(errors, 'period')}>
+              {({ id }) => (
+                <Controller
+                  control={form.control}
+                  name="period"
+                  render={({ field }) => (
+                    <OptionSelect
+                      id={id}
+                      value={field.value ?? ''}
+                      onValueChange={field.onChange}
+                      options={optionsOf(
+                        Object.values(CreditGrantPeriod),
+                        CREDIT_GRANT_PERIOD_LABEL,
+                      )}
+                      placeholder="Choose a period"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </Field>
+          ) : null}
+        </div>
+
+        <div className="flex flex-col gap-4">
+          <Field label="Expiry" required>
             {({ id }) => (
               <Controller
                 control={form.control}
-                name="expirationDurationUnit"
+                name="expirationType"
                 render={({ field }) => (
                   <OptionSelect
                     id={id}
-                    value={field.value ?? CreditGrantExpiryDurationUnit.Day}
+                    value={field.value}
                     onValueChange={field.onChange}
                     options={optionsOf(
-                      Object.values(CreditGrantExpiryDurationUnit),
-                      CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
+                      Object.values(CreditGrantExpiryType),
+                      CREDIT_GRANT_EXPIRY_TYPE_LABEL,
                     )}
                     disabled={isSubmitting}
                   />
@@ -263,38 +286,58 @@ export function CreditGrantCreateForm({
               />
             )}
           </Field>
+          {expirationType === CreditGrantExpiryType.Duration ? (
+            <div className="grid grid-cols-2 gap-3">
+              <Field label="Duration" required error={messageOf(errors, 'expirationDuration')}>
+                {({ id, ...field }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={1}
+                    disabled={isSubmitting}
+                    {...field}
+                    {...form.register('expirationDuration', { valueAsNumber: true })}
+                  />
+                )}
+              </Field>
+              <Field label="Unit">
+                {({ id }) => (
+                  <Controller
+                    control={form.control}
+                    name="expirationDurationUnit"
+                    render={({ field }) => (
+                      <OptionSelect
+                        id={id}
+                        value={field.value ?? CreditGrantExpiryDurationUnit.Day}
+                        onValueChange={field.onChange}
+                        options={optionsOf(
+                          Object.values(CreditGrantExpiryDurationUnit),
+                          CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
+                        )}
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  />
+                )}
+              </Field>
+            </div>
+          ) : null}
+          <Field label="Priority" hint="0 is highest." error={errors.priority?.message}>
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                type="number"
+                min={0}
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('priority', { valueAsNumber: true })}
+              />
+            )}
+          </Field>
+          <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+            {summary}
+          </p>
         </div>
-      ) : null}
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field
-          label="Conversion rate"
-          hint="Optional. 1 credit = this much currency."
-          error={messageOf(errors, 'conversionRate')}
-        >
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              inputMode="decimal"
-              placeholder="e.g. 0.01"
-              disabled={isSubmitting}
-              {...field}
-              {...form.register('conversionRate')}
-            />
-          )}
-        </Field>
-        <Field label="Priority" hint="0 is highest." error={errors.priority?.message}>
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              type="number"
-              min={0}
-              disabled={isSubmitting}
-              {...field}
-              {...form.register('priority', { valueAsNumber: true })}
-            />
-          )}
-        </Field>
       </div>
 
       <FormActions

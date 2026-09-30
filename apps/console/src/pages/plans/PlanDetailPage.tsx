@@ -4,26 +4,20 @@ import {
   type EditEntitlement,
   type EditCreditGrant,
   type CreateCreditGrant,
-  BILLING_PERIOD_LABEL,
-  type BillingPeriod,
-  BillingModel,
   type Charge,
   type CreateCharge,
   type CreditGrant,
   CreditGrantScope,
   type Entitlement,
   EntitlementEntityType,
-  type Money,
+  FeatureType,
   PLAN_STATUS_LABEL,
   PriceEntityType,
   PriceType,
   PlanStatus,
   chargeToDraft,
-  compareMoney,
   creditGrantToEdit,
   entitlementToEdit,
-  formatMoney,
-  money,
 } from '@fp/domain'
 import {
   useArchivePlan,
@@ -36,7 +30,6 @@ import {
   useDeleteEntitlement,
   useEntitlements,
   usePlan,
-  usePlanSubscriptions,
   usePrices,
   useSyncPlanPrices,
   useTerminatePrice,
@@ -47,31 +40,30 @@ import {
   toUpdatePriceRequest,
 } from '@fp/query'
 import {
-  ChargeForm,
-  ChargeTable,
+  AddChargeDialog,
   CreditGrantCreateForm,
   CreditGrantEditForm,
   CreditGrantTable,
   EntitlementCreateForm,
   EntitlementEditForm,
-  EntitlementTable,
+  EntityHeader,
   type FeatureOption,
-  PlanPreviewCard,
+  PlanChargesView,
+  PlanCustomerPreview,
+  PlanEntitlementsView,
+  pricingSummary,
 } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
-  ContextualSection,
   DetailList,
-  type DetailMetric,
-  DetailShell,
+  DetailTabs,
   EditableFields,
+  FormDialog,
   LoadingRows,
-  ResourceNavigation,
   Section,
 } from '@fp/ui/compositions'
 import {
-  Badge,
   Button,
   DropdownMenu,
   DropdownMenuContent,
@@ -79,33 +71,34 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@fp/ui/primitives'
-import { CopyIcon, EyeOffIcon, MoreHorizontalIcon, PencilIcon, RefreshCwIcon } from 'lucide-react'
+import {
+  CopyIcon,
+  EyeOffIcon,
+  LayersIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  RefreshCwIcon,
+} from 'lucide-react'
 import { usePlanFormOptions } from './planFormOptions'
 
 /**
  * A plan's detail page — the hub where a plan is completed.
  *
- * V1 scatters a plan across four containers; this gathers them behind one set of
- * tabs on the shared `DetailShell`. The header carries a large title, its status,
- * the lookup key as an identifier, and — in a single ⋮ overflow menu — the actions
- * on the plan as a whole: edit, duplicate, sync usage charges, archive. The
- * **metric rail** leads with real numbers, never a restatement of the badge below
- * it: how many subscriptions are on the plan, what it starts at, how many charges
- * it carries, and in which currency.
- *
- * The body pairs a tabbed left column with a persistent right rail: the live
- * customer-facing preview — the plan's pricing and an example bill — stays visible
- * on every tab, while the left column changes with the tab. Overview shows the
- * charges the plan bills, Entitlements and Credit Grants are what it includes, and
- * Information is the record itself. Every destructive action — terminate a charge,
- * delete an entitlement or grant, archive the plan — goes through a `ConfirmDialog`
- * first.
+ * Header: icon tile, name, status, lookup key as a copyable id, one primary Edit
+ * and a ⋯ menu for the actions on the plan as a whole. Tabs: Charges,
+ * Entitlements, Credit grants, Information. Beside the tabs, a persistent
+ * "What customers see" preview reads the same charges, entitlements and grants.
+ * Add and edit happen in dialogs; every destructive action goes through a
+ * `ConfirmDialog` first.
  *
  * The page fetches and composes; every piece it renders is a presentational
- * component from `@fp/ui`, so what the tabs show is testable without this page.
+ * component from `@fp/ui`.
  */
 
-/** The tabs, in order. The empty id is Overview, so `/plans/:id` lands there. */
+/**
+ * The tabs, in order. The first id stays `overview` (the router strips it as the
+ * default, so `/plans/:id` lands there) but it is labelled "Charges".
+ */
 export const PLAN_TABS = ['overview', 'entitlements', 'credit-grants', 'information'] as const
 export type PlanTab = (typeof PLAN_TABS)[number]
 
@@ -131,38 +124,6 @@ function formatDate(value: Date | null): string {
   return value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value) : '—'
 }
 
-/**
- * The cheapest recurring fixed base the plan carries — the "starts at" number.
- *
- * Only flat-fee fixed charges have a single comparable amount, so tiered and
- * usage charges are left out; the minimum is found with `compareMoney` so a
- * 20-digit amount still sorts correctly and no cent is lost to a float. Charges
- * in a currency other than the current minimum's are skipped rather than
- * compared — there is no honest answer to "is $9 less than €9".
- */
-function startingPrice(charges: Charge[]): { money: Money; period: BillingPeriod } | null {
-  const fixed = charges.filter(
-    (charge) =>
-      charge.type === PriceType.Fixed &&
-      charge.billingModel === BillingModel.FlatFee &&
-      /^-?\d+(\.\d+)?$/.test(charge.amount),
-  )
-  const first = fixed[0]
-  if (!first) return null
-
-  let best = first
-  let bestMoney = money(first.amount, first.currency || 'USD')
-  for (const charge of fixed) {
-    if (charge.currency && best.currency && charge.currency !== best.currency) continue
-    const next = money(charge.amount, charge.currency || 'USD')
-    if (compareMoney(next, bestMoney) < 0) {
-      best = charge
-      bestMoney = next
-    }
-  }
-  return { money: bestMoney, period: best.billingPeriod }
-}
-
 export function PlanDetailPage({
   planId,
   tab,
@@ -178,10 +139,10 @@ export function PlanDetailPage({
   const clone = useClonePlan()
   const sync = useSyncPlanPrices()
 
-  // Read for the metric rail. The Overview tab re-reads prices under the same
-  // key, so react-query serves both from one fetch.
+  // The tabs and the preview read the same keys, so react-query serves each once.
   const charges = usePrices(PriceEntityType.Plan, planId)
-  const subscriptions = usePlanSubscriptions(planId)
+  const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
+  const grants = useCreditGrants(CreditGrantScope.Plan, planId)
 
   const [archiving, setArchiving] = useState(false)
   const [editing, setEditing] = useState(false)
@@ -207,38 +168,17 @@ export function PlanDetailPage({
   const record = plan.data
   const isArchived = record.status === PlanStatus.Archived
 
-  const metrics = buildMetrics({
-    charges: charges.data ?? [],
-    chargesPending: charges.isPending,
-    subscriptions: subscriptions.data ?? [],
-    subscriptionsPending: subscriptions.isPending,
-  })
-
-  // The right rail. The plan's live charges, mapped to the draft shape the
-  // preview reads, so the customer-facing price stays visible on every tab — it
-  // is the plan's pricing, relevant whether you are on Entitlements or Overview.
-  const chargeRows = charges.data ?? []
-  const previewCharges = chargeRows.map(chargeToDraft)
-  const meterName = (id: string) => chargeRows.find((c) => c.meterId === id)?.meterName ?? id
-
   return (
     <>
-      <DetailShell
+      <EntityHeader
         trail={[{ label: 'Plans', onClick: onNavigateToList }, { label: record.name }]}
+        icon={<LayersIcon aria-hidden className="size-5" />}
         title={record.name}
-        badges={
-          <Badge variant={isArchived ? 'outline' : 'secondary'}>
-            {PLAN_STATUS_LABEL[record.status]}
-          </Badge>
-        }
-        {...(record.lookupKey ? { identifier: record.lookupKey } : {})}
-        {...(record.description ? { description: record.description } : {})}
-        metrics={metrics}
+        subtitle={PLAN_STATUS_LABEL[record.status]}
+        id={record.lookupKey || record.id}
         actions={
           <>
             <Button
-              variant="outline"
-              size="sm"
               disabled={editing || isArchived}
               onClick={() => {
                 onTabChange('information')
@@ -248,106 +188,107 @@ export function PlanDetailPage({
               <PencilIcon aria-hidden className="size-4" />
               Edit
             </Button>
-            <Button variant="ghost" size="sm" onClick={() => onEdit(planId)}>
-              Edit configuration
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={
-                  <Button variant="ghost" size="icon" aria-label="More actions">
-                    <MoreHorizontalIcon aria-hidden className="size-4" />
-                  </Button>
-                }
-              />
+                render={<Button variant="outline" size="icon" aria-label="More actions" />}
+              >
+                <MoreHorizontalIcon aria-hidden className="size-4" />
+              </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(planId)}>
-                  <PencilIcon aria-hidden className="size-4" />
-                  Edit configuration
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    clone.mutate(
-                      { id: planId, name: `${record.name} (copy)` },
-                      {
-                        onSuccess: (result) => {
-                          const id = (result as { id?: string }).id
-                          if (id) onDuplicated(id)
+                  <DropdownMenuItem onClick={() => onEdit(planId)}>
+                    <PencilIcon aria-hidden className="size-4" />
+                    Edit configuration
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() =>
+                      clone.mutate(
+                        { id: planId, name: `${record.name} (copy)` },
+                        {
+                          onSuccess: (result) => {
+                            const id = (result as { id?: string }).id
+                            if (id) onDuplicated(id)
+                          },
                         },
-                      },
-                    )
-                  }
-                >
-                  <CopyIcon aria-hidden className="size-4" />
-                  Duplicate
-                </DropdownMenuItem>
-                <DropdownMenuItem disabled={sync.isPending} onClick={() => sync.mutate(planId)}>
-                  <RefreshCwIcon aria-hidden className="size-4" />
-                  {sync.isPending ? 'Syncing…' : 'Sync usage charges'}
-                </DropdownMenuItem>
+                      )
+                    }
+                  >
+                    <CopyIcon aria-hidden className="size-4" />
+                    Duplicate
+                  </DropdownMenuItem>
+                  <DropdownMenuItem disabled={sync.isPending} onClick={() => sync.mutate(planId)}>
+                    <RefreshCwIcon aria-hidden className="size-4" />
+                    {sync.isPending ? 'Syncing…' : 'Sync usage charges'}
+                  </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
-                  <EyeOffIcon aria-hidden className="size-4" />
-                  Archive
-                </DropdownMenuItem>
+                  <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
+                    <EyeOffIcon aria-hidden className="size-4" />
+                    Archive
+                  </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         }
-      >
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-          {/* LEFT — changes with the tab. The section strip is the shared
-              `ResourceNavigation` line nav, the same one the customer page uses. */}
-          <div className="min-w-0">
-            <ResourceNavigation
-              items={[
-                { id: 'overview', label: 'Overview' },
-                { id: 'entitlements', label: 'Entitlements' },
-                { id: 'credit-grants', label: 'Credit Grants' },
-                { id: 'information', label: 'Information' },
-              ]}
-              value={tab}
-              onChange={(id) => onTabChange(id as PlanTab)}
-              label="Plan sections"
-            />
+      />
 
-            <div className="pt-5">
-              {tab === 'overview' ? <OverviewTab planId={planId} /> : null}
-              {tab === 'entitlements' ? <EntitlementsTab planId={planId} /> : null}
-              {tab === 'credit-grants' ? <CreditGrantsTab planId={planId} /> : null}
-              {tab === 'information' ? (
-                <InformationTab
-                  name={record.name}
-                  lookupKey={record.lookupKey}
-                  planId={record.id}
-                  description={record.description}
-                  status={PLAN_STATUS_LABEL[record.status]}
-                  createdAt={record.createdAt}
-                  updatedAt={record.updatedAt}
-                  readOnly={isArchived}
-                  onSave={(patch) =>
-                    update.mutateAsync({
-                      id: planId,
-                      draft: {
-                        name: record.name,
-                        lookupKey: record.lookupKey,
-                        description: record.description,
-                        ...patch,
-                      },
-                    })
-                  }
-                  editing={editing}
-                  onEditingChange={setEditing}
-                />
-              ) : null}
-            </div>
-          </div>
-
-          {/* RIGHT — the plan's pricing, persistent across every tab. */}
-          <aside className="lg:sticky lg:top-4 lg:self-start">
-            <PlanPreviewCard name={record.name} charges={previewCharges} meterLabel={meterName} />
-          </aside>
+      <div className="grid grid-cols-1 gap-6 px-6 pb-10 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <div className="min-w-0">
+          <DetailTabs
+            value={tab}
+            onValueChange={(next) => onTabChange(parsePlanTab(next))}
+            tabs={[
+              { value: 'overview', label: 'Charges', content: <ChargesTab planId={planId} /> },
+              {
+                value: 'entitlements',
+                label: 'Entitlements',
+                content: <EntitlementsTab planId={planId} />,
+              },
+              {
+                value: 'credit-grants',
+                label: 'Credit grants',
+                content: <CreditGrantsTab planId={planId} />,
+              },
+              {
+                value: 'information',
+                label: 'Information',
+                content: (
+                  <InformationTab
+                    name={record.name}
+                    lookupKey={record.lookupKey}
+                    planId={record.id}
+                    description={record.description}
+                    status={PLAN_STATUS_LABEL[record.status]}
+                    createdAt={record.createdAt}
+                    updatedAt={record.updatedAt}
+                    readOnly={isArchived}
+                    onSave={(patch) =>
+                      update.mutateAsync({
+                        id: planId,
+                        draft: {
+                          name: record.name,
+                          lookupKey: record.lookupKey,
+                          description: record.description,
+                          ...patch,
+                        },
+                      })
+                    }
+                    editing={editing}
+                    onEditingChange={setEditing}
+                  />
+                ),
+              },
+            ]}
+          />
         </div>
-      </DetailShell>
+
+        <aside className="lg:sticky lg:top-4 lg:self-start">
+          <PlanCustomerPreview
+            name={record.name}
+            charges={charges.data ?? []}
+            entitlements={entitlements.data ?? []}
+            grants={grants.data ?? []}
+          />
+        </aside>
+      </div>
 
       <ConfirmDialog
         open={archiving}
@@ -371,77 +312,12 @@ export function PlanDetailPage({
   )
 }
 
-/** The rail's numbers (up to four), built from the plan's charges and subscriptions. */
-function buildMetrics({
-  charges,
-  chargesPending,
-  subscriptions,
-  subscriptionsPending,
-}: {
-  charges: Charge[]
-  chargesPending: boolean
-  subscriptions: { status: string }[]
-  subscriptionsPending: boolean
-}): DetailMetric[] {
-  const active = subscriptions.filter((s) => s.status.toLowerCase() === 'active').length
-  const start = startingPrice(charges)
-  const currency = (charges.find((c) => c.currency)?.currency ?? '').toUpperCase()
-  const fixedCount = charges.filter((c) => c.type === PriceType.Fixed).length
-  const usageCount = charges.length - fixedCount
-
-  const subscriptionsMetric: DetailMetric = subscriptionsPending
-    ? { label: 'Active subscriptions', value: '—' }
-    : {
-        label: 'Active subscriptions',
-        value: active.toLocaleString(),
-        hint: `${subscriptions.length.toLocaleString()} total`,
-      }
-
-  const startsAtMetric: DetailMetric = chargesPending
-    ? { label: 'Starts at', value: '—' }
-    : start
-      ? {
-          label: 'Starts at',
-          value: formatMoney(start.money),
-          hint: BILLING_PERIOD_LABEL[start.period],
-        }
-      : { label: 'Starts at', value: 'Usage-based', sentiment: 'muted' }
-
-  const chargesMetric: DetailMetric = chargesPending
-    ? { label: 'Charges', value: '—' }
-    : charges.length > 0
-      ? {
-          label: 'Charges',
-          value: charges.length.toLocaleString(),
-          hint: `${fixedCount} fixed · ${usageCount} usage`,
-        }
-      : { label: 'Charges', value: '0', sentiment: 'muted' }
-
-  // While loading it reads '—' like the others; once resolved with no charge
-  // setting a currency, it is omitted rather than shown as a permanent empty
-  // "Currency —" tile. A rail tile is a number the plan has, not a field it is
-  // missing — an unpriced plan simply has one fewer tile.
-  const currencyMetric: DetailMetric | null = chargesPending
-    ? { label: 'Currency', value: '—' }
-    : currency
-      ? { label: 'Currency', value: currency }
-      : null
-
-  return [subscriptionsMetric, startsAtMetric, chargesMetric, currencyMetric].filter(
-    (metric): metric is DetailMetric => metric !== null,
-  )
-}
-
 /**
- * Overview — the charges the plan bills.
- *
- * Add and a row's Edit swap the Charges section for the charge form in place
- * (`ContextualSection`): the plan, its tabs and its preview stay put, Cancel or
- * a save swaps the table back, refetched. An edit is saved as a new price
- * version; terminate ends a charge behind a confirm. The live customer-facing
- * preview lives in the detail page's persistent right rail.
+ * Charges — what the plan bills, grouped by when it bills. "Add charge" opens a
+ * dialog that asks Fixed or Usage first; a row's Edit opens the form directly.
+ * An edit is saved as a new price version; terminate ends a charge behind a confirm.
  */
-function OverviewTab({ planId }: { planId: string }) {
+function ChargesTab({ planId }: { planId: string }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
   const { meters, units } = usePlanFormOptions()
   const create = useCreateBulkPrices()
@@ -477,48 +353,33 @@ function OverviewTab({ planId }: { planId: string }) {
 
   return (
     <>
-      <ContextualSection
-        title="Charges"
-        description="What this plan bills, and how."
-        backLabel="Charges"
-        onBack={close}
-        formTitle={editing ? 'Edit charge' : 'Add charge'}
-        formDescription={
+      <PlanChargesView
+        charges={rows}
+        onAdd={() => setForm('add')}
+        onEdit={(charge) => setForm(charge)}
+        onTerminate={(charge) => setTerminating(charge)}
+      />
+
+      <AddChargeDialog
+        open={form !== null}
+        onOpenChange={(open) => {
+          if (!open) close()
+        }}
+        editing={editing}
+        meters={meters}
+        priceUnits={units}
+        onSubmit={submit}
+        isSubmitting={create.isPending || updatePrice.isPending}
+        submitError={
           editing
-            ? 'Update the price. Everything else about a charge is fixed once created.'
-            : 'A fixed fee, or usage billed against a metered feature.'
+            ? updatePrice.isError
+              ? 'Could not save the price. Try again.'
+              : null
+            : create.isError
+              ? 'The charge was rejected. Check it and try again.'
+              : null
         }
-        form={
-          form === null ? undefined : (
-            <ChargeForm
-              key={editing ? `edit:${editing.id}` : 'create'}
-              mode={editing ? 'edit' : 'create'}
-              {...(editing ? { defaultValue: chargeToDraft(editing) } : {})}
-              meters={meters}
-              priceUnits={units}
-              onSubmit={submit}
-              onCancel={close}
-              isSubmitting={create.isPending || updatePrice.isPending}
-              submitError={
-                editing
-                  ? updatePrice.isError
-                    ? 'Could not save the price. Try again.'
-                    : null
-                  : create.isError
-                    ? 'The charge was rejected. Check it and try again.'
-                    : null
-              }
-            />
-          )
-        }
-      >
-        <ChargeTable
-          charges={rows}
-          onAdd={() => setForm('add')}
-          onEdit={(charge) => setForm(charge)}
-          onTerminate={(charge) => setTerminating(charge)}
-        />
-      </ContextualSection>
+      />
 
       <ConfirmDialog
         open={terminating !== null}
@@ -544,9 +405,14 @@ function OverviewTab({ planId }: { planId: string }) {
   )
 }
 
-/** Entitlements — what the plan includes of each feature. */
+/**
+ * Entitlements — what the plan includes of each feature. The last column shows
+ * the plan's usage price for a metered feature, found by matching the feature's
+ * meter to a usage charge; usage beyond the value bills at that price.
+ */
 function EntitlementsTab({ planId }: { planId: string }) {
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
+  const charges = usePrices(PriceEntityType.Plan, planId)
   const { featureOptions, allFeatures } = usePlanFormOptions()
   const create = useCreateBulkEntitlements()
   const updateEntitlement = useUpdateEntitlement()
@@ -569,6 +435,18 @@ function EntitlementsTab({ planId }: { planId: string }) {
 
   if (entitlements.isPending) return <LoadingRows />
 
+  const usagePrice = (entitlement: Entitlement): string | null => {
+    if (entitlement.featureType !== FeatureType.Metered) return null
+    const meterId = allFeatures.find((f) => f.id === entitlement.featureId)?.meterId
+    if (!meterId) return null
+    const charge = (charges.data ?? []).find(
+      (c) => c.type === PriceType.Usage && c.meterId === meterId,
+    )
+    return charge
+      ? pricingSummary(chargeToDraft(charge), (charge.currency || 'usd').toUpperCase())
+      : null
+  }
+
   const close = () => {
     setForm(null)
     create.reset()
@@ -577,59 +455,59 @@ function EntitlementsTab({ planId }: { planId: string }) {
 
   return (
     <>
-      <ContextualSection
-        title="Entitlements"
-        description="What this plan includes of each feature."
-        backLabel="Entitlements"
-        onBack={close}
-        formTitle={editing ? 'Edit entitlement' : 'Add entitlement'}
-        formDescription={
-          editing
-            ? 'Change what this entitlement grants.'
-            : 'Grant a feature to everyone on this plan.'
-        }
-        form={
-          form === null ? undefined : editing && editingOption ? (
-            <EntitlementEditForm
-              key={editing.id}
-              feature={editingOption}
-              defaultValue={entitlementToEdit(editing)}
-              onSubmit={(draft: EditEntitlement) =>
-                updateEntitlement.mutate({ id: editing.id, draft }, { onSuccess: close })
-              }
-              onCancel={close}
-              isSubmitting={updateEntitlement.isPending}
-              submitError={
-                updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null
-              }
-            />
-          ) : (
-            <EntitlementCreateForm
-              features={options}
-              onSubmit={(draft: CreateEntitlement) =>
-                create.mutate(
-                  {
-                    entityType: EntitlementEntityType.Plan,
-                    entityId: planId,
-                    entitlements: [draft],
-                  },
-                  { onSuccess: close },
-                )
-              }
-              onCancel={close}
-              isSubmitting={create.isPending}
-              submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
-            />
-          )
+      <PlanEntitlementsView
+        entitlements={entitlements.data ?? []}
+        usagePrice={usagePrice}
+        onAdd={() => setForm('add')}
+        onEdit={(entitlement) => setForm(entitlement)}
+        onDelete={(entitlement) => setRemoving(entitlement)}
+      />
+
+      <FormDialog
+        open={form !== null}
+        onOpenChange={(open) => {
+          if (!open) close()
+        }}
+        size="md"
+        title={editing ? 'Edit entitlement' : 'Add entitlement'}
+        description={
+          editing ? 'Change what this entitlement grants.' : 'Grant a feature to everyone on this plan.'
         }
       >
-        <EntitlementTable
-          entitlements={entitlements.data ?? []}
-          onAdd={() => setForm('add')}
-          onEdit={(entitlement) => setForm(entitlement)}
-          onDelete={(entitlement) => setRemoving(entitlement)}
-        />
-      </ContextualSection>
+        {form === null ? null : editing && editingOption ? (
+          <EntitlementEditForm
+            key={editing.id}
+            feature={editingOption}
+            defaultValue={entitlementToEdit(editing)}
+            usagePrice={usagePrice(editing) ?? undefined}
+            onSubmit={(draft: EditEntitlement) =>
+              updateEntitlement.mutate({ id: editing.id, draft }, { onSuccess: close })
+            }
+            onCancel={close}
+            isSubmitting={updateEntitlement.isPending}
+            submitError={
+              updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null
+            }
+          />
+        ) : (
+          <EntitlementCreateForm
+            features={options}
+            onSubmit={(draft: CreateEntitlement) =>
+              create.mutate(
+                {
+                  entityType: EntitlementEntityType.Plan,
+                  entityId: planId,
+                  entitlements: [draft],
+                },
+                { onSuccess: close },
+              )
+            }
+            onCancel={close}
+            isSubmitting={create.isPending}
+            submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
+          />
+        )}
+      </FormDialog>
 
       <ConfirmDialog
         open={removing !== null}
@@ -654,7 +532,7 @@ function EntitlementsTab({ planId }: { planId: string }) {
   )
 }
 
-/** Credit Grants — the balances the plan hands its subscribers. */
+/** Credit grants — the balances the plan hands its subscribers. */
 function CreditGrantsTab({ planId }: { planId: string }) {
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
   const create = useCreateCreditGrant()
@@ -674,51 +552,48 @@ function CreditGrantsTab({ planId }: { planId: string }) {
 
   return (
     <>
-      <ContextualSection
-        title="Credit grants"
-        description="Balances this plan hands its subscribers."
-        backLabel="Credit grants"
-        onBack={close}
-        formTitle={editing ? 'Edit credit grant' : 'Add credit grant'}
-        formDescription={
+      <CreditGrantTable
+        grants={grants.data ?? []}
+        onAdd={() => setForm('add')}
+        onEdit={(grant) => setForm(grant)}
+        onDelete={(grant) => setRemoving(grant)}
+      />
+
+      <FormDialog
+        open={form !== null}
+        onOpenChange={(open) => {
+          if (!open) close()
+        }}
+        size={editing ? 'md' : 'lg'}
+        title={editing ? 'Edit credit grant' : 'Add credit grant'}
+        description={
           editing
             ? 'Rename the grant or change when it ends. Its credits and schedule are fixed.'
             : 'Hand subscribers a balance of credits to spend against usage.'
         }
-        form={
-          form === null ? undefined : editing ? (
-            <CreditGrantEditForm
-              key={editing.id}
-              defaultValue={creditGrantToEdit(editing)}
-              onSubmit={(draft: EditCreditGrant) =>
-                updateGrant.mutate({ id: editing.id, draft }, { onSuccess: close })
-              }
-              onCancel={close}
-              isSubmitting={updateGrant.isPending}
-              submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
-            />
-          ) : (
-            <CreditGrantCreateForm
-              onSubmit={(grant: CreateCreditGrant) =>
-                create.mutate(
-                  { scope: CreditGrantScope.Plan, id: planId, grant },
-                  { onSuccess: close },
-                )
-              }
-              onCancel={close}
-              isSubmitting={create.isPending}
-              submitError={create.isError ? 'Could not create the grant. Try again.' : null}
-            />
-          )
-        }
       >
-        <CreditGrantTable
-          grants={grants.data ?? []}
-          onAdd={() => setForm('add')}
-          onEdit={(grant) => setForm(grant)}
-          onDelete={(grant) => setRemoving(grant)}
-        />
-      </ContextualSection>
+        {form === null ? null : editing ? (
+          <CreditGrantEditForm
+            key={editing.id}
+            defaultValue={creditGrantToEdit(editing)}
+            onSubmit={(draft: EditCreditGrant) =>
+              updateGrant.mutate({ id: editing.id, draft }, { onSuccess: close })
+            }
+            onCancel={close}
+            isSubmitting={updateGrant.isPending}
+            submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
+          />
+        ) : (
+          <CreditGrantCreateForm
+            onSubmit={(grant: CreateCreditGrant) =>
+              create.mutate({ scope: CreditGrantScope.Plan, id: planId, grant }, { onSuccess: close })
+            }
+            onCancel={close}
+            isSubmitting={create.isPending}
+            submitError={create.isError ? 'Could not create the grant. Try again.' : null}
+          />
+        )}
+      </FormDialog>
 
       <ConfirmDialog
         open={removing !== null}

@@ -5,7 +5,6 @@ import {
   type CreateEntitlement,
   type EditEntitlement,
   FeatureType,
-  USAGE_RESET_PERIOD_LABEL,
   UsageResetPeriod,
   createEntitlementSchema,
   editEntitlementSchema,
@@ -17,8 +16,8 @@ import { Textarea } from '@ui/components/primitives/textarea'
 import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
 import { OptionCombobox } from '@ui/compositions/OptionCombobox'
-import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
+import { MeteredEntitlementFields } from './MeteredEntitlementFields'
 
 /**
  * Grant or change an entitlement, as a form.
@@ -53,11 +52,6 @@ export interface FeatureOption {
   unit?: string
 }
 
-const RESET_OPTIONS = Object.values(UsageResetPeriod).map((period) => ({
-  value: period,
-  label: USAGE_RESET_PERIOD_LABEL[period],
-}))
-
 const messageOf = (errors: unknown, key: string): string | undefined =>
   (errors as Record<string, { message?: string } | undefined>)[key]?.message
 
@@ -73,6 +67,8 @@ const parseConfig = (text: string): Record<string, unknown> | null => {
 }
 
 interface SharedProps {
+  /** The plan's usage price for a metered feature, shown in the billing note. */
+  usagePrice?: string | undefined
   onCancel?: () => void
   isSubmitting?: boolean
   submitError?: string | null
@@ -92,6 +88,7 @@ export function EntitlementCreateForm({
   isSubmitting = false,
   submitError = null,
   submitLabel,
+  usagePrice,
 }: EntitlementCreateFormProps) {
   const form = useForm<CreateEntitlement>({
     resolver: standardSchemaResolver(createEntitlementSchema) as Resolver<CreateEntitlement>,
@@ -105,7 +102,6 @@ export function EntitlementCreateForm({
   const featureType = form.watch('featureType')
   const feature = features.find((option) => option.id === featureId)
   const errors = form.formState.errors
-  const unlimited = form.watch('usageLimit' as never) === null
 
   const choose = (id: string) => {
     const next = features.find((option) => option.id === id)
@@ -147,74 +143,24 @@ export function EntitlementCreateForm({
       </Field>
 
       {feature && featureType === FeatureType.Metered ? (
-        <>
-          <Field
-            label="Usage limit"
-            error={messageOf(errors, 'usageLimit')}
-            {...(feature.unit ? { hint: `In ${feature.unit}.` } : {})}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="numeric"
-                disabled={isSubmitting || unlimited}
-                placeholder={unlimited ? 'Unlimited' : '0'}
-                {...field}
-                {...form.register('usageLimit' as never, {
-                  setValueAs: (value: unknown) =>
-                    value === '' || value == null ? undefined : Number(value),
-                })}
-              />
-            )}
-          </Field>
-          <label className="flex items-center gap-2 text-sm">
-            <Switch
-              checked={unlimited}
-              onCheckedChange={(checked) => {
-                form.setValue('usageLimit' as never, (checked ? null : 0) as never, {
-                  shouldValidate: true,
-                })
-                form.setValue(
-                  'usageResetPeriod' as never,
-                  (checked ? null : UsageResetPeriod.Monthly) as never,
-                )
-              }}
-              disabled={isSubmitting}
-            />
-            Unlimited — no cap on usage
-          </label>
-          <Field label="Usage reset">
-            {({ id }) => (
-              <Controller
-                control={form.control}
-                name={'usageResetPeriod' as never}
-                render={({ field }) => (
-                  <OptionSelect
-                    id={id}
-                    value={(field.value as string | null) ?? UsageResetPeriod.Monthly}
-                    onValueChange={field.onChange}
-                    options={RESET_OPTIONS}
-                    disabled={isSubmitting || unlimited}
-                  />
-                )}
-              />
-            )}
-          </Field>
-          <label className="flex items-center gap-2 text-sm">
-            <Controller
-              control={form.control}
-              name={'isSoftLimit' as never}
-              render={({ field }) => (
-                <Switch
-                  checked={Boolean(field.value)}
-                  onCheckedChange={field.onChange}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-            Soft limit — allow usage past the limit
-          </label>
-        </>
+        <MeteredEntitlementFields
+          limit={form.watch('usageLimit' as never) as unknown as number | null | undefined}
+          unlimited={form.watch('usageLimit' as never) === null}
+          onLimitChange={(next) => {
+            form.setValue('usageLimit' as never, next as never, { shouldValidate: true })
+            if (next === null) form.setValue('usageResetPeriod' as never, null as never)
+            else if (form.getValues('usageResetPeriod' as never) == null)
+              form.setValue('usageResetPeriod' as never, UsageResetPeriod.Monthly as never)
+          }}
+          resetPeriod={form.watch('usageResetPeriod' as never) as unknown as UsageResetPeriod | null}
+          onResetPeriodChange={(period) =>
+            form.setValue('usageResetPeriod' as never, period as never)
+          }
+          unit={feature.unit}
+          limitError={messageOf(errors, 'usageLimit')}
+          disabled={isSubmitting}
+          usagePrice={usagePrice}
+        />
       ) : null}
 
       {feature && featureType === FeatureType.Static ? (
@@ -289,6 +235,7 @@ export function EntitlementEditForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  usagePrice,
 }: EntitlementEditFormProps) {
   const form = useForm<EditEntitlement>({
     resolver: standardSchemaResolver(editEntitlementSchema) as Resolver<EditEntitlement>,
@@ -322,61 +269,20 @@ export function EntitlementEditForm({
       </Field>
 
       {feature.type === FeatureType.Metered ? (
-        <>
-          <Field
-            label="Usage limit"
-            error={messageOf(errors, 'usageLimit')}
-            hint={
-              defaultValue.usageLimit === undefined
-                ? 'Currently unlimited. A limit cannot be removed once set.'
-                : `${feature.unit ? `In ${feature.unit}. ` : ''}A limit cannot be removed once set.`
-            }
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="numeric"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('usageLimit', {
-                  setValueAs: (value: unknown) =>
-                    value === '' || value == null ? undefined : Number(value),
-                })}
-              />
-            )}
-          </Field>
-          <Field label="Usage reset">
-            {({ id }) => (
-              <Controller
-                control={form.control}
-                name="usageResetPeriod"
-                render={({ field }) => (
-                  <OptionSelect
-                    id={id}
-                    value={field.value ?? UsageResetPeriod.Monthly}
-                    onValueChange={field.onChange}
-                    options={RESET_OPTIONS}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )}
-          </Field>
-          <label className="flex items-center gap-2 text-sm">
-            <Controller
-              control={form.control}
-              name="isSoftLimit"
-              render={({ field }) => (
-                <Switch
-                  checked={Boolean(field.value)}
-                  onCheckedChange={field.onChange}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-            Soft limit — allow usage past the limit
-          </label>
-        </>
+        <MeteredEntitlementFields
+          limit={form.watch('usageLimit')}
+          unlimited={form.watch('usageLimit') == null}
+          onLimitChange={(next) =>
+            form.setValue('usageLimit', next ?? undefined, { shouldValidate: true })
+          }
+          resetPeriod={form.watch('usageResetPeriod')}
+          onResetPeriodChange={(period) => form.setValue('usageResetPeriod', period)}
+          unit={feature.unit}
+          limitError={messageOf(errors, 'usageLimit')}
+          disabled={isSubmitting}
+          lockUnlimited
+          usagePrice={usagePrice}
+        />
       ) : null}
 
       {feature.type === FeatureType.Static ? (

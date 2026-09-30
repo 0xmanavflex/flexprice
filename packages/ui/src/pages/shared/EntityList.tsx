@@ -873,6 +873,7 @@ export function EntityList<T extends object>({
       aria-label={label}
       className={cn('flex w-full min-w-0 flex-col gap-4', className)}
     >
+      <h1 className="sr-only">{label}</h1>
       {toolbar}
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
