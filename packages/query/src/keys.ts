@@ -92,6 +92,10 @@ export const queryKeys = {
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['taxRates', 'list', filter] as const,
     detail: (id: string) => ['taxRates', 'detail', id] as const,
   },
+  rawEvents: {
+    all: () => ['rawEvents'] as const,
+    list: (filter: Readonly<Record<string, unknown>> = {}) => ['rawEvents', 'list', filter] as const,
+  },
   // A plan's money lives in three separate record types, so each has its own
   // key: invalidating `prices.all()` refreshes every charge list without
   // touching entitlements or grants.

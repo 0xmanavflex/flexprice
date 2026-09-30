@@ -1,0 +1,73 @@
+import { useQuery } from '@tanstack/react-query'
+import { type Flexprice, call } from '@fp/api'
+import type { RawEvent, RawEventQuery } from '@fp/domain'
+import { queryKeys } from './keys'
+import { useFlexprice } from './provider'
+
+/**
+ * Raw events: the ingest log, through `POST /events/query`
+ * (`client.events.listRawEvents`).
+ *
+ * The event name, customer and source are all server-side filters here, so
+ * unlike the catalogue lists nothing is narrowed on the page.
+ */
+
+/** The wire shape this reads, after the SDK camelCases the response. */
+export interface RawEventWire {
+  id?: string | undefined
+  eventName?: string | undefined
+  externalCustomerId?: string | undefined
+  customerId?: string | undefined
+  source?: string | undefined
+  timestamp?: string | undefined
+  properties?: Record<string, unknown> | undefined
+}
+
+export function toRawEvent(wire: RawEventWire): RawEvent {
+  const parsed = wire.timestamp ? new Date(wire.timestamp) : null
+  return {
+    id: wire.id ?? '',
+    eventName: wire.eventName ?? '',
+    externalCustomerId: wire.externalCustomerId ?? '',
+    customerId: wire.customerId ?? '',
+    source: wire.source ?? '',
+    timestamp: parsed && !Number.isNaN(parsed.getTime()) ? parsed : null,
+    properties: wire.properties ?? {},
+  }
+}
+
+/** Only the filters that were set are sent; the SDK drops undeclared keys anyway. */
+export function toRawEventFilter(query: RawEventQuery): Record<string, unknown> {
+  return {
+    pageSize: query.pageSize,
+    offset: (query.page - 1) * query.pageSize,
+    order: query.sortDirection,
+    ...(query.search ? { eventName: query.search } : {}),
+    ...(query.customer ? { externalCustomerId: query.customer } : {}),
+    ...(query.source ? { source: query.source } : {}),
+  }
+}
+
+export interface RawEventPage {
+  events: RawEvent[]
+  total: number
+}
+
+export async function fetchRawEvents(
+  client: Flexprice,
+  query: RawEventQuery,
+): Promise<RawEventPage> {
+  const response = await call(() => client.events.listRawEvents(toRawEventFilter(query) as never))
+  const events = (response.events ?? []).map((event) => toRawEvent(event as RawEventWire))
+  return { events, total: response.totalCount ?? events.length }
+}
+
+export function useRawEvents(query: RawEventQuery) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.rawEvents.list({ ...query }),
+    queryFn: () => fetchRawEvents(client, query),
+    placeholderData: (previous) => previous,
+  })
+}

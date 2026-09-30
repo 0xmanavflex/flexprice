@@ -221,6 +221,9 @@ export {
 } from './taxRate'
 export type { TaxRate, TaxRateQuery } from './taxRate'
 
+export { DEFAULT_RAW_EVENT_QUERY } from './rawEvent'
+export type { RawEvent, RawEventQuery } from './rawEvent'
+
 /**
  * Settings: who is in the organisation, what they may do, and what it pays.
  */

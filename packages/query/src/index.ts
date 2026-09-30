@@ -173,6 +173,9 @@ export type { PaymentPage, PaymentWire } from './payments'
 export { fetchTaxRates, toTaxRate, toTaxRateFilter, useTaxRates } from './taxRates'
 export type { TaxRatePage, TaxRateWire } from './taxRates'
 
+export { fetchRawEvents, toRawEvent, toRawEventFilter, useRawEvents } from './rawEvents'
+export type { RawEventPage, RawEventWire } from './rawEvents'
+
 export {
   toCharge,
   toChargeRequest,
