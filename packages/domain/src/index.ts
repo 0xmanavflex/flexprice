@@ -485,3 +485,11 @@ export {
   USAGE_SYNC_STATE_LABEL,
 } from './usageSync'
 export type { UsageSync, UsageSyncEntry, UsageSyncQuery, UsageSyncState } from './usageSync'
+export {
+  DEFAULT_DATA_EXPORT_QUERY,
+  EXPORT_ENTITY,
+  EXPORT_ENTITY_LABEL,
+  EXPORT_INTERVAL_LABEL,
+  EXPORT_STATE,
+} from './dataExport'
+export type { DataExport, DataExportQuery, ExportEntity, ExportState } from './dataExport'

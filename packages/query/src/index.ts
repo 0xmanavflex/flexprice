@@ -385,3 +385,5 @@ export { fetchWorkflowRuns, toWorkflowFilter, toWorkflowRun, useWorkflowRuns } f
 export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
 export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'
+export { fetchDataExports, toDataExport, toDataExportFilter, useDataExports } from './dataExports'
+export type { DataExportPage, DataExportWire } from './dataExports'

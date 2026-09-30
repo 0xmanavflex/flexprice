@@ -101,6 +101,10 @@ export const queryKeys = {
     all: () => ['usageSyncs'] as const,
     list: (filter: Record<string, unknown>) => ['usageSyncs', 'list', filter] as const,
   },
+  dataExports: {
+    all: () => ['dataExports'] as const,
+    list: (filter: Record<string, unknown>) => ['dataExports', 'list', filter] as const,
+  },
   workflowRuns: {
     all: () => ['workflowRuns'] as const,
     list: (filter: Record<string, unknown>) => ['workflowRuns', 'list', filter] as const,
