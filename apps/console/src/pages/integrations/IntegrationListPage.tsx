@@ -1,6 +1,6 @@
 import { ApiError, useIntegrations } from '@fp/query'
 import { IntegrationGrid } from '@fp/ui/flexprice'
-import { PageBody } from '@fp/ui/compositions'
+import { PageBody, PageHeader } from '@fp/ui/compositions'
 
 /** The wiring layer: fetch, turn an error into a sentence, hand the grid plain props. */
 export function IntegrationListPage() {
@@ -8,14 +8,20 @@ export function IntegrationListPage() {
   const failure = toFailure(integrations.error)
 
   return (
-    <PageBody>
-      <IntegrationGrid
-        integrations={integrations.data ?? []}
-        isLoading={integrations.isPending}
-        error={failure?.message ?? null}
-        {...(failure?.canRetry ? { onRetry: () => void integrations.refetch() } : {})}
+    <>
+      <PageHeader
+        title="Integrations"
+        description="Connections to your payment processor, ledger and marketplaces."
       />
-    </PageBody>
+      <PageBody>
+        <IntegrationGrid
+          integrations={integrations.data ?? []}
+          isLoading={integrations.isPending}
+          error={failure?.message ?? null}
+          {...(failure?.canRetry ? { onRetry: () => void integrations.refetch() } : {})}
+        />
+      </PageBody>
+    </>
   )
 }
 
