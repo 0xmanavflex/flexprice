@@ -1,20 +1,19 @@
 import { useState } from 'react'
-import { type Charge, type CostSheet, PriceEntityType } from '@fp/domain'
+import { PriceEntityType } from '@fp/domain'
 import { ApiError, useCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
-import { CatalogStatusBadge, ChargeTable } from '@fp/ui/pages'
+import { CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CostMarginCard } from '@fp/ui/pages'
 import {
   AppFailure,
-  type DetailMetric,
   DetailList,
-  DetailShell,
   EditableFields,
   EmptyState,
   LoadingRows,
   PageBody,
   Section,
 } from '@fp/ui/compositions'
-import { Button } from '@fp/ui/primitives'
-import { PencilIcon, ReceiptIcon } from 'lucide-react'
+import { CalculatorIcon, ReceiptIcon } from 'lucide-react'
+
+type CostSheetTab = 'costs' | 'information'
 
 export interface CostSheetDetailPageProps {
   costSheetId: string
@@ -48,6 +47,7 @@ export function CostSheetDetailPage({
   const prices = usePrices(PriceEntityType.CostSheet, costSheetId)
   const update = useUpdateCostSheet()
   const [editing, setEditing] = useState(startEditing)
+  const [tab, setTab] = useState<CostSheetTab>(startEditing ? 'information' : 'costs')
 
   if (costSheet.isPending) {
     return (
@@ -86,125 +86,108 @@ export function CostSheetDetailPage({
   const data = costSheet.data
   const charges = prices.data ?? null
 
+  const count = charges?.length ?? data.priceCount
+
   return (
-    <DetailShell
-      breadcrumb={
-        <button
-          type="button"
-          onClick={onNavigateToList}
-          className="text-muted-foreground hover:text-foreground w-fit text-xs transition-colors"
-        >
-          ← Cost Sheets
-        </button>
-      }
+    <CatalogDetailFrame
+      listLabel="Cost sheets"
+      onBack={onNavigateToList}
+      icon={<CalculatorIcon />}
       title={data.name}
       badges={<CatalogStatusBadge status={data.status} />}
-      identifier={data.lookupKey || data.id}
-      {...(data.description ? { description: data.description } : {})}
-      actions={
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={editing || data.status === 'archived'}
-          onClick={() => setEditing(true)}
-        >
-          <PencilIcon aria-hidden className="size-4" />
-          Edit
-        </Button>
-      }
-      metrics={costSheetMetrics(data, charges)}
-    >
-      <Section title="Information" description="Every attribute of this cost sheet.">
-        <EditableFields
-          editing={editing}
-          onEditingChange={setEditing}
-          className="mb-4"
-          fields={[
-            { key: 'name', label: 'Name', value: data.name, required: true },
-            {
-              key: 'lookupKey',
-              label: 'Lookup key',
-              value: data.lookupKey ?? '',
-              placeholder: 'No lookup key',
-            },
-            {
-              key: 'description',
-              label: 'Description',
-              value: data.description ?? '',
-              multiline: true,
-              placeholder: 'No description',
-            },
-          ]}
-          onSave={(changes) =>
-            update.mutateAsync({
-              id: data.id,
-              draft: {
-                name: changes.name ?? data.name,
-                lookupKey: changes.lookupKey ?? data.lookupKey,
-                description: changes.description ?? data.description,
-              },
-            })
-          }
-        />
-        <DetailList
-          items={[
-            { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-            { label: 'Cost sheet ID', value: <span className="font-mono text-xs">{data.id}</span> },
-            { label: 'Created', value: formatDate(data.createdAt) },
-            { label: 'Updated', value: formatDate(data.updatedAt) },
-          ]}
-        />
-      </Section>
-
-      <Section title="Prices" description="The prices this cost sheet groups to measure cost.">
-        {prices.isPending ? (
-          <LoadingRows />
-        ) : charges && charges.length > 0 ? (
-          <ChargeTable charges={charges} />
-        ) : (
-          <EmptyState
-            size="inline"
-            icon={<ReceiptIcon aria-hidden />}
-            title="No prices yet"
-            description="Prices tagged to this cost sheet will appear here. None have been added to it yet."
-          />
-        )}
-      </Section>
-    </DetailShell>
+      subtitle={data.description || `${count} ${count === 1 ? 'price' : 'prices'} grouped to measure cost`}
+      id={data.lookupKey || data.id}
+      primary={{
+        label: 'Edit',
+        disabled: editing || data.status === 'archived',
+        onClick: () => {
+          setTab('information')
+          setEditing(true)
+        },
+      }}
+      menuLabel="Cost sheet actions"
+      menu={[{ id: 'costs', label: 'View costs', onSelect: () => setTab('costs') }]}
+      tab={tab}
+      onTabChange={(next) => setTab(next as CostSheetTab)}
+      tabs={[
+        {
+          value: 'costs',
+          label: 'Costs',
+          count,
+          content: (
+            <div className="flex flex-col gap-6">
+              {/* Margin numbers are DEMO_COST_MARGIN: the API carries no revenue/cost totals. */}
+              <CostMarginCard />
+              <Section title="Prices" description="The prices this cost sheet groups to measure cost.">
+                {prices.isPending ? (
+                  <LoadingRows />
+                ) : charges && charges.length > 0 ? (
+                  <ChargeTable charges={charges} />
+                ) : (
+                  <EmptyState
+                    size="inline"
+                    icon={<ReceiptIcon aria-hidden />}
+                    title="No prices yet"
+                    description="Prices tagged to this cost sheet will appear here. None have been added to it yet."
+                  />
+                )}
+              </Section>
+            </div>
+          ),
+        },
+        {
+          value: 'information',
+          label: 'Information',
+          content: (
+            <Section title="Information" description="Every attribute of this cost sheet.">
+              <EditableFields
+                editing={editing}
+                onEditingChange={setEditing}
+                className="mb-4"
+                fields={[
+                  { key: 'name', label: 'Name', value: data.name, required: true },
+                  {
+                    key: 'lookupKey',
+                    label: 'Lookup key',
+                    value: data.lookupKey ?? '',
+                    placeholder: 'No lookup key',
+                  },
+                  {
+                    key: 'description',
+                    label: 'Description',
+                    value: data.description ?? '',
+                    multiline: true,
+                    placeholder: 'No description',
+                  },
+                ]}
+                onSave={(changes) =>
+                  update.mutateAsync({
+                    id: data.id,
+                    draft: {
+                      name: changes.name ?? data.name,
+                      lookupKey: changes.lookupKey ?? data.lookupKey,
+                      description: changes.description ?? data.description,
+                    },
+                  })
+                }
+              />
+              <DetailList
+                items={[
+                  { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
+                  {
+                    label: 'Cost sheet ID',
+                    value: <span className="font-mono text-xs">{data.id}</span>,
+                  },
+                  { label: 'Created', value: formatDate(data.createdAt) },
+                  { label: 'Updated', value: formatDate(data.updatedAt) },
+                ]}
+              />
+            </Section>
+          ),
+        },
+      ]}
+    />
   )
-}
-
-/**
- * The rail: how much this cost sheet covers, in real numbers.
- *
- * Price count and currency come from the prices the sheet actually groups —
- * never its status, lookup key or timestamps, which live in the header and the
- * Information list. No total: money is not summed client-side (see the file
- * note), and the API sends none.
- */
-function costSheetMetrics(data: CostSheet, charges: Charge[] | null): DetailMetric[] {
-  const count = charges?.length ?? data.priceCount
-  const metrics: DetailMetric[] = [
-    {
-      label: 'Prices',
-      value: new Intl.NumberFormat().format(count),
-      hint: 'grouped to measure cost',
-    },
-  ]
-
-  if (charges && charges.length > 0) {
-    const currencies = [
-      ...new Set(charges.map((charge) => charge.currency.toUpperCase()).filter(Boolean)),
-    ]
-    const [only] = currencies
-    if (currencies.length === 1 && only) {
-      metrics.push({ label: 'Currency', value: only })
-    } else if (currencies.length > 1) {
-      metrics.push({ label: 'Currencies', value: currencies.length })
-    }
-  }
-
-  return metrics
 }
 
 function formatDate(value: Date | null): string {

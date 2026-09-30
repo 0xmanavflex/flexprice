@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   COUPON_CADENCE_LABEL,
   COUPON_TYPE_LABEL,
@@ -15,22 +15,24 @@ import {
   useCouponAssociations,
   useUpdateCoupon,
 } from '@fp/query'
-import { CatalogStatusBadge, Money } from '@fp/ui/pages'
+import {
+  CatalogDetailFrame,
+  CatalogStatusBadge,
+  CouponRedemptionsView,
+  Money,
+} from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
   type DetailItem,
   DetailList,
-  type DetailMetric,
-  DetailShell,
+  Properties,
   EditableFields,
   EmptyState,
   LoadingRows,
   Section,
 } from '@fp/ui/compositions'
 import {
-  Badge,
-  Button,
   Table,
   TableBody,
   TableCell,
@@ -38,7 +40,9 @@ import {
   TableHeader,
   TableRow,
 } from '@fp/ui/primitives'
-import { ChevronLeftIcon, LinkIcon } from 'lucide-react'
+import { LinkIcon, TicketPercentIcon } from 'lucide-react'
+
+type CouponTab = 'overview' | 'redemptions' | 'information'
 
 export interface CouponDetailPageProps {
   couponId: string
@@ -74,6 +78,7 @@ export function CouponDetailPage({
 
   const [archiving, setArchiving] = useState(false)
   const [editing, setEditing] = useState(startEditing)
+  const [tab, setTab] = useState<CouponTab>(startEditing ? 'information' : 'overview')
 
   if (coupon.isPending) {
     return (
@@ -102,85 +107,91 @@ export function CouponDetailPage({
   }
 
   return (
-    <>
-      <DetailShell
-        breadcrumb={
-          <button
-            type="button"
-            onClick={onBack}
-            className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -ml-1 inline-flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
-          >
-            <ChevronLeftIcon aria-hidden className="size-4" />
-            Coupons
-          </button>
-        }
-        title={record.name}
-        badges={
-          <>
-            <CatalogStatusBadge status={record.status} />
-            <Badge
-              variant="outline"
-              size="sm"
-              radius="full"
-              className="border-border/60 text-foreground bg-transparent px-2 font-normal dark:bg-transparent"
-            >
-              {COUPON_TYPE_LABEL[record.type]}
-            </Badge>
-          </>
-        }
-        identifier={record.code || record.id}
-        actions={
-          <>
-            <Button
-              variant="outline"
-              disabled={editing || isArchived}
-              onClick={() => setEditing(true)}
-            >
-              Edit
-            </Button>
-            {isArchived ? null : (
-              <Button variant="destructive" onClick={() => setArchiving(true)}>
-                Archive
-              </Button>
-            )}
-          </>
-        }
-        metrics={couponMetrics(record)}
-      >
-        {/* The most useful content first: where this coupon is in force. */}
-        <CouponUsage couponId={record.id} />
-
-        <Section
-          title="Details"
-          description="Use the pencil on the name, or Edit above. The discount is fixed once created."
-        >
-          <EditableFields
-            editing={editing}
-            onEditingChange={setEditing}
-            className="mb-4"
-            fields={[
-              {
-                key: 'name',
-                label: 'Name',
-                value: record.name,
-                required: true,
-                readOnly: isArchived,
-              },
-            ]}
-            onSave={(changes) =>
-              update.mutateAsync({ id: record.id, draft: { name: changes.name ?? record.name } })
-            }
-          />
-          <DetailList items={detailItems(record)} />
-        </Section>
-
-        {record.metadata ? (
-          <Section title="Metadata" description="Custom key-value pairs stored on this coupon.">
-            <DetailList items={metadataItems(record.metadata)} />
-          </Section>
-        ) : null}
-      </DetailShell>
-
+    <CatalogDetailFrame
+      listLabel="Coupons"
+      onBack={onBack}
+      icon={<TicketPercentIcon />}
+      title={record.name}
+      badges={<CatalogStatusBadge status={record.status} />}
+      subtitle={`${COUPON_TYPE_LABEL[record.type]} · ${cadenceText(record)}`}
+      id={record.code || record.id}
+      primary={{
+        label: 'Edit',
+        disabled: editing || isArchived,
+        onClick: () => {
+          setTab('information')
+          setEditing(true)
+        },
+      }}
+      menuLabel="Coupon actions"
+      menu={
+        isArchived
+          ? []
+          : [{ id: 'archive', label: 'Archive', destructive: true, onSelect: () => setArchiving(true) }]
+      }
+      tab={tab}
+      onTabChange={(next) => setTab(next as CouponTab)}
+      tabs={[
+        {
+          value: 'overview',
+          label: 'Overview',
+          content: (
+            <div className="flex flex-col gap-6">
+              <Section title="Summary">
+                <Properties columns={4} items={couponSummary(record)} />
+              </Section>
+              {/* The most useful content first: where this coupon is in force. */}
+              <CouponUsage couponId={record.id} />
+            </div>
+          ),
+        },
+        {
+          value: 'redemptions',
+          label: 'Redemptions',
+          count: record.totalRedemptions,
+          content: <CouponRedemptionsView />,
+        },
+        {
+          value: 'information',
+          label: 'Information',
+          content: (
+            <div className="flex flex-col gap-6">
+              <Section
+                title="Details"
+                description="Use the pencil on the name, or Edit above. The discount is fixed once created."
+              >
+                <EditableFields
+                  editing={editing}
+                  onEditingChange={setEditing}
+                  className="mb-4"
+                  fields={[
+                    {
+                      key: 'name',
+                      label: 'Name',
+                      value: record.name,
+                      required: true,
+                      readOnly: isArchived,
+                    },
+                  ]}
+                  onSave={(changes) =>
+                    update.mutateAsync({
+                      id: record.id,
+                      draft: { name: changes.name ?? record.name },
+                    })
+                  }
+                />
+                <DetailList items={detailItems(record)} />
+              </Section>
+              {record.metadata ? (
+                <Section title="Metadata" description="Custom key-value pairs stored on this coupon.">
+                  <DetailList items={metadataItems(record.metadata)} />
+                </Section>
+              ) : null}
+            </div>
+          ),
+        },
+      ]}
+    >
       <ConfirmDialog
         open={archiving}
         onOpenChange={(open) => {
@@ -197,20 +208,13 @@ export function CouponDetailPage({
         destructive
         error={toSubmitError(archive.error)}
       />
-    </>
+    </CatalogDetailFrame>
   )
 }
 
-/**
- * The rail: the numbers a coupon exists to carry.
- *
- * Discount is the headline (the % or the `Money` amount); redemptions leads with
- * the count used against its ceiling; and where a ceiling is set, the rate that
- * ceiling has reached. Status and type are chips in the header, not tiles —
- * a rail that restated them would add nothing.
- */
-function couponMetrics(coupon: Coupon): DetailMetric[] {
-  const metrics: DetailMetric[] = [
+/** Overview summary: the numbers a coupon exists to carry (real, from the record). */
+function couponSummary(coupon: Coupon): { label: string; value: ReactNode }[] {
+  const items: { label: string; value: ReactNode }[] = [
     {
       label: 'Discount',
       value:
@@ -221,29 +225,25 @@ function couponMetrics(coupon: Coupon): DetailMetric[] {
         ) : (
           '—'
         ),
-      hint: cadenceText(coupon),
     },
+    { label: 'Cadence', value: cadenceText(coupon) },
     {
       label: 'Redemptions',
-      value: <span className="tabular-nums">{coupon.totalRedemptions.toLocaleString()}</span>,
-      hint:
-        coupon.maxRedemptions !== null
-          ? `of ${coupon.maxRedemptions.toLocaleString()}`
-          : 'no limit',
+      value: (
+        <span className="tabular-nums">
+          {coupon.totalRedemptions.toLocaleString()}
+          {coupon.maxRedemptions !== null ? ` of ${coupon.maxRedemptions.toLocaleString()}` : ''}
+        </span>
+      ),
     },
   ]
-
-  // A rate only means something against a ceiling.
   if (coupon.maxRedemptions !== null && coupon.maxRedemptions > 0) {
     const rate = Math.round((coupon.totalRedemptions / coupon.maxRedemptions) * 100)
-    metrics.push({
-      label: 'Redemption rate',
-      value: `${rate}%`,
-      hint: 'of limit used',
-    })
+    items.push({ label: 'Redemption rate', value: `${rate}%` })
+  } else {
+    items.push({ label: 'Limit', value: 'No limit' })
   }
-
-  return metrics
+  return items
 }
 
 /** "One-time", "Forever", or "Repeating · 3 periods". */

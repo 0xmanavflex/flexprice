@@ -38,6 +38,8 @@ import {
   useUpdateEntitlement,
 } from '@fp/query'
 import {
+  AddonSubscriptionsView,
+  CatalogDetailFrame,
   CatalogStatusBadge,
   ChargeTable,
   CreditGrantCreateForm,
@@ -54,21 +56,13 @@ import {
   ContextualSection,
   DetailList,
   type DetailMetric,
-  DetailShell,
   EditableFields,
   LoadingRows,
   PageBody,
+  Properties,
 } from '@fp/ui/compositions'
-import {
-  Button,
-  Card,
-  CardContent,
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from '@fp/ui/primitives'
-import { PencilIcon } from 'lucide-react'
+import { Card, CardContent } from '@fp/ui/primitives'
+import { PuzzleIcon } from 'lucide-react'
 
 export interface AddonDetailPageProps {
   addonId: string
@@ -78,7 +72,7 @@ export interface AddonDetailPageProps {
 }
 
 /** The tabs, in order. Overview leads with the add-on's prices. */
-type AddonTab = 'overview' | 'entitlements' | 'credit-grants' | 'information'
+type AddonTab = 'charges' | 'entitlements' | 'subscriptions' | 'information'
 
 /**
  * One add-on, in full.
@@ -110,7 +104,7 @@ export function AddonDetailPage({
   const prices = usePrices(PriceEntityType.Addon, addonId)
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
 
-  const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'overview')
+  const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'charges')
   const [editing, setEditing] = useState(startEditing)
 
   if (addon.isPending) {
@@ -148,87 +142,109 @@ export function AddonDetailPage({
   }
 
   const data = addon.data
-  const metrics = buildMetrics({
+  const metricItems = buildMetrics({
     charges: prices.data ?? [],
     chargesPending: prices.isPending,
     entitlementCount: (entitlements.data ?? []).length,
     entitlementsPending: entitlements.isPending,
-  })
+  }).map((metric) => ({
+    label: metric.label,
+    value: (
+      <span className="tabular-nums">
+        {metric.value}
+        {metric.hint ? <span className="text-muted-foreground font-normal"> / {metric.hint}</span> : null}
+      </span>
+    ),
+  }))
+
+  const chargeCount = (prices.data ?? []).length
+  const entitlementCount = (entitlements.data ?? []).length
+  const subtitle =
+    data.description ||
+    `${chargeCount} ${chargeCount === 1 ? 'charge' : 'charges'} · ${entitlementCount} ${entitlementCount === 1 ? 'entitlement' : 'entitlements'}`
 
   return (
-    <DetailShell
-      breadcrumb={
-        <button
-          type="button"
-          onClick={onNavigateToList}
-          className="text-muted-foreground hover:text-foreground w-fit text-xs transition-colors"
-        >
-          ← Add-ons
-        </button>
-      }
+    <CatalogDetailFrame
+      listLabel="Add-ons"
+      onBack={onNavigateToList}
+      icon={<PuzzleIcon />}
       title={data.name}
       badges={<CatalogStatusBadge status={data.status} />}
-      identifier={data.lookupKey || data.id}
-      {...(data.description ? { description: data.description } : {})}
-      actions={
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={editing || data.status === 'archived'}
-          onClick={() => {
-            setTab('information')
-            setEditing(true)
-          }}
-        >
-          <PencilIcon aria-hidden className="size-4" />
-          Edit
-        </Button>
-      }
-      metrics={metrics}
-    >
-      <Tabs value={tab} onValueChange={(value) => setTab(value as AddonTab)}>
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="entitlements">Entitlements</TabsTrigger>
-          <TabsTrigger value="credit-grants">Credit Grants</TabsTrigger>
-          <TabsTrigger value="information">Information</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="pt-4">
-          <PricesTab addonId={addonId} />
-        </TabsContent>
-        <TabsContent value="entitlements" className="pt-4">
-          <EntitlementsTab addonId={addonId} />
-        </TabsContent>
-        <TabsContent value="credit-grants" className="pt-4">
-          <CreditGrantsTab addonId={addonId} />
-        </TabsContent>
-        <TabsContent value="information" className="pt-4">
-          <InformationTab
-            addon={data}
-            editing={editing}
-            onEditingChange={setEditing}
-            onSave={(patch) =>
-              update
-                .mutateAsync({
-                  id: data.id,
-                  draft: {
-                    name: data.name,
-                    lookupKey: data.lookupKey,
-                    description: data.description,
-                    ...patch,
-                  },
-                })
-                .then(() => undefined)
-            }
-          />
-        </TabsContent>
-      </Tabs>
-    </DetailShell>
+      subtitle={subtitle}
+      id={data.lookupKey || data.id}
+      primary={{
+        label: 'Edit',
+        disabled: editing || data.status === 'archived',
+        onClick: () => {
+          setTab('information')
+          setEditing(true)
+        },
+      }}
+      menuLabel="Add-on actions"
+      menu={[
+        {
+          id: 'entitlements',
+          label: 'Manage entitlements',
+          onSelect: () => setTab('entitlements'),
+        },
+        { id: 'charges', label: 'View charges', onSelect: () => setTab('charges') },
+      ]}
+      tab={tab}
+      onTabChange={(next) => setTab(next as AddonTab)}
+      tabs={[
+        {
+          value: 'charges',
+          label: 'Charges',
+          ...(prices.isPending ? {} : { count: chargeCount }),
+          content: (
+            <div className="flex flex-col gap-6">
+              {metricItems.length > 0 ? <Properties columns={4} items={metricItems} /> : null}
+              <PricesTab addonId={addonId} />
+            </div>
+          ),
+        },
+        {
+          value: 'entitlements',
+          label: 'Entitlements',
+          ...(entitlements.isPending ? {} : { count: entitlementCount }),
+          content: (
+            <div className="flex flex-col gap-6">
+              <EntitlementsTab addonId={addonId} />
+              <CreditGrantsTab addonId={addonId} />
+            </div>
+          ),
+        },
+        { value: 'subscriptions', label: 'Subscriptions', content: <AddonSubscriptionsView /> },
+        {
+          value: 'information',
+          label: 'Information',
+          content: (
+            <InformationTab
+              addon={data}
+              editing={editing}
+              onEditingChange={setEditing}
+              onSave={(patch) =>
+                update
+                  .mutateAsync({
+                    id: data.id,
+                    draft: {
+                      name: data.name,
+                      lookupKey: data.lookupKey,
+                      description: data.description,
+                      ...patch,
+                    },
+                  })
+                  .then(() => undefined)
+              }
+            />
+          ),
+        },
+      ]}
+    />
   )
 }
 
-/** Overview — the prices this add-on carries. Terminating one is confirmed first. */
+/** Charges — the prices this add-on carries. Terminating one is confirmed first. */
 function PricesTab({ addonId }: { addonId: string }) {
   const charges = usePrices(PriceEntityType.Addon, addonId)
   const terminate = useTerminatePrice()

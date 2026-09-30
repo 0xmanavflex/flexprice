@@ -1,12 +1,10 @@
-import { GROUP_ENTITY_TYPE_LABEL, type Group } from '@fp/domain'
+import { useState } from 'react'
+import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
 import { ApiError, useGroup } from '@fp/query'
-import { CatalogStatusBadge } from '@fp/ui/pages'
+import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView } from '@fp/ui/pages'
 import {
   AppFailure,
-  type DetailMetric,
   DetailList,
-  DetailShell,
-  EmptyState,
   LoadingRows,
   PageBody,
   Section,
@@ -33,6 +31,7 @@ export interface GroupDetailPageProps {
  */
 export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPageProps) {
   const group = useGroup(groupId)
+  const [tab, setTab] = useState('members')
 
   if (group.isPending) {
     return (
@@ -71,65 +70,52 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
   const data = group.data
   const kind = GROUP_ENTITY_TYPE_LABEL[data.entityType].toLowerCase()
 
+  const noun = GROUP_ENTITY_TYPE_LABEL[data.entityType]
+
   return (
-    <DetailShell
-      breadcrumb={
-        <button
-          type="button"
-          onClick={onNavigateToList}
-          className="text-muted-foreground hover:text-foreground w-fit text-xs transition-colors"
-        >
-          ← Groups
-        </button>
-      }
+    <CatalogDetailFrame
+      listLabel="Groups"
+      onBack={onNavigateToList}
+      icon={<LayersIcon />}
       title={data.name}
       badges={<CatalogStatusBadge status={data.status} />}
-      identifier={data.lookupKey || data.id}
-      metrics={groupMetrics(data)}
-    >
-      <Section title="Information" description="Every attribute of this group.">
-        <DetailList
-          items={[
-            { label: 'Name', value: data.name },
-            { label: 'Lookup key', value: data.lookupKey || '—' },
-            { label: 'Holds', value: GROUP_ENTITY_TYPE_LABEL[data.entityType] },
-            { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-            { label: 'Group ID', value: <span className="font-mono text-xs">{data.id}</span> },
-            { label: 'Created', value: formatDate(data.createdAt) },
-            { label: 'Updated', value: formatDate(data.updatedAt) },
-          ]}
-        />
-      </Section>
-
-      <Section title="Members" description={`The ${kind} this group holds.`}>
-        <EmptyState
-          size="inline"
-          icon={<LayersIcon aria-hidden />}
-          title="Members aren't listed yet"
-          description={`The ${kind} this group holds will appear here once the members read view is wired.`}
-        />
-      </Section>
-    </DetailShell>
+      subtitle={`${new Intl.NumberFormat().format(data.entityCount)} ${kind}`}
+      id={data.lookupKey || data.id}
+      menuLabel="Group actions"
+      tab={tab}
+      onTabChange={setTab}
+      tabs={[
+        {
+          value: 'members',
+          label: noun,
+          count: data.entityCount,
+          content: <GroupMembersView kind={kind} count={data.entityCount} />,
+        },
+        {
+          value: 'information',
+          label: 'Information',
+          content: (
+            <Section title="Information" description="Every attribute of this group.">
+              <DetailList
+                items={[
+                  { label: 'Name', value: data.name },
+                  { label: 'Lookup key', value: data.lookupKey || '—' },
+                  { label: 'Holds', value: noun },
+                  { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
+                  {
+                    label: 'Group ID',
+                    value: <span className="font-mono text-xs">{data.id}</span>,
+                  },
+                  { label: 'Created', value: formatDate(data.createdAt) },
+                  { label: 'Updated', value: formatDate(data.updatedAt) },
+                ]}
+              />
+            </Section>
+          ),
+        },
+      ]}
+    />
   )
-}
-
-/**
- * The rail: the one number a group is for — how many members it holds.
- *
- * The count rides on the group record (its `entityIds`), so it is real and
- * belongs here as the headline; the kind it holds is the hint. Status, lookup
- * key and timestamps stay in the header and Information, never restated here.
- */
-function groupMetrics(group: Group): DetailMetric[] {
-  const noun = GROUP_ENTITY_TYPE_LABEL[group.entityType].toLowerCase()
-  const kind = group.entityCount === 1 ? noun.replace(/s$/, '') : noun
-  return [
-    {
-      label: 'Members',
-      value: new Intl.NumberFormat().format(group.entityCount),
-      hint: kind,
-    },
-  ]
 }
 
 function formatDate(value: Date | null): string {
