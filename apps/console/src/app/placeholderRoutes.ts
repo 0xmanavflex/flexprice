@@ -38,16 +38,7 @@ export const PLACEHOLDER_ROUTES = [
   // `/price-units` is a real page now — see `priceUnitsRoute` in router.tsx.
   // `/cost-sheets` is a real page now — see `costSheetsRoute` in router.tsx.
   // `/groups` is a real page now — see `groupsRoute` in router.tsx.
-  {
-    path: '/pricing-widget',
-    title: 'Pricing Widget',
-    description: 'The embeddable pricing table your customers see.',
-    emptyTitle: 'No pricing widget yet',
-    emptyDescription:
-      'The pricing widget is the embeddable table your customers choose a plan from.',
-    cta: 'Configure widget',
-    legacy: '/product-catalog/pricing-widget',
-  },
+  // `/pricing-widget` is a real page — see `pricingWidgetRoute` in router.tsx.
 
   // Billing
   // `/customers` is a real page now — see `customersRoute` in router.tsx.

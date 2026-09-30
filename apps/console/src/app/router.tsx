@@ -119,6 +119,11 @@ const IntegrationListPage = lazy(() =>
     default: m.IntegrationListPage,
   })),
 )
+const PricingWidgetPage = lazy(() =>
+  import('@/pages/pricing-widget/PricingWidgetPage').then((m) => ({
+    default: m.PricingWidgetPage,
+  })),
+)
 const ExportListPage = lazy(() =>
   import('@/pages/exports/ExportListPage').then((m) => ({ default: m.ExportListPage })),
 )
@@ -1081,6 +1086,12 @@ const integrationsRoute = createRoute({
   component: IntegrationListPage,
 })
 
+const pricingWidgetRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/pricing-widget',
+  component: PricingWidgetPage,
+})
+
 const taxesRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/taxes',
@@ -1225,6 +1236,7 @@ export const routeTree = rootRoute.addChildren([
     creditNotesRoute,
     workflowsRoute,
     exportsRoute,
+    pricingWidgetRoute,
     integrationsRoute,
     usageSyncsRoute,
     taxesRoute,
