@@ -226,3 +226,5 @@ export { UsageSyncDetailSheet, UsageSyncDetailSheetProvenance } from './UsageSyn
 export type { UsageSyncDetailSheetProps } from './UsageSyncDetailSheet'
 export { DataExportGrid, DataExportGridProvenance } from './DataExportGrid'
 export type { DataExportGridProps } from './DataExportGrid'
+export { IntegrationGrid, IntegrationGridProvenance } from './IntegrationGrid'
+export type { IntegrationGridProps } from './IntegrationGrid'
