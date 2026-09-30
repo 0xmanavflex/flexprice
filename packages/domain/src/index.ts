@@ -211,6 +211,15 @@ export {
 export type { Payment, PaymentQuery } from './payment'
 
 export {
+  CREDIT_NOTE_STATUS_LABEL,
+  CREDIT_NOTE_TYPE_LABEL,
+  CreditNoteStatus,
+  CreditNoteType,
+  DEFAULT_CREDIT_NOTE_QUERY,
+} from './creditNote'
+export type { CreditNote, CreditNoteQuery } from './creditNote'
+
+export {
   DEFAULT_TAX_RATE_QUERY,
   TAX_RATE_SCOPE_LABEL,
   TAX_RATE_SORT_LABEL,

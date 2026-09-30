@@ -42,6 +42,12 @@ export {
 export type { WebhookDashboard } from './settings'
 
 /**
+ * `GET /creditnotes`, live but absent from the SDK. See `creditNotes.ts`.
+ */
+export { listCreditNotes } from './creditNotes'
+export type { ListCreditNotesParams } from './creditNotes'
+
+/**
  * The SDK's request and response models, re-exported so the rest of the
  * workspace has one import path for them and the SDK can be swapped or pinned
  * in one place.

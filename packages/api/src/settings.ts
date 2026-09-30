@@ -124,7 +124,7 @@ function describeFailure(
  * DNS failure, an HTML 502 and a JSON 403 all leave this module as the same
  * `ApiError` a caller would have got from the SDK path.
  */
-async function request(
+export async function request(
   serverURL: string,
   path: string,
   init: { method: string; token: string; environmentId: string; body?: unknown },
@@ -140,7 +140,7 @@ async function request(
      * unreachable by staying disabled until an environment exists; this is the
      * backstop for a caller that does not.
      */
-    throw new ApiError(ErrorKind.Forbidden, 'Choose an environment before reading its settings.')
+    throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
   }
 
   const url = `${serverURL.replace(/\/+$/, '')}${path}`

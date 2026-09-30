@@ -167,6 +167,8 @@ export {
 } from './subscriptions'
 export type { SubscriptionPage, SubscriptionWire } from './subscriptions'
 
+export { fetchCreditNotes, toCreditNote, useCreditNotes } from './creditNotes'
+export type { CreditNotePage, CreditNoteWire } from './creditNotes'
 export { fetchPayments, toPayment, toPaymentFilter, usePayments } from './payments'
 export type { PaymentPage, PaymentWire } from './payments'
 
