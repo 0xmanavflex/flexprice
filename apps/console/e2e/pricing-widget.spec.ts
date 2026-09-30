@@ -13,9 +13,10 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('pricing widget previews published plans', async ({ page }) => {
+test('pricing widget shows the plan catalogue block', async ({ page }) => {
   await page.goto('/pricing-widget')
 
   await expect(page.getByRole('heading', { name: 'Pricing Widget', level: 1 })).toBeVisible()
-  await expect(page.locator('[data-testid^="pricing-plan-"]').first()).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Plans', level: 2 })).toBeVisible()
+  await expect(page.getByText('3 plans')).toBeVisible()
 })
