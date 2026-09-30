@@ -18,9 +18,9 @@ import { DotSeparator } from "./dot-separator"
 interface PlansHeaderProps {
   liveCount: number
   metaLabel: string
-  editorName: string
-  editorAvatar: string
-  editedAt: string
+  editorName?: string
+  editorAvatar?: string
+  editedAt?: string
   onCreatePlan: () => void
 }
 
@@ -44,21 +44,25 @@ export function PlansHeader({
         </div>
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">
           <span>{metaLabel}</span>
-          <DotSeparator />
-          <span className="flex items-center gap-1.5">
-            <Avatar className="size-5">
-              <AvatarImage src={editorAvatar} alt="" />
-              <AvatarFallback className="text-[9px]">
-                {editorName
-                  .split(" ")
-                  .map((part) => part[0])
-                  .join("")}
-              </AvatarFallback>
-            </Avatar>
-            <span>{editorName}</span>
-            <DotSeparator />
-            <span>{editedAt}</span>
-          </span>
+          {editorName ? (
+            <>
+              <DotSeparator />
+              <span className="flex items-center gap-1.5">
+                <Avatar className="size-5">
+                  <AvatarImage src={editorAvatar} alt="" />
+                  <AvatarFallback className="text-[9px]">
+                    {editorName
+                      .split(" ")
+                      .map((part) => part[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <span>{editorName}</span>
+                <DotSeparator />
+                <span>{editedAt}</span>
+              </span>
+            </>
+          ) : null}
         </div>
       </div>
 

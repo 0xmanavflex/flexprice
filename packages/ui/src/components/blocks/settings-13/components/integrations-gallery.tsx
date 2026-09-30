@@ -8,7 +8,7 @@ import {
   FramePanel,
 } from "@ui/components/reui/frame"
 
-import { Button } from "@ui/components/primitives/button"
+import { Button, buttonVariants } from "@ui/components/primitives/button"
 import { Item, ItemMedia } from "@ui/components/primitives/item"
 import { Switch } from "@ui/components/primitives/switch"
 
@@ -16,11 +16,12 @@ import { integrationApps, type IntegrationApp } from "./data"
 
 // ── Integration card ──
 
-function IntegrationCard({ app }: { app: IntegrationApp }) {
-  const [connected, setConnected] = useState(app.connected)
+function IntegrationCard({ app, live }: { app: IntegrationApp; live: boolean }) {
+  const [demoConnected, setConnected] = useState(app.connected)
+  const connected = live ? app.connected : demoConnected
 
   return (
-    <Frame>
+    <Frame data-testid={`integration-${app.id}`}>
       {/* Content */}
       <FramePanel className="space-y-4">
         <div className="flex items-start justify-between gap-4">
@@ -30,36 +31,49 @@ function IntegrationCard({ app }: { app: IntegrationApp }) {
             </ItemMedia>
           </Item>
 
-          <Button variant="ghost" size="icon-sm">
-            <ExternalLinkIcon
-              className="opacity-60"
-              aria-hidden="true"
-            />
-          </Button>
+          {app.docsUrl ? (
+            <a
+              href={app.docsUrl}
+              target="_blank"
+              rel="noreferrer"
+              aria-label={`Setup guide for ${app.name ?? app.id}`}
+              className={buttonVariants({ variant: "ghost", size: "icon-sm" })}
+            >
+              <ExternalLinkIcon className="opacity-60" aria-hidden="true" />
+            </a>
+          ) : null}
         </div>
-        <p className="text-muted-foreground text-sm">{app.description}</p>
+        <div className="space-y-1">
+          {app.name ? <h3 className="text-sm font-semibold">{app.name}</h3> : null}
+          <p className="text-muted-foreground text-sm">{app.description}</p>
+        </div>
       </FramePanel>
 
       {/* Footer */}
       <FrameFooter className="flex flex-row items-center justify-between p-2">
-        <Button
-          type="button"
-          size="sm"
-          variant={connected ? "outline" : "default"}
-          aria-pressed={connected}
-          onClick={() => setConnected((c) => !c)}
-        >
-          {!connected ? (
-            <PlugZapIcon
-              aria-hidden="true"
-            />
-          ) : (
-            ""
-          )}
-          {connected ? "Disconnect" : "Connect"}
-        </Button>
+        {live ? (
+          <span className="text-muted-foreground px-2 text-sm">
+            {connected ? "Connected" : "Not connected"}
+          </span>
+        ) : (
+          <Button
+            type="button"
+            size="sm"
+            variant={connected ? "outline" : "default"}
+            aria-pressed={connected}
+            onClick={() => setConnected((c) => !c)}
+          >
+            {!connected ? <PlugZapIcon aria-hidden="true" /> : ""}
+            {connected ? "Disconnect" : "Connect"}
+          </Button>
+        )}
 
-        <Switch checked={connected} onCheckedChange={setConnected} />
+        <Switch
+          checked={connected}
+          disabled={live}
+          aria-label={`${app.name ?? app.id} connection`}
+          onCheckedChange={setConnected}
+        />
       </FrameFooter>
     </Frame>
   )
@@ -67,9 +81,10 @@ function IntegrationCard({ app }: { app: IntegrationApp }) {
 
 // ── Main component ──
 
-export function IntegrationsGallery() {
+export function IntegrationsGallery({ apps }: { apps?: IntegrationApp[] }) {
+  const live = apps !== undefined
   return (
-    <div className="w-full max-w-4xl space-y-4">
+    <div className="w-full space-y-4">
       {/* Heading */}
       <div className="flex flex-col gap-4">
         <div className="space-y-0.5">
@@ -83,8 +98,8 @@ export function IntegrationsGallery() {
 
       {/* Grid */}
       <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 md:grid-cols-3">
-        {integrationApps.map((app) => (
-          <IntegrationCard key={app.id} app={app} />
+        {(apps ?? integrationApps).map((app) => (
+          <IntegrationCard key={app.id} app={app} live={live} />
         ))}
       </div>
     </div>

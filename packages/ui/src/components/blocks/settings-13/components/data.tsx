@@ -16,6 +16,8 @@ import { Zoom } from "@ui/components/primitives/svgs/zoom"
 
 export interface IntegrationApp {
   id: string
+  name?: string
+  docsUrl?: string
   description: string
   logo: ReactNode
   connected: boolean

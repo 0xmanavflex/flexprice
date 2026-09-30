@@ -1,8 +1,16 @@
+import { DEFAULT_PLAN_QUERY } from '@fp/domain'
+import { usePlans } from '@fp/query'
 import { PricingCatalogBlock } from '@fp/ui/pages'
 import { PageBody, PageHeader } from '@fp/ui/compositions'
 
-/** The ReUI `solution-billing-2` plan catalogue block, unmodified. */
-export function PricingWidgetPage() {
+export interface PricingWidgetPageProps {
+  onCreatePlan: () => void
+  onEditPlan: (planId: string) => void
+}
+
+export function PricingWidgetPage({ onCreatePlan, onEditPlan }: PricingWidgetPageProps) {
+  const plans = usePlans({ ...DEFAULT_PLAN_QUERY, pageSize: 100 })
+
   return (
     <>
       <PageHeader
@@ -10,7 +18,11 @@ export function PricingWidgetPage() {
         description="The plan catalogue your customers choose from."
       />
       <PageBody>
-        <PricingCatalogBlock />
+      <PricingCatalogBlock
+        plans={plans.data?.plans ?? []}
+        onCreatePlan={onCreatePlan}
+        onEditPlan={onEditPlan}
+      />
       </PageBody>
     </>
   )

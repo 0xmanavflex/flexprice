@@ -30,7 +30,7 @@ export interface Plan {
   monthlyPrice: number
   annualPrice: number
   perSeat: boolean
-  subscribers: number
+  subscribers?: number
   entitlements: Entitlement[]
   addOns: AddOn[]
 }

@@ -73,9 +73,10 @@ function PublicToast({ children }: { children: string }) {
 
 interface PlanTileProps {
   plan: Plan
+  onEdit?: (planId: string) => void
 }
 
-export function PlanTile({ plan }: PlanTileProps) {
+export function PlanTile({ plan, onEdit }: PlanTileProps) {
   const [active, setActive] = React.useState(plan.status === "active")
   const [isPublic, setIsPublic] = React.useState(plan.isPublic)
   const [interval, setInterval] = React.useState<BillingInterval>("monthly")
@@ -178,10 +179,14 @@ export function PlanTile({ plan }: PlanTileProps) {
                 />
               )}
               <span>{isPublic ? "Public" : "Private"}</span>
-              <DotSeparator />
-              <span className="tabular-nums">
-                {plan.subscribers.toLocaleString()} subscribers
-              </span>
+              {plan.subscribers !== undefined ? (
+                <>
+                  <DotSeparator />
+                  <span className="tabular-nums">
+                    {plan.subscribers.toLocaleString()} subscribers
+                  </span>
+                </>
+              ) : null}
             </div>
           </div>
 
@@ -190,7 +195,7 @@ export function PlanTile({ plan }: PlanTileProps) {
             variant="ghost"
             size="icon-sm"
             aria-label={`Edit ${details.name} details`}
-            onClick={() => setEditOpen(true)}
+            onClick={() => (onEdit ? onEdit(plan.id) : setEditOpen(true))}
           >
             <PencilIcon
               className="opacity-60"
@@ -240,17 +245,20 @@ export function PlanTile({ plan }: PlanTileProps) {
         )}
 
         {/* Add entitlement */}
-        <Button
-          type="button"
-          variant="outline"
-          className="mt-auto"
-          onClick={handleAddEntitlement}
-        >
-          <PlusIcon
-            aria-hidden="true"
-          />
-          Add entitlement
-        </Button>
+        {onEdit ? null : (
+          <Button
+            type="button"
+            variant="outline"
+            className="mt-auto"
+            onClick={handleAddEntitlement}
+          >
+            <PlusIcon
+              aria-hidden="true"
+            />
+            Add entitlement
+          </Button>
+        )}
+        {onEdit ? null : (
         <p className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
           <span>{entitlementCount} entitlements</span>
           <DotSeparator />
@@ -259,9 +267,11 @@ export function PlanTile({ plan }: PlanTileProps) {
             {plan.addOns.length === 1 ? "on" : "ons"}
           </span>
         </p>
+        )}
       </FramePanel>
 
       {/* Footer: active + public toggles */}
+      {onEdit ? null : (
       <FrameFooter className="flex flex-col gap-2 p-3">
         <label className="flex items-center justify-between gap-2 text-sm">
           <span className="text-foreground">Active</span>
@@ -280,6 +290,7 @@ export function PlanTile({ plan }: PlanTileProps) {
           />
         </label>
       </FrameFooter>
+      )}
 
       <EditPlanDialog
         open={editOpen}

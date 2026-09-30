@@ -1074,8 +1074,21 @@ const integrationsRoute = createRoute({
 const pricingWidgetRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/pricing-widget',
-  component: PricingWidgetPage,
+  component: PricingWidgetRouteComponent,
 })
+
+function PricingWidgetRouteComponent() {
+  const navigate = useNavigate()
+
+  return (
+    <PricingWidgetPage
+      onCreatePlan={() => void navigate({ to: '/plans/new' })}
+      onEditPlan={(planId) =>
+        void navigate({ to: '/plans/$planId/edit', params: { planId } })
+      }
+    />
+  )
+}
 
 const taxesRoute = createRoute({
   getParentRoute: () => shellRoute,

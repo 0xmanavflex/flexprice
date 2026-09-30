@@ -1,9 +1,13 @@
+import type { ComponentProps } from "react"
+
 import { IntegrationsGallery } from "./components/integrations-gallery"
 
-export function Page() {
+export type { IntegrationApp } from "./components/data"
+
+export function Page(props: ComponentProps<typeof IntegrationsGallery>) {
   return (
-    <div className="flex min-h-svh w-full items-start justify-center p-4 sm:p-8 md:p-12">
-      <IntegrationsGallery />
+    <div className="flex w-full items-start">
+      <IntegrationsGallery {...props} />
     </div>
   )
 }

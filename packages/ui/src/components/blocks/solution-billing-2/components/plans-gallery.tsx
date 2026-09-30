@@ -13,13 +13,25 @@ import { toast } from "sonner"
 import { Button } from "@ui/components/primitives/button"
 
 import { CreatePlanDialog } from "./create-plan-dialog"
-import { plans } from "./data"
+import { plans as demoPlans, type Plan } from "./data"
 import { PlanTile } from "./plan-tile"
 import { PlansHeader } from "./plans-header"
 
-export function PlansGallery() {
+interface PlansGalleryProps {
+  /** Omit to render the block's demo catalog. */
+  plans?: Plan[]
+  onCreatePlan?: () => void
+  onEditPlan?: (planId: string) => void
+}
+
+export function PlansGallery({
+  plans = demoPlans,
+  onCreatePlan,
+  onEditPlan,
+}: PlansGalleryProps) {
+  const isDemo = plans === demoPlans
   const [createOpen, setCreateOpen] = React.useState(false)
-  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(true)
+  const [hasUnsavedChanges, setHasUnsavedChanges] = React.useState(isDemo)
 
   const liveCount = plans.filter((plan) => plan.status === "active").length
 
@@ -38,16 +50,21 @@ export function PlansGallery() {
   }
 
   return (
-    <div className="bg-background flex min-h-svh w-full flex-col">
-      <div className="mx-auto w-full max-w-[1320px] p-3 md:p-4">
+    <div className="bg-background flex w-full flex-col">
+      <div className="mx-auto w-full max-w-[1320px]">
         {/* Content-level header */}
         <PlansHeader
           liveCount={liveCount}
-          metaLabel={`${plans.length} plans`}
-          editorName="Mara Whitfield"
-          editorAvatar="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&dpr=2&q=80"
-          editedAt="edited 14 min ago"
-          onCreatePlan={() => setCreateOpen(true)}
+          metaLabel={`${plans.length} ${plans.length === 1 ? "plan" : "plans"}`}
+          {...(isDemo
+            ? {
+                editorName: "Mara Whitfield",
+                editorAvatar:
+                  "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=96&h=96&dpr=2&q=80",
+                editedAt: "edited 14 min ago",
+              }
+            : {})}
+          onCreatePlan={onCreatePlan ?? (() => setCreateOpen(true))}
         />
 
         <div className="mt-4 flex flex-col gap-4">
@@ -76,7 +93,11 @@ export function PlansGallery() {
           {/* Plan tile gallery (the signature) */}
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {plans.map((plan) => (
-              <PlanTile key={plan.id} plan={plan} />
+              <PlanTile
+                key={plan.id}
+                plan={plan}
+                {...(onEditPlan ? { onEdit: onEditPlan } : {})}
+              />
             ))}
           </div>
         </div>
