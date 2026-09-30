@@ -80,6 +80,20 @@ export function PriceUnitListPage({
             query={query}
             onQueryChange={onQueryChange}
             onPriceUnitClick={onOpenPriceUnit}
+            onRename={(priceUnit, name) =>
+              update
+                .mutateAsync({
+                  id: priceUnit.id,
+                  draft: {
+                    name,
+                    code: priceUnit.code,
+                    symbol: priceUnit.symbol,
+                    baseCurrency: priceUnit.baseCurrency.toUpperCase(),
+                    conversionRate: Number(priceUnit.conversionRate) || 1,
+                  },
+                })
+                .then(() => undefined, () => undefined)
+            }
             onCreate={() => setEditing({ mode: 'create' })}
             // The editor sheet this page already owns. Only the name is
             // editable once a unit exists; the sheet renders the rest

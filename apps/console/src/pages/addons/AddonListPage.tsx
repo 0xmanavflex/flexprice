@@ -75,6 +75,14 @@ export function AddonListPage({ query, onQueryChange, onOpenAddon }: AddonListPa
             query={query}
             onQueryChange={onQueryChange}
             onAddonClick={onOpenAddon}
+            onRename={(addon, name) =>
+              update
+                .mutateAsync({
+                  id: addon.id,
+                  draft: { name, lookupKey: addon.lookupKey, description: addon.description },
+                })
+                .then(() => undefined, () => undefined)
+            }
             onCreate={() => setEditing({ mode: 'create' })}
             // The editor sheet this page already owns, reached from the row
             // menu as well as from a row.

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { type CreatePlan, type PlanQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, useCreatePlan, usePlans } from '@fp/query'
+import { ApiError, useCatalogStats, useCreatePlan, usePlans, useUpdatePlan } from '@fp/query'
 import { PlanEditorDialog, PlanGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
@@ -26,6 +26,7 @@ export interface PlanListPageProps {
 export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageProps) {
   const plans = usePlans(query)
   const create = useCreatePlan()
+  const update = useUpdatePlan()
   // Counts per status for the toolbar's dropdown. Each is one `limit: 1`
   // request read for its `pagination.total` — the server's count, not the
   // twenty-five rows that happen to be on screen.
@@ -75,6 +76,14 @@ export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageP
             query={query}
             onQueryChange={onQueryChange}
             onPlanClick={(plan) => onOpenPlan(plan.id)}
+            onRename={(plan, name) =>
+              update
+                .mutateAsync({
+                  id: plan.id,
+                  draft: { name, lookupKey: plan.lookupKey, description: plan.description },
+                })
+                .then(() => undefined, () => undefined)
+            }
             onCreate={() => setCreating(true)}
             onClearFilters={clearFilters}
             statusCounts={{

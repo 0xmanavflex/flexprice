@@ -1,8 +1,9 @@
-import type { ReactNode } from 'react'
-import { BracesIcon, GaugeIcon, HashIcon, ToggleRightIcon } from 'lucide-react'
+import { useRef, useState, type ReactNode } from 'react'
+import { BracesIcon, PencilIcon, GaugeIcon, HashIcon, ToggleRightIcon } from 'lucide-react'
 import type { CircleIcon } from 'lucide-react'
 import { type Money as MoneyValue, formatMoney } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
+import { Input } from '@ui/primitives/input'
 import { Skeleton } from '@ui/primitives/skeleton'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -225,6 +226,89 @@ function spreadOptions(options: ColumnOptions | undefined): ColumnOptions {
   }
 }
 
+
+/**
+ * A table cell that edits in place.
+ *
+ * Reading shows the text with a pencil that appears on hover or focus; a click
+ * on either swaps in a stock `Input`. Enter or blur saves, Escape cancels. An
+ * unchanged or empty value saves nothing. Clicks are stopped from reaching the
+ * row, so editing never navigates.
+ */
+function InlineTextCell({
+  value,
+  label,
+  muted,
+  onSave,
+}: {
+  value: string
+  label: string
+  muted?: boolean | undefined
+  onSave: (value: string) => void | Promise<void>
+}) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState(value)
+  const [pending, setPending] = useState(false)
+  const cancelled = useRef(false)
+
+  const commit = async () => {
+    const next = draft.trim()
+    setEditing(false)
+    if (cancelled.current || !next || next === value) return
+    setPending(true)
+    try {
+      await onSave(next)
+    } finally {
+      setPending(false)
+    }
+  }
+
+  if (editing) {
+    return (
+      <Input
+        autoFocus
+        aria-label={label}
+        value={draft}
+        className="h-8"
+        onClick={(event) => event.stopPropagation()}
+        onChange={(event) => setDraft(event.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') {
+            event.preventDefault()
+            event.currentTarget.blur()
+          } else if (event.key === 'Escape') {
+            cancelled.current = true
+            event.currentTarget.blur()
+          }
+        }}
+      />
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      aria-label={`${label}: ${value || 'not set'}. Edit`}
+      disabled={pending}
+      title="Click to edit"
+      className="group/inline flex w-full min-w-0 items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-60"
+      onClick={(event) => {
+        event.stopPropagation()
+        cancelled.current = false
+        setDraft(value)
+        setEditing(true)
+      }}
+    >
+      <span className={cn('truncate', muted && 'text-muted-foreground')}>{value || <EmDash />}</span>
+      <PencilIcon
+        aria-hidden
+        className="text-muted-foreground size-3 shrink-0 opacity-0 group-hover/inline:opacity-100 group-focus-visible/inline:opacity-100"
+      />
+    </button>
+  )
+}
+
 /**
  * Text, on one line, clipped rather than wrapped.
  *
@@ -236,13 +320,29 @@ export function textColumn<T>(
   id: string,
   header: string,
   get: (row: T) => string | null | undefined,
-  options?: ColumnOptions & { muted?: boolean },
+  options?: ColumnOptions & {
+    muted?: boolean
+    /** Makes the cell click-to-edit; saved by the caller's mutation. */
+    onEdit?: ((row: T, value: string) => void | Promise<void>) | undefined
+  },
 ): EntityColumn<T> {
+  const onEdit = options?.onEdit
   return {
     id,
     header,
     cell: (row) => {
       const value = get(row)
+      if (onEdit) {
+        return (
+          <InlineTextCell
+            key={value ?? ''}
+            value={value ?? ''}
+            label={header}
+            muted={options?.muted}
+            onSave={(next) => onEdit(row, next)}
+          />
+        )
+      }
       if (!value) return <EmDash />
       return (
         <span

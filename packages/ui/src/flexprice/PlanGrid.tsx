@@ -136,6 +136,8 @@ export interface PlanGridProps {
   onCreate?: () => void
   /** Row menu: open the plan's editor. Left out of the menu when absent. */
   onEdit?: ((plan: Plan) => void) | undefined
+  /** Inline rename from the name cell. Absent leaves the name read-only. */
+  onRename?: ((plan: Plan, name: string) => void | Promise<void>) | undefined
   /** Row menu: clone the plan. `useClonePlan` backs this. */
   onDuplicate?: ((plan: Plan) => void) | undefined
   /** Row menu: jump to the plan's charges editor. */
@@ -160,6 +162,7 @@ export function PlanGrid({
   onPlanClick,
   onCreate,
   onEdit,
+  onRename,
   onDuplicate,
   onAddCharges,
   onArchive,
@@ -170,6 +173,7 @@ export function PlanGrid({
   const columns = useMemo<EntityColumn<Plan>[]>(
     () => [
       textColumn<Plan>('name', 'Plan', (row) => row.name, {
+        ...(onRename ? { onEdit: onRename } : {}),
         width: 240,
         sortable: true,
         sortValue: PlanSortField.Name,
@@ -209,7 +213,7 @@ export function PlanGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale],
+    [locale, onRename],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
