@@ -112,6 +112,11 @@ const TaxListPage = lazy(() =>
 )
 import { parseTaxSearch } from './taxSearch'
 import { DEFAULT_TAX_RATE_QUERY, type TaxRateQuery } from '@fp/domain'
+const EventListPage = lazy(() =>
+  import('@/pages/events/EventListPage').then((m) => ({ default: m.EventListPage })),
+)
+import { parseEventSearch } from './eventSearch'
+import { DEFAULT_RAW_EVENT_QUERY, type RawEventQuery } from '@fp/domain'
 const SettingsPage = lazy(() =>
   import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
@@ -982,6 +987,26 @@ function TaxesRouteComponent() {
   )
 }
 
+const eventsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/events',
+  validateSearch: (search: Record<string, unknown>): RawEventQuery => parseEventSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_RAW_EVENT_QUERY)] },
+  component: EventsRouteComponent,
+})
+
+function EventsRouteComponent() {
+  const query = useSearch({ from: eventsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <EventListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/events', search: next, replace: true })}
+    />
+  )
+}
+
 /**
  * Settings, with both navigation levels in the address bar.
  *
@@ -1084,6 +1109,7 @@ export const routeTree = rootRoute.addChildren([
     invoicesRoute,
     paymentsRoute,
     taxesRoute,
+    eventsRoute,
     settingsRoute,
     subscriptionCreateRoute,
     ...developerRedirects,

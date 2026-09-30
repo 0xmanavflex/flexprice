@@ -69,16 +69,7 @@ export const PLACEHOLDER_ROUTES = [
   // Developers
   // `/api-keys`, `/service-accounts`, `/webhooks` are real: each lands on its
   // Settings → Developers panel (see `developerRedirects` in router.tsx).
-  {
-    path: '/events',
-    title: 'Events Debugger',
-    description: 'The raw usage events as they arrived, so you can see why a bill is what it is.',
-    emptyTitle: 'No events received yet',
-    emptyDescription:
-      'Usage events sent by your systems appear here as they arrive, so a bill can be traced to what caused it.',
-    cta: null,
-    legacy: '/usage-tracking/events',
-  },
+  // `/events` is a real page — see `eventsRoute` in router.tsx.
   {
     path: '/exports',
     title: 'Exports',

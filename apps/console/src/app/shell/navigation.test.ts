@@ -167,6 +167,7 @@ describe('every destination resolves', () => {
     '/invoices',
     '/payments',
     '/taxes',
+    '/events',
     '/settings',
     '/api-keys',
     '/service-accounts',

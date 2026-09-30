@@ -796,6 +796,27 @@ const settingsStore: Record<string, SettingsValue> = {
 }
 
 /**
+ * The raw event log the Events Debugger reads: sixty events across three
+ * customers, three event names and two sources, an hour apart, so paging,
+ * every filter and the sort all have something to do. One customer id is not
+ * matched to a Flexprice customer, which is a real state worth seeing.
+ */
+const rawEvents: Record<string, unknown>[] = Array.from({ length: 60 }, (_, index) => {
+  const customers = ['acme-corp', 'globex', 'initech']
+  const names = ['api_call', 'storage_gb', 'seat_active']
+  const externalCustomerId = customers[index % 3]
+  return {
+    id: `evt_01M38QEVT${String(index).padStart(14, '0')}`,
+    event_name: names[index % names.length],
+    external_customer_id: externalCustomerId,
+    customer_id: externalCustomerId === 'initech' ? '' : `cust_${externalCustomerId}`,
+    source: index % 5 === 0 ? 'import' : 'sdk',
+    timestamp: new Date(Date.UTC(2026, 8, 1, 0, 0, 0) + index * 3_600_000).toISOString(),
+    properties: { units: (index % 7) + 1, region: index % 2 === 0 ? 'us-east-1' : 'eu-west-1' },
+  }
+})
+
+/**
  * `GET /taxes/rates`, the one settings panel with no handler at all.
  *
  * Without it the request escaped MSW to `mock.flexprice.test` and failed at
@@ -2097,6 +2118,40 @@ export const handlers = [
     return HttpResponse.json({
       items: taxRates.slice(offset, offset + limit),
       pagination: { total: taxRates.length, limit, offset },
+    })
+  }),
+
+  /*
+   * `POST /events/query` — the Events Debugger's list (`client.events.listRawEvents`).
+   *
+   * Name, customer and source are server-side filters on the real endpoint, so
+   * they are applied here too; a mock that ignored them would make the grid's
+   * filter chips look wired when they were not. Newest first unless `order` is
+   * `asc`. `total_count` is the filtered total, as on the wire.
+   */
+  http.post(`${BASE}/events/query`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const pageSize = Number(body['page_size'] ?? 50)
+    const offset = Number(body['offset'] ?? 0)
+    const name = String(body['event_name'] ?? '')
+    const customer = String(body['external_customer_id'] ?? '')
+    const source = String(body['source'] ?? '')
+
+    const matches = rawEvents
+      .filter(
+        (event) =>
+          (!name || String(event['event_name']).toLowerCase().includes(name.toLowerCase())) &&
+          (!customer || event['external_customer_id'] === customer) &&
+          (!source || event['source'] === source),
+      )
+      .sort((a, b) => String(a['timestamp']).localeCompare(String(b['timestamp'])))
+    if (body['order'] !== 'asc') matches.reverse()
+
+    return HttpResponse.json({
+      events: matches.slice(offset, offset + pageSize),
+      total_count: matches.length,
+      has_more: offset + pageSize < matches.length,
+      offset,
     })
   }),
 
