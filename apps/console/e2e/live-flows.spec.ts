@@ -1,0 +1,479 @@
+import { expect, test, type BrowserContext, type Locator, type Page } from '@playwright/test'
+
+import { SignInPage } from './pages/auth'
+import { ShellPage } from './pages/shell'
+
+/**
+ * Create → edit → delete of every catalogue entity, through the real UI against
+ * the real Flexprice dev API. **Opt-in, skipped by default** (see
+ * `live-auth.spec.ts` for the why and the dev-server recipe).
+ *
+ * ```sh
+ * E2E_LIVE=1 E2E_EMAIL=… E2E_PASSWORD=… E2E_ENV_ID=<env id> \
+ * E2E_ENV_PREFIX=claude-e2e-forms- E2E_BASE_URL=http://127.0.0.1:3300 \
+ *   pnpm exec playwright test e2e/live-flows.spec.ts --workers=1 --timeout=120000
+ * ```
+ *
+ * ## Isolation
+ *
+ * The tenant is shared with colleagues and holds a production-type
+ * environment, so this suite writes to exactly one dedicated environment:
+ * the one whose id is `E2E_ENV_ID`. Three independent guards enforce it —
+ * the switcher must read a name starting `E2E_ENV_PREFIX`, the persisted
+ * environment id must equal `E2E_ENV_ID`, and every non-GET request that
+ * leaves the browser is aborted unless its `X-Environment-ID` is that id.
+ *
+ * Every record is named `e2e-<timestamp>-…`, so a run is recognisable and a
+ * leftover is attributable. The password is typed through `SignInPage` only.
+ */
+
+const email = process.env['E2E_EMAIL']
+const password = process.env['E2E_PASSWORD']
+const envId = process.env['E2E_ENV_ID']
+const envPrefix = process.env['E2E_ENV_PREFIX'] ?? 'claude-e2e-forms-'
+const live = process.env['E2E_LIVE'] === '1' && !!email && !!password && !!envId
+
+const run = `e2e-${Date.now()}`
+const violations: string[] = []
+
+let context: BrowserContext
+let page: Page
+
+/** The one open dialog. */
+const dialog = () => page.getByRole('dialog')
+
+async function assertIsolated() {
+  const shell = new ShellPage(page)
+  await expect(shell.environment).toContainText(envPrefix)
+  const stored = await page.evaluate(() => localStorage.getItem('flexprice.environment'))
+  if (!(stored ?? '').includes(envId as string)) {
+    throw new Error('ABORT: the selected environment is not the dedicated e2e environment')
+  }
+}
+
+async function open(path: string) {
+  await page.goto(path)
+  await assertIsolated()
+}
+
+/** Required fields carry a trailing asterisk in their name, so match the head. */
+function field(scope: Locator, label: string): Locator {
+  const escaped = label.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+  return scope.getByLabel(new RegExp(`^${escaped}(\\s*\\*)?$`))
+}
+
+async function fill(scope: Locator, label: string, value: string) {
+  await field(scope, label).fill(value)
+}
+
+/** Choose an option in an `OptionSelect` (a combobox trigger + listbox). */
+async function choose(scope: Locator, label: string, option: string | RegExp) {
+  await field(scope, label).click()
+  await page.getByRole('option', { name: option }).first().click()
+}
+
+async function submit(scope: Locator = dialog()) {
+  await scope
+    .getByRole('button', { name: /^(Create|Save changes|Add|Save)/ })
+    .last()
+    .click()
+  await expect(dialog()).toHaveCount(0, { timeout: 30_000 })
+}
+
+/** Narrow a paginated list to the records of this run, so a row is never on page two. */
+async function search(text: string) {
+  await page
+    .getByPlaceholder(/^Search/)
+    .first()
+    .fill(text)
+  await page.waitForTimeout(800)
+}
+
+function row(name: string): Locator {
+  return page.getByRole('row').filter({ hasText: name })
+}
+
+async function openRowMenu(name: string, action: string | RegExp) {
+  await row(name).getByRole('button', { name: 'Row actions' }).click()
+  await page.getByRole('menuitem', { name: action }).click()
+}
+
+async function inlineRename(from: string, to: string) {
+  await row(from).getByRole('button', { name: /Edit$/ }).first().click()
+  // While editing, the row's text is an input value, so `row(from)` no longer matches.
+  const input = page.getByRole('row').getByRole('textbox')
+  await input.fill(to)
+  await input.press('Enter')
+  await expect(row(to)).toBeVisible({ timeout: 30_000 })
+}
+
+/** Confirm a destructive action in the confirm dialog, by its button label. */
+async function confirm(label: string | RegExp) {
+  const scope = page.getByRole('alertdialog').or(page.getByRole('dialog'))
+  await scope.getByRole('button', { name: label }).click()
+  await expect(scope).toHaveCount(0, { timeout: 30_000 })
+}
+
+/** Open a list, find the row, run a destructive row action and confirm it. */
+async function removeFrom(
+  path: string,
+  name: string,
+  action: string,
+  confirmLabel: string | RegExp,
+) {
+  await open(path)
+  await openRowMenu(name, action)
+  await confirm(confirmLabel)
+  await expect(row(name)).toHaveCount(0, { timeout: 30_000 })
+}
+
+const tag = run.slice(-6)
+/** Lookup keys are lowercase letters, digits and underscores. */
+const key = (suffix: string) => `${run.replace(/-/g, '_')}_${suffix}`
+const letters = (n: number) =>
+  Array.from({ length: n }, (_, i) =>
+    String.fromCharCode(65 + (Number(run.slice(-1 - i, run.length - i)) % 26)),
+  ).join('')
+
+test.describe('live flows', () => {
+  test.skip(!live, 'Live flows are opt-in: set E2E_LIVE=1, E2E_EMAIL, E2E_PASSWORD, E2E_ENV_ID.')
+
+  test.beforeAll(async ({ browser }) => {
+    context = await browser.newContext({ baseURL: process.env['E2E_BASE_URL'] })
+    // Guard three: nothing that writes may leave the browser for another env.
+    await context.route(/\/v1\//, async (route) => {
+      const request = route.request()
+      const isAuth = /\/v1\/auth\//.test(request.url())
+      if (
+        request.method() !== 'GET' &&
+        !isAuth &&
+        request.headers()['x-environment-id'] !== envId
+      ) {
+        violations.push(`${request.method()} ${request.url()}`)
+        await route.abort()
+        return
+      }
+      await route.continue()
+    })
+    page = await context.newPage()
+    // A rejected write is the finding this suite exists to surface, so say what
+    // the API answered instead of leaving only the UI's generic sentence.
+    page.on('response', async (response) => {
+      const request = response.request()
+      if (
+        !/\/v1\//.test(request.url()) ||
+        /\/v1\/auth\//.test(request.url()) ||
+        (response.status() < 400 &&
+          !process.env['E2E_DEBUG_STATUS'] &&
+          (request.method() === 'GET' || /\/search$/.test(request.url())))
+      )
+        return
+      const body = await response.text().catch(() => '')
+      console.log(
+        `API ${response.status()} ${request.method()} ${new URL(request.url()).pathname} ` +
+          `req=${(request.postData() ?? '').slice(0, 400)} res=${body.slice(0, 300)}${process.env['E2E_DEBUG_STATUS'] ? ` statuses=${(body.match(/"status":"\w+"/g) ?? []).join(',')}` : ''}`,
+      )
+    })
+    const signIn = new SignInPage(page)
+    await signIn.goto()
+    await signIn.signIn(email as string, password as string)
+    await expect(page).not.toHaveURL(/\/sign-in/, { timeout: 30_000 })
+    const shell = new ShellPage(page)
+    await expect(shell.environment).not.toContainText('Loading environments', { timeout: 30_000 })
+    await shell.switchEnvironment(envPrefix)
+    await assertIsolated()
+  })
+
+  test.afterAll(async () => {
+    expect(violations, 'writes attempted outside the e2e environment').toEqual([])
+    await context?.close()
+  })
+
+  test('feature: boolean create, edit, inline rename', async () => {
+    test.setTimeout(40_000)
+    const name = `${run}-flag`
+    await open('/features')
+    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await choose(dialog(), 'Type', 'Boolean')
+    await submit()
+    await search(name)
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+
+    await openRowMenu(name, 'Edit feature')
+    await fill(dialog(), 'Description', 'edited by live e2e')
+    await submit()
+
+    await inlineRename(name, `${name}-renamed`)
+    await openRowMenu(`${name}-renamed`, 'Delete feature')
+    await confirm(/Delete/)
+    // Deleted features linger as "Archived" rather than leaving the list.
+    await expect(row(`${name}-renamed`).filter({ hasText: 'Published' })).toHaveCount(0, {
+      timeout: 30_000,
+    })
+  })
+  test('feature: metered create and edit', async () => {
+    const name = `${run}-metered`
+    await open('/features')
+    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await fill(dialog(), 'Event name', `${run}_evt`)
+    await submit()
+    await search(name)
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+
+    await openRowMenu(name, 'Edit feature')
+    await fill(dialog(), 'Description', 'metered, edited by live e2e')
+    await fill(dialog(), 'Unit (singular)', 'call')
+    await fill(dialog(), 'Unit (plural)', 'calls')
+    await submit()
+    await inlineRename(name, `${name}-renamed`)
+    await openRowMenu(`${name}-renamed`, 'Delete feature')
+    await confirm(/Delete/)
+    await expect(row(`${name}-renamed`).filter({ hasText: 'Published' })).toHaveCount(0, {
+      timeout: 30_000,
+    })
+  })
+
+  test('group: create feature group, then delete', async () => {
+    const name = `${run}-group`
+    await open('/groups')
+    await page.getByRole('button', { name: 'New group' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await fill(dialog(), 'Lookup key', `${run}-group`)
+    await choose(dialog(), 'Holds', 'Features')
+    await submit()
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+    await removeFrom('/groups', name, 'Delete group', 'Delete group')
+  })
+
+  test('add-on: create, edit, inline rename', async () => {
+    const name = `${run}-addon`
+    await open('/addons')
+    await page.getByRole('button', { name: 'New add-on' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await fill(dialog(), 'Lookup key', key('addon'))
+    await submit()
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+    await openRowMenu(name, 'Edit add-on')
+    await fill(dialog(), 'Description', 'edited by live e2e')
+    await submit()
+    await inlineRename(name, `${name}-renamed`)
+  })
+
+  test('coupon: create percentage, rename, inline rename, archive', async () => {
+    const name = `${run}-coupon`
+    await open('/coupons')
+    await page.getByRole('button', { name: 'New coupon' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await fill(dialog(), 'Code', `E2E${tag}`)
+    await choose(dialog(), 'Discount type', 'Percentage')
+    await fill(dialog(), 'Percentage off', '10')
+    await choose(dialog(), 'Duration', 'Forever')
+    await submit()
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+    await inlineRename(name, `${name}-renamed`)
+
+    // The list only renames inline; the rename drawer and Archive live on the detail page.
+    await row(`${name}-renamed`).getByText(`E2E${tag}`).click()
+    await expect(page.getByRole('heading', { name: `${name}-renamed` })).toBeVisible()
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await fill(dialog(), 'Name', `${name}-edited`)
+    await submit()
+    await expect(page.getByRole('heading', { name: `${name}-edited` })).toBeVisible({
+      timeout: 30_000,
+    })
+    await page.getByRole('button', { name: 'Archive', exact: true }).click()
+    await confirm('Archive coupon')
+    await expect(page.getByText('Archived').first()).toBeVisible({ timeout: 30_000 })
+  })
+
+  test('price unit: create, rename, inline rename', async () => {
+    const name = `${run}-unit`
+    await open('/price-units')
+    await page.getByRole('button', { name: 'New price unit' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await fill(dialog(), 'Code', letters(3))
+    await fill(dialog(), 'Symbol', '★')
+    await choose(dialog(), 'Base currency', /^USD/)
+    await fill(dialog(), 'Conversion rate', '0.5')
+    await submit()
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+    await openRowMenu(name, 'Rename price unit')
+    await fill(dialog(), 'Name', `${name}-edited`)
+    await submit()
+    await expect(row(`${name}-edited`)).toBeVisible({ timeout: 30_000 })
+    await inlineRename(`${name}-edited`, `${name}-renamed`)
+  })
+
+  test('cost sheet: create, edit, inline rename, delete', async () => {
+    const name = `${run}-costsheet`
+    await open('/cost-sheets')
+    await page.getByRole('button', { name: 'New cost sheet' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await fill(dialog(), 'Lookup key', key('costsheet'))
+    await submit()
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+    await openRowMenu(name, 'Edit cost sheet')
+    await fill(dialog(), 'Description', 'edited by live e2e')
+    await submit()
+    await inlineRename(name, `${name}-renamed`)
+    await removeFrom('/cost-sheets', `${name}-renamed`, 'Delete cost sheet', 'Delete cost sheet')
+  })
+
+  test('tax rate: create, edit, inline rename, delete', async () => {
+    const name = `${run}-tax`
+    await open('/taxes')
+    await page.getByRole('button', { name: 'New tax rate' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await fill(dialog(), 'Code', `E2E${tag}`)
+    await fill(dialog(), 'Rate (%)', '7.5')
+    await submit()
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+    await openRowMenu(name, 'Edit tax rate')
+    await fill(dialog(), 'Description', 'edited by live e2e')
+    await submit()
+    await inlineRename(name, `${name}-renamed`)
+    await removeFrom('/taxes', `${name}-renamed`, 'Delete tax rate', 'Delete tax rate')
+  })
+
+  test('customer: create, edit, inline rename, delete', async () => {
+    const name = `${run}-customer`
+    await open('/customers')
+    await page.getByRole('button', { name: 'New customer' }).first().click()
+    await fill(dialog(), 'Name', name)
+    await fill(dialog(), 'External ID', `${run}-cust`)
+    await fill(dialog(), 'Email', `${run}@example.com`)
+    await submit()
+    await expect(row(name)).toBeVisible({ timeout: 30_000 })
+    await openRowMenu(name, 'Edit customer')
+    await fill(dialog(), 'City', 'London')
+    await submit()
+    await inlineRename(name, `${name}-renamed`)
+    await removeFrom('/customers', `${name}-renamed`, 'Delete customer', 'Delete customer')
+  })
+  test('plan: create, edit, charges, entitlement, credit grant, archive', async () => {
+    test.setTimeout(240_000)
+    const feature = `${run}-planmeter`
+    const flag = `${run}-planflag`
+    const plan = `${run}-plan`
+
+    // A metered feature (for the usage charge) and a boolean one (entitlement).
+    await open('/features')
+    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await fill(dialog(), 'Name', feature)
+    await fill(dialog(), 'Event name', `${run}_plan_evt`)
+    await submit()
+    await search(feature)
+    await expect(row(feature)).toBeVisible({ timeout: 30_000 })
+    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await fill(dialog(), 'Name', flag)
+    await choose(dialog(), 'Type', 'Boolean')
+    await submit()
+    await search(flag)
+    await expect(row(flag)).toBeVisible({ timeout: 30_000 })
+
+    await open('/plans')
+    await page.getByRole('button', { name: 'New plan' }).first().click()
+    await fill(dialog(), 'Name', plan)
+    await fill(dialog(), 'Lookup key', key('plan'))
+    await submit()
+    // Creating a plan lands on its detail page.
+    await expect(page.getByRole('heading', { name: plan })).toBeVisible({ timeout: 30_000 })
+
+    // Edit details.
+    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('menuitem', { name: 'Edit details' }).click()
+    await fill(dialog(), 'Description', 'edited by live e2e')
+    await submit()
+
+    // Fixed charge.
+    await page.getByRole('button', { name: 'Add charges' }).first().click()
+    await fill(dialog(), 'Display name', 'Base fee')
+    await fill(dialog(), 'Amount (USD)', '25')
+    await submit()
+    await expect(page.getByText('Base fee').first()).toBeVisible({ timeout: 30_000 })
+
+    // Usage charge on the metered feature.
+    await page.getByRole('button', { name: 'Add charges' }).first().click()
+    await dialog().getByRole('tab', { name: 'Usage' }).click()
+    await dialog()
+      .getByRole('combobox', { name: /Metered feature/ })
+      .click()
+    await page.getByRole('option', { name: feature }).first().click()
+    await fill(dialog(), 'Display name', 'Per call')
+    await fill(dialog(), 'Amount (USD)', '0.02')
+    await submit()
+    await expect(page.getByText('Per call').first()).toBeVisible({ timeout: 30_000 })
+
+    // Edit the fixed charge's price: a new version.
+    await page.getByRole('button', { name: /^Actions for Base fee/ }).click()
+    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
+    await fill(dialog(), 'Amount (USD)', '30')
+    await dialog().getByRole('button', { name: 'Save new version' }).click()
+    await expect(dialog()).toHaveCount(0, { timeout: 30_000 })
+
+    // Entitlement.
+    await page.getByRole('button', { name: 'Entitlements', exact: true }).click()
+    await page.getByRole('button', { name: 'Add entitlement' }).first().click()
+    await field(dialog(), 'Feature').click()
+    await page.getByRole('option', { name: flag }).first().click()
+    await dialog()
+      .getByRole('button', { name: /^(Add|Save|Create)/ })
+      .last()
+      .click()
+    await expect(dialog()).toHaveCount(0, { timeout: 30_000 })
+    await expect(page.getByText(flag).first()).toBeVisible({ timeout: 30_000 })
+    await page.getByRole('button', { name: new RegExp(`^Actions for ${flag}`) }).click()
+    await page.getByRole('menuitem', { name: /Edit/ }).click()
+    await dialog().getByRole('switch').click()
+    await dialog()
+      .getByRole('button', { name: /^(Save|Update)/ })
+      .last()
+      .click()
+    await expect(dialog()).toHaveCount(0, { timeout: 30_000 })
+
+    // Credit grant.
+    await page.getByRole('button', { name: 'Credit Grants', exact: true }).click()
+    await page
+      .getByRole('button', { name: /Add credit grant|Add grant/ })
+      .first()
+      .click()
+    await fill(dialog(), 'Name', `${run}-grant`)
+    await fill(dialog(), 'Credits', '100')
+    await choose(dialog(), 'Credit type', /One-time|One time/i)
+    await choose(dialog(), 'Expiry', /Never/i)
+    await dialog()
+      .getByRole('button', { name: /^(Add|Create|Save)/ })
+      .last()
+      .click()
+    await expect(dialog()).toHaveCount(0, { timeout: 30_000 })
+    await expect(page.getByText(`${run}-grant`).first()).toBeVisible({ timeout: 30_000 })
+    await page.getByRole('button', { name: new RegExp(`^Actions for ${run}-grant`) }).click()
+    await page.getByRole('menuitem', { name: /Edit/ }).click()
+    await fill(dialog(), 'Name', `${run}-grant-edited`)
+    await dialog()
+      .getByRole('button', { name: /^(Save|Update)/ })
+      .last()
+      .click()
+    await expect(dialog()).toHaveCount(0, { timeout: 30_000 })
+    await expect(page.getByText(`${run}-grant-edited`).first()).toBeVisible({ timeout: 30_000 })
+
+    // Archive the plan.
+    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('menuitem', { name: 'Archive' }).click()
+    await confirm(/Archive/)
+
+    // Best-effort cleanup. The API refuses to delete a feature that a plan still
+    // links to (even an archived plan), so a rejection here is a backend rule, not
+    // a UI failure; the records are e2e-named and live in the dedicated env.
+    await open('/features')
+    await search(run)
+    for (const n of [feature, flag]) {
+      await openRowMenu(n, /Delete feature|Archive feature/)
+      await confirm(/Delete|Archive/).catch(async () => {
+        await page.keyboard.press('Escape')
+      })
+    }
+  })
+})
