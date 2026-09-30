@@ -8,7 +8,17 @@ import {
   useCustomerUsageSummary,
   useUpdateCustomer,
 } from '@fp/query'
-import { CUSTOMER_TABS, CustomerDetail, QuotaCard, type CustomerTab } from '@fp/ui/pages'
+import {
+  CUSTOMER_TABS,
+  CustomerAnalyticsView,
+  CustomerDetail,
+  CustomerWalletView,
+  DEMO_FEATURE_ANALYTICS,
+  DEMO_WALLET,
+  QuotaCard,
+  toast,
+  type CustomerTab,
+} from '@fp/ui/pages'
 import { CustomerSubscriptionCreate } from '@/pages/subscriptions/CustomerSubscriptionCreate'
 import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
 
@@ -127,13 +137,23 @@ export function CustomerDetailPage({
         : {})}
       subscriptionsLoading={subscriptions.isLoading}
       invoicesLoading={invoices.isLoading}
-      usage={
-        <UsageSection
-          features={usage.data?.features ?? []}
-          isLoading={usage.isLoading}
-          failed={usage.error !== null}
-          onRetry={() => void usage.refetch()}
+      wallet={
+        <CustomerWalletView
+          wallet={DEMO_WALLET}
+          onTopUp={(request) => toast.info(`Top-up of ${request.credits} ${request.kind} credits queued`)}
+          onAction={(action) => toast.info(`Wallet action: ${action}`)}
         />
+      }
+      usage={
+        <div className="flex flex-col gap-8">
+          <CustomerAnalyticsView features={DEMO_FEATURE_ANALYTICS} />
+          <UsageSection
+            features={usage.data?.features ?? []}
+            isLoading={usage.isLoading}
+            failed={usage.error !== null}
+            onRetry={() => void usage.refetch()}
+          />
+        </div>
       }
     />
   )

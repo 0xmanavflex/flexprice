@@ -109,6 +109,8 @@ export interface CustomerDetailProps {
    * no quota data to hand.
    */
   usage?: ReactNode
+  /** The Wallet section's contents; omitted, the empty state shows. */
+  wallet?: ReactNode
   locale?: string
 }
 
@@ -136,6 +138,7 @@ export function CustomerDetail({
   subscriptionsLoading = false,
   invoicesLoading = false,
   usage,
+  wallet,
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
@@ -146,7 +149,7 @@ export function CustomerDetail({
     { id: 'subscriptions', label: 'Subscriptions', count: subscriptions.length },
     { id: 'invoices', label: 'Invoices', count: invoices.length },
     { id: 'wallet', label: 'Wallet' },
-    { id: 'usage', label: 'Usage' },
+    { id: 'usage', label: 'Analytics' },
     { id: 'information', label: 'Information' },
   ]
 
@@ -247,12 +250,14 @@ export function CustomerDetail({
         <InvoicesTab invoices={invoices} isLoading={invoicesLoading} formatDate={formatDate} />
       ) : null}
 
-      {tab === 'wallet' ? (
-        <EmptyState
-          title="No wallet connected"
-          description="A customer's credit balance, top-ups and transactions will appear here once a wallet is set up."
-        />
-      ) : null}
+      {tab === 'wallet'
+        ? (wallet ?? (
+            <EmptyState
+              title="No wallet connected"
+              description="A customer's credit balance, top-ups and transactions will appear here once a wallet is set up."
+            />
+          ))
+        : null}
 
       {tab === 'usage'
         ? (usage ?? (
