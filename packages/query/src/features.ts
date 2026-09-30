@@ -236,7 +236,12 @@ export function toUpdateFeatureRequest(draft: EditFeature): Record<string, unkno
     ...(draft.reportingUnit ? { reportingUnit: toReportingUnitRequest(draft.reportingUnit) } : {}),
     ...(draft.groupId ? { groupId: draft.groupId } : {}),
     ...(draft.alertSettings ? { alertSettings: toAlertConfigRequest(draft.alertSettings) } : {}),
-    ...(draft.filters ? { filters: draft.filters.map(toFilterRequest) } : {}),
+    // The API rejects `filters: []` on update ("Filters cannot be empty") and
+    // merges what it is given into the meter's existing filters, so an empty
+    // list is "nothing to change" and is left out.
+    ...(draft.filters && draft.filters.length > 0
+      ? { filters: draft.filters.map(toFilterRequest) }
+      : {}),
   }
 }
 

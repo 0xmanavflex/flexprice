@@ -70,10 +70,12 @@ export function toEntitlement(wire: EntitlementWire): Entitlement {
     usageLimit: typeof wire.usageLimit === 'number' ? wire.usageLimit : null,
     usageResetPeriod,
     isSoftLimit: wire.isSoftLimit ?? false,
-    staticValue: wire.staticValue ?? null,
+    // The API sends "" for an unset static value; keep it absent so an edit form
+    // does not seed (and then fail validating) a hidden empty field.
+    staticValue: wire.staticValue ? wire.staticValue : null,
     isEnabled: typeof wire.isEnabled === 'boolean' ? wire.isEnabled : null,
     configValue: wire.configValue ?? null,
-    grantQuota: wire.grantQuota ?? null,
+    grantQuota: wire.grantQuota ? wire.grantQuota : null,
     grantMeasure: (wire.grantMeasure ?? null) as EntitlementGrantMeasure | null,
     grantDurationUnit: (wire.grantDurationUnit ?? null) as EntitlementGrantDurationUnit | null,
     grantDurationValue:

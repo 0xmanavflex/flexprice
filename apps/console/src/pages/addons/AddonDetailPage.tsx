@@ -267,7 +267,7 @@ function PricesTab({ addonId }: { addonId: string }) {
 /** Entitlements — what the add-on includes of each feature. Removal is confirmed. */
 function EntitlementsTab({ addonId }: { addonId: string }) {
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
-  const features = useFeatures(DEFAULT_FEATURE_QUERY)
+  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
   const create = useCreateBulkEntitlements()
   const updateEntitlement = useUpdateEntitlement()
   const remove = useDeleteEntitlement()
@@ -345,7 +345,9 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
           : {})}
         onEditSubmit={submitEdit}
         isSubmitting={updateEntitlement.isPending}
-        submitError={updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null}
+        submitError={
+          updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null
+        }
       />
       <ConfirmDialog
         open={target !== null}

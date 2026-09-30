@@ -83,7 +83,14 @@ export async function fetchCostSheets(
   query: CostSheetQuery,
 ): Promise<CostSheetPage> {
   const response = await call(() => client.costs.queryCostsheet(toCostSheetFilter(query) as never))
-  const costSheets = (response.items ?? []).map((item) => toCostSheet(item as CostSheetWire))
+  // The search endpoint returns soft-deleted sheets (`status: "deleted"`) with
+  // no way to exclude them, and `toCostSheet` would collapse that status to
+  // "published" — so a deleted sheet would sit in the list looking live. A
+  // deleted sheet is gone, so it is dropped here and taken off the total.
+  const items = (response.items ?? []) as CostSheetWire[]
+  const live = items.filter((item) => item.status !== 'deleted')
+  const costSheets = live.map(toCostSheet)
+  const dropped = items.length - live.length
 
   return {
     // Status is not a server-side filter here, so it is applied on the page —
@@ -92,7 +99,7 @@ export async function fetchCostSheets(
       query.statuses.length > 0
         ? costSheets.filter((sheet) => query.statuses.includes(sheet.status))
         : costSheets,
-    total: response.pagination?.total ?? 0,
+    total: Math.max(0, (response.pagination?.total ?? 0) - dropped),
   }
 }
 

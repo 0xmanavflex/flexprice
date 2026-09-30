@@ -266,10 +266,7 @@ export function PlanDetailPage({
                 <CopyIcon aria-hidden className="size-4" />
                 Duplicate
               </DropdownMenuItem>
-              <DropdownMenuItem
-                disabled={sync.isPending}
-                onClick={() => sync.mutate(planId)}
-              >
+              <DropdownMenuItem disabled={sync.isPending} onClick={() => sync.mutate(planId)}>
                 <RefreshCwIcon aria-hidden className="size-4" />
                 {sync.isPending ? 'Syncing…' : 'Sync usage charges'}
               </DropdownMenuItem>
@@ -431,7 +428,7 @@ function buildMetrics({
  */
 function OverviewTab({ planId }: { planId: string }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
-  const features = useFeatures(DEFAULT_FEATURE_QUERY)
+  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
   const priceUnits = usePriceUnits({ ...DEFAULT_PRICE_UNIT_QUERY, pageSize: 100 })
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
@@ -529,7 +526,7 @@ function OverviewTab({ planId }: { planId: string }) {
 /** Entitlements — what the plan includes of each feature. */
 function EntitlementsTab({ planId }: { planId: string }) {
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
-  const features = useFeatures(DEFAULT_FEATURE_QUERY)
+  const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
   const create = useCreateBulkEntitlements()
   const updateEntitlement = useUpdateEntitlement()
   const remove = useDeleteEntitlement()
@@ -547,9 +544,7 @@ function EntitlementsTab({ planId }: { planId: string }) {
   })
   const allFeatures = features.data?.features ?? []
   const options = allFeatures.filter((f) => !granted.has(f.id)).map(toOption)
-  const editingFeature = editing
-    ? allFeatures.find((f) => f.id === editing.featureId)
-    : undefined
+  const editingFeature = editing ? allFeatures.find((f) => f.id === editing.featureId) : undefined
 
   if (entitlements.isPending) return <LoadingRows />
 
@@ -593,14 +588,20 @@ function EntitlementsTab({ planId }: { planId: string }) {
               editing: {
                 feature: editingFeature
                   ? toOption(editingFeature)
-                  : { id: editing.featureId, name: editing.featureName ?? 'Feature', type: editing.featureType },
+                  : {
+                      id: editing.featureId,
+                      name: editing.featureName ?? 'Feature',
+                      type: editing.featureType,
+                    },
                 defaultValue: entitlementToEdit(editing),
               },
             }
           : {})}
         onEditSubmit={submitEdit}
         isSubmitting={updateEntitlement.isPending}
-        submitError={updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null}
+        submitError={
+          updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null
+        }
       />
       <ConfirmDialog
         open={removing !== null}
