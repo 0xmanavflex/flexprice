@@ -1,7 +1,6 @@
-import type { CSSProperties, ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Cell, Pie, PieChart } from 'recharts'
 import { ChartContainer, ChartTooltip } from '@ui/primitives/chart'
-import { Item, ItemMedia } from '@ui/primitives/item'
 import { Separator } from '@ui/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -30,45 +29,8 @@ import type { ChartTone } from './charts'
 export const HalfDonutProvenance = provenance({
   source: 'composition',
   composes: ['@reui/chart-12', 'ui/chart', 'ui/separator'],
-  note: 'chart-12 half-donut geometry, its graph-paper backdrop and its tiled footer, over real slices and validated tones.',
+  note: 'chart-12 half-donut geometry over real slices, tones from the validated palette, centre total and footer legend.',
 })
-
-/**
- * The block's backdrop: graph paper behind the arc, twice.
- *
- * A flat 8px grid faded out downward, and a second blurred copy of it masked
- * to an ellipse behind the arc so the gauge sits in a soft pool of light
- * rather than on a plain card. It is decoration and nothing reads it, which
- * is why it is `aria-hidden` — but it is *most* of what makes chart-12 look
- * like chart-12, and dropping it was why this panel did not.
- *
- * Copied from the block unchanged, down to the mask stops and opacities.
- */
-function GaugeGrid() {
-  const gridPattern =
-    '[background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:8px_8px]'
-
-  return (
-    <div
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-x-0 top-0 h-52 overflow-hidden"
-    >
-      <div
-        className={cn(
-          'absolute inset-x-0 top-0 h-40 [mask-image:linear-gradient(to_bottom,black_0%,black_42%,transparent_100%)] opacity-35',
-          gridPattern,
-        )}
-      />
-      <div
-        className={cn(
-          'absolute -inset-x-8 top-7 h-44 [mask-image:radial-gradient(ellipse_88%_76%_at_50%_16%,black_0%,black_46%,transparent_100%)] opacity-45 blur-md',
-          gridPattern,
-        )}
-      />
-      <div className="absolute inset-x-0 bottom-0 h-24 bg-[linear-gradient(to_bottom,transparent_0%,var(--card)_72%,var(--card)_100%)]" />
-    </div>
-  )
-}
 
 /** One slice of the ring. */
 export interface DonutSlice {
@@ -86,46 +48,6 @@ export interface DonutSlice {
    * nothing, which is the one thing a status colour cannot survive.
    */
   tone: ChartTone
-  /**
-   * The glyph in this slice's footer tile.
-   *
-   * chart-12 puts a logo in each; here it is whatever names the slice — a
-   * clock for overdue, a tick for paid. Omit it and the tile is a plain
-   * colour chip, which still carries the mapping back to the arc.
-   */
-  icon?: ReactNode | undefined
-}
-
-/**
- * chart-12's footer swatch: a 32px colour tile, stippled and glossed.
- *
- * The block's version is a brand logo, so it drops to `dark:bg-neutral-950`
- * and lets the white glyph carry it. Ours cannot: this tile is the only thing
- * tying a footer column back to its slice on the arc, so it keeps the slice's
- * tone in both modes. Everything else — the size, the white ring, the shadow,
- * the stipple and the top gloss — is the block's.
- */
-function SliceTile({ slice }: { slice: DonutSlice }) {
-  return (
-    <Item
-      className="dark:border-border relative isolate flex size-8 items-center justify-center overflow-hidden border-2 border-white bg-[var(--slice-tile)] p-0 shadow-[0_1px_3px_0_rgba(0,0,0,0.14)] dark:shadow-[0_1px_3px_0_rgba(0,0,0,0.35)] [&_svg]:size-4 [&_svg]:text-white"
-      style={{ '--slice-tile': toneColor(slice.tone) } as CSSProperties}
-    >
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-0 [background-image:radial-gradient(circle_at_center,rgba(255,255,255,0.22)_0.6px,transparent_0.65px)] [background-size:3px_3px] opacity-0 dark:opacity-[0.38]"
-      />
-      <span
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 z-[1] [background-image:radial-gradient(48.05%_48.05%_at_50%_5.95%,rgba(255,255,255,0.4)_0%,rgba(255,255,255,0)_100%)]"
-      />
-      {slice.icon === undefined ? null : (
-        <ItemMedia variant="icon" className="relative z-10 size-auto">
-          {slice.icon}
-        </ItemMedia>
-      )}
-    </Item>
-  )
 }
 
 export interface HalfDonutProps {
@@ -159,9 +81,7 @@ export function HalfDonut({
     : slices.filter((slice) => slice.value > 0)
 
   return (
-    <div className={cn('relative flex flex-col', className)}>
-      <GaugeGrid />
-
+    <div className={cn('flex flex-col', className)}>
       <div className="relative mx-auto h-[158px] w-full max-w-[300px]">
         <ChartContainer
           config={{}}
@@ -230,7 +150,7 @@ export function HalfDonut({
 
         <div className="pointer-events-none absolute inset-x-0 top-[82px] flex flex-col items-center">
           <span className="text-muted-foreground text-xs">{centerLabel}</span>
-          <span className="text-2xl font-medium tabular-nums">{centerValue}</span>
+          <span className="text-2xl font-semibold tabular-nums">{centerValue}</span>
         </div>
       </div>
 
@@ -241,20 +161,24 @@ export function HalfDonut({
         {slices.map((slice, index) => (
           <li key={slice.id} className="flex min-w-0 flex-1 items-stretch">
             {index > 0 ? <Separator orientation="vertical" className="mx-2" /> : null}
-            <div className="flex min-w-0 flex-1 flex-col items-center gap-2 px-2 text-center">
-              <SliceTile slice={slice} />
+            <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-2 text-center">
               {/*
                 `min-w-0 max-w-full` is load-bearing, not tidying. Without it
-                this wrapper sizes to its content, so the `truncate` on the
+                this flex row sizes to its content, so the `truncate` on the
                 label below never engages and a long label overflows its column
                 into the next one instead of ellipsing. Every story here fed it
                 short words ("Paid", "Recurring"), so it took real feature names
                 on the revenue mix to surface it — see `LongLabelsTruncate`.
               */}
-              <div className="min-w-0 max-w-full">
-                <div className="text-muted-foreground truncate text-xs">{slice.label}</div>
-                <div className="text-base font-medium tabular-nums">{format(slice.value)}</div>
-              </div>
+              <span className="text-muted-foreground flex min-w-0 max-w-full items-center gap-1.5 text-xs">
+                <span
+                  aria-hidden="true"
+                  className="size-2 shrink-0 rounded-full"
+                  style={{ backgroundColor: toneColor(slice.tone) }}
+                />
+                <span className="truncate">{slice.label}</span>
+              </span>
+              <span className="text-base font-medium tabular-nums">{format(slice.value)}</span>
             </div>
           </li>
         ))}

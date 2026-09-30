@@ -67,6 +67,8 @@ export const PLACEHOLDER_ROUTES = [
   // `/revenue` is a real page now — see `revenueRoute` in router.tsx.
 
   // Developers
+  // `/api-keys`, `/service-accounts`, `/webhooks` are real: each lands on its
+  // Settings → Developers panel (see `developerRedirects` in router.tsx).
   {
     path: '/events',
     title: 'Events Debugger',
@@ -76,36 +78,6 @@ export const PLACEHOLDER_ROUTES = [
       'Usage events sent by your systems appear here as they arrive, so a bill can be traced to what caused it.',
     cta: null,
     legacy: '/usage-tracking/events',
-  },
-  {
-    path: '/api-keys',
-    title: 'API Keys',
-    description: 'Keys your systems use to send usage and read billing data.',
-    emptyTitle: 'No API keys yet',
-    emptyDescription:
-      'API keys let your systems send usage and read billing data.',
-    cta: 'Create API key',
-    legacy: '/developers/api-keys',
-  },
-  {
-    path: '/service-accounts',
-    title: 'Service Accounts',
-    description: 'Non-human identities, and what each one may do.',
-    emptyTitle: 'No service accounts yet',
-    emptyDescription:
-      'Service accounts are non-human identities, each with its own permissions.',
-    cta: 'Create service account',
-    legacy: '/developers/service-accounts',
-  },
-  {
-    path: '/webhooks',
-    title: 'Webhooks',
-    description: 'Where Flexprice tells your systems that something happened.',
-    emptyTitle: 'No webhooks yet',
-    emptyDescription:
-      'Webhooks tell your systems when something happens in Flexprice — an invoice finalised, a payment failed.',
-    cta: 'Create webhook',
-    legacy: '/developers/webhooks',
   },
   {
     path: '/exports',

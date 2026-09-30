@@ -168,6 +168,9 @@ describe('every destination resolves', () => {
     '/payments',
     '/taxes',
     '/settings',
+    '/api-keys',
+    '/service-accounts',
+    '/webhooks',
   ]
 
   const destinations = [...NAV, ...SECONDARY].flatMap((entry) => [

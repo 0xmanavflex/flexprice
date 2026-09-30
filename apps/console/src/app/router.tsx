@@ -1030,6 +1030,31 @@ function SettingsRouteComponent() {
   )
 }
 
+/**
+ * Developer destinations that already have a home in Settings.
+ *
+ * API keys, service accounts and webhooks are built as Settings → Developers
+ * panels; the sidebar links them at their own paths, so each lands on its
+ * panel rather than duplicating it as a second page.
+ */
+const developerRedirects = [
+  ['/api-keys', 'api-keys'],
+  ['/service-accounts', 'service-accounts'],
+  ['/webhooks', 'webhooks'],
+].map(([path, tab]) =>
+  createRoute({
+    getParentRoute: () => shellRoute,
+    path: path as string,
+    beforeLoad: () => {
+      throw redirect({
+        to: '/settings',
+        search: { section: 'developers', tab } as never,
+        replace: true,
+      })
+    },
+  }),
+)
+
 export const routeTree = rootRoute.addChildren([
   signInRoute,
   shellRoute.addChildren([
@@ -1061,6 +1086,7 @@ export const routeTree = rootRoute.addChildren([
     taxesRoute,
     settingsRoute,
     subscriptionCreateRoute,
+    ...developerRedirects,
     ...placeholderRoutes,
   ]),
 ])
