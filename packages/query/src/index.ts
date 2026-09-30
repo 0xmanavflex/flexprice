@@ -219,6 +219,7 @@ export type { RawEventPage, RawEventWire } from './rawEvents'
 export {
   toCharge,
   toChargeRequest,
+  toUpdatePriceRequest,
   useCreateBulkPrices,
   usePrices,
   useTerminatePrice,
@@ -380,3 +381,5 @@ export type {
   UsagePoint,
   UsageWindow,
 } from './events'
+export { fetchWorkflowRuns, toWorkflowFilter, toWorkflowRun, useWorkflowRuns } from './workflowRuns'
+export type { WorkflowRunPage, WorkflowRunWire } from './workflowRuns'
