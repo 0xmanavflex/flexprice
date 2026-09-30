@@ -65,7 +65,7 @@ import {
   DetailList,
   type DetailMetric,
   DetailShell,
-  InlineField,
+  EditableFields,
   LoadingRows,
   ResourceNavigation,
   Section,
@@ -184,6 +184,7 @@ export function PlanDetailPage({
   const subscriptions = usePlanSubscriptions(planId)
 
   const [archiving, setArchiving] = useState(false)
+  const [editing, setEditing] = useState(false)
 
   if (plan.isPending) {
     return (
@@ -234,46 +235,63 @@ export function PlanDetailPage({
         {...(record.description ? { description: record.description } : {})}
         metrics={metrics}
         actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button variant="ghost" size="icon" aria-label="More actions">
-                  <MoreHorizontalIcon aria-hidden className="size-4" />
-                </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => onEdit(planId)}>
-                <PencilIcon aria-hidden className="size-4" />
-                Edit details
-              </DropdownMenuItem>
-              <DropdownMenuItem
-                onClick={() =>
-                  clone.mutate(
-                    { id: planId, name: `${record.name} (copy)` },
-                    {
-                      onSuccess: (result) => {
-                        const id = (result as { id?: string }).id
-                        if (id) onDuplicated(id)
-                      },
-                    },
-                  )
+          <>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={editing || isArchived}
+              onClick={() => {
+                onTabChange('information')
+                setEditing(true)
+              }}
+            >
+              <PencilIcon aria-hidden className="size-4" />
+              Edit
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => onEdit(planId)}>
+              Edit configuration
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger
+                render={
+                  <Button variant="ghost" size="icon" aria-label="More actions">
+                    <MoreHorizontalIcon aria-hidden className="size-4" />
+                  </Button>
                 }
-              >
-                <CopyIcon aria-hidden className="size-4" />
-                Duplicate
-              </DropdownMenuItem>
-              <DropdownMenuItem disabled={sync.isPending} onClick={() => sync.mutate(planId)}>
-                <RefreshCwIcon aria-hidden className="size-4" />
-                {sync.isPending ? 'Syncing…' : 'Sync usage charges'}
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
-                <EyeOffIcon aria-hidden className="size-4" />
-                Archive
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+              />
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => onEdit(planId)}>
+                  <PencilIcon aria-hidden className="size-4" />
+                  Edit configuration
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    clone.mutate(
+                      { id: planId, name: `${record.name} (copy)` },
+                      {
+                        onSuccess: (result) => {
+                          const id = (result as { id?: string }).id
+                          if (id) onDuplicated(id)
+                        },
+                      },
+                    )
+                  }
+                >
+                  <CopyIcon aria-hidden className="size-4" />
+                  Duplicate
+                </DropdownMenuItem>
+                <DropdownMenuItem disabled={sync.isPending} onClick={() => sync.mutate(planId)}>
+                  <RefreshCwIcon aria-hidden className="size-4" />
+                  {sync.isPending ? 'Syncing…' : 'Sync usage charges'}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
+                  <EyeOffIcon aria-hidden className="size-4" />
+                  Archive
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </>
         }
       >
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
@@ -317,7 +335,8 @@ export function PlanDetailPage({
                       },
                     })
                   }
-                  onEdit={() => onEdit(planId)}
+                  editing={editing}
+                  onEditingChange={setEditing}
                 />
               ) : null}
             </div>
@@ -726,7 +745,7 @@ function CreditGrantsTab({ planId }: { planId: string }) {
 
 /**
  * Information — the plan record itself. Name, lookup key and description edit
- * in place; "Edit" opens the full edit page.
+ * in place, per field or together via the header Edit.
  */
 function InformationTab({
   name,
@@ -738,7 +757,8 @@ function InformationTab({
   updatedAt,
   readOnly,
   onSave,
-  onEdit,
+  editing,
+  onEditingChange,
 }: {
   name: string
   lookupKey: string
@@ -749,49 +769,42 @@ function InformationTab({
   updatedAt: Date | null
   readOnly: boolean
   onSave: (patch: { name?: string; lookupKey?: string; description?: string }) => Promise<unknown>
-  onEdit: () => void
+  editing: boolean
+  onEditingChange: (editing: boolean) => void
 }) {
   return (
     <Section
       title="Plan details"
-      description="Click the pencil to change a value in place."
+      description="Use the pencil on a value, or Edit above to change them together."
       className="max-w-3xl"
-      actions={
-        <Button variant="outline" size="sm" onClick={onEdit}>
-          <PencilIcon aria-hidden className="size-4" />
-          Edit plan
-        </Button>
-      }
     >
       <div className="flex flex-col gap-5">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <InlineField
-            label="Name"
-            value={name}
-            required
-            readOnly={readOnly}
-            onSave={(next) => onSave({ name: next })}
-          />
-          <InlineField
-            label="Lookup key"
-            value={lookupKey}
-            placeholder="No lookup key"
-            readOnly={readOnly}
-            validate={(next) =>
-              next === '' || /^[a-z0-9_]+$/.test(next)
-                ? null
-                : 'Use lowercase letters, numbers and underscores'
-            }
-            onSave={(next) => onSave({ lookupKey: next })}
-          />
-        </div>
-        <InlineField
-          label="Description"
-          value={description}
-          placeholder="No description"
-          multiline
-          readOnly={readOnly}
-          onSave={(next) => onSave({ description: next })}
+        <EditableFields
+          editing={editing}
+          onEditingChange={onEditingChange}
+          fields={[
+            { key: 'name', label: 'Name', value: name, required: true, readOnly },
+            {
+              key: 'lookupKey',
+              label: 'Lookup key',
+              value: lookupKey,
+              placeholder: 'No lookup key',
+              readOnly,
+              validate: (next) =>
+                next === '' || /^[a-z0-9_]+$/.test(next)
+                  ? null
+                  : 'Use lowercase letters, numbers and underscores',
+            },
+            {
+              key: 'description',
+              label: 'Description',
+              value: description,
+              placeholder: 'No description',
+              multiline: true,
+              readOnly,
+            },
+          ]}
+          onSave={(changes) => onSave(changes)}
         />
         <DetailList
           items={[

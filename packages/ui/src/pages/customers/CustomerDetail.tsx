@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import { PencilIcon, PlusIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
@@ -21,7 +21,7 @@ import { ResourceNavigation } from '@ui/compositions/ResourceNavigation'
 import type { ResourceNavItem } from '@ui/compositions/ResourceNavigation'
 import { Section } from '@ui/compositions/Section'
 import { ContextualSection } from '@ui/compositions/ContextualSection'
-import { InlineField } from '@ui/compositions/InlineField'
+import { EditableFields } from '@ui/compositions/EditableFields'
 import { DetailList } from '@ui/compositions/DetailList'
 import type { DetailItem } from '@ui/compositions/DetailList'
 import { EmptyState } from '@ui/compositions/EmptyState'
@@ -81,7 +81,7 @@ export interface CustomerDetailProps {
   onBack: () => void
   /** The header's primary action. */
   onCreateSubscription: () => void
-  /** Open the full Edit page for the customer. */
+  /** Open the stepped Edit page: address and billing configuration. */
   onEdit?: () => void
   /**
    * Save one of the simple fields in place (name, email, phone). Omitted, the
@@ -139,6 +139,7 @@ export function CustomerDetail({
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
+  const [editing, setEditing] = useState(false)
 
   const items: ResourceNavItem[] = [
     { id: 'overview', label: 'Overview' },
@@ -180,11 +181,30 @@ export function CustomerDetail({
       {...(subtitle ? { description: subtitle } : {})}
       actions={
         <>
-          {onEdit ? (
-            <Button variant="outline" onClick={onEdit}>
+          {onUpdateField ? (
+            <Button
+              variant="outline"
+              disabled={editing}
+              onClick={() => {
+                onTabChange('information')
+                setEditing(true)
+              }}
+            >
               <PencilIcon aria-hidden />
-              Edit customer
+              Edit
             </Button>
+          ) : null}
+          {onEdit ? (
+            onUpdateField ? (
+              <Button variant="ghost" onClick={onEdit}>
+                Edit billing details
+              </Button>
+            ) : (
+              <Button variant="outline" onClick={onEdit}>
+                <PencilIcon aria-hidden />
+                Edit customer
+              </Button>
+            )
           ) : null}
           <Button onClick={onCreateSubscription}>
             <PlusIcon aria-hidden />
@@ -244,7 +264,13 @@ export function CustomerDetail({
         : null}
 
       {tab === 'information' ? (
-        <InformationTab customer={customer} formatDate={formatDate} onUpdateField={onUpdateField} />
+        <InformationTab
+          customer={customer}
+          formatDate={formatDate}
+          onUpdateField={onUpdateField}
+          editing={editing}
+          onEditingChange={setEditing}
+        />
       ) : null}
     </DetailShell>
   )
@@ -508,7 +534,11 @@ function InformationTab({
   customer,
   formatDate,
   onUpdateField,
+  editing,
+  onEditingChange,
 }: {
+  editing: boolean
+  onEditingChange: (editing: boolean) => void
   customer: CustomerDetailModel
   formatDate: (date: Date | null) => string
   onUpdateField: CustomerDetailProps['onUpdateField']
@@ -558,41 +588,41 @@ function InformationTab({
         title="Information"
         description={
           onUpdateField
-            ? 'The full customer record. Click the pencil to change name, email or phone in place.'
+            ? 'The full customer record. Use the pencil, or Edit above, to change name, email or phone in place.'
             : 'The full customer record.'
         }
       >
         {onUpdateField ? (
-          <div className="mb-5 grid gap-4 sm:grid-cols-3">
-            <InlineField
-              label="Name"
-              value={customer.name}
-              required
-              onSave={(name) => onUpdateField({ name })}
-            />
-            <InlineField
-              label="Email"
-              value={customer.email}
-              placeholder="No email"
-              validate={(next) =>
-                next === ''
-                  ? customer.email
-                    ? CLEAR_UNSUPPORTED
-                    : null
-                  : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)
-                    ? null
-                    : 'Enter a valid email address.'
-              }
-              onSave={(email) => onUpdateField({ email })}
-            />
-            <InlineField
-              label="Phone"
-              value={customer.phone}
-              placeholder="No phone"
-              validate={(next) => (next === '' && customer.phone ? CLEAR_UNSUPPORTED : null)}
-              onSave={(phone) => onUpdateField({ phone })}
-            />
-          </div>
+          <EditableFields
+            className="mb-5"
+            editing={editing}
+            onEditingChange={onEditingChange}
+            fields={[
+              { key: 'name', label: 'Name', value: customer.name, required: true },
+              {
+                key: 'email',
+                label: 'Email',
+                value: customer.email,
+                placeholder: 'No email',
+                validate: (next) =>
+                  next === ''
+                    ? customer.email
+                      ? CLEAR_UNSUPPORTED
+                      : null
+                    : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)
+                      ? null
+                      : 'Enter a valid email address.',
+              },
+              {
+                key: 'phone',
+                label: 'Phone',
+                value: customer.phone,
+                placeholder: 'No phone',
+                validate: (next) => (next === '' && customer.phone ? CLEAR_UNSUPPORTED : null),
+              },
+            ]}
+            onSave={(changes) => onUpdateField(changes)}
+          />
         ) : null}
         <DetailList items={items} columns={2} />
       </Section>

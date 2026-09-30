@@ -205,7 +205,21 @@ export const EditsInline: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Edit Phone' }))
     await userEvent.type(canvas.getByRole('textbox', { name: 'Phone' }), '+1 555 0100{Enter}')
     await expect(args.onUpdateField).toHaveBeenCalledWith({ phone: '+1 555 0100' })
-    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer' }))
+    await expect(args.onEdit).not.toHaveBeenCalled()
+  },
+}
+
+/** Header Edit flips the fields in place, one save; billing details stays the stepped page. */
+export const HeaderEditInPlace: Story = {
+  args: { onUpdateField: fn(async () => undefined), onEdit: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Phone' }), '1')
+    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await expect(args.onUpdateField).toHaveBeenCalledOnce()
+    await expect(args.onEdit).not.toHaveBeenCalled()
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit billing details' }))
     await expect(args.onEdit).toHaveBeenCalledOnce()
   },
 }

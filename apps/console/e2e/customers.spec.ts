@@ -128,9 +128,20 @@ test.describe('a customer detail page', () => {
     await request
   })
 
-  test('opens the full edit page from the header', async ({ page }) => {
+  test('header Edit edits in place with one save, no navigation', async ({ page }) => {
     await openFirstCustomer(page)
-    await page.getByRole('button', { name: 'Edit customer' }).click()
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(page.getByRole('textbox', { name: 'Phone' })).toBeVisible()
+    await page.getByRole('textbox', { name: 'Phone' }).fill('+1 555 0177')
+    const request = page.waitForRequest(isWrite('PUT', /\/v1\/customers$/))
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await request
+    await expect(page).toHaveURL(/\/customers\/[^/]+(\?tab=information)?$/)
+  })
+
+  test('opens the billing edit page from the header', async ({ page }) => {
+    await openFirstCustomer(page)
+    await page.getByRole('button', { name: 'Edit billing details' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
   })
 

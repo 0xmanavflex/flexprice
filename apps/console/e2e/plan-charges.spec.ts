@@ -98,11 +98,26 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await expect(page.getByLabel(/^Name/)).not.toHaveValue('')
   })
 
-  test('opens the edit page from the plan menu', async ({ page }) => {
+  test('header Edit edits plan details in place', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()
-    await page.getByRole('button', { name: 'More actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit details' }).click()
+    const url = page.url()
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(page.getByRole('textbox', { name: 'Name' })).toBeVisible()
+    await page.getByRole('textbox', { name: 'Description' }).fill('edited in place')
+    const request = page.waitForRequest(
+      (r) => r.method() === 'PUT' && /\/v1\/plans\//.test(r.url()),
+    )
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await request
+    await expect(page).not.toHaveURL(/\/edit/)
+    expect(page.url()).toContain(new URL(url).pathname)
+  })
+
+  test('opens the stepped edit page from Edit configuration', async ({ page }) => {
+    const plan = new PlanDetailPage(page)
+    await plan.open()
+    await page.getByRole('button', { name: 'Edit configuration' }).click()
     await expect(page).toHaveURL(/\/plans\/plan_synth_0000\/edit$/)
   })
 
