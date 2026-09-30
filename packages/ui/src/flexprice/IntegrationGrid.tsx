@@ -32,12 +32,20 @@ function IntegrationCard({ integration }: { integration: Integration }) {
           </ItemMedia>
           <ItemContent>
             <ItemTitle>{integration.name}</ItemTitle>
-            <span className="text-muted-foreground text-xs">{integration.categories.join(' · ')}</span>
+            <span className="text-muted-foreground text-xs">
+              {integration.categories.join(' · ')}
+            </span>
           </ItemContent>
         </Item>
-        <ItemDescription className="mt-3 line-clamp-none">{integration.description}</ItemDescription>
+        <ItemDescription className="mt-3 line-clamp-none">
+          {integration.description}
+        </ItemDescription>
       </FramePanel>
-      <FrameFooter className="flex items-center justify-between gap-2">
+      <FrameFooter
+        role="group"
+        aria-label={`${integration.name} status`}
+        className="flex items-center justify-between gap-2"
+      >
         {connected ? (
           <Badge variant="success-light">
             {integration.connections > 1 ? `Connected (${integration.connections})` : 'Connected'}
@@ -79,9 +87,20 @@ export interface IntegrationGridProps {
   onRetry?: () => void
 }
 
-export function IntegrationGrid({ integrations, isLoading = false, error = null, onRetry }: IntegrationGridProps) {
+export function IntegrationGrid({
+  integrations,
+  isLoading = false,
+  error = null,
+  onRetry,
+}: IntegrationGridProps) {
   if (error) {
-    return <ErrorState title="Couldn't load integrations" description={error} {...(onRetry ? { onRetry } : {})} />
+    return (
+      <ErrorState
+        title="Couldn't load integrations"
+        description={error}
+        {...(onRetry ? { onRetry } : {})}
+      />
+    )
   }
   if (isLoading) {
     return (
