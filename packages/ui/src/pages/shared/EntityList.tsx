@@ -16,7 +16,6 @@ import {
   ArrowDownIcon,
   ArrowUpDownIcon,
   ArrowUpIcon,
-  ChevronRightIcon,
   DownloadIcon,
   FilterIcon,
   MoreHorizontalIcon,
@@ -35,7 +34,6 @@ import type {
   FilterField,
   FilterQuery,
 } from '@ui/components/reui/filters/filters-types'
-import { ProjectsEmptyIllustration } from '@ui/components/blocks/empty-state-3/components/projects-empty-illustration'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -54,7 +52,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@ui/components/primitives/input-group'
-import { Item, ItemActions, ItemContent, ItemDescription, ItemMedia, ItemTitle } from '@ui/components/primitives/item'
 import {
   Select,
   SelectContent,
@@ -64,6 +61,7 @@ import {
 } from '@ui/components/primitives/select'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { EmptyState } from '@ui/compositions/EmptyState'
+import { GuidedEmptyState } from '@ui/compositions/GuidedEmptyState'
 import { FilterBar, type FlatFilter } from '@ui/compositions/FilterBar'
 import { SortMenu, type SortOption } from '@ui/compositions/SortMenu'
 import { cn } from '@ui/lib/cn'
@@ -401,73 +399,6 @@ function downloadCsv(filename: string, csv: string): void {
 /* ------------------------------------------------------------------ *
  * Empty state
  * ------------------------------------------------------------------ */
-
-/**
- * The first run: nothing exists yet.
- *
- * `empty-state-3`'s illustration, because it is the one in the registry that
- * reads as "a structure you have not built yet" rather than "a search that
- * found nothing" — the distinction this whole component pair keeps insisting
- * on. Only the illustration is taken; the block's own copy, buttons and
- * template grid belong to its demo.
- *
- * The three cards are the part that earns its space. An empty screen is the
- * one moment someone will read documentation, and a link they have to go
- * looking for in a help menu is a link nobody follows.
- */
-function EntityEmptyState({ empty, label }: { empty: EntityEmpty; label: string }) {
-  return (
-    <div className="flex w-full flex-col items-center gap-10 py-14" role="status" aria-label={`${label}: nothing here yet`}>
-      <div className="flex max-w-[28rem] flex-col items-center gap-4 text-center">
-        <div className="text-muted-foreground">
-          <ProjectsEmptyIllustration />
-        </div>
-        <div className="flex flex-col items-center gap-2">
-          <p className="text-lg font-medium tracking-tight">{empty.title}</p>
-          {empty.description ? (
-            <p className="text-muted-foreground max-w-[25rem] text-sm/relaxed">
-              {empty.description}
-            </p>
-          ) : null}
-        </div>
-        {empty.actions ? (
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
-            {empty.actions}
-          </div>
-        ) : null}
-      </div>
-
-      {empty.guides && empty.guides.length > 0 ? (
-        <div className="grid w-full max-w-[52rem] gap-3 sm:grid-cols-3">
-          {empty.guides.map((guide) => (
-            <Item
-              key={guide.href + guide.title}
-              variant="outline"
-              render={
-                <a href={guide.href} target="_blank" rel="noreferrer" aria-label={`${guide.title} — read docs`} />
-              }
-              className="hover:bg-muted/30 min-w-0 flex-col items-start gap-2 transition-colors"
-            >
-              {guide.icon ? (
-                <ItemMedia className="text-muted-foreground">{guide.icon}</ItemMedia>
-              ) : null}
-              <ItemContent className="min-w-0 gap-1">
-                <ItemTitle className="font-medium">{guide.title}</ItemTitle>
-                {guide.description ? (
-                  <ItemDescription className="line-clamp-2">{guide.description}</ItemDescription>
-                ) : null}
-              </ItemContent>
-              <ItemActions className="text-muted-foreground mt-1 gap-1 text-xs">
-                Read docs
-                <ChevronRightIcon aria-hidden className="size-3.5" />
-              </ItemActions>
-            </Item>
-          ))}
-        </div>
-      ) : null}
-    </div>
-  )
-}
 
 /* ------------------------------------------------------------------ *
  * The component
@@ -948,7 +879,13 @@ export function EntityList<T extends object>({
           stops an overflowing table pushing the page itself wider. */}
       <div ref={frameRef} data-slot="entity-list-frame" className="w-full min-w-0">
         {showFirstRun && empty ? (
-          <EntityEmptyState empty={empty} label={label} />
+          <GuidedEmptyState
+            title={empty.title}
+            description={empty.description}
+            actions={empty.actions}
+            guides={empty.guides}
+            label={`${label}: nothing here yet`}
+          />
         ) : (
           <DataGrid
             table={table as never}

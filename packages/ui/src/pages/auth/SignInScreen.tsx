@@ -1,11 +1,6 @@
 import { useState, type ReactNode } from 'react'
-import { AuthGridBackground } from '@ui/components/blocks/auth-6/components/auth-grid-background'
-import {
-  AUTH6_FOUNDERS_STORY,
-  AUTH6_TRUST_BRANDS,
-} from '@ui/components/blocks/auth-6/components/data'
-import { SlackWordmark } from '@ui/components/ui/svgs/slackWordmark'
-import { Item, ItemMedia } from '@ui/components/primitives/item'
+import { QuoteIcon } from 'lucide-react'
+import { WaveDots } from '@ui/components/blocks/auth-11/components/wave-dots'
 import { Google } from '@ui/components/ui/svgs/google'
 import { GithubLight } from '@ui/components/ui/svgs/githubLight'
 import { GithubDark } from '@ui/components/ui/svgs/githubDark'
@@ -40,8 +35,8 @@ import { SignInForm, type SignInFormProps } from './SignInForm'
  */
 export const SignInScreenProvenance = provenance({
   source: Source.REUI,
-  registry: ['auth-6'],
-  note: "ReUI auth-6 layout, grid background, provider row AND the block's own sidebar (Unsplash photo, Slack wordmark, testimonial, six brand wordmarks) as shipped. Form, copy and behaviour are ours. The sidebar content is ReUI demo material — third-party marks and a quote from no real customer — and must be replaced before this screen faces a customer.",
+  registry: ['auth-6', 'auth-11'],
+  note: "ReUI auth-6 layout and provider row, auth-11 WaveDots backdrop (unchanged). Sidebar is our own testimonial panel with text wordmarks; the quote is a placeholder to be replaced with an approved customer quote.",
 })
 
 /** One provider button, as the block draws them. */
@@ -50,6 +45,19 @@ interface Provider {
   label: string
   logo: ReactNode
 }
+
+/**
+ * Placeholder testimonial — replace with a real, approved customer quote
+ * before this screen faces customers.
+ */
+const TESTIMONIAL = {
+  quote:
+    'Flexprice let us move from spreadsheets to real usage-based billing in a couple of weeks. Pricing changes that used to take an engineering sprint now take an afternoon.',
+  name: 'Customer name',
+  role: 'Head of Finance, Customer',
+}
+
+const CUSTOMER_LOGOS = ['Krutrim', 'Vapi', 'Simplismart', 'Aftershoot', 'Facilio', 'Gigin']
 
 const PROVIDERS: Provider[] = [
   { id: 'google', label: 'Google', logo: <Google className="size-4 shrink-0" aria-hidden /> },
@@ -210,58 +218,40 @@ export function SignInScreen({
         </div>
       </section>
 
-      {/*
-        The block's own sidebar, rendered from its own exported data
-        (`AUTH6_FOUNDERS_STORY`, `AUTH6_TRUST_BRANDS`) and its own grid
-        background, so it matches the published `auth-6` preview exactly.
+      <aside className="bg-muted/25 border-border/70 relative hidden overflow-hidden lg:flex lg:min-h-svh lg:border-l">
+        <WaveDots />
 
-        The structure is reproduced here rather than imported because the
-        block keeps `Sidebar` as a module-local function — and vendored files
-        are not hand-edited (see `docs/component-guardrails.md`).
-
-        NOTE: the quote and the six wordmarks are ReUI's **demo content**, the
-        same way `dashboard-4` ships sample data on the Home page. They are
-        placeholders pending real content, and should be replaced before this
-        screen is put in front of a customer — the logos are other companies'
-        trademarks and the quote is not a real Flexprice customer's.
-      */}
-      <aside className="bg-muted/25 border-border/70 relative hidden min-h-136 overflow-hidden px-8 py-10 sm:px-12 lg:flex lg:min-h-svh lg:border-l lg:px-14 lg:py-12">
-        <AuthGridBackground />
-
-        <div className="relative z-10 flex min-h-full w-full flex-col justify-between gap-10">
+        <div className="relative z-10 flex min-h-full w-full flex-col justify-between gap-10 px-14 py-12">
           <div className="flex flex-1 items-center justify-center">
-            <div className="mx-auto flex w-full max-w-132 flex-col items-start">
-              <div className="bg-background/90 border-border/60 relative w-full overflow-hidden rounded-xl border backdrop-blur-sm">
-                <img
-                  src="https://images.unsplash.com/photo-1690378820474-b468b8ee64d3?q=80&w=1470&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                  alt=""
-                  className="h-auto w-full object-cover"
-                />
-              </div>
-
-              <div className="mt-6 flex w-full flex-col items-start gap-3 text-left">
-                <SlackWordmark aria-hidden="true" className="text-foreground h-6 w-auto" />
-                <p className="max-w-md text-base leading-7">
-                  {AUTH6_FOUNDERS_STORY.description}
-                </p>
-                <Button type="button" variant="outline" size="lg" className="font-semibold">
-                  {AUTH6_FOUNDERS_STORY.cta}
-                </Button>
-              </div>
-            </div>
+            <figure className="bg-background/90 border-border/60 flex w-full max-w-[34rem] flex-col gap-8 rounded-2xl border p-10 backdrop-blur-sm">
+              <QuoteIcon aria-hidden className="text-primary size-8" />
+              <blockquote className="text-2xl/9 font-medium tracking-tight text-pretty">
+                {TESTIMONIAL.quote}
+              </blockquote>
+              <figcaption className="flex items-center gap-3">
+                <span
+                  aria-hidden
+                  className="bg-primary text-primary-foreground flex size-10 items-center justify-center rounded-full text-sm font-medium"
+                >
+                  {TESTIMONIAL.name.charAt(0)}
+                </span>
+                <span className="flex flex-col">
+                  <span className="text-sm font-medium">{TESTIMONIAL.name}</span>
+                  <span className="text-muted-foreground text-sm">{TESTIMONIAL.role}</span>
+                </span>
+              </figcaption>
+            </figure>
           </div>
 
-          <div className="mx-auto grid w-full max-w-[24rem] grid-cols-3 justify-items-center gap-x-3 gap-y-5">
-            {AUTH6_TRUST_BRANDS.map((brand) => (
-              <Item
-                key={brand.id}
-                className="text-foreground/90 flex min-h-6 w-auto items-center justify-center border-0 p-0"
-              >
-                <ItemMedia variant="icon" className="size-auto">
-                  {brand.logo}
-                </ItemMedia>
-              </Item>
-            ))}
+          <div className="flex flex-col items-center gap-4">
+            <p className="text-muted-foreground text-xs">Trusted by teams building on usage-based pricing</p>
+            <ul className="flex flex-wrap items-center justify-center gap-x-8 gap-y-3">
+              {CUSTOMER_LOGOS.map((name) => (
+                <li key={name} className="text-foreground/70 text-base font-medium tracking-tight">
+                  {name}
+                </li>
+              ))}
+            </ul>
           </div>
         </div>
       </aside>

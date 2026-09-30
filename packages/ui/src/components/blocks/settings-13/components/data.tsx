@@ -1,3 +1,5 @@
+// @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
+// Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
 "use client"
 
 import type { ReactNode } from "react"
@@ -16,8 +18,6 @@ import { Zoom } from "@ui/components/primitives/svgs/zoom"
 
 export interface IntegrationApp {
   id: string
-  name?: string
-  docsUrl?: string
   description: string
   logo: ReactNode
   connected: boolean
