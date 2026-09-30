@@ -106,6 +106,13 @@ const PaymentListPage = lazy(() =>
   import('@/pages/payments/PaymentListPage').then((m) => ({ default: m.PaymentListPage })),
 )
 import { parsePaymentSearch } from './paymentSearch'
+const CreditNoteListPage = lazy(() =>
+  import('@/pages/credit-notes/CreditNoteListPage').then((m) => ({
+    default: m.CreditNoteListPage,
+  })),
+)
+import { parseCreditNoteSearch } from './creditNoteSearch'
+import { type CreditNoteQuery, DEFAULT_CREDIT_NOTE_QUERY } from '@fp/domain'
 import { DEFAULT_PAYMENT_QUERY, type PaymentQuery } from '@fp/domain'
 const TaxListPage = lazy(() =>
   import('@/pages/taxes/TaxListPage').then((m) => ({ default: m.TaxListPage })),
@@ -967,6 +974,27 @@ function PaymentsRouteComponent() {
   )
 }
 
+const creditNotesRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/credit-notes',
+  validateSearch: (search: Record<string, unknown>): CreditNoteQuery =>
+    parseCreditNoteSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_CREDIT_NOTE_QUERY)] },
+  component: CreditNotesRouteComponent,
+})
+
+function CreditNotesRouteComponent() {
+  const query = useSearch({ from: creditNotesRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <CreditNoteListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/credit-notes', search: next, replace: true })}
+    />
+  )
+}
+
 const taxesRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/taxes',
@@ -1108,6 +1136,7 @@ export const routeTree = rootRoute.addChildren([
     subscriptionsRoute,
     invoicesRoute,
     paymentsRoute,
+    creditNotesRoute,
     taxesRoute,
     eventsRoute,
     settingsRoute,

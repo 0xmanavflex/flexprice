@@ -54,16 +54,7 @@ export const PLACEHOLDER_ROUTES = [
   // `/subscriptions` is a real page now — see `subscriptionsRoute` in router.tsx.
   // `/payments` is a real page now — see `paymentsRoute` in router.tsx.
   // `/invoices` is a real page (invoicesRoute); `/taxes` too (taxesRoute).
-  {
-    path: '/credit-notes',
-    title: 'Credit Notes',
-    description: 'Refunds and adjustments issued against invoices.',
-    emptyTitle: 'No credit notes yet',
-    emptyDescription:
-      'Credit notes refund or adjust an invoice after it has been issued.',
-    cta: 'Create credit note',
-    legacy: '/billing/credit-notes',
-  },
+  // `/credit-notes` is a real page — see `creditNotesRoute` in router.tsx.
   // `/revenue` is a real page now — see `revenueRoute` in router.tsx.
 
   // Developers

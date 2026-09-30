@@ -817,6 +817,27 @@ const rawEvents: Record<string, unknown>[] = Array.from({ length: 60 }, (_, inde
 })
 
 /**
+ * Credit notes, authored to the wire: snake_case, `total_amount` a number, the
+ * invoice and customer embedded as `GET /creditnotes` expands them.
+ */
+const creditNotes: Record<string, unknown>[] = Array.from({ length: 30 }, (_, index) => {
+  const statuses = ['FINALIZED', 'DRAFT', 'VOIDED']
+  const customers = ['Acme Corp', 'Globex', 'Initech']
+  return {
+    id: `cnote_01M38Q${String(index).padStart(10, '0')}`,
+    credit_note_number: `CN-${String(index + 1).padStart(4, '0')}`,
+    credit_note_status: statuses[index % 3],
+    credit_note_type: index % 2 === 0 ? 'REFUND' : 'ADJUSTMENT',
+    currency: 'usd',
+    total_amount: 25 + index * 5,
+    invoice_id: `inv_${index}`,
+    invoice: { invoice_number: `INV-${1000 + index}` },
+    customer: { id: `cust_${index % 3}`, name: customers[index % 3] },
+    created_at: new Date(Date.UTC(2026, 8, 1) + index * 86_400_000).toISOString(),
+  }
+})
+
+/**
  * `GET /taxes/rates`, the one settings panel with no handler at all.
  *
  * Without it the request escaped MSW to `mock.flexprice.test` and failed at
@@ -2152,6 +2173,27 @@ export const handlers = [
       total_count: matches.length,
       has_more: offset + pageSize < matches.length,
       offset,
+    })
+  }),
+
+  /*
+   * `GET /creditnotes` — a live route the SDK has no method for, so the app
+   * reads it with plain fetch. Status is a server-side filter (repeatable
+   * `credit_note_status`), paging is limit/offset, and `pagination.total` is the
+   * filtered total.
+   */
+  http.get(`${BASE}/creditnotes`, ({ request }) => {
+    const url = new URL(request.url)
+    const limit = Number(url.searchParams.get('limit') ?? 25)
+    const offset = Number(url.searchParams.get('offset') ?? 0)
+    const statuses = url.searchParams.getAll('credit_note_status')
+
+    const matches = creditNotes.filter(
+      (note) => statuses.length === 0 || statuses.includes(String(note['credit_note_status'])),
+    )
+    return HttpResponse.json({
+      items: matches.slice(offset, offset + limit),
+      pagination: { total: matches.length, limit, offset },
     })
   }),
 
