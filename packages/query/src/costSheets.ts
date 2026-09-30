@@ -117,10 +117,12 @@ export function useCostSheets(query: CostSheetQuery) {
 }
 
 /**
- * One cost sheet, fetched by id through `GET /costs/{id}`.
+ * One cost sheet, fetched by id through the search endpoint.
  *
- * The get endpoint wraps the record under `costsheet`, unlike the list — so this
- * unwraps it and reports a missing record as null.
+ * `GET /costs/{id}` returns the record bare while the SDK's response schema
+ * expects it wrapped under `costsheet` and strips everything else, so the SDK
+ * hands back an empty object. Searching by id sidesteps that; a missing or
+ * deleted record is reported as null.
  */
 export function useCostSheet(id: string) {
   const client = useFlexprice()
@@ -128,8 +130,12 @@ export function useCostSheet(id: string) {
   return useQuery({
     queryKey: queryKeys.costSheets.detail(id),
     queryFn: async () => {
-      const response = await call(() => client.costs.getCostsheet(id))
-      return response.costsheet ? toCostSheet(response.costsheet as CostSheetWire) : null
+      const response = await call(() =>
+        client.costs.queryCostsheet({ costsheetIDs: [id], queryFilter: { limit: 1 } } as never),
+      )
+      const items = (response.items ?? []) as CostSheetWire[]
+      const record = items.find((item) => item.id === id && item.status !== 'deleted')
+      return record ? toCostSheet(record) : null
     },
     enabled: id.length > 0,
   })
