@@ -260,7 +260,7 @@ export function MetricChart({
             className={cn(
               'h-auto flex-1 flex-col items-start justify-start gap-2 rounded-none px-4 py-3.5 text-left',
               // The accent sits on the bottom edge, against the plot it drives.
-              'border-0 border-b-2 border-transparent',
+              'border-0 border-transparent',
               'data-active:border-chart-1 data-active:bg-muted',
             )}
           >
