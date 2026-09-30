@@ -57,3 +57,5 @@ export type { ListCreditNotesParams } from './creditNotes'
  */
 export type * as FlexpriceModels from '@flexprice/sdk/sdk/models'
 export type { Flexprice } from '@flexprice/sdk'
+export { searchUsageRecords } from './usageRecords'
+export type { SearchUsageRecordsParams } from './usageRecords'

@@ -97,6 +97,10 @@ export const queryKeys = {
     list: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['creditNotes', 'list', filter] as const,
   },
+  usageSyncs: {
+    all: () => ['usageSyncs'] as const,
+    list: (filter: Record<string, unknown>) => ['usageSyncs', 'list', filter] as const,
+  },
   workflowRuns: {
     all: () => ['workflowRuns'] as const,
     list: (filter: Record<string, unknown>) => ['workflowRuns', 'list', filter] as const,
