@@ -144,9 +144,12 @@ export function EnvironmentsPanel() {
           description="A sandbox is the safe default. Production is real customers and real money."
         >
           <EnvironmentForm
-            id="settings-create-environment"
             isSubmitting={create.isPending}
             submitError={createError}
+            onCancel={() => {
+              setIsCreating(false)
+              create.reset()
+            }}
             onSubmit={(draft: CreateEnvironment) =>
               create.mutate(draft, {
                 // Closed only on success. A form that closes on failure is how
@@ -158,21 +161,6 @@ export function EnvironmentsPanel() {
               })
             }
           />
-          <div className="flex items-center gap-3">
-            <Button type="submit" form="settings-create-environment" disabled={create.isPending}>
-              {create.isPending ? 'Creating…' : 'Create environment'}
-            </Button>
-            <Button
-              variant="ghost"
-              disabled={create.isPending}
-              onClick={() => {
-                setIsCreating(false)
-                create.reset()
-              }}
-            >
-              Cancel
-            </Button>
-          </div>
         </Section>
       ) : null}
     </WidePanel>

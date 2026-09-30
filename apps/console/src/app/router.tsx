@@ -40,9 +40,6 @@ import { DEFAULT_FEATURE_QUERY, type FeatureQuery } from '@fp/domain'
 const FeatureListPage = lazy(() =>
   import('@/pages/features/FeatureListPage').then((m) => ({ default: m.FeatureListPage })),
 )
-const FeatureCreatePage = lazy(() =>
-  import('@/pages/features/FeatureCreatePage').then((m) => ({ default: m.FeatureCreatePage })),
-)
 import { parseFeatureSearch } from './featureSearch'
 import { DEFAULT_PLAN_QUERY, type PlanQuery } from '@fp/domain'
 const PlanListPage = lazy(() =>
@@ -50,9 +47,6 @@ const PlanListPage = lazy(() =>
 )
 const PlanDetailPage = lazy(() =>
   import('@/pages/plans/PlanDetailPage').then((m) => ({ default: m.PlanDetailPage })),
-)
-const PlanChargesPage = lazy(() =>
-  import('@/pages/plans/PlanChargesPage').then((m) => ({ default: m.PlanChargesPage })),
 )
 import { parsePlanTab, type PlanTab } from '@/pages/plans/PlanDetailPage'
 import { parsePlanSearch } from './planSearch'
@@ -491,7 +485,6 @@ function FeaturesRouteComponent() {
     <FeatureListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/features', search: next, replace: true })}
-      onCreate={() => void navigate({ to: '/features/new' })}
       onOpenFeature={(feature) =>
         void navigate({ to: '/features/$featureId', params: { featureId: feature.id } })
       }
@@ -499,6 +492,10 @@ function FeaturesRouteComponent() {
   )
 }
 
+/**
+ * `/features/new` is the shell's "New feature" entry. Creating is a dialog now,
+ * so it renders the list with that dialog open; closing it drops back to the list.
+ */
 const featureCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/features/new',
@@ -507,9 +504,17 @@ const featureCreateRoute = createRoute({
 
 function FeatureCreateRouteComponent() {
   const navigate = useNavigate()
-  const backToList = () => void navigate({ to: '/features', search: {} as never })
 
-  return <FeatureCreatePage onCreated={backToList} onCancel={backToList} />
+  return (
+    <FeatureListPage
+      initialCreate
+      query={DEFAULT_FEATURE_QUERY}
+      onQueryChange={(next) => void navigate({ to: '/features', search: next })}
+      onOpenFeature={(feature) =>
+        void navigate({ to: '/features/$featureId', params: { featureId: feature.id } })
+      }
+    />
+  )
 }
 
 /** The feature detail page. `/features/$featureId` — the id is a path param. */
@@ -598,9 +603,6 @@ function PlanDetailRouteComponent() {
           replace: true,
         })
       }
-      onOpenCharges={() =>
-        void navigate({ to: '/plans/$planId/charges', params: { planId }, search: {} as never })
-      }
       onArchived={() => void navigate({ to: '/plans', search: {} as never })}
       onNavigateToList={() => void navigate({ to: '/plans', search: {} as never })}
       onDuplicated={(newId) =>
@@ -608,21 +610,6 @@ function PlanDetailRouteComponent() {
       }
     />
   )
-}
-
-const planChargesRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/plans/$planId/charges',
-  component: PlanChargesRouteComponent,
-})
-
-function PlanChargesRouteComponent() {
-  const { planId } = planChargesRoute.useParams()
-  const navigate = useNavigate()
-  const toDetail = () =>
-    void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
-
-  return <PlanChargesPage planId={planId} onDone={toDetail} onCancel={toDetail} />
 }
 
 /**
@@ -698,7 +685,6 @@ function CouponsRouteComponent() {
     <CouponListPage
       query={query}
       onQueryChange={(next) => void navigate({ to: '/coupons', search: next, replace: true })}
-      onCreate={() => void navigate({ to: '/coupons', search: { ...query, page: 1 } })}
       onOpenCoupon={(coupon) =>
         void navigate({ to: '/coupons/$couponId', params: { couponId: coupon.id } })
       }
@@ -1214,9 +1200,6 @@ export const routeTree = rootRoute.addChildren([
     featureCreateRoute,
     featureDetailRoute,
     plansRoute,
-    // The charges route is registered before the detail route so `/plans/x/charges`
-    // is matched by it, not swallowed as a `$planId` of "x/charges".
-    planChargesRoute,
     planDetailRoute,
     addonsRoute,
     addonDetailRoute,

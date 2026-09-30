@@ -1420,7 +1420,7 @@ function patchRow(rows: Record<string, unknown>[], id: string, patch: Record<str
 function removeRow(rows: Record<string, unknown>[], id: string) {
   const index = findIndexById(rows, id)
   if (index >= 0) rows.splice(index, 1)
-  return HttpResponse.json({ success: true, id })
+  return new HttpResponse(null, { status: 204 })
 }
 
 /* ---- The overview's demo data ------------------------------------------
@@ -2580,7 +2580,10 @@ export const handlers = [
   http.put(`${BASE}/costs/:id`, async ({ request, params }) =>
     patchRow(costSheetStore, String(params['id']), await readBody(request)),
   ),
-  http.delete(`${BASE}/costs/:id`, ({ params }) => removeRow(costSheetStore, String(params['id']))),
+  http.delete(`${BASE}/costs/:id`, ({ params }) => {
+    removeRow(costSheetStore, String(params['id']))
+    return HttpResponse.json({ message: 'Cost sheet deleted' })
+  }),
 
   http.post(`${BASE}/groups`, async ({ request }) => {
     const body = await readBody(request)
@@ -2596,6 +2599,13 @@ export const handlers = [
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
+  http.put(`${BASE}/customers`, async ({ request }) =>
+    patchRow(
+      (corpus['customers'] as Corpus).items,
+      new URL(request.url).searchParams.get('id') ?? '',
+      await readBody(request),
+    ),
+  ),
   http.put(`${BASE}/customers/:id`, async ({ request, params }) =>
     patchRow((corpus['customers'] as Corpus).items, String(params['id']), await readBody(request)),
   ),

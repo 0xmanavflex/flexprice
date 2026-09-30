@@ -11,6 +11,7 @@ import {
 import { Input } from '@ui/primitives/input'
 import { RadioGroup, RadioGroupItem } from '@ui/primitives/radio-group'
 import { Field } from '@ui/compositions/Field'
+import { FormActions } from '@ui/compositions/FormActions'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -28,19 +29,16 @@ import { provenance } from '@ui/provenance'
  * reason attached: an option that silently does not exist reads as a bug, and
  * people go looking for it.
  *
- * It renders no buttons. The dialog that hosts it puts them in a
- * `DialogFooter` and submits with `form="…"`, which is what keeps the footer
- * ReUI's own bar rather than a row improvised inside the body.
+ * It ends with the shared `FormActions` footer, like every other create form.
  */
 export const EnvironmentFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/input', 'ui/radio-group', 'ui/field'],
+  composes: ['ui/input', 'ui/radio-group', 'compositions/field'],
   note: 'RHF + the domain schema. The type is a pair of one-line cards, not a select.',
 })
 
 export interface EnvironmentFormProps {
-  /** Ties the submit button in the dialog footer to this form. */
-  id: string
+  onCancel?: () => void
   defaultValue?: CreateEnvironment
   onSubmit: (environment: CreateEnvironment) => void
   isSubmitting?: boolean
@@ -56,7 +54,7 @@ export interface EnvironmentFormProps {
 const TYPES = [EnvironmentType.Sandbox, EnvironmentType.Production] as const
 
 export function EnvironmentForm({
-  id,
+  onCancel,
   defaultValue = emptyEnvironment,
   onSubmit,
   isSubmitting = false,
@@ -71,11 +69,10 @@ export function EnvironmentForm({
   })
 
   const type = form.watch('type')
-  const error = form.formState.errors.type?.message ?? submitError
+  const typeError = form.formState.errors.type?.message
 
   return (
     <form
-      id={id}
       className="flex flex-col gap-4"
       /*
        * Production is refused here as well as disabled in the control, because
@@ -143,11 +140,19 @@ export function EnvironmentForm({
         </RadioGroup>
       </fieldset>
 
-      {error ? (
+      {typeError ? (
         <p role="alert" className="text-destructive text-sm">
-          {error}
+          {typeError}
         </p>
       ) : null}
+
+      <FormActions
+        mode="create"
+        noun="environment"
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+        submitError={submitError}
+      />
     </form>
   )
 }

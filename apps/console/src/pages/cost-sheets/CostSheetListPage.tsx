@@ -1,10 +1,16 @@
-import { type CostSheet, type CostSheetQuery } from '@fp/domain'
-import { ApiError, useCostSheets } from '@fp/query'
-import { CostSheetGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody } from '@fp/ui/compositions'
+import { useState } from 'react'
+import { type CostSheet, type CostSheetQuery, type CreateCostSheet, costSheetToEdit } from '@fp/domain'
+import {
+  ApiError,
+  useCostSheets,
+  useCreateCostSheet,
+  useDeleteCostSheet,
+  useUpdateCostSheet,
+} from '@fp/query'
+import { CostSheetEditorDialog, CostSheetGrid } from '@fp/ui/flexprice'
+import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { SheetIcon } from 'lucide-react'
-import { env } from '@/env'
 
 export interface CostSheetListPageProps {
   query: CostSheetQuery
@@ -12,22 +18,15 @@ export interface CostSheetListPageProps {
   onOpenCostSheet: (costSheet: CostSheet) => void
 }
 
-/** Where a cost sheet is created today. No origin configured, no link. */
-const LEGACY_PATH = '/product-catalog/cost-sheets'
+/** Which record the dialog is editing — a new one, or an existing cost sheet. */
+type Editing = { mode: 'create' } | { mode: 'edit'; costSheet: CostSheet } | null
 
 /**
- * The wiring layer, and nothing else — the same shape as `CouponListPage`.
+ * The cost sheet surface: a list, a dialog to create or edit one, inline rename
+ * in the name cell, and a confirmed delete.
  *
- * Fetches, turns an error into a sentence, and hands the grid plain props. No
- * `useState`: the query lives in the URL. Read-only for now — creating and
- * editing a cost sheet is a later surface, the same way coupons shipped a list
- * before its editor.
- *
- * The create action is a hand-off for the same reason as `GroupListPage`:
- * this page replaced a placeholder that linked out to where a cost sheet can
- * be made, the real list dropped that link, and nothing in the console
- * replaced it. `POST /costs` exists in the SDK and is not wired here yet, so
- * the offer points at the dashboard that can serve it today.
+ * The list stays URL-driven; the dialog and the pending delete are the only
+ * local state, because a half-typed cost sheet is not worth a URL.
  */
 export function CostSheetListPage({
   query,
@@ -35,34 +34,38 @@ export function CostSheetListPage({
   onOpenCostSheet,
 }: CostSheetListPageProps) {
   const costSheets = useCostSheets(query)
+  const create = useCreateCostSheet()
+  const update = useUpdateCostSheet()
+  const remove = useDeleteCostSheet()
 
-  const createHref = env.legacyConsoleUrl ? `${env.legacyConsoleUrl}${LEGACY_PATH}` : null
-
-  /*
-   * Built once and handed to the grid, which is now the only thing that
-   * renders it.
-   *
-   * `ListState` still publishes a `createAction` through its offer context,
-   * but `EntityList` does not read that context — it takes `primaryAction`
-   * and `empty.actions` directly. Leaving the button only on `ListState`
-   * would have quietly removed the one route to creating a cost sheet.
-   */
-  const createAction = createHref ? (
-    <Button
-      size="sm"
-      render={
-        // A new tab, so nothing open in the console is lost.
-        <a href={createHref} rel="noreferrer" target="_blank" />
-      }
-    >
-      New cost sheet
-    </Button>
-  ) : null
+  const [editing, setEditing] = useState<Editing>(null)
+  const [deleting, setDeleting] = useState<CostSheet | null>(null)
 
   const failure = toFailure(costSheets.error)
   const rows = costSheets.data?.costSheets ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+
+  const active = editing?.mode === 'create' ? create : update
+
+  const close = () => {
+    setEditing(null)
+    create.reset()
+    update.reset()
+  }
+
+  const submit = (draft: CreateCostSheet) => {
+    if (editing?.mode === 'create') {
+      create.mutate(draft, { onSuccess: close })
+    } else if (editing?.mode === 'edit') {
+      update.mutate({ id: editing.costSheet.id, draft }, { onSuccess: close })
+    }
+  }
+
+  const closeDelete = () => {
+    setDeleting(null)
+    remove.reset()
+  }
 
   return (
     <>
@@ -74,14 +77,10 @@ export function CostSheetListPage({
           isFiltered={isFiltered}
           onRetry={() => void costSheets.refetch()}
           onClearFilters={clearFilters}
-          {...(createAction ? { createAction } : {})}
+          createAction={<Button onClick={() => setEditing({ mode: 'create' })}>New cost sheet</Button>}
           emptyIcon={<SheetIcon aria-hidden />}
           emptyTitle="No cost sheets yet"
-          emptyDescription={
-            createHref
-              ? 'Cost sheets record what usage costs you, so margin can be measured against what you charge. Create the first in the current dashboard.'
-              : 'Cost sheets record what usage costs you, so margin can be measured against what you charge. Creating one is not in this console yet — use POST /costs, or the current dashboard.'
-          }
+          emptyDescription="Cost sheets record what usage costs you, so margin can be measured against what you charge. Create the first to start."
         >
           <CostSheetGrid
             costSheets={rows}
@@ -89,11 +88,46 @@ export function CostSheetListPage({
             query={query}
             onQueryChange={onQueryChange}
             onCostSheetClick={onOpenCostSheet}
+            onRename={(costSheet, name) =>
+              update
+                .mutateAsync({ id: costSheet.id, draft: { name } })
+                .then(() => undefined, () => undefined)
+            }
+            onCreate={() => setEditing({ mode: 'create' })}
+            onEdit={(costSheet) => setEditing({ mode: 'edit', costSheet })}
+            onDelete={setDeleting}
             onClearFilters={clearFilters}
-            {...(createAction ? { primaryAction: createAction, emptyActions: createAction } : {})}
           />
         </ListState>
       </PageBody>
+
+      <CostSheetEditorDialog
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) close()
+        }}
+        mode={editing?.mode ?? 'create'}
+        {...(editing?.mode === 'edit' ? { defaultValue: costSheetToEdit(editing.costSheet) } : {})}
+        onSubmit={submit}
+        isSubmitting={active.isPending}
+        submitError={toSubmitError(active.error)}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) closeDelete()
+        }}
+        title={`Delete ${deleting?.name ?? 'cost sheet'}?`}
+        description="The cost sheet is removed. This cannot be undone."
+        confirmLabel="Delete cost sheet"
+        onConfirm={() => {
+          if (deleting) remove.mutate(deleting.id, { onSuccess: closeDelete })
+        }}
+        isPending={remove.isPending}
+        destructive
+        error={toSubmitError(remove.error)}
+      />
     </>
   )
 }
@@ -116,4 +150,23 @@ function toFailure(error: unknown): { message: string; canRetry: boolean } | nul
     }
   }
   return { message: 'Something went wrong loading cost sheets.', canRetry: true }
+}
+
+/** A save failure, as a sentence the form can show inline. */
+function toSubmitError(error: unknown): string | null {
+  if (!error) return null
+
+  if (error instanceof ApiError) {
+    switch (error.kind) {
+      case 'invalid':
+        return error.message || 'Check the details and try again.'
+      case 'forbidden':
+        return 'You do not have permission to change cost sheets here.'
+      case 'network':
+        return 'Could not reach Flexprice. Check your connection and try again.'
+      default:
+        return 'Could not save the cost sheet. Try again.'
+    }
+  }
+  return 'Could not save the cost sheet. Try again.'
 }

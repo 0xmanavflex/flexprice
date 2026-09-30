@@ -7,7 +7,6 @@ import {
   type GroupQuery,
   GroupStatus,
 } from '@fp/domain'
-import { Button } from '@ui/primitives/button'
 import { GroupGrid } from './GroupGrid'
 
 /**
@@ -203,24 +202,23 @@ export const FilteredEmpty: Story = {
 }
 
 /**
- * Nothing created yet.
- *
- * Creating a group still happens in the legacy console, so the page hands the
- * grid a link rather than a handler — and the grid renders it in both the
- * toolbar and the empty state, which is the only route to a first group.
+ * Nothing created yet. The create action is offered in both the toolbar and
+ * the empty state, and both call `onCreate`.
  */
 export const FirstRun: Story = {
   args: {
     groups: [],
     total: 0,
-    primaryAction: <Button>New group</Button>,
-    emptyActions: <Button>New group</Button>,
+    onCreate: fn(),
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('No groups yet')).toBeInTheDocument()
     await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
-    await expect(canvas.getAllByRole('button', { name: /new group/i }).length).toBe(2)
+    const create = canvas.getAllByRole('button', { name: /new group/i })
+    await expect(create.length).toBe(2)
+    await userEvent.click(create[0]!)
+    await expect(args.onCreate).toHaveBeenCalledOnce()
   },
 }
 

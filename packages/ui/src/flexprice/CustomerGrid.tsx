@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, ReceiptIcon, UserIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, PencilIcon, ReceiptIcon, Trash2Icon, UserIcon } from 'lucide-react'
 import {
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,
@@ -107,6 +107,12 @@ export interface CustomerGridProps {
   onCustomerClick?: (customer: Customer) => void
   /** The primary create action; renders a "New customer" CTA at the toolbar's end. */
   onCreate?: () => void
+  /** Row menu: open the customer's editor. Left out of the menu when absent. */
+  onEdit?: ((customer: Customer) => void) | undefined
+  /** Row menu: delete. The page confirms before it runs. */
+  onDelete?: ((customer: Customer) => void) | undefined
+  /** Inline rename from the name cell. Absent leaves the name read-only. */
+  onRename?: ((customer: Customer, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for dates. Supplied by the app, never read from a global. */
@@ -123,6 +129,9 @@ export function CustomerGrid({
   onRetry,
   onCustomerClick,
   onCreate,
+  onEdit,
+  onDelete,
+  onRename,
   onClearFilters,
   locale,
 }: CustomerGridProps) {
@@ -135,6 +144,7 @@ export function CustomerGrid({
         // The column the list is *for*. Hiding it leaves a table of
         // attributes belonging to nobody.
         hideable: false,
+        ...(onRename ? { onEdit: onRename } : {}),
       }),
       // Its own column rather than a subtitle under the name. Stacked, it was
       // unsortable, unexportable and clipped twice as often; beside the name
@@ -161,7 +171,7 @@ export function CustomerGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale],
+    [locale, onRename],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
@@ -179,11 +189,26 @@ export function CustomerGrid({
         onSelect: () => onCustomerClick(customer),
       })
     }
+    if (onEdit) {
+      actions.push({
+        label: 'Edit customer',
+        icon: <PencilIcon aria-hidden className="size-4" />,
+        onSelect: () => onEdit(customer),
+      })
+    }
     actions.push({
       label: 'Copy customer ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(customer.id),
     })
+    if (onDelete) {
+      actions.push({
+        label: 'Delete customer',
+        icon: <Trash2Icon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onDelete(customer),
+      })
+    }
     return actions
   }
 

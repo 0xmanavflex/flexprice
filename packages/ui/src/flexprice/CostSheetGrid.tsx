@@ -1,5 +1,13 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, ScrollTextIcon, SheetIcon, TrendingUpIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  CopyIcon,
+  PencilIcon,
+  ScrollTextIcon,
+  SheetIcon,
+  Trash2Icon,
+  TrendingUpIcon,
+} from 'lucide-react'
 import {
   COST_SHEET_SORT_LABEL,
   COST_SHEET_STATUS_LABEL,
@@ -9,6 +17,7 @@ import {
   CostSheetStatus,
   DEFAULT_COST_SHEET_QUERY,
 } from '@fp/domain'
+import { Button } from '@ui/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
 import {
@@ -96,13 +105,16 @@ export interface CostSheetGridProps {
   error?: string | null
   onRetry?: () => void
   onCostSheetClick?: (costSheet: CostSheet) => void
-  /** The primary action. Cost sheets are still created in the legacy console,
-   *  so this is a link rather than a handler — the page supplies the node. */
-  primaryAction?: React.ReactNode
+  /** The primary create action; renders a "New cost sheet" CTA at the toolbar's end. */
+  onCreate?: () => void
+  /** Row menu: open the cost sheet's editor. Left out of the menu when absent. */
+  onEdit?: ((costSheet: CostSheet) => void) | undefined
+  /** Row menu: delete. The page confirms before it runs. */
+  onDelete?: ((costSheet: CostSheet) => void) | undefined
+  /** Inline rename from the name cell. Absent leaves the name read-only. */
+  onRename?: ((costSheet: CostSheet, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
-  /** Up to two 32px buttons under the first-run empty state. */
-  emptyActions?: React.ReactNode
   locale?: string
 }
 
@@ -115,9 +127,11 @@ export function CostSheetGrid({
   error = null,
   onRetry,
   onCostSheetClick,
-  primaryAction,
+  onCreate,
+  onEdit,
+  onDelete,
+  onRename,
   onClearFilters,
-  emptyActions,
   locale,
 }: CostSheetGridProps) {
   const columns = useMemo<EntityColumn<CostSheet>[]>(
@@ -127,6 +141,7 @@ export function CostSheetGrid({
         sortable: true,
         sortValue: CostSheetSortField.Name,
         hideable: false,
+        ...(onRename ? { onEdit: onRename } : {}),
       }),
       idColumn<CostSheet>('lookupKey', 'Key', (row) => row.lookupKey, { width: 170 }),
       textColumn<CostSheet>('description', 'Description', (row) => row.description, {
@@ -161,7 +176,7 @@ export function CostSheetGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale],
+    [locale, onRename],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
@@ -179,11 +194,26 @@ export function CostSheetGrid({
         onSelect: () => onCostSheetClick(costSheet),
       })
     }
+    if (onEdit) {
+      actions.push({
+        label: 'Edit cost sheet',
+        icon: <PencilIcon aria-hidden className="size-4" />,
+        onSelect: () => onEdit(costSheet),
+      })
+    }
     actions.push({
       label: 'Copy cost sheet ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(costSheet.id),
     })
+    if (onDelete) {
+      actions.push({
+        label: 'Delete cost sheet',
+        icon: <Trash2Icon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onDelete(costSheet),
+      })
+    }
     return actions
   }
 
@@ -234,7 +264,7 @@ export function CostSheetGrid({
       selectable
       rowActions={rowActions}
       exportFileName="cost-sheets"
-      primaryAction={primaryAction}
+      primaryAction={onCreate ? <Button onClick={onCreate}>New cost sheet</Button> : undefined}
       {...(onCostSheetClick ? { onRowClick: onCostSheetClick } : {})}
       isLoading={isLoading}
       error={error}
@@ -246,7 +276,7 @@ export function CostSheetGrid({
         title: 'No cost sheets yet',
         description:
           'A cost sheet records what each unit of usage costs you, so margin can be measured against what you charge for it.',
-        ...(emptyActions ? { actions: emptyActions } : {}),
+        ...(onCreate ? { actions: <Button onClick={onCreate}>New cost sheet</Button> } : {}),
         guides: GUIDES,
       }}
     />

@@ -1,10 +1,10 @@
+import { useState } from 'react'
 import { type Group, type GroupQuery } from '@fp/domain'
-import { ApiError, useGroups } from '@fp/query'
-import { GroupGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody } from '@fp/ui/compositions'
+import { ApiError, useCreateGroup, useDeleteGroup, useGroups } from '@fp/query'
+import { GroupEditorDialog, GroupGrid } from '@fp/ui/flexprice'
+import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { LayersIcon } from 'lucide-react'
-import { env } from '@/env'
 
 export interface GroupListPageProps {
   query: GroupQuery
@@ -12,56 +12,35 @@ export interface GroupListPageProps {
   onOpenGroup: (group: Group) => void
 }
 
-/** Where a group is created today. Unset origin means no link is offered. */
-const LEGACY_PATH = '/product-catalog/groups'
-
 /**
- * The wiring layer, and nothing else — the same shape as `CouponListPage`.
+ * The group surface: a list, a dialog to create one, and a confirmed delete.
  *
- * Fetches, turns an error into a sentence, and hands the grid plain props. No
- * `useState`: the query lives in the URL. Read-only for now — creating and
- * editing a group is a later surface, the same way coupons shipped a list
- * before its editor.
- *
- * Which is exactly why the create action is a hand-off rather than nothing.
- * This page replaced a placeholder that offered "Create group" against the
- * current dashboard, and shipping the real list dropped that link without
- * putting anything in its place: a tenant with no groups had no route to a
- * first one from anywhere in the console. Until `POST /groups` is wired to a
- * drawer here, the offer goes where the thing can actually be made today —
- * the same reasoning, and the same link, as `PlaceholderPage`.
+ * The API has no group update, so there is no edit and no inline rename — a
+ * wrong name means delete and recreate. The list stays URL-driven; the dialog
+ * and the pending delete are the only local state.
  */
 export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPageProps) {
   const groups = useGroups(query)
+  const create = useCreateGroup()
+  const remove = useDeleteGroup()
 
-  const createHref = env.legacyConsoleUrl ? `${env.legacyConsoleUrl}${LEGACY_PATH}` : null
-
-  /*
-   * Built once and handed to the grid, which is now the only thing that
-   * renders it.
-   *
-   * `ListState` still publishes a `createAction` through its offer context,
-   * but `EntityList` does not read that context — it takes `primaryAction`
-   * and `empty.actions` directly. Leaving the button only on `ListState`
-   * would have quietly removed the one route to creating a group.
-   */
-  const createAction = createHref ? (
-    <Button
-      size="sm"
-      render={
-        // A new tab: following a link out of the console should not discard
-        // what is open in it.
-        <a href={createHref} rel="noreferrer" target="_blank" />
-      }
-    >
-      New group
-    </Button>
-  ) : null
+  const [creating, setCreating] = useState(false)
+  const [deleting, setDeleting] = useState<Group | null>(null)
 
   const failure = toFailure(groups.error)
   const rows = groups.data?.groups ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+
+  const closeCreate = () => {
+    setCreating(false)
+    create.reset()
+  }
+
+  const closeDelete = () => {
+    setDeleting(null)
+    remove.reset()
+  }
 
   return (
     <>
@@ -73,14 +52,10 @@ export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPa
           isFiltered={isFiltered}
           onRetry={() => void groups.refetch()}
           onClearFilters={clearFilters}
-          {...(createAction ? { createAction } : {})}
+          createAction={<Button onClick={() => setCreating(true)}>New group</Button>}
           emptyIcon={<LayersIcon aria-hidden />}
           emptyTitle="No groups yet"
-          emptyDescription={
-            createHref
-              ? 'Groups bundle prices or features so they report and invoice together — a product line, a region. Create the first in the current dashboard.'
-              : 'Groups bundle prices or features so they report and invoice together — a product line, a region. Creating one is not in this console yet — use POST /groups, or the current dashboard.'
-          }
+          emptyDescription="Groups bundle prices or features so they report and invoice together — a product line, a region. Create the first to start."
         >
           <GroupGrid
             groups={rows}
@@ -88,11 +63,38 @@ export function GroupListPage({ query, onQueryChange, onOpenGroup }: GroupListPa
             query={query}
             onQueryChange={onQueryChange}
             onGroupClick={onOpenGroup}
+            onCreate={() => setCreating(true)}
+            onDelete={setDeleting}
             onClearFilters={clearFilters}
-            {...(createAction ? { primaryAction: createAction, emptyActions: createAction } : {})}
           />
         </ListState>
       </PageBody>
+
+      <GroupEditorDialog
+        open={creating}
+        onOpenChange={(open) => {
+          if (!open) closeCreate()
+        }}
+        onSubmit={(draft) => create.mutate(draft, { onSuccess: closeCreate })}
+        isSubmitting={create.isPending}
+        submitError={toSubmitError(create.error)}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) closeDelete()
+        }}
+        title={`Delete ${deleting?.name ?? 'group'}?`}
+        description="The group is removed; the prices or features in it are not. This cannot be undone."
+        confirmLabel="Delete group"
+        onConfirm={() => {
+          if (deleting) remove.mutate(deleting.id, { onSuccess: closeDelete })
+        }}
+        isPending={remove.isPending}
+        destructive
+        error={toSubmitError(remove.error)}
+      />
     </>
   )
 }
@@ -115,4 +117,23 @@ function toFailure(error: unknown): { message: string; canRetry: boolean } | nul
     }
   }
   return { message: 'Something went wrong loading groups.', canRetry: true }
+}
+
+/** A save failure, as a sentence the form can show inline. */
+function toSubmitError(error: unknown): string | null {
+  if (!error) return null
+
+  if (error instanceof ApiError) {
+    switch (error.kind) {
+      case 'invalid':
+        return error.message || 'Check the details and try again.'
+      case 'forbidden':
+        return 'You do not have permission to change groups here.'
+      case 'network':
+        return 'Could not reach Flexprice. Check your connection and try again.'
+      default:
+        return 'Could not save the group. Try again.'
+    }
+  }
+  return 'Could not save the group. Try again.'
 }

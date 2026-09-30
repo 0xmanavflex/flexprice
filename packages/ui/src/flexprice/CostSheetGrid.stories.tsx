@@ -6,7 +6,6 @@ import {
   CostSheetStatus,
   DEFAULT_COST_SHEET_QUERY,
 } from '@fp/domain'
-import { Button } from '@ui/primitives/button'
 import { CostSheetGrid } from './CostSheetGrid'
 
 /**
@@ -197,24 +196,23 @@ export const FilteredEmpty: Story = {
 }
 
 /**
- * Nothing created yet.
- *
- * Creating a cost sheet still happens in the legacy console, so the page hands
- * the grid a link rather than a handler — and the grid renders it in both the
- * toolbar and the empty state, which is the only route to a first sheet.
+ * Nothing created yet. The create action is offered in both the toolbar and
+ * the empty state, and both call `onCreate`.
  */
 export const FirstRun: Story = {
   args: {
     costSheets: [],
     total: 0,
-    primaryAction: <Button>New cost sheet</Button>,
-    emptyActions: <Button>New cost sheet</Button>,
+    onCreate: fn(),
   },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('No cost sheets yet')).toBeInTheDocument()
     await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
-    await expect(canvas.getAllByRole('button', { name: /new cost sheet/i }).length).toBe(2)
+    const create = canvas.getAllByRole('button', { name: /new cost sheet/i })
+    await expect(create.length).toBe(2)
+    await userEvent.click(create[0]!)
+    await expect(args.onCreate).toHaveBeenCalledOnce()
   },
 }
 

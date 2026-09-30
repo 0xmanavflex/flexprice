@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, GaugeIcon, LayersIcon, TagIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, GaugeIcon, LayersIcon, TagIcon, Trash2Icon } from 'lucide-react'
 import {
   DEFAULT_GROUP_QUERY,
   GROUP_ENTITY_TYPE_LABEL,
@@ -11,6 +11,7 @@ import {
   GroupSortField,
   GroupStatus,
 } from '@fp/domain'
+import { Button } from '@ui/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from './EntityList'
 import {
@@ -89,13 +90,12 @@ export interface GroupGridProps {
   error?: string | null
   onRetry?: () => void
   onGroupClick?: (group: Group) => void
-  /** The primary action. Groups are still created in the legacy console, so
-   *  this is a link rather than a handler — the page supplies the node. */
-  primaryAction?: React.ReactNode
+  /** The primary create action; renders a "New group" CTA at the toolbar's end. */
+  onCreate?: () => void
+  /** Row menu: delete. Groups have no update route, so this and create are all there is. */
+  onDelete?: ((group: Group) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
-  /** Up to two 32px buttons under the first-run empty state. */
-  emptyActions?: React.ReactNode
   locale?: string
 }
 
@@ -108,9 +108,9 @@ export function GroupGrid({
   error = null,
   onRetry,
   onGroupClick,
-  primaryAction,
+  onCreate,
+  onDelete,
   onClearFilters,
-  emptyActions,
   locale,
 }: GroupGridProps) {
   const columns = useMemo<EntityColumn<Group>[]>(
@@ -193,6 +193,14 @@ export function GroupGrid({
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(group.id),
     })
+    if (onDelete) {
+      actions.push({
+        label: 'Delete group',
+        icon: <Trash2Icon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onDelete(group),
+      })
+    }
     return actions
   }
 
@@ -237,7 +245,7 @@ export function GroupGrid({
       selectable
       rowActions={rowActions}
       exportFileName="groups"
-      primaryAction={primaryAction}
+      primaryAction={onCreate ? <Button onClick={onCreate}>New group</Button> : undefined}
       {...(onGroupClick ? { onRowClick: onGroupClick } : {})}
       isLoading={isLoading}
       error={error}
@@ -249,7 +257,7 @@ export function GroupGrid({
         title: 'No groups yet',
         description:
           'A group bundles prices or features so they can be filtered, reported and invoiced together — a product line, a region, a tier.',
-        ...(emptyActions ? { actions: emptyActions } : {}),
+        ...(onCreate ? { actions: <Button onClick={onCreate}>New group</Button> } : {}),
         guides: GUIDES,
       }}
     />

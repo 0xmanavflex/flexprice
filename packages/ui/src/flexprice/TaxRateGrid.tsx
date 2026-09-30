@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CopyIcon, LinkIcon, ListIcon, PercentIcon, PlusIcon } from 'lucide-react'
+import { CopyIcon, LinkIcon, ListIcon, PencilIcon, PercentIcon, PlusIcon, Trash2Icon } from 'lucide-react'
 import {
   DEFAULT_TAX_RATE_QUERY,
   TAX_RATE_SCOPE_LABEL,
@@ -84,6 +84,12 @@ export interface TaxRateGridProps {
   onTaxRateClick?: (taxRate: TaxRate) => void
   /** The primary create action; renders a "New tax rate" CTA at the toolbar's end. */
   onCreate?: () => void
+  /** Row menu: open the tax rate's editor. Left out of the menu when absent. */
+  onEdit?: ((taxRate: TaxRate) => void) | undefined
+  /** Row menu: delete. The page confirms before it runs. */
+  onDelete?: ((taxRate: TaxRate) => void) | undefined
+  /** Inline rename from the name cell. Absent leaves the name read-only. */
+  onRename?: ((taxRate: TaxRate, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
 }
@@ -98,6 +104,9 @@ export function TaxRateGrid({
   onRetry,
   onTaxRateClick,
   onCreate,
+  onEdit,
+  onDelete,
+  onRename,
   onClearFilters,
 }: TaxRateGridProps) {
   const columns = useMemo<EntityColumn<TaxRate>[]>(
@@ -107,6 +116,7 @@ export function TaxRateGrid({
         sortable: true,
         sortValue: TaxRateSortField.Name,
         hideable: false,
+        ...(onRename ? { onEdit: onRename } : {}),
       }),
       idColumn<TaxRate>('code', 'Code', (row) => row.code, { width: 160 }),
       /*
@@ -132,7 +142,7 @@ export function TaxRateGrid({
         tone: row.status === TaxRateStatus.Published ? 'success' : 'neutral',
       })),
     ],
-    [],
+    [onRename],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
@@ -150,11 +160,26 @@ export function TaxRateGrid({
         onSelect: () => onTaxRateClick(taxRate),
       })
     }
+    if (onEdit) {
+      actions.push({
+        label: 'Edit tax rate',
+        icon: <PencilIcon aria-hidden className="size-4" />,
+        onSelect: () => onEdit(taxRate),
+      })
+    }
     actions.push({
       label: 'Copy tax rate ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(taxRate.id),
     })
+    if (onDelete) {
+      actions.push({
+        label: 'Delete tax rate',
+        icon: <Trash2Icon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onDelete(taxRate),
+      })
+    }
     return actions
   }
 

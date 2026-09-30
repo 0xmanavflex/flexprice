@@ -1,6 +1,7 @@
+import { useState } from 'react'
 import { type Coupon, type CouponQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, useCoupons, useUpdateCoupon } from '@fp/query'
-import { CouponGrid } from '@fp/ui/flexprice'
+import { ApiError, useCatalogStats, useCoupons, useCreateCoupon, useUpdateCoupon } from '@fp/query'
+import { CouponEditorDialog, CouponGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { TicketPercentIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -8,7 +9,6 @@ import { Button } from '@fp/ui/primitives'
 export interface CouponListPageProps {
   query: CouponQuery
   onQueryChange: (query: CouponQuery) => void
-  onCreate: () => void
   onOpenCoupon: (coupon: Coupon) => void
 }
 
@@ -16,11 +16,19 @@ export interface CouponListPageProps {
  * The wiring layer, and nothing else — the same shape as `AddonListPage`.
  *
  * Replaces V1's `Coupons.tsx`. Fetches, turns an error into a sentence, and
- * hands the grid plain props. No `useState`: the query lives in the URL.
+ * hands the grid plain props. The query lives in the URL; the create dialog is
+ * the one piece of local state.
  */
-export function CouponListPage({ query, onQueryChange, onCreate, onOpenCoupon }: CouponListPageProps) {
+export function CouponListPage({ query, onQueryChange, onOpenCoupon }: CouponListPageProps) {
   const coupons = useCoupons(query)
   const update = useUpdateCoupon()
+  const create = useCreateCoupon()
+  const [creating, setCreating] = useState(false)
+  const onCreate = () => setCreating(true)
+  const close = () => {
+    setCreating(false)
+    create.reset()
+  }
   // The server's counts for the status dropdown — one `limit: 1` request each,
   // read for `pagination.total`, never counted off the page on screen.
   const stats = useCatalogStats('coupons')
@@ -63,6 +71,17 @@ export function CouponListPage({ query, onQueryChange, onCreate, onOpenCoupon }:
           />
         </ListState>
       </PageBody>
+
+      <CouponEditorDialog
+        mode="create"
+        open={creating}
+        onOpenChange={(open) => {
+          if (!open) close()
+        }}
+        onSubmit={(draft) => create.mutate(draft, { onSuccess: close })}
+        isSubmitting={create.isPending}
+        submitError={toSubmitError(create.error)}
+      />
     </>
   )
 }
@@ -85,4 +104,22 @@ function toFailure(error: unknown): { message: string; canRetry: boolean } | nul
     }
   }
   return { message: 'Something went wrong loading coupons.', canRetry: true }
+}
+
+function toSubmitError(error: unknown): string | null {
+  if (!error) return null
+
+  if (error instanceof ApiError) {
+    switch (error.kind) {
+      case 'invalid':
+        return error.message || 'Check the details and try again.'
+      case 'forbidden':
+        return 'You do not have permission to change coupons here.'
+      case 'network':
+        return 'Could not reach Flexprice. Check your connection and try again.'
+      default:
+        return 'Could not save the coupon. Try again.'
+    }
+  }
+  return 'Could not save the coupon. Try again.'
 }
