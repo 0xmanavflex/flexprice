@@ -84,5 +84,7 @@ export type {
 } from './useFormSteps'
 export { ContextualSection, ContextualSectionProvenance } from './ContextualSection'
 export type { ContextualSectionProps } from './ContextualSection'
+export { EditableFields, EditableFieldsProvenance } from './EditableFields'
+export type { EditableFieldDef, EditableFieldsProps } from './EditableFields'
 export { InlineField, InlineFieldProvenance } from './InlineField'
 export type { InlineFieldProps } from './InlineField'

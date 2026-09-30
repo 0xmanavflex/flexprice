@@ -18,7 +18,7 @@ import {
   LoadingRows,
   PageBody,
   ResourceNavigation,
-  InlineField,
+  EditableFields,
   Section,
 } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -50,11 +50,14 @@ type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
  * there is no linked-price or entitlement read hook yet, so they say what will
  * appear rather than inventing rows.
  *
- * Edit opens the same dialog the list uses, prefilled.
+ * Name and description edit in place (per value, or all at once from the header
+ * Edit). Type and meter configuration is a genuine multi-step journey, so
+ * "Edit configuration" opens the same stepped form Create uses, prefilled.
  */
 export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
   const [tab, setTab] = useState<FeatureTab>('overview')
+  const [editing, setEditing] = useState(false)
   const update = useUpdateFeature()
 
   if (feature.isPending) {
@@ -106,10 +109,23 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
       }
       identifier={data.lookupKey || data.id}
       actions={
-        <Button variant="outline" size="sm" onClick={() => onEdit(featureId)}>
-          <PencilIcon aria-hidden className="size-4" />
-          Edit
-        </Button>
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={editing || data.status === 'archived'}
+            onClick={() => {
+              setTab('overview')
+              setEditing(true)
+            }}
+          >
+            <PencilIcon aria-hidden className="size-4" />
+            Edit
+          </Button>
+          <Button variant="ghost" size="sm" onClick={() => onEdit(featureId)}>
+            Edit configuration
+          </Button>
+        </>
       }
       {...(data.description ? { description: data.description } : {})}
     >
@@ -128,25 +144,41 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
 
       <div className="flex flex-col gap-6 pt-5">
         {tab === 'overview' ? (
-          <Section title="Details" description="Click the pencil to change a value in place.">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <InlineField
-                label="Name"
-                value={data.name}
-                required
-                readOnly={data.status === 'archived'}
-                onSave={(name) => update.mutateAsync({ id: data.id, draft: { name } })}
-              />
-              <InlineField
-                label="Description"
-                value={data.description}
-                placeholder="No description"
-                multiline
-                onSave={(description) =>
-                  update.mutateAsync({ id: data.id, draft: { name: data.name, description } })
-                }
-              />
-            </div>
+          <Section
+            title="Details"
+            description="Use the pencil on a value, or Edit above to change them together."
+          >
+            <EditableFields
+              editing={editing}
+              onEditingChange={setEditing}
+              fields={[
+                {
+                  key: 'name',
+                  label: 'Name',
+                  value: data.name,
+                  required: true,
+                  readOnly: data.status === 'archived',
+                },
+                {
+                  key: 'description',
+                  label: 'Description',
+                  value: data.description,
+                  placeholder: 'No description',
+                  multiline: true,
+                },
+              ]}
+              onSave={(changes) =>
+                update.mutateAsync({
+                  id: data.id,
+                  draft: {
+                    name: changes.name ?? data.name,
+                    ...(changes.description !== undefined
+                      ? { description: changes.description }
+                      : {}),
+                  },
+                })
+              }
+            />
           </Section>
         ) : null}
         {tab === 'overview' ? (

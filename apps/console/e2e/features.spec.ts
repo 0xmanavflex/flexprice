@@ -133,7 +133,16 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await list(page).rows().first().getByRole('cell').nth(2).click()
     await expect(page).toHaveURL(/\/features\/[^/?#]+$/)
+
+    // Header Edit is in place: fields become inputs, the URL does not change.
+    const url = page.url()
     await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(page.getByLabel('Name')).toBeVisible()
+    await expect(page).toHaveURL(url)
+    await page.getByRole('button', { name: 'Cancel' }).click()
+
+    // The multi-step configuration is the dedicated flow.
+    await page.getByRole('button', { name: 'Edit configuration' }).click()
     await expect(page).toHaveURL(/\/edit$/)
   })
 })
