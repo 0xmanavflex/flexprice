@@ -60,6 +60,11 @@ export {
   useCreateFeature,
   useFeature,
   useFeatures,
+  toUpdateFeatureRequest,
+  toCloneFeatureRequest,
+  useUpdateFeature,
+  useDeleteFeature,
+  useCloneFeature,
 } from './features'
 export type { FeaturePage, FeatureWire } from './features'
 
@@ -90,6 +95,7 @@ export {
   useAddons,
   useCreateAddon,
   useUpdateAddon,
+  useDeleteAddon,
 } from './addons'
 export type { AddonPage, AddonWire } from './addons'
 
@@ -104,6 +110,8 @@ export {
   useCouponAssociations,
   useCoupons,
   useUpdateCoupon,
+  toCreateCouponRequest,
+  useCreateCoupon,
 } from './coupons'
 export type {
   CouponAssociationPage,
@@ -122,10 +130,20 @@ export {
   usePriceUnit,
   usePriceUnits,
   useUpdatePriceUnit,
+  useDeletePriceUnit,
 } from './priceUnits'
 export type { PriceUnitPage, PriceUnitWire } from './priceUnits'
 
-export { fetchGroups, toGroup, toGroupFilter, useGroup, useGroups } from './groups'
+export {
+  fetchGroups,
+  toGroup,
+  toGroupFilter,
+  useGroup,
+  useGroups,
+  toCreateGroupRequest,
+  useCreateGroup,
+  useDeleteGroup,
+} from './groups'
 export type { GroupPage, GroupWire } from './groups'
 
 export {
@@ -134,6 +152,11 @@ export {
   toCostSheetFilter,
   useCostSheet,
   useCostSheets,
+  toCreateCostSheetRequest,
+  toUpdateCostSheetRequest,
+  useCreateCostSheet,
+  useUpdateCostSheet,
+  useDeleteCostSheet,
 } from './costSheets'
 export type { CostSheetPage, CostSheetWire } from './costSheets'
 
@@ -151,6 +174,11 @@ export {
   useCustomers,
   useCustomerSubscriptions,
   useCustomerUsageSummary,
+  toCreateCustomerRequest,
+  toUpdateCustomerRequest,
+  useCreateCustomer,
+  useUpdateCustomer,
+  useDeleteCustomer,
 } from './customers'
 export type {
   CustomerDetailWire,
@@ -172,7 +200,17 @@ export type { CreditNotePage, CreditNoteWire } from './creditNotes'
 export { fetchPayments, toPayment, toPaymentFilter, usePayments } from './payments'
 export type { PaymentPage, PaymentWire } from './payments'
 
-export { fetchTaxRates, toTaxRate, toTaxRateFilter, useTaxRates } from './taxRates'
+export {
+  fetchTaxRates,
+  toTaxRate,
+  toTaxRateFilter,
+  useTaxRates,
+  toCreateTaxRateRequest,
+  toUpdateTaxRateRequest,
+  useCreateTaxRate,
+  useUpdateTaxRate,
+  useDeleteTaxRate,
+} from './taxRates'
 export type { TaxRatePage, TaxRateWire } from './taxRates'
 
 export { fetchRawEvents, toRawEvent, toRawEventFilter, useRawEvents } from './rawEvents'
@@ -194,6 +232,8 @@ export {
   useCreateBulkEntitlements,
   useDeleteEntitlement,
   useEntitlements,
+  toUpdateEntitlementRequest,
+  useUpdateEntitlement,
 } from './entitlements'
 export type { EntitlementWire } from './entitlements'
 
@@ -203,6 +243,8 @@ export {
   useCreateCreditGrant,
   useCreditGrants,
   useDeleteCreditGrant,
+  toUpdateCreditGrantRequest,
+  useUpdateCreditGrant,
 } from './creditGrants'
 export type { CreditGrantWire } from './creditGrants'
 
@@ -320,6 +362,7 @@ export {
   useCreateAlertSetting,
   useDeleteAlertSetting,
   useUpdateAlertSetting,
+  toAlertConfigRequest,
 } from './alertSettings'
 export type { AlertSettingPage, AlertSettingWire } from './alertSettings'
 

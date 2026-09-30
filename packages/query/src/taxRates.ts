@@ -1,6 +1,8 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  type CreateTaxRate,
+  type EditTaxRate,
   type TaxRate,
   type TaxRateQuery,
   TaxRateScope,
@@ -29,6 +31,7 @@ export interface TaxRateWire {
   name?: string | undefined
   code?: string | undefined
   description?: string | undefined
+  metadata?: Record<string, string> | undefined
   percentageValue?: string | undefined
   scope?: string | undefined
   status?: string | undefined
@@ -55,6 +58,7 @@ export function toTaxRate(wire: TaxRateWire): TaxRate {
     // The percentage as the API sends it ("18", not 0.18), or empty when absent.
     percentageValue: wire.percentageValue ?? '',
     scope,
+    metadata: wire.metadata ?? {},
     status,
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -109,5 +113,72 @@ export function useTaxRates(query: TaxRateQuery) {
     queryKey: queryKeys.taxRates.list({ ...query, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchTaxRates(client, query),
     placeholderData: (previous) => previous,
+  })
+}
+
+/** Domain draft out, `CreateTaxRateRequest` in. Only percentage rates are offered. */
+export function toCreateTaxRateRequest(draft: CreateTaxRate): Record<string, unknown> {
+  return {
+    name: draft.name,
+    code: draft.code,
+    taxRateType: 'percentage',
+    percentageValue: draft.percentageValue,
+    scope: draft.scope,
+    ...(draft.description ? { description: draft.description } : {}),
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
+  }
+}
+
+/** The wire spells the two states `ACTIVE` / `INACTIVE`; the catalogue says published / archived. */
+const STATUS_TO_WIRE = { published: 'ACTIVE', archived: 'INACTIVE' } as const
+
+/** Domain edit out, `UpdateTaxRateRequest` in. Value, scope and type are fixed. */
+export function toUpdateTaxRateRequest(draft: EditTaxRate): Record<string, unknown> {
+  return {
+    name: draft.name,
+    code: draft.code,
+    ...(draft.description ? { description: draft.description } : {}),
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
+    ...(draft.status ? { taxRateStatus: STATUS_TO_WIRE[draft.status] } : {}),
+  }
+}
+
+export function useCreateTaxRate() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateTaxRate) =>
+      call(() => client.taxRates.createTaxRate(toCreateTaxRateRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taxRates.all() })
+    },
+  })
+}
+
+export function useUpdateTaxRate() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: EditTaxRate }) =>
+      call(() => client.taxRates.updateTaxRate(id, toUpdateTaxRateRequest(draft) as never)),
+    onSuccess: (_result, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taxRates.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taxRates.detail(id) })
+    },
+  })
+}
+
+export function useDeleteTaxRate() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.taxRates.deleteTaxRate(id)),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taxRates.all() })
+      void queryClient.removeQueries({ queryKey: queryKeys.taxRates.detail(id) })
+    },
   })
 }

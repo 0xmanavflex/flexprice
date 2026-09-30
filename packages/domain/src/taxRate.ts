@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 /**
  * A tax rate, as the list reads it.
  *
@@ -53,6 +55,7 @@ export interface TaxRate {
   /** The percentage as the API sends it — `"18"`, not `0.18`. Empty when absent. */
   percentageValue: string
   scope: TaxRateScope
+  metadata?: Record<string, string>
   status: TaxRateStatus
   createdAt: Date | null
   updatedAt: Date | null
@@ -87,4 +90,70 @@ export const DEFAULT_TAX_RATE_QUERY: TaxRateQuery = {
   statuses: [],
   sortBy: TaxRateSortField.Name,
   sortDirection: 'asc',
+}
+
+const percentage = z
+  .string()
+  .trim()
+  .min(1, 'Enter a percentage')
+  .regex(/^\d+(\.\d+)?$/, 'Enter a number, for example 18')
+  .refine((v) => Number(v) <= 100, 'A percentage cannot exceed 100')
+
+const taxCode = z
+  .string()
+  .trim()
+  .min(1, 'Enter a code')
+  .regex(/^[A-Za-z0-9]+$/, 'Use letters and numbers only')
+
+/**
+ * A tax rate draft. Only percentage rates are offered — the backend has no
+ * other type — so there is no type field; the request mapper sends
+ * `percentage`. The value is a decimal string in 0–100 (`"18"`, not `0.18`).
+ * The code is case-sensitive alphanumeric.
+ */
+export const createTaxRateSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a name'),
+  code: taxCode,
+  description: z.string().trim().optional(),
+  percentageValue: percentage,
+  scope: z.enum([TaxRateScope.Internal, TaxRateScope.External, TaxRateScope.OneTime]),
+  metadata: z.record(z.string(), z.string()).optional(),
+})
+
+export type CreateTaxRate = z.infer<typeof createTaxRateSchema>
+
+/**
+ * What an edit can change. The value, scope and type are fixed once created —
+ * invoices already carry them — so an edit renames, recodes, re-describes,
+ * changes metadata, or archives (`INACTIVE` on the wire) and restores.
+ */
+export const editTaxRateSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a name'),
+  code: taxCode,
+  description: z.string().trim().optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
+  status: z.enum([TaxRateStatus.Published, TaxRateStatus.Archived]).optional(),
+})
+
+export type EditTaxRate = z.infer<typeof editTaxRateSchema>
+
+export function emptyTaxRate(): CreateTaxRate {
+  return {
+    name: '',
+    code: '',
+    description: '',
+    percentageValue: '',
+    scope: TaxRateScope.Internal,
+  }
+}
+
+/** An edit draft seeded from an existing tax rate. */
+export function taxRateToEdit(rate: TaxRate): EditTaxRate {
+  return {
+    name: rate.name,
+    code: rate.code,
+    description: rate.description,
+    status: rate.status,
+    ...(rate.metadata && Object.keys(rate.metadata).length > 0 ? { metadata: rate.metadata } : {}),
+  }
 }

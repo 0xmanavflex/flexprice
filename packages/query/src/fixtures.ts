@@ -42,6 +42,15 @@ export interface Corpus {
  * plan-scoped prices appended to `prices` share that rule.
  */
 export const corpus = {
-  addons, coupons, creditgrants, customers, entitlements, features, invoices, plans, priceUnits,
-  prices, subscriptions,
+  addons,
+  coupons,
+  creditgrants,
+  customers,
+  entitlements,
+  features,
+  invoices,
+  plans,
+  priceUnits,
+  prices,
+  subscriptions,
 } as unknown as Record<string, Corpus>

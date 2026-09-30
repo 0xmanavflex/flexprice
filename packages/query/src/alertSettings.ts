@@ -174,7 +174,7 @@ export function useAlertSetting(id: string) {
  * SDK's zod schema rejects a null where it expects an object, and an omitted
  * severity is how the API is told that severity is not configured.
  */
-function toConfigRequest(config: AlertSettingConfig): Record<string, unknown> {
+export function toAlertConfigRequest(config: AlertSettingConfig): Record<string, unknown> {
   const thresholds: Record<string, unknown> = {}
   for (const severity of ALERT_SEVERITY_ORDER) {
     const value = config[severity]
@@ -201,13 +201,13 @@ export function toCreateAlertSettingRequest(draft: CreateAlertSetting): Record<s
     entityType: draft.entityType,
     ...(draft.parentEntityId ? { parentEntityId: draft.parentEntityId } : {}),
     ...(draft.parentEntityType ? { parentEntityType: draft.parentEntityType } : {}),
-    config: toConfigRequest(draft.config),
+    config: toAlertConfigRequest(draft.config),
   }
 }
 
 /** The update request. Only `config` — the watched entity cannot be changed. */
 export function toUpdateAlertSettingRequest(config: AlertSettingConfig): Record<string, unknown> {
-  return { config: toConfigRequest(config) }
+  return { config: toAlertConfigRequest(config) }
 }
 
 export function useCreateAlertSetting() {

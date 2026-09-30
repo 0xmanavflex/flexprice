@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 /**
  * A group, as the list reads it.
  *
@@ -88,4 +90,25 @@ export const DEFAULT_GROUP_QUERY: GroupQuery = {
   sortBy: GroupSortField.Name,
   sortDirection: 'asc',
   view: GroupView.Table,
+}
+
+/**
+ * A group draft. A group holds either prices or features, never both, so the
+ * entity type is chosen at creation and cannot change; there is no update
+ * route at all, which is why there is no edit schema.
+ */
+export const createGroupSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a name'),
+  lookupKey: z
+    .string()
+    .trim()
+    .min(1, 'Enter a lookup key')
+    .regex(/^[a-z0-9_-]+$/, 'Use lowercase letters, numbers, hyphens and underscores'),
+  entityType: z.enum([GroupEntityType.Price, GroupEntityType.Feature]),
+})
+
+export type CreateGroup = z.infer<typeof createGroupSchema>
+
+export function emptyGroup(entityType: GroupEntityType = GroupEntityType.Feature): CreateGroup {
+  return { name: '', lookupKey: '', entityType }
 }

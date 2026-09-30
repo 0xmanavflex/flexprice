@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 /**
  * A cost sheet, as the list reads it.
  *
@@ -32,6 +34,7 @@ export interface CostSheet {
   description: string
   /** How many prices the cost sheet groups. */
   priceCount: number
+  metadata?: Record<string, string>
   status: CostSheetStatus
   createdAt: Date | null
   updatedAt: Date | null
@@ -75,4 +78,43 @@ export const DEFAULT_COST_SHEET_QUERY: CostSheetQuery = {
   sortBy: CostSheetSortField.Name,
   sortDirection: 'asc',
   view: CostSheetView.Table,
+}
+
+const metadata = z.record(z.string(), z.string())
+
+/**
+ * A cost sheet draft. The lookup key is optional (the backend leaves it blank)
+ * and free-form up to 255 characters, like the name.
+ */
+export const createCostSheetSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a name').max(255, 'Use 255 characters or fewer'),
+  lookupKey: z.string().trim().max(255, 'Use 255 characters or fewer').optional(),
+  description: z.string().trim().optional(),
+  metadata: metadata.optional(),
+})
+
+export type CreateCostSheet = z.infer<typeof createCostSheetSchema>
+
+/**
+ * An edit is the same shape. The backend ignores a blank field on update rather
+ * than clearing it, so a form cannot use this to empty a description or a key.
+ */
+export const editCostSheetSchema = createCostSheetSchema
+
+export type EditCostSheet = CreateCostSheet
+
+export function emptyCostSheet(): CreateCostSheet {
+  return { name: '', lookupKey: '', description: '' }
+}
+
+/** An edit draft seeded from an existing cost sheet. */
+export function costSheetToEdit(sheet: CostSheet): EditCostSheet {
+  return {
+    name: sheet.name,
+    lookupKey: sheet.lookupKey,
+    description: sheet.description,
+    ...(sheet.metadata && Object.keys(sheet.metadata).length > 0
+      ? { metadata: sheet.metadata }
+      : {}),
+  }
 }

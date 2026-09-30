@@ -8,6 +8,7 @@ import {
   CreditGrantScope,
   type CreateCreditGrant,
   type CreditGrant,
+  type EditCreditGrant,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
@@ -39,6 +40,8 @@ export interface CreditGrantWire {
   expirationDurationUnit?: string | undefined
   conversionRate?: string | undefined
   priority?: number | undefined
+  endDate?: Date | undefined
+  metadata?: Record<string, string> | undefined
   createdAt?: Date | undefined
 }
 
@@ -62,11 +65,14 @@ export function toCreditGrant(wire: CreditGrantWire): CreditGrant {
     period: (wire.period ?? null) as CreditGrantPeriod | null,
     periodCount: typeof wire.periodCount === 'number' ? wire.periodCount : null,
     expirationType,
-    expirationDuration: typeof wire.expirationDuration === 'number' ? wire.expirationDuration : null,
+    expirationDuration:
+      typeof wire.expirationDuration === 'number' ? wire.expirationDuration : null,
     expirationDurationUnit: (wire.expirationDurationUnit ??
       null) as CreditGrantExpiryDurationUnit | null,
     conversionRate: wire.conversionRate ?? null,
     priority: typeof wire.priority === 'number' ? wire.priority : 0,
+    endDate: wire.endDate ?? null,
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -138,7 +144,10 @@ export function useCreateCreditGrant() {
       scope: CreditGrantScope
       id: string
       grant: CreateCreditGrant
-    }) => call(() => client.creditGrants.createCreditGrant(toCreditGrantRequest(grant, scope, id) as never)),
+    }) =>
+      call(() =>
+        client.creditGrants.createCreditGrant(toCreditGrantRequest(grant, scope, id) as never),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.creditGrants.all() })
     },
@@ -152,6 +161,30 @@ export function useDeleteCreditGrant() {
 
   return useMutation({
     mutationFn: (id: string) => call(() => client.creditGrants.deleteCreditGrant(id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.creditGrants.all() })
+    },
+  })
+}
+
+/** Domain edit out, `UpdateCreditGrantRequest` in. The credits and cadence are not editable. */
+export function toUpdateCreditGrantRequest(draft: EditCreditGrant): Record<string, unknown> {
+  return {
+    name: draft.name,
+    ...(draft.endDate ? { endDate: draft.endDate } : {}),
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
+  }
+}
+
+export function useUpdateCreditGrant() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: EditCreditGrant }) =>
+      call(() =>
+        client.creditGrants.updateCreditGrant(id, toUpdateCreditGrantRequest(draft) as never),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.creditGrants.all() })
     },

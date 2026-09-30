@@ -1,6 +1,7 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  type CreateGroup,
   type Group,
   type GroupQuery,
   GroupEntityType,
@@ -117,5 +118,39 @@ export function useGroup(id: string) {
       return toGroup(response as GroupWire)
     },
     enabled: id.length > 0,
+  })
+}
+
+/** Domain draft out, `CreateGroupRequest` in. There is no group update route. */
+export function toCreateGroupRequest(draft: CreateGroup): Record<string, unknown> {
+  return { name: draft.name, lookupKey: draft.lookupKey, entityType: draft.entityType }
+}
+
+export function useCreateGroup() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateGroup) =>
+      call(() => client.groups.createGroup(toCreateGroupRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.groups.all() })
+    },
+  })
+}
+
+/** Delete — `DELETE` by id. Takes the record id. */
+export function useDeleteGroup() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.groups.deleteGroup(id)),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.groups.all() })
+      void queryClient.removeQueries({ queryKey: queryKeys.groups.detail(id) })
+      // Members are filed by group id, so their lists can now be stale.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.features.all() })
+    },
   })
 }

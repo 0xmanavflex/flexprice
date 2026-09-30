@@ -154,3 +154,90 @@ export interface CouponAssociation {
   startDate: Date | null
   endDate: Date | null
 }
+
+/**
+ * A coupon draft. Flat rather than a union so the form can flip the type
+ * without losing what was typed; the rules that depend on the type live in the
+ * refinement, and the request mapper sends only the fields the type uses.
+ *
+ * Amounts are decimal strings — never numbers — and `percentageOff` is 0–100.
+ * `durationInPeriods` is for `repeated` cadence only (the backend rejects it
+ * otherwise). Redemption dates are `Date`s; the mapper serialises them.
+ */
+export const createCouponSchema = z
+  .object({
+    name: z.string().trim().min(1, 'Enter a name'),
+    couponCode: z.string().trim().optional(),
+    type: z.enum([CouponType.Fixed, CouponType.Percentage]),
+    amountOff: z.string().trim().optional(),
+    currency: z.string().trim().optional(),
+    percentageOff: z.string().trim().optional(),
+    cadence: z.enum([CouponCadence.Once, CouponCadence.Repeated, CouponCadence.Forever]),
+    durationInPeriods: z.number().int('Must be a whole number').positive('Must be greater than zero').optional(),
+    redeemAfter: z.date().optional(),
+    redeemBefore: z.date().optional(),
+    maxRedemptions: z
+      .number()
+      .int('Must be a whole number')
+      .min(1, 'Must be at least 1')
+      .max(1_000_000, 'Must be 1,000,000 or fewer')
+      .optional(),
+    metadata: z.record(z.string(), z.string()).optional(),
+  })
+  .superRefine((coupon, ctx) => {
+    if (coupon.type === CouponType.Fixed) {
+      if (!/^\d+(\.\d+)?$/.test(coupon.amountOff ?? '') || Number(coupon.amountOff) <= 0) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['amountOff'],
+          message: 'Enter an amount greater than zero',
+        })
+      }
+      if (!coupon.currency) {
+        ctx.addIssue({ code: 'custom', path: ['currency'], message: 'Choose a currency' })
+      }
+    } else {
+      const value = coupon.percentageOff ?? ''
+      if (!/^\d+(\.\d+)?$/.test(value) || Number(value) <= 0 || Number(value) > 100) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['percentageOff'],
+          message: 'Enter a percentage between 0 and 100',
+        })
+      }
+    }
+
+    if (coupon.cadence === CouponCadence.Repeated && coupon.durationInPeriods === undefined) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['durationInPeriods'],
+        message: 'Enter how many billing periods it applies to',
+      })
+    }
+
+    if (
+      coupon.redeemAfter &&
+      coupon.redeemBefore &&
+      coupon.redeemAfter.getTime() > coupon.redeemBefore.getTime()
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['redeemBefore'],
+        message: 'Must be after the start date',
+      })
+    }
+  })
+
+export type CreateCoupon = z.infer<typeof createCouponSchema>
+
+export function emptyCoupon(): CreateCoupon {
+  return {
+    name: '',
+    couponCode: '',
+    type: CouponType.Percentage,
+    amountOff: '',
+    currency: '',
+    percentageOff: '',
+    cadence: CouponCadence.Once,
+  }
+}

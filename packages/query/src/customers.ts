@@ -1,7 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  type CreateCustomer,
   type Customer,
+  type EditCustomer,
   type CustomerDetail,
   type CustomerQuery,
   CustomerSortField,
@@ -81,7 +83,9 @@ export async function fetchCustomers(
   client: Flexprice,
   query: CustomerQuery,
 ): Promise<CustomerPage> {
-  const response = await call(() => client.customers.queryCustomer(toCustomerFilter(query) as never))
+  const response = await call(() =>
+    client.customers.queryCustomer(toCustomerFilter(query) as never),
+  )
   const customers = (response.items ?? []).map((item) => toCustomer(item as CustomerWire))
 
   // The SDK's customer filter has no name-search field and does not narrow by
@@ -94,8 +98,9 @@ export async function fetchCustomers(
     )
     .filter((customer) =>
       needle
-        ? [customer.name, customer.email, customer.externalId]
-            .some((field) => field.toLowerCase().includes(needle))
+        ? [customer.name, customer.email, customer.externalId].some((field) =>
+            field.toLowerCase().includes(needle),
+          )
         : true,
     )
 
@@ -183,9 +188,9 @@ export async function fetchCustomerSubscriptions(
   client: Flexprice,
   externalId: string,
 ): Promise<Subscription[]> {
-  const response = (await call(() =>
-    client.customers.getSubscriptionsForCustomer(externalId),
-  )) as { items?: unknown[] }
+  const response = (await call(() => client.customers.getSubscriptionsForCustomer(externalId))) as {
+    items?: unknown[]
+  }
   return (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
 }
 
@@ -256,7 +261,8 @@ export interface CustomerUsageSummary {
 
 interface CustomerUsageSummaryWire {
   features?: FeatureUsageWire[] | undefined
-  period?: { startTime?: Date | null | undefined; endTime?: Date | null | undefined } | null | undefined
+  period?:
+    { startTime?: Date | null | undefined; endTime?: Date | null | undefined } | null | undefined
 }
 
 export function toCustomerUsageSummary(wire: CustomerUsageSummaryWire): CustomerUsageSummary {
@@ -291,5 +297,81 @@ export function useCustomerUsageSummary(customerId: string) {
     queryKey: queryKeys.customers.usage(customerId),
     queryFn: () => fetchCustomerUsageSummary(client, customerId),
     enabled: customerId.length > 0,
+  })
+}
+
+/** The text fields a customer form leaves as `''` when blank, mapped to their wire names. */
+const CUSTOMER_TEXT_FIELDS = [
+  ['email', 'email'],
+  ['phone', 'contact'],
+  ['timezone', 'timezone'],
+  ['addressLine1', 'addressLine1'],
+  ['addressLine2', 'addressLine2'],
+  ['addressCity', 'addressCity'],
+  ['addressState', 'addressState'],
+  ['addressPostalCode', 'addressPostalCode'],
+  ['addressCountry', 'addressCountry'],
+] as const
+
+/** Domain draft out, `CreateCustomerRequest` in. Blank optional fields are omitted. */
+export function toCreateCustomerRequest(draft: CreateCustomer): Record<string, unknown> {
+  const request: Record<string, unknown> = { externalId: draft.externalId, name: draft.name }
+  for (const [field, wireKey] of CUSTOMER_TEXT_FIELDS) {
+    const value = draft[field]
+    if (value) request[wireKey] = value
+  }
+  if (draft.taxTreatment) request.taxTreatment = draft.taxTreatment
+  if (draft.metadata) request.metadata = draft.metadata
+  return request
+}
+
+/**
+ * Domain edit out, `UpdateCustomerRequest` in. The update patches, so blanks are
+ * omitted and leave the stored value alone; the SDK cannot send an empty string
+ * to clear a field, so clearing a value is not offered.
+ */
+export function toUpdateCustomerRequest(draft: EditCustomer): Record<string, unknown> {
+  return toCreateCustomerRequest(draft)
+}
+
+export function useCreateCustomer() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateCustomer) =>
+      call(() => client.customers.createCustomer(toCreateCustomerRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    },
+  })
+}
+
+export function useUpdateCustomer() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: EditCustomer }) =>
+      call(() => client.customers.updateCustomer(toUpdateCustomerRequest(draft) as never, id)),
+    onSuccess: (_result, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customers.detail(id) })
+    },
+  })
+}
+
+export function useDeleteCustomer() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.customers.deleteCustomer(id)),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+      void queryClient.removeQueries({ queryKey: queryKeys.customers.detail(id) })
+    },
   })
 }

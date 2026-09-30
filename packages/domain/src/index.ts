@@ -69,8 +69,14 @@ export {
   UsageResetPeriod,
   createEntitlementSchema,
   emptyEntitlement,
+  editEntitlementSchema,
+  entitlementToEdit,
+  EntitlementGrantMeasure,
+  EntitlementGrantDurationUnit,
+  EntitlementGrantAllocationBehavior,
+  EntitlementAggregationMode,
 } from './entitlement'
-export type { CreateEntitlement, Entitlement } from './entitlement'
+export type { CreateEntitlement, Entitlement, EditEntitlement } from './entitlement'
 
 export {
   CREDIT_GRANT_CADENCE_LABEL,
@@ -84,8 +90,10 @@ export {
   CreditGrantScope,
   createCreditGrantSchema,
   emptyCreditGrant,
+  editCreditGrantSchema,
+  creditGrantToEdit,
 } from './creditGrant'
-export type { CreateCreditGrant, CreditGrant } from './creditGrant'
+export type { CreateCreditGrant, CreditGrant, EditCreditGrant } from './creditGrant'
 
 export {
   AGGREGATION_LABEL,
@@ -103,8 +111,23 @@ export {
   FEATURE_SORT_LABEL,
   FeatureSortField,
   FeatureView,
+  meterFilterSchema,
+  reportingUnitSchema,
+  editFeatureSchema,
+  cloneFeatureSchema,
+  defaultFeatureLookupKey,
+  emptyCloneFeature,
 } from './feature'
-export type { CreateFeature, Feature, FeatureQuery, MeterDraft } from './feature'
+export type {
+  CreateFeature,
+  Feature,
+  FeatureQuery,
+  MeterDraft,
+  MeterFilterDraft,
+  ReportingUnitDraft,
+  EditFeature,
+  CloneFeature,
+} from './feature'
 
 export {
   DEFAULT_PLAN_QUERY,
@@ -142,8 +165,10 @@ export {
   CouponView,
   DEFAULT_COUPON_QUERY,
   editCouponSchema,
+  createCouponSchema,
+  emptyCoupon,
 } from './coupon'
-export type { Coupon, CouponAssociation, CouponQuery, EditCoupon } from './coupon'
+export type { Coupon, CouponAssociation, CouponQuery, EditCoupon, CreateCoupon } from './coupon'
 
 export {
   DEFAULT_PRICE_UNIT_QUERY,
@@ -167,8 +192,10 @@ export {
   GroupSortField,
   GroupStatus,
   GroupView,
+  createGroupSchema,
+  emptyGroup,
 } from './group'
-export type { Group, GroupQuery } from './group'
+export type { Group, GroupQuery, CreateGroup } from './group'
 
 export {
   COST_SHEET_SORT_LABEL,
@@ -177,8 +204,12 @@ export {
   CostSheetStatus,
   CostSheetView,
   DEFAULT_COST_SHEET_QUERY,
+  createCostSheetSchema,
+  editCostSheetSchema,
+  emptyCostSheet,
+  costSheetToEdit,
 } from './costSheet'
-export type { CostSheet, CostSheetQuery } from './costSheet'
+export type { CostSheet, CostSheetQuery, CreateCostSheet, EditCostSheet } from './costSheet'
 
 export {
   CUSTOMER_SORT_LABEL,
@@ -188,8 +219,18 @@ export {
   CustomerStatus,
   CustomerTaxTreatment,
   DEFAULT_CUSTOMER_QUERY,
+  createCustomerSchema,
+  editCustomerSchema,
+  emptyCustomer,
+  customerToEdit,
 } from './customer'
-export type { Customer, CustomerDetail, CustomerQuery } from './customer'
+export type {
+  Customer,
+  CustomerDetail,
+  CustomerQuery,
+  CreateCustomer,
+  EditCustomer,
+} from './customer'
 
 export {
   DEFAULT_SUBSCRIPTION_QUERY,
@@ -227,8 +268,12 @@ export {
   TaxRateScope,
   TaxRateSortField,
   TaxRateStatus,
+  createTaxRateSchema,
+  editTaxRateSchema,
+  emptyTaxRate,
+  taxRateToEdit,
 } from './taxRate'
-export type { TaxRate, TaxRateQuery } from './taxRate'
+export type { TaxRate, TaxRateQuery, CreateTaxRate, EditTaxRate } from './taxRate'
 
 export { DEFAULT_RAW_EVENT_QUERY } from './rawEvent'
 export type { RawEvent, RawEventQuery } from './rawEvent'

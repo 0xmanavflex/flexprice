@@ -2,7 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { call } from '@fp/api'
 import {
   type CreateEntitlement,
+  type EditEntitlement,
   type Entitlement,
+  type EntitlementAggregationMode,
+  type EntitlementGrantAllocationBehavior,
+  type EntitlementGrantDurationUnit,
+  type EntitlementGrantMeasure,
   type EntitlementEntityType,
   FeatureType,
   UsageResetPeriod,
@@ -35,6 +40,12 @@ export interface EntitlementWire {
   staticValue?: string | undefined
   isEnabled?: boolean | undefined
   configValue?: Record<string, unknown> | undefined
+  grantQuota?: string | undefined
+  grantMeasure?: string | undefined
+  grantDurationUnit?: string | undefined
+  grantDurationValue?: number | undefined
+  grantAllocationBehavior?: string | undefined
+  aggregationMode?: string | undefined
   feature?: { id?: string; name?: string } | undefined
   createdAt?: Date | undefined
 }
@@ -62,6 +73,14 @@ export function toEntitlement(wire: EntitlementWire): Entitlement {
     staticValue: wire.staticValue ?? null,
     isEnabled: typeof wire.isEnabled === 'boolean' ? wire.isEnabled : null,
     configValue: wire.configValue ?? null,
+    grantQuota: wire.grantQuota ?? null,
+    grantMeasure: (wire.grantMeasure ?? null) as EntitlementGrantMeasure | null,
+    grantDurationUnit: (wire.grantDurationUnit ?? null) as EntitlementGrantDurationUnit | null,
+    grantDurationValue:
+      typeof wire.grantDurationValue === 'number' ? wire.grantDurationValue : null,
+    grantAllocationBehavior: (wire.grantAllocationBehavior ??
+      null) as EntitlementGrantAllocationBehavior | null,
+    aggregationMode: (wire.aggregationMode ?? null) as EntitlementAggregationMode | null,
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -159,6 +178,49 @@ export function useDeleteEntitlement() {
 
   return useMutation({
     mutationFn: (id: string) => call(() => client.entitlements.deleteEntitlement(id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.entitlements.all() })
+    },
+  })
+}
+
+/**
+ * Domain edit out, `UpdateEntitlementRequest` in. Every key is optional and an
+ * absent one is left alone. The SDK cannot send null, so a limit cannot be
+ * cleared back to "unlimited" through this call.
+ */
+export function toUpdateEntitlementRequest(draft: EditEntitlement): Record<string, unknown> {
+  const request: Record<string, unknown> = {}
+  const keys = [
+    'usageLimit',
+    'usageResetPeriod',
+    'isSoftLimit',
+    'staticValue',
+    'isEnabled',
+    'configValue',
+    'grantQuota',
+    'grantMeasure',
+    'grantDurationUnit',
+    'grantDurationValue',
+    'grantAllocationBehavior',
+    'aggregationMode',
+    'clearGrantConfig',
+  ] as const
+  for (const key of keys) {
+    if (draft[key] !== undefined) request[key] = draft[key]
+  }
+  return request
+}
+
+export function useUpdateEntitlement() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: EditEntitlement }) =>
+      call(() =>
+        client.entitlements.updateEntitlement(id, toUpdateEntitlementRequest(draft) as never),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.entitlements.all() })
     },

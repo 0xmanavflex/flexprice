@@ -57,7 +57,7 @@ describe('feature type decides whether a meter exists', () => {
 
   it.each(['API-Calls', 'apiCalls', 'api calls'])('rejects %s as a lookup key', (lookupKey) => {
     expect(errors({ name: 'x', type: FeatureType.Boolean, lookupKey })).toContain(
-      'Use lowercase letters, numbers and underscores',
+      'Use lowercase letters, numbers, hyphens and underscores',
     )
   })
 

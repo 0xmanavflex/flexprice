@@ -122,6 +122,9 @@ export interface CreditGrant {
   /** Credits-to-currency rate, when set (amount = credits × rate). */
   conversionRate: string | null
   priority: number
+  /** When the grant stops issuing credits, if it has been given an end. */
+  endDate?: Date | null
+  metadata?: Record<string, string>
   createdAt: Date | null
 }
 
@@ -206,5 +209,33 @@ export function emptyCreditGrant(): CreateCreditGrant {
     periodCount: 1,
     expirationType: CreditGrantExpiryType.Never,
     priority: 0,
+  }
+}
+
+/**
+ * What editing a credit grant can change: its name, its metadata and an end
+ * date. The credits, cadence and expiry are fixed once issued — a grant already
+ * applied to subscriptions cannot be re-priced — so they are not in this shape.
+ * The backend rejects an end date in the past, and so does this.
+ */
+export const editCreditGrantSchema = z.object({
+  name: z.string().trim().min(1, 'Enter a name'),
+  endDate: z
+    .date({ error: 'Enter a valid date' })
+    .refine((date) => date.getTime() > Date.now(), 'The end date cannot be in the past')
+    .optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
+})
+
+export type EditCreditGrant = z.infer<typeof editCreditGrantSchema>
+
+/** An edit draft seeded from an existing grant. */
+export function creditGrantToEdit(grant: CreditGrant): EditCreditGrant {
+  return {
+    name: grant.name,
+    ...(grant.endDate ? { endDate: grant.endDate } : {}),
+    ...(grant.metadata && Object.keys(grant.metadata).length > 0
+      ? { metadata: grant.metadata }
+      : {}),
   }
 }

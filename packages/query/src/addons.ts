@@ -160,3 +160,18 @@ export function useAddon(id: string) {
     enabled: id.length > 0,
   })
 }
+
+/** Delete — `DELETE` by id. Takes the record id. */
+export function useDeleteAddon() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.addons.deleteAddon(id)),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.addons.all() })
+      void queryClient.removeQueries({ queryKey: queryKeys.addons.detail(id) })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.plans.all() })
+    },
+  })
+}

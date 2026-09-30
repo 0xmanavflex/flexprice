@@ -8,6 +8,7 @@ import {
   CouponSortField,
   CouponStatus,
   CouponType,
+  type CreateCoupon,
   type EditCoupon,
   moneyOr,
 } from '@fp/domain'
@@ -257,5 +258,44 @@ export function useCouponAssociations(couponId: string) {
       return { associations: items, total: response.pagination?.total ?? items.length }
     },
     enabled: couponId.length > 0,
+  })
+}
+
+/**
+ * Domain draft out, `CreateCouponRequest` in. Only the fields the coupon's type
+ * uses are sent — a fixed coupon never carries `percentageOff` and vice versa —
+ * and `durationInPeriods` only for a repeated cadence. The redemption window
+ * goes out as ISO strings, which is what the request takes.
+ */
+export function toCreateCouponRequest(draft: CreateCoupon): Record<string, unknown> {
+  return {
+    name: draft.name,
+    type: draft.type,
+    cadence: draft.cadence,
+    ...(draft.couponCode ? { couponCode: draft.couponCode } : {}),
+    ...(draft.type === CouponType.Fixed
+      ? { amountOff: draft.amountOff, currency: draft.currency }
+      : { percentageOff: draft.percentageOff }),
+    ...(draft.cadence === CouponCadence.Repeated && draft.durationInPeriods !== undefined
+      ? { durationInPeriods: draft.durationInPeriods }
+      : {}),
+    ...(draft.redeemAfter ? { redeemAfter: draft.redeemAfter.toISOString() } : {}),
+    ...(draft.redeemBefore ? { redeemBefore: draft.redeemBefore.toISOString() } : {}),
+    ...(draft.maxRedemptions !== undefined ? { maxRedemptions: draft.maxRedemptions } : {}),
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
+  }
+}
+
+/** Create a coupon — `POST /coupons`. Call `mutateAsync(draft: CreateCoupon)`. */
+export function useCreateCoupon() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateCoupon) =>
+      call(() => client.coupons.createCoupon(toCreateCouponRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.coupons.all() })
+    },
   })
 }

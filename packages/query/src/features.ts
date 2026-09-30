@@ -2,13 +2,17 @@ import { useMutation, useQueryClient, useQuery } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
   type AggregationType,
+  type CloneFeature,
   type CreateFeature,
+  type EditFeature,
   type Feature,
   type FeatureQuery,
+  type ReportingUnitDraft,
   FeatureStatus,
   FeatureType,
   FeatureSortField,
 } from '@fp/domain'
+import { toAlertConfigRequest } from './alertSettings'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -45,17 +49,45 @@ export interface FeatureWire {
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
   meterId?: string | undefined
+  groupId?: string | undefined
+  reportingUnit?:
+    | {
+        unitSingular?: string | undefined
+        unitPlural?: string | undefined
+        conversionRate?: number | string | undefined
+      }
+    | undefined
   meter?:
     | {
         id?: string | undefined
         eventName?: string | undefined
-        aggregation?: { type?: string | undefined } | undefined
+        aggregation?:
+          | {
+              type?: string | undefined
+              field?: string | undefined
+              groupBy?: string | undefined
+            }
+          | undefined
+        filters?: { key?: string | undefined; values?: string[] | undefined }[] | undefined
       }
     | undefined
 }
 
 const FEATURE_TYPES = new Set<string>(Object.values(FeatureType))
 const FEATURE_STATUSES = new Set<string>(Object.values(FeatureStatus))
+
+function toReportingUnit(wire: FeatureWire['reportingUnit']): ReportingUnitDraft | null {
+  if (!wire || !wire.unitSingular || !wire.unitPlural || wire.conversionRate === undefined) {
+    return null
+  }
+  return {
+    unitSingular: wire.unitSingular,
+    unitPlural: wire.unitPlural,
+    // Kept as the decimal text it is displayed as; the number the SDK parsed is
+    // only stringified, never computed on.
+    conversionRate: String(wire.conversionRate),
+  }
+}
 
 export function toFeature(wire: FeatureWire): Feature {
   const type = FEATURE_TYPES.has(wire.type ?? '')
@@ -80,6 +112,13 @@ export function toFeature(wire: FeatureWire): Feature {
     meterId: wire.meterId ?? wire.meter?.id ?? null,
     unitSingular: wire.unitSingular ?? '',
     unitPlural: wire.unitPlural ?? '',
+    groupId: wire.groupId ? wire.groupId : null,
+    reportingUnit: toReportingUnit(wire.reportingUnit),
+    meterFilters: (wire.meter?.filters ?? [])
+      .filter((f) => typeof f.key === 'string' && f.key.length > 0)
+      .map((f) => ({ key: f.key ?? '', values: f.values ?? [] })),
+    aggregationField: wire.meter?.aggregation?.field ? wire.meter.aggregation.field : null,
+    aggregationGroupBy: wire.meter?.aggregation?.groupBy ? wire.meter.aggregation.groupBy : null,
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -130,6 +169,9 @@ export function toCreateFeatureRequest(draft: CreateFeature): Record<string, unk
     ...(draft.description ? { description: draft.description } : {}),
     ...(draft.unitSingular ? { unitSingular: draft.unitSingular } : {}),
     ...(draft.unitPlural ? { unitPlural: draft.unitPlural } : {}),
+    ...(draft.groupId ? { groupId: draft.groupId } : {}),
+    ...(draft.reportingUnit ? { reportingUnit: toReportingUnitRequest(draft.reportingUnit) } : {}),
+    ...(draft.alertSettings ? { alertSettings: toAlertConfigRequest(draft.alertSettings) } : {}),
   }
 
   if (draft.type !== FeatureType.Metered) return base
@@ -148,8 +190,62 @@ export function toCreateFeatureRequest(draft: CreateFeature): Record<string, unk
         ...(meter.field ? { field: meter.field } : {}),
         ...(meter.expression ? { expression: meter.expression } : {}),
         ...(meter.multiplier ? { multiplier: meter.multiplier } : {}),
+        ...(meter.groupBy ? { groupBy: meter.groupBy } : {}),
       },
+      ...(meter.filters && meter.filters.length > 0
+        ? { filters: meter.filters.map(toFilterRequest) }
+        : {}),
     },
+  }
+}
+
+/**
+ * The SDK types `conversionRate` as a number, the domain holds it as decimal
+ * text. This is a wire-format conversion of an input, not arithmetic.
+ */
+function toReportingUnitRequest(unit: {
+  unitSingular: string
+  unitPlural: string
+  conversionRate: string
+}): Record<string, unknown> {
+  return {
+    unitSingular: unit.unitSingular,
+    unitPlural: unit.unitPlural,
+    conversionRate: Number(unit.conversionRate),
+  }
+}
+
+function toFilterRequest(filter: { key: string; values: string[] }): Record<string, unknown> {
+  return { key: filter.key, values: filter.values }
+}
+
+/**
+ * Domain edit out, `UpdateFeatureRequest` in. The API patches by pointer: a key
+ * that is absent is left alone. Type, lookup key and meter are immutable and so
+ * are not in this request. Blank optional text is omitted rather than sent as an
+ * empty string, since the API would read that as "set to empty" only for some
+ * fields; the SDK also cannot send null, so a reporting unit or group cannot be
+ * cleared through this call.
+ */
+export function toUpdateFeatureRequest(draft: EditFeature): Record<string, unknown> {
+  return {
+    name: draft.name,
+    ...(draft.description !== undefined ? { description: draft.description } : {}),
+    ...(draft.unitSingular ? { unitSingular: draft.unitSingular } : {}),
+    ...(draft.unitPlural ? { unitPlural: draft.unitPlural } : {}),
+    ...(draft.reportingUnit ? { reportingUnit: toReportingUnitRequest(draft.reportingUnit) } : {}),
+    ...(draft.groupId ? { groupId: draft.groupId } : {}),
+    ...(draft.alertSettings ? { alertSettings: toAlertConfigRequest(draft.alertSettings) } : {}),
+    ...(draft.filters ? { filters: draft.filters.map(toFilterRequest) } : {}),
+  }
+}
+
+/** Domain clone out, `CloneFeatureRequest` in. */
+export function toCloneFeatureRequest(draft: CloneFeature): Record<string, unknown> {
+  return {
+    name: draft.name,
+    lookupKey: draft.lookupKey,
+    ...(draft.description ? { description: draft.description } : {}),
   }
 }
 
@@ -158,13 +254,8 @@ export interface FeaturePage {
   total: number
 }
 
-export async function fetchFeatures(
-  client: Flexprice,
-  query: FeatureQuery,
-): Promise<FeaturePage> {
-  const response = await call(() =>
-    client.features.queryFeature(toFeatureFilter(query) as never),
-  )
+export async function fetchFeatures(client: Flexprice, query: FeatureQuery): Promise<FeaturePage> {
+  const response = await call(() => client.features.queryFeature(toFeatureFilter(query) as never))
   const features = (response.items ?? []).map((item) => toFeature(item as FeatureWire))
 
   // Type and status are not server-side filters on FeatureFilter, so they are
@@ -224,6 +315,48 @@ export function useCreateFeature() {
       call(() => client.features.createFeature(toCreateFeatureRequest(draft) as never)),
     onSuccess: () => {
       // Invalidating the prefix covers every list and filter combination.
+      void queryClient.invalidateQueries({ queryKey: queryKeys.features.all() })
+    },
+  })
+}
+
+export function useUpdateFeature() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: EditFeature }) =>
+      call(() => client.features.updateFeature(id, toUpdateFeatureRequest(draft) as never)),
+    onSuccess: (_result, { id }) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.features.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.features.detail(id) })
+    },
+  })
+}
+
+/** Archive/delete a feature — `DELETE /features/{id}`. Takes the feature id. */
+export function useDeleteFeature() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.features.deleteFeature(id)),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.features.all() })
+      void queryClient.removeQueries({ queryKey: queryKeys.features.detail(id) })
+    },
+  })
+}
+
+/** Clone a feature, `POST /features/{id}/clone`. Resolves to the new feature's wire record. */
+export function useCloneFeature() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: CloneFeature }) =>
+      call(() => client.features.cloneFeature(id, toCloneFeatureRequest(draft) as never)),
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.features.all() })
     },
   })

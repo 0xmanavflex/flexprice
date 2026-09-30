@@ -1,3 +1,5 @@
+import { z } from 'zod'
+
 /**
  * A customer, as the billing list reads it.
  *
@@ -111,4 +113,74 @@ export const DEFAULT_CUSTOMER_QUERY: CustomerQuery = {
   statuses: [],
   sortBy: CustomerSortField.Name,
   sortDirection: 'asc',
+}
+
+const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} characters or fewer`)
+
+/**
+ * A customer draft — what V1's drawer collects, plus the timezone and metadata
+ * the backend accepts. `externalId` and `name` are the only required fields.
+ * Optional text fields are `''` when blank (a form's natural empty), and the
+ * query layer drops them from the request. The country is an ISO 3166-1
+ * alpha-2 code.
+ */
+export const createCustomerSchema = z.object({
+  externalId: z.string().trim().min(1, 'Enter an external ID').max(255),
+  name: z.string().trim().min(1, 'Enter a name'),
+  email: z.union([z.literal(''), z.email('Enter a valid email address')]).optional(),
+  phone: optionalText(50).optional(),
+  timezone: optionalText(100).optional(),
+  taxTreatment: z.enum([CustomerTaxTreatment.Taxable, CustomerTaxTreatment.Exempt]).optional(),
+  addressLine1: optionalText(255).optional(),
+  addressLine2: optionalText(255).optional(),
+  addressCity: optionalText(100).optional(),
+  addressState: optionalText(100).optional(),
+  addressPostalCode: optionalText(20).optional(),
+  addressCountry: z
+    .union([z.literal(''), z.string().trim().length(2, 'Use a two-letter country code')])
+    .optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
+})
+
+export type CreateCustomer = z.infer<typeof createCustomerSchema>
+
+/** An edit carries the same fields; the external ID is editable on the backend. */
+export const editCustomerSchema = createCustomerSchema
+
+export type EditCustomer = CreateCustomer
+
+export function emptyCustomer(): CreateCustomer {
+  return {
+    externalId: '',
+    name: '',
+    email: '',
+    phone: '',
+    timezone: '',
+    taxTreatment: CustomerTaxTreatment.Taxable,
+    addressLine1: '',
+    addressLine2: '',
+    addressCity: '',
+    addressState: '',
+    addressPostalCode: '',
+    addressCountry: '',
+  }
+}
+
+/** An edit draft seeded from a customer's detail. */
+export function customerToEdit(customer: CustomerDetail): EditCustomer {
+  return {
+    externalId: customer.externalId,
+    name: customer.name,
+    email: customer.email,
+    phone: customer.phone,
+    timezone: customer.timezone,
+    ...(customer.taxTreatment ? { taxTreatment: customer.taxTreatment } : {}),
+    addressLine1: customer.addressLine1,
+    addressLine2: customer.addressLine2,
+    addressCity: customer.addressCity,
+    addressState: customer.addressState,
+    addressPostalCode: customer.addressPostalCode,
+    addressCountry: customer.addressCountry,
+    ...(Object.keys(customer.metadata).length > 0 ? { metadata: customer.metadata } : {}),
+  }
 }

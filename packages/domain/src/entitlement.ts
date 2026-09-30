@@ -64,6 +64,30 @@ export const USAGE_RESET_PERIOD_LABEL: Record<UsageResetPeriod, string> = {
  * differently. The value fields are all optional because which one is meaningful
  * depends on `featureType`.
  */
+export const EntitlementGrantMeasure = { Quantity: 'quantity', Amount: 'amount' } as const
+export type EntitlementGrantMeasure =
+  (typeof EntitlementGrantMeasure)[keyof typeof EntitlementGrantMeasure]
+
+export const EntitlementGrantDurationUnit = {
+  Hour: 'hour',
+  Day: 'day',
+  Week: 'week',
+  SubscriptionPeriod: 'subscription_period',
+} as const
+export type EntitlementGrantDurationUnit =
+  (typeof EntitlementGrantDurationUnit)[keyof typeof EntitlementGrantDurationUnit]
+
+export const EntitlementGrantAllocationBehavior = {
+  FirstUsage: 'first_usage',
+  UnitStart: 'unit_start',
+} as const
+export type EntitlementGrantAllocationBehavior =
+  (typeof EntitlementGrantAllocationBehavior)[keyof typeof EntitlementGrantAllocationBehavior]
+
+export const EntitlementAggregationMode = { Additive: 'additive', Parallel: 'parallel' } as const
+export type EntitlementAggregationMode =
+  (typeof EntitlementAggregationMode)[keyof typeof EntitlementAggregationMode]
+
 export interface Entitlement {
   id: string
   featureId: string
@@ -83,6 +107,13 @@ export interface Entitlement {
   isEnabled: boolean | null
   /** Config: the JSON blob, kept as sent. */
   configValue: Record<string, unknown> | null
+  /** Grant config, when the entitlement carries one. */
+  grantQuota?: string | null
+  grantMeasure?: EntitlementGrantMeasure | null
+  grantDurationUnit?: EntitlementGrantDurationUnit | null
+  grantDurationValue?: number | null
+  grantAllocationBehavior?: EntitlementGrantAllocationBehavior | null
+  aggregationMode?: EntitlementAggregationMode | null
   createdAt: Date | null
 }
 
@@ -161,5 +192,116 @@ export function emptyEntitlement(featureId: string, featureType: FeatureType): C
       return { featureId, featureType, isEnabled: true }
     case FeatureType.Config:
       return { featureId, featureType, configValue: {} }
+  }
+}
+
+/**
+ * What an entitlement edit can change.
+ *
+ * The backend patches: a field left `undefined` is left alone. The feature and
+ * the plan or add-on it belongs to are not editable — to point a grant at a
+ * different feature, delete it and add another — so they are not in this shape.
+ * Only the fields for the entitlement's feature type are meaningful, and the
+ * form shows only those; the schema does not have to re-state the type.
+ *
+ * `usageLimit` cannot be cleared back to "unlimited" through an update (the
+ * request has no way to say null); that is a delete-and-recreate.
+ * `clearGrantConfig` wipes the grant block back to a plain entitlement.
+ */
+export const editEntitlementSchema = z
+  .object({
+    usageLimit: z
+      .number({ error: 'Enter a limit' })
+      .int('Must be a whole number')
+      .nonnegative('Cannot be negative')
+      .optional(),
+    usageResetPeriod: z
+      .enum(Object.values(UsageResetPeriod) as [UsageResetPeriod, ...UsageResetPeriod[]])
+      .optional(),
+    isSoftLimit: z.boolean().optional(),
+    staticValue: z.string().trim().min(1, 'Enter a value').optional(),
+    isEnabled: z.boolean().optional(),
+    configValue: z.record(z.string(), z.unknown()).optional(),
+    /** A decimal string, like every other amount. */
+    grantQuota: z
+      .string()
+      .trim()
+      .regex(/^\d+(\.\d+)?$/, 'Enter a number, for example 100')
+      .optional(),
+    grantMeasure: z
+      .enum(Object.values(EntitlementGrantMeasure) as [
+        EntitlementGrantMeasure,
+        ...EntitlementGrantMeasure[],
+      ])
+      .optional(),
+    grantDurationUnit: z
+      .enum(Object.values(EntitlementGrantDurationUnit) as [
+        EntitlementGrantDurationUnit,
+        ...EntitlementGrantDurationUnit[],
+      ])
+      .optional(),
+    grantDurationValue: z.number().int().positive('Must be greater than zero').optional(),
+    grantAllocationBehavior: z
+      .enum(Object.values(EntitlementGrantAllocationBehavior) as [
+        EntitlementGrantAllocationBehavior,
+        ...EntitlementGrantAllocationBehavior[],
+      ])
+      .optional(),
+    aggregationMode: z
+      .enum(Object.values(EntitlementAggregationMode) as [
+        EntitlementAggregationMode,
+        ...EntitlementAggregationMode[],
+      ])
+      .optional(),
+    clearGrantConfig: z.boolean().optional(),
+  })
+  .superRefine((edit, ctx) => {
+    const hasGrantField =
+      edit.grantQuota !== undefined ||
+      edit.grantMeasure !== undefined ||
+      edit.grantDurationUnit !== undefined ||
+      edit.grantDurationValue !== undefined ||
+      edit.grantAllocationBehavior !== undefined
+    if (edit.clearGrantConfig && hasGrantField) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['clearGrantConfig'],
+        message: 'Clearing the grant config cannot be combined with changing it',
+      })
+    }
+    if (
+      edit.grantDurationUnit !== undefined &&
+      edit.grantDurationUnit !== EntitlementGrantDurationUnit.SubscriptionPeriod &&
+      edit.grantDurationValue === undefined
+    ) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['grantDurationValue'],
+        message: 'Enter how long the grant lasts',
+      })
+    }
+  })
+
+export type EditEntitlement = z.infer<typeof editEntitlementSchema>
+
+/** An edit draft seeded from an existing entitlement, so the form opens on its values. */
+export function entitlementToEdit(entitlement: Entitlement): EditEntitlement {
+  return {
+    ...(entitlement.usageLimit !== null ? { usageLimit: entitlement.usageLimit } : {}),
+    ...(entitlement.usageResetPeriod ? { usageResetPeriod: entitlement.usageResetPeriod } : {}),
+    isSoftLimit: entitlement.isSoftLimit,
+    ...(entitlement.staticValue !== null ? { staticValue: entitlement.staticValue } : {}),
+    ...(entitlement.isEnabled !== null ? { isEnabled: entitlement.isEnabled } : {}),
+    ...(entitlement.configValue ? { configValue: entitlement.configValue } : {}),
+    ...(entitlement.grantQuota ? { grantQuota: entitlement.grantQuota } : {}),
+    ...(entitlement.grantMeasure ? { grantMeasure: entitlement.grantMeasure } : {}),
+    ...(entitlement.grantDurationUnit ? { grantDurationUnit: entitlement.grantDurationUnit } : {}),
+    ...(entitlement.grantDurationValue != null
+      ? { grantDurationValue: entitlement.grantDurationValue }
+      : {}),
+    ...(entitlement.grantAllocationBehavior
+      ? { grantAllocationBehavior: entitlement.grantAllocationBehavior }
+      : {}),
+    ...(entitlement.aggregationMode ? { aggregationMode: entitlement.aggregationMode } : {}),
   }
 }

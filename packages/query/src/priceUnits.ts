@@ -179,3 +179,17 @@ export function usePriceUnit(id: string) {
     enabled: id.length > 0,
   })
 }
+
+/** Delete — `DELETE` by id. Takes the record id. */
+export function useDeletePriceUnit() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.priceUnits.deletePriceUnit(id)),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.priceUnits.all() })
+      void queryClient.removeQueries({ queryKey: queryKeys.priceUnits.detail(id) })
+    },
+  })
+}

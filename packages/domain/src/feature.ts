@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { alertSettingConfigSchema } from './alertSetting'
 
 /**
  * A feature, and the rules for creating one.
@@ -68,6 +69,25 @@ const decimal = z
 
 const name = z.string().trim().min(1, 'Enter a name')
 
+/** One event filter: a property of the event and the values that let it through. */
+export const meterFilterSchema = z.object({
+  key: z.string().trim().min(1, 'Enter the event property'),
+  values: z.array(z.string().trim().min(1, 'Enter a value')).min(1, 'Add at least one value'),
+})
+export type MeterFilterDraft = z.infer<typeof meterFilterSchema>
+
+/**
+ * A display unit for reporting: `reporting_value = unit_value × conversionRate`.
+ * All three fields travel together — the backend rejects a partial one. The
+ * rate is a decimal string, never a float.
+ */
+export const reportingUnitSchema = z.object({
+  unitSingular: z.string().trim().min(1, 'Enter the singular unit'),
+  unitPlural: z.string().trim().min(1, 'Enter the plural unit'),
+  conversionRate: decimal,
+})
+export type ReportingUnitDraft = z.infer<typeof reportingUnitSchema>
+
 /**
  * A meter, with the rules that depend on how it aggregates.
  *
@@ -89,9 +109,24 @@ export const meterSchema = z
     expression: z.string().trim().optional(),
     /** Only for SUM_WITH_MULTIPLIER. A decimal string — never a float. */
     multiplier: z.string().trim().optional(),
+    /**
+     * An event property to group by before aggregating. The backend accepts it
+     * only with MAX aggregation, and the refinement below says so up front.
+     */
+    groupBy: z.string().trim().optional(),
+    /** Narrow which events count: each filter is a property and the values it may take. */
+    filters: z.array(meterFilterSchema).optional(),
     resetUsage: z.enum([ResetUsage.BillingPeriod, ResetUsage.Never]),
   })
   .superRefine((meter, ctx) => {
+    if (meter.groupBy && meter.aggregationType !== AggregationType.Max) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['groupBy'],
+        message: 'Group by is only available with the Maximum aggregation',
+      })
+    }
+
     if (needsAggregationTarget(meter.aggregationType) && !meter.field && !meter.expression) {
       ctx.addIssue({
         code: 'custom',
@@ -122,18 +157,40 @@ const common = {
   lookupKey: z
     .string()
     .trim()
-    .regex(/^[a-z0-9_]*$/, 'Use lowercase letters, numbers and underscores')
+    .regex(/^[a-z0-9_-]*$/, 'Use lowercase letters, numbers, hyphens and underscores')
     .optional(),
   description: z.string().trim().optional(),
   unitSingular: z.string().trim().optional(),
   unitPlural: z.string().trim().optional(),
+  /** Display unit for reports; all three of its fields or none. */
+  reportingUnit: reportingUnitSchema.optional(),
+  /** The group this feature is filed under. */
+  groupId: z.string().trim().optional(),
+  /** Usage alert thresholds for this feature. */
+  alertSettings: alertSettingConfigSchema.optional(),
+}
+
+/** The backend wants a feature's own unit names as a pair, or not at all. */
+function refineUnitPair(
+  value: { unitSingular?: string | undefined; unitPlural?: string | undefined },
+  ctx: z.RefinementCtx,
+): void {
+  if (Boolean(value.unitSingular) !== Boolean(value.unitPlural)) {
+    ctx.addIssue({
+      code: 'custom',
+      path: [value.unitSingular ? 'unitPlural' : 'unitSingular'],
+      message: 'Enter both the singular and plural unit, or neither',
+    })
+  }
 }
 
 export const createFeatureSchema = z.discriminatedUnion('type', [
-  z.object({ ...common, type: z.literal(FeatureType.Metered), meter: meterSchema }),
-  z.object({ ...common, type: z.literal(FeatureType.Boolean) }),
-  z.object({ ...common, type: z.literal(FeatureType.Static) }),
-  z.object({ ...common, type: z.literal(FeatureType.Config) }),
+  z
+    .object({ ...common, type: z.literal(FeatureType.Metered), meter: meterSchema })
+    .superRefine(refineUnitPair),
+  z.object({ ...common, type: z.literal(FeatureType.Boolean) }).superRefine(refineUnitPair),
+  z.object({ ...common, type: z.literal(FeatureType.Static) }).superRefine(refineUnitPair),
+  z.object({ ...common, type: z.literal(FeatureType.Config) }).superRefine(refineUnitPair),
 ])
 
 export type CreateFeature = z.infer<typeof createFeatureSchema>
@@ -155,6 +212,67 @@ export function emptyFeature(type: FeatureType): CreateFeature {
   return { ...base, type }
 }
 
+/**
+ * The lookup key V1 derives from a name: `feat-` plus the name, lowercased and
+ * hyphenated. Anything the key's alphabet does not allow collapses to a hyphen.
+ * Returns `''` for a blank name so the create form can leave the field empty.
+ */
+export function defaultFeatureLookupKey(name: string): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+  return slug ? `feat-${slug}` : ''
+}
+
+/**
+ * What an edit can change: everything except the type, lookup key and meter,
+ * which the backend treats as immutable once a feature exists. The meter's
+ * event filters are the one meter property that may still change.
+ *
+ * A field left `undefined` is left alone on the server; `description`, the unit
+ * names and `groupId` may be `''` to clear them.
+ */
+export const editFeatureSchema = z
+  .object({
+    name,
+    description: z.string().trim().optional(),
+    unitSingular: z.string().trim().optional(),
+    unitPlural: z.string().trim().optional(),
+    reportingUnit: reportingUnitSchema.optional(),
+    groupId: z.string().trim().optional(),
+    alertSettings: alertSettingConfigSchema.optional(),
+    /** Metered features only. */
+    filters: z.array(meterFilterSchema).optional(),
+  })
+  .superRefine(refineUnitPair)
+
+export type EditFeature = z.infer<typeof editFeatureSchema>
+
+/** The clone dialog: a new name and lookup key, both required and both unique. */
+export const cloneFeatureSchema = z.object({
+  name,
+  lookupKey: z
+    .string()
+    .trim()
+    .min(1, 'Enter a lookup key')
+    .regex(/^[a-z0-9_-]+$/, 'Use lowercase letters, numbers, hyphens and underscores'),
+  description: z.string().trim().optional(),
+})
+
+export type CloneFeature = z.infer<typeof cloneFeatureSchema>
+
+/** A clone draft seeded from its source: a distinct name, and the key derived from it. */
+export function emptyCloneFeature(source: { name: string; description?: string }): CloneFeature {
+  const copyName = `${source.name} (copy)`
+  return {
+    name: copyName,
+    lookupKey: defaultFeatureLookupKey(copyName),
+    ...(source.description ? { description: source.description } : {}),
+  }
+}
+
 /** The read model the list and detail pages render. Narrow and total. */
 export interface Feature {
   id: string
@@ -170,6 +288,15 @@ export interface Feature {
   meterId: string | null
   unitSingular: string
   unitPlural: string
+  /** The group the feature is filed under, when it has one. */
+  groupId?: string | null
+  /** The reporting unit, when one is set. */
+  reportingUnit?: ReportingUnitDraft | null
+  /** The meter's event filters (metered features only). */
+  meterFilters?: MeterFilterDraft[]
+  /** The meter's aggregation target and options, for prefilling an edit. */
+  aggregationField?: string | null
+  aggregationGroupBy?: string | null
   createdAt: Date | null
   updatedAt: Date | null
 }

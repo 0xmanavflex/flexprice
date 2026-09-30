@@ -1,7 +1,9 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
   type CostSheet,
+  type CreateCostSheet,
+  type EditCostSheet,
   type CostSheetQuery,
   CostSheetSortField,
   CostSheetStatus,
@@ -29,6 +31,7 @@ export interface CostSheetWire {
   name?: string | undefined
   lookupKey?: string | undefined
   description?: string | undefined
+  metadata?: Record<string, string> | undefined
   prices?: unknown[] | undefined
   status?: string | undefined
   createdAt?: Date | undefined
@@ -48,6 +51,7 @@ export function toCostSheet(wire: CostSheetWire): CostSheet {
     lookupKey: wire.lookupKey ?? '',
     description: wire.description ?? '',
     priceCount: wire.prices?.length ?? 0,
+    metadata: wire.metadata ?? {},
     status,
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -121,5 +125,59 @@ export function useCostSheet(id: string) {
       return response.costsheet ? toCostSheet(response.costsheet as CostSheetWire) : null
     },
     enabled: id.length > 0,
+  })
+}
+
+/** Domain draft out, `CreateCostsheetRequest` in. Blank optional fields are dropped. */
+export function toCreateCostSheetRequest(draft: CreateCostSheet): Record<string, unknown> {
+  return {
+    name: draft.name,
+    ...(draft.lookupKey ? { lookupKey: draft.lookupKey } : {}),
+    ...(draft.description ? { description: draft.description } : {}),
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
+  }
+}
+
+/** The update treats a blank field as "unchanged", so blanks are dropped here too. */
+export function toUpdateCostSheetRequest(draft: EditCostSheet): Record<string, unknown> {
+  return toCreateCostSheetRequest(draft)
+}
+
+export function useCreateCostSheet() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateCostSheet) =>
+      call(() => client.costs.createCostsheet(toCreateCostSheetRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.costSheets.all() })
+    },
+  })
+}
+
+export function useUpdateCostSheet() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: EditCostSheet }) =>
+      call(() => client.costs.updateCostsheet(id, toUpdateCostSheetRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.costSheets.all() })
+    },
+  })
+}
+
+export function useDeleteCostSheet() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.costs.deleteCostsheet(id)),
+    onSuccess: (_result, id) => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.costSheets.all() })
+      void queryClient.removeQueries({ queryKey: queryKeys.costSheets.detail(id) })
+    },
   })
 }
