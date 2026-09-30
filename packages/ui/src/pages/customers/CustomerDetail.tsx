@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { PencilIcon, PlusIcon } from 'lucide-react'
+import { MoreHorizontalIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
@@ -9,6 +9,15 @@ import {
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@ui/components/primitives/dropdown-menu'
+import { ScrollArea } from '@ui/components/primitives/scroll-area'
+import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
+import {
   Table,
   TableBody,
   TableCell,
@@ -17,8 +26,7 @@ import {
   TableRow,
 } from '@ui/components/primitives/table'
 import { DetailShell } from '@ui/compositions/DetailShell'
-import { ResourceNavigation } from '@ui/compositions/ResourceNavigation'
-import type { ResourceNavItem } from '@ui/compositions/ResourceNavigation'
+import { DetailTabs, SimpleTable } from '@ui/compositions/DetailKit'
 import { Section } from '@ui/compositions/Section'
 import { ContextualSection } from '@ui/compositions/ContextualSection'
 import { EditableFields } from '@ui/compositions/EditableFields'
@@ -28,9 +36,9 @@ import { EmptyState } from '@ui/compositions/EmptyState'
 import { LoadingRows } from '@ui/compositions/States'
 import { Money } from '../shared/Money'
 import { CatalogStatusBadge } from '../shared/StatusBadge'
-import { SubscriptionStatusBadge } from '../subscriptions/SubscriptionStatusBadge'
 import { InvoiceStatusBadge } from '../shared/StatusBadge'
 import { provenance } from '@ui/provenance'
+import { CustomerSubscriptionCards } from './CustomerSubscriptionCards'
 
 /**
  * A customer's detail page.
@@ -51,16 +59,16 @@ export const CustomerDetailProvenance = provenance({
   source: 'composition',
   composes: [
     'ui/detail-shell',
-    'ui/resource-navigation',
+    'ui/detail-kit',
     'ui/section',
     'ui/detail-list',
     'pages/shared/Money',
   ],
-  note: 'Reference detail page: DetailShell + ResourceNavigation + Section, wired to the real customer/subscriptions/invoices.',
+  note: 'Reference detail page: DetailShell + DetailTabs + Section, wired to the real customer/subscriptions/invoices.',
 })
 
 export type CustomerTab =
-  'overview' | 'subscriptions' | 'invoices' | 'wallet' | 'usage' | 'information'
+  'overview' | 'subscriptions' | 'invoices' | 'wallet' | 'usage' | 'events' | 'information'
 
 export const CUSTOMER_TABS = [
   'overview',
@@ -68,6 +76,7 @@ export const CUSTOMER_TABS = [
   'invoices',
   'wallet',
   'usage',
+  'events',
   'information',
 ] as const satisfies readonly CustomerTab[]
 
@@ -144,15 +153,6 @@ export function CustomerDetail({
   const formatDate = useDateFormat(locale)
   const [editing, setEditing] = useState(false)
 
-  const items: ResourceNavItem[] = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'subscriptions', label: 'Subscriptions', count: subscriptions.length },
-    { id: 'invoices', label: 'Invoices', count: invoices.length },
-    { id: 'wallet', label: 'Wallet' },
-    { id: 'usage', label: 'Analytics' },
-    { id: 'information', label: 'Information' },
-  ]
-
   // The subtitle answers "who is this": how to reach them, since when, and where.
   const since = customer.createdAt ? `Customer since ${formatDate(customer.createdAt)}` : null
   const subtitle = [customer.email || null, since, customer.addressCountry || null]
@@ -183,174 +183,194 @@ export function CustomerDetail({
       }
       {...(subtitle ? { description: subtitle } : {})}
       actions={
-        <>
-          {onUpdateField ? (
-            <Button
-              variant="outline"
-              disabled={editing}
-              onClick={() => {
-                onTabChange('information')
-                setEditing(true)
-              }}
-            >
-              <PencilIcon aria-hidden />
-              Edit
-            </Button>
-          ) : null}
-          {onEdit ? (
-            onUpdateField ? (
-              <Button variant="ghost" onClick={onEdit}>
-                Edit billing details
-              </Button>
-            ) : (
-              <Button variant="outline" onClick={onEdit}>
-                <PencilIcon aria-hidden />
-                Edit customer
-              </Button>
-            )
-          ) : null}
-          <Button onClick={onCreateSubscription}>
-            <PlusIcon aria-hidden />
-            Create subscription
-          </Button>
-        </>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="outline" size="icon" aria-label="Customer actions" />}
+          >
+            <MoreHorizontalIcon aria-hidden />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuGroup>
+              {onUpdateField ? (
+                <DropdownMenuItem
+                  disabled={editing}
+                  onClick={() => {
+                    onTabChange('information')
+                    setEditing(true)
+                  }}
+                >
+                  Edit
+                </DropdownMenuItem>
+              ) : null}
+              {onEdit ? (
+                <DropdownMenuItem onClick={onEdit}>
+                  {onUpdateField ? 'Edit billing details' : 'Edit customer'}
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuItem onClick={onCreateSubscription}>Create subscription</DropdownMenuItem>
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
       }
     >
-      <ResourceNavigation
-        items={items}
+      <DetailTabs
         value={tab}
-        onChange={(id) => onTabChange(id as CustomerTab)}
-        label="Customer sections"
+        onValueChange={(next) => onTabChange(next as CustomerTab)}
+        tabs={[
+          {
+            value: 'overview',
+            label: 'Overview',
+            content: (
+              <OverviewTab
+                subscriptions={subscriptions}
+                invoices={invoices}
+                invoicesLoading={invoicesLoading}
+                onViewInvoices={() => onTabChange('invoices')}
+                onViewSubscriptions={() => onTabChange('subscriptions')}
+                onCreateSubscription={onCreateSubscription}
+                formatDate={formatDate}
+              />
+            ),
+          },
+          {
+            value: 'subscriptions',
+            label: 'Subscriptions',
+            count: subscriptions.length,
+            content: (
+              <SubscriptionsTab
+                subscriptions={subscriptions}
+                isLoading={subscriptionsLoading}
+                onCreateSubscription={onCreateSubscription}
+                form={subscriptionForm}
+                onCancelCreate={onCancelSubscriptionCreate}
+                formatDate={formatDate}
+              />
+            ),
+          },
+          {
+            value: 'invoices',
+            label: 'Invoices',
+            count: invoices.length,
+            content: (
+              <InvoicesTab invoices={invoices} isLoading={invoicesLoading} formatDate={formatDate} />
+            ),
+          },
+          {
+            value: 'wallet',
+            label: 'Wallet',
+            content:
+              wallet ?? (
+                <EmptyState
+                  title="No wallet connected"
+                  description="A customer's credit balance, top-ups and transactions will appear here once a wallet is set up."
+                />
+              ),
+          },
+          {
+            value: 'usage',
+            label: 'Analytics',
+            content:
+              usage ?? (
+                <EmptyState
+                  title="No usage to show yet"
+                  description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
+                />
+              ),
+          },
+          {
+            value: 'events',
+            label: 'Events',
+            content: <EventsTab events={DEMO_CUSTOMER_EVENTS} />,
+          },
+          {
+            value: 'information',
+            label: 'Information',
+            content: (
+              <InformationTab
+                customer={customer}
+                formatDate={formatDate}
+                onUpdateField={onUpdateField}
+                editing={editing}
+                onEditingChange={setEditing}
+              />
+            ),
+          },
+        ]}
       />
-
-      {tab === 'overview' ? (
-        <OverviewTab
-          customer={customer}
-          subscriptions={subscriptions}
-          invoices={invoices}
-          invoicesLoading={invoicesLoading}
-          onViewInvoices={() => onTabChange('invoices')}
-          onCreateSubscription={onCreateSubscription}
-          formatDate={formatDate}
-        />
-      ) : null}
-
-      {tab === 'subscriptions' ? (
-        <SubscriptionsTab
-          subscriptions={subscriptions}
-          isLoading={subscriptionsLoading}
-          onCreateSubscription={onCreateSubscription}
-          form={subscriptionForm}
-          onCancelCreate={onCancelSubscriptionCreate}
-          formatDate={formatDate}
-        />
-      ) : null}
-
-      {tab === 'invoices' ? (
-        <InvoicesTab invoices={invoices} isLoading={invoicesLoading} formatDate={formatDate} />
-      ) : null}
-
-      {tab === 'wallet'
-        ? (wallet ?? (
-            <EmptyState
-              title="No wallet connected"
-              description="A customer's credit balance, top-ups and transactions will appear here once a wallet is set up."
-            />
-          ))
-        : null}
-
-      {tab === 'usage'
-        ? (usage ?? (
-            <EmptyState
-              title="No usage to show yet"
-              description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
-            />
-          ))
-        : null}
-
-      {tab === 'information' ? (
-        <InformationTab
-          customer={customer}
-          formatDate={formatDate}
-          onUpdateField={onUpdateField}
-          editing={editing}
-          onEditingChange={setEditing}
-        />
-      ) : null}
     </DetailShell>
   )
 }
 
-function SubscriptionSummary({
-  subscription,
-  formatDate,
-}: {
-  subscription: Subscription
-  formatDate: (date: Date | null) => string
-}) {
-  const renews = subscription.currentPeriodEnd
-    ? `renews ${formatDate(subscription.currentPeriodEnd)}`
-    : null
-  const line = [subscription.planName, subscription.billingPeriodLabel, renews]
-    .filter((part) => part && part !== '—')
-    .join(' · ')
+/** Demo activity: no customer event feed is wired yet. */
+interface CustomerEvent {
+  id: number
+  title: string
+  at: string
+  status: 'completed' | 'active' | 'pending' | 'issue'
+  summary: string
+  source: string
+}
 
+export const DEMO_CUSTOMER_EVENTS: CustomerEvent[] = [
+  { id: 6, title: 'Usage threshold reached', at: 'Today, 09:14', status: 'issue', summary: '80% of the monthly API calls allowance used.', source: 'api_call' },
+  { id: 5, title: 'Invoice finalized', at: 'Yesterday', status: 'completed', summary: 'Invoice sent to the billing contact.', source: 'billing' },
+  { id: 4, title: 'Payment received', at: 'Sep 28', status: 'completed', summary: 'Card payment settled.', source: 'payments' },
+  { id: 3, title: 'Wallet top-up', at: 'Sep 20', status: 'completed', summary: 'Credits added to the prepaid wallet.', source: 'wallet' },
+  { id: 2, title: 'Subscription renewed', at: 'Sep 1', status: 'completed', summary: 'Billing period rolled over.', source: 'subscription' },
+  { id: 1, title: 'Customer created', at: 'Aug 12', status: 'completed', summary: 'Record created in Flexprice.', source: 'customer' },
+]
+
+function EventsTab({ events }: { events: CustomerEvent[] }) {
   return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate text-sm font-medium">{subscription.planName}</span>
-        <span className="text-muted-foreground truncate text-xs">{line}</span>
-      </div>
-      <SubscriptionStatusBadge status={subscription.status} />
-    </div>
+    <SimpleTable
+      rows={events}
+      getRowId={(event) => String(event.id)}
+      columns={[
+        { key: 'title', header: 'Event', cell: (e) => <span className="font-medium">{e.title}</span> },
+        { key: 'source', header: 'Source', cell: (e) => <span className="font-mono text-xs">{e.source}</span> },
+        { key: 'summary', header: 'Details', cell: (e) => <span className="text-muted-foreground">{e.summary}</span> },
+        { key: 'at', header: 'When', cell: (e) => <span className="text-muted-foreground">{e.at}</span> },
+      ]}
+      empty={
+        <EmptyState
+          size="inline"
+          title="No events yet"
+          description="Events ingested for this customer appear here as they arrive."
+        />
+      }
+    />
   )
 }
 
 function OverviewTab({
-  customer,
   subscriptions,
   invoices,
   invoicesLoading,
   onViewInvoices,
+  onViewSubscriptions,
   onCreateSubscription,
   formatDate,
 }: {
-  customer: CustomerDetailModel
   subscriptions: Subscription[]
   invoices: Invoice[]
   invoicesLoading: boolean
   onViewInvoices: () => void
+  onViewSubscriptions: () => void
   onCreateSubscription: () => void
   formatDate: (date: Date | null) => string
 }) {
   const recent = invoices.slice(0, 5)
-  const primary = subscriptions[0]
-
-  const details: DetailItem[] = [
-    { label: 'Customer ID', value: <span className="font-mono text-xs">{customer.id}</span> },
-    ...(customer.externalId
-      ? [
-          {
-            label: 'External ID',
-            value: <span className="font-mono text-xs">{customer.externalId}</span>,
-          },
-        ]
-      : []),
-    { label: 'Billing email', value: customer.email || '—' },
-    { label: 'Country', value: customer.addressCountry || '—' },
-    { label: 'Timezone', value: customer.timezone || '—' },
-    {
-      label: 'Tax',
-      value: customer.taxTreatment ? CUSTOMER_TAX_TREATMENT_LABEL[customer.taxTreatment] : '—',
-    },
-  ]
 
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-      <div className="flex flex-col gap-5 lg:col-span-2">
-        <Section title="Subscription" description="The plan this customer is billed on.">
-          {primary ? (
-            <SubscriptionSummary subscription={primary} formatDate={formatDate} />
+    <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex flex-col gap-6">
+        <Section title="Subscriptions" description="The plans this customer is billed on.">
+          {subscriptions.length > 0 ? (
+            <CustomerSubscriptionCards
+              subscriptions={subscriptions}
+              formatDate={formatDate}
+              onViewAll={onViewSubscriptions}
+            />
           ) : (
             <EmptyState
               size="inline"
@@ -386,8 +406,14 @@ function OverviewTab({
         </Section>
       </div>
 
-      <Section title="Details" description="How this customer is set up." className="lg:col-span-1">
-        <DetailList items={details} columns={1} />
+      <Section title="Activity" description="Recent events. Demo data.">
+        <ScrollArea className="h-[560px]">
+          <div className="pr-3">
+            <AccountActivityRail
+              events={DEMO_CUSTOMER_EVENTS.map((e) => ({ ...e, labels: [] })) as never}
+            />
+          </div>
+        </ScrollArea>
       </Section>
     </div>
   )
@@ -421,36 +447,7 @@ function SubscriptionsTab({
       {isLoading ? (
         <LoadingRows />
       ) : subscriptions.length > 0 ? (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Plan</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Billing</TableHead>
-              <TableHead>Renews</TableHead>
-              <TableHead>Started</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {subscriptions.map((subscription) => (
-              <TableRow key={subscription.id}>
-                <TableCell className="font-medium">{subscription.planName}</TableCell>
-                <TableCell>
-                  <SubscriptionStatusBadge status={subscription.status} />
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {subscription.billingPeriodLabel}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {formatDate(subscription.currentPeriodEnd)}
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {formatDate(subscription.startDate)}
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <CustomerSubscriptionCards subscriptions={subscriptions} formatDate={formatDate} />
       ) : (
         <EmptyState
           size="inline"
