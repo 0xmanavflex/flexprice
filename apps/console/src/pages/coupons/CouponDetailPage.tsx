@@ -23,8 +23,8 @@ import {
   DetailList,
   type DetailMetric,
   DetailShell,
+  EditableFields,
   EmptyState,
-  InlineField,
   LoadingRows,
   Section,
 } from '@fp/ui/compositions'
@@ -43,7 +43,8 @@ import { ChevronLeftIcon, LinkIcon } from 'lucide-react'
 export interface CouponDetailPageProps {
   couponId: string
   onBack: () => void
-  onEdit: (couponId: string) => void
+  /** Open with the details already in edit mode. */
+  startEditing?: boolean
 }
 
 /**
@@ -58,16 +59,21 @@ export interface CouponDetailPageProps {
  * "Where used" (the subscriptions this coupon is applied to, from
  * `/coupons/associations`) is promoted above the attribute list: it is the
  * question V1 could not answer and the most useful thing on the page. The
- * header's Edit opens the dedicated edit page (the discount is immutable) and the
- * name also edits in place; Archive
+ * header's Edit turns the details into inputs in place (only the name can change;
+ * the discount is immutable, so it stays read-only); Archive
  * soft-deletes behind a confirmation.
  */
-export function CouponDetailPage({ couponId, onBack, onEdit }: CouponDetailPageProps) {
+export function CouponDetailPage({
+  couponId,
+  onBack,
+  startEditing = false,
+}: CouponDetailPageProps) {
   const coupon = useCoupon(couponId)
   const update = useUpdateCoupon()
   const archive = useArchiveCoupon()
 
   const [archiving, setArchiving] = useState(false)
+  const [editing, setEditing] = useState(startEditing)
 
   if (coupon.isPending) {
     return (
@@ -125,7 +131,11 @@ export function CouponDetailPage({ couponId, onBack, onEdit }: CouponDetailPageP
         identifier={record.code || record.id}
         actions={
           <>
-            <Button variant="outline" onClick={() => onEdit(record.id)}>
+            <Button
+              variant="outline"
+              disabled={editing || isArchived}
+              onClick={() => setEditing(true)}
+            >
               Edit
             </Button>
             {isArchived ? null : (
@@ -140,13 +150,26 @@ export function CouponDetailPage({ couponId, onBack, onEdit }: CouponDetailPageP
         {/* The most useful content first: where this coupon is in force. */}
         <CouponUsage couponId={record.id} />
 
-        <Section title="Details" description="Click the pencil to rename in place.">
-          <InlineField
-            label="Name"
-            value={record.name}
-            required
-            readOnly={isArchived}
-            onSave={(name) => update.mutateAsync({ id: record.id, draft: { name } })}
+        <Section
+          title="Details"
+          description="Use the pencil on the name, or Edit above. The discount is fixed once created."
+        >
+          <EditableFields
+            editing={editing}
+            onEditingChange={setEditing}
+            className="mb-4"
+            fields={[
+              {
+                key: 'name',
+                label: 'Name',
+                value: record.name,
+                required: true,
+                readOnly: isArchived,
+              },
+            ]}
+            onSave={(changes) =>
+              update.mutateAsync({ id: record.id, draft: { name: changes.name ?? record.name } })
+            }
           />
           <DetailList items={detailItems(record)} />
         </Section>

@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { type Charge, type CostSheet, PriceEntityType } from '@fp/domain'
 import { ApiError, useCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
 import { CatalogStatusBadge, ChargeTable } from '@fp/ui/pages'
@@ -6,8 +7,8 @@ import {
   type DetailMetric,
   DetailList,
   DetailShell,
+  EditableFields,
   EmptyState,
-  InlineField,
   LoadingRows,
   PageBody,
   Section,
@@ -17,7 +18,8 @@ import { PencilIcon, ReceiptIcon } from 'lucide-react'
 
 export interface CostSheetDetailPageProps {
   costSheetId: string
-  onEdit: (costSheetId: string) => void
+  /** Open with the details already in edit mode (the list row's Edit). */
+  startEditing?: boolean
   onNavigateToList: () => void
 }
 
@@ -39,12 +41,13 @@ export interface CostSheetDetailPageProps {
  */
 export function CostSheetDetailPage({
   costSheetId,
-  onEdit,
+  startEditing = false,
   onNavigateToList,
 }: CostSheetDetailPageProps) {
   const costSheet = useCostSheet(costSheetId)
   const prices = usePrices(PriceEntityType.CostSheet, costSheetId)
   const update = useUpdateCostSheet()
+  const [editing, setEditing] = useState(startEditing)
 
   if (costSheet.isPending) {
     return (
@@ -99,7 +102,12 @@ export function CostSheetDetailPage({
       identifier={data.lookupKey || data.id}
       {...(data.description ? { description: data.description } : {})}
       actions={
-        <Button variant="outline" size="sm" onClick={() => onEdit(costSheetId)}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={editing || data.status === 'archived'}
+          onClick={() => setEditing(true)}
+        >
           <PencilIcon aria-hidden className="size-4" />
           Edit
         </Button>
@@ -107,34 +115,39 @@ export function CostSheetDetailPage({
       metrics={costSheetMetrics(data, charges)}
     >
       <Section title="Information" description="Every attribute of this cost sheet.">
-        <div className="mb-4 grid gap-4 sm:grid-cols-2">
-          <InlineField
-            label="Name"
-            value={data.name}
-            required
-            onSave={(name) =>
-              update.mutateAsync({
-                id: data.id,
-                draft: { name, lookupKey: data.lookupKey, description: data.description },
-              })
-            }
-          />
-          <InlineField
-            label="Description"
-            value={data.description ?? ''}
-            multiline
-            placeholder="No description"
-            onSave={(description) =>
-              update.mutateAsync({
-                id: data.id,
-                draft: { name: data.name, lookupKey: data.lookupKey, description },
-              })
-            }
-          />
-        </div>
+        <EditableFields
+          editing={editing}
+          onEditingChange={setEditing}
+          className="mb-4"
+          fields={[
+            { key: 'name', label: 'Name', value: data.name, required: true },
+            {
+              key: 'lookupKey',
+              label: 'Lookup key',
+              value: data.lookupKey ?? '',
+              placeholder: 'No lookup key',
+            },
+            {
+              key: 'description',
+              label: 'Description',
+              value: data.description ?? '',
+              multiline: true,
+              placeholder: 'No description',
+            },
+          ]}
+          onSave={(changes) =>
+            update.mutateAsync({
+              id: data.id,
+              draft: {
+                name: changes.name ?? data.name,
+                lookupKey: changes.lookupKey ?? data.lookupKey,
+                description: changes.description ?? data.description,
+              },
+            })
+          }
+        />
         <DetailList
           items={[
-            { label: 'Lookup key', value: data.lookupKey || '—' },
             { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
             { label: 'Cost sheet ID', value: <span className="font-mono text-xs">{data.id}</span> },
             { label: 'Created', value: formatDate(data.createdAt) },

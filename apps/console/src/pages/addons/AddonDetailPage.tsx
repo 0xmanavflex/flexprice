@@ -55,7 +55,7 @@ import {
   DetailList,
   type DetailMetric,
   DetailShell,
-  InlineField,
+  EditableFields,
   LoadingRows,
   PageBody,
 } from '@fp/ui/compositions'
@@ -72,7 +72,8 @@ import { PencilIcon } from 'lucide-react'
 
 export interface AddonDetailPageProps {
   addonId: string
-  onEdit: (addonId: string) => void
+  /** Open with the details already in edit mode (the list row's Edit). */
+  startEditing?: boolean
   onNavigateToList: () => void
 }
 
@@ -89,8 +90,8 @@ type AddonTab = 'overview' | 'entitlements' | 'credit-grants' | 'information'
  * itself. An add-on shares a plan's charges, entitlements, and credit grants, so
  * it reuses the exact same read tables and editors rather than restating them.
  *
- * Name and description edit in place (`InlineField`); Edit opens the dedicated
- * edit page. Adding or editing an entitlement or credit grant swaps that tab's
+ * Name and description edit in place on the Information tab (`EditableFields`):
+ * the header Edit turns them all into inputs at once, with no edit page. Adding or editing an entitlement or credit grant swaps that tab's
  * table for its form in place (`ContextualSection`) rather than opening a dialog.
  *
  * The page fetches and composes; every relational section is a presentational
@@ -98,14 +99,19 @@ type AddonTab = 'overview' | 'entitlements' | 'credit-grants' | 'information'
  * `ConfirmDialog` — a charge is terminated, an entitlement or grant removed, only
  * after a confirming beat.
  */
-export function AddonDetailPage({ addonId, onEdit, onNavigateToList }: AddonDetailPageProps) {
+export function AddonDetailPage({
+  addonId,
+  startEditing = false,
+  onNavigateToList,
+}: AddonDetailPageProps) {
   const addon = useAddon(addonId)
   const update = useUpdateAddon()
   // Fetched here too (deduped by react-query) so the rail can carry real counts.
   const prices = usePrices(PriceEntityType.Addon, addonId)
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
 
-  const [tab, setTab] = useState<AddonTab>('overview')
+  const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'overview')
+  const [editing, setEditing] = useState(startEditing)
 
   if (addon.isPending) {
     return (
@@ -165,7 +171,15 @@ export function AddonDetailPage({ addonId, onEdit, onNavigateToList }: AddonDeta
       identifier={data.lookupKey || data.id}
       {...(data.description ? { description: data.description } : {})}
       actions={
-        <Button variant="outline" size="sm" onClick={() => onEdit(addonId)}>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={editing || data.status === 'archived'}
+          onClick={() => {
+            setTab('information')
+            setEditing(true)
+          }}
+        >
           <PencilIcon aria-hidden className="size-4" />
           Edit
         </Button>
@@ -192,6 +206,8 @@ export function AddonDetailPage({ addonId, onEdit, onNavigateToList }: AddonDeta
         <TabsContent value="information" className="pt-4">
           <InformationTab
             addon={data}
+            editing={editing}
+            onEditingChange={setEditing}
             onSave={(patch) =>
               update
                 .mutateAsync({
@@ -449,29 +465,53 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   )
 }
 
-/** Information — name and description edit in place; the rest is read-only. */
+/** Information — name and description edit in place (pencil or header Edit); the rest is read-only. */
 function InformationTab({
   addon,
+  editing,
+  onEditingChange,
   onSave,
 }: {
   addon: Addon
+  editing: boolean
+  onEditingChange: (editing: boolean) => void
   onSave: (patch: { name?: string; description?: string }) => Promise<void>
 }) {
   return (
     <Card className="max-w-2xl">
       <CardContent className="flex flex-col gap-4 pt-5">
-        <InlineField label="Name" value={addon.name} required onSave={(name) => onSave({ name })} />
-        <InlineField
-          label="Description"
-          value={addon.description ?? ''}
-          multiline
-          placeholder="Add a description"
-          onSave={(description) => onSave({ description })}
+        <EditableFields
+          editing={editing}
+          onEditingChange={onEditingChange}
+          fields={[
+            {
+              key: 'name',
+              label: 'Name',
+              value: addon.name,
+              required: true,
+              readOnly: addon.status === 'archived',
+            },
+            {
+              key: 'description',
+              label: 'Description',
+              value: addon.description ?? '',
+              multiline: true,
+              placeholder: 'Add a description',
+              readOnly: addon.status === 'archived',
+            },
+            {
+              // Integrations key off it, so the API never lets it change.
+              key: 'lookupKey',
+              label: 'Lookup key',
+              value: addon.lookupKey,
+              readOnly: true,
+            },
+          ]}
+          onSave={(changes) => onSave(changes)}
         />
         <DetailList
           items={[
             { label: 'Status', value: <CatalogStatusBadge status={addon.status} /> },
-            { label: 'Lookup key', value: addon.lookupKey || '—' },
             { label: 'Add-on ID', value: <span className="font-mono text-xs">{addon.id}</span> },
             { label: 'Created', value: formatDate(addon.createdAt) },
             { label: 'Updated', value: formatDate(addon.updatedAt) },

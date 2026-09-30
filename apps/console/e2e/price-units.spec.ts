@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { CatalogListPage } from './pages/catalog'
 
 test.beforeEach(async ({ context }) => {
   await context.addInitScript(
@@ -42,6 +43,31 @@ test.describe('price unit create', () => {
     await page.goto('/price-units/new')
     await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(page).toHaveURL(/\/price-units$/)
+  })
+})
+
+test.describe('price unit edit', () => {
+  test('header Edit edits the name in place', async ({ page }) => {
+    await page.goto('/price-units')
+    const list = new CatalogListPage(page, {
+      heading: 'Price units',
+      searchLabel: 'Search price units',
+    })
+    await expect(list.rows().first()).toBeVisible({ timeout: 45_000 })
+    await list.rows().first().getByRole('button', { name: 'Row actions' }).click()
+    await page.getByRole('menuitem', { name: 'View price unit' }).click()
+    await expect(page).toHaveURL(/\/price-units\/(?!new)[^/?]+$/)
+
+    const url = page.url()
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await expect(page).toHaveURL(url)
+    await page.getByLabel('Name', { exact: true }).fill('Renamed in place')
+    const request = page.waitForRequest(
+      (r) => r.method() === 'PUT' && /\/v1\/prices\/units\/[^/]+$/.test(new URL(r.url()).pathname),
+    )
+    await page.getByRole('button', { name: 'Save changes' }).click()
+    await request
+    await expect(page.getByLabel('Name', { exact: true })).toBeHidden()
   })
 })
 

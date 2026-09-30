@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogStatusBadge } from '@fp/ui/pages'
@@ -5,13 +6,17 @@ import {
   AppFailure,
   DetailList,
   DetailShell,
-  InlineField,
+  EditableFields,
   LoadingRows,
   Section,
 } from '@fp/ui/compositions'
+import { Button } from '@fp/ui/primitives'
+import { PencilIcon } from 'lucide-react'
 
 export interface PriceUnitDetailPageProps {
   priceUnitId: string
+  /** Open with the details already in edit mode. */
+  startEditing?: boolean
   onNavigateToList: () => void
 }
 
@@ -29,12 +34,17 @@ const SAMPLE_QUANTITY = 1000
  * version rendered the same four fields three times over, which this replaces.
  *
  * The name is all the backend lets change, so it is edited in place (the pencil
- * beside it); everything else is shown read-only in the lists below. There is no
- * Edit page, because there is nothing else to edit.
+ * beside it, or the header Edit); everything else is shown read-only in the lists
+ * below. There is no Edit page, because there is nothing else to edit.
  */
-export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnitDetailPageProps) {
+export function PriceUnitDetailPage({
+  priceUnitId,
+  startEditing = false,
+  onNavigateToList,
+}: PriceUnitDetailPageProps) {
   const priceUnit = usePriceUnit(priceUnitId)
   const update = useUpdatePriceUnit()
+  const [editing, setEditing] = useState(startEditing)
 
   if (priceUnit.isPending) {
     return (
@@ -87,20 +97,26 @@ export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnit
       title={data.name}
       badges={<CatalogStatusBadge status={data.status} />}
       identifier={data.code || data.id}
+      actions={
+        <Button variant="outline" size="sm" disabled={editing} onClick={() => setEditing(true)}>
+          <PencilIcon aria-hidden className="size-4" />
+          Edit
+        </Button>
+      }
     >
       <Section
         title="Details"
         description="Click the pencil to rename it. Its other fields are fixed once created."
       >
-        <InlineField
-          label="Name"
-          value={data.name}
-          required
-          onSave={(name) =>
+        <EditableFields
+          editing={editing}
+          onEditingChange={setEditing}
+          fields={[{ key: 'name', label: 'Name', value: data.name, required: true }]}
+          onSave={(changes) =>
             update.mutateAsync({
               id: data.id,
               draft: {
-                name,
+                name: changes.name ?? data.name,
                 code: data.code,
                 symbol: data.symbol,
                 baseCurrency: data.baseCurrency.toUpperCase(),

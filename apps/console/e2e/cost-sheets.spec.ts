@@ -55,19 +55,20 @@ test.describe('the cost sheets list', () => {
     await expect(page).toHaveURL(/\/cost-sheets(\?.*)?$/)
   })
 
-  test('edits a cost sheet on its own page', async ({ page }) => {
+  test('row Edit opens the detail page in edit mode', async ({ page }) => {
     await page.goto('/cost-sheets')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
     await openRowMenu(page, 'Edit cost sheet')
-    await expect(page).toHaveURL(/\/cost-sheets\/[^/]+\/edit/)
+    await expect(page).toHaveURL(/\/cost-sheets\/(?!new)[^/?]+\?edit=true/)
+    await expect(page.getByLabel('Name', { exact: true })).toBeVisible()
 
-    await page.getByLabel('Description').fill('Updated from the edit page')
+    await page.getByLabel('Description', { exact: true }).fill('Updated in place')
 
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/costs\/[^/]+$/))
     await page.getByRole('button', { name: 'Save changes' }).click()
     await request
-    await expect(page).not.toHaveURL(/\/edit/)
+    await expect(page.getByLabel('Description', { exact: true })).toBeHidden()
   })
 
   test('renames a cost sheet inline', async ({ page }) => {

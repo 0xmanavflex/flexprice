@@ -777,6 +777,11 @@ function useCancelToList(fallback: string, params?: Record<string, string>) {
   }
 }
 
+/** `?edit=true` opens a detail page with its details already in edit mode. */
+function parseEditSearch(search: Record<string, unknown>): { edit?: boolean } {
+  return search.edit === true || search.edit === 'true' ? { edit: true } : {}
+}
+
 const addonCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/addons/new',
@@ -793,30 +798,6 @@ function AddonCreateRouteComponent() {
       onCancel={cancel}
       onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
       onDone={(addonId) => void navigate({ to: '/addons/$addonId', params: { addonId } })}
-    />
-  )
-}
-
-const addonEditRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/addons/$addonId/edit',
-  component: AddonEditRouteComponent,
-})
-
-function AddonEditRouteComponent() {
-  const { addonId } = addonEditRoute.useParams()
-  const navigate = useNavigate()
-  const toDetail = (id: string) =>
-    void navigate({ to: '/addons/$addonId', params: { addonId: id } })
-  const cancel = useCancelToList('/addons/$addonId', { addonId })
-
-  return (
-    <AddonFormPage
-      mode="edit"
-      addonId={addonId}
-      onCancel={cancel}
-      onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
-      onDone={toDetail}
     />
   )
 }
@@ -841,30 +822,6 @@ function CouponCreateRouteComponent() {
   )
 }
 
-const couponEditRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/coupons/$couponId/edit',
-  component: CouponEditRouteComponent,
-})
-
-function CouponEditRouteComponent() {
-  const { couponId } = couponEditRoute.useParams()
-  const navigate = useNavigate()
-  const toDetail = (id: string) =>
-    void navigate({ to: '/coupons/$couponId', params: { couponId: id } })
-  const cancel = useCancelToList('/coupons/$couponId', { couponId })
-
-  return (
-    <CouponFormPage
-      mode="edit"
-      couponId={couponId}
-      onCancel={cancel}
-      onNavigateToList={() => void navigate({ to: '/coupons', search: {} as never })}
-      onDone={toDetail}
-    />
-  )
-}
-
 const costSheetCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/cost-sheets/new',
@@ -883,30 +840,6 @@ function CostSheetCreateRouteComponent() {
       onDone={(costSheetId) =>
         void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId } })
       }
-    />
-  )
-}
-
-const costSheetEditRoute = createRoute({
-  getParentRoute: () => shellRoute,
-  path: '/cost-sheets/$costSheetId/edit',
-  component: CostSheetEditRouteComponent,
-})
-
-function CostSheetEditRouteComponent() {
-  const { costSheetId } = costSheetEditRoute.useParams()
-  const navigate = useNavigate()
-  const toDetail = (id: string) =>
-    void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId: id } })
-  const cancel = useCancelToList('/cost-sheets/$costSheetId', { costSheetId })
-
-  return (
-    <CostSheetFormPage
-      mode="edit"
-      costSheetId={costSheetId}
-      onCancel={cancel}
-      onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
-      onDone={toDetail}
     />
   )
 }
@@ -939,7 +872,11 @@ function AddonsRouteComponent() {
       }
       onCreateAddon={() => void navigate({ to: '/addons/new' })}
       onEditAddon={(addon) =>
-        void navigate({ to: '/addons/$addonId/edit', params: { addonId: addon.id } })
+        void navigate({
+          to: '/addons/$addonId',
+          params: { addonId: addon.id },
+          search: { edit: true },
+        })
       }
     />
   )
@@ -949,17 +886,19 @@ function AddonsRouteComponent() {
 const addonDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/addons/$addonId',
+  validateSearch: parseEditSearch,
   component: AddonDetailRouteComponent,
 })
 
 function AddonDetailRouteComponent() {
   const { addonId } = addonDetailRoute.useParams()
+  const { edit } = addonDetailRoute.useSearch()
   const navigate = useNavigate()
 
   return (
     <AddonDetailPage
       addonId={addonId}
-      onEdit={(id) => void navigate({ to: '/addons/$addonId/edit', params: { addonId: id } })}
+      startEditing={edit === true}
       onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
     />
   )
@@ -971,7 +910,7 @@ function AddonDetailRouteComponent() {
  * The list keeps the URL-as-query contract; opening a coupon navigates to
  * `/coupons/$couponId`, which is where the discount, redemptions, window, and —
  * the V2 addition — where the coupon is applied all live. Editing is limited to
- * a rename (the discount is immutable), so it stays a drawer over the detail.
+ * a rename (the discount is immutable), done in place on the detail page.
  */
 const couponsRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -1000,17 +939,19 @@ function CouponsRouteComponent() {
 const couponDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/coupons/$couponId',
+  validateSearch: parseEditSearch,
   component: CouponDetailRouteComponent,
 })
 
 function CouponDetailRouteComponent() {
   const { couponId } = couponDetailRoute.useParams()
+  const { edit } = couponDetailRoute.useSearch()
   const navigate = useNavigate()
 
   return (
     <CouponDetailPage
       couponId={couponId}
-      onEdit={(id) => void navigate({ to: '/coupons/$couponId/edit', params: { couponId: id } })}
+      startEditing={edit === true}
       onBack={() => void navigate({ to: '/coupons', search: {} as never })}
     />
   )
@@ -1075,16 +1016,19 @@ function PriceUnitCreateRouteComponent() {
 const priceUnitDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/price-units/$priceUnitId',
+  validateSearch: parseEditSearch,
   component: PriceUnitDetailRouteComponent,
 })
 
 function PriceUnitDetailRouteComponent() {
   const { priceUnitId } = priceUnitDetailRoute.useParams()
+  const { edit } = priceUnitDetailRoute.useSearch()
   const navigate = useNavigate()
 
   return (
     <PriceUnitDetailPage
       priceUnitId={priceUnitId}
+      startEditing={edit === true}
       onNavigateToList={() => void navigate({ to: '/price-units', search: {} as never })}
     />
   )
@@ -1200,8 +1144,9 @@ function CostSheetsRouteComponent() {
       onCreateCostSheet={() => void navigate({ to: '/cost-sheets/new' })}
       onEditCostSheet={(costSheet) =>
         void navigate({
-          to: '/cost-sheets/$costSheetId/edit',
+          to: '/cost-sheets/$costSheetId',
           params: { costSheetId: costSheet.id },
+          search: { edit: true },
         })
       }
     />
@@ -1212,19 +1157,19 @@ function CostSheetsRouteComponent() {
 const costSheetDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/cost-sheets/$costSheetId',
+  validateSearch: parseEditSearch,
   component: CostSheetDetailRouteComponent,
 })
 
 function CostSheetDetailRouteComponent() {
   const { costSheetId } = costSheetDetailRoute.useParams()
+  const { edit } = costSheetDetailRoute.useSearch()
   const navigate = useNavigate()
 
   return (
     <CostSheetDetailPage
       costSheetId={costSheetId}
-      onEdit={(id) =>
-        void navigate({ to: '/cost-sheets/$costSheetId/edit', params: { costSheetId: id } })
-      }
+      startEditing={edit === true}
       onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
     />
   )
@@ -1552,9 +1497,7 @@ function PricingWidgetRouteComponent() {
   return (
     <PricingWidgetPage
       onCreatePlan={() => void navigate({ to: '/plans/new' })}
-      onEditPlan={(planId) =>
-        void navigate({ to: '/plans/$planId/edit', params: { planId } })
-      }
+      onEditPlan={(planId) => void navigate({ to: '/plans/$planId/edit', params: { planId } })}
     />
   )
 }
@@ -1719,11 +1662,9 @@ export const routeTree = rootRoute.addChildren([
     planDetailRoute,
     addonsRoute,
     addonCreateRoute,
-    addonEditRoute,
     addonDetailRoute,
     couponsRoute,
     couponCreateRoute,
-    couponEditRoute,
     couponDetailRoute,
     priceUnitsRoute,
     priceUnitCreateRoute,
@@ -1734,7 +1675,6 @@ export const routeTree = rootRoute.addChildren([
     environmentCreateRoute,
     costSheetsRoute,
     costSheetCreateRoute,
-    costSheetEditRoute,
     costSheetDetailRoute,
     customersRoute,
     customerCreateRoute,

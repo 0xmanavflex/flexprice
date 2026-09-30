@@ -51,21 +51,22 @@ test.describe('the coupons list', () => {
     await expect(page).toHaveURL(/\/coupons(\?.*)?$/)
   })
 
-  test('edits a coupon on its own page from the detail', async ({ page }) => {
+  test('edits a coupon in place from the detail header', async ({ page }) => {
     await page.goto('/coupons')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
     await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
     await page.getByRole('menuitem', { name: 'View coupon' }).click()
     await expect(page).toHaveURL(/\/coupons\/[^/]+$/)
 
+    const url = page.url()
     await page.getByRole('button', { name: 'Edit', exact: true }).click()
-    await expect(page).toHaveURL(/\/coupons\/[^/]+\/edit/)
+    await expect(page).toHaveURL(url)
 
-    await page.getByRole('textbox', { name: 'Name' }).fill('Renamed on the edit page')
+    await page.getByLabel('Name', { exact: true }).fill('Renamed in place')
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/coupons\/[^/]+$/))
     await page.getByRole('button', { name: 'Save changes' }).click()
     await request
-    await expect(page).not.toHaveURL(/\/edit/)
+    await expect(page.getByLabel('Name', { exact: true })).toBeHidden()
   })
 
   test('renames a coupon inline', async ({ page }) => {

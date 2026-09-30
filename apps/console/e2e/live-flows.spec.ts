@@ -76,6 +76,16 @@ async function submitPage(label: string | RegExp = /^(Create|Save changes)/) {
   await expect.poll(() => page.url(), { timeout: 30_000 }).not.toBe(url)
 }
 
+/** Save the in-place edit form and require the update PUT to succeed. */
+async function saveInPlace(pathPattern: RegExp) {
+  const response = page.waitForResponse(
+    (r) => r.request().method() === 'PUT' && pathPattern.test(new URL(r.url()).pathname),
+    { timeout: 30_000 },
+  )
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  expect((await response).status()).toBe(200)
+}
+
 /** Narrow a paginated list to the records of this run, so a row is never on page two. */
 async function search(text: string) {
   await page
@@ -280,9 +290,12 @@ test.describe('live flows', () => {
     await open('/addons')
     await search(name)
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
+    // Row Edit opens the detail page with the details in edit mode.
     await openRowMenu(name, 'Edit add-on')
+    await expect(page).toHaveURL(/\/addons\/[^/?]+\?edit=true/)
     await fill(main, 'Description', 'edited by live e2e')
-    await submitPage()
+    await saveInPlace(/\/v1\/addons\/[^/]+$/)
+    await expect(page.getByText('edited by live e2e').first()).toBeVisible({ timeout: 30_000 })
     await open('/addons')
     await search(name)
     await inlineRename(name, `${name}-renamed`)
@@ -304,12 +317,12 @@ test.describe('live flows', () => {
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
     await inlineRename(name, `${name}-renamed`)
 
-    // The list only renames inline; the rename drawer and Archive live on the detail page.
+    // The list only renames inline; the in-place edit and Archive live on the detail page.
     await row(`${name}-renamed`).getByText(`E2E${tag}`).click()
     await expect(page.getByRole('heading', { name: `${name}-renamed` })).toBeVisible()
     await page.getByRole('button', { name: 'Edit', exact: true }).click()
     await fill(main, 'Name', `${name}-edited`)
-    await submitPage()
+    await saveInPlace(/\/v1\/coupons\/[^/]+$/)
     await expect(page.getByRole('heading', { name: `${name}-edited` })).toBeVisible({
       timeout: 30_000,
     })
@@ -349,8 +362,10 @@ test.describe('live flows', () => {
     await search(name)
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
     await openRowMenu(name, 'Edit cost sheet')
+    await expect(page).toHaveURL(/\/cost-sheets\/[^/?]+\?edit=true/)
     await fill(main, 'Description', 'edited by live e2e')
-    await submitPage()
+    await saveInPlace(/\/v1\/costs\/[^/]+$/)
+    await expect(page.getByText('edited by live e2e').first()).toBeVisible({ timeout: 30_000 })
     await open('/cost-sheets')
     await search(name)
     // The cost sheet search matches the name exactly, so the renamed row leaves
@@ -446,9 +461,9 @@ test.describe('live flows', () => {
     // Creating a plan lands on its detail page.
     await expect(page.getByRole('heading', { name: plan })).toBeVisible({ timeout: 30_000 })
 
-    // Edit details: the same form, on its own page.
+    // Edit configuration: the same form, on its own page.
     await page.getByRole('button', { name: 'More actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit details' }).click()
+    await page.getByRole('menuitem', { name: 'Edit configuration' }).click()
     await fill(page, 'Description', 'edited by live e2e')
     await page.getByRole('button', { name: /^Save/ }).last().click()
     await expect(page.getByRole('heading', { name: plan })).toBeVisible({ timeout: 30_000 })
