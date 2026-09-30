@@ -233,6 +233,7 @@ export {
   useCreateBulkEntitlements,
   useDeleteEntitlement,
   useEntitlements,
+  usePlanEntitlements,
   toUpdateEntitlementRequest,
   useUpdateEntitlement,
 } from './entitlements'

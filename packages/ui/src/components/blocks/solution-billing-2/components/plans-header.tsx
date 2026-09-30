@@ -37,9 +37,9 @@ export function PlansHeader({
       {/* Left: page identity + live plan count */}
       <div className="flex min-w-0 flex-col gap-1">
         <div className="flex flex-wrap items-center gap-2.5">
-          <h2 className="text-foreground text-lg leading-tight font-semibold tracking-tight">
+          <h1 className="text-foreground text-lg leading-tight font-semibold tracking-tight">
             Plans
-          </h2>
+          </h1>
           <Badge variant="success-light">{liveCount} live</Badge>
         </div>
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-sm">

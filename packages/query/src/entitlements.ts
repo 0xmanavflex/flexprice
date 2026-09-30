@@ -145,6 +145,28 @@ export function useEntitlements(entityType: EntitlementEntityType, entityId: str
   })
 }
 
+/** The entitlements of many plans in one request, for the pricing catalogue. */
+export function usePlanEntitlements(planIds: string[]) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.entitlements.list({ entityType: 'PLAN', entityIds: planIds }),
+    queryFn: async () => {
+      const response = await call(() =>
+        client.entitlements.queryEntitlement({
+          entityType: 'PLAN',
+          entityIds: planIds,
+          expand: 'features',
+          limit: 1000,
+          offset: 0,
+        } as never),
+      )
+      return (response.items ?? []).map((item) => toEntitlement(item as EntitlementWire))
+    },
+    enabled: planIds.length > 0,
+  })
+}
+
 /** Grant several entitlements in one call. */
 export function useCreateBulkEntitlements() {
   const client = useFlexprice()

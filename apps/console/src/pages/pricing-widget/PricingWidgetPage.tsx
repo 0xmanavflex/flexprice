@@ -1,7 +1,7 @@
 import { DEFAULT_PLAN_QUERY } from '@fp/domain'
-import { usePlans } from '@fp/query'
+import { usePlanEntitlements, usePlans } from '@fp/query'
 import { PricingCatalogBlock } from '@fp/ui/pages'
-import { PageBody, PageHeader } from '@fp/ui/compositions'
+import { PageBody } from '@fp/ui/compositions'
 
 export interface PricingWidgetPageProps {
   onCreatePlan: () => void
@@ -11,19 +11,17 @@ export interface PricingWidgetPageProps {
 export function PricingWidgetPage({ onCreatePlan, onEditPlan }: PricingWidgetPageProps) {
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, pageSize: 100 })
 
+  const planList = plans.data?.plans ?? []
+  const entitlements = usePlanEntitlements(planList.map((plan) => plan.id))
+
   return (
-    <>
-      <PageHeader
-        title="Pricing Widget"
-        description="The plan catalogue your customers choose from."
-      />
-      <PageBody>
+    <PageBody>
       <PricingCatalogBlock
-        plans={plans.data?.plans ?? []}
+        plans={planList}
+        entitlements={entitlements.data ?? []}
         onCreatePlan={onCreatePlan}
         onEditPlan={onEditPlan}
       />
-      </PageBody>
-    </>
+    </PageBody>
   )
 }

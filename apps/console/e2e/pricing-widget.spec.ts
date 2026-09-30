@@ -16,8 +16,7 @@ test.beforeEach(async ({ context }) => {
 test('pricing widget shows the plan catalogue block', async ({ page }) => {
   await page.goto('/pricing-widget')
 
-  await expect(page.getByRole('heading', { name: 'Pricing Widget', level: 1 })).toBeVisible()
-  await expect(page.getByRole('heading', { name: 'Plans', level: 2 })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Plans', level: 1 })).toBeVisible()
   await expect(page.getByRole('button', { name: 'New plan' })).toBeVisible()
   await expect(page.getByRole('heading', { level: 3 }).first()).toBeVisible()
   await expect(page.getByText('Mara Whitfield')).toHaveCount(0)

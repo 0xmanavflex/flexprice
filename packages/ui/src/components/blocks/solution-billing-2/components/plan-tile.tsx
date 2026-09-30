@@ -245,12 +245,12 @@ export function PlanTile({ plan, onEdit }: PlanTileProps) {
         )}
 
         {/* Add entitlement */}
-        {onEdit ? null : (
+        {(
           <Button
             type="button"
             variant="outline"
             className="mt-auto"
-            onClick={handleAddEntitlement}
+            onClick={onEdit ? () => onEdit(plan.id) : handleAddEntitlement}
           >
             <PlusIcon
               aria-hidden="true"
@@ -258,7 +258,7 @@ export function PlanTile({ plan, onEdit }: PlanTileProps) {
             Add entitlement
           </Button>
         )}
-        {onEdit ? null : (
+        {(
         <p className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
           <span>{entitlementCount} entitlements</span>
           <DotSeparator />
@@ -271,12 +271,13 @@ export function PlanTile({ plan, onEdit }: PlanTileProps) {
       </FramePanel>
 
       {/* Footer: active + public toggles */}
-      {onEdit ? null : (
+      {(
       <FrameFooter className="flex flex-col gap-2 p-3">
         <label className="flex items-center justify-between gap-2 text-sm">
           <span className="text-foreground">Active</span>
           <Switch
             checked={active}
+            disabled={Boolean(onEdit)}
             onCheckedChange={handleToggleActive}
             aria-label={`Toggle ${details.name} active`}
           />
@@ -285,6 +286,7 @@ export function PlanTile({ plan, onEdit }: PlanTileProps) {
           <span className="text-foreground">Public</span>
           <Switch
             checked={isPublic}
+            disabled={Boolean(onEdit)}
             onCheckedChange={handleTogglePublic}
             aria-label={`Toggle ${details.name} public`}
           />
