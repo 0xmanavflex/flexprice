@@ -18,6 +18,12 @@ import { ConsoleShell } from './shell/ConsoleShell'
 import { hasSession, needsSignIn, useSession } from './session'
 import { useEnvironments } from './shell/useEnvironments'
 import type { InvoiceQuery } from '@fp/domain'
+const InvoiceCreatePage = lazy(() =>
+  import('@/pages/invoices/InvoiceCreatePage').then((m) => ({ default: m.InvoiceCreatePage })),
+)
+const InvoiceDetailPage = lazy(() =>
+  import('@/pages/invoices/InvoiceDetailPage').then((m) => ({ default: m.InvoiceDetailPage })),
+)
 const InvoiceListPage = lazy(() =>
   import('@/pages/invoices/InvoiceListPage').then((m) => ({ default: m.InvoiceListPage })),
 )
@@ -433,6 +439,10 @@ function InvoicesRouteComponent() {
   return (
     <InvoiceListPage
       query={query}
+      onCreate={() => void navigate({ to: '/invoices/new' })}
+      onInvoiceClick={(invoice) =>
+        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId: invoice.id } })
+      }
       onQueryChange={(next) =>
         void navigate({
           to: '/invoices',
@@ -1518,6 +1528,18 @@ const integrationsRoute = createRoute({
   component: IntegrationListPage,
 })
 
+const invoiceCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/invoices/new',
+  component: InvoiceCreatePage,
+})
+
+const invoiceDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/invoices/$invoiceId',
+  component: InvoiceDetailPage,
+})
+
 const pricingWidgetRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/pricing-widget',
@@ -1720,6 +1742,8 @@ export const routeTree = rootRoute.addChildren([
     customerDetailRoute,
     subscriptionsRoute,
     invoicesRoute,
+    invoiceCreateRoute,
+    invoiceDetailRoute,
     paymentsRoute,
     creditNotesRoute,
     workflowsRoute,

@@ -7,6 +7,8 @@ import { ListState, PageBody } from '@fp/ui/compositions'
 export interface InvoiceListPageProps {
   query: InvoiceQuery
   onQueryChange: (query: InvoiceQuery) => void
+  onCreate?: () => void
+  onInvoiceClick?: (invoice: Invoice) => void
 }
 
 /**
@@ -20,7 +22,7 @@ export interface InvoiceListPageProps {
  * Note what is absent: any `useState`. The query lives in the URL, so this
  * component has nothing to remember.
  */
-export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) {
+export function InvoiceListPage({ query, onQueryChange, onCreate, onInvoiceClick }: InvoiceListPageProps) {
   const invoices = useInvoices(query)
 
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -84,6 +86,8 @@ export function InvoiceListPage({ query, onQueryChange }: InvoiceListPageProps) 
             isLoading={invoices.isPending}
             error={toMessage(invoices.error)}
             onRetry={() => void invoices.refetch()}
+            {...(onCreate ? { onCreate } : {})}
+            {...(onInvoiceClick ? { onInvoiceClick } : {})}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
             /*
              * The status facet, in the toolbar beside Sort — the same slot
