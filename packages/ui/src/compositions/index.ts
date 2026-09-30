@@ -55,7 +55,7 @@ export { DetailStats, DetailStatsProvenance } from './DetailStats'
 export type { DetailStat, DetailStatsProps } from './DetailStats'
 export { MetricRail, MetricRailProvenance } from './MetricRail'
 export type { DetailMetric, MetricRailProps } from './MetricRail'
-export { DetailShell, DetailShellProvenance } from './DetailShell'
+export { DetailBreadcrumb, DetailShell, DetailShellProvenance } from './DetailShell'
 export type { DetailCrumb, DetailShellProps } from './DetailShell'
 export { ConfirmDialog, ConfirmDialogProvenance } from './ConfirmDialog'
 export type { ConfirmDialogProps } from './ConfirmDialog'
@@ -72,3 +72,17 @@ export { DateInput, DateInputProvenance } from './DateInput'
 export type { DateInputProps } from './DateInput'
 
 export * from './shell'
+
+export { FormPage, FormPageProvenance } from './FormPage'
+export type { FormPageProps } from './FormPage'
+export { FormSteps, FormStepsProvenance, StepFooter, useFormSteps } from './useFormSteps'
+export type {
+  FormFlow,
+  FormStepDef,
+  StepFooterProps,
+  UseFormStepsOptions,
+} from './useFormSteps'
+export { ContextualSection, ContextualSectionProvenance } from './ContextualSection'
+export type { ContextualSectionProps } from './ContextualSection'
+export { InlineField, InlineFieldProvenance } from './InlineField'
+export type { InlineFieldProps } from './InlineField'

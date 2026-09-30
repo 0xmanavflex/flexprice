@@ -36,7 +36,7 @@ export interface DetailCrumb {
  * the title, it replaces the assorted "← Back" links each detail page used to
  * grow its own.
  */
-function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
+export function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
   return (
     <nav aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">

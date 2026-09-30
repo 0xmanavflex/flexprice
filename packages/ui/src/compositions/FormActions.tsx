@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { Button } from '@ui/components/primitives/button'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { provenance } from '@ui/provenance'
@@ -22,6 +23,11 @@ export interface FormActionsProps {
   isSubmitting?: boolean
   submitError?: string | null | undefined
   submitLabel?: string
+  /** `id` of the `<form>` to submit, when the footer sits outside it (a page's sticky bar). */
+  formId?: string
+  /** Rendered between Cancel and the submit, e.g. a stepper's Previous/Next. */
+  between?: ReactNode
+  hideSubmit?: boolean
 }
 
 export function FormActions({
@@ -31,6 +37,9 @@ export function FormActions({
   isSubmitting = false,
   submitError = null,
   submitLabel,
+  formId,
+  between,
+  hideSubmit = false,
 }: FormActionsProps) {
   const label =
     submitLabel ?? (mode === 'create' ? `Create${noun ? ` ${noun}` : ''}` : 'Save changes')
@@ -47,9 +56,12 @@ export function FormActions({
             Cancel
           </Button>
         ) : null}
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving…' : label}
-        </Button>
+        {between}
+        {hideSubmit ? null : (
+          <Button type="submit" disabled={isSubmitting} {...(formId ? { form: formId } : {})}>
+            {isSubmitting ? 'Saving…' : label}
+          </Button>
+        )}
       </div>
     </div>
   )
