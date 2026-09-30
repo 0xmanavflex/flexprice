@@ -50,10 +50,13 @@ export function OptionCombobox({
       onValueChange={(next) => onValueChange((next as Option | null)?.value ?? '')}
       itemToStringLabel={(option) => (option as Option).label}
       itemToStringValue={(option) => (option as Option).value}
+      openOnInputClick
       isItemEqualToValue={(a, b) => (a as Option).value === (b as Option).value}
       {...(disabled !== undefined ? { disabled } : {})}
     >
       <ComboboxInput
+        showTrigger={false}
+        showClear
         {...(id ? { id } : {})}
         placeholder={placeholder}
         className="w-full"
