@@ -26,8 +26,11 @@ import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
 import { Textarea } from '@ui/components/primitives/textarea'
+import type { ReactNode } from 'react'
 import { Field } from '@ui/compositions/Field'
-import { FormActions } from '@ui/compositions/FormActions'
+import { FormPage } from '@ui/compositions/FormPage'
+import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSteps'
+import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect, type Option } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
 
@@ -61,12 +64,15 @@ export const FeatureFormProvenance = provenance({
 })
 
 type FeatureFormProps = {
-  onCancel?: () => void
+  onCancel: () => void
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
   /** The groups a feature can be filed under; the field is hidden when there are none. */
   groups?: readonly Option[]
+  trail: DetailCrumb[]
+  step?: string
+  onStepChange?: (id: string) => void
 } & (
   | {
       mode: 'create'
@@ -113,6 +119,33 @@ interface FormValues {
     warning: ThresholdValues
     critical: ThresholdValues
   }
+}
+
+const FORM_ID = 'feature-form'
+
+const DETAILS_STEP = { id: 'details', title: 'Details' }
+const TYPE_STEP = { id: 'type', title: 'Type' }
+const METERED_STEPS = [
+  DETAILS_STEP,
+  TYPE_STEP,
+  { id: 'event', title: 'Event' },
+  { id: 'aggregation', title: 'Aggregation' },
+  { id: 'additional', title: 'Additional' },
+] as const
+const PLAIN_STEPS = [DETAILS_STEP, TYPE_STEP, { id: 'additional', title: 'Additional' }] as const
+
+const STEP_FIELDS: Record<string, string[]> = {
+  details: ['name', 'lookupKey', 'description', 'groupId'],
+  type: [],
+  event: ['meter.eventName', 'meter.filters', 'filters'],
+  aggregation: [
+    'meter.aggregationType',
+    'meter.field',
+    'meter.multiplier',
+    'meter.groupBy',
+    'meter.resetUsage',
+  ],
+  additional: ['unitSingular', 'unitPlural', 'reportingUnit', 'alertSettings'],
 }
 
 const TYPES = [FeatureType.Metered, FeatureType.Boolean, FeatureType.Static] as const
@@ -305,7 +338,16 @@ function normalize(values: FormValues, mode: 'create' | 'edit') {
 }
 
 export function FeatureForm(props: FeatureFormProps) {
-  const { mode, onCancel, isSubmitting = false, submitError = null, groups = [] } = props
+  const {
+    mode,
+    onCancel,
+    isSubmitting = false,
+    submitError = null,
+    groups = [],
+    trail,
+    step,
+    onStepChange,
+  } = props
   const feature = props.mode === 'edit' ? props.feature : undefined
   const isEdit = mode === 'edit'
 
@@ -337,12 +379,6 @@ export function FeatureForm(props: FeatureFormProps) {
     return found?.message
   }
 
-  const submit = form.handleSubmit((values) => {
-    // The resolver returns the schema's parsed output, not the form value.
-    if (props.mode === 'edit') props.onSubmit(values as unknown as EditFeature)
-    else props.onSubmit(values as unknown as CreateFeature)
-  })
-
   const nameField = form.register('name', {
     onChange: (event: { target: { value: string } }) => {
       // The key follows the name until the person types a key of their own.
@@ -354,8 +390,31 @@ export function FeatureForm(props: FeatureFormProps) {
 
   const setAlertsOn = (on: boolean) => form.setValue('alertsOn', on, { shouldDirty: true })
 
-  return (
-    <form onSubmit={submit} noValidate className="flex flex-col gap-5">
+  const flow = useFormSteps({
+    steps: isMetered ? METERED_STEPS : PLAIN_STEPS,
+    step,
+    onStepChange,
+    unlockAll: isEdit,
+    validate: (id) => form.trigger(STEP_FIELDS[id] as never),
+  })
+
+  const submitAll = form.handleSubmit(
+    (values) => {
+      // The resolver returns the schema's parsed output, not the form value.
+      if (props.mode === 'edit') props.onSubmit(values as unknown as EditFeature)
+      else props.onSubmit(values as unknown as CreateFeature)
+    },
+    (errors) => {
+      // Send the person to the first step that has something to fix.
+      const bad = flow.steps.find((s) =>
+        STEP_FIELDS[s.id]?.some((path) => get(errors, path.split('.')[0] ?? '') !== undefined),
+      )
+      if (bad) flow.goTo(bad.id)
+    },
+  )
+
+  const detailsStep = (
+    <>
       <div className="grid gap-4 sm:grid-cols-2">
         <Field label="Name" required error={message('name')}>
           {({ id, ...field }) => (
@@ -395,204 +454,207 @@ export function FeatureForm(props: FeatureFormProps) {
           />
         )}
       </Field>
-
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Type" hint={TYPE_HINT[type]}>
+      {groups.length > 0 ? (
+        <Field label="Group" hint="File the feature under a group." error={message('groupId')}>
           {({ id, ...field }) => (
             <OptionSelect
               id={id}
               aria-describedby={field['aria-describedby']}
-              value={type}
-              options={TYPE_OPTIONS}
-              disabled={isSubmitting || isEdit}
-              onValueChange={(next) => {
-                if (next === type || isEdit) return
-                // A type switch keeps the shared fields and lets the schema drop the rest.
-                form.setValue('type', next as FeatureType, { shouldDirty: true })
-                form.clearErrors()
-              }}
+              value={form.watch('groupId')}
+              options={groups}
+              placeholder="No group"
+              disabled={isSubmitting}
+              onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
             />
           )}
         </Field>
+      ) : null}
+    </>
+  )
 
-        {groups.length > 0 ? (
-          <Field label="Group" hint="File the feature under a group." error={message('groupId')}>
-            {({ id, ...field }) => (
-              <OptionSelect
-                id={id}
-                aria-describedby={field['aria-describedby']}
-                value={form.watch('groupId')}
-                options={groups}
-                placeholder="No group"
-                disabled={isSubmitting}
-                onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
-              />
-            )}
-          </Field>
-        ) : null}
-      </div>
+  const typeStep = (
+    <>
+      <Field label="Type" hint={TYPE_HINT[type]}>
+        {({ id, ...field }) => (
+          <OptionSelect
+            id={id}
+            aria-describedby={field['aria-describedby']}
+            value={type}
+            options={TYPE_OPTIONS}
+            disabled={isSubmitting || isEdit}
+            onValueChange={(next) => {
+              if (next === type || isEdit) return
+              // A type switch keeps the shared fields and lets the schema drop the rest.
+              form.setValue('type', next as FeatureType, { shouldDirty: true })
+              form.clearErrors()
+            }}
+          />
+        )}
+      </Field>
+    </>
+  )
 
-      {isMetered ? (
-        <fieldset className="flex flex-col gap-4 rounded-lg border p-4" disabled={isSubmitting}>
-          <legend className="px-1 text-sm font-medium">Meter</legend>
-
-          {isEdit ? (
+  const eventStep = (
+    <>
+      {isEdit ? (
+        <p className="text-muted-foreground text-xs">
+          The event, aggregation and reset are fixed once the meter exists. Filters can still
+          change.
+        </p>
+      ) : null}
+      <Field label="Event name" required error={message('meter.eventName')}>
+        {({ id, ...field }) => (
+          <Input
+            id={id}
+            readOnly={isEdit}
+            disabled={isEdit}
+            {...field}
+            {...form.register('meter.eventName')}
+          />
+        )}
+      </Field>
+      <div className="flex flex-col gap-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-sm font-medium">Event filters</p>
             <p className="text-muted-foreground text-xs">
-              The event, aggregation and reset are fixed once the meter exists. Filters can still
-              change.
+              Only events whose property matches one of the values are counted.
             </p>
-          ) : null}
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Event name" required error={message('meter.eventName')}>
-              {({ id, ...field }) => (
-                <Input
-                  id={id}
-                  readOnly={isEdit}
-                  disabled={isEdit}
-                  {...field}
-                  {...form.register('meter.eventName')}
-                />
-              )}
-            </Field>
-
-            <Field label="Aggregation">
-              {({ id, ...field }) => (
-                <OptionSelect
-                  id={id}
-                  aria-describedby={field['aria-describedby']}
-                  value={aggregationType}
-                  options={AGGREGATION_OPTIONS}
-                  disabled={isEdit}
-                  onValueChange={(next) =>
-                    form.setValue('meter.aggregationType', next as AggregationType, {
-                      shouldDirty: true,
-                    })
-                  }
-                />
-              )}
-            </Field>
-
-            {needsAggregationTarget(aggregationType) ? (
-              <Field
-                label="Event field"
-                required
-                hint="The property on the event to aggregate."
-                error={message('meter.field')}
-              >
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
-                    readOnly={isEdit}
-                    disabled={isEdit}
-                    {...field}
-                    {...form.register('meter.field')}
-                  />
-                )}
-              </Field>
-            ) : null}
-
-            {aggregationType === AggregationType.SumWithMultiplier ? (
-              <Field label="Multiplier" required error={message('meter.multiplier')}>
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
-                    inputMode="decimal"
-                    disabled={isEdit}
-                    {...field}
-                    {...form.register('meter.multiplier')}
-                  />
-                )}
-              </Field>
-            ) : null}
-
-            {aggregationType === AggregationType.Max ? (
-              <Field
-                label="Group by"
-                hint="An event property to group by before taking the maximum."
-                error={message('meter.groupBy')}
-              >
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
-                    readOnly={isEdit}
-                    disabled={isEdit}
-                    {...field}
-                    {...form.register('meter.groupBy')}
-                  />
-                )}
-              </Field>
-            ) : null}
-
-            <Field label="Reset usage">
-              {({ id, ...field }) => (
-                <OptionSelect
-                  id={id}
-                  aria-describedby={field['aria-describedby']}
-                  value={form.watch('meter.resetUsage')}
-                  options={RESET_OPTIONS}
-                  disabled={isEdit}
-                  onValueChange={(next) =>
-                    form.setValue('meter.resetUsage', next as ResetUsage, { shouldDirty: true })
-                  }
-                />
-              )}
-            </Field>
           </div>
-
-          <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium">Event filters</p>
-                <p className="text-muted-foreground text-xs">
-                  Only events whose property matches one of the values are counted.
-                </p>
-              </div>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => filters.append({ key: '', valuesText: '' })}
-              >
-                <PlusIcon aria-hidden className="size-4" />
-                Add filter
-              </Button>
-            </div>
-            {filters.fields.map((row, index) => (
-              <div key={row.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
-                <Field
-                  label={`Filter ${index + 1} property`}
-                  error={message(`${filterPath}.${index}.key`)}
-                >
-                  {({ id, ...field }) => (
-                    <Input id={id} {...field} {...form.register(`filters.${index}.key`)} />
-                  )}
-                </Field>
-                <Field
-                  label={`Filter ${index + 1} values`}
-                  hint="Comma separated."
-                  error={message(`${filterPath}.${index}.values`)}
-                >
-                  {({ id, ...field }) => (
-                    <Input id={id} {...field} {...form.register(`filters.${index}.valuesText`)} />
-                  )}
-                </Field>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="mt-6"
-                  aria-label={`Remove filter ${index + 1}`}
-                  onClick={() => filters.remove(index)}
-                >
-                  <Trash2Icon aria-hidden className="size-4" />
-                </Button>
-              </div>
-            ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => filters.append({ key: '', valuesText: '' })}
+          >
+            <PlusIcon aria-hidden className="size-4" />
+            Add filter
+          </Button>
+        </div>
+        {filters.fields.map((row, index) => (
+          <div key={row.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
+            <Field
+              label={`Filter ${index + 1} property`}
+              error={message(`${filterPath}.${index}.key`)}
+            >
+              {({ id, ...field }) => (
+                <Input id={id} {...field} {...form.register(`filters.${index}.key`)} />
+              )}
+            </Field>
+            <Field
+              label={`Filter ${index + 1} values`}
+              hint="Comma separated."
+              error={message(`${filterPath}.${index}.values`)}
+            >
+              {({ id, ...field }) => (
+                <Input id={id} {...field} {...form.register(`filters.${index}.valuesText`)} />
+              )}
+            </Field>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mt-6"
+              aria-label={`Remove filter ${index + 1}`}
+              onClick={() => filters.remove(index)}
+            >
+              <Trash2Icon aria-hidden className="size-4" />
+            </Button>
           </div>
-        </fieldset>
+        ))}
+      </div>
+    </>
+  )
+
+  const aggregationStep = (
+    <div className="grid gap-4 sm:grid-cols-2">
+      <Field label="Aggregation">
+        {({ id, ...field }) => (
+          <OptionSelect
+            id={id}
+            aria-describedby={field['aria-describedby']}
+            value={aggregationType}
+            options={AGGREGATION_OPTIONS}
+            disabled={isEdit}
+            onValueChange={(next) =>
+              form.setValue('meter.aggregationType', next as AggregationType, {
+                shouldDirty: true,
+              })
+            }
+          />
+        )}
+      </Field>
+
+      {needsAggregationTarget(aggregationType) ? (
+        <Field
+          label="Event field"
+          required
+          hint="The property on the event to aggregate."
+          error={message('meter.field')}
+        >
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              readOnly={isEdit}
+              disabled={isEdit}
+              {...field}
+              {...form.register('meter.field')}
+            />
+          )}
+        </Field>
       ) : null}
 
+      {aggregationType === AggregationType.SumWithMultiplier ? (
+        <Field label="Multiplier" required error={message('meter.multiplier')}>
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              inputMode="decimal"
+              disabled={isEdit}
+              {...field}
+              {...form.register('meter.multiplier')}
+            />
+          )}
+        </Field>
+      ) : null}
+
+      {aggregationType === AggregationType.Max ? (
+        <Field
+          label="Group by"
+          hint="An event property to group by before taking the maximum."
+          error={message('meter.groupBy')}
+        >
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              readOnly={isEdit}
+              disabled={isEdit}
+              {...field}
+              {...form.register('meter.groupBy')}
+            />
+          )}
+        </Field>
+      ) : null}
+
+      <Field label="Reset usage">
+        {({ id, ...field }) => (
+          <OptionSelect
+            id={id}
+            aria-describedby={field['aria-describedby']}
+            value={form.watch('meter.resetUsage')}
+            options={RESET_OPTIONS}
+            disabled={isEdit}
+            onValueChange={(next) =>
+              form.setValue('meter.resetUsage', next as ResetUsage, { shouldDirty: true })
+            }
+          />
+        )}
+      </Field>
+    </div>
+  )
+
+  const additionalStep = (
+    <>
       <fieldset className="flex flex-col gap-4 rounded-lg border p-4" disabled={isSubmitting}>
         <legend className="px-1 text-sm font-medium">Units</legend>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -634,7 +696,6 @@ export function FeatureForm(props: FeatureFormProps) {
           </Field>
         </div>
       </fieldset>
-
       <fieldset className="flex flex-col gap-4 rounded-lg border p-4" disabled={isSubmitting}>
         <legend className="px-1 text-sm font-medium">Alerts</legend>
         <Field
@@ -711,14 +772,49 @@ export function FeatureForm(props: FeatureFormProps) {
           </div>
         ) : null}
       </fieldset>
+    </>
+  )
 
-      <FormActions
-        mode={mode}
-        noun="feature"
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
-    </form>
+  const content: Record<string, ReactNode> = {
+    details: detailsStep,
+    type: typeStep,
+    event: eventStep,
+    aggregation: aggregationStep,
+    additional: additionalStep,
+  }
+
+  return (
+    <FormPage
+      title={isEdit ? `Edit ${feature?.name ?? 'feature'}` : 'Create feature'}
+      description={
+        isEdit
+          ? 'Update this feature. Steps are the same as when it was created.'
+          : 'Define what you measure or gate. Plans price it and entitlements limit it.'
+      }
+      trail={trail}
+      width="narrow"
+      footer={
+        <StepFooter
+          flow={flow}
+          mode={mode}
+          noun="feature"
+          formId={FORM_ID}
+          onCancel={onCancel}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      }
+    >
+      <FormSteps flow={flow} label="Feature steps">
+        <form
+          id={FORM_ID}
+          onSubmit={flow.guardSubmit(submitAll)}
+          noValidate
+          className="flex flex-col gap-5"
+        >
+          {content[flow.step]}
+        </form>
+      </FormSteps>
+    </FormPage>
   )
 }

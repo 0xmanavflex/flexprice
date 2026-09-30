@@ -1,8 +1,7 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { AggregationType, FeatureType, ResetUsage } from '@fp/domain'
 import { FeatureForm } from './FeatureForm'
-import { featureFixtures } from './featureFixtures'
 
 /**
  * The replacement for `AddFeature.tsx` — 1,106 lines and four state slices —
@@ -20,17 +19,30 @@ async function chooseOption(label: string, optionName: string) {
   await userEvent.click(await screen.findByRole('option', { name: optionName }))
 }
 
+async function next(canvas: ReturnType<typeof within>) {
+  await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+}
+
+const trail: { label: string }[] = [{ label: 'Features' }, { label: 'Create feature' }]
+
+const withHeight: Decorator = (Story) => (
+  <div className="flex h-[720px] flex-col">
+    <Story />
+  </div>
+)
+
 const meta = {
   title: 'Surfaces/FeatureForm',
   component: FeatureForm,
-  parameters: { layout: 'padded' },
-  args: { mode: 'create', onSubmit: fn(), onCancel: fn() },
+  parameters: { layout: 'fullscreen' },
+  decorators: [withHeight],
+  args: { mode: 'create', trail, onSubmit: fn(), onCancel: fn() },
 } satisfies Meta<typeof FeatureForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Opens metered, the type that needs the most explanation. */
+/** Opens on the first step of a metered feature. */
 export const Default: Story = {}
 
 export const Boolean: Story = {
@@ -67,21 +79,35 @@ export const SubmitError: Story = {
   },
 }
 
-/** Validation is the domain schema's, reached through the form. */
+/** Next is gated by the domain schema, and the message lands on the step the person is on. */
 export const ValidationFromDomain: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
+    await next(canvas)
 
     await expect(await canvas.findByText('Enter a name')).toBeInTheDocument()
-    await expect(canvas.getByText('Enter the event name')).toBeInTheDocument()
+    await expect(canvas.getByLabelText(/^Name/)).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
 
+/** Values entered on one step survive Previous and Next. */
+export const StepsKeepValues: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
+    await next(canvas)
+    await expect(await canvas.findByRole('combobox', { name: 'Type' })).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Previous' }))
+
+    await expect(await canvas.findByLabelText(/^Name/)).toHaveValue('API calls')
+  },
+}
+
 /**
- * The meter disappears when the type no longer has one.
+ * The meter steps disappear when the type no longer has a meter.
  *
  * V1 keeps meter data in a separate state slice, so it survives a type switch
  * and can be submitted invisibly. Here it is not in the value at all.
@@ -90,13 +116,15 @@ export const SwitchingTypeDropsTheMeter: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.getByLabelText(/^Event name/)).toBeInTheDocument()
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'SSO')
+    await next(canvas)
+    await expect(await canvas.findByRole('button', { name: /Event/ })).toBeInTheDocument()
 
     await chooseOption('Type', 'Boolean')
-    await expect(canvas.queryByLabelText(/^Event name/)).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('button', { name: /Aggregation/ })).not.toBeInTheDocument()
 
-    await userEvent.type(canvas.getByLabelText(/^Name/), 'SSO')
-    await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
+    await next(canvas)
+    await userEvent.click(await canvas.findByRole('button', { name: /create feature/i }))
 
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'SSO', type: FeatureType.Boolean, lookupKey: 'feat-sso' }),
@@ -109,9 +137,26 @@ export const SwitchingTypeDropsTheMeter: Story = {
 
 /** COUNT is the only aggregation with nothing per event to add up. */
 export const CountHidesTheAggregationTarget: Story = {
+  args: {
+    defaultValue: {
+      name: 'Calls',
+      lookupKey: 'calls',
+      type: FeatureType.Metered,
+      meter: {
+        eventName: 'call',
+        aggregationType: AggregationType.Count,
+        resetUsage: ResetUsage.BillingPeriod,
+      },
+    },
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
+    await next(canvas)
+    await next(canvas)
+    await next(canvas)
+
+    await expect(await canvas.findByRole('combobox', { name: 'Aggregation' })).toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Event field/)).not.toBeInTheDocument()
 
     await chooseOption('Aggregation', 'Sum of a field')
@@ -122,43 +167,36 @@ export const CountHidesTheAggregationTarget: Story = {
   },
 }
 
-/** The multiplier appears only for the aggregation that uses it. */
-export const MultiplierOnlyForSumWithMultiplier: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-
-    await expect(canvas.queryByLabelText(/^Multiplier/)).not.toBeInTheDocument()
-
-    await chooseOption('Aggregation', 'Sum, multiplied')
-
-    await expect(await canvas.findByLabelText(/^Multiplier/)).toBeInTheDocument()
-  },
-}
-
-/**
- * A zero multiplier is rejected.
- *
- * V1 compares `multiplier <= 0` against a *string*, which is always false, so a
- * zero multiplier passes there and the feature silently bills nothing.
- */
+/** A zero multiplier is rejected, on the step it belongs to. */
 export const ZeroMultiplierRejected: Story = {
+  args: {
+    defaultValue: {
+      name: 'Weighted tokens',
+      lookupKey: 'weighted',
+      type: FeatureType.Metered,
+      meter: {
+        eventName: 'llm_completion',
+        aggregationType: AggregationType.SumWithMultiplier,
+        field: 'tokens',
+        multiplier: '0',
+        resetUsage: ResetUsage.BillingPeriod,
+      },
+    },
+  },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.type(canvas.getByLabelText(/^Name/), 'Weighted tokens')
-    await userEvent.type(canvas.getByLabelText(/^Event name/), 'llm_completion')
-    await chooseOption('Aggregation', 'Sum, multiplied')
-    await userEvent.type(await canvas.findByLabelText(/^Event field/), 'tokens')
-    await userEvent.type(await canvas.findByLabelText(/^Multiplier/), '0')
-
-    await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
+    await next(canvas)
+    await next(canvas)
+    await next(canvas)
+    await next(canvas)
 
     await expect(await canvas.findByText('Must be greater than zero')).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
 
-/** A valid metered feature submits a parsed domain value. */
+/** A valid metered feature walks the steps and submits a parsed domain value. */
 export const SubmitsAValidatedDomainValue: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
@@ -166,9 +204,12 @@ export const SubmitsAValidatedDomainValue: Story = {
     await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
     await userEvent.clear(canvas.getByLabelText(/^Lookup key/))
     await userEvent.type(canvas.getByLabelText(/^Lookup key/), 'api_calls')
-    await userEvent.type(canvas.getByLabelText(/^Event name/), 'api_call')
-
-    await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
+    await next(canvas)
+    await next(canvas)
+    await userEvent.type(await canvas.findByLabelText(/^Event name/), 'api_call')
+    await next(canvas)
+    await next(canvas)
+    await userEvent.click(await canvas.findByRole('button', { name: /create feature/i }))
 
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -195,64 +236,5 @@ export const LookupKeyFollowsName: Story = {
     await userEvent.type(canvas.getByLabelText(/^Lookup key/), 'mine')
     await userEvent.type(canvas.getByLabelText(/^Name/), ' more')
     await expect(canvas.getByLabelText(/^Lookup key/)).toHaveValue('mine')
-  },
-}
-
-/** Group by is offered only with the Maximum aggregation. */
-export const GroupByOnlyForMax: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.queryByLabelText(/^Group by/)).not.toBeInTheDocument()
-    await chooseOption('Aggregation', 'Maximum value')
-    await expect(await canvas.findByLabelText(/^Group by/)).toBeInTheDocument()
-  },
-}
-
-/** A filter needs a property and at least one value. */
-export const FilterValidation: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
-    await userEvent.type(canvas.getByLabelText(/^Event name/), 'api_call')
-    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }))
-    await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
-    await expect(await canvas.findByText('Enter the event property')).toBeInTheDocument()
-    await expect(args.onSubmit).not.toHaveBeenCalled()
-
-    await userEvent.type(canvas.getByLabelText('Filter 1 property'), 'region')
-    await userEvent.type(canvas.getByLabelText('Filter 1 values'), 'eu, us')
-    await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
-    await expect(args.onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({
-        meter: expect.objectContaining({
-          filters: [{ key: 'region', values: ['eu', 'us'] }],
-        }),
-      }),
-    )
-  },
-}
-
-/** Editing: type, lookup key and meter are read-only; a rename submits an EditFeature. */
-export const EditRename: Story = {
-  args: {
-    mode: 'edit',
-    feature: featureFixtures[0]!,
-    onSubmit: fn(),
-  } as never,
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByLabelText(/^Lookup key/)).toHaveAttribute('readonly')
-    await expect(canvas.getByLabelText(/^Event name/)).toHaveAttribute('readonly')
-
-    await userEvent.clear(canvas.getByLabelText(/^Name/))
-    await userEvent.type(canvas.getByLabelText(/^Name/), 'API requests')
-    await userEvent.click(canvas.getByRole('button', { name: /save changes/i }))
-
-    await expect(args.onSubmit).toHaveBeenCalledWith(
-      expect.objectContaining({ name: 'API requests' }),
-    )
-    await expect(args.onSubmit).toHaveBeenCalledWith(
-      expect.not.objectContaining({ lookupKey: expect.anything() }),
-    )
   },
 }

@@ -149,8 +149,6 @@ export { EventDetailSheet, EventDetailSheetProvenance } from './events/EventDeta
 export type { EventDetailSheetProps } from './events/EventDetailSheet'
 export { FeatureForm, FeatureFormProvenance } from './features/FeatureForm'
 export type { FeatureFormProps } from './features/FeatureForm'
-export { FeatureEditorDialog, FeatureEditorDialogProvenance } from './features/FeatureEditorDialog'
-export type { FeatureEditorDialogProps } from './features/FeatureEditorDialog'
 export { FeatureCloneDialog, FeatureCloneDialogProvenance } from './features/FeatureCloneDialog'
 export type { FeatureCloneDialogProps } from './features/FeatureCloneDialog'
 export { Money, MoneyProvenance } from './shared/Money'
