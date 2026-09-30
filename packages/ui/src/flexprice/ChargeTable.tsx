@@ -9,9 +9,10 @@ import {
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/primitives/button'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/primitives/table'
-import { GaugeIcon, RepeatIcon, Trash2Icon } from 'lucide-react'
+import { GaugeIcon, RepeatIcon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { provenance } from '@ui/provenance'
+import { RowActionsMenu } from './RowActionsMenu'
 
 /**
  * A plan's charges, as a read table.
@@ -33,6 +34,7 @@ export const ChargeTableProvenance = provenance({
 export interface ChargeTableProps {
   charges: Charge[]
   onAdd?: () => void
+  onEdit?: (charge: Charge) => void
   onTerminate?: (charge: Charge) => void
   locale?: string
   /**
@@ -63,7 +65,14 @@ function valueOf(charge: Charge): string {
   }
 }
 
-export function ChargeTable({ charges, onAdd, onTerminate, emptyDescription }: ChargeTableProps) {
+export function ChargeTable({
+  charges,
+  onAdd,
+  onEdit,
+  onTerminate,
+  emptyDescription,
+}: ChargeTableProps) {
+  const hasActions = Boolean(onEdit || onTerminate)
   if (charges.length === 0) {
     // The instruction is only honest where the action exists: a surface with no
     // add flow is told what the state means, not what to do about it.
@@ -107,7 +116,7 @@ export function ChargeTable({ charges, onAdd, onTerminate, emptyDescription }: C
               <TableHead>Type &amp; timing</TableHead>
               <TableHead>Billing period</TableHead>
               <TableHead>Value</TableHead>
-              {onTerminate ? (
+              {hasActions ? (
                 <TableHead className="w-10">
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -145,17 +154,14 @@ export function ChargeTable({ charges, onAdd, onTerminate, emptyDescription }: C
                     charge.billingPeriod}
                 </TableCell>
                 <TableCell className="tabular-nums">{valueOf(charge)}</TableCell>
-                {onTerminate ? (
+                {hasActions ? (
                   <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Terminate ${charge.displayName || 'charge'}`}
-                      onClick={() => onTerminate(charge)}
-                    >
-                      <Trash2Icon aria-hidden className="size-4" />
-                    </Button>
+                    <RowActionsMenu
+                      label={charge.displayName || 'charge'}
+                      onEdit={onEdit ? () => onEdit(charge) : undefined}
+                      onRemove={onTerminate ? () => onTerminate(charge) : undefined}
+                      removeLabel="Terminate"
+                    />
                   </TableCell>
                 ) : null}
               </TableRow>

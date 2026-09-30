@@ -263,6 +263,10 @@ export interface Charge {
   lookupKey: string
   description: string
   displayName: string
+  /** Free trial length in days, for a recurring fixed charge that has one. */
+  trialPeriodDays?: number | null
+  /** The custom price unit (e.g. `TOK`) the charge is denominated in; absent for plain currency. */
+  priceUnit?: string | null
   createdAt: Date | null
 }
 
@@ -292,6 +296,12 @@ const chargeBase = {
   meterId: z.string().trim().optional(),
   /** A human label for the charge, optional. */
   displayName: z.string().trim().optional(),
+  /** Free-trial days for a fixed charge; absent means no trial. */
+  trialPeriodDays: z.number().int().positive('Must be greater than zero').optional(),
+  /** A custom price unit's code; absent means the charge is priced in `currency`. */
+  priceUnit: z.string().trim().optional(),
+  /** Edit only: the ISO date (`YYYY-MM-DD`) a changed price takes effect, as a new version. */
+  effectiveFrom: z.string().trim().optional(),
 }
 
 export const createChargeSchema = z
@@ -361,5 +371,43 @@ export function emptyCharge(type: PriceType, billingModel: BillingModel): Create
         // that starts invalid teaches people to ignore its errors.
         tiers: [{ upTo: null, unitAmount: '' }],
       }
+  }
+}
+
+/**
+ * A saved charge, back as the draft the editor edits.
+ *
+ * The inverse of what `toChargeRequest` sends: only what the billing model uses
+ * is carried, so an edit opens on a structurally valid shape.
+ */
+export function chargeToDraft(charge: Charge): CreateCharge {
+  const base = {
+    type: charge.type,
+    currency: (charge.currency || 'USD').toUpperCase(),
+    billingPeriod: charge.billingPeriod,
+    invoiceCadence: charge.invoiceCadence,
+    ...(charge.meterId ? { meterId: charge.meterId } : {}),
+    ...(charge.displayName ? { displayName: charge.displayName } : {}),
+    ...(charge.trialPeriodDays ? { trialPeriodDays: charge.trialPeriodDays } : {}),
+    ...(charge.priceUnit ? { priceUnit: charge.priceUnit } : {}),
+  }
+
+  switch (charge.billingModel) {
+    case BillingModel.Package:
+      return {
+        ...base,
+        billingModel: BillingModel.Package,
+        amount: charge.amount || '0',
+        divideBy: charge.transformQuantity?.divideBy ?? 1,
+      }
+    case BillingModel.Tiered:
+      return {
+        ...base,
+        billingModel: BillingModel.Tiered,
+        tierMode: charge.tierMode ?? TierMode.Volume,
+        tiers: charge.tiers,
+      }
+    case BillingModel.FlatFee:
+      return { ...base, billingModel: BillingModel.FlatFee, amount: charge.amount || '0' }
   }
 }

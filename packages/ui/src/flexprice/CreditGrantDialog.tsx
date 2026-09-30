@@ -10,90 +10,175 @@ import {
   CreditGrantExpiryDurationUnit,
   CreditGrantExpiryType,
   CreditGrantPeriod,
+  type EditCreditGrant,
   createCreditGrantSchema,
+  editCreditGrantSchema,
   emptyCreditGrant,
 } from '@fp/domain'
-import { Button } from '@ui/primitives/button'
 import { Input } from '@ui/primitives/input'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@ui/primitives/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@ui/primitives/select'
+import { DateInput } from '@ui/compositions/DateInput'
 import { Field } from '@ui/compositions/Field'
+import { FormActions } from '@ui/compositions/FormActions'
+import { FormDialog } from '@ui/compositions/FormDialog'
+import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
 
 /**
- * Add a credit grant, in a dialog.
+ * Add or edit a credit grant, in a dialog.
  *
- * Two choices bend the form: a *recurring* grant asks for the period it
- * refreshes on; a *duration* expiry asks how long the credits last. Everything
- * else is always shown. The rules — a recurring grant needs a period, a positive
- * number of credits — are the domain schema's, so what the dialog rejects an
- * agent-driven grant is held to as well.
+ * Create: a *recurring* grant asks for the period it refreshes on; a *duration*
+ * expiry asks how long the credits last. The rules are the domain schema's.
+ * Edit: a grant already applied to subscriptions cannot be re-priced, so only
+ * its name and end date change; the rest is shown as fixed.
  *
- * It emits a validated `CreateCreditGrant`; the page creates it (there is no
- * bulk grant endpoint, so one dialog makes one grant).
+ * It emits a validated `CreateCreditGrant` or `EditCreditGrant`; the page saves
+ * it (there is no bulk grant endpoint, so one dialog makes one grant).
  */
 export const CreditGrantDialogProvenance = provenance({
   source: 'composition',
-  composes: ['ui/dialog', 'ui/select', 'ui/input', 'ui/button'],
-  note: 'Add-credit-grant dialog; period and duration fields appear conditionally.',
+  composes: [
+    'compositions/form-dialog',
+    'compositions/field',
+    'compositions/form-actions',
+    'compositions/option-select',
+    'compositions/date-input',
+    'ui/input',
+  ],
+  note: 'Credit-grant dialog, create or edit; period and duration fields appear conditionally.',
 })
 
 export interface CreditGrantDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSubmit: (grant: CreateCreditGrant) => void
+  mode?: 'create' | 'edit'
+  onSubmit?: (grant: CreateCreditGrant) => void
+  /** Edit: the grant's current name and end date. */
+  defaultValue?: EditCreditGrant
+  onEditSubmit?: (edit: EditCreditGrant) => void
   isSubmitting?: boolean
   submitError?: string | null
 }
 
-export function CreditGrantDialog({
-  open,
-  onOpenChange,
-  onSubmit,
-  isSubmitting = false,
-  submitError = null,
-}: CreditGrantDialogProps) {
+export function CreditGrantDialog(props: CreditGrantDialogProps) {
+  const { open, onOpenChange, isSubmitting = false, submitError = null } = props
+  const editing = props.mode === 'edit' && props.defaultValue
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>Add credit grant</DialogTitle>
-          <DialogDescription>
-            Hand subscribers a balance of credits to spend against usage.
-          </DialogDescription>
-        </DialogHeader>
-        <CreditGrantFields
-          key={open ? 'open' : 'closed'}
+    <FormDialog
+      open={open}
+      onOpenChange={onOpenChange}
+      title={editing ? 'Edit credit grant' : 'Add credit grant'}
+      description={
+        editing
+          ? 'Rename the grant or change when it ends. Its credits and schedule are fixed.'
+          : 'Hand subscribers a balance of credits to spend against usage.'
+      }
+    >
+      {editing ? (
+        <CreditGrantEditFields
+          defaultValue={editing}
           isSubmitting={isSubmitting}
           submitError={submitError}
-          onSubmit={onSubmit}
+          onSubmit={(edit) => props.onEditSubmit?.(edit)}
           onCancel={() => onOpenChange(false)}
         />
-      </DialogContent>
-    </Dialog>
+      ) : (
+        <CreditGrantCreateFields
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+          onSubmit={(grant) => props.onSubmit?.(grant)}
+          onCancel={() => onOpenChange(false)}
+        />
+      )}
+    </FormDialog>
   )
 }
 
-interface FieldsProps {
+interface FieldsProps<T> {
   isSubmitting: boolean
   submitError: string | null
-  onSubmit: (grant: CreateCreditGrant) => void
+  onSubmit: (grant: T) => void
   onCancel: () => void
 }
 
-function CreditGrantFields({ isSubmitting, submitError, onSubmit, onCancel }: FieldsProps) {
+const messageOf = (errors: unknown, key: string): string | undefined =>
+  (errors as Record<string, { message?: string } | undefined>)[key]?.message
+
+const optionsOf = <T extends string>(values: T[], labels: Record<T, string>) =>
+  values.map((value) => ({ value, label: labels[value] }))
+
+const pad = (n: number) => String(n).padStart(2, '0')
+const toIso = (date: Date | undefined) =>
+  date ? `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}` : ''
+const endOfDay = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number)
+  return y && m && d ? new Date(y, m - 1, d, 23, 59, 59) : undefined
+}
+
+function CreditGrantEditFields({
+  defaultValue,
+  isSubmitting,
+  submitError,
+  onSubmit,
+  onCancel,
+}: FieldsProps<EditCreditGrant> & { defaultValue: EditCreditGrant }) {
+  const form = useForm<EditCreditGrant>({
+    resolver: standardSchemaResolver(editCreditGrantSchema) as Resolver<EditCreditGrant>,
+    defaultValues: defaultValue,
+    mode: 'onTouched',
+  })
+  const errors = form.formState.errors
+
+  return (
+    <form
+      onSubmit={form.handleSubmit((values) => onSubmit(values))}
+      noValidate
+      className="flex flex-col gap-4"
+    >
+      <Field label="Name" required error={errors.name?.message}>
+        {({ id, ...field }) => (
+          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+        )}
+      </Field>
+      <div className="max-w-xs">
+        <Field
+          label="End date"
+          hint="Optional. The grant stops issuing credits after this day."
+          error={errors.endDate?.message}
+        >
+          {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
+            <Controller
+              control={form.control}
+              name="endDate"
+              render={({ field }) => (
+                <DateInput
+                  id={id}
+                  value={toIso(field.value)}
+                  onValueChange={(iso) => field.onChange(iso ? endOfDay(iso) : undefined)}
+                  disabled={isSubmitting}
+                  aria-describedby={describedBy}
+                  aria-invalid={invalid}
+                />
+              )}
+            />
+          )}
+        </Field>
+      </div>
+      <FormActions
+        mode="edit"
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+        submitError={submitError}
+      />
+    </form>
+  )
+}
+
+function CreditGrantCreateFields({
+  isSubmitting,
+  submitError,
+  onSubmit,
+  onCancel,
+}: FieldsProps<CreateCreditGrant>) {
   const form = useForm<CreateCreditGrant>({
     resolver: standardSchemaResolver(createCreditGrantSchema) as Resolver<CreateCreditGrant>,
     defaultValues: emptyCreditGrant(),
@@ -129,27 +214,19 @@ function CreditGrantFields({ isSubmitting, submitError, onSubmit, onCancel }: Fi
             />
           )}
         </Field>
-        <Field
-          label="Credit type"
-          required
-        >
+        <Field label="Credit type" required>
           {({ id }) => (
             <Controller
               control={form.control}
               name="cadence"
               render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
-                  <SelectTrigger id={id}>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(CreditGrantCadence).map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {CREDIT_GRANT_CADENCE_LABEL[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <OptionSelect
+                  id={id}
+                  value={field.value}
+                  onValueChange={field.onChange}
+                  options={optionsOf(Object.values(CreditGrantCadence), CREDIT_GRANT_CADENCE_LABEL)}
+                  disabled={isSubmitting}
+                />
               )}
             />
           )}
@@ -157,28 +234,20 @@ function CreditGrantFields({ isSubmitting, submitError, onSubmit, onCancel }: Fi
       </div>
 
       {cadence === CreditGrantCadence.Recurring ? (
-        <Field label="Refreshes every" required error={(errors as { period?: { message?: string } }).period?.message}>
+        <Field label="Refreshes every" required error={messageOf(errors, 'period')}>
           {({ id }) => (
             <Controller
               control={form.control}
               name="period"
               render={({ field }) => (
-                <Select
+                <OptionSelect
+                  id={id}
                   value={field.value ?? ''}
                   onValueChange={field.onChange}
+                  options={optionsOf(Object.values(CreditGrantPeriod), CREDIT_GRANT_PERIOD_LABEL)}
+                  placeholder="Choose a period"
                   disabled={isSubmitting}
-                >
-                  <SelectTrigger id={id}>
-                    <SelectValue placeholder="Choose a period" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.values(CreditGrantPeriod).map((value) => (
-                      <SelectItem key={value} value={value}>
-                        {CREDIT_GRANT_PERIOD_LABEL[value]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                />
               )}
             />
           )}
@@ -191,18 +260,16 @@ function CreditGrantFields({ isSubmitting, submitError, onSubmit, onCancel }: Fi
             control={form.control}
             name="expirationType"
             render={({ field }) => (
-              <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
-                <SelectTrigger id={id}>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {Object.values(CreditGrantExpiryType).map((value) => (
-                    <SelectItem key={value} value={value}>
-                      {CREDIT_GRANT_EXPIRY_TYPE_LABEL[value]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <OptionSelect
+                id={id}
+                value={field.value}
+                onValueChange={field.onChange}
+                options={optionsOf(
+                  Object.values(CreditGrantExpiryType),
+                  CREDIT_GRANT_EXPIRY_TYPE_LABEL,
+                )}
+                disabled={isSubmitting}
+              />
             )}
           />
         )}
@@ -210,11 +277,7 @@ function CreditGrantFields({ isSubmitting, submitError, onSubmit, onCancel }: Fi
 
       {expirationType === CreditGrantExpiryType.Duration ? (
         <div className="grid grid-cols-2 gap-3">
-          <Field
-            label="Duration"
-            required
-            error={(errors as { expirationDuration?: { message?: string } }).expirationDuration?.message}
-          >
+          <Field label="Duration" required error={messageOf(errors, 'expirationDuration')}>
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -232,22 +295,16 @@ function CreditGrantFields({ isSubmitting, submitError, onSubmit, onCancel }: Fi
                 control={form.control}
                 name="expirationDurationUnit"
                 render={({ field }) => (
-                  <Select
+                  <OptionSelect
+                    id={id}
                     value={field.value ?? CreditGrantExpiryDurationUnit.Day}
                     onValueChange={field.onChange}
+                    options={optionsOf(
+                      Object.values(CreditGrantExpiryDurationUnit),
+                      CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
+                    )}
                     disabled={isSubmitting}
-                  >
-                    <SelectTrigger id={id}>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {Object.values(CreditGrantExpiryDurationUnit).map((value) => (
-                        <SelectItem key={value} value={value}>
-                          {CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL[value]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  />
                 )}
               />
             )}
@@ -259,7 +316,7 @@ function CreditGrantFields({ isSubmitting, submitError, onSubmit, onCancel }: Fi
         <Field
           label="Conversion rate"
           hint="Optional. 1 credit = this much currency."
-          error={(errors as { conversionRate?: { message?: string } }).conversionRate?.message}
+          error={messageOf(errors, 'conversionRate')}
         >
           {({ id, ...field }) => (
             <Input
@@ -286,20 +343,13 @@ function CreditGrantFields({ isSubmitting, submitError, onSubmit, onCancel }: Fi
         </Field>
       </div>
 
-      {submitError ? (
-        <p role="alert" className="text-sm text-destructive">
-          {submitError}
-        </p>
-      ) : null}
-
-      <div className="flex gap-2 border-t pt-4">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Adding…' : 'Add credit grant'}
-        </Button>
-        <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
-          Cancel
-        </Button>
-      </div>
+      <FormActions
+        mode="create"
+        noun="credit grant"
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+        submitError={submitError}
+      />
     </form>
   )
 }

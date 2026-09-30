@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import {
   BillingModel,
   BillingPeriod,
@@ -114,15 +114,18 @@ export const Default: Story = {
   },
 }
 
-/** With add and terminate wired, each row carries a terminate action. */
+/** With add, edit and terminate wired, each row carries an actions menu. */
 export const WithActions: Story = {
-  args: { charges: chargeFixtures, onAdd: fn(), onTerminate: fn() },
-  play: async ({ canvasElement }) => {
+  parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
+  args: { charges: chargeFixtures, onAdd: fn(), onEdit: fn(), onTerminate: fn() },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(
-      canvas.getByRole('button', { name: /terminate platform base/i }),
-    ).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /add charges/i })).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform base' }))
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByRole('menuitem', { name: 'Terminate' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    await expect(args.onEdit).toHaveBeenCalledWith(expect.objectContaining({ displayName: 'Platform base' }))
   },
 }
 

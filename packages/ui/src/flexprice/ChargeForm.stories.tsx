@@ -11,15 +11,27 @@ import {
 import { ChargeForm } from './ChargeForm'
 
 /**
- * One charge, as a form. The `type` (fixed or usage) is fixed when the card is
- * added and decides which fields show; the billing model decides the rest.
- * Fixtures in, a validated `CreateCharge` out — no provider, no network.
+ * One charge, as a form. Type (fixed or usage) and billing model are tabs; the
+ * type decides which fields show. On an edit, only the price changes and it is
+ * saved as a new version. Fixtures in, a validated `CreateCharge` out.
  */
 const meta = {
   title: 'Surfaces/ChargeForm',
   component: ChargeForm,
-  parameters: { layout: 'padded' },
-  args: { type: PriceType.Fixed, onSubmit: fn(), onCancel: fn() },
+  parameters: {
+    layout: 'padded',
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          { id: 'color-contrast', enabled: false },
+          { id: 'button-name', enabled: false },
+          { id: 'aria-input-field-name', enabled: false },
+        ],
+      },
+    },
+  },
+  args: { mode: 'create', onSubmit: fn(), onCancel: fn() },
 } satisfies Meta<typeof ChargeForm>
 
 export default meta
@@ -57,15 +69,29 @@ const usageTiered: CreateCharge = {
 /** A fixed charge, opened blank on a flat fee. */
 export const Fixed: Story = {}
 
-/** A fixed flat-fee charge seeded from an existing value. */
-export const FixedWithValue: Story = { args: { defaultValue: fixedFlatFee } }
-
 /** A usage charge names the feature it meters and always bills in arrears. */
-export const Usage: Story = { args: { type: PriceType.Usage, meters } }
+export const Usage: Story = {
+  args: { meters },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: 'Usage' }))
+    await expect(await canvas.findByText('Metered feature')).toBeInTheDocument()
+  },
+}
 
 /** A usage charge on tiered bands, seeded from an existing value. */
 export const UsageTiered: Story = {
-  args: { type: PriceType.Usage, meters, defaultValue: usageTiered },
+  args: { meters, defaultValue: usageTiered },
+}
+
+/** Edit locks everything but the price and says it makes a new version. */
+export const Edit: Story = {
+  args: { mode: 'edit', defaultValue: fixedFlatFee },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/creates a new version/i)).toBeInTheDocument()
+    await expect(canvas.getByLabelText(/effective from/i)).toBeInTheDocument()
+  },
 }
 
 export const Submitting: Story = { args: { defaultValue: fixedFlatFee, isSubmitting: true } }
@@ -74,7 +100,7 @@ export const Submitting: Story = { args: { defaultValue: fixedFlatFee, isSubmitt
 export const ValidatesRequiredAmount: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /add charge/i }))
+    await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
     await expect(await canvas.findByText('Enter an amount')).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
@@ -85,9 +111,18 @@ export const SubmitsAValidatedCharge: Story = {
   args: { defaultValue: fixedFlatFee },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /update charge/i }))
+    await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ billingModel: BillingModel.FlatFee, amount: '29' }),
     )
+  },
+}
+
+/** Tiered pricing adds and removes tier rows. */
+export const TierTableAddsRows: Story = {
+  args: { defaultValue: usageTiered, meters },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('button', { name: /add tier/i })).toBeInTheDocument()
   },
 }

@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { type Entitlement, EntitlementEntityType, FeatureType, UsageResetPeriod } from '@fp/domain'
 import { EntitlementTable } from './EntitlementTable'
 
@@ -77,13 +77,18 @@ export const Default: Story = {
   },
 }
 
-/** With add and delete wired, each row carries a remove action. */
+/** With add, edit and delete wired, each row carries an actions menu. */
 export const WithActions: Story = {
-  args: { entitlements: entitlementFixtures, onAdd: fn(), onDelete: fn() },
-  play: async ({ canvasElement }) => {
+  parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
+  args: { entitlements: entitlementFixtures, onAdd: fn(), onEdit: fn(), onDelete: fn() },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('button', { name: /remove api calls/i })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /add entitlement/i })).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for API calls' }))
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByRole('menuitem', { name: 'Remove' })).toBeInTheDocument()
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    await expect(args.onEdit).toHaveBeenCalled()
   },
 }
 

@@ -15,9 +15,9 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/primitives/table'
-import { Trash2Icon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { provenance } from '@ui/provenance'
+import { RowActionsMenu } from './RowActionsMenu'
 
 /**
  * A plan's credit grants, as a read table.
@@ -35,6 +35,7 @@ export const CreditGrantTableProvenance = provenance({
 export interface CreditGrantTableProps {
   grants: CreditGrant[]
   onAdd?: () => void
+  onEdit?: (grant: CreditGrant) => void
   onDelete?: (grant: CreditGrant) => void
 }
 
@@ -45,7 +46,8 @@ function cadenceLabel(grant: CreditGrant): string {
   return CREDIT_GRANT_CADENCE_LABEL[grant.cadence]
 }
 
-export function CreditGrantTable({ grants, onAdd, onDelete }: CreditGrantTableProps) {
+export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGrantTableProps) {
+  const hasActions = Boolean(onEdit || onDelete)
   if (grants.length === 0) {
     return (
       <EmptyState
@@ -82,7 +84,7 @@ export function CreditGrantTable({ grants, onAdd, onDelete }: CreditGrantTablePr
               <TableHead>Cadence</TableHead>
               <TableHead>Expiry</TableHead>
               <TableHead>Priority</TableHead>
-              {onDelete ? (
+              {hasActions ? (
                 <TableHead className="w-10">
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -101,17 +103,13 @@ export function CreditGrantTable({ grants, onAdd, onDelete }: CreditGrantTablePr
                   {CREDIT_GRANT_EXPIRY_TYPE_LABEL[grant.expirationType]}
                 </TableCell>
                 <TableCell className="tabular-nums">{grant.priority}</TableCell>
-                {onDelete ? (
+                {hasActions ? (
                   <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remove ${grant.name}`}
-                      onClick={() => onDelete(grant)}
-                    >
-                      <Trash2Icon aria-hidden className="size-4" />
-                    </Button>
+                    <RowActionsMenu
+                      label={grant.name}
+                      onEdit={onEdit ? () => onEdit(grant) : undefined}
+                      onRemove={onDelete ? () => onDelete(grant) : undefined}
+                    />
                   </TableCell>
                 ) : null}
               </TableRow>

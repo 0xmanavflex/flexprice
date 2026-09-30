@@ -6,6 +6,8 @@ import {
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreditGrant,
+  type EditCreditGrant,
+  type EditEntitlement,
   type Entitlement,
   type Money,
   BILLING_PERIOD_LABEL,
@@ -15,6 +17,8 @@ import {
   FeatureType,
   PriceEntityType,
   compareMoney,
+  creditGrantToEdit,
+  entitlementToEdit,
   formatMoney,
   moneyOr,
 } from '@fp/domain'
@@ -31,6 +35,8 @@ import {
   usePrices,
   useTerminatePrice,
   useUpdateAddon,
+  useUpdateCreditGrant,
+  useUpdateEntitlement,
 } from '@fp/query'
 import {
   AddonEditorDialog,
@@ -38,7 +44,7 @@ import {
   ChargeTable,
   CreditGrantDialog,
   CreditGrantTable,
-  EntitlementDrawer,
+  EntitlementDialog,
   EntitlementTable,
   type FeatureOption,
 } from '@fp/ui/flexprice'
@@ -263,20 +269,23 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
   const features = useFeatures(DEFAULT_FEATURE_QUERY)
   const create = useCreateBulkEntitlements()
+  const updateEntitlement = useUpdateEntitlement()
   const remove = useDeleteEntitlement()
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<Entitlement | null>(null)
   const [target, setTarget] = useState<Entitlement | null>(null)
 
   // Only features not already entitled can be added — a feature is granted once.
   const granted = new Set((entitlements.data ?? []).map((e) => e.featureId))
-  const options: FeatureOption[] = (features.data?.features ?? [])
-    .filter((f) => !granted.has(f.id))
-    .map((f) => ({
-      id: f.id,
-      name: f.name,
-      type: f.type,
-      ...(f.type === FeatureType.Metered && f.unitPlural ? { unit: f.unitPlural } : {}),
-    }))
+  const toOption = (f: NonNullable<typeof features.data>['features'][number]): FeatureOption => ({
+    id: f.id,
+    name: f.name,
+    type: f.type,
+    ...(f.type === FeatureType.Metered && f.unitPlural ? { unit: f.unitPlural } : {}),
+  })
+  const allFeatures = features.data?.features ?? []
+  const options = allFeatures.filter((f) => !granted.has(f.id)).map(toOption)
+  const editingFeature = editing ? allFeatures.find((f) => f.id === editing.featureId) : undefined
 
   if (entitlements.isPending) return <LoadingRows />
 
@@ -285,6 +294,11 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
       { entityType: EntitlementEntityType.Addon, entityId: addonId, entitlements: [draft] },
       { onSuccess: () => setAdding(false) },
     )
+  }
+
+  const submitEdit = (draft: EditEntitlement) => {
+    if (!editing) return
+    updateEntitlement.mutate({ id: editing.id, draft }, { onSuccess: () => setEditing(null) })
   }
 
   const close = () => {
@@ -297,15 +311,41 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
       <EntitlementTable
         entitlements={entitlements.data ?? []}
         onAdd={() => setAdding(true)}
+        onEdit={(entitlement) => setEditing(entitlement)}
         onDelete={(entitlement) => setTarget(entitlement)}
       />
-      <EntitlementDrawer
+      <EntitlementDialog
         open={adding}
         onOpenChange={setAdding}
+        mode="create"
         features={options}
         onSubmit={submit}
         isSubmitting={create.isPending}
         submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
+      />
+      <EntitlementDialog
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null)
+        }}
+        mode="edit"
+        {...(editing
+          ? {
+              editing: {
+                feature: editingFeature
+                  ? toOption(editingFeature)
+                  : {
+                      id: editing.featureId,
+                      name: editing.featureName ?? 'Feature',
+                      type: editing.featureType,
+                    },
+                defaultValue: entitlementToEdit(editing),
+              },
+            }
+          : {})}
+        onEditSubmit={submitEdit}
+        isSubmitting={updateEntitlement.isPending}
+        submitError={updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null}
       />
       <ConfirmDialog
         open={target !== null}
@@ -330,8 +370,10 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
 function CreditGrantsTab({ addonId }: { addonId: string }) {
   const grants = useCreditGrants(CreditGrantScope.Addon, addonId)
   const create = useCreateCreditGrant()
+  const updateGrant = useUpdateCreditGrant()
   const remove = useDeleteCreditGrant()
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<CreditGrant | null>(null)
   const [target, setTarget] = useState<CreditGrant | null>(null)
 
   if (grants.isPending) return <LoadingRows />
@@ -341,6 +383,11 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
       { scope: CreditGrantScope.Addon, id: addonId, grant },
       { onSuccess: () => setAdding(false) },
     )
+  }
+
+  const submitEdit = (draft: EditCreditGrant) => {
+    if (!editing) return
+    updateGrant.mutate({ id: editing.id, draft }, { onSuccess: () => setEditing(null) })
   }
 
   const close = () => {
@@ -353,6 +400,7 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
       <CreditGrantTable
         grants={grants.data ?? []}
         onAdd={() => setAdding(true)}
+        onEdit={(grant) => setEditing(grant)}
         onDelete={(grant) => setTarget(grant)}
       />
       <CreditGrantDialog
@@ -361,6 +409,17 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
         onSubmit={submit}
         isSubmitting={create.isPending}
         submitError={create.isError ? 'Could not create the grant. Try again.' : null}
+      />
+      <CreditGrantDialog
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null)
+        }}
+        mode="edit"
+        {...(editing ? { defaultValue: creditGrantToEdit(editing) } : {})}
+        onEditSubmit={submitEdit}
+        isSubmitting={updateGrant.isPending}
+        submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
       />
       <ConfirmDialog
         open={target !== null}

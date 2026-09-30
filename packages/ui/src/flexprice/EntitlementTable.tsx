@@ -13,9 +13,9 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/primitives/table'
-import { Trash2Icon } from 'lucide-react'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { provenance } from '@ui/provenance'
+import { RowActionsMenu } from './RowActionsMenu'
 
 /**
  * A plan's entitlements, as a read table.
@@ -33,6 +33,7 @@ export const EntitlementTableProvenance = provenance({
 export interface EntitlementTableProps {
   entitlements: Entitlement[]
   onAdd?: () => void
+  onEdit?: (entitlement: Entitlement) => void
   onDelete?: (entitlement: Entitlement) => void
 }
 
@@ -59,7 +60,8 @@ function valueOf(entitlement: Entitlement): string {
   }
 }
 
-export function EntitlementTable({ entitlements, onAdd, onDelete }: EntitlementTableProps) {
+export function EntitlementTable({ entitlements, onAdd, onEdit, onDelete }: EntitlementTableProps) {
+  const hasActions = Boolean(onEdit || onDelete)
   if (entitlements.length === 0) {
     return (
       <EmptyState
@@ -95,7 +97,7 @@ export function EntitlementTable({ entitlements, onAdd, onDelete }: EntitlementT
               <TableHead>Type</TableHead>
               <TableHead>Usage reset</TableHead>
               <TableHead>Value</TableHead>
-              {onDelete ? (
+              {hasActions ? (
                 <TableHead className="w-10">
                   <span className="sr-only">Actions</span>
                 </TableHead>
@@ -117,17 +119,13 @@ export function EntitlementTable({ entitlements, onAdd, onDelete }: EntitlementT
                     : '—'}
                 </TableCell>
                 <TableCell className="tabular-nums">{valueOf(entitlement)}</TableCell>
-                {onDelete ? (
+                {hasActions ? (
                   <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remove ${entitlement.featureName ?? 'entitlement'}`}
-                      onClick={() => onDelete(entitlement)}
-                    >
-                      <Trash2Icon aria-hidden className="size-4" />
-                    </Button>
+                    <RowActionsMenu
+                      label={entitlement.featureName ?? 'entitlement'}
+                      onEdit={onEdit ? () => onEdit(entitlement) : undefined}
+                      onRemove={onDelete ? () => onDelete(entitlement) : undefined}
+                    />
                   </TableCell>
                 ) : null}
               </TableRow>

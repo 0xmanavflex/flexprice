@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import {
+  type CreateEntitlement,
+  type EditEntitlement,
+  type EditCreditGrant,
+  type CreateCreditGrant,
   BILLING_PERIOD_LABEL,
   type BillingPeriod,
   BillingModel,
   type Charge,
   type CreateCharge,
-  type CreateCreditGrant,
-  type CreateEntitlement,
   type CreatePlan,
   type CreditGrant,
   CreditGrantScope,
   DEFAULT_FEATURE_QUERY,
+  DEFAULT_PRICE_UNIT_QUERY,
   type Entitlement,
   EntitlementEntityType,
   FeatureType,
@@ -19,16 +22,20 @@ import {
   PriceEntityType,
   PriceType,
   PlanStatus,
-  TierMode,
+  PriceUnitStatus,
+  chargeToDraft,
   compareMoney,
+  creditGrantToEdit,
+  entitlementToEdit,
   formatMoney,
   money,
 } from '@fp/domain'
 import {
   useArchivePlan,
   useClonePlan,
-  useCreateCreditGrant,
   useCreateBulkEntitlements,
+  useCreateBulkPrices,
+  useCreateCreditGrant,
   useCreditGrants,
   useDeleteCreditGrant,
   useDeleteEntitlement,
@@ -36,18 +43,26 @@ import {
   useFeatures,
   usePlan,
   usePlanSubscriptions,
+  usePriceUnits,
   usePrices,
   useSyncPlanPrices,
   useTerminatePrice,
+  useUpdateCreditGrant,
+  useUpdateEntitlement,
   useUpdatePlan,
+  useUpdatePrice,
+  toUpdatePriceRequest,
 } from '@fp/query'
 import {
+  ChargeEditorDialog,
   ChargeTable,
   CreditGrantDialog,
   CreditGrantTable,
-  EntitlementDrawer,
+  EntitlementDialog,
   type FeatureOption,
   EntitlementTable,
+  type MeterOption,
+  type PriceUnitOption,
   PlanEditorDialog,
   PlanPreviewCard,
 } from '@fp/ui/flexprice'
@@ -107,8 +122,6 @@ export interface PlanDetailPageProps {
   planId: string
   tab: PlanTab
   onTabChange: (tab: PlanTab) => void
-  /** Opens the two-pane charges builder for this plan. */
-  onOpenCharges: () => void
   /** After archiving or duplicating, where to go. */
   onArchived: () => void
   onDuplicated: (planId: string) => void
@@ -153,48 +166,10 @@ function startingPrice(charges: Charge[]): { money: Money; period: BillingPeriod
   return { money: bestMoney, period: best.billingPeriod }
 }
 
-/**
- * A saved `Charge` as the draft shape the preview card reads.
- *
- * The preview is driven from `CreateCharge[]` — the same input the editor feeds
- * it — so the plan's live charges are mapped back to that shape here. Only the
- * fields the preview uses are carried; the model discriminant decides the rest.
- */
-function toDraftCharge(charge: Charge): CreateCharge {
-  const base = {
-    type: charge.type,
-    currency: (charge.currency || 'USD').toUpperCase(),
-    billingPeriod: charge.billingPeriod,
-    invoiceCadence: charge.invoiceCadence,
-    ...(charge.meterId ? { meterId: charge.meterId } : {}),
-    ...(charge.displayName ? { displayName: charge.displayName } : {}),
-  }
-
-  switch (charge.billingModel) {
-    case BillingModel.Package:
-      return {
-        ...base,
-        billingModel: BillingModel.Package,
-        amount: charge.amount || '0',
-        divideBy: charge.transformQuantity?.divideBy ?? 1,
-      }
-    case BillingModel.Tiered:
-      return {
-        ...base,
-        billingModel: BillingModel.Tiered,
-        tierMode: charge.tierMode ?? TierMode.Volume,
-        tiers: charge.tiers,
-      }
-    case BillingModel.FlatFee:
-      return { ...base, billingModel: BillingModel.FlatFee, amount: charge.amount || '0' }
-  }
-}
-
 export function PlanDetailPage({
   planId,
   tab,
   onTabChange,
-  onOpenCharges,
   onArchived,
   onDuplicated,
   onNavigateToList,
@@ -245,7 +220,7 @@ export function PlanDetailPage({
   // preview reads, so the customer-facing price stays visible on every tab — it
   // is the plan's pricing, relevant whether you are on Entitlements or Overview.
   const chargeRows = charges.data ?? []
-  const previewCharges = chargeRows.map(toDraftCharge)
+  const previewCharges = chargeRows.map(chargeToDraft)
   const meterName = (id: string) => chargeRows.find((c) => c.meterId === id)?.meterName ?? id
 
   return (
@@ -324,9 +299,7 @@ export function PlanDetailPage({
             />
 
             <div className="pt-5">
-              {tab === 'overview' ? (
-                <OverviewTab planId={planId} onOpenCharges={onOpenCharges} />
-              ) : null}
+              {tab === 'overview' ? <OverviewTab planId={planId} /> : null}
               {tab === 'entitlements' ? <EntitlementsTab planId={planId} /> : null}
               {tab === 'credit-grants' ? <CreditGrantsTab planId={planId} /> : null}
               {tab === 'information' ? (
@@ -452,34 +425,82 @@ function buildMetrics({
 /**
  * Overview — the charges the plan bills.
  *
- * The charges table (add opens the standalone charge builder, terminate ends a
- * charge behind a confirm). The live customer-facing preview is no longer inline
- * here: it lives in the detail page's persistent right rail, visible on every tab.
+ * Add opens the charge dialog empty; a row's Edit opens it on that charge, saved
+ * as a new price version; terminate ends a charge behind a confirm. The live
+ * customer-facing preview lives in the detail page's persistent right rail.
  */
-function OverviewTab({
-  planId,
-  onOpenCharges,
-}: {
-  planId: string
-  onOpenCharges: () => void
-}) {
+function OverviewTab({ planId }: { planId: string }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
+  const features = useFeatures(DEFAULT_FEATURE_QUERY)
+  const priceUnits = usePriceUnits({ ...DEFAULT_PRICE_UNIT_QUERY, pageSize: 100 })
+  const create = useCreateBulkPrices()
+  const updatePrice = useUpdatePrice()
   const terminate = useTerminatePrice()
+  const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<Charge | null>(null)
   const [terminating, setTerminating] = useState<Charge | null>(null)
+
+  // A usage charge bills against a meter; only metered features have one.
+  const meters: MeterOption[] = (features.data?.features ?? [])
+    .filter((f) => f.type === FeatureType.Metered && f.meterId)
+    .map((f) => ({ id: f.meterId as string, name: f.name }))
+  const units: PriceUnitOption[] = (priceUnits.data?.priceUnits ?? [])
+    .filter((unit) => unit.status === PriceUnitStatus.Published)
+    .map((unit) => ({ code: unit.code, name: unit.name, baseCurrency: unit.baseCurrency }))
 
   if (charges.isPending) return <LoadingRows />
 
   const rows = charges.data ?? []
+
+  const submitCreate = (draft: CreateCharge) => {
+    create.mutate(
+      { entityType: PriceEntityType.Plan, entityId: planId, charges: [draft] },
+      { onSuccess: () => setAdding(false) },
+    )
+  }
+
+  const submitEdit = (draft: CreateCharge) => {
+    if (!editing) return
+    updatePrice.mutate(
+      { id: editing.id, body: toUpdatePriceRequest(draft) },
+      { onSuccess: () => setEditing(null) },
+    )
+  }
 
   return (
     <>
       <Section title="Charges" description="What this plan bills, and how.">
         <ChargeTable
           charges={rows}
-          onAdd={onOpenCharges}
+          onAdd={() => setAdding(true)}
+          onEdit={(charge) => setEditing(charge)}
           onTerminate={(charge) => setTerminating(charge)}
         />
       </Section>
+
+      <ChargeEditorDialog
+        open={adding}
+        onOpenChange={setAdding}
+        mode="create"
+        meters={meters}
+        priceUnits={units}
+        onSubmit={submitCreate}
+        isSubmitting={create.isPending}
+        submitError={create.isError ? 'The charge was rejected. Check it and try again.' : null}
+      />
+      <ChargeEditorDialog
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null)
+        }}
+        mode="edit"
+        {...(editing ? { defaultValue: chargeToDraft(editing) } : {})}
+        meters={meters}
+        priceUnits={units}
+        onSubmit={submitEdit}
+        isSubmitting={updatePrice.isPending}
+        submitError={updatePrice.isError ? 'Could not save the price. Try again.' : null}
+      />
 
       <ConfirmDialog
         open={terminating !== null}
@@ -510,20 +531,25 @@ function EntitlementsTab({ planId }: { planId: string }) {
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const features = useFeatures(DEFAULT_FEATURE_QUERY)
   const create = useCreateBulkEntitlements()
+  const updateEntitlement = useUpdateEntitlement()
   const remove = useDeleteEntitlement()
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<Entitlement | null>(null)
   const [removing, setRemoving] = useState<Entitlement | null>(null)
 
   // Only features not already entitled can be added — a feature is granted once.
   const granted = new Set((entitlements.data ?? []).map((e) => e.featureId))
-  const options: FeatureOption[] = (features.data?.features ?? [])
-    .filter((f) => !granted.has(f.id))
-    .map((f) => ({
-      id: f.id,
-      name: f.name,
-      type: f.type,
-      ...(f.type === FeatureType.Metered && f.unitPlural ? { unit: f.unitPlural } : {}),
-    }))
+  const toOption = (f: NonNullable<typeof features.data>['features'][number]): FeatureOption => ({
+    id: f.id,
+    name: f.name,
+    type: f.type,
+    ...(f.type === FeatureType.Metered && f.unitPlural ? { unit: f.unitPlural } : {}),
+  })
+  const allFeatures = features.data?.features ?? []
+  const options = allFeatures.filter((f) => !granted.has(f.id)).map(toOption)
+  const editingFeature = editing
+    ? allFeatures.find((f) => f.id === editing.featureId)
+    : undefined
 
   if (entitlements.isPending) return <LoadingRows />
 
@@ -534,20 +560,47 @@ function EntitlementsTab({ planId }: { planId: string }) {
     )
   }
 
+  const submitEdit = (draft: EditEntitlement) => {
+    if (!editing) return
+    updateEntitlement.mutate({ id: editing.id, draft }, { onSuccess: () => setEditing(null) })
+  }
+
   return (
     <>
       <EntitlementTable
         entitlements={entitlements.data ?? []}
         onAdd={() => setAdding(true)}
+        onEdit={(entitlement) => setEditing(entitlement)}
         onDelete={(entitlement) => setRemoving(entitlement)}
       />
-      <EntitlementDrawer
+      <EntitlementDialog
         open={adding}
         onOpenChange={setAdding}
+        mode="create"
         features={options}
         onSubmit={submit}
         isSubmitting={create.isPending}
         submitError={create.isError ? 'Could not add the entitlement. Try again.' : null}
+      />
+      <EntitlementDialog
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null)
+        }}
+        mode="edit"
+        {...(editing
+          ? {
+              editing: {
+                feature: editingFeature
+                  ? toOption(editingFeature)
+                  : { id: editing.featureId, name: editing.featureName ?? 'Feature', type: editing.featureType },
+                defaultValue: entitlementToEdit(editing),
+              },
+            }
+          : {})}
+        onEditSubmit={submitEdit}
+        isSubmitting={updateEntitlement.isPending}
+        submitError={updateEntitlement.isError ? 'Could not save the entitlement. Try again.' : null}
       />
       <ConfirmDialog
         open={removing !== null}
@@ -576,8 +629,10 @@ function EntitlementsTab({ planId }: { planId: string }) {
 function CreditGrantsTab({ planId }: { planId: string }) {
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
   const create = useCreateCreditGrant()
+  const updateGrant = useUpdateCreditGrant()
   const remove = useDeleteCreditGrant()
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<CreditGrant | null>(null)
   const [removing, setRemoving] = useState<CreditGrant | null>(null)
 
   if (grants.isPending) return <LoadingRows />
@@ -589,11 +644,17 @@ function CreditGrantsTab({ planId }: { planId: string }) {
     )
   }
 
+  const submitEdit = (draft: EditCreditGrant) => {
+    if (!editing) return
+    updateGrant.mutate({ id: editing.id, draft }, { onSuccess: () => setEditing(null) })
+  }
+
   return (
     <>
       <CreditGrantTable
         grants={grants.data ?? []}
         onAdd={() => setAdding(true)}
+        onEdit={(grant) => setEditing(grant)}
         onDelete={(grant) => setRemoving(grant)}
       />
       <CreditGrantDialog
@@ -602,6 +663,17 @@ function CreditGrantsTab({ planId }: { planId: string }) {
         onSubmit={submit}
         isSubmitting={create.isPending}
         submitError={create.isError ? 'Could not create the grant. Try again.' : null}
+      />
+      <CreditGrantDialog
+        open={editing !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditing(null)
+        }}
+        mode="edit"
+        {...(editing ? { defaultValue: creditGrantToEdit(editing) } : {})}
+        onEditSubmit={submitEdit}
+        isSubmitting={updateGrant.isPending}
+        submitError={updateGrant.isError ? 'Could not save the grant. Try again.' : null}
       />
       <ConfirmDialog
         open={removing !== null}

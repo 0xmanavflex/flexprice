@@ -50,6 +50,9 @@ export interface ChargeWire {
   lookupKey?: string | undefined
   description?: string | undefined
   displayName?: string | undefined
+  trialPeriodDays?: number | undefined
+  priceUnitType?: string | undefined
+  priceUnitConfig?: { priceUnit?: string } | undefined
   createdAt?: Date | undefined
 }
 
@@ -120,6 +123,10 @@ export function toCharge(wire: ChargeWire): Charge {
     lookupKey: wire.lookupKey ?? '',
     description: wire.description ?? '',
     displayName: wire.displayName ?? '',
+    ...(wire.trialPeriodDays ? { trialPeriodDays: wire.trialPeriodDays } : {}),
+    ...(wire.priceUnitType === 'CUSTOM' && wire.priceUnitConfig?.priceUnit
+      ? { priceUnit: wire.priceUnitConfig.priceUnit }
+      : {}),
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -137,6 +144,7 @@ export function toChargeRequest(
   entityType: PriceEntityType,
   entityId: string,
 ): Record<string, unknown> {
+  const custom = draft.priceUnit ? draft.priceUnit : null
   const common: Record<string, unknown> = {
     type: draft.type,
     billingModel: draft.billingModel,
@@ -144,31 +152,82 @@ export function toChargeRequest(
     billingPeriod: draft.billingPeriod,
     billingPeriodCount: 1,
     invoiceCadence: draft.invoiceCadence,
-    priceUnitType: 'FIAT',
+    priceUnitType: custom ? 'CUSTOM' : 'FIAT',
     entityType,
     entityId,
     ...(draft.displayName ? { displayName: draft.displayName } : {}),
     ...(draft.type === PriceType.Usage && draft.meterId ? { meterId: draft.meterId } : {}),
+    ...(draft.type === PriceType.Fixed && draft.trialPeriodDays
+      ? { trialPeriodDays: draft.trialPeriodDays }
+      : {}),
   }
+  const tiersOf = (tiers: Tier[]) =>
+    tiers.map((tier) => ({
+      upTo: tier.upTo,
+      unitAmount: tier.unitAmount,
+      flatAmount: tier.flatAmount ?? '0',
+    }))
 
   switch (draft.billingModel) {
     case BillingModel.FlatFee:
-      return { ...common, amount: draft.amount }
+      return custom
+        ? { ...common, priceUnitConfig: { priceUnit: custom, amount: draft.amount } }
+        : { ...common, amount: draft.amount }
     case BillingModel.Package:
       return {
         ...common,
-        amount: draft.amount,
+        ...(custom
+          ? { priceUnitConfig: { priceUnit: custom, amount: draft.amount } }
+          : { amount: draft.amount }),
         transformQuantity: { divideBy: draft.divideBy },
       }
     case BillingModel.Tiered:
       return {
         ...common,
         tierMode: draft.tierMode,
-        tiers: draft.tiers.map((tier) => ({
-          upTo: tier.upTo,
-          unitAmount: tier.unitAmount,
-          flatAmount: tier.flatAmount ?? '0',
-        })),
+        ...(custom
+          ? { priceUnitConfig: { priceUnit: custom, priceUnitTiers: tiersOf(draft.tiers) } }
+          : { tiers: tiersOf(draft.tiers) }),
+      }
+  }
+}
+
+/**
+ * A charge edit, as an `UpdatePriceRequest`.
+ *
+ * Only the price itself moves: the amount or bands, the model, the display name.
+ * Currency, period, meter and cadence are fixed once a price exists, so they are
+ * never sent. `effectiveFrom` is what makes the change a new *version* — the old
+ * price keeps billing until that date rather than being rewritten in place.
+ */
+export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknown> {
+  const custom = Boolean(draft.priceUnit)
+  const common: Record<string, unknown> = {
+    billingModel: draft.billingModel,
+    ...(draft.displayName ? { displayName: draft.displayName } : {}),
+    ...(draft.effectiveFrom ? { effectiveFrom: `${draft.effectiveFrom}T00:00:00Z` } : {}),
+  }
+  const tiersOf = (tiers: Tier[]) =>
+    tiers.map((tier) => ({
+      upTo: tier.upTo,
+      unitAmount: tier.unitAmount,
+      flatAmount: tier.flatAmount ?? '0',
+    }))
+
+  switch (draft.billingModel) {
+    case BillingModel.FlatFee:
+      return { ...common, ...(custom ? { priceUnitAmount: draft.amount } : { amount: draft.amount }) }
+    case BillingModel.Package:
+      return {
+        ...common,
+        ...(custom ? { priceUnitAmount: draft.amount } : { amount: draft.amount }),
+        transformQuantity: { divideBy: draft.divideBy },
+      }
+    case BillingModel.Tiered:
+      return {
+        ...common,
+        tierMode: draft.tierMode,
+        ...(custom ? { priceUnitTiers: tiersOf(draft.tiers) } : { tiers: tiersOf(draft.tiers) }),
       }
   }
 }
@@ -236,7 +295,10 @@ export function useCreateBulkPrices() {
   })
 }
 
-/** Update one charge's amount or model in place. */
+/**
+ * Update one charge. The change is a new version of the price from
+ * `effectiveFrom` (or from now), not an in-place rewrite of history.
+ */
 export function useUpdatePrice() {
   const client = useFlexprice()
   const queryClient = useQueryClient()

@@ -1,4 +1,3 @@
-import { useEffect } from 'react'
 import { Controller, useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
@@ -9,6 +8,7 @@ import {
   type CreateCharge,
   INVOICE_CADENCE_LABEL,
   InvoiceCadence,
+  PRICE_TYPE_LABEL,
   PriceType,
   type Tier,
   TIER_MODE_LABEL,
@@ -16,44 +16,48 @@ import {
   createChargeSchema,
   emptyCharge,
 } from '@fp/domain'
-import { Button } from '@ui/primitives/button'
 import { Input } from '@ui/primitives/input'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@ui/primitives/select'
-import {
-  NumberField,
-  NumberFieldDecrement,
-  NumberFieldGroup,
-  NumberFieldIncrement,
-  NumberFieldInput,
-} from '@ui/components/reui/number-field'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/primitives/tabs'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
+import { DateInput } from '@ui/compositions/DateInput'
 import { Field } from '@ui/compositions/Field'
+import { FormActions } from '@ui/compositions/FormActions'
+import { OptionCombobox } from '@ui/compositions/OptionCombobox'
+import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
 import { TierTable, type TierRowError } from './TierTable'
 
 /**
- * One charge, as a form.
+ * One charge (a price), as a form — create or edit.
  *
- * The Fixed and Usage variants of V1's charge builder, unified: a card's `type`
- * is fixed when it is added, and the form shows exactly the fields that type
- * needs — a usage charge names the feature it meters and always bills in
- * arrears; a fixed charge chooses its invoice cadence. Everything else is
- * shared, so the two do not drift into two half-maintained forms.
+ * Fixed and usage are one form: the type tab decides which fields exist — a
+ * usage charge names the meter it bills and always bills in arrears; a fixed
+ * charge chooses its invoice cadence and may carry a free trial. The billing
+ * model tabs (flat fee, package, tiered) each show only their own fields.
  *
- * Like `PriceOverrideForm`, it holds no state: `react-hook-form` owns the values
- * and `createChargeSchema` owns the rules, so switching billing model resets to
- * a structurally valid shape rather than leaving the previous model's fields
- * behind. It emits a validated `CreateCharge`; it never touches `@fp/query`.
+ * On an edit the API lets only the price itself change — amount or bands, model,
+ * display name. Currency, period, meter, cadence and price unit are shown but
+ * locked, and the change is saved as a **new version** from an `Effective from`
+ * date, which the form says plainly.
+ *
+ * `react-hook-form` owns the values and `createChargeSchema` the rules. Switching
+ * billing model or type resets to a structurally valid shape rather than leaving
+ * the previous one's fields behind. It emits a validated `CreateCharge`; it never
+ * touches `@fp/query`.
  */
 export const ChargeFormProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/number-field', 'ui/select', 'ui/input', 'ui/button'],
-  note: 'RHF + the domain charge schema; a single form for the fixed and usage variants.',
+  composes: [
+    'ui/tabs',
+    'compositions/field',
+    'compositions/form-actions',
+    'compositions/option-select',
+    'compositions/option-combobox',
+    'compositions/date-input',
+    '@reui/alert',
+    'ui/input',
+  ],
+  note: 'RHF + the domain charge schema; type and billing model as stock Tabs, tier table for banded pricing.',
 })
 
 /** A metered feature the usage variant can charge against. */
@@ -62,21 +66,31 @@ export interface MeterOption {
   name: string
 }
 
+/** A custom price unit a charge can be denominated in instead of a currency. */
+export interface PriceUnitOption {
+  code: string
+  name: string
+  /** The currency the unit converts into; the charge's currency follows it. */
+  baseCurrency: string
+}
+
 export interface ChargeFormProps {
-  /** Fixed once the card is added — it decides which fields show. */
-  type: PriceType
+  mode: 'create' | 'edit'
   defaultValue?: CreateCharge
   /** The metered features a usage charge may bill against. */
   meters?: MeterOption[]
+  priceUnits?: PriceUnitOption[]
   currencies?: string[]
   onSubmit: (charge: CreateCharge) => void
   onCancel?: () => void
   isSubmitting?: boolean
+  submitError?: string | null
 }
 
 const BILLING_MODELS = [BillingModel.FlatFee, BillingModel.Package, BillingModel.Tiered] as const
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
-const DEFAULT_CURRENCIES = ['USD', 'EUR', 'GBP']
+const DEFAULT_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR']
+const FIAT = 'FIAT'
 
 /** Fixed charges can be one-time; usage cannot — you cannot meter a one-off. */
 const FIXED_PERIODS = [
@@ -90,44 +104,67 @@ const FIXED_PERIODS = [
 ] as const
 const USAGE_PERIODS = FIXED_PERIODS.filter((p) => p !== BillingPeriod.OneTime)
 
+const periodOptions = (periods: readonly BillingPeriod[]) =>
+  periods.map((period) => ({ value: period, label: BILLING_PERIOD_LABEL[period] }))
+
+const messageOf = (errors: unknown, key: string): string | undefined =>
+  (errors as Record<string, { message?: string } | undefined>)[key]?.message
+
 export function ChargeForm({
-  type,
+  mode,
   defaultValue,
   meters = [],
+  priceUnits = [],
   currencies = DEFAULT_CURRENCIES,
   onSubmit,
   onCancel,
   isSubmitting = false,
+  submitError = null,
 }: ChargeFormProps) {
+  const isEdit = mode === 'edit'
   const form = useForm<CreateCharge>({
     resolver: standardSchemaResolver(createChargeSchema) as Resolver<CreateCharge>,
-    defaultValues: defaultValue ?? emptyCharge(type, BillingModel.FlatFee),
+    defaultValues: defaultValue ?? emptyCharge(PriceType.Fixed, BillingModel.FlatFee),
     mode: 'onTouched',
   })
 
-  useEffect(() => {
-    if (defaultValue) form.reset(defaultValue)
-  }, [defaultValue, form])
-
+  const type = form.watch('type')
   const billingModel = form.watch('billingModel')
+  const currency = form.watch('currency')
+  const billingPeriod = form.watch('billingPeriod')
+  const priceUnit = form.watch('priceUnit')
   const errors = form.formState.errors
   const isUsage = type === PriceType.Usage
   const periods = isUsage ? USAGE_PERIODS : FIXED_PERIODS
+  const unitLabel = priceUnit || currency
+  const lockedInput = (id: string, value: string) => (
+    <Input id={id} value={value} readOnly disabled />
+  )
 
-  // Switching model replaces the whole value, so a tier array can never survive
-  // into a flat fee and be submitted invisibly. Common fields are re-seeded from
-  // the current values so the choice made so far is not lost.
-  const changeModel = (next: BillingModel) => {
-    if (next === billingModel) return
-    const fresh = emptyCharge(type, next)
+  // Switching type or model replaces the whole value, so a tier array can never
+  // survive into a flat fee and be submitted invisibly. Choices made so far are
+  // re-seeded from the current values so they are not lost.
+  const reseed = (nextType: PriceType, nextModel: BillingModel) => {
+    const fresh = emptyCharge(nextType, nextModel)
     const current = form.getValues()
+    const period =
+      nextType === PriceType.Usage && current.billingPeriod === BillingPeriod.OneTime
+        ? BillingPeriod.Monthly
+        : current.billingPeriod
     form.reset({
       ...fresh,
       currency: current.currency,
-      billingPeriod: current.billingPeriod,
-      invoiceCadence: current.invoiceCadence,
-      ...(isUsage ? { meterId: current.meterId } : {}),
+      billingPeriod: period,
+      ...(nextType === current.type ? { invoiceCadence: current.invoiceCadence } : {}),
       ...(current.displayName ? { displayName: current.displayName } : {}),
+      ...(current.priceUnit ? { priceUnit: current.priceUnit } : {}),
+      ...(current.effectiveFrom ? { effectiveFrom: current.effectiveFrom } : {}),
+      ...(nextType === PriceType.Fixed && current.trialPeriodDays
+        ? { trialPeriodDays: current.trialPeriodDays }
+        : {}),
+      ...(nextType === PriceType.Usage && nextType === current.type
+        ? { meterId: current.meterId }
+        : {}),
     } as CreateCharge)
   }
 
@@ -147,298 +184,356 @@ export function ChargeForm({
   }
   const tierMessage = (rawTierErrors as { message?: string } | undefined)?.message
 
+  const amountField = (label: string) => (
+    <Field label={label} required error={messageOf(errors, 'amount')}>
+      {({ id, ...field }) => (
+        <Input
+          id={id}
+          inputMode="decimal"
+          placeholder="0.00"
+          disabled={isSubmitting}
+          {...field}
+          {...form.register('amount' as never)}
+        />
+      )}
+    </Field>
+  )
+
   return (
     <form
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
       noValidate
-      className="flex flex-col gap-4"
+      className="flex flex-col gap-5"
     >
-      {isUsage ? (
-        <Field label="Metered feature" required error={errors.meterId?.message}>
-          {({ id }) => (
-            <Controller
-              control={form.control}
-              name={'meterId' as never}
-              render={({ field }) => (
-                <Select
-                  value={(field.value as string) || ''}
-                  onValueChange={field.onChange}
-                  disabled={isSubmitting}
-                >
-                  <SelectTrigger id={id} className="w-full">
-                    <SelectValue placeholder="Choose a feature to meter" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {meters.length === 0 ? (
-                      <SelectItem value="__none" disabled>
-                        No metered features
-                      </SelectItem>
-                    ) : (
-                      meters.map((meter) => (
-                        <SelectItem key={meter.id} value={meter.id}>
-                          {meter.name}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              )}
+      {isEdit ? (
+        <Alert>
+          <AlertTitle>Changing the price creates a new version</AlertTitle>
+          <AlertDescription>
+            The current price keeps billing until the effective date, so past invoices are
+            unaffected. Currency, period, meter and invoice timing are fixed once a charge exists.
+          </AlertDescription>
+        </Alert>
+      ) : (
+        <Tabs value={type} onValueChange={(next) => reseed(next as PriceType, billingModel)}>
+          <TabsList aria-label="Charge type">
+            {[PriceType.Fixed, PriceType.Usage].map((value) => (
+              <TabsTrigger key={value} value={value} disabled={isSubmitting}>
+                {PRICE_TYPE_LABEL[value]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      )}
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        {isUsage ? (
+          <Field
+            label="Metered feature"
+            required
+            error={messageOf(errors, 'meterId')}
+            hint={isEdit ? 'Fixed once created.' : 'The feature whose usage this charge bills.'}
+          >
+            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
+              <Controller
+                control={form.control}
+                name={'meterId' as never}
+                render={({ field }) => (
+                  <OptionCombobox
+                    id={id}
+                    value={(field.value as string) || ''}
+                    onValueChange={field.onChange}
+                    options={meters.map((meter) => ({ value: meter.id, label: meter.name }))}
+                    placeholder="Choose a feature to meter"
+                    emptyText="No metered features."
+                    disabled={isSubmitting || isEdit}
+                    aria-describedby={describedBy}
+                    aria-invalid={invalid}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        ) : null}
+
+        <Field label="Display name" hint="Optional. What this charge is called on an invoice.">
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              disabled={isSubmitting}
+              placeholder={isUsage ? 'e.g. API calls' : 'e.g. Platform base'}
+              {...field}
+              {...form.register('displayName' as never)}
             />
           )}
         </Field>
-      ) : null}
 
-      <Field label="Display name" hint="Optional. What this charge is called on an invoice.">
-        {({ id, ...field }) => (
-          <Input
-            id={id}
-            disabled={isSubmitting}
-            placeholder={isUsage ? 'e.g. API calls' : 'e.g. Platform base'}
-            {...field}
-            {...form.register('displayName' as never)}
-          />
-        )}
-      </Field>
-
-      <div className="grid grid-cols-2 gap-3">
-        <Field label="Currency" required>
-          {({ id }) => (
-            <Controller
-              control={form.control}
-              name="currency"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
-                  <SelectTrigger id={id} className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {currencies.map((code) => (
-                      <SelectItem key={code} value={code}>
-                        {code}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          )}
+        <Field
+          label="Currency"
+          required
+          {...(priceUnit ? { hint: 'Follows the price unit.' } : {})}
+        >
+          {({ id, 'aria-describedby': describedBy }) =>
+            isEdit || priceUnit ? (
+              lockedInput(id, currency.toUpperCase())
+            ) : (
+              <Controller
+                control={form.control}
+                name="currency"
+                render={({ field }) => (
+                  <OptionSelect
+                    id={id}
+                    value={field.value.toUpperCase()}
+                    onValueChange={field.onChange}
+                    options={currencies.map((code) => ({ value: code, label: code }))}
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )
+          }
         </Field>
 
         <Field label="Billing period" required>
-          {({ id }) => (
-            <Controller
-              control={form.control}
-              name="billingPeriod"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
-                  <SelectTrigger id={id} className="w-full">
-                    {/* Base UI's SelectValue renders the raw value; show the
-                        humanized label the options use, not `MONTHLY`. */}
-                    <SelectValue>
-                      {(value) =>
-                        value ? BILLING_PERIOD_LABEL[value as keyof typeof BILLING_PERIOD_LABEL] : null
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {periods.map((period) => (
-                      <SelectItem key={period} value={period}>
-                        {BILLING_PERIOD_LABEL[period]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          )}
+          {({ id }) =>
+            isEdit ? (
+              lockedInput(id, BILLING_PERIOD_LABEL[billingPeriod])
+            ) : (
+              <Controller
+                control={form.control}
+                name="billingPeriod"
+                render={({ field }) => (
+                  <OptionSelect
+                    id={id}
+                    value={field.value}
+                    onValueChange={field.onChange}
+                    options={periodOptions(periods)}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )
+          }
         </Field>
+
+        {priceUnits.length > 0 || priceUnit ? (
+          <Field
+            label="Price unit"
+            hint={
+              isEdit
+                ? 'Fixed once created.'
+                : 'Optional. Price in credits, tokens or another custom unit instead of a currency.'
+            }
+          >
+            {({ id }) =>
+              isEdit ? (
+                lockedInput(id, priceUnit || 'None (currency)')
+              ) : (
+                <OptionSelect
+                  id={id}
+                  value={priceUnit || FIAT}
+                  onValueChange={(code) => {
+                    const unit = priceUnits.find((option) => option.code === code)
+                    const current = form.getValues()
+                    form.reset({
+                      ...current,
+                      ...(unit
+                        ? { priceUnit: unit.code, currency: unit.baseCurrency.toUpperCase() }
+                        : { priceUnit: undefined }),
+                    } as CreateCharge)
+                  }}
+                  options={[
+                    { value: FIAT, label: 'None (currency)' },
+                    ...priceUnits.map((unit) => ({
+                      value: unit.code,
+                      label: `${unit.name} (${unit.code})`,
+                    })),
+                  ]}
+                  disabled={isSubmitting}
+                />
+              )
+            }
+          </Field>
+        ) : null}
+
+        {!isUsage ? (
+          <Field label="Invoice timing" required>
+            {({ id }) =>
+              isEdit ? (
+                lockedInput(
+                  id,
+                  INVOICE_CADENCE_LABEL[form.getValues('invoiceCadence') as InvoiceCadence],
+                )
+              ) : (
+                <Controller
+                  control={form.control}
+                  name="invoiceCadence"
+                  render={({ field }) => (
+                    <OptionSelect
+                      id={id}
+                      value={field.value}
+                      onValueChange={field.onChange}
+                      options={[InvoiceCadence.Advance, InvoiceCadence.Arrear].map((cadence) => ({
+                        value: cadence,
+                        label: INVOICE_CADENCE_LABEL[cadence],
+                      }))}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )
+            }
+          </Field>
+        ) : null}
+
+        {!isUsage && !isEdit && billingPeriod !== BillingPeriod.OneTime ? (
+          <Field
+            label="Free trial (days)"
+            hint="Optional. Subscribers are not billed for this charge during the trial."
+            error={messageOf(errors, 'trialPeriodDays')}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                type="number"
+                min={1}
+                inputMode="numeric"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('trialPeriodDays' as never, {
+                  setValueAs: (value: unknown) =>
+                    value === '' || value == null || Number.isNaN(Number(value))
+                      ? undefined
+                      : Number(value),
+                })}
+              />
+            )}
+          </Field>
+        ) : null}
       </div>
 
-      <fieldset className="flex flex-col gap-2" disabled={isSubmitting}>
-        <legend className="mb-1 text-sm font-medium">Billing model</legend>
-        <div className="flex flex-wrap gap-2">
-          {BILLING_MODELS.map((model) => (
-            <Button
-              key={model}
-              type="button"
-              size="sm"
-              variant={model === billingModel ? 'default' : 'outline'}
-              aria-pressed={model === billingModel}
-              onClick={() => changeModel(model)}
-            >
-              {BILLING_MODEL_LABEL[model]}
-            </Button>
-          ))}
-        </div>
-      </fieldset>
+      {isUsage ? (
+        <p className="text-xs text-muted-foreground">
+          Usage charges bill in arrears — once the period’s usage is known.
+        </p>
+      ) : null}
 
-      {billingModel === BillingModel.FlatFee || billingModel === BillingModel.Package ? (
-        <div className="grid grid-cols-2 gap-3">
+      <div className="flex flex-col gap-2">
+        <span className="text-sm font-medium">Billing model</span>
+        <Tabs value={billingModel} onValueChange={(next) => reseed(type, next as BillingModel)}>
+          <TabsList aria-label="Billing model">
+            {BILLING_MODELS.map((model) => (
+              <TabsTrigger key={model} value={model} disabled={isSubmitting}>
+                {BILLING_MODEL_LABEL[model]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <TabsContent value={BillingModel.FlatFee} className="pt-2">
+            <div className="max-w-xs">{amountField(`Amount (${unitLabel})`)}</div>
+          </TabsContent>
+
+          <TabsContent value={BillingModel.Package} className="pt-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              {amountField(`Price per package (${unitLabel})`)}
+              <Field
+                label="Units per package"
+                hint="The price buys this many units."
+                error={messageOf(errors, 'divideBy')}
+              >
+                {({ id, ...field }) => (
+                  <Input
+                    id={id}
+                    type="number"
+                    min={1}
+                    inputMode="numeric"
+                    disabled={isSubmitting}
+                    {...field}
+                    {...form.register('divideBy' as never, { valueAsNumber: true })}
+                  />
+                )}
+              </Field>
+            </div>
+          </TabsContent>
+
+          <TabsContent value={BillingModel.Tiered} className="flex flex-col gap-3 pt-2">
+            <div className="max-w-sm">
+              <Field label="Tier mode">
+                {({ id }) => (
+                  <Controller
+                    control={form.control}
+                    name={'tierMode' as never}
+                    render={({ field }) => (
+                      <OptionSelect
+                        id={id}
+                        value={(field.value as string) || TierMode.Volume}
+                        onValueChange={field.onChange}
+                        options={TIER_MODES.map((tierMode) => ({
+                          value: tierMode,
+                          label: TIER_MODE_LABEL[tierMode],
+                        }))}
+                        disabled={isSubmitting}
+                      />
+                    )}
+                  />
+                )}
+              </Field>
+            </div>
+            <TierTable
+              tiers={tiers}
+              currencySymbol={unitLabel}
+              rowErrors={tierRowErrors}
+              onChange={(next) =>
+                form.setValue('tiers' as never, next as never, {
+                  shouldDirty: true,
+                  shouldValidate: true,
+                })
+              }
+              disabled={isSubmitting}
+            />
+            {tierMessage ? (
+              <p role="alert" className="text-xs text-destructive">
+                {tierMessage}
+              </p>
+            ) : null}
+          </TabsContent>
+        </Tabs>
+      </div>
+
+      {isEdit ? (
+        <div className="max-w-xs">
           <Field
-            label={billingModel === BillingModel.Package ? 'Price per package' : 'Amount'}
-            required
-            error={(errors as { amount?: { message?: string } }).amount?.message}
+            label="Effective from"
+            hint="Leave empty to start the new price now. Earlier invoices keep the old price."
           >
             {({ id, 'aria-describedby': describedBy }) => (
               <Controller
                 control={form.control}
-                name={'amount' as never}
+                name={'effectiveFrom' as never}
                 render={({ field }) => (
-                  <NumberField
+                  <DateInput
                     id={id}
-                    min={0}
-                    value={
-                      field.value === '' || field.value == null ? null : Number(field.value)
-                    }
-                    onValueChange={(value) =>
-                      field.onChange(value == null ? '' : String(value))
-                    }
-                    disabled={isSubmitting}
-                  >
-                    <NumberFieldGroup>
-                      <NumberFieldDecrement />
-                      <NumberFieldInput
-                        aria-label="Amount"
-                        aria-describedby={describedBy}
-                        aria-invalid={
-                          (errors as { amount?: unknown }).amount ? true : undefined
-                        }
-                      />
-                      <NumberFieldIncrement />
-                    </NumberFieldGroup>
-                  </NumberField>
-                )}
-              />
-            )}
-          </Field>
-
-          {billingModel === BillingModel.Package ? (
-            <Field
-              label="Units per package"
-              hint="The price above buys this many units."
-              error={(errors as { divideBy?: { message?: string } }).divideBy?.message}
-            >
-              {({ id }) => (
-                <Controller
-                  control={form.control}
-                  name={'divideBy' as never}
-                  render={({ field }) => (
-                    <NumberField
-                      id={id}
-                      min={1}
-                      step={1}
-                      value={typeof field.value === 'number' ? field.value : null}
-                      onValueChange={(value) => field.onChange(value ?? 1)}
-                      disabled={isSubmitting}
-                    >
-                      <NumberFieldGroup>
-                        <NumberFieldDecrement />
-                        <NumberFieldInput aria-label="Units per package" />
-                        <NumberFieldIncrement />
-                      </NumberFieldGroup>
-                    </NumberField>
-                  )}
-                />
-              )}
-            </Field>
-          ) : null}
-        </div>
-      ) : null}
-
-      {billingModel === BillingModel.Tiered ? (
-        <div className="flex flex-col gap-3">
-          <Field label="Tier mode">
-            {({ id }) => (
-              <Controller
-                control={form.control}
-                name={'tierMode' as never}
-                render={({ field }) => (
-                  <Select
-                    value={(field.value as string) || TierMode.Volume}
+                    value={(field.value as string | undefined) ?? ''}
                     onValueChange={field.onChange}
+                    placeholder="Now"
                     disabled={isSubmitting}
-                  >
-                    <SelectTrigger id={id} className="w-full">
-                      <SelectValue>
-                        {(value) =>
-                          value ? TIER_MODE_LABEL[value as keyof typeof TIER_MODE_LABEL] : null
-                        }
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TIER_MODES.map((mode) => (
-                        <SelectItem key={mode} value={mode}>
-                          {TIER_MODE_LABEL[mode]}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    aria-describedby={describedBy}
+                  />
                 )}
               />
             )}
           </Field>
-
-          <TierTable
-            tiers={tiers}
-            onChange={(next) =>
-              form.setValue('tiers' as never, next as never, {
-                shouldDirty: true,
-                shouldValidate: true,
-              })
-            }
-            disabled={isSubmitting}
-          />
-          {tierMessage ? (
-            <p role="alert" className="text-xs text-destructive">
-              {tierMessage}
-            </p>
-          ) : null}
         </div>
       ) : null}
 
-      {!isUsage ? (
-        <Field label="Invoice timing" required>
-          {({ id }) => (
-            <Controller
-              control={form.control}
-              name="invoiceCadence"
-              render={({ field }) => (
-                <Select value={field.value} onValueChange={field.onChange} disabled={isSubmitting}>
-                  <SelectTrigger id={id} className="w-full">
-                    <SelectValue>
-                      {(value) =>
-                        value ? INVOICE_CADENCE_LABEL[value as keyof typeof INVOICE_CADENCE_LABEL] : null
-                      }
-                    </SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[InvoiceCadence.Advance, InvoiceCadence.Arrear].map((cadence) => (
-                      <SelectItem key={cadence} value={cadence}>
-                        {INVOICE_CADENCE_LABEL[cadence]}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            />
-          )}
-        </Field>
-      ) : (
-        <p className="text-xs text-muted-foreground">
-          Usage charges bill in arrears — once the period's usage is known.
-        </p>
-      )}
-
-      <div className="flex gap-2 border-t pt-3">
-        <Button type="submit" size="sm" disabled={isSubmitting}>
-          {defaultValue ? 'Update charge' : 'Add charge'}
-        </Button>
-        {onCancel ? (
-          <Button type="button" size="sm" variant="outline" disabled={isSubmitting} onClick={onCancel}>
-            Cancel
-          </Button>
-        ) : null}
-      </div>
+      <FormActions
+        mode={mode}
+        noun="charge"
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+        submitError={submitError}
+        {...(isEdit ? { submitLabel: 'Save new version' } : {})}
+      />
     </form>
   )
 }
