@@ -101,6 +101,9 @@ export const queryKeys = {
     all: () => ['usageSyncs'] as const,
     list: (filter: Record<string, unknown>) => ['usageSyncs', 'list', filter] as const,
   },
+  integrations: {
+    all: () => ['integrations'] as const,
+  },
   dataExports: {
     all: () => ['dataExports'] as const,
     list: (filter: Record<string, unknown>) => ['dataExports', 'list', filter] as const,

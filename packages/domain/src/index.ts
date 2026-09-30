@@ -493,3 +493,5 @@ export {
   EXPORT_STATE,
 } from './dataExport'
 export type { DataExport, DataExportQuery, ExportEntity, ExportState } from './dataExport'
+export { INTEGRATION_CATALOG } from './integration'
+export type { Integration, IntegrationSpec } from './integration'
