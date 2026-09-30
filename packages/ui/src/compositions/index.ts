@@ -88,3 +88,16 @@ export { EditableFields, EditableFieldsProvenance } from './EditableFields'
 export type { EditableFieldDef, EditableFieldsProps } from './EditableFields'
 export { InlineField, InlineFieldProvenance } from './InlineField'
 export type { InlineFieldProps } from './InlineField'
+
+export {
+  ChoiceCards,
+  Composer,
+  CopyId,
+  DetailKitProvenance,
+  DetailTabs,
+  Properties,
+  SegmentMeter,
+  SimpleTable,
+  SplitMeter,
+} from './DetailKit'
+export type { Choice, DetailTabSpec, SimpleColumn } from './DetailKit'
