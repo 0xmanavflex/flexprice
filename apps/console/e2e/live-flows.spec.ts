@@ -39,9 +39,6 @@ const violations: string[] = []
 let context: BrowserContext
 let page: Page
 
-/** The one open dialog. */
-const dialog = () => page.getByRole('dialog')
-
 async function assertIsolated() {
   const shell = new ShellPage(page)
   await expect(shell.environment).toContainText(envPrefix)
@@ -70,14 +67,6 @@ async function fill(scope: Locator, label: string, value: string) {
 async function choose(scope: Locator, label: string, option: string | RegExp) {
   await field(scope, label).click()
   await page.getByRole('option', { name: option }).first().click()
-}
-
-async function submit(scope: Locator = dialog()) {
-  await scope
-    .getByRole('button', { name: /^(Create|Save changes|Add|Save)/ })
-    .last()
-    .click()
-  await expect(dialog()).toHaveCount(0, { timeout: 30_000 })
 }
 
 /** Submit a full-page form (Create/Save) and wait for the page to navigate away. */
