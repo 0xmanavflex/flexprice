@@ -92,7 +92,7 @@ import type {
 import { cva } from "class-variance-authority"
 
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 
 /* -------------------------------------------------------------------------- */
 /*                                  Variants                                  */

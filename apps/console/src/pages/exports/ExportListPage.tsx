@@ -1,7 +1,7 @@
 import { DownloadCloudIcon } from 'lucide-react'
 import { type DataExportQuery, EXPORT_STATE } from '@fp/domain'
 import { ApiError, useDataExports } from '@fp/query'
-import { DataExportGrid } from '@fp/ui/flexprice'
+import { DataExportGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 
 export interface ExportListPageProps {

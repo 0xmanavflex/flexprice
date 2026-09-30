@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type CreatePlan, type PlanQuery } from '@fp/domain'
 import { ApiError, useCatalogStats, useCreatePlan, usePlans, useUpdatePlan } from '@fp/query'
-import { PlanEditorDialog, PlanGrid } from '@fp/ui/flexprice'
+import { PlanEditorDialog, PlanGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'

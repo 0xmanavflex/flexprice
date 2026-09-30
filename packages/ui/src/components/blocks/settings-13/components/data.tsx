@@ -2,15 +2,15 @@
 
 import type { ReactNode } from "react"
 
-import { Discord } from "@ui/primitives/svgs/discord"
-import { Gemini } from "@ui/primitives/svgs/gemini"
-import { Loom } from "@ui/primitives/svgs/loom"
-import { N8n } from "@ui/primitives/svgs/n8n"
-import { Slack } from "@ui/primitives/svgs/slack"
-import { Spotify } from "@ui/primitives/svgs/spotify"
-import { Stripe } from "@ui/primitives/svgs/stripe"
-import { Supabase } from "@ui/primitives/svgs/supabase"
-import { Zoom } from "@ui/primitives/svgs/zoom"
+import { Discord } from "@ui/components/primitives/svgs/discord"
+import { Gemini } from "@ui/components/primitives/svgs/gemini"
+import { Loom } from "@ui/components/primitives/svgs/loom"
+import { N8n } from "@ui/components/primitives/svgs/n8n"
+import { Slack } from "@ui/components/primitives/svgs/slack"
+import { Spotify } from "@ui/components/primitives/svgs/spotify"
+import { Stripe } from "@ui/components/primitives/svgs/stripe"
+import { Supabase } from "@ui/components/primitives/svgs/supabase"
+import { Zoom } from "@ui/components/primitives/svgs/zoom"
 
 // ── Types ──
 

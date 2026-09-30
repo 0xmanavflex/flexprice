@@ -9,8 +9,8 @@ import {
   FrameTitle,
 } from "@ui/components/reui/frame"
 
-import { Progress } from "@ui/primitives/progress"
-import { SidebarGroup } from "@ui/primitives/sidebar"
+import { Progress } from "@ui/components/primitives/progress"
+import { SidebarGroup } from "@ui/components/primitives/sidebar"
 
 const AI_USAGE = {
   used: 8240,

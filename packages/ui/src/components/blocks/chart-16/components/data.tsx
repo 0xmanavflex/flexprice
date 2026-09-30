@@ -4,7 +4,7 @@
 
 import { ReactNode } from "react"
 
-import { ChartConfig } from "@ui/primitives/chart"
+import { ChartConfig } from "@ui/components/primitives/chart"
 import { StoreIcon, EyeIcon, ShoppingCartIcon, CreditCardIcon } from "lucide-react"
 
 // ── Types ──

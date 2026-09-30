@@ -1,6 +1,6 @@
 import type { PriceOverride } from '@fp/domain'
 import { EmptyState, type WorkflowStep, WorkflowStepper } from '@fp/ui/compositions'
-import { PriceOverrideForm } from '@fp/ui/flexprice'
+import { PriceOverrideForm } from '@fp/ui/pages'
 import { Button } from '@fp/ui/primitives'
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import {

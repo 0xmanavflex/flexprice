@@ -1,6 +1,6 @@
 import { GROUP_ENTITY_TYPE_LABEL, type Group } from '@fp/domain'
 import { ApiError, useGroup } from '@fp/query'
-import { CatalogStatusBadge } from '@fp/ui/flexprice'
+import { CatalogStatusBadge } from '@fp/ui/pages'
 import {
   AppFailure,
   type DetailMetric,

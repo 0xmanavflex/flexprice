@@ -11,7 +11,7 @@ import {
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@ui/primitives/tabs"
+} from "@ui/components/primitives/tabs"
 
 import { BillingTab } from "./billing-tab"
 import { SETTINGS_TAB_ITEMS } from "./data"

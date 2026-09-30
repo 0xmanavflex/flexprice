@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { Button } from '@ui/primitives/button'
-import { Skeleton } from '@ui/primitives/skeleton'
+import { Button } from '@ui/components/primitives/button'
+import { Skeleton } from '@ui/components/primitives/skeleton'
 import { ListOfferProvider, type ListOffer } from './EmptyState'
 import { provenance } from '@ui/provenance'
 

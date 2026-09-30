@@ -12,7 +12,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@ui/primitives/dropdown-menu"
+} from "@ui/components/primitives/dropdown-menu"
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -24,7 +24,7 @@ import {
   SidebarMenuSubButton,
   SidebarMenuSubItem,
   useSidebar,
-} from "@ui/primitives/sidebar"
+} from "@ui/components/primitives/sidebar"
 import { IconPlaceholder } from "./icon-placeholder"
 
 import { NAV_MAIN, type NavChild, type NavItem } from "./data"

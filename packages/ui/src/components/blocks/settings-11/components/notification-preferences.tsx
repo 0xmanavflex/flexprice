@@ -1,6 +1,6 @@
 // @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
-import { Checkbox } from "@ui/primitives/checkbox"
+import { Checkbox } from "@ui/components/primitives/checkbox"
 import {
   Table,
   TableBody,
@@ -8,13 +8,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@ui/primitives/table"
+} from "@ui/components/primitives/table"
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@ui/primitives/tabs"
+} from "@ui/components/primitives/tabs"
 
 import {
   CHANNELS,

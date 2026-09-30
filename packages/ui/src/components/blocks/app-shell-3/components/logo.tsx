@@ -2,7 +2,7 @@
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
 import { cn } from "cn"
 
-import { Item, ItemMedia } from "@ui/primitives/item"
+import { Item, ItemMedia } from "@ui/components/primitives/item"
 
 interface LogoProps {
   className?: string

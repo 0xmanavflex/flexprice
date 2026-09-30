@@ -7,7 +7,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from '@ui/primitives/empty'
+} from '@ui/components/primitives/empty'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 

@@ -1,6 +1,6 @@
 import { useNavigate } from '@tanstack/react-router'
 import { ApiError, ErrorKind, useSignIn } from '@fp/query'
-import { SignInScreen } from '@fp/ui/flexprice'
+import { SignInScreen } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
 import { env } from '@/env'
 

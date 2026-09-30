@@ -21,7 +21,7 @@ import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 
 import { cn } from "cn"
-import { Spinner } from "@ui/primitives/spinner"
+import { Spinner } from "@ui/components/primitives/spinner"
 import { LoaderCircleIcon, MinusIcon, CheckIcon, RotateCwIcon, ChevronRightIcon } from "lucide-react"
 
 // Base UI extends its synthetic events with a handler-veto escape hatch.

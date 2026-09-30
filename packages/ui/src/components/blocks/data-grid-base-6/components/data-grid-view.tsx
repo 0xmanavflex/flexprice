@@ -16,7 +16,7 @@ import {
 } from "@tanstack/react-table"
 import { toast } from "sonner"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
@@ -25,20 +25,20 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@ui/primitives/dropdown-menu"
+} from "@ui/components/primitives/dropdown-menu"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@ui/primitives/input-group"
-import { Separator } from "@ui/primitives/separator"
+} from "@ui/components/primitives/input-group"
+import { Separator } from "@ui/components/primitives/separator"
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@ui/primitives/tabs"
+} from "@ui/components/primitives/tabs"
 import { createMembersGridColumns, type MemberRowAction } from "./columns"
 import {
   MEMBER_AUTH_PROVIDER_OPTIONS,

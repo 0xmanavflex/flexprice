@@ -13,7 +13,7 @@ import {
   useTaxRates,
   useUpdateTaxRate,
 } from '@fp/query'
-import { TaxRateEditorDialog, TaxRateGrid } from '@fp/ui/flexprice'
+import { TaxRateEditorDialog, TaxRateGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { PercentIcon } from 'lucide-react'

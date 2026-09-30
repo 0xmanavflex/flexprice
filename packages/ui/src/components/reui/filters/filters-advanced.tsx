@@ -64,26 +64,26 @@ import type {
 } from "@ui/components/reui/filters/filters-types"
 
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@ui/primitives/dropdown-menu"
-import { Input } from "@ui/primitives/input"
+} from "@ui/components/primitives/dropdown-menu"
+import { Input } from "@ui/components/primitives/input"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@ui/primitives/popover"
+} from "@ui/components/primitives/popover"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@ui/primitives/tooltip"
+} from "@ui/components/primitives/tooltip"
 import { RefreshCwIcon, CircleAlertIcon, GripVerticalIcon, ChevronDownIcon, EllipsisVerticalIcon, XIcon, PlusIcon, CopyIcon, UngroupIcon, Trash2Icon, ListFilterIcon, FolderPlusIcon } from "lucide-react"
 
 /* -------------------------------------------------------------------------- */

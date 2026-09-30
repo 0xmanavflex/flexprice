@@ -9,12 +9,12 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@ui/primitives/breadcrumb"
+} from "@ui/components/primitives/breadcrumb"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@ui/primitives/sidebar"
+} from "@ui/components/primitives/sidebar"
 import { IconPlaceholder } from "./icon-placeholder"
 
 import { AppSidebar } from "./app-sidebar"

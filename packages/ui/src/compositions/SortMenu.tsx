@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { ArrowDownIcon, ArrowUpIcon, ArrowUpDownIcon } from 'lucide-react'
-import { Button } from '@ui/primitives/button'
+import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -10,7 +10,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@ui/primitives/dropdown-menu'
+} from '@ui/components/primitives/dropdown-menu'
 import { provenance } from '@ui/provenance'
 
 /**

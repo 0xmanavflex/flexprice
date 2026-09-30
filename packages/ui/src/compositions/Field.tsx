@@ -1,5 +1,5 @@
 import { useId, type ReactNode } from 'react'
-import { Field as FieldRoot, FieldDescription, FieldError, FieldLabel } from '@ui/primitives/field'
+import { Field as FieldRoot, FieldDescription, FieldError, FieldLabel } from '@ui/components/primitives/field'
 import { provenance } from '@ui/provenance'
 
 /**

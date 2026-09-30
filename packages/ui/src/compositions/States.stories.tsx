@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { Button } from '@ui/primitives/button'
+import { Button } from '@ui/components/primitives/button'
 import { EmptyState } from './EmptyState'
 import { GridToolbar } from './GridToolbar'
 import { ListState } from './States'

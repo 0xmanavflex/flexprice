@@ -65,7 +65,7 @@ import {
   type PriceUnitOption,
   PlanEditorDialog,
   PlanPreviewCard,
-} from '@fp/ui/flexprice'
+} from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,

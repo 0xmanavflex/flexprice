@@ -5,8 +5,8 @@
 import { useState, type ComponentProps } from "react"
 
 import { SlackWordmark } from "@ui/components/ui/svgs/slackWordmark"
-import { Button } from "@ui/primitives/button"
-import { Item, ItemMedia } from "@ui/primitives/item"
+import { Button } from "@ui/components/primitives/button"
+import { Item, ItemMedia } from "@ui/components/primitives/item"
 
 import { AuthGridBackground } from "./auth-grid-background"
 import { AUTH6_FOUNDERS_STORY, AUTH6_TRUST_BRANDS } from "./data"

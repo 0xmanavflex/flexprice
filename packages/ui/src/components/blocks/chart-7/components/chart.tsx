@@ -10,8 +10,8 @@ import {
   AvatarFallback,
   AvatarGroup,
   AvatarImage,
-} from "@ui/primitives/avatar"
-import { Button } from "@ui/primitives/button"
+} from "@ui/components/primitives/avatar"
+import { Button } from "@ui/components/primitives/button"
 
 import { arcMetrics, type ArcMetric, type MetricMember } from "./data"
 

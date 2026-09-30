@@ -5,7 +5,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from '@ui/primitives/combobox'
+} from '@ui/components/primitives/combobox'
 import { provenance } from '@ui/provenance'
 import type { Option } from './OptionSelect'
 

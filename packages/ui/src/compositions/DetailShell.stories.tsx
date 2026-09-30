@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { Badge } from '@ui/components/reui/badge'
-import { Button } from '@ui/primitives/button'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/primitives/tabs'
+import { Button } from '@ui/components/primitives/button'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
 import { DetailShell } from './DetailShell'
 
 /**

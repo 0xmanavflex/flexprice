@@ -2,7 +2,7 @@
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
 import { type ReactNode } from "react"
 
-import { type ChartConfig } from "@ui/primitives/chart"
+import { type ChartConfig } from "@ui/components/primitives/chart"
 import { ActivityIcon, SparklesIcon, CircleDollarSignIcon } from "lucide-react"
 
 export type RangeKey = "week" | "month" | "quarter"

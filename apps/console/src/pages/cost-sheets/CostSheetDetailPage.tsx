@@ -1,6 +1,6 @@
 import { type Charge, type CostSheet, PriceEntityType } from '@fp/domain'
 import { ApiError, useCostSheet, usePrices } from '@fp/query'
-import { CatalogStatusBadge, ChargeTable } from '@fp/ui/flexprice'
+import { CatalogStatusBadge, ChargeTable } from '@fp/ui/pages'
 import {
   AppFailure,
   type DetailMetric,

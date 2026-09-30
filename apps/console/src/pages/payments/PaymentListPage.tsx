@@ -1,6 +1,6 @@
 import { type PaymentQuery } from '@fp/domain'
 import { ApiError, usePayments } from '@fp/query'
-import { PaymentGrid } from '@fp/ui/flexprice'
+import { PaymentGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { CreditCardIcon } from 'lucide-react'
 

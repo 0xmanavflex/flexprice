@@ -12,7 +12,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-} from "@ui/primitives/sidebar"
+} from "@ui/components/primitives/sidebar"
 import { IconPlaceholder } from "./icon-placeholder"
 
 import { ACTIVE_PROJECTS, type Project } from "./data"

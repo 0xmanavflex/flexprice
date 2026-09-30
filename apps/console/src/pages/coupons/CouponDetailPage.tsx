@@ -17,7 +17,7 @@ import {
   useCouponAssociations,
   useUpdateCoupon,
 } from '@fp/query'
-import { CatalogStatusBadge, CouponEditorDialog, Money } from '@fp/ui/flexprice'
+import { CatalogStatusBadge, CouponEditorDialog, Money } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,

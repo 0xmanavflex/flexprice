@@ -6,7 +6,7 @@ import {
   SidebarFooter,
   SidebarHeader,
   SidebarTrigger,
-} from "@ui/primitives/sidebar"
+} from "@ui/components/primitives/sidebar"
 
 import { Logo } from "./logo"
 import { NavMain } from "./nav-main"

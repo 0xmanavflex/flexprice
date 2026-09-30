@@ -6,11 +6,11 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@ui/primitives/dropdown-menu'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/primitives/tooltip'
+} from '@ui/components/primitives/dropdown-menu'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { Badge } from '@ui/components/reui/badge'
 import { cn } from '@ui/lib/cn'
-import { useSidebar } from '@ui/primitives/sidebar'
+import { useSidebar } from '@ui/components/primitives/sidebar'
 import { MENU_CONTENT, MENU_ITEM } from './menuSurface'
 import type { ShellEnvironment } from './types'
 

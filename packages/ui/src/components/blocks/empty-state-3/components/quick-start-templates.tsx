@@ -6,7 +6,7 @@ import {
   ItemContent,
   ItemMedia,
   ItemTitle,
-} from "@ui/primitives/item"
+} from "@ui/components/primitives/item"
 import { KanbanIcon, ChevronRightIcon, TimerIcon } from "lucide-react"
 
 export function QuickStartTemplates() {

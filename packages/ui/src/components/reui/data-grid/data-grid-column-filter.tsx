@@ -7,14 +7,14 @@ import type { DataGridFeatures } from "@ui/components/reui/data-grid/data-grid"
 import type { Column } from "@tanstack/react-table"
 
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
-import { Input } from "@ui/primitives/input"
+import { Button } from "@ui/components/primitives/button"
+import { Input } from "@ui/components/primitives/input"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@ui/primitives/popover"
-import { Separator } from "@ui/primitives/separator"
+} from "@ui/components/primitives/popover"
+import { Separator } from "@ui/components/primitives/separator"
 import { CirclePlusIcon, CheckIcon } from "lucide-react"
 
 interface DataGridColumnFilterProps<TData extends object, TValue> {

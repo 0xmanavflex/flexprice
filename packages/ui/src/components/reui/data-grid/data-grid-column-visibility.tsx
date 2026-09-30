@@ -15,7 +15,7 @@ import {
   DropdownMenuGroup,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@ui/primitives/dropdown-menu"
+} from "@ui/components/primitives/dropdown-menu"
 
 function DataGridColumnVisibility<TData extends object>({
   table,

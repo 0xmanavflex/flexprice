@@ -1,5 +1,5 @@
 import { type CSSProperties, type ReactNode } from 'react'
-import { TooltipProvider } from '@ui/primitives/tooltip'
+import { TooltipProvider } from '@ui/components/primitives/tooltip'
 import {
   Sidebar,
   SidebarContent,
@@ -8,7 +8,7 @@ import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from '@ui/primitives/sidebar'
+} from '@ui/components/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ShellAccount } from './ShellAccount'

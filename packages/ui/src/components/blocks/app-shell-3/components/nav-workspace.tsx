@@ -10,8 +10,8 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@ui/primitives/avatar"
-import { buttonVariants } from "@ui/primitives/button"
+} from "@ui/components/primitives/avatar"
+import { buttonVariants } from "@ui/components/primitives/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,13 +21,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
-} from "@ui/primitives/dropdown-menu"
+} from "@ui/components/primitives/dropdown-menu"
 import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
   useSidebar,
-} from "@ui/primitives/sidebar"
+} from "@ui/components/primitives/sidebar"
 import { IconPlaceholder } from "./icon-placeholder"
 
 import { WORKSPACES, type Workspace } from "./data"

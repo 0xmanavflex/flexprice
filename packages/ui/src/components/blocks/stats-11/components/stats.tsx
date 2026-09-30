@@ -6,8 +6,8 @@ import {
   FrameTitle,
 } from "@ui/components/reui/frame"
 
-import { Button } from "@ui/primitives/button"
-import { Progress } from "@ui/primitives/progress"
+import { Button } from "@ui/components/primitives/button"
+import { Progress } from "@ui/components/primitives/progress"
 
 import { renewalDate, total, used } from "./data"
 

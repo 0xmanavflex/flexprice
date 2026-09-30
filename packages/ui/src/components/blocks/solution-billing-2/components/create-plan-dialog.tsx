@@ -5,7 +5,7 @@ import * as React from "react"
 import type { ReactNode } from "react"
 import { toast } from "sonner"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   Dialog,
   DialogClose,
@@ -14,15 +14,15 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@ui/primitives/dialog"
-import { Field, FieldGroup, FieldLabel } from "@ui/primitives/field"
+} from "@ui/components/primitives/dialog"
+import { Field, FieldGroup, FieldLabel } from "@ui/components/primitives/field"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@ui/primitives/input-group"
-import { Tabs, TabsList, TabsTrigger } from "@ui/primitives/tabs"
+} from "@ui/components/primitives/input-group"
+import { Tabs, TabsList, TabsTrigger } from "@ui/components/primitives/tabs"
 
 import { intervalOptions, type BillingInterval } from "./data"
 

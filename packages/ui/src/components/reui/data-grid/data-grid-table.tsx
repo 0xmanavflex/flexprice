@@ -31,9 +31,9 @@ import { flexRender, Subscribe } from "@tanstack/react-table"
 import type { Cell, Column, Header, Row, Table } from "@tanstack/react-table"
 import { cn } from "cn"
 
-import { Button } from "@ui/primitives/button"
-import { Checkbox } from "@ui/primitives/checkbox"
-import { Spinner } from "@ui/primitives/spinner"
+import { Button } from "@ui/components/primitives/button"
+import { Checkbox } from "@ui/components/primitives/checkbox"
+import { Spinner } from "@ui/components/primitives/spinner"
 import { PlusIcon } from "lucide-react"
 
 // Static spacing lookups; called once per cell, so they stay plain string

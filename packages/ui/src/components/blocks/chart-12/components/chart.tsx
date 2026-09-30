@@ -6,28 +6,28 @@ import { useState, type CSSProperties } from "react"
 import { cn } from "cn"
 import { Cell, Pie, PieChart } from "recharts"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   Card,
   CardAction,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@ui/primitives/card"
+} from "@ui/components/primitives/card"
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@ui/primitives/chart"
+} from "@ui/components/primitives/chart"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@ui/primitives/dropdown-menu"
-import { Item, ItemMedia } from "@ui/primitives/item"
-import { Separator } from "@ui/primitives/separator"
+} from "@ui/components/primitives/dropdown-menu"
+import { Item, ItemMedia } from "@ui/components/primitives/item"
+import { Separator } from "@ui/components/primitives/separator"
 import {
   chartConfig,
   inflowRanges,

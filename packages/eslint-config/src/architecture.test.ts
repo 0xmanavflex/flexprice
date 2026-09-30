@@ -40,16 +40,16 @@ describe('UI is presentation', () => {
     ['react-query directly', IMPORTS.reactQuery],
     ['actions', IMPORTS.actions],
   ])('refuses %s', async (_label, code) => {
-    expect(await lintAt('packages/ui/src/flexprice/Thing.tsx', code)).toHaveLength(1)
+    expect(await lintAt('packages/ui/src/pages/Thing.tsx', code)).toHaveLength(1)
   })
 
   it('allows domain types and React', async () => {
     const code = [IMPORTS.domain, IMPORTS.react].join('\n')
-    expect(await lintAt('packages/ui/src/flexprice/Thing.tsx', code)).toEqual([])
+    expect(await lintAt('packages/ui/src/pages/Thing.tsx', code)).toEqual([])
   })
 
   it('explains what to do instead, not just that it is wrong', async () => {
-    const [message] = await lintAt('packages/ui/src/flexprice/Thing.tsx', IMPORTS.query)
+    const [message] = await lintAt('packages/ui/src/pages/Thing.tsx', IMPORTS.query)
     expect(message).toMatch(/pass the result down|page/i)
   })
 })
@@ -110,8 +110,8 @@ describe('apps compose through the door', () => {
 })
 
 describe('block-grade primitives live behind one seam', () => {
-  it('lets the flexprice grids import the data grid', async () => {
-    expect(await lintAt('packages/ui/src/flexprice/CouponGrid.tsx', IMPORTS.dataGrid)).toEqual([])
+  it('lets the page grids import the data grid', async () => {
+    expect(await lintAt('packages/ui/src/pages/coupons/CouponGrid.tsx', IMPORTS.dataGrid)).toEqual([])
   })
 
   it('lets FilterBar import the filter builder', async () => {
@@ -135,7 +135,7 @@ describe('block-grade primitives live behind one seam', () => {
 describe('the temporary adapter cannot spread', () => {
   it.each([
     'apps/console/src/pages/Invoices.tsx',
-    'packages/ui/src/flexprice/Thing.tsx',
+    'packages/ui/src/pages/Thing.tsx',
     'packages/actions/src/billing.ts',
   ])('refuses a shim import in %s', async (path) => {
     const messages = await lintAt(path, IMPORTS.adapter)

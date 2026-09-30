@@ -2,7 +2,7 @@
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
 import { useState } from "react"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   Field,
   FieldDescription,
@@ -10,7 +10,7 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSet,
-} from "@ui/primitives/field"
+} from "@ui/components/primitives/field"
 import {
   Select,
   SelectContent,
@@ -18,8 +18,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@ui/primitives/select"
-import { Switch } from "@ui/primitives/switch"
+} from "@ui/components/primitives/select"
+import { Switch } from "@ui/components/primitives/switch"
 
 import { DIGEST_CADENCE, QUIET_HOURS, QUIET_HOURS_END, TIMEOUTS } from "./data"
 import { SettingRow } from "./setting-row"

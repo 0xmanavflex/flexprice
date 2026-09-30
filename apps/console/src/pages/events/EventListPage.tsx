@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { ScrollTextIcon } from 'lucide-react'
 import { type RawEvent, type RawEventQuery } from '@fp/domain'
 import { ApiError, useRawEvents } from '@fp/query'
-import { EventDetailSheet, EventGrid } from '@fp/ui/flexprice'
+import { EventDetailSheet, EventGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 
 export interface EventListPageProps {

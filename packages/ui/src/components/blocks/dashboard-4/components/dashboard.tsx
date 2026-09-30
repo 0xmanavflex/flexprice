@@ -27,12 +27,12 @@ import { Openai } from "@ui/components/ui/svgs/openai"
 import { OpenaiDark } from "@ui/components/ui/svgs/openaiDark"
 import { Slack } from "@ui/components/ui/svgs/slack"
 import { Zoom } from "@ui/components/ui/svgs/zoom"
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   ChartContainer,
   ChartTooltip,
   ChartTooltipContent,
-} from "@ui/primitives/chart"
+} from "@ui/components/primitives/chart"
 import {
   Item,
   ItemActions,
@@ -40,7 +40,7 @@ import {
   ItemDescription,
   ItemMedia,
   ItemTitle,
-} from "@ui/primitives/item"
+} from "@ui/components/primitives/item"
 import {
   Select,
   SelectContent,
@@ -48,8 +48,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@ui/primitives/select"
-import { Separator } from "@ui/primitives/separator"
+} from "@ui/components/primitives/select"
+import { Separator } from "@ui/components/primitives/separator"
 import {
   agentCallMetrics,
   callChartConfig,

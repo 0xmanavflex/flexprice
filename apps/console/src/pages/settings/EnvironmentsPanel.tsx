@@ -7,7 +7,7 @@ import {
 } from '@fp/domain'
 import { useCreateEnvironment, useEnvironmentList } from '@fp/query'
 import { LoadingRows, Section } from '@fp/ui/compositions'
-import { EnvironmentForm } from '@fp/ui/flexprice'
+import { EnvironmentForm } from '@fp/ui/pages'
 import {
   Badge,
   Button,

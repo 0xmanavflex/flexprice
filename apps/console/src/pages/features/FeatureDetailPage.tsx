@@ -10,7 +10,7 @@ import {
   type Feature,
 } from '@fp/domain'
 import { ApiError, useFeature, useGroups, useUpdateFeature } from '@fp/query'
-import { CatalogStatusBadge, FeatureEditorDialog, FeatureTypeBadge } from '@fp/ui/flexprice'
+import { CatalogStatusBadge, FeatureEditorDialog, FeatureTypeBadge } from '@fp/ui/pages'
 import {
   AppFailure,
   type DetailItem,

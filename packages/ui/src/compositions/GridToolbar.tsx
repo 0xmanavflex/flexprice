@@ -5,7 +5,7 @@ import {
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from '@ui/primitives/input-group'
+} from '@ui/components/primitives/input-group'
 import { useListOffer } from './EmptyState'
 import { provenance } from '@ui/provenance'
 

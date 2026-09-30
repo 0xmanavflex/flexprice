@@ -4,8 +4,8 @@ import { useInvoices, useUsageAnalytics, UsageWindowSize } from '@fp/query'
 import type { UsageAnalytics } from '@fp/query'
 import { DEFAULT_INVOICE_QUERY, InvoiceStatus } from '@fp/domain'
 import type { Invoice } from '@fp/domain'
-import { RevenueDashboard } from '@fp/ui/flexprice'
-import type { MetricTab, RevenueDashboardProps } from '@fp/ui/flexprice'
+import { RevenueDashboard } from '@fp/ui/pages'
+import type { MetricTab, RevenueDashboardProps } from '@fp/ui/pages'
 import { PageBody, PageHeader } from '@fp/ui/compositions'
 
 /**

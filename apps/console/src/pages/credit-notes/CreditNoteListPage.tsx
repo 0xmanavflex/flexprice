@@ -1,7 +1,7 @@
 import { FileMinusIcon } from 'lucide-react'
 import { type CreditNoteQuery } from '@fp/domain'
 import { ApiError, useCreditNotes } from '@fp/query'
-import { CreditNoteGrid } from '@fp/ui/flexprice'
+import { CreditNoteGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 
 export interface CreditNoteListPageProps {

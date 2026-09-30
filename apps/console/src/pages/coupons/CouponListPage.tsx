@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Coupon, type CouponQuery } from '@fp/domain'
 import { ApiError, useCatalogStats, useCoupons, useCreateCoupon, useUpdateCoupon } from '@fp/query'
-import { CouponEditorDialog, CouponGrid } from '@fp/ui/flexprice'
+import { CouponEditorDialog, CouponGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { TicketPercentIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'

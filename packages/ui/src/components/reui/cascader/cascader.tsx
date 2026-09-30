@@ -82,7 +82,7 @@ import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 
 import { cn } from "cn"
-import { ScrollArea } from "@ui/primitives/scroll-area"
+import { ScrollArea } from "@ui/components/primitives/scroll-area"
 import { ChevronDownIcon, XIcon } from "lucide-react"
 
 /** Stable `filteredItems` for a level swap; a fixed identity cannot loop. */

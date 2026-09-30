@@ -86,7 +86,7 @@ const CustomerDetailPage = lazy(() =>
   import('@/pages/customers/CustomerDetailPage').then((m) => ({ default: m.CustomerDetailPage })),
 )
 import { parseCustomerTab } from '@/pages/customers/CustomerDetailPage'
-import type { CustomerTab } from '@fp/ui/flexprice'
+import type { CustomerTab } from '@fp/ui/pages'
 import { parseCustomerSearch } from './customerSearch'
 import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
 const SubscriptionListPage = lazy(() =>

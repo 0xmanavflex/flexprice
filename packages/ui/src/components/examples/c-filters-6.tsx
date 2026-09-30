@@ -13,8 +13,8 @@ import type {
   FilterValueDisplayContext,
 } from "@ui/components/reui/filters/filters-types"
 
-import { Button } from "@ui/primitives/button"
-import { Slider } from "@ui/primitives/slider"
+import { Button } from "@ui/components/primitives/button"
+import { Slider } from "@ui/components/primitives/slider"
 import { ActivityIcon, BanknoteIcon, Building2Icon } from "lucide-react"
 
 /**

@@ -1,7 +1,7 @@
 import { WorkflowIcon } from 'lucide-react'
 import { type WorkflowQuery } from '@fp/domain'
 import { ApiError, useWorkflowRuns } from '@fp/query'
-import { WorkflowGrid } from '@fp/ui/flexprice'
+import { WorkflowGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 
 export interface WorkflowListPageProps {

@@ -1,4 +1,4 @@
-import { useSidebar } from '@ui/primitives/sidebar'
+import { useSidebar } from '@ui/components/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 

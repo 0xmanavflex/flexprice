@@ -70,7 +70,7 @@ import type { Cell, HeaderGroup, Row, Table } from "@tanstack/react-table"
 import { createPortal } from "react-dom"
 
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import { GripHorizontalIcon } from "lucide-react"
 
 // Context to share sortable listeners from row to handle

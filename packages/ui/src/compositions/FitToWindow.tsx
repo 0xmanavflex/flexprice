@@ -1,6 +1,6 @@
 import { Maximize2Icon } from 'lucide-react'
-import { Button } from '@ui/primitives/button'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/primitives/tooltip'
+import { Button } from '@ui/components/primitives/button'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { provenance } from '@ui/provenance'
 
 /**

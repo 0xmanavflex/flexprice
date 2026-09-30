@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { PageBody, PageHeader } from '@fp/ui/compositions'
-import { SettingsShell, type SettingsSection } from '@fp/ui/flexprice'
+import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BellIcon,
   BuildingIcon,

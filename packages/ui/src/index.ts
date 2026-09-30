@@ -18,15 +18,15 @@
  * state it can be in — loading, empty, error — becomes expressible as props
  * rather than something you must provoke a server into producing.
  *
- * Four folders, each with a different bar for entry:
+ * Each folder has a different bar for entry:
  *
- *   primitives/    Vendored from the ReUI registry. Never hand-edited, so an
- *                  upstream update stays a re-install.
- *   compositions/  Generic behaviour composed over ReUI parts. The preferred
- *                  way to differ from the registry.
- *   flexprice/     Product components that know billing vocabulary —
- *                  InvoiceStatusBadge, MoneyCell. Domain types are welcome
- *                  here; transport types are not.
+ *   components/primitives/  Vendored shadcn controls. Never hand-edited, so an
+ *                           upstream update stays a re-install.
+ *   components/reui/        Vendored ReUI blocks. Same rule.
+ *   compositions/           Generic behaviour composed over those parts.
+ *   pages/                  One folder per screen. Product components that
+ *                           know billing vocabulary. Domain types are welcome
+ *                           here; transport types are not.
  *   provenance/    Where each component came from, in the type system.
  *
  * The thing to avoid is what V1 became: 616 component files, 371 of them in one

@@ -6,8 +6,8 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@ui/primitives/avatar"
-import { Item, ItemMedia } from "@ui/primitives/item"
+} from "@ui/components/primitives/avatar"
+import { Item, ItemMedia } from "@ui/components/primitives/item"
 import { AuthGridBackground } from "./auth-grid-background"
 import { AUTH18_TESTIMONIAL, AUTH18_TRUST_BRANDS } from "./data"
 import { LoginForm } from "./login-form"

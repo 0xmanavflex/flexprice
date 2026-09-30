@@ -5,7 +5,7 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@ui/primitives/dialog'
+} from '@ui/components/primitives/dialog'
 import { cn } from 'cn'
 import { provenance } from '@ui/provenance'
 

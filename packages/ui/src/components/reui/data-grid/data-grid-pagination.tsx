@@ -6,15 +6,15 @@ import type { JSX, ReactNode } from "react"
 import { useDataGrid } from "@ui/components/reui/data-grid/data-grid"
 
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@ui/primitives/select"
-import { Skeleton } from "@ui/primitives/skeleton"
+} from "@ui/components/primitives/select"
+import { Skeleton } from "@ui/components/primitives/skeleton"
 import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react"
 
 interface DataGridPaginationProps {

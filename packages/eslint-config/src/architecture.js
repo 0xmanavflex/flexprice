@@ -48,7 +48,7 @@ const ADAPTER_MESSAGE =
  * it locally, so a registry update or a design change meant editing dozens of
  * call sites, and each one drifted.
  *
- * The fix is one seam. These may be imported only by the `flexprice/` grids and
+ * The fix is one seam. These may be imported only by the `pages/` grids and
  * filters, and by `FilterBar`/`GridFooter` that back them — never by a page, a
  * shell part, or another composition. A screen composes from `FeatureGrid`, not
  * from `data-grid`, so swapping or restyling the grid stays a change in one file
@@ -174,7 +174,7 @@ export const uiSeamRules = {
   files: ['packages/ui/src/**/*.{ts,tsx}'],
   ignores: [
     'packages/ui/src/components/**',
-    'packages/ui/src/flexprice/**',
+    'packages/ui/src/pages/**',
     'packages/ui/src/compositions/FilterBar.tsx',
     'packages/ui/src/compositions/GridFooter.tsx',
     // A seam component's own story is part of the seam: it must build the same
@@ -193,7 +193,7 @@ export const uiSeamRules = {
           {
             group: BLOCKS,
             message:
-              'This is a block-grade primitive. Only the flexprice/ grids and filters (and FilterBar/GridFooter) may import the data grid, filter builder or cascader — compose from FeatureGrid, PlanGrid, FilterBar, and the swap stays a change in one place.',
+              'This is a block-grade primitive. Only the pages/ grids and filters (and FilterBar/GridFooter) may import the data grid, filter builder or cascader — compose from FeatureGrid, PlanGrid, FilterBar, and the swap stays a change in one place.',
           },
         ],
       },

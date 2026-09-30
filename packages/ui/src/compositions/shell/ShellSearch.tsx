@@ -1,15 +1,15 @@
 import { useEffect, useState } from 'react'
 import { SearchIcon } from 'lucide-react'
-import { Button } from '@ui/primitives/button'
+import { Button } from '@ui/components/primitives/button'
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@ui/primitives/dialog'
-import { Input } from '@ui/primitives/input'
-import { Kbd } from '@ui/primitives/kbd'
+} from '@ui/components/primitives/dialog'
+import { Input } from '@ui/components/primitives/input'
+import { Kbd } from '@ui/components/primitives/kbd'
 import { provenance } from '@ui/provenance'
 
 /**

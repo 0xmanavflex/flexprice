@@ -1,8 +1,8 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from 'lucide-react'
-import { SidebarProvider } from '@ui/primitives/sidebar'
-import { TooltipProvider } from '@ui/primitives/tooltip'
+import { SidebarProvider } from '@ui/components/primitives/sidebar'
+import { TooltipProvider } from '@ui/components/primitives/tooltip'
 import { ShellNav } from './ShellNav'
 import type { ShellNavGroup } from './types'
 

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { FilterIcon } from 'lucide-react'
-import { Button } from '@ui/primitives/button'
+import { Button } from '@ui/components/primitives/button'
 import { Filters } from '@ui/components/reui/filters/filters'
 import { createFilterQuery, flattenFilterConditions } from '@ui/components/reui/filters/filters-query'
 import {

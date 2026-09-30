@@ -8,7 +8,7 @@ import {
   useDeleteCustomer,
   useUpdateCustomer,
 } from '@fp/query'
-import { CustomerEditorDialog, CustomerGrid } from '@fp/ui/flexprice'
+import { CustomerEditorDialog, CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { UsersIcon } from 'lucide-react'

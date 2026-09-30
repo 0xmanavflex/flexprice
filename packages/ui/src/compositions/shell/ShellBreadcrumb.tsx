@@ -7,7 +7,7 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from '@ui/primitives/breadcrumb'
+} from '@ui/components/primitives/breadcrumb'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import type { ReactNode } from 'react'

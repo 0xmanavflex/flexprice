@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
-import { Input } from '@ui/primitives/input'
-import { Button } from '@ui/primitives/button'
+import { Input } from '@ui/components/primitives/input'
+import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 
 /**

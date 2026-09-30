@@ -10,14 +10,14 @@ import {
 import { cn } from "cn"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
 
-import { ChartContainer, ChartTooltip } from "@ui/primitives/chart"
+import { ChartContainer, ChartTooltip } from "@ui/components/primitives/chart"
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@ui/primitives/select"
+} from "@ui/components/primitives/select"
 import {
   chartConfig,
   conversionFunnelData,

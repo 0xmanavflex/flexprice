@@ -9,8 +9,8 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@ui/primitives/avatar"
-import { Button } from "@ui/primitives/button"
+} from "@ui/components/primitives/avatar"
+import { Button } from "@ui/components/primitives/button"
 import { UserCircle, XIcon, UploadIcon } from "lucide-react"
 
 interface ProfileAvatarUploadProps {

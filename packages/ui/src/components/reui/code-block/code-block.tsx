@@ -42,7 +42,7 @@ import type {
 } from "@ui/components/reui/code-block/code-block-highlight"
 
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 
 /* -------------------------------------------------------------------------- */
 /*                                   Context                                   */

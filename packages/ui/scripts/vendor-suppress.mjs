@@ -14,7 +14,7 @@
  *
  * So: a mechanical, idempotent, re-runnable header. Run it after every
  * install — `pnpm ui:add` does it automatically. Our own components, in
- * `flexprice/` and `compositions/`, are never touched and stay fully checked.
+ * `pages/` and `compositions/`, are never touched and stay fully checked.
  */
 import { readFileSync, writeFileSync } from 'node:fs'
 import { globSync } from 'node:fs'
@@ -26,7 +26,7 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 /** Vendored, therefore not ours to fix. Everything else is fully typechecked. */
 const VENDORED = [
   'src/components/reui/**/*.{ts,tsx}',
-  'src/primitives/**/*.{ts,tsx}',
+  'src/components/primitives/**/*.{ts,tsx}',
   // Premium blocks arrive as whole demo pages with their own components and
   // fixture data. They are a starting point to adapt, not code we maintain —
   // same rule, same treatment.

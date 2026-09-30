@@ -23,11 +23,11 @@ import type { DateRange, DayButton } from "react-day-picker"
 
 import { useIsMobile } from "@ui/hooks/use-mobile"
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
-import { Calendar, CalendarDayButton } from "@ui/primitives/calendar"
-import { Input } from "@ui/primitives/input"
-import { ScrollArea } from "@ui/primitives/scroll-area"
-import { Tabs, TabsList, TabsTrigger } from "@ui/primitives/tabs"
+import { Button } from "@ui/components/primitives/button"
+import { Calendar, CalendarDayButton } from "@ui/components/primitives/calendar"
+import { Input } from "@ui/components/primitives/input"
+import { ScrollArea } from "@ui/components/primitives/scroll-area"
+import { Tabs, TabsList, TabsTrigger } from "@ui/components/primitives/tabs"
 import { CornerUpLeftIcon, CornerUpRightIcon, ChevronLeftIcon, ChevronRightIcon, XIcon } from "lucide-react"
 
 export interface DateSelectorI18nConfig {

@@ -1,6 +1,6 @@
 // @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
-import { type ChartConfig } from "@ui/primitives/chart"
+import { type ChartConfig } from "@ui/components/primitives/chart"
 
 export type MetricKey =
   | "calls"

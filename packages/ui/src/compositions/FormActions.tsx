@@ -1,4 +1,4 @@
-import { Button } from '@ui/primitives/button'
+import { Button } from '@ui/components/primitives/button'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { provenance } from '@ui/provenance'
 

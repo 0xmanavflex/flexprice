@@ -11,7 +11,7 @@ import {
 import { cn } from "cn"
 import { toast } from "sonner"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   Item,
   ItemActions,
@@ -20,8 +20,8 @@ import {
   ItemMedia,
   ItemSeparator,
   ItemTitle,
-} from "@ui/primitives/item"
-import { Switch } from "@ui/primitives/switch"
+} from "@ui/components/primitives/item"
+import { Switch } from "@ui/components/primitives/switch"
 
 import {
   statusLabel,

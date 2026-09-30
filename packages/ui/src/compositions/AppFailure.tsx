@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Button } from '@ui/primitives/button'
+import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 
 /**

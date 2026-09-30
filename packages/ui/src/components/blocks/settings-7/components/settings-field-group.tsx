@@ -8,7 +8,7 @@ import {
   FieldGroup,
   FieldLegend,
   FieldSet,
-} from "@ui/primitives/field"
+} from "@ui/components/primitives/field"
 
 interface SettingsFieldGroupProps {
   legend: string

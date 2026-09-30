@@ -12,7 +12,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@ui/primitives/card"
+} from "@ui/components/primitives/card"
 
 interface SettingsCardProps {
   title: string

@@ -23,7 +23,7 @@ import {
 import { Combobox as ComboboxPrimitive } from "@base-ui/react"
 
 import { cn } from "cn"
-import { ScrollArea } from "@ui/primitives/scroll-area"
+import { ScrollArea } from "@ui/components/primitives/scroll-area"
 import { LoaderCircleIcon } from "lucide-react"
 
 export interface CascaderColumnsProps extends Omit<

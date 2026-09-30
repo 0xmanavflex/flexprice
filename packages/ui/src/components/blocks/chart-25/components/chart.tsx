@@ -7,8 +7,8 @@ import { Line, LineChart, XAxis, YAxis } from "recharts"
 import {
   ChartContainer,
   type ChartConfig,
-} from "@ui/primitives/chart"
-import { Separator } from "@ui/primitives/separator"
+} from "@ui/components/primitives/chart"
+import { Separator } from "@ui/components/primitives/separator"
 import { orderMetrics, type OrderMetric } from "./data"
 import { TrendingUp, TrendingDown } from "lucide-react"
 

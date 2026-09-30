@@ -6,9 +6,9 @@
   "description": "Presentation only. No server state, no SDK, no transport types.",
   "exports": {
     ".": "./src/index.ts",
-    "./primitives": "./src/primitives/index.ts",
+    "./primitives": "./src/components/primitives/index.ts",
     "./compositions": "./src/compositions/index.ts",
-    "./flexprice": "./src/flexprice/index.ts",
+    "./pages": "./src/pages/index.ts",
     "./styles.css": "./src/styles.css"
   },
   "scripts": {

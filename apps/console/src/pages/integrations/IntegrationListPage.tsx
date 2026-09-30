@@ -1,4 +1,4 @@
-import { IntegrationsBlock } from '@fp/ui/flexprice'
+import { IntegrationsBlock } from '@fp/ui/pages'
 import { PageBody } from '@fp/ui/compositions'
 
 export function IntegrationListPage() {

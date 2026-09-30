@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
-import { SidebarProvider } from '@ui/primitives/sidebar'
+import { SidebarProvider } from '@ui/components/primitives/sidebar'
 import { EnvironmentSwitcher } from './EnvironmentSwitcher'
 import type { ShellEnvironment } from './types'
 

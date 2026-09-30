@@ -7,26 +7,26 @@ import {
   AvatarFallback,
   AvatarGroup,
   AvatarImage,
-} from "@ui/primitives/avatar"
+} from "@ui/components/primitives/avatar"
 import {
   Card,
   CardAction,
   CardContent,
   CardHeader,
   CardTitle,
-} from "@ui/primitives/card"
+} from "@ui/components/primitives/card"
 import {
   Tabs,
   TabsContent,
   TabsList,
   TabsTrigger,
-} from "@ui/primitives/tabs"
+} from "@ui/components/primitives/tabs"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@ui/primitives/tooltip"
+} from "@ui/components/primitives/tooltip"
 import {
   allocationMemberCount,
   allocationMembers,

@@ -7,7 +7,7 @@ import {
   useDeleteCostSheet,
   useUpdateCostSheet,
 } from '@fp/query'
-import { CostSheetEditorDialog, CostSheetGrid } from '@fp/ui/flexprice'
+import { CostSheetEditorDialog, CostSheetGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { SheetIcon } from 'lucide-react'

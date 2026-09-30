@@ -4,20 +4,20 @@
 
 import { useEffect, useId, useState, type ComponentProps } from "react"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   Dialog,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from "@ui/primitives/dialog"
-import { Input } from "@ui/primitives/input"
-import { Kbd } from "@ui/primitives/kbd"
+} from "@ui/components/primitives/dialog"
+import { Input } from "@ui/components/primitives/input"
+import { Kbd } from "@ui/components/primitives/kbd"
 import {
   SidebarGroup,
   SidebarGroupContent,
-} from "@ui/primitives/sidebar"
+} from "@ui/components/primitives/sidebar"
 import { IconPlaceholder } from "./icon-placeholder"
 
 export function SearchForm({ ...props }: ComponentProps<"form">) {

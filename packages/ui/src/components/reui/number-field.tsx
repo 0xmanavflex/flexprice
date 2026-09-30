@@ -9,7 +9,7 @@ import type { VariantProps } from "class-variance-authority"
 import { cva } from "class-variance-authority"
 
 import { cn } from "cn"
-import { Label } from "@ui/primitives/label"
+import { Label } from "@ui/components/primitives/label"
 import { MinusIcon, PlusIcon } from "lucide-react"
 
 const NumberFieldContext = createContext<{

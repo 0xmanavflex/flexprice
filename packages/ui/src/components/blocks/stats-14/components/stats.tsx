@@ -6,7 +6,7 @@ import {
   FrameTitle,
 } from "@ui/components/reui/frame"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,7 +14,7 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@ui/primitives/dropdown-menu"
+} from "@ui/components/primitives/dropdown-menu"
 import { adoptionRate, bars, getBarColor, maxBars } from "./data"
 import { EllipsisVerticalIcon, SettingsIcon, TriangleAlertIcon, Pin, Share2Icon, ShieldCheckIcon } from "lucide-react"
 

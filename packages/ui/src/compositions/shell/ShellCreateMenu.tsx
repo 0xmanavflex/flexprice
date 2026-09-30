@@ -1,13 +1,13 @@
 import { Fragment, type ReactNode } from 'react'
 import { PlusIcon } from 'lucide-react'
-import { Button } from '@ui/primitives/button'
+import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@ui/primitives/dropdown-menu'
+} from '@ui/components/primitives/dropdown-menu'
 import { provenance } from '@ui/provenance'
 import { MENU_CONTENT, MENU_ITEM } from './menuSurface'
 

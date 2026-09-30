@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { WaypointsIcon } from 'lucide-react'
 import { type UsageSync, type UsageSyncQuery } from '@fp/domain'
 import { ApiError, useUsageSyncs } from '@fp/query'
-import { UsageSyncDetailSheet, UsageSyncGrid } from '@fp/ui/flexprice'
+import { UsageSyncDetailSheet, UsageSyncGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 
 export interface UsageSyncListPageProps {

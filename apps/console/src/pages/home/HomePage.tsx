@@ -16,7 +16,7 @@ import {
   isActive,
 } from '@fp/domain'
 import type { Invoice, Subscription } from '@fp/domain'
-import { DashboardHome } from '@fp/ui/flexprice'
+import { DashboardHome } from '@fp/ui/pages'
 import type {
   ApiPanel,
   EventsPanel,
@@ -25,7 +25,7 @@ import type {
   SubscriptionsPanel,
   UsagePanel,
   UsageRow,
-} from '@fp/ui/flexprice'
+} from '@fp/ui/pages'
 
 /**
  * Home — the console overview, wired to what the API can actually answer.

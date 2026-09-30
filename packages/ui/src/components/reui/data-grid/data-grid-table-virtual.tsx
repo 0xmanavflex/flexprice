@@ -40,7 +40,7 @@ import type {
 } from "@tanstack/react-virtual"
 
 import { cn } from "cn"
-import { Spinner } from "@ui/primitives/spinner"
+import { Spinner } from "@ui/components/primitives/spinner"
 
 type DataGridTableVirtualScrollElements = {
   containerElement: HTMLDivElement | null

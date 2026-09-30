@@ -29,7 +29,7 @@ import {
   type ShellEnvironment,
   type ShellUser,
 } from '@fp/ui/compositions'
-import { EnvironmentCreateDialog } from '@fp/ui/flexprice'
+import { EnvironmentCreateDialog } from '@fp/ui/pages'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import {
   breadcrumbForPath,

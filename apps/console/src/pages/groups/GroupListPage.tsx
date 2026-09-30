@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Group, type GroupQuery } from '@fp/domain'
 import { ApiError, useCreateGroup, useDeleteGroup, useGroups } from '@fp/query'
-import { GroupEditorDialog, GroupGrid } from '@fp/ui/flexprice'
+import { GroupEditorDialog, GroupGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { LayersIcon } from 'lucide-react'

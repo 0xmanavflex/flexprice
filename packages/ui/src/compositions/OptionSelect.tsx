@@ -4,7 +4,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from '@ui/primitives/select'
+} from '@ui/components/primitives/select'
 import { provenance } from '@ui/provenance'
 
 /**

@@ -9,7 +9,7 @@ import {
 } from "@ui/components/reui/alert"
 import { Badge } from "@ui/components/reui/badge"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   Field,
   FieldDescription,
@@ -17,14 +17,14 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSet,
-} from "@ui/primitives/field"
-import { Input } from "@ui/primitives/input"
+} from "@ui/components/primitives/field"
+import { Input } from "@ui/components/primitives/input"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
   InputGroupText,
-} from "@ui/primitives/input-group"
+} from "@ui/components/primitives/input-group"
 import {
   Select,
   SelectContent,
@@ -32,8 +32,8 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@ui/primitives/select"
-import { Textarea } from "@ui/primitives/textarea"
+} from "@ui/components/primitives/select"
+import { Textarea } from "@ui/components/primitives/textarea"
 import { ROLES, TIMEZONES } from "./data"
 import { ProfileAvatarUpload } from "./profile-avatar-upload"
 import { SettingRow } from "./setting-row"

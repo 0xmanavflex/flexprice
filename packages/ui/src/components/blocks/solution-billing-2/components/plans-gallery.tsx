@@ -10,7 +10,7 @@ import {
 } from "@ui/components/reui/alert"
 import { toast } from "sonner"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 
 import { CreatePlanDialog } from "./create-plan-dialog"
 import { plans } from "./data"

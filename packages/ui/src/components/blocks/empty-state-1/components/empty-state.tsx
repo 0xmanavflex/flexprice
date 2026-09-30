@@ -1,6 +1,6 @@
 // @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import {
   Empty,
   EmptyContent,
@@ -8,7 +8,7 @@ import {
   EmptyHeader,
   EmptyMedia,
   EmptyTitle,
-} from "@ui/primitives/empty"
+} from "@ui/components/primitives/empty"
 import { LearnMoreGuides } from "./learn-more-guides"
 import { RecordsEmptyIllustration } from "./records-empty-illustration"
 import { PlugZapIcon, UploadIcon } from "lucide-react"

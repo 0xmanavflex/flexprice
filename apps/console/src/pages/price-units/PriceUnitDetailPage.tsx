@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type CreatePriceUnit, formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
-import { CatalogStatusBadge, PriceUnitEditorDialog } from '@fp/ui/flexprice'
+import { CatalogStatusBadge, PriceUnitEditorDialog } from '@fp/ui/pages'
 import { AppFailure, DetailList, DetailShell, LoadingRows, Section } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 

@@ -23,7 +23,7 @@ import { architecture } from './architecture.js'
  */
 const VENDORED = [
   'packages/ui/src/components/reui/**',
-  'packages/ui/src/primitives/**',
+  'packages/ui/src/components/primitives/**',
   'packages/ui/src/components/blocks/**',
   'packages/ui/src/components/examples/**',
   'packages/ui/src/hooks/**',

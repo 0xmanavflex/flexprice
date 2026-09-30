@@ -2,16 +2,16 @@
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
 import { type ComponentProps } from "react"
 
-import { Button } from "@ui/primitives/button"
-import { Field, FieldGroup, FieldLabel } from "@ui/primitives/field"
-import { Input } from "@ui/primitives/input"
+import { Button } from "@ui/components/primitives/button"
+import { Field, FieldGroup, FieldLabel } from "@ui/components/primitives/field"
+import { Input } from "@ui/components/primitives/input"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
-} from "@ui/primitives/input-group"
-import { Separator } from "@ui/primitives/separator"
+} from "@ui/components/primitives/input-group"
+import { Separator } from "@ui/components/primitives/separator"
 import { AuthLogo } from "./auth-logo"
 import { AUTH18_PROVIDERS } from "./data"
 import { EyeOffIcon, EyeIcon } from "lucide-react"

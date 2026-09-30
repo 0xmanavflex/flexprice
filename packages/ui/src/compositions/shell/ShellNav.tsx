@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from '@ui/primitives/dropdown-menu'
+} from '@ui/components/primitives/dropdown-menu'
 import {
   SidebarGroup,
   SidebarGroupContent,
@@ -18,7 +18,7 @@ import {
   SidebarMenuItem,
   SidebarMenuSub,
   useSidebar,
-} from '@ui/primitives/sidebar'
+} from '@ui/components/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
 import { MENU_ITEM, MENU_LABEL } from './menuSurface'
 import type { ShellNavGroup, ShellNavItem } from './types'

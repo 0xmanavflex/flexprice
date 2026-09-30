@@ -21,7 +21,7 @@ import type {
 import { Subscribe } from "@tanstack/react-table"
 
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 
 /** Where a finished edit sends the focused cell, or null to stay. */
 type DataGridEditorAdvance = "down" | "up" | "right" | "left" | null

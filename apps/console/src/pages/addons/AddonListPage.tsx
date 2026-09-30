@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Addon, type AddonQuery, type CreateAddon } from '@fp/domain'
 import { ApiError, useAddons, useCatalogStats, useCreateAddon, useUpdateAddon } from '@fp/query'
-import { AddonEditorDialog, AddonGrid } from '@fp/ui/flexprice'
+import { AddonEditorDialog, AddonGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PuzzleIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'

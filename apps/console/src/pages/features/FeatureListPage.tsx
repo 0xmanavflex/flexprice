@@ -18,7 +18,7 @@ import {
   useGroups,
   useUpdateFeature,
 } from '@fp/query'
-import { FeatureCloneDialog, FeatureEditorDialog, FeatureGrid } from '@fp/ui/flexprice'
+import { FeatureCloneDialog, FeatureEditorDialog, FeatureGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'

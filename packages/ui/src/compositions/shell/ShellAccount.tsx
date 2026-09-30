@@ -1,5 +1,5 @@
 import { BookOpenIcon, LogOutIcon, SettingsIcon, UserIcon } from 'lucide-react'
-import { Button } from '@ui/primitives/button'
+import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -8,7 +8,7 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '@ui/primitives/dropdown-menu'
+} from '@ui/components/primitives/dropdown-menu'
 import { provenance } from '@ui/provenance'
 import { MENU_CONTENT, MENU_ITEM } from './menuSurface'
 import type { ShellUser } from './types'

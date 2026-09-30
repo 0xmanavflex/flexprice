@@ -52,9 +52,9 @@ import type {
 } from "@ui/components/reui/filters/filters-types"
 
 import { cn } from "cn"
-import { Button } from "@ui/primitives/button"
-import { ButtonGroup } from "@ui/primitives/button-group"
-import { Input } from "@ui/primitives/input"
+import { Button } from "@ui/components/primitives/button"
+import { ButtonGroup } from "@ui/components/primitives/button-group"
+import { Input } from "@ui/components/primitives/input"
 import { CheckIcon, XIcon } from "lucide-react"
 
 /* -------------------------------------------------------------------------- */

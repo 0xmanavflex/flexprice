@@ -6,7 +6,7 @@ import {
   useCustomerSubscriptions,
   useCustomerUsageSummary,
 } from '@fp/query'
-import { CUSTOMER_TABS, CustomerDetail, QuotaCard, type CustomerTab } from '@fp/ui/flexprice'
+import { CUSTOMER_TABS, CustomerDetail, QuotaCard, type CustomerTab } from '@fp/ui/pages'
 import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
 
 /**

@@ -4,7 +4,7 @@ import { type CSSProperties } from "react"
 import { Frame, FramePanel } from "@ui/components/reui/frame"
 import { cn } from "cn"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import { responseMetrics, type MetricGauge, type ResponseMetric } from "./data"
 import { TrendingDown, TrendingUp, EllipsisVerticalIcon } from "lucide-react"
 

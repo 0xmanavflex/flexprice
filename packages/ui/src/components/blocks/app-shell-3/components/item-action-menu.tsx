@@ -12,8 +12,8 @@ import {
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@ui/primitives/dropdown-menu"
-import { SidebarMenuAction } from "@ui/primitives/sidebar"
+} from "@ui/components/primitives/dropdown-menu"
+import { SidebarMenuAction } from "@ui/components/primitives/sidebar"
 import { IconPlaceholder } from "./icon-placeholder"
 
 import { ITEM_ACTIONS } from "./data"

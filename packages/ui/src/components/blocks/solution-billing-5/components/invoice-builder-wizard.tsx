@@ -27,9 +27,9 @@ import {
   Avatar,
   AvatarFallback,
   AvatarImage,
-} from "@ui/primitives/avatar"
-import { Button } from "@ui/primitives/button"
-import { Calendar } from "@ui/primitives/calendar"
+} from "@ui/components/primitives/avatar"
+import { Button } from "@ui/components/primitives/button"
+import { Calendar } from "@ui/components/primitives/calendar"
 import {
   Card,
   CardAction,
@@ -38,7 +38,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@ui/primitives/card"
+} from "@ui/components/primitives/card"
 import {
   Combobox,
   ComboboxContent,
@@ -46,7 +46,7 @@ import {
   ComboboxInput,
   ComboboxItem,
   ComboboxList,
-} from "@ui/primitives/combobox"
+} from "@ui/components/primitives/combobox"
 import {
   Field,
   FieldDescription,
@@ -54,18 +54,18 @@ import {
   FieldLabel,
   FieldLegend,
   FieldSet,
-} from "@ui/primitives/field"
-import { Input } from "@ui/primitives/input"
+} from "@ui/components/primitives/field"
+import { Input } from "@ui/components/primitives/input"
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupInput,
-} from "@ui/primitives/input-group"
+} from "@ui/components/primitives/input-group"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@ui/primitives/popover"
+} from "@ui/components/primitives/popover"
 import {
   Select,
   SelectContent,
@@ -73,9 +73,9 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@ui/primitives/select"
-import { Separator } from "@ui/primitives/separator"
-import { Spinner } from "@ui/primitives/spinner"
+} from "@ui/components/primitives/select"
+import { Separator } from "@ui/components/primitives/separator"
+import { Spinner } from "@ui/components/primitives/spinner"
 import {
   Table,
   TableBody,
@@ -83,7 +83,7 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@ui/primitives/table"
+} from "@ui/components/primitives/table"
 import {
   COLLECTION_METHOD_OPTIONS,
   createInvoiceLine,

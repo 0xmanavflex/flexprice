@@ -61,7 +61,7 @@ import type {
   Table,
 } from "@tanstack/react-table"
 
-import { Button } from "@ui/primitives/button"
+import { Button } from "@ui/components/primitives/button"
 import { GripVerticalIcon } from "lucide-react"
 
 function DataGridTableDndHeader<TData extends object>({

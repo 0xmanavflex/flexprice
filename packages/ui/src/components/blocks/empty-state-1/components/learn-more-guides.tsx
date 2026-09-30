@@ -6,7 +6,7 @@ import {
   ItemContent,
   ItemMedia,
   ItemTitle,
-} from "@ui/primitives/item"
+} from "@ui/components/primitives/item"
 import { BookOpenIcon, ChevronRightIcon, FileTextIcon } from "lucide-react"
 
 export function LearnMoreGuides() {

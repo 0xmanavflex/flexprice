@@ -13,23 +13,23 @@ import {
   AvatarGroup,
   AvatarGroupCount,
   AvatarImage,
-} from "@ui/primitives/avatar"
-import { Button } from "@ui/primitives/button"
-import { ButtonGroup } from "@ui/primitives/button-group"
+} from "@ui/components/primitives/avatar"
+import { Button } from "@ui/components/primitives/button"
+import { ButtonGroup } from "@ui/components/primitives/button-group"
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
-} from "@ui/primitives/popover"
-import { Progress } from "@ui/primitives/progress"
-import { ScrollArea } from "@ui/primitives/scroll-area"
-import { Separator } from "@ui/primitives/separator"
+} from "@ui/components/primitives/popover"
+import { Progress } from "@ui/components/primitives/progress"
+import { ScrollArea } from "@ui/components/primitives/scroll-area"
+import { Separator } from "@ui/components/primitives/separator"
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
-} from "@ui/primitives/tooltip"
+} from "@ui/components/primitives/tooltip"
 import { IconPlaceholder } from "./icon-placeholder"
 
 import {

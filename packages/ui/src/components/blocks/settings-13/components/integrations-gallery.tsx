@@ -8,9 +8,9 @@ import {
   FramePanel,
 } from "@ui/components/reui/frame"
 
-import { Button } from "@ui/primitives/button"
-import { Item, ItemMedia } from "@ui/primitives/item"
-import { Switch } from "@ui/primitives/switch"
+import { Button } from "@ui/components/primitives/button"
+import { Item, ItemMedia } from "@ui/components/primitives/item"
+import { Switch } from "@ui/components/primitives/switch"
 
 import { integrationApps, type IntegrationApp } from "./data"
 

@@ -1,4 +1,4 @@
-import { PricingCatalogBlock } from '@fp/ui/flexprice'
+import { PricingCatalogBlock } from '@fp/ui/pages'
 import { PageBody, PageHeader } from '@fp/ui/compositions'
 
 /** The ReUI `solution-billing-2` plan catalogue block, unmodified. */

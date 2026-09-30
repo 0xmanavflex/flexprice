@@ -1,7 +1,7 @@
 import { type Invoice, type InvoiceQuery, isStoredInvoiceStatus } from '@fp/domain'
 import { ApiError, useInvoices } from '@fp/query'
 import { ReceiptIcon } from 'lucide-react'
-import { InvoiceGrid } from '@fp/ui/flexprice'
+import { InvoiceGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 
 export interface InvoiceListPageProps {

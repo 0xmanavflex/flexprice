@@ -7,8 +7,8 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from '@ui/primitives/dialog'
-import { Button } from '@ui/primitives/button'
+} from '@ui/components/primitives/dialog'
+import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 
 /**

@@ -47,7 +47,7 @@ import {
   EntitlementDialog,
   EntitlementTable,
   type FeatureOption,
-} from '@fp/ui/flexprice'
+} from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,

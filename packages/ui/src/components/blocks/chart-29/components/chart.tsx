@@ -7,7 +7,7 @@ import { Badge } from "@ui/components/reui/badge"
 import { Frame, FramePanel } from "@ui/components/reui/frame"
 import { Bar, BarChart, XAxis } from "recharts"
 
-import { ChartContainer, ChartTooltip } from "@ui/primitives/chart"
+import { ChartContainer, ChartTooltip } from "@ui/components/primitives/chart"
 import { chartConfig, chartData } from "./data"
 import { TrendingUp } from "lucide-react"
 

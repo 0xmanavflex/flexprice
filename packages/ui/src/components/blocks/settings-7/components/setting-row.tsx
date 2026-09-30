@@ -10,7 +10,7 @@ import {
   FieldLabel,
   FieldSeparator,
   FieldTitle,
-} from "@ui/primitives/field"
+} from "@ui/components/primitives/field"
 
 interface SettingRowProps {
   title: string
