@@ -30,6 +30,8 @@ export { CUSTOMER_TABS, CustomerDetail, CustomerDetailProvenance } from './custo
 export type { CustomerDetailProps, CustomerTab } from './customers/CustomerDetail'
 export { InvoiceGrid, InvoiceGridProvenance } from './invoices/InvoiceGrid'
 export type { InvoiceGridProps } from './invoices/InvoiceGrid'
+export { InvoiceCreatorBlock } from './invoices/InvoiceCreatorBlock'
+export { InvoiceBillingDetailBlock } from './invoices/InvoiceBillingDetailBlock'
 export { PriceOverrideForm, PriceOverrideFormProvenance } from './charges/PriceOverrideForm'
 export type { PriceOverrideFormProps } from './charges/PriceOverrideForm'
 /*

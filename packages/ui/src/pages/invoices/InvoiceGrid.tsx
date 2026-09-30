@@ -10,6 +10,7 @@ import {
   PaymentStatus,
   isStoredInvoiceStatus,
 } from '@fp/domain'
+import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import {
@@ -164,6 +165,7 @@ export interface InvoiceGridProps {
   error?: string | null
   onRetry?: () => void
   onInvoiceClick?: (invoice: Invoice) => void
+  onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for dates and amounts. Supplied by the app, never read from a global. */
@@ -179,6 +181,7 @@ export function InvoiceGrid({
   error = null,
   onRetry,
   onInvoiceClick,
+  onCreate,
   onClearFilters,
   locale,
 }: InvoiceGridProps) {
@@ -324,6 +327,7 @@ export function InvoiceGrid({
         selectable
         rowActions={rowActions}
         exportFileName="invoices"
+        primaryAction={onCreate ? <Button onClick={onCreate}>New invoice</Button> : undefined}
         {...(onInvoiceClick ? { onRowClick: onInvoiceClick } : {})}
         isLoading={isLoading}
         error={error}
