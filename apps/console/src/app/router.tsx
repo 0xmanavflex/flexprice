@@ -114,6 +114,11 @@ const CreditNoteListPage = lazy(() =>
 const WorkflowListPage = lazy(() =>
   import('@/pages/workflows/WorkflowListPage').then((m) => ({ default: m.WorkflowListPage })),
 )
+const ExportListPage = lazy(() =>
+  import('@/pages/exports/ExportListPage').then((m) => ({ default: m.ExportListPage })),
+)
+import { parseDataExportSearch } from './dataExportSearch'
+import { DEFAULT_DATA_EXPORT_QUERY, type DataExportQuery } from '@fp/domain'
 const UsageSyncListPage = lazy(() =>
   import('@/pages/usage-syncs/UsageSyncListPage').then((m) => ({ default: m.UsageSyncListPage })),
 )
@@ -1045,6 +1050,26 @@ function WorkflowsRouteComponent() {
   )
 }
 
+const exportsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/exports',
+  validateSearch: (search: Record<string, unknown>): DataExportQuery => parseDataExportSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_DATA_EXPORT_QUERY)] },
+  component: ExportsRouteComponent,
+})
+
+function ExportsRouteComponent() {
+  const query = useSearch({ from: exportsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <ExportListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/exports', search: next, replace: true })}
+    />
+  )
+}
+
 const taxesRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/taxes',
@@ -1188,6 +1213,7 @@ export const routeTree = rootRoute.addChildren([
     paymentsRoute,
     creditNotesRoute,
     workflowsRoute,
+    exportsRoute,
     usageSyncsRoute,
     taxesRoute,
     eventsRoute,

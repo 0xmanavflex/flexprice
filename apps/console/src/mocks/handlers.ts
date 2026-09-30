@@ -885,6 +885,23 @@ const workflowRuns: Record<string, unknown>[] = Array.from({ length: 30 }, (_, i
   }
 })
 
+/** Scheduled exports, authored to the wire: snake_case, `job_config` nested. */
+const scheduledTasks: Record<string, unknown>[] = [
+  ['invoice', 'daily', true, 'acme-billing', 'us-east-1', 'flexprice/invoices/'],
+  ['events', 'hourly', true, 'acme-usage', 'us-east-1', 'flexprice/events/'],
+  ['credit_usage', 'daily', false, 'acme-warehouse', 'eu-west-1', 'flexprice/credits/'],
+  ['usage_analytics', 'daily', true, 'acme-analytics', 'ap-south-1', ''],
+].map(([entity, interval, enabled, bucket, region, prefix], index) => ({
+  id: `task_${String(index + 1).padStart(4, '0')}`,
+  connection_id: 'conn_s3_01',
+  entity_type: entity,
+  interval,
+  enabled,
+  status: 'published',
+  job_config: { bucket, region, key_prefix: prefix },
+  created_at: new Date(Date.UTC(2026, 1, 1 + index)).toISOString(),
+}))
+
 /**
  * `GET /taxes/rates`, the one settings panel with no handler at all.
  *
@@ -1364,8 +1381,30 @@ function findIndexById(rows: Record<string, unknown>[], id: string): number {
 }
 
 /** In-memory stores for the entities whose corpus is empty. */
-const costSheetStore: Record<string, unknown>[] = []
-const groupStore: Record<string, unknown>[] = []
+const costSheetStore: Record<string, unknown>[] = [
+  {
+    id: 'cost_seed_1',
+    name: 'Inference costs',
+    lookup_key: 'inference-costs',
+    description: 'What each model call costs us.',
+    status: 'published',
+    prices: [],
+    created_at: '2025-01-10T09:00:00Z',
+    updated_at: '2025-01-10T09:00:00Z',
+  },
+]
+const groupStore: Record<string, unknown>[] = [
+  {
+    id: 'grp_seed_1',
+    name: 'Core features',
+    lookup_key: 'core-features',
+    entity_type: 'feature',
+    entity_ids: [],
+    status: 'published',
+    created_at: '2025-01-10T09:00:00Z',
+    updated_at: '2025-01-10T09:00:00Z',
+  },
+]
 
 async function readBody(request: Request): Promise<Record<string, unknown>> {
   return ((await request.json().catch(() => ({}))) ?? {}) as Record<string, unknown>
@@ -2259,6 +2298,24 @@ export const handlers = [
 
     const matches = creditNotes.filter(
       (note) => statuses.length === 0 || statuses.includes(String(note['credit_note_status'])),
+    )
+    return HttpResponse.json({
+      items: matches.slice(offset, offset + limit),
+      pagination: { total: matches.length, limit, offset },
+    })
+  }),
+
+  /*
+   * `GET /tasks/scheduled` — the Exports list. `enabled` is the server-side
+   * filter this console sends.
+   */
+  http.get(`${BASE}/tasks/scheduled`, ({ request }) => {
+    const url = new URL(request.url)
+    const limit = Number(url.searchParams.get('limit') ?? 25)
+    const offset = Number(url.searchParams.get('offset') ?? 0)
+    const enabled = url.searchParams.get('enabled')
+    const matches = scheduledTasks.filter(
+      (task) => enabled === null || String(task['enabled']) === enabled,
     )
     return HttpResponse.json({
       items: matches.slice(offset, offset + limit),

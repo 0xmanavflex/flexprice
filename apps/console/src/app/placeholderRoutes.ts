@@ -61,16 +61,7 @@ export const PLACEHOLDER_ROUTES = [
   // `/api-keys`, `/service-accounts`, `/webhooks` are real: each lands on its
   // Settings → Developers panel (see `developerRedirects` in router.tsx).
   // `/events` is a real page — see `eventsRoute` in router.tsx.
-  {
-    path: '/exports',
-    title: 'Exports',
-    description: 'Scheduled extracts of billing data to your own storage.',
-    emptyTitle: 'No exports yet',
-    emptyDescription:
-      'Exports send billing data to your own storage on a schedule.',
-    cta: 'Create export',
-    legacy: '/tools/exports',
-  },
+  // `/exports` is a real page — see `exportsRoute` in router.tsx.
   // `/usage-syncs` is a real page — see `usageSyncsRoute` in router.tsx.
   // `/workflows` is a real page — see `workflowsRoute` in router.tsx.
 
