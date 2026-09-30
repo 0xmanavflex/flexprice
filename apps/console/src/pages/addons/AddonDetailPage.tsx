@@ -33,7 +33,7 @@ import {
   useUpdateAddon,
 } from '@fp/query'
 import {
-  AddonEditorSheet,
+  AddonEditorDialog,
   CatalogStatusBadge,
   ChargeTable,
   CreditGrantDialog,
@@ -193,7 +193,7 @@ export function AddonDetailPage({ addonId, onNavigateToList }: AddonDetailPagePr
         </Tabs>
       </DetailShell>
 
-      <AddonEditorSheet
+      <AddonEditorDialog
         open={editing}
         onOpenChange={(open) => {
           if (!open) closeEditor()

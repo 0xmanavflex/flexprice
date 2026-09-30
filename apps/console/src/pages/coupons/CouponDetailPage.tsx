@@ -17,7 +17,7 @@ import {
   useCouponAssociations,
   useUpdateCoupon,
 } from '@fp/query'
-import { CatalogStatusBadge, CouponEditorSheet, Money } from '@fp/ui/flexprice'
+import { CatalogStatusBadge, CouponEditorDialog, Money } from '@fp/ui/flexprice'
 import {
   AppFailure,
   ConfirmDialog,
@@ -160,7 +160,7 @@ export function CouponDetailPage({ couponId, onBack }: CouponDetailPageProps) {
         ) : null}
       </DetailShell>
 
-      <CouponEditorSheet
+      <CouponEditorDialog
         open={editing}
         onOpenChange={(open) => {
           if (!open) closeEdit()

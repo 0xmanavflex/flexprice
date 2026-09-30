@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type CreatePriceUnit, type PriceUnit, type PriceUnitQuery } from '@fp/domain'
 import { ApiError, useCreatePriceUnit, usePriceUnits, useUpdatePriceUnit } from '@fp/query'
-import { PriceUnitEditorSheet, PriceUnitGrid } from '@fp/ui/flexprice'
+import { PriceUnitEditorDialog, PriceUnitGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { CoinsIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -90,7 +90,7 @@ export function PriceUnitListPage({
         </ListState>
       </PageBody>
 
-      <PriceUnitEditorSheet
+      <PriceUnitEditorDialog
         open={editing !== null}
         onOpenChange={(open) => {
           if (!open) close()

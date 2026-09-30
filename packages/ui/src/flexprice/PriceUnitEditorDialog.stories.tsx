@@ -1,7 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import type { CreatePriceUnit } from '@fp/domain'
-import { PriceUnitEditorSheet } from './PriceUnitEditorSheet'
+import { PriceUnitEditorDialog } from './PriceUnitEditorDialog'
 
 /**
  * The price-unit editor, as a right-hand drawer carrying `PriceUnitForm`. The
@@ -9,11 +9,11 @@ import { PriceUnitEditorSheet } from './PriceUnitEditorSheet'
  * validated `CreatePriceUnit` comes out. Open by default. No provider, no network.
  */
 const meta = {
-  title: 'Surfaces/PriceUnitEditorSheet',
-  component: PriceUnitEditorSheet,
+  title: 'Surfaces/PriceUnitEditorDialog',
+  component: PriceUnitEditorDialog,
   parameters: { layout: 'fullscreen' },
   args: { open: true, onOpenChange: fn(), mode: 'create', onSubmit: fn() },
-} satisfies Meta<typeof PriceUnitEditorSheet>
+} satisfies Meta<typeof PriceUnitEditorDialog>
 
 export default meta
 type Story = StoryObj<typeof meta>

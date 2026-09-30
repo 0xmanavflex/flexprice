@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { AddonEditorSheet } from './AddonEditorSheet'
+import { AddonEditorDialog } from './AddonEditorDialog'
 
 /**
  * The add-on editor, as a right-hand drawer — the list stays visible behind it.
@@ -8,11 +8,11 @@ import { AddonEditorSheet } from './AddonEditorSheet'
  * the mode, and what a submit does. Open by default so the surface is visible.
  */
 const meta = {
-  title: 'Surfaces/AddonEditorSheet',
-  component: AddonEditorSheet,
+  title: 'Surfaces/AddonEditorDialog',
+  component: AddonEditorDialog,
   parameters: { layout: 'fullscreen' },
   args: { open: true, onOpenChange: fn(), mode: 'create', onSubmit: fn() },
-} satisfies Meta<typeof AddonEditorSheet>
+} satisfies Meta<typeof AddonEditorDialog>
 
 export default meta
 type Story = StoryObj<typeof meta>

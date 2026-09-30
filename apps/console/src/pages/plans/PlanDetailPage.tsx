@@ -48,7 +48,7 @@ import {
   EntitlementDrawer,
   type FeatureOption,
   EntitlementTable,
-  PlanEditorSheet,
+  PlanEditorDialog,
   PlanPreviewCard,
 } from '@fp/ui/flexprice'
 import {
@@ -351,7 +351,7 @@ export function PlanDetailPage({
         </div>
       </DetailShell>
 
-      <PlanEditorSheet
+      <PlanEditorDialog
         open={editing}
         onOpenChange={setEditing}
         mode="edit"

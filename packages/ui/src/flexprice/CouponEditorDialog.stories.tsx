@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { CouponEditorSheet } from './CouponEditorSheet'
+import { CouponEditorDialog } from './CouponEditorDialog'
 
 /**
  * The coupon editor, as a right-hand drawer — the detail page stays behind it.
@@ -8,8 +8,8 @@ import { CouponEditorSheet } from './CouponEditorSheet'
  * small and the code and discount show as read-only context. Open by default.
  */
 const meta = {
-  title: 'Surfaces/CouponEditorSheet',
-  component: CouponEditorSheet,
+  title: 'Surfaces/CouponEditorDialog',
+  component: CouponEditorDialog,
   parameters: { layout: 'fullscreen' },
   args: {
     open: true,
@@ -17,7 +17,7 @@ const meta = {
     defaultValue: { name: 'Launch 20% off' },
     onSubmit: fn(),
   },
-} satisfies Meta<typeof CouponEditorSheet>
+} satisfies Meta<typeof CouponEditorDialog>
 
 export default meta
 type Story = StoryObj<typeof meta>

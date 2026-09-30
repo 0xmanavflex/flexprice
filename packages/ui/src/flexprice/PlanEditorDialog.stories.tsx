@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { PlanEditorSheet } from './PlanEditorSheet'
+import { PlanEditorDialog } from './PlanEditorDialog'
 
 /**
  * The plan editor, as a right-hand drawer carrying `PlanForm`. The page owns
@@ -8,11 +8,11 @@ import { PlanEditorSheet } from './PlanEditorSheet'
  * Open by default so the surface is visible. No provider, no network.
  */
 const meta = {
-  title: 'Surfaces/PlanEditorSheet',
-  component: PlanEditorSheet,
+  title: 'Surfaces/PlanEditorDialog',
+  component: PlanEditorDialog,
   parameters: { layout: 'fullscreen' },
   args: { open: true, onOpenChange: fn(), mode: 'create', onSubmit: fn() },
-} satisfies Meta<typeof PlanEditorSheet>
+} satisfies Meta<typeof PlanEditorDialog>
 
 export default meta
 type Story = StoryObj<typeof meta>

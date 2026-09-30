@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type CreatePlan, type PlanQuery } from '@fp/domain'
 import { ApiError, useCatalogStats, useCreatePlan, usePlans } from '@fp/query'
-import { PlanEditorSheet, PlanGrid } from '@fp/ui/flexprice'
+import { PlanEditorDialog, PlanGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -86,7 +86,7 @@ export function PlanListPage({ query, onQueryChange, onOpenPlan }: PlanListPageP
         </ListState>
       </PageBody>
 
-      <PlanEditorSheet
+      <PlanEditorDialog
         open={creating}
         onOpenChange={(open) => {
           if (!open) close()

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type CreatePriceUnit, formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
-import { CatalogStatusBadge, PriceUnitEditorSheet } from '@fp/ui/flexprice'
+import { CatalogStatusBadge, PriceUnitEditorDialog } from '@fp/ui/flexprice'
 import { AppFailure, DetailList, DetailShell, LoadingRows, Section } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 
@@ -152,7 +152,7 @@ export function PriceUnitDetailPage({ priceUnitId, onNavigateToList }: PriceUnit
         </Section>
       </DetailShell>
 
-      <PriceUnitEditorSheet
+      <PriceUnitEditorDialog
         open={editing}
         onOpenChange={(open) => {
           if (!open) closeEditor()

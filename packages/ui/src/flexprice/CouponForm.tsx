@@ -1,9 +1,9 @@
 import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type EditCoupon, editCouponSchema } from '@fp/domain'
-import { Button } from '@ui/primitives/button'
 import { Input } from '@ui/primitives/input'
 import { Field } from '@ui/compositions/Field'
+import { FormActions } from '@ui/compositions/FormActions'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -53,7 +53,7 @@ export function CouponForm({
     <form
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
       noValidate
-      className="flex min-h-full flex-col gap-6"
+      className="flex flex-col gap-5"
     >
       <Field label="Name" required error={errors.name?.message}>
         {({ id, ...field }) => (
@@ -82,23 +82,12 @@ export function CouponForm({
         </div>
       ) : null}
 
-      <div className="mt-auto flex flex-col gap-3 border-t pt-4">
-        {submitError ? (
-          <p role="alert" className="text-destructive text-sm">
-            {submitError}
-          </p>
-        ) : null}
-        <div className="flex gap-2">
-          <Button type="submit" disabled={isSubmitting}>
-            {isSubmitting ? 'Saving…' : 'Save changes'}
-          </Button>
-          {onCancel ? (
-            <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
-              Cancel
-            </Button>
-          ) : null}
-        </div>
-      </div>
+      <FormActions
+        mode="edit"
+        onCancel={onCancel}
+        isSubmitting={isSubmitting}
+        submitError={submitError}
+      />
     </form>
   )
 }

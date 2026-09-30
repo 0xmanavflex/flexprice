@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { type Addon, type AddonQuery, type CreateAddon } from '@fp/domain'
 import { ApiError, useAddons, useCatalogStats, useCreateAddon, useUpdateAddon } from '@fp/query'
-import { AddonEditorSheet, AddonGrid } from '@fp/ui/flexprice'
+import { AddonEditorDialog, AddonGrid } from '@fp/ui/flexprice'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PuzzleIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -89,7 +89,7 @@ export function AddonListPage({ query, onQueryChange, onOpenAddon }: AddonListPa
         </ListState>
       </PageBody>
 
-      <AddonEditorSheet
+      <AddonEditorDialog
         open={editing !== null}
         onOpenChange={(open) => {
           if (!open) close()
