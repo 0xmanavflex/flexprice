@@ -66,16 +66,7 @@ export const PLACEHOLDER_ROUTES = [
   // `/workflows` is a real page — see `workflowsRoute` in router.tsx.
 
   // Elsewhere
-  {
-    path: '/integrations',
-    title: 'Integrations',
-    description: 'Connections to your payment processor, ledger and data warehouse.',
-    emptyTitle: 'No integrations connected',
-    emptyDescription:
-      'Integrations connect Flexprice to your payment processor, ledger and data warehouse.',
-    cta: 'Connect an integration',
-    legacy: '/tools/integrations',
-  },
+  // `/integrations` is a real page — see `integrationsRoute` in router.tsx.
   // `/settings` is a real page now — see `settingsRoute` in router.tsx.
   {
     path: '/docs',

@@ -2306,6 +2306,20 @@ export const handlers = [
   }),
 
   /*
+   * `GET /connections` — which integrations the environment has connected.
+   * Stripe is published, QuickBooks has a draft (which must not count).
+   */
+  http.get(`${BASE}/connections`, () =>
+    HttpResponse.json({
+      connections: [
+        { id: 'conn_stripe', provider_type: 'stripe', connection_status: 'published' },
+        { id: 'conn_qb', provider_type: 'quickbooks', connection_status: 'draft' },
+      ],
+      pagination: { total: 2, limit: 100, offset: 0 },
+    }),
+  ),
+
+  /*
    * `GET /tasks/scheduled` — the Exports list. `enabled` is the server-side
    * filter this console sends.
    */

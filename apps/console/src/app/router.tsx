@@ -114,6 +114,11 @@ const CreditNoteListPage = lazy(() =>
 const WorkflowListPage = lazy(() =>
   import('@/pages/workflows/WorkflowListPage').then((m) => ({ default: m.WorkflowListPage })),
 )
+const IntegrationListPage = lazy(() =>
+  import('@/pages/integrations/IntegrationListPage').then((m) => ({
+    default: m.IntegrationListPage,
+  })),
+)
 const ExportListPage = lazy(() =>
   import('@/pages/exports/ExportListPage').then((m) => ({ default: m.ExportListPage })),
 )
@@ -1070,6 +1075,12 @@ function ExportsRouteComponent() {
   )
 }
 
+const integrationsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/integrations',
+  component: IntegrationListPage,
+})
+
 const taxesRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/taxes',
@@ -1214,6 +1225,7 @@ export const routeTree = rootRoute.addChildren([
     creditNotesRoute,
     workflowsRoute,
     exportsRoute,
+    integrationsRoute,
     usageSyncsRoute,
     taxesRoute,
     eventsRoute,
