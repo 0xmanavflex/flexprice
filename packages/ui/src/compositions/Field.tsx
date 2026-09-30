@@ -1,24 +1,21 @@
 import { useId, type ReactNode } from 'react'
-import { Label } from '@ui/primitives/label'
+import { Field as FieldRoot, FieldDescription, FieldError, FieldLabel } from '@ui/primitives/field'
 import { provenance } from '@ui/provenance'
 
 /**
  * A label, a control, its hint and its error — wired together.
  *
- * Extracted after the same twenty lines appeared in two forms. The wiring is
- * the whole point and it is the part people forget: `htmlFor` to the control,
- * `aria-describedby` to *both* the hint and the error, `role="alert"` on the
- * error so it is announced rather than merely rendered.
+ * The layout and typography are the stock shadcn `Field` parts; this only adds
+ * the wiring people forget: `htmlFor` to the control, `aria-describedby` to
+ * both the hint and the error, `aria-invalid`, and an announced error.
  *
- * The child is a function because the id has to reach the control, and the
- * control is different every time — a native input, a select, a ReUI
- * primitive. Generating the id here rather than deriving it from the label
- * means two fields can share a label text without colliding.
+ * The child is a function because the generated id has to reach the control,
+ * and the control differs every time (input, select, combobox, switch).
  */
 export const FieldProvenance = provenance({
   source: 'composition',
-  composes: ['ui/label'],
-  note: 'Label/control/hint/error association, so it cannot be forgotten per form.',
+  composes: ['ui/field'],
+  note: 'Stock Field/FieldLabel/FieldDescription/FieldError plus id and aria wiring.',
 })
 
 export interface FieldProps {
@@ -43,22 +40,15 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
   const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <Label htmlFor={id}>
+    <FieldRoot data-invalid={error ? true : undefined}>
+      <FieldLabel htmlFor={id}>
         {label}
         {required ? (
           <span aria-hidden className="text-destructive">
-            {' '}
             *
           </span>
         ) : null}
-      </Label>
-
-      {hint ? (
-        <p id={hintId} className="text-xs text-muted-foreground">
-          {hint}
-        </p>
-      ) : null}
+      </FieldLabel>
 
       {children({
         id,
@@ -67,11 +57,16 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
         required: required || undefined,
       })}
 
-      {error ? (
-        <p id={errorId} role="alert" className="text-xs text-destructive">
-          {error}
-        </p>
+      {hint ? (
+        <FieldDescription id={hintId} className="text-xs">
+          {hint}
+        </FieldDescription>
       ) : null}
-    </div>
+      {error ? (
+        <FieldError id={errorId} className="text-xs">
+          {error}
+        </FieldError>
+      ) : null}
+    </FieldRoot>
   )
 }
