@@ -99,6 +99,13 @@ export const config = [
       '@typescript-eslint/consistent-type-imports': 'off',
       'react-hooks/exhaustive-deps': 'off',
       'no-useless-assignment': 'off',
+      /*
+       * The ReUI code-block highlighter strips ANSI escapes, so its regex is
+       * necessarily full of control characters — `\x1b`, `\x07`. The rule is
+       * right in general and wrong here, and the file is the registry's to
+       * change, not ours.
+       */
+      'no-control-regex': 'off',
     },
   },
   ...architecture,

@@ -84,6 +84,16 @@ function dayStart(daysAgo: number): Date {
 }
 
 const dayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
+/*
+ * The subscription matrix's axis, which carries the day alone.
+ *
+ * Its columns are narrow — seven of them share the half-width panel — and
+ * "24 Sep" under each one either wraps or ellipses. The month is already in
+ * the panel's own description ("New in the last 7 days"), so repeating it
+ * seven times spends the only horizontal room the axis has on the one part
+ * that does not change.
+ */
+const columnDayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric' })
 const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric' })
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
@@ -102,7 +112,9 @@ const MAX_COLUMNS = 7
  * backwards the moment the locale puts the month first, which en-US does.
  */
 function bucketLabel(start: Date, last: Date): string {
-  if (start.getTime() === last.getTime()) return dayLabel.format(start)
+  if (start.getTime() === last.getTime()) return columnDayLabel.format(start)
+  // A multi-day bucket needs the month back: "23–27" spanning a boundary is
+  // ambiguous in a way a single day is not.
   return dayLabel.formatRange(start, last)
 }
 

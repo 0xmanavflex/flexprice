@@ -1,5 +1,6 @@
+import { useId } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
-import { CartesianGrid, Line, LineChart, XAxis, YAxis } from 'recharts'
+import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/primitives/button'
@@ -110,9 +111,28 @@ export function toneRamp(tone: ChartTone, steps: number): string[] {
   const base = toneColor(tone)
   if (steps <= 1) return [base]
   return Array.from({ length: steps }, (_, index) => {
-    // 100% down to 16% of the tone, the rest of the mix being the surface.
-    const weight = 100 - (index / (steps - 1)) * 84
-    return `color-mix(in oklch, ${base} ${weight.toFixed(1)}%, var(--card))`
+    /*
+     * Linear from the full tone down to 15%, mixed in **oklab**.
+     *
+     * Both halves were arrived at by measuring the design's own tiles and then
+     * solving for the weights that reproduce them, rather than by taste. The
+     * fit is good to a few units per channel; it is not exact, because the
+     * design's ramp was not mixed in this space, and chasing the last two
+     * units would mean hard-coding seven stops that only work at one length.
+     *
+     * oklab, not oklch, and that is not a detail. White is `oklch(1 0 0)` —
+     * lightness 1, chroma 0, hue *zero* — so an oklch mix interpolates the hue
+     * angle from this blue's 264 degrees down to 0, and the ramp sweeps
+     * through violet and pink on the way to pale. It did exactly that on
+     * screen. oklab is rectangular: there is no hue angle to rotate, so the
+     * tail is the head, only lighter.
+     *
+     * Against the surface rather than literal white, so the ramp follows the
+     * card into dark mode instead of fading toward the wrong end.
+     */
+    const u = index / (steps - 1)
+    const weight = 100 - 85 * u
+    return `color-mix(in oklab, ${base} ${weight.toFixed(1)}%, var(--card))`
   })
 }
 
@@ -281,6 +301,9 @@ function MetricSeries({
   caption?: string | undefined
 }) {
   const format = tab.format ?? formatWhole
+  // Namespaces the gradient: two MetricCharts on one page would otherwise
+  // define the same SVG id, and the second silently repaints the first.
+  const chartId = useId().replace(/:/g, '')
   const config = {
     value: { label: tab.label, color: 'var(--chart-1)' },
   } satisfies ChartConfig
@@ -314,11 +337,25 @@ function MetricSeries({
         role="img"
         aria-label={`${tab.label} over ${tab.points.length} buckets, from ${format(min)} to ${format(max)}`}
       >
-        <LineChart
+        <AreaChart
           accessibilityLayer
           data={tab.points}
           margin={{ top: 12, right: 12, bottom: 4, left: 12 }}
         >
+          {/*
+            The wash under the line. The design carries one and it is doing
+            work: a bare stroke on a white card leaves the plot reading as a
+            thin squiggle, and the fill gives the series a body so the shape of
+            the window is legible at a glance. Kept very faint — 18% at the
+            line falling to nothing at the axis — because it is there to seat
+            the line, not to be read as an area.
+          */}
+          <defs>
+            <linearGradient id={`${chartId}-wash`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.18} />
+              <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
           <XAxis
             dataKey="label"
@@ -351,16 +388,17 @@ function MetricSeries({
               ) : null
             }
           />
-          <Line
+          <Area
             dataKey="value"
             type="monotone"
             stroke="var(--color-value)"
             strokeWidth={2}
+            fill={`url(#${chartId}-wash)`}
             dot={false}
             activeDot={{ r: 4, fill: 'var(--color-value)', stroke: 'var(--card)', strokeWidth: 2 }}
             isAnimationActive={false}
           />
-        </LineChart>
+        </AreaChart>
       </ChartContainer>
       {caption ? <p className="text-muted-foreground text-xs">{caption}</p> : null}
     </div>

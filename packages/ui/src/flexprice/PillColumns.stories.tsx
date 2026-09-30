@@ -105,28 +105,27 @@ export const NoColumns: Story = {
  * The mark is `@reui/stats-14`'s, and this is the guard that keeps it so.
  *
  * This component's first version claimed stats-14 in its provenance and drew
- * something else entirely — variable-height stacks of `rounded-full` pills,
- * bottom-anchored — and nothing caught it, because every test here asserted on
- * readings and labels rather than on the mark. A provenance note is a claim,
- * and an unchecked claim drifts.
+ * something else entirely — variable-height stacks of `rounded-full` pills —
+ * and nothing caught it, because every test here asserted on readings and
+ * labels rather than on the mark. A provenance note is a claim, and an
+ * unchecked claim drifts.
  *
- * So these four assertions are deliberately about geometry: the slab's height
- * and radius, the 2px margin that sets the gutter, and the fact that every
- * column has the same number of slabs. If a redesign genuinely moves off the
- * block, this story should be deleted along with the provenance entry — not
- * loosened until it passes.
+ * So these assertions are deliberately about geometry: the slab's height and
+ * radius, the 2px margin that sets the gutter, and the fixed row count. If a
+ * redesign genuinely moves off the block, delete this story along with the
+ * provenance entry — do not loosen it until it passes.
  */
 export const MatchesTheBlocksMark: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const column = canvas
+    const slabs = canvas
       .getByRole('button', { name: /^Mon:/ })
       .querySelectorAll('span[aria-hidden="true"]')
 
-    // A fixed grid: the block's six slabs, present whether lit or not.
-    await expect(column.length).toBe(6)
+    // A fixed grid: seven slabs, present whether lit or not.
+    await expect(slabs.length).toBe(7)
 
-    for (const slab of Array.from(column)) {
+    for (const slab of Array.from(slabs)) {
       const box = slab.getBoundingClientRect()
       // `h-3` — 12px, not an elastic share of the column.
       await expect(Math.round(box.height)).toBe(12)
@@ -146,32 +145,54 @@ export const MatchesTheBlocksMark: Story = {
 }
 
 /**
- * One series is the block's own case, so it gets the block's own ramp.
+ * Bars stand on the axis, and the ramp starts at the head of each one.
  *
- * With nothing else carrying identity there is no legend to draw — the panel
- * title already names the single series — and the graduation is magnitude,
- * which is what a sequential ramp is for.
+ * Both halves matter. stats-14 lights from the top, which over a row of dates
+ * reads as bars hanging from a ceiling; and indexing the ramp by absolute row
+ * would make every short column uniformly pale, so height and colour would say
+ * the same thing twice while the top of each bar drifted.
  */
-export const SingleSeriesUsesTheRamp: Story = {
-  args: {
-    series: [{ id: 'all', label: 'New subscriptions' }],
-    columns: columns.map((column) => ({
-      label: column.label,
-      values: { all: Object.values(column.values).reduce((sum, value) => sum + value, 0) },
-    })),
-  },
+export const BarsStandAndTheRampRestarts: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    const slabsOf = (name: RegExp) =>
+      Array.from(
+        canvas.getByRole('button', { name }).querySelectorAll('span[aria-hidden="true"]'),
+      )
 
-    // No legend: one colour mapping to one label would be noise.
-    await expect(canvas.queryByRole('list')).not.toBeInTheDocument()
+    // Fri is the tallest column, Sun the shortest.
+    const tall = slabsOf(/^Fri:/)
+    const short = slabsOf(/^Sun:/)
 
-    const lit = Array.from(
-      canvas.getByRole('button', { name: /^Fri:/ }).querySelectorAll('span[style*="background"]'),
+    const isLit = (el: Element) => (el as HTMLElement).style.backgroundColor !== ''
+
+    // Lit at the foot, unlit at the head — never the other way round.
+    const litIndexes = tall.map((el, i) => (isLit(el) ? i : -1)).filter((i) => i >= 0)
+    await expect(litIndexes.at(-1)).toBe(tall.length - 1)
+    await expect(litIndexes).toEqual(
+      Array.from({ length: litIndexes.length }, (_, k) => tall.length - litIndexes.length + k),
     )
-    // Stepped, not flat — adjacent lit slabs differ, which is the ramp.
-    await expect(lit.length).toBeGreaterThan(1)
-    const colours = new Set(lit.map((slab) => getComputedStyle(slab).backgroundColor))
-    await expect(colours.size).toBe(lit.length)
+
+    // The head of a short bar is the same full tone as the head of a tall one.
+    const headOf = (slabs: Element[]) =>
+      (slabs.find(isLit) as HTMLElement).style.backgroundColor
+    await expect(headOf(short)).toBe(headOf(tall))
+  },
+}
+
+/**
+ * The footer is totals, not a colour key.
+ *
+ * Every column runs one ramp, so nothing in the plot distinguishes the series
+ * and a swatch beside each label would be pointing at a colour that is not
+ * there. The numbers are the breakdown.
+ */
+export const FooterCarriesTotals: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Starter across the week: 12+9+15+6+18+4+3.
+    await expect(canvas.getByText('67')).toBeInTheDocument()
+    // Scale: 2+4+3+1+6+0+0.
+    await expect(canvas.getByText('16')).toBeInTheDocument()
   },
 }
