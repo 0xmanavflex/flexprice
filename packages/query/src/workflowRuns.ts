@@ -4,7 +4,7 @@ import {
   type WorkflowQuery,
   type WorkflowRun,
   WORKFLOW_STATUS_WIRE,
-  WorkflowStatus,
+  type WorkflowStatus,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'

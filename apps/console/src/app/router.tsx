@@ -362,7 +362,6 @@ const placeholderRoutes = PLACEHOLDER_ROUTES.map((entry) =>
         emptyTitle={entry.emptyTitle}
         emptyDescription={entry.emptyDescription}
         cta={entry.cta}
-        {...('legacy' in entry ? { legacyPath: entry.legacy } : {})}
       />
     ),
   }),
