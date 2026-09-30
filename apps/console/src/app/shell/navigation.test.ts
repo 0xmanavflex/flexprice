@@ -170,6 +170,7 @@ describe('every destination resolves', () => {
     '/taxes',
     '/events',
     '/workflows',
+    '/usage-syncs',
     '/settings',
     '/api-keys',
     '/service-accounts',

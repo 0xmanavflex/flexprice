@@ -71,16 +71,7 @@ export const PLACEHOLDER_ROUTES = [
     cta: 'Create export',
     legacy: '/tools/exports',
   },
-  {
-    path: '/usage-syncs',
-    title: 'Usage Syncs',
-    description: 'Usage pulled in from somewhere else, and whether it is current.',
-    emptyTitle: 'No usage syncs yet',
-    emptyDescription:
-      'Usage syncs pull usage in from another system and keep it current.',
-    cta: 'Create usage sync',
-    legacy: '/tools/usage-syncs',
-  },
+  // `/usage-syncs` is a real page — see `usageSyncsRoute` in router.tsx.
   // `/workflows` is a real page — see `workflowsRoute` in router.tsx.
 
   // Elsewhere

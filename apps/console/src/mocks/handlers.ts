@@ -837,6 +837,35 @@ const creditNotes: Record<string, unknown>[] = Array.from({ length: 30 }, (_, in
   }
 })
 
+/** Usage records, authored to the wire. Every third one has not been synced. */
+const usageRecords: Record<string, unknown>[] = Array.from({ length: 30 }, (_, index) => {
+  const synced = index % 3 !== 2
+  const number = String(index + 1).padStart(2, '0')
+  return {
+    id: `ur_${number}`,
+    customer_id: `cust_${number}`,
+    customer_external_id: `customer-${number}`,
+    subscription_id: `sub_${number}`,
+    plan_id: 'plan_pro',
+    quantity: String(100 + index),
+    amount: (120 + index * 3).toFixed(2),
+    currency: 'usd',
+    period_start: '2026-08-01T00:00:00Z',
+    period_end: '2026-09-01T00:00:00Z',
+    synced,
+    syncs: synced
+      ? {
+          aws_marketplace: {
+            agreement_id: `agr_${number}`,
+            reporting_id: `rep_${number}`,
+            synced_at: '2026-09-02T00:00:00Z',
+            connection_id: 'conn_aws',
+          },
+        }
+      : {},
+  }
+})
+
 /** Workflow runs, authored to the wire: snake_case, times as ISO strings. */
 const workflowRuns: Record<string, unknown>[] = Array.from({ length: 30 }, (_, index) => {
   const statuses = ['Completed', 'Failed', 'Running', 'TimedOut', 'Canceled']
@@ -1332,6 +1361,27 @@ const customerUsage = {
 
 function findIndexById(rows: Record<string, unknown>[], id: string): number {
   return rows.findIndex((row) => readString(row, 'id') === id)
+}
+
+/** In-memory stores for the entities whose corpus is empty. */
+const costSheetStore: Record<string, unknown>[] = []
+const groupStore: Record<string, unknown>[] = []
+
+async function readBody(request: Request): Promise<Record<string, unknown>> {
+  return ((await request.json().catch(() => ({}))) ?? {}) as Record<string, unknown>
+}
+
+function patchRow(rows: Record<string, unknown>[], id: string, patch: Record<string, unknown>) {
+  const index = findIndexById(rows, id)
+  if (index < 0) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+  rows[index] = { ...rows[index], ...patch, id }
+  return HttpResponse.json(rows[index])
+}
+
+function removeRow(rows: Record<string, unknown>[], id: string) {
+  const index = findIndexById(rows, id)
+  if (index >= 0) rows.splice(index, 1)
+  return HttpResponse.json({ success: true, id })
 }
 
 /* ---- The overview's demo data ------------------------------------------
@@ -2242,6 +2292,24 @@ export const handlers = [
     })
   }),
 
+  /*
+   * `POST /usage-records/search` — the Usage Syncs list. `synced` is the
+   * server-side filter this console sends; the record is authored to the wire
+   * with a `syncs` map keyed by marketplace.
+   */
+  http.post(`${BASE}/usage-records/search`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const limit = Number(body['limit'] ?? 25)
+    const offset = Number(body['offset'] ?? 0)
+    const synced = typeof body['synced'] === 'boolean' ? body['synced'] : null
+
+    const matches = usageRecords.filter((row) => synced === null || row['synced'] === synced)
+    return HttpResponse.json({
+      items: matches.slice(offset, offset + limit),
+      pagination: { total: matches.length, limit, offset },
+    })
+  }),
+
   // ---- end Settings -----------------------------------------------------
 
   // Entities the capture environment had nothing in are deliberately absent.
@@ -2251,14 +2319,20 @@ export const handlers = [
     HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
   ),
 
-  // Groups and cost sheets: the capture environment had none, so these return
-  // an empty list — a state worth seeing — rather than a fabricated row. They
-  // disappear when a captured corpus for each lands.
+  // Groups and cost sheets: the capture environment had none, so they start
+  // empty and hold whatever this session creates — a state worth seeing, and
+  // enough to run create, rename and delete end to end.
   http.post(`${BASE}/groups/search`, () =>
-    HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
+    HttpResponse.json({
+      items: groupStore,
+      pagination: { total: groupStore.length, limit: 25, offset: 0 },
+    }),
   ),
   http.post(`${BASE}/costs/search`, () =>
-    HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
+    HttpResponse.json({
+      items: costSheetStore,
+      pagination: { total: costSheetStore.length, limit: 25, offset: 0 },
+    }),
   ),
 
   // Saving a plan's charges. The bulk endpoint echoes each price back with an
@@ -2291,6 +2365,10 @@ export const handlers = [
     }))
     return HttpResponse.json({ items }, { status: 201 })
   }),
+  http.put(`${BASE}/entitlements/:id`, async ({ request, params }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+  }),
   http.delete(`${BASE}/entitlements/:id`, ({ params }) =>
     HttpResponse.json({ success: true, id: params['id'] }),
   ),
@@ -2322,6 +2400,10 @@ export const handlers = [
       { status: 201 },
     )
   }),
+  http.put(`${BASE}/creditgrants/:id`, async ({ request, params }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+  }),
   http.delete(`${BASE}/creditgrants/:id`, ({ params }) =>
     HttpResponse.json({ success: true, id: params['id'] }),
   ),
@@ -2334,6 +2416,23 @@ export const handlers = [
       { status: 201 },
     )
   }),
+
+  // Editing, cloning and deleting a feature echo back, so the dialogs' success
+  // paths — close, invalidate, refetch — complete end to end.
+  http.put(`${BASE}/features/:id`, async ({ request, params }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+  }),
+  http.post(`${BASE}/features/:id/clone`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    return HttpResponse.json(
+      { ...body, id: `feat_clone_${Date.now()}`, status: 'published' },
+      { status: 201 },
+    )
+  }),
+  http.delete(`${BASE}/features/:id`, ({ params }) =>
+    HttpResponse.json({ success: true, id: params['id'] }),
+  ),
 
   // Creating and editing an add-on echo the record back, so the drawer's
   // success path — close, invalidate, refetch — completes end to end.
@@ -2391,6 +2490,64 @@ export const handlers = [
   http.delete(`${BASE}/coupons/:id`, ({ params }) =>
     HttpResponse.json({ id: String(params['id']) }),
   ),
+  http.post(`${BASE}/coupons`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = { ...body, id: `coupon_new_${Date.now()}`, status: 'published' }
+    ;(corpus['coupons'] as Corpus).items.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+
+  // Cost sheets, groups, customers and tax rates: create, update and delete
+  // mutate an in-memory store (or the corpus the list reads), so the list a
+  // mutation invalidates comes back showing the change.
+  http.post(`${BASE}/costs`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = { ...body, id: `cost_new_${Date.now()}`, status: 'published', prices: [] }
+    costSheetStore.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.put(`${BASE}/costs/:id`, async ({ request, params }) =>
+    patchRow(costSheetStore, String(params['id']), await readBody(request)),
+  ),
+  http.delete(`${BASE}/costs/:id`, ({ params }) => removeRow(costSheetStore, String(params['id']))),
+
+  http.post(`${BASE}/groups`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = { ...body, id: `grp_new_${Date.now()}`, status: 'published', entity_ids: [] }
+    groupStore.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.delete(`${BASE}/groups/:id`, ({ params }) => removeRow(groupStore, String(params['id']))),
+
+  http.post(`${BASE}/customers`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = { ...body, id: `cust_new_${Date.now()}`, status: 'published' }
+    ;(corpus['customers'] as Corpus).items.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.put(`${BASE}/customers/:id`, async ({ request, params }) =>
+    patchRow((corpus['customers'] as Corpus).items, String(params['id']), await readBody(request)),
+  ),
+  http.delete(`${BASE}/customers/:id`, ({ params }) =>
+    removeRow((corpus['customers'] as Corpus).items, String(params['id'])),
+  ),
+
+  http.post(`${BASE}/taxes/rates`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = {
+      ...body,
+      id: `tax_new_${Date.now()}`,
+      tax_rate_type: 'percentage',
+      tax_rate_status: 'ACTIVE',
+      status: 'published',
+    }
+    taxRates.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.put(`${BASE}/taxes/rates/:id`, async ({ request, params }) =>
+    patchRow(taxRates, String(params['id']), await readBody(request)),
+  ),
+  http.delete(`${BASE}/taxes/rates/:id`, ({ params }) => removeRow(taxRates, String(params['id']))),
 
   // Price units, the same way: create echoes the record back, and update — which
   // sends only the name — echoes it beside a fixed identity, so the drawer's

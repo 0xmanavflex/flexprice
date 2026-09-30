@@ -114,6 +114,11 @@ const CreditNoteListPage = lazy(() =>
 const WorkflowListPage = lazy(() =>
   import('@/pages/workflows/WorkflowListPage').then((m) => ({ default: m.WorkflowListPage })),
 )
+const UsageSyncListPage = lazy(() =>
+  import('@/pages/usage-syncs/UsageSyncListPage').then((m) => ({ default: m.UsageSyncListPage })),
+)
+import { parseUsageSyncSearch } from './usageSyncSearch'
+import { DEFAULT_USAGE_SYNC_QUERY, type UsageSyncQuery } from '@fp/domain'
 import { parseWorkflowSearch } from './workflowSearch'
 import { DEFAULT_WORKFLOW_QUERY, type WorkflowQuery } from '@fp/domain'
 import { parseCreditNoteSearch } from './creditNoteSearch'
@@ -1000,6 +1005,26 @@ function CreditNotesRouteComponent() {
   )
 }
 
+const usageSyncsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/usage-syncs',
+  validateSearch: (search: Record<string, unknown>): UsageSyncQuery => parseUsageSyncSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_USAGE_SYNC_QUERY)] },
+  component: UsageSyncsRouteComponent,
+})
+
+function UsageSyncsRouteComponent() {
+  const query = useSearch({ from: usageSyncsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <UsageSyncListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/usage-syncs', search: next, replace: true })}
+    />
+  )
+}
+
 const workflowsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/workflows',
@@ -1163,6 +1188,7 @@ export const routeTree = rootRoute.addChildren([
     paymentsRoute,
     creditNotesRoute,
     workflowsRoute,
+    usageSyncsRoute,
     taxesRoute,
     eventsRoute,
     settingsRoute,
