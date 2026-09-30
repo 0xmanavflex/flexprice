@@ -1,24 +1,14 @@
-import { useMemo, useState } from 'react'
-import {
-  type CloneFeature,
-  type CreateFeature,
-  type EditFeature,
-  type Feature,
-  type FeatureQuery,
-  DEFAULT_GROUP_QUERY,
-  GroupEntityType,
-} from '@fp/domain'
+import { useState } from 'react'
+import { type CloneFeature, type Feature, type FeatureQuery } from '@fp/domain'
 import {
   ApiError,
   useCatalogStats,
   useCloneFeature,
-  useCreateFeature,
   useDeleteFeature,
   useFeatures,
-  useGroups,
   useUpdateFeature,
 } from '@fp/query'
-import { FeatureCloneDialog, FeatureEditorDialog, FeatureGrid } from '@fp/ui/pages'
+import { FeatureCloneDialog, FeatureGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
@@ -27,52 +17,31 @@ import { toSubmitError } from './featureMessages'
 export interface FeatureListPageProps {
   query: FeatureQuery
   onQueryChange: (query: FeatureQuery) => void
-  /** Opens with the create dialog showing — the `/features/new` entry point. */
-  initialCreate?: boolean
+  onCreateFeature: () => void
+  onEditFeature: (feature: Feature) => void
   onOpenFeature: (feature: Feature) => void
 }
 
-type Editing = { mode: 'create' } | { mode: 'edit'; feature: Feature } | null
-
 /**
- * The feature surface: a list, and dialogs to create, edit, clone and delete.
- *
- * The query lives in the URL. The dialogs are the only local state, because a
- * half-typed feature is not worth a URL; opening one keeps the list behind it.
+ * The feature surface: a list. Create and edit are full pages (`FeatureFormPage`);
+ * clone and delete are small confirmations that stay here. Names rename inline.
  */
 export function FeatureListPage({
   query,
   onQueryChange,
-  initialCreate = false,
+  onCreateFeature,
+  onEditFeature,
   onOpenFeature,
 }: FeatureListPageProps) {
   const features = useFeatures(query)
-  const create = useCreateFeature()
   const update = useUpdateFeature()
   const clone = useCloneFeature()
   const remove = useDeleteFeature()
-  const groups = useGroups({ ...DEFAULT_GROUP_QUERY, pageSize: 100 })
 
-  const [editing, setEditing] = useState<Editing>(initialCreate ? { mode: 'create' } : null)
   const [cloning, setCloning] = useState<Feature | null>(null)
   const [deleting, setDeleting] = useState<Feature | null>(null)
 
-  const groupOptions = useMemo(
-    () =>
-      (groups.data?.groups ?? [])
-        .filter((group) => group.entityType === GroupEntityType.Feature)
-        .map((group) => ({ value: group.id, label: group.name })),
-    [groups.data],
-  )
-
-  const onCreate = () => setEditing({ mode: 'create' })
-  const active = editing?.mode === 'edit' ? update : create
-
-  const closeEditor = () => {
-    setEditing(null)
-    create.reset()
-    update.reset()
-  }
+  const onCreate = onCreateFeature
   const closeClone = () => {
     setCloning(null)
     clone.reset()
@@ -82,9 +51,6 @@ export function FeatureListPage({
     remove.reset()
   }
 
-  const submitCreate = (draft: CreateFeature) => create.mutate(draft, { onSuccess: closeEditor })
-  const submitEdit = (feature: Feature) => (draft: EditFeature) =>
-    update.mutate({ id: feature.id, draft }, { onSuccess: closeEditor })
   const submitClone = (draft: CloneFeature) => {
     if (cloning) clone.mutate({ id: cloning.id, draft }, { onSuccess: closeClone })
   }
@@ -95,8 +61,7 @@ export function FeatureListPage({
 
   const failure = toFailure(features.error)
   const rows = features.data?.features ?? []
-  const isFiltered =
-    query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0
+  const isFiltered = query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0
   const clearFilters = () =>
     onQueryChange({ ...query, search: '', types: [], statuses: [], page: 1 })
 
@@ -139,7 +104,7 @@ export function FeatureListPage({
             onQueryChange={onQueryChange}
             onFeatureClick={onOpenFeature}
             onCreate={onCreate}
-            onEdit={(feature) => setEditing({ mode: 'edit', feature })}
+            onEdit={onEditFeature}
             onClone={setCloning}
             onDelete={setDeleting}
             onRename={(feature, name) =>
@@ -157,33 +122,6 @@ export function FeatureListPage({
           />
         </ListState>
       </PageBody>
-
-      {editing?.mode === 'edit' ? (
-        <FeatureEditorDialog
-          open
-          onOpenChange={(open) => {
-            if (!open) closeEditor()
-          }}
-          mode="edit"
-          feature={editing.feature}
-          onSubmit={submitEdit(editing.feature)}
-          groups={groupOptions}
-          isSubmitting={active.isPending}
-          submitError={toSubmitError(active.error)}
-        />
-      ) : (
-        <FeatureEditorDialog
-          open={editing?.mode === 'create'}
-          onOpenChange={(open) => {
-            if (!open) closeEditor()
-          }}
-          mode="create"
-          onSubmit={submitCreate}
-          groups={groupOptions}
-          isSubmitting={create.isPending}
-          submitError={toSubmitError(create.error, 'create')}
-        />
-      )}
 
       <FeatureCloneDialog
         open={cloning !== null}

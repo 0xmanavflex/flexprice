@@ -1,16 +1,14 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   AGGREGATION_LABEL,
-  DEFAULT_GROUP_QUERY,
-  GroupEntityType,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   FeatureType,
   needsAggregationTarget,
   type Feature,
 } from '@fp/domain'
-import { ApiError, useFeature, useGroups, useUpdateFeature } from '@fp/query'
-import { CatalogStatusBadge, FeatureEditorDialog, FeatureTypeBadge } from '@fp/ui/pages'
+import { ApiError, useFeature, useUpdateFeature } from '@fp/query'
+import { CatalogStatusBadge, FeatureTypeBadge } from '@fp/ui/pages'
 import {
   AppFailure,
   type DetailItem,
@@ -20,13 +18,14 @@ import {
   LoadingRows,
   PageBody,
   ResourceNavigation,
+  InlineField,
   Section,
 } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { CheckIcon, CopyIcon, GaugeIcon, PencilIcon, ReceiptIcon } from 'lucide-react'
-import { toSubmitError } from './featureMessages'
 
 export interface FeatureDetailPageProps {
+  onEdit: (featureId: string) => void
   featureId: string
   onNavigateToList: () => void
 }
@@ -53,19 +52,10 @@ type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
  *
  * Edit opens the same dialog the list uses, prefilled.
  */
-export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetailPageProps) {
+export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
   const [tab, setTab] = useState<FeatureTab>('overview')
-  const [editing, setEditing] = useState(false)
   const update = useUpdateFeature()
-  const groups = useGroups({ ...DEFAULT_GROUP_QUERY, pageSize: 100 })
-  const groupOptions = useMemo(
-    () =>
-      (groups.data?.groups ?? [])
-        .filter((group) => group.entityType === GroupEntityType.Feature)
-        .map((group) => ({ value: group.id, label: group.name })),
-    [groups.data],
-  )
 
   if (feature.isPending) {
     return (
@@ -116,7 +106,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
       }
       identifier={data.lookupKey || data.id}
       actions={
-        <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+        <Button variant="outline" size="sm" onClick={() => onEdit(featureId)}>
           <PencilIcon aria-hidden className="size-4" />
           Edit
         </Button>
@@ -137,6 +127,28 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
       />
 
       <div className="flex flex-col gap-6 pt-5">
+        {tab === 'overview' ? (
+          <Section title="Details" description="Click the pencil to change a value in place.">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <InlineField
+                label="Name"
+                value={data.name}
+                required
+                readOnly={data.status === 'archived'}
+                onSave={(name) => update.mutateAsync({ id: data.id, draft: { name } })}
+              />
+              <InlineField
+                label="Description"
+                value={data.description}
+                placeholder="No description"
+                multiline
+                onSave={(description) =>
+                  update.mutateAsync({ id: data.id, draft: { name: data.name, description } })
+                }
+              />
+            </div>
+          </Section>
+        ) : null}
         {tab === 'overview' ? (
           isMetered ? (
             <>
@@ -167,7 +179,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
             </>
           ) : (
             <Section title="Overview" description="How this feature behaves.">
-              <p className="text-sm leading-relaxed text-muted-foreground">
+              <p className="text-muted-foreground text-sm leading-relaxed">
                 This is a boolean feature — it gates access to functionality rather than metering
                 usage, so it carries no event name or aggregation.
               </p>
@@ -176,7 +188,10 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
         ) : null}
 
         {tab === 'charges' ? (
-          <Section title="Charges" description="Prices across the catalogue that meter this feature.">
+          <Section
+            title="Charges"
+            description="Prices across the catalogue that meter this feature."
+          >
             <EmptyState
               size="inline"
               icon={<ReceiptIcon aria-hidden />}
@@ -203,32 +218,6 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
           </Section>
         ) : null}
       </div>
-
-      <FeatureEditorDialog
-        open={editing}
-        onOpenChange={(open) => {
-          if (!open) {
-            setEditing(false)
-            update.reset()
-          }
-        }}
-        mode="edit"
-        feature={data}
-        groups={groupOptions}
-        onSubmit={(draft) =>
-          update.mutate(
-            { id: data.id, draft },
-            {
-              onSuccess: () => {
-                setEditing(false)
-                update.reset()
-              },
-            },
-          )
-        }
-        isSubmitting={update.isPending}
-        submitError={toSubmitError(update.error)}
-      />
     </DetailShell>
   )
 }
@@ -249,7 +238,7 @@ function IngestEventSection({ feature }: { feature: Feature }) {
       description="Send a usage event to Flexprice for this feature. Fill in the placeholders, then run it from your terminal or backend."
       actions={<CopyButton value={command} />}
     >
-      <pre className="overflow-x-auto rounded-lg border bg-muted/50 p-4 font-mono text-xs leading-relaxed text-foreground">
+      <pre className="bg-muted/50 text-foreground overflow-x-auto rounded-lg border p-4 font-mono text-xs leading-relaxed">
         <code>{command}</code>
       </pre>
     </Section>

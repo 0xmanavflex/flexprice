@@ -147,6 +147,9 @@ const SettingsPage = lazy(() =>
   import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
 import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from './settingsSearch'
+const FeatureFormPage = lazy(() =>
+  import('@/pages/features/FeatureFormPage').then((m) => ({ default: m.FeatureFormPage })),
+)
 const FeatureDetailPage = lazy(() =>
   import('@/pages/features/FeatureDetailPage').then((m) => ({ default: m.FeatureDetailPage })),
 )
@@ -487,31 +490,73 @@ function FeaturesRouteComponent() {
       onOpenFeature={(feature) =>
         void navigate({ to: '/features/$featureId', params: { featureId: feature.id } })
       }
+      onCreateFeature={() => void navigate({ to: '/features/new' })}
+      onEditFeature={(feature) =>
+        void navigate({ to: '/features/$featureId/edit', params: { featureId: feature.id } })
+      }
     />
   )
 }
 
 /**
- * `/features/new` is the shell's "New feature" entry. Creating is a dialog now,
- * so it renders the list with that dialog open; closing it drops back to the list.
+ * Feature create and edit are full pages: `/features/new` and
+ * `/features/$featureId/edit`, the step in `?step=` so a half-finished flow is a link.
  */
 const featureCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/features/new',
+  validateSearch: (search: Record<string, unknown>): { step?: string } =>
+    typeof search.step === 'string' ? { step: search.step } : {},
   component: FeatureCreateRouteComponent,
 })
 
 function FeatureCreateRouteComponent() {
   const navigate = useNavigate()
+  const { step } = featureCreateRoute.useSearch()
 
   return (
-    <FeatureListPage
-      initialCreate
-      query={DEFAULT_FEATURE_QUERY}
-      onQueryChange={(next) => void navigate({ to: '/features', search: next })}
-      onOpenFeature={(feature) =>
-        void navigate({ to: '/features/$featureId', params: { featureId: feature.id } })
+    <FeatureFormPage
+      mode="create"
+      {...(step ? { step } : {})}
+      onStepChange={(next) =>
+        void navigate({ to: '/features/new', search: { step: next }, replace: true })
       }
+      onCancel={() => void navigate({ to: '/features', search: {} as never })}
+      onDone={(featureId) => void navigate({ to: '/features/$featureId', params: { featureId } })}
+    />
+  )
+}
+
+const featureEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/features/$featureId/edit',
+  validateSearch: (search: Record<string, unknown>): { step?: string } =>
+    typeof search.step === 'string' ? { step: search.step } : {},
+  component: FeatureEditRouteComponent,
+})
+
+function FeatureEditRouteComponent() {
+  const { featureId } = featureEditRoute.useParams()
+  const { step } = featureEditRoute.useSearch()
+  const navigate = useNavigate()
+  const toDetail = (id: string) =>
+    void navigate({ to: '/features/$featureId', params: { featureId: id } })
+
+  return (
+    <FeatureFormPage
+      mode="edit"
+      featureId={featureId}
+      {...(step ? { step } : {})}
+      onStepChange={(next) =>
+        void navigate({
+          to: '/features/$featureId/edit',
+          params: { featureId },
+          search: { step: next },
+          replace: true,
+        })
+      }
+      onCancel={() => toDetail(featureId)}
+      onDone={toDetail}
     />
   )
 }
@@ -530,6 +575,7 @@ function FeatureDetailRouteComponent() {
   return (
     <FeatureDetailPage
       featureId={featureId}
+      onEdit={(id) => void navigate({ to: '/features/$featureId/edit', params: { featureId: id } })}
       onNavigateToList={() => void navigate({ to: '/features', search: {} as never })}
     />
   )
@@ -1048,7 +1094,8 @@ function WorkflowsRouteComponent() {
 const exportsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/exports',
-  validateSearch: (search: Record<string, unknown>): DataExportQuery => parseDataExportSearch(search),
+  validateSearch: (search: Record<string, unknown>): DataExportQuery =>
+    parseDataExportSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_DATA_EXPORT_QUERY)] },
   component: ExportsRouteComponent,
 })
@@ -1210,6 +1257,7 @@ export const routeTree = rootRoute.addChildren([
     revenueRoute,
     featuresRoute,
     featureCreateRoute,
+    featureEditRoute,
     featureDetailRoute,
     plansRoute,
     planDetailRoute,

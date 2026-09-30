@@ -1,0 +1,100 @@
+import { useMemo } from 'react'
+import {
+  DEFAULT_GROUP_QUERY,
+  GroupEntityType,
+  type CreateFeature,
+  type EditFeature,
+} from '@fp/domain'
+import { useCreateFeature, useFeature, useGroups, useUpdateFeature } from '@fp/query'
+import { FeatureForm } from '@fp/ui/pages'
+import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { toSubmitError } from './featureMessages'
+
+export type FeatureFormPageProps = {
+  step?: string
+  onStepChange: (id: string) => void
+  onCancel: () => void
+} & (
+  | { mode: 'create'; onDone: (featureId: string) => void }
+  | { mode: 'edit'; featureId: string; onDone: (featureId: string) => void }
+)
+
+/**
+ * Create or edit a feature on its own page.
+ *
+ * Same form both ways (`FeatureForm`), stepped, with the step in the URL. Create
+ * ends on the new feature's detail page; edit returns to the one it came from.
+ * The data layer is the hooks the dialogs used — nothing about saving changed.
+ */
+export function FeatureFormPage(props: FeatureFormPageProps) {
+  const { step, onStepChange, onCancel } = props
+  const create = useCreateFeature()
+  const update = useUpdateFeature()
+  const existing = useFeature(props.mode === 'edit' ? props.featureId : '')
+  const groups = useGroups({ ...DEFAULT_GROUP_QUERY, pageSize: 100 })
+  const groupOptions = useMemo(
+    () =>
+      (groups.data?.groups ?? [])
+        .filter((group) => group.entityType === GroupEntityType.Feature)
+        .map((group) => ({ value: group.id, label: group.name })),
+    [groups.data],
+  )
+  const stepProps = { ...(step ? { step } : {}), onStepChange, onCancel, groups: groupOptions }
+
+  if (props.mode === 'create') {
+    return (
+      <FeatureForm
+        mode="create"
+        trail={[{ label: 'Features', onClick: onCancel }, { label: 'Create feature' }]}
+        {...stepProps}
+        isSubmitting={create.isPending}
+        submitError={toSubmitError(create.error, 'create')}
+        onSubmit={(draft: CreateFeature) =>
+          create.mutate(draft, {
+            onSuccess: (created) => props.onDone((created as { id?: string }).id ?? ''),
+          })
+        }
+      />
+    )
+  }
+
+  if (existing.isPending) {
+    return (
+      <PageBody>
+        <div className="pt-4">
+          <LoadingRows />
+        </div>
+      </PageBody>
+    )
+  }
+  if (existing.error || !existing.data) {
+    return (
+      <PageBody>
+        <AppFailure
+          title="This feature could not be loaded"
+          detail="Try again, or go back."
+          onRetry={existing.error ? () => void existing.refetch() : onCancel}
+        />
+      </PageBody>
+    )
+  }
+
+  const feature = existing.data
+  return (
+    <FeatureForm
+      mode="edit"
+      feature={feature}
+      trail={[
+        { label: 'Features', onClick: onCancel },
+        { label: feature.name, onClick: () => props.onDone(feature.id) },
+        { label: 'Edit' },
+      ]}
+      {...stepProps}
+      isSubmitting={update.isPending}
+      submitError={toSubmitError(update.error)}
+      onSubmit={(draft: EditFeature) =>
+        update.mutate({ id: feature.id, draft }, { onSuccess: () => props.onDone(feature.id) })
+      }
+    />
+  )
+}
