@@ -257,6 +257,5 @@ export { CustomerEditorDialog, CustomerEditorDialogProvenance } from './Customer
 export type { CustomerEditorDialogProps } from './CustomerEditorDialog'
 export { DataExportGrid, DataExportGridProvenance } from './DataExportGrid'
 export type { DataExportGridProps } from './DataExportGrid'
-export { IntegrationGrid, IntegrationGridProvenance } from './IntegrationGrid'
-export type { IntegrationGridProps } from './IntegrationGrid'
+export { IntegrationsBlock } from './IntegrationsBlock'
 export { PricingCatalogBlock } from './PricingCatalogBlock'

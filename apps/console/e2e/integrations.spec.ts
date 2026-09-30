@@ -14,20 +14,20 @@ test.beforeEach(async ({ context }) => {
 })
 
 test.describe('integrations', () => {
-  test('shows the catalogue with connection status', async ({ page }) => {
+  test('shows the integrations gallery', async ({ page }) => {
     await page.goto('/integrations')
 
     await expect(page.getByRole('heading', { name: 'Integrations', level: 1 })).toBeVisible()
-    await expect(page.getByTestId('integration-stripe')).toContainText('Connected')
-    await expect(page.getByTestId('integration-razorpay')).toContainText('Not connected')
-    await expect(page.getByRole('heading', { name: 'Premium add-ons' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Disconnect' }).first()).toBeVisible()
   })
 
-  test('links a provider to its setup guide', async ({ page }) => {
+  test('toggles a connection', async ({ page }) => {
     await page.goto('/integrations')
 
-    const guide = page.getByRole('link', { name: /Setup guide for Stripe/ })
-    await expect(guide).toHaveAttribute('href', 'https://docs.flexprice.io/integrations/stripe/')
-    await expect(guide).toHaveAttribute('target', '_blank')
+    const disconnects = page.getByRole('button', { name: 'Disconnect' })
+    await expect(disconnects.first()).toBeVisible()
+    const before = await disconnects.count()
+    await page.getByRole('button', { name: 'Connect', exact: true }).first().click()
+    await expect(disconnects).toHaveCount(before + 1)
   })
 })

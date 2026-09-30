@@ -18,5 +18,6 @@ test('pricing widget shows the plan catalogue block', async ({ page }) => {
 
   await expect(page.getByRole('heading', { name: 'Pricing Widget', level: 1 })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Plans', level: 2 })).toBeVisible()
-  await expect(page.getByText('3 plans')).toBeVisible()
+  await expect(page.getByText('Starter').first()).toBeVisible()
+  await expect(page.getByText('Enterprise').first()).toBeVisible()
 })
