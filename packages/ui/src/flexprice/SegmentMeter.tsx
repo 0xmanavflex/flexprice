@@ -57,7 +57,7 @@ export interface SegmentMeterRow {
 
 export interface SegmentMeterProps {
   rows: SegmentMeterRow[]
-  /** Segments in a full track. Default 40. */
+  /** Segments in a full track. Default 56, the block's. */
   segments?: number | undefined
   /** Formats values for the tooltip and the right-hand figure. */
   format?: ((value: number) => string) | undefined
@@ -88,7 +88,7 @@ export function MeterTrack({
   className?: string | undefined
 }) {
   return (
-    <span className={cn('flex h-7 w-full items-stretch justify-between gap-px', className)}>
+    <span className={cn('flex h-7 w-full items-stretch justify-between', className)}>
       {Array.from({ length: segments }, (_, index) => (
         <span
           key={index}
@@ -105,7 +105,7 @@ export function MeterTrack({
 
 export function SegmentMeter({
   rows,
-  segments = 40,
+  segments = 56,
   format = formatWhole,
   label,
   emptyMessage = 'Nothing to show for this period',

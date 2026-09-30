@@ -91,6 +91,31 @@ export function seriesTone(index: number): ChartTone {
   return SERIES_TONES[Math.min(Math.max(index, 0), SERIES_TONES.length - 1)] ?? 'series-1'
 }
 
+/**
+ * One tone, stepped light-to-dark — a **sequential** ramp.
+ *
+ * `@reui/stats-14` paints its segment matrix `indigo-600` down to `indigo-100`,
+ * and that graduation is most of why the block reads the way it does. A
+ * hard-coded indigo would put an unvalidated colour back into the library, so
+ * the ramp is mixed from a tone against the card instead: same shape, still a
+ * token, and it follows the surface into dark mode on its own.
+ *
+ * Index 0 is the full tone and the last step is the palest. Sequential, so
+ * unlike the categorical slots adjacent steps are *meant* to be close — the
+ * ΔE ≥ 15 floor is a rule about telling two categories apart, and these are
+ * not two categories. Reach for it only when the steps encode magnitude; when
+ * they encode identity, use `seriesTone`.
+ */
+export function toneRamp(tone: ChartTone, steps: number): string[] {
+  const base = toneColor(tone)
+  if (steps <= 1) return [base]
+  return Array.from({ length: steps }, (_, index) => {
+    // 100% down to 16% of the tone, the rest of the mix being the surface.
+    const weight = 100 - (index / (steps - 1)) * 84
+    return `color-mix(in oklch, ${base} ${weight.toFixed(1)}%, var(--card))`
+  })
+}
+
 /** Locale-grouped integers — the default any chart formats numbers with. */
 export function formatWhole(value: number): string {
   return new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 }).format(value)

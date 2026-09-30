@@ -2,7 +2,6 @@ import { useId, type CSSProperties, type ReactNode } from 'react'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/primitives/button'
 import { Progress } from '@ui/primitives/progress'
-import { Separator } from '@ui/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { toneColor } from './charts'
@@ -43,7 +42,7 @@ import { toneColor } from './charts'
  */
 export const QuotaCardProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/stats-11', 'ui/progress', 'ui/badge', 'ui/separator', 'flexprice/charts'],
+  composes: ['@reui/stats-11', 'ui/progress', 'ui/badge', 'flexprice/charts'],
   note: "stats-11's quota-card arrangement over a real entitlement: used / included / percent / remaining / reset, with unlimited and over-quota states the block does not model and an unpriced overage slot that stays a dash.",
 })
 
@@ -209,7 +208,7 @@ export function QuotaCard({
           value={barValue}
           aria-label={meterName}
           style={{ '--quota-tone': toneColor(tone) } as CSSProperties}
-          className="block gap-0 [&_[data-slot=progress-indicator]]:bg-[var(--quota-tone)] [&_[data-slot=progress-track]]:h-1.5"
+          className="block gap-0 [&_[data-slot=progress-indicator]]:bg-[var(--quota-tone)] [&_[data-slot=progress-track]]:h-2"
         />
       )}
 
@@ -242,12 +241,17 @@ export function QuotaCard({
         </span>
       </div>
 
-      <Separator />
-
-      {/* stats-11's divided footer: the renewal date. */}
-      <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-        <span className="text-muted-foreground text-xs">Quota renews on</span>
-        <span className="text-sm font-medium tabular-nums">
+      {/*
+        stats-11's footer, which is a dashed box rather than a ruled-off row.
+        This was a `Separator` and a plain line until the block was actually
+        vendored and could be read — the comment above it claimed a "divided
+        footer" the block does not have. Worth the correction: the dashed
+        outline is what marks the renewal date as a standing fact about the
+        quota rather than one more reading taken this period.
+      */}
+      <div className="border-input text-muted-foreground flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-md border border-dashed p-2">
+        <span className="text-xs">Quota renews on</span>
+        <span className="text-foreground text-sm font-medium tabular-nums">
           {resetsOn
             ? new Intl.DateTimeFormat(locale, {
                 day: 'numeric',

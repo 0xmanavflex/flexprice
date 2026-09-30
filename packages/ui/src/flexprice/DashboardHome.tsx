@@ -1,6 +1,14 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowUpRightIcon, InfoIcon, KeyRoundIcon, SlidersHorizontalIcon } from 'lucide-react'
+import {
+  ArrowUpRightIcon,
+  CheckIcon,
+  ClockIcon,
+  InfoIcon,
+  KeyRoundIcon,
+  SlidersHorizontalIcon,
+  TriangleAlertIcon,
+} from 'lucide-react'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/primitives/button'
 import {
@@ -606,18 +614,20 @@ function SubscriptionsCard({
         <PillColumns
           columns={columns}
           series={series}
-          height={150}
           label={`New subscriptions by plan, ${rangeLabel}`}
         />
       ) : (
         <>
-          <div className="flex h-[150px] items-end gap-1.5" aria-hidden>
-            {Array.from({ length: 7 }, (_, index) => (
-              <div
-                key={index}
-                className="bg-muted flex-1 rounded-t-sm"
-                style={{ height: `${28 + ((index * 13) % 44)}%` }}
-              />
+          {/* The same matrix with nothing lit — which is what the chart draws
+              for an all-zero window anyway, so the shape never jumps as the
+              data arrives. */}
+          <div className="flex w-full items-end gap-2" aria-hidden>
+            {Array.from({ length: 7 }, (_, column) => (
+              <div key={column} className="flex min-w-0 flex-1 flex-col justify-end">
+                {Array.from({ length: 6 }, (_, row) => (
+                  <span key={row} className="bg-muted my-0.5 h-3 rounded" />
+                ))}
+              </div>
             ))}
           </div>
           {status === 'unavailable' ? (
@@ -658,10 +668,33 @@ function InvoicesCard({
   onViewInvoices: () => void
 }) {
   const ready = invoices.status === 'ready'
+  /*
+   * The glyph in each footer tile. Paid, open and overdue are the three
+   * states, and the icon means the tile is not relying on green/amber/red
+   * alone to say which is which.
+   */
   const slices: DonutSlice[] = [
-    { id: 'paid', label: 'Paid', value: ready ? invoices.paid : 0, tone: 'good' },
-    { id: 'open', label: 'Open', value: ready ? invoices.open : 0, tone: 'warning' },
-    { id: 'overdue', label: 'Overdue', value: ready ? invoices.overdue : 0, tone: 'critical' },
+    {
+      id: 'paid',
+      label: 'Paid',
+      value: ready ? invoices.paid : 0,
+      tone: 'good',
+      icon: <CheckIcon aria-hidden />,
+    },
+    {
+      id: 'open',
+      label: 'Open',
+      value: ready ? invoices.open : 0,
+      tone: 'warning',
+      icon: <ClockIcon aria-hidden />,
+    },
+    {
+      id: 'overdue',
+      label: 'Overdue',
+      value: ready ? invoices.overdue : 0,
+      tone: 'critical',
+      icon: <TriangleAlertIcon aria-hidden />,
+    },
   ]
 
   return (

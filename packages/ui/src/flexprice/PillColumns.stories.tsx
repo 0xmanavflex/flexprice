@@ -100,3 +100,78 @@ export const AllZero: Story = {
 export const NoColumns: Story = {
   args: { columns: [] },
 }
+
+/**
+ * The mark is `@reui/stats-14`'s, and this is the guard that keeps it so.
+ *
+ * This component's first version claimed stats-14 in its provenance and drew
+ * something else entirely — variable-height stacks of `rounded-full` pills,
+ * bottom-anchored — and nothing caught it, because every test here asserted on
+ * readings and labels rather than on the mark. A provenance note is a claim,
+ * and an unchecked claim drifts.
+ *
+ * So these four assertions are deliberately about geometry: the slab's height
+ * and radius, the 2px margin that sets the gutter, and the fact that every
+ * column has the same number of slabs. If a redesign genuinely moves off the
+ * block, this story should be deleted along with the provenance entry — not
+ * loosened until it passes.
+ */
+export const MatchesTheBlocksMark: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const column = canvas
+      .getByRole('button', { name: /^Mon:/ })
+      .querySelectorAll('span[aria-hidden="true"]')
+
+    // A fixed grid: the block's six slabs, present whether lit or not.
+    await expect(column.length).toBe(6)
+
+    for (const slab of Array.from(column)) {
+      const box = slab.getBoundingClientRect()
+      // `h-3` — 12px, not an elastic share of the column.
+      await expect(Math.round(box.height)).toBe(12)
+
+      const style = getComputedStyle(slab)
+      // `rounded`, so a slab with corners — never `rounded-full`, which is
+      // what made this read as a pill stack instead of the block's matrix.
+      const radius = Number.parseFloat(style.borderTopLeftRadius)
+      await expect(radius).toBeGreaterThan(0)
+      await expect(radius).toBeLessThan(box.height / 2)
+
+      // `my-0.5`, the block's 2px, giving a 4px gutter between slabs.
+      await expect(style.marginTop).toBe('2px')
+      await expect(style.marginBottom).toBe('2px')
+    }
+  },
+}
+
+/**
+ * One series is the block's own case, so it gets the block's own ramp.
+ *
+ * With nothing else carrying identity there is no legend to draw — the panel
+ * title already names the single series — and the graduation is magnitude,
+ * which is what a sequential ramp is for.
+ */
+export const SingleSeriesUsesTheRamp: Story = {
+  args: {
+    series: [{ id: 'all', label: 'New subscriptions' }],
+    columns: columns.map((column) => ({
+      label: column.label,
+      values: { all: Object.values(column.values).reduce((sum, value) => sum + value, 0) },
+    })),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    // No legend: one colour mapping to one label would be noise.
+    await expect(canvas.queryByRole('list')).not.toBeInTheDocument()
+
+    const lit = Array.from(
+      canvas.getByRole('button', { name: /^Fri:/ }).querySelectorAll('span[style*="background"]'),
+    )
+    // Stepped, not flat — adjacent lit slabs differ, which is the ramp.
+    await expect(lit.length).toBeGreaterThan(1)
+    const colours = new Set(lit.map((slab) => getComputedStyle(slab).backgroundColor))
+    await expect(colours.size).toBe(lit.length)
+  },
+}

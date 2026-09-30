@@ -29,16 +29,27 @@ import { useFlexprice } from './provider'
  * Typed loosely because each SDK resource has its own filter shape and this
  * only ever reads `pagination.total`.
  */
-const COUNTERS = {
-  features: (client: Flexprice) => client.features.queryFeature({ limit: 1 } as never),
-  plans: (client: Flexprice) => client.plans.queryPlan({ limit: 1 } as never),
-  customers: (client: Flexprice) => client.customers.queryCustomer({ limit: 1 } as never),
-  subscriptions: (client: Flexprice) =>
-    client.subscriptions.querySubscription({ limit: 1 } as never),
-  invoices: (client: Flexprice) => client.invoices.queryInvoice({ limit: 1 } as never),
-} as const
+export type CountableId = 'features' | 'plans' | 'customers' | 'subscriptions' | 'invoices'
 
-export type CountableId = keyof typeof COUNTERS
+/**
+ * Every counter is declared as returning `Promise<unknown>` on purpose.
+ *
+ * Left to infer, the map's five entries keep five *different* response types,
+ * so `COUNTERS[id]` — where `id` is the union — is a union of function
+ * signatures, and TypeScript will not call one of those: it has no single
+ * signature to check the call against, and picks the first, which then fails
+ * against the rest ("`ListInvoicesResponse` is not assignable to
+ * `ListSubscriptionsResponse`"). Widening the return here is honest rather
+ * than lossy, because `fetchCount` reads exactly one field off it and that
+ * field is on all five.
+ */
+const COUNTERS: Record<CountableId, (client: Flexprice) => Promise<unknown>> = {
+  features: (client) => client.features.queryFeature({ limit: 1 } as never),
+  plans: (client) => client.plans.queryPlan({ limit: 1 } as never),
+  customers: (client) => client.customers.queryCustomer({ limit: 1 } as never),
+  subscriptions: (client) => client.subscriptions.querySubscription({ limit: 1 } as never),
+  invoices: (client) => client.invoices.queryInvoice({ limit: 1 } as never),
+}
 
 async function fetchCount(client: Flexprice, id: CountableId): Promise<number> {
   const response = (await call(() => COUNTERS[id](client))) as {

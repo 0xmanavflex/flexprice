@@ -58,7 +58,7 @@ export interface SplitMeterProps {
    * of a ceiling, and the gap is the point.
    */
   total?: number | undefined
-  /** Segments in a full track. Default 40. */
+  /** Segments in a full track. Default 56, the block's. */
   segments?: number | undefined
   /** Heading above the track. */
   title?: ReactNode | undefined
@@ -117,7 +117,7 @@ function allocate(values: number[], slots: number): number[] {
 export function SplitMeter({
   parts,
   total,
-  segments = 40,
+  segments = 56,
   title,
   value,
   format = formatWhole,
@@ -173,7 +173,7 @@ export function SplitMeter({
             />
           }
         >
-          <span className="flex h-7 w-full items-stretch justify-between gap-px">
+          <span className="flex h-7 w-full items-stretch justify-between">
             {track.map((partIndex, index) => (
               <span
                 key={index}

@@ -1,29 +1,44 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/primitives/tooltip'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { formatWhole, seriesTone, toneColor } from './charts'
+import { formatWhole, seriesTone, toneColor, toneRamp } from './charts'
 import type { ChartTone } from './charts'
 
 /**
- * Stacked columns, drawn as stacked pills.
+ * `@reui/stats-14`'s segment matrix, over real data.
  *
- * `@reui/stats-14` draws a column as a run of small rounded segments rather
- * than a solid bar, lit from the bottom. The block hard-wires one series of
- * indigo bars with its numbers in a `data.ts`; what is reused here is the
- * *mark* — the segment stack, its rounding and its spacing — over real
- * multi-series data, with each segment taking the tone of the series it belongs
- * to so one column reads as a stack.
+ * The block is not a bar chart, and reading it as one is how this component
+ * went wrong the first time. It draws a **fixed grid** — every column is the
+ * same height, built from `rows` short slabs — and encodes the value by how
+ * many slabs are *lit*, counting down from the top. The unlit remainder stays
+ * visible underneath as `bg-muted`, so each column carries its own track. The
+ * lit slabs run a single-hue ramp by row, dark at the top to pale at the
+ * bottom, which is what gives the block its equaliser look.
  *
- * The pill quantises, and that is the point. A solid stacked bar invites you to
- * compare two segments by eyeballing their heights; a pill stack gives you
- * something countable, and is honest that these are approximate shares rather
- * than a precise readout. The precise numbers are in the tooltip and the
- * legend, where they can be read rather than estimated.
+ * What is reused is that mark, exactly: the `h-3` slab, its `rounded` corners,
+ * the `my-0.5` that puts 4px between slabs, `gap-2` between columns, the
+ * top-down fill and the graduated ramp. The first version of this file reused
+ * none of it — it drew variable-height stacks of `rounded-full` pills, bottom
+ * anchored, in flat categorical colour — and the result looked nothing like
+ * the block it claimed to compose.
+ *
+ * **Colour means one thing at a time.** With a single series the ramp is the
+ * block's, sequential by row. With several it cannot be: painting plans by row
+ * index would say the top of a column is a different *kind* of thing from the
+ * bottom, when what actually differs is which plan. So multi-series columns
+ * take a flat categorical tone per series and the ramp stands down. The
+ * geometry — which is what you recognise — is identical either way.
+ *
+ * Three things the block has no need of, kept because a console does: the
+ * axis label under each column, a tooltip carrying the exact figures, and a
+ * legend. The matrix quantises, deliberately — it is countable rather than
+ * precise — so the precise numbers have to be somewhere, and hover is not
+ * somewhere a keyboard can reach.
  */
 export const PillColumnsProvenance = provenance({
   source: 'composition',
   composes: ['@reui/stats-14', 'ui/tooltip'],
-  note: 'stats-14 pill-segment column over real stacked series, tones from the validated palette, per-column tooltip.',
+  note: 'stats-14 segment matrix — h-3 slabs, top-down fill, graduated ramp — over real data, with an axis, a tooltip and a legend.',
 })
 
 /** One series across every column. */
@@ -50,12 +65,10 @@ export interface PillColumn {
 
 export interface PillColumnsProps {
   columns: PillColumn[]
-  /** Stack order, bottom first. Also the legend order. */
+  /** Stack order, top first — the order the legend reads in. */
   series: PillSeries[]
-  /** Segments in a full column. Default 8. */
-  cells?: number | undefined
-  /** Column height in px. Default 160. */
-  height?: number | undefined
+  /** Slabs in a column. Default 6, the block's. */
+  rows?: number | undefined
   /** Formats values for the tooltip and legend. Defaults to a locale-grouped integer. */
   format?: ((value: number) => string) | undefined
   /** Accessible name for the plot as a whole. */
@@ -64,13 +77,13 @@ export interface PillColumnsProps {
 }
 
 /**
- * Hand out `slots` whole segments in proportion to `values`.
+ * Hand out `slots` whole slabs in proportion to `values`.
  *
  * Largest-remainder, so the parts sum to exactly `slots` — rounding each share
- * independently drifts, and a column that shows seven segments when it should
- * show eight is a bug somebody will chase through the data instead of the
- * arithmetic. A series with any value at all takes a segment before the
- * remainders are shared out, so a small-but-real share is never invisible.
+ * independently drifts, and a column that shows five slabs when it should show
+ * six is a bug somebody will chase through the data instead of the arithmetic.
+ * A series with any value at all takes a slab before the remainders are shared
+ * out, so a small-but-real share is never invisible.
  */
 function allocate(values: number[], slots: number): number[] {
   const out = values.map(() => 0)
@@ -110,13 +123,19 @@ function allocate(values: number[], slots: number): number[] {
 export function PillColumns({
   columns,
   series,
-  cells = 8,
-  height = 160,
+  rows = 6,
   format = formatWhole,
   label,
   className,
 }: PillColumnsProps) {
   const toneFor = (index: number): ChartTone => series[index]?.tone ?? seriesTone(index)
+
+  /*
+   * One series is the block's own case, so it gets the block's own treatment:
+   * a ramp down the rows. Several series means colour is already spoken for.
+   */
+  const single = series.length <= 1
+  const ramp = single ? toneRamp(series[0]?.tone ?? seriesTone(0), rows) : null
 
   const totals = columns.map((column) =>
     series.reduce((sum, item) => sum + Math.max(column.values[item.id] ?? 0, 0), 0),
@@ -125,23 +144,26 @@ export function PillColumns({
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
-      <div className="flex items-end gap-2" role="group" aria-label={label}>
+      <div className="flex w-full items-end gap-2" role="group" aria-label={label}>
         {columns.map((column, columnIndex) => {
           const total = totals[columnIndex] ?? 0
-          // How tall this column stands, in whole segments, against the tallest.
-          const filled = peak > 0 ? (allocate([total, peak - total], cells)[0] ?? 0) : 0
+          // How many slabs this column lights, against the tallest column.
+          const lit = peak > 0 ? (allocate([total, peak - total], rows)[0] ?? 0) : 0
+
+          /*
+           * Which series owns each lit slab, top down. `null` is unlit track.
+           * Series 0 takes the top of the column so the stack reads in the
+           * same order as the legend beneath it.
+           */
+          const owner: (number | null)[] = Array.from({ length: rows }, () => null)
           const perSeries = allocate(
             series.map((item) => Math.max(column.values[item.id] ?? 0, 0)),
-            filled,
+            lit,
           )
-
-          // Bottom-up: index 0 is the lowest segment, so the first series sits
-          // at the foot of the stack the way a stacked bar reads.
-          const stack: (ChartTone | null)[] = Array.from({ length: cells }, () => null)
           let cursor = 0
           perSeries.forEach((count, seriesIndex) => {
-            for (let n = 0; n < count && cursor < cells; n += 1) {
-              stack[cursor] = toneFor(seriesIndex)
+            for (let n = 0; n < count && cursor < rows; n += 1) {
+              owner[cursor] = seriesIndex
               cursor += 1
             }
           })
@@ -158,17 +180,29 @@ export function PillColumns({
                     <button
                       type="button"
                       aria-label={reading}
-                      className="focus-visible:ring-ring flex w-full cursor-default flex-col-reverse gap-1 rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
-                      style={{ height }}
+                      className="focus-visible:ring-ring flex w-full cursor-default flex-col justify-end rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     />
                   }
                 >
-                  {stack.map((tone, cellIndex) => (
+                  {owner.map((seriesIndex, rowIndex) => (
                     <span
-                      key={cellIndex}
+                      key={rowIndex}
                       aria-hidden="true"
-                      className={cn('min-h-0 w-full flex-1 rounded-full', tone ? null : 'bg-muted')}
-                      {...(tone ? { style: { backgroundColor: toneColor(tone) } } : {})}
+                      /* The block's slab, to the pixel: 12px tall, 4px radius,
+                         2px of margin top and bottom for a 4px gutter. */
+                      className={cn(
+                        'my-0.5 h-3 rounded',
+                        seriesIndex === null ? 'bg-muted' : null,
+                      )}
+                      {...(seriesIndex === null
+                        ? {}
+                        : {
+                            style: {
+                              backgroundColor: ramp
+                                ? (ramp[rowIndex] ?? toneColor(toneFor(seriesIndex)))
+                                : toneColor(toneFor(seriesIndex)),
+                            },
+                          })}
                     />
                   ))}
                 </TooltipTrigger>
@@ -203,22 +237,25 @@ export function PillColumns({
       </div>
 
       {/*
-       * Always drawn, never conditional on there being room: with more than one
-       * series the only other thing telling them apart is their colour, and a
-       * legend that disappears on a narrow screen takes the meaning with it.
+       * Drawn whenever colour is carrying identity — which is exactly the
+       * multi-series case. A single series is already named by the panel's own
+       * title, and the ramp there is magnitude, not identity, so a legend
+       * mapping one colour to one label would be noise.
        */}
-      <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
-        {series.map((item, seriesIndex) => (
-          <li key={item.id} className="flex items-center gap-1.5 text-xs">
-            <span
-              aria-hidden="true"
-              className="size-2 rounded-full"
-              style={{ backgroundColor: toneColor(toneFor(seriesIndex)) }}
-            />
-            <span className="text-muted-foreground">{item.label}</span>
-          </li>
-        ))}
-      </ul>
+      {single ? null : (
+        <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+          {series.map((item, seriesIndex) => (
+            <li key={item.id} className="flex items-center gap-1.5 text-xs">
+              <span
+                aria-hidden="true"
+                className="size-2 rounded-full"
+                style={{ backgroundColor: toneColor(toneFor(seriesIndex)) }}
+              />
+              <span className="text-muted-foreground">{item.label}</span>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
