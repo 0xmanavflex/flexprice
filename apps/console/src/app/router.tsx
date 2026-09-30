@@ -111,6 +111,11 @@ const CreditNoteListPage = lazy(() =>
     default: m.CreditNoteListPage,
   })),
 )
+const WorkflowListPage = lazy(() =>
+  import('@/pages/workflows/WorkflowListPage').then((m) => ({ default: m.WorkflowListPage })),
+)
+import { parseWorkflowSearch } from './workflowSearch'
+import { DEFAULT_WORKFLOW_QUERY, type WorkflowQuery } from '@fp/domain'
 import { parseCreditNoteSearch } from './creditNoteSearch'
 import { type CreditNoteQuery, DEFAULT_CREDIT_NOTE_QUERY } from '@fp/domain'
 import { DEFAULT_PAYMENT_QUERY, type PaymentQuery } from '@fp/domain'
@@ -995,6 +1000,26 @@ function CreditNotesRouteComponent() {
   )
 }
 
+const workflowsRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/workflows',
+  validateSearch: (search: Record<string, unknown>): WorkflowQuery => parseWorkflowSearch(search),
+  search: { middlewares: [stripSearchParams(DEFAULT_WORKFLOW_QUERY)] },
+  component: WorkflowsRouteComponent,
+})
+
+function WorkflowsRouteComponent() {
+  const query = useSearch({ from: workflowsRoute.id })
+  const navigate = useNavigate()
+
+  return (
+    <WorkflowListPage
+      query={query}
+      onQueryChange={(next) => void navigate({ to: '/workflows', search: next, replace: true })}
+    />
+  )
+}
+
 const taxesRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/taxes',
@@ -1137,6 +1162,7 @@ export const routeTree = rootRoute.addChildren([
     invoicesRoute,
     paymentsRoute,
     creditNotesRoute,
+    workflowsRoute,
     taxesRoute,
     eventsRoute,
     settingsRoute,

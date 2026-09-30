@@ -837,6 +837,25 @@ const creditNotes: Record<string, unknown>[] = Array.from({ length: 30 }, (_, in
   }
 })
 
+/** Workflow runs, authored to the wire: snake_case, times as ISO strings. */
+const workflowRuns: Record<string, unknown>[] = Array.from({ length: 30 }, (_, index) => {
+  const statuses = ['Completed', 'Failed', 'Running', 'TimedOut', 'Canceled']
+  const types = ['PriceSyncV2Workflow', 'ExecuteExportWorkflow', 'ProcessInvoiceWorkflow']
+  const status = statuses[index % statuses.length]
+  const start = Date.UTC(2026, 8, 1) + index * 3_600_000
+  const duration = 800 + index * 1_700
+  return {
+    workflow_id: `wf-${String(index + 1).padStart(4, '0')}`,
+    run_id: `run_${String(index + 1).padStart(6, '0')}`,
+    workflow_type: types[index % types.length],
+    status,
+    task_queue: 'billing',
+    start_time: new Date(start).toISOString(),
+    close_time: status === 'Running' ? null : new Date(start + duration).toISOString(),
+    duration_ms: status === 'Running' ? null : duration,
+  }
+})
+
 /**
  * `GET /taxes/rates`, the one settings panel with no handler at all.
  *
@@ -2191,6 +2210,32 @@ export const handlers = [
     const matches = creditNotes.filter(
       (note) => statuses.length === 0 || statuses.includes(String(note['credit_note_status'])),
     )
+    return HttpResponse.json({
+      items: matches.slice(offset, offset + limit),
+      pagination: { total: matches.length, limit, offset },
+    })
+  }),
+
+  /*
+   * `POST /workflows/search` — the Workflows list. The body is snake_case;
+   * `workflow_id` and `workflow_status` are the server-side filters this
+   * console sends, and `order` sorts by start time.
+   */
+  http.post(`${BASE}/workflows/search`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const limit = Number(body['limit'] ?? 25)
+    const offset = Number(body['offset'] ?? 0)
+    const id = typeof body['workflow_id'] === 'string' ? body['workflow_id'] : ''
+    const status = typeof body['workflow_status'] === 'string' ? body['workflow_status'] : ''
+
+    const matches = workflowRuns
+      .filter((run) => !id || String(run['workflow_id']).includes(id))
+      .filter((run) => !status || run['status'] === status)
+      .sort((a, b) =>
+        body['order'] === 'asc'
+          ? String(a['start_time']).localeCompare(String(b['start_time']))
+          : String(b['start_time']).localeCompare(String(a['start_time'])),
+      )
     return HttpResponse.json({
       items: matches.slice(offset, offset + limit),
       pagination: { total: matches.length, limit, offset },

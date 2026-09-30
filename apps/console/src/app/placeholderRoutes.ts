@@ -81,16 +81,7 @@ export const PLACEHOLDER_ROUTES = [
     cta: 'Create usage sync',
     legacy: '/tools/usage-syncs',
   },
-  {
-    path: '/workflows',
-    title: 'Workflows',
-    description: 'Automations that run on billing events, and their recent runs.',
-    emptyTitle: 'No workflows yet',
-    emptyDescription:
-      'Workflows run automatically on billing events, and their runs are listed here.',
-    cta: 'Create workflow',
-    legacy: '/developers/workflows',
-  },
+  // `/workflows` is a real page — see `workflowsRoute` in router.tsx.
 
   // Elsewhere
   {
