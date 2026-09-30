@@ -13,12 +13,14 @@ import {
 import { Input } from '@ui/components/primitives/input'
 import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
+import { FormPage } from '@ui/compositions/FormPage'
+import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { DateInput } from '@ui/compositions/DateInput'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
 
 /**
- * Create a coupon.
+ * Create a coupon, on a full page.
  *
  * Presentational: it emits a validated `CreateCoupon` and never imports
  * `@fp/query`. The discount, cadence and window are fixed once created, so this
@@ -28,14 +30,16 @@ import { provenance } from '@ui/provenance'
  */
 export const CouponCreateFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'ui/label'],
+  composes: ['ui/input', 'compositions/form-page', 'compositions/form-actions'],
   note: 'RHF + the domain schema. Type and cadence reveal only the fields that apply.',
 })
 
 export interface CouponCreateFormProps {
   defaultValue?: CreateCoupon
   onSubmit: (coupon: CreateCoupon) => void
-  onCancel?: () => void
+  onCancel: () => void
+  /** Breadcrumb; the last crumb is the page itself. */
+  trail: DetailCrumb[]
   isSubmitting?: boolean
   submitError?: string | null
 }
@@ -62,8 +66,11 @@ const fromIso = (s: string): Date | undefined => {
 const toNumber = (raw: unknown): number | undefined =>
   raw === '' || raw === null || raw === undefined ? undefined : Number(raw)
 
+const FORM_ID = 'coupon-create-form'
+
 export function CouponCreateForm({
   defaultValue,
+  trail,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -80,195 +87,205 @@ export function CouponCreateForm({
   const cadence = form.watch('cadence')
 
   return (
-    <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-5"
+    <FormPage
+      title="Create coupon"
+      description="A discount customers can redeem. Its type, amount and duration are fixed once created."
+      trail={trail}
+      width="narrow"
+      footer={
+        <FormActions
+          mode="create"
+          noun="coupon"
+          formId={FORM_ID}
+          onCancel={onCancel}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      }
     >
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Name" required error={errors.name?.message}>
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-          )}
-        </Field>
-        <Field
-          label="Code"
-          hint="What a customer types to redeem it. Optional."
-          error={errors.couponCode?.message}
-        >
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('couponCode')} />
-          )}
-        </Field>
-      </div>
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Discount type" required error={errors.type?.message}>
-          {({ id, ...field }) => (
-            <Controller
-              control={form.control}
-              name="type"
-              render={({ field: control }) => (
-                <OptionSelect
-                  id={id}
-                  {...field}
-                  value={control.value}
-                  onValueChange={(value) => control.onChange(value)}
-                  options={TYPE_OPTIONS}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          )}
-        </Field>
-
-        {type === CouponType.Percentage ? (
-          <Field label="Percentage off" required error={errors.percentageOff?.message}>
+      <form
+        id={FORM_ID}
+        onSubmit={form.handleSubmit((values) => onSubmit(values))}
+        noValidate
+        className="flex flex-col gap-5"
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Name" required error={errors.name?.message}>
             {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="decimal"
-                placeholder="10"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('percentageOff')}
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            )}
+          </Field>
+          <Field
+            label="Code"
+            hint="What a customer types to redeem it. Optional."
+            error={errors.couponCode?.message}
+          >
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('couponCode')} />
+            )}
+          </Field>
+        </div>
+
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Discount type" required error={errors.type?.message}>
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="type"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => control.onChange(value)}
+                    options={TYPE_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
               />
             )}
           </Field>
-        ) : (
-          <Field label="Amount off" required error={errors.amountOff?.message}>
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="decimal"
-                placeholder="25.00"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('amountOff')}
-              />
-            )}
-          </Field>
-        )}
-      </div>
 
-      {type === CouponType.Fixed ? (
-        <Field label="Currency" required error={errors.currency?.message}>
-          {({ id, ...field }) => (
-            <Controller
-              control={form.control}
-              name="currency"
-              render={({ field: control }) => (
-                <OptionSelect
+          {type === CouponType.Percentage ? (
+            <Field label="Percentage off" required error={errors.percentageOff?.message}>
+              {({ id, ...field }) => (
+                <Input
                   id={id}
-                  {...field}
-                  value={control.value}
-                  onValueChange={(value) => control.onChange(value)}
-                  options={CURRENCY_OPTIONS}
-                  placeholder="Select a currency"
+                  inputMode="decimal"
+                  placeholder="10"
                   disabled={isSubmitting}
+                  {...field}
+                  {...form.register('percentageOff')}
                 />
               )}
-            />
-          )}
-        </Field>
-      ) : null}
-
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Duration" required error={errors.cadence?.message}>
-          {({ id, ...field }) => (
-            <Controller
-              control={form.control}
-              name="cadence"
-              render={({ field: control }) => (
-                <OptionSelect
+            </Field>
+          ) : (
+            <Field label="Amount off" required error={errors.amountOff?.message}>
+              {({ id, ...field }) => (
+                <Input
                   id={id}
-                  {...field}
-                  value={control.value}
-                  onValueChange={(value) => control.onChange(value)}
-                  options={CADENCE_OPTIONS}
+                  inputMode="decimal"
+                  placeholder="25.00"
                   disabled={isSubmitting}
+                  {...field}
+                  {...form.register('amountOff')}
                 />
               )}
-            />
+            </Field>
           )}
-        </Field>
+        </div>
 
-        {cadence === CouponCadence.Repeated ? (
-          <Field label="Billing periods" required error={errors.durationInPeriods?.message}>
+        {type === CouponType.Fixed ? (
+          <Field label="Currency" required error={errors.currency?.message}>
             {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="numeric"
-                placeholder="3"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('durationInPeriods', { setValueAs: toNumber })}
+              <Controller
+                control={form.control}
+                name="currency"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => control.onChange(value)}
+                    options={CURRENCY_OPTIONS}
+                    placeholder="Select a currency"
+                    disabled={isSubmitting}
+                  />
+                )}
               />
             )}
           </Field>
         ) : null}
-      </div>
 
-      <Field
-        label="Max redemptions"
-        hint="Leave blank for unlimited."
-        error={errors.maxRedemptions?.message}
-      >
-        {({ id, ...field }) => (
-          <Input
-            id={id}
-            inputMode="numeric"
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('maxRedemptions', { setValueAs: toNumber })}
-          />
-        )}
-      </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Duration" required error={errors.cadence?.message}>
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="cadence"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => control.onChange(value)}
+                    options={CADENCE_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </Field>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Redeemable from" error={errors.redeemAfter?.message}>
-          {({ id, ...field }) => (
-            <Controller
-              control={form.control}
-              name="redeemAfter"
-              render={({ field: control }) => (
-                <DateInput
+          {cadence === CouponCadence.Repeated ? (
+            <Field label="Billing periods" required error={errors.durationInPeriods?.message}>
+              {({ id, ...field }) => (
+                <Input
                   id={id}
-                  {...field}
-                  value={toIso(control.value)}
-                  onValueChange={(value) => control.onChange(fromIso(value))}
+                  inputMode="numeric"
+                  placeholder="3"
                   disabled={isSubmitting}
+                  {...field}
+                  {...form.register('durationInPeriods', { setValueAs: toNumber })}
                 />
               )}
+            </Field>
+          ) : null}
+        </div>
+
+        <Field
+          label="Max redemptions"
+          hint="Leave blank for unlimited."
+          error={errors.maxRedemptions?.message}
+        >
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              inputMode="numeric"
+              disabled={isSubmitting}
+              {...field}
+              {...form.register('maxRedemptions', { setValueAs: toNumber })}
             />
           )}
         </Field>
-        <Field label="Redeemable until" error={errors.redeemBefore?.message}>
-          {({ id, ...field }) => (
-            <Controller
-              control={form.control}
-              name="redeemBefore"
-              render={({ field: control }) => (
-                <DateInput
-                  id={id}
-                  {...field}
-                  value={toIso(control.value)}
-                  onValueChange={(value) => control.onChange(fromIso(value))}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          )}
-        </Field>
-      </div>
 
-      <FormActions
-        mode="create"
-        noun="coupon"
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
-    </form>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Redeemable from" error={errors.redeemAfter?.message}>
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="redeemAfter"
+                render={({ field: control }) => (
+                  <DateInput
+                    id={id}
+                    {...field}
+                    value={toIso(control.value)}
+                    onValueChange={(value) => control.onChange(fromIso(value))}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </Field>
+          <Field label="Redeemable until" error={errors.redeemBefore?.message}>
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="redeemBefore"
+                render={({ field: control }) => (
+                  <DateInput
+                    id={id}
+                    {...field}
+                    value={toIso(control.value)}
+                    onValueChange={(value) => control.onChange(fromIso(value))}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+      </form>
+    </FormPage>
   )
 }

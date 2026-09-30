@@ -23,45 +23,53 @@ import {
 } from '@ui/components/reui/number-field'
 import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
+import { FormPage } from '@ui/compositions/FormPage'
+import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
 
 /**
- * Create or edit a price unit's details.
+ * Create a price unit, on its own page.
  *
- * Presentational, like every form here: it takes a default value and emits a
- * validated `CreatePriceUnit`, holding no state beyond the field values and
- * never importing `@fp/query`. The page wires it to a mutation.
+ * Presentational: it takes a default value and emits a validated
+ * `CreatePriceUnit`, holding no state beyond the field values and never
+ * importing `@fp/query`. The page wires it to a mutation.
  *
- * The backend fixes everything but the name once a unit exists — the code,
- * symbol, base currency and rate are what issued prices and integrations key
- * off. So on an edit those four are shown read-only (their values still visible,
- * because that is what the person came to check) and only the name is editable,
- * which is exactly the narrow payload `useUpdatePriceUnit` sends.
+ * Create only. The backend fixes everything but the name once a unit exists, so
+ * there is no edit page: the name is edited in place on the detail page, where
+ * the other attributes are already shown read-only.
  */
 export const PriceUnitFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'ui/select', '@reui/number-field', 'ui/label'],
-  note: 'RHF + the domain schema. The rate is a ReUI number field; the four immutable fields lock on edit.',
+  composes: [
+    'ui/input',
+    'ui/select',
+    '@reui/number-field',
+    'compositions/field',
+    'compositions/form-page',
+    'compositions/form-actions',
+  ],
+  note: 'RHF + the domain schema, in the shared full-page shell. The rate is a ReUI number field.',
 })
 
 export interface PriceUnitFormProps {
-  /** `create` allows every field; `edit` locks all but the name. */
-  mode: 'create' | 'edit'
   defaultValue?: CreatePriceUnit
   onSubmit: (priceUnit: CreatePriceUnit) => void
   onCancel?: () => void
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
+  trail: DetailCrumb[]
 }
 
+const FORM_ID = 'price-unit-form'
+
 export function PriceUnitForm({
-  mode,
   defaultValue,
   onSubmit,
   onCancel,
   isSubmitting = false,
   submitError = null,
+  trail,
 }: PriceUnitFormProps) {
   const form = useForm<CreatePriceUnit>({
     resolver: standardSchemaResolver(createPriceUnitSchema) as Resolver<CreatePriceUnit>,
@@ -70,77 +78,75 @@ export function PriceUnitForm({
   })
 
   const errors = form.formState.errors
-  const isEdit = mode === 'edit'
   const baseCurrency = form.watch('baseCurrency')
   const conversionRate = form.watch('conversionRate')
 
   return (
-    <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-5"
+    <FormPage
+      title="Create price unit"
+      description="Define a unit to charge in — its code, symbol, and the rate it converts to a currency at. Only the name can change later."
+      trail={trail}
+      width="narrow"
+      footer={
+        <FormActions
+          mode="create"
+          noun="price unit"
+          formId={FORM_ID}
+          onCancel={onCancel}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      }
     >
-      <Field label="Name" required error={errors.name?.message}>
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-        )}
-      </Field>
-
-      <Field
-        label="Code"
-        required={!isEdit}
-        hint={
-          isEdit
-            ? 'Fixed once created — issued prices key off it.'
-            : 'A three-character code, such as CRD or TOK.'
-        }
-        error={errors.code?.message}
+      <form
+        id={FORM_ID}
+        onSubmit={form.handleSubmit((values) => onSubmit(values))}
+        noValidate
+        className="flex flex-col gap-5"
       >
-        {({ id, ...field }) =>
-          isEdit ? (
-            <Input id={id} value={defaultValue?.code ?? ''} readOnly disabled />
-          ) : (
-            <Input
-              id={id}
-              maxLength={3}
-              disabled={isSubmitting}
-              {...field}
-              {...form.register('code')}
-            />
-          )
-        }
-      </Field>
+        <Field label="Name" required error={errors.name?.message}>
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+          )}
+        </Field>
 
-      <Field
-        label="Symbol"
-        required={!isEdit}
-        hint={isEdit ? 'Fixed once created.' : 'The glyph a rendered amount carries, such as ★.'}
-        error={errors.symbol?.message}
-      >
-        {({ id, ...field }) =>
-          isEdit ? (
-            <Input id={id} value={defaultValue?.symbol ?? ''} readOnly disabled />
-          ) : (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('symbol')} />
-          )
-        }
-      </Field>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field
+            label="Code"
+            required
+            hint="A three-character code, such as CRD or TOK."
+            error={errors.code?.message}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                maxLength={3}
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('code')}
+              />
+            )}
+          </Field>
 
-      <Field
-        label="Base currency"
-        required={!isEdit}
-        hint={isEdit ? 'Fixed once created.' : 'The currency the rate converts into.'}
-        error={errors.baseCurrency?.message}
-      >
-        {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) =>
-          isEdit ? (
-            <Input
-              id={id}
-              value={(defaultValue?.baseCurrency ?? '').toUpperCase()}
-              readOnly
-              disabled
-            />
-          ) : (
+          <Field
+            label="Symbol"
+            required
+            hint="The glyph a rendered amount carries, such as ★."
+            error={errors.symbol?.message}
+          >
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('symbol')} />
+            )}
+          </Field>
+        </div>
+
+        <Field
+          label="Base currency"
+          required
+          hint="The currency the rate converts into."
+          error={errors.baseCurrency?.message}
+        >
+          {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
             <Select
               value={baseCurrency || undefined}
               onValueChange={(value) =>
@@ -167,24 +173,16 @@ export function PriceUnitForm({
                 ))}
               </SelectContent>
             </Select>
-          )
-        }
-      </Field>
+          )}
+        </Field>
 
-      <Field
-        label="Conversion rate"
-        required={!isEdit}
-        hint={
-          isEdit
-            ? 'Fixed once created.'
-            : 'How much of the base currency one unit is worth. Must be greater than zero.'
-        }
-        error={errors.conversionRate?.message}
-      >
-        {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) =>
-          isEdit ? (
-            <Input id={id} value={String(defaultValue?.conversionRate ?? '')} readOnly disabled />
-          ) : (
+        <Field
+          label="Conversion rate"
+          required
+          hint="How much of the base currency one unit is worth. Must be greater than zero."
+          error={errors.conversionRate?.message}
+        >
+          {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
             <NumberField
               id={id}
               value={conversionRate ?? null}
@@ -203,29 +201,21 @@ export function PriceUnitForm({
             >
               {/* `id` goes on the root NumberField, not the input: the
                   increment/decrement buttons' aria-controls reference the root's
-                  id, so overriding only the input's id leaves them dangling
-                  (axe aria-valid-attr-value). This matches ChargeForm. */}
+                  id (axe aria-valid-attr-value). This matches ChargeForm. */}
               <NumberFieldGroup>
                 <NumberFieldDecrement />
                 <NumberFieldInput
                   inputMode="decimal"
+                  aria-label="Conversion rate"
                   aria-describedby={describedBy}
                   aria-invalid={invalid}
                 />
                 <NumberFieldIncrement />
               </NumberFieldGroup>
             </NumberField>
-          )
-        }
-      </Field>
-
-      <FormActions
-        mode={mode}
-        noun="price unit"
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
-    </form>
+          )}
+        </Field>
+      </form>
+    </FormPage>
   )
 }

@@ -15,13 +15,7 @@ import {
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import {
-  type EntityColumn,
-  dateColumn,
-  idColumn,
-  pillColumn,
-  textColumn,
-} from '../shared/cells'
+import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
 
 /**
  * The coupon list, over the shared `EntityList`.
@@ -179,12 +173,9 @@ export function CouponGrid({
         width: 130,
       }),
       textColumn<Coupon>('duration', 'Duration', durationLabel, { width: 180 }),
-      textColumn<Coupon>(
-        'redemptions',
-        'Redemptions',
-        (row) => redemptionsLabel(row, locale),
-        { width: 140 },
-      ),
+      textColumn<Coupon>('redemptions', 'Redemptions', (row) => redemptionsLabel(row, locale), {
+        width: 140,
+      }),
       dateColumn<Coupon>('redeemBefore', 'Valid until', (row) => row.redeemBefore, {
         width: 140,
         ...(locale ? { locale } : {}),

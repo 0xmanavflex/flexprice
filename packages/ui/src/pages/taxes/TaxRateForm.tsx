@@ -15,11 +15,13 @@ import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
+import { FormPage } from '@ui/compositions/FormPage'
+import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
 
 /**
- * Tax rate forms: `TaxRateCreateForm` collects the whole rate; `TaxRateEditForm`
+ * Tax rate pages: `TaxRateCreateForm` collects the whole rate; `TaxRateEditForm`
  * changes only what the API lets change (name, code, description, status),
  * because invoices already carry the value and scope.
  *
@@ -28,7 +30,13 @@ import { provenance } from '@ui/provenance'
  */
 export const TaxRateFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/input', 'ui/textarea', 'ui/label', 'compositions/field'],
+  composes: [
+    'ui/input',
+    'ui/textarea',
+    'compositions/field',
+    'compositions/form-page',
+    'compositions/form-actions',
+  ],
   note: 'RHF + the domain schemas. Create takes the value and scope; edit renames, recodes and archives.',
 })
 
@@ -36,6 +44,7 @@ interface TaxRateFormBase {
   onCancel?: () => void
   isSubmitting?: boolean
   submitError?: string | null
+  trail: DetailCrumb[]
 }
 
 export interface TaxRateCreateFormProps extends TaxRateFormBase {
@@ -64,6 +73,7 @@ export function TaxRateCreateForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  trail,
 }: TaxRateCreateFormProps) {
   const form = useForm<CreateTaxRate>({
     resolver: standardSchemaResolver(createTaxRateSchema) as Resolver<CreateTaxRate>,
@@ -74,87 +84,92 @@ export function TaxRateCreateForm({
   const errors = form.formState.errors
 
   return (
-    <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-5"
+    <FormPage
+      title="Create tax rate"
+      description="A percentage added to invoices. Its value and scope are fixed once created."
+      trail={trail}
+      width="narrow"
+      footer={
+        <FormActions
+          mode="create"
+          noun="tax rate"
+          formId="tax-rate-create-form"
+          onCancel={onCancel}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      }
     >
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Name" required error={errors.name?.message}>
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-          )}
-        </Field>
-        <Field
-          label="Code"
-          required
-          hint="Letters and numbers. Case-sensitive."
-          error={errors.code?.message}
-        >
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('code')} />
-          )}
-        </Field>
-      </div>
+      <form
+        id="tax-rate-create-form"
+        onSubmit={form.handleSubmit((values) => onSubmit(values))}
+        noValidate
+        className="flex flex-col gap-5"
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Name" required error={errors.name?.message}>
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            )}
+          </Field>
+          <Field
+            label="Code"
+            required
+            hint="Letters and numbers. Case-sensitive."
+            error={errors.code?.message}
+          >
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('code')} />
+            )}
+          </Field>
+        </div>
 
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Rate (%)" required error={errors.percentageValue?.message}>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Rate (%)" required error={errors.percentageValue?.message}>
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                inputMode="decimal"
+                placeholder="18"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('percentageValue')}
+              />
+            )}
+          </Field>
+          <Field label="Scope" required hint="Fixed once created." error={errors.scope?.message}>
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="scope"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => control.onChange(value)}
+                    options={SCOPE_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </Field>
+        </div>
+
+        <Field label="Description" error={errors.description?.message}>
           {({ id, ...field }) => (
-            <Input
+            <Textarea
               id={id}
-              inputMode="decimal"
-              placeholder="18"
+              rows={3}
               disabled={isSubmitting}
               {...field}
-              {...form.register('percentageValue')}
+              {...form.register('description')}
             />
           )}
         </Field>
-        <Field
-          label="Scope"
-          required
-          hint="Fixed once created."
-          error={errors.scope?.message}
-        >
-          {({ id, ...field }) => (
-            <Controller
-              control={form.control}
-              name="scope"
-              render={({ field: control }) => (
-                <OptionSelect
-                  id={id}
-                  {...field}
-                  value={control.value}
-                  onValueChange={(value) => control.onChange(value)}
-                  options={SCOPE_OPTIONS}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          )}
-        </Field>
-      </div>
-
-      <Field label="Description" error={errors.description?.message}>
-        {({ id, ...field }) => (
-          <Textarea
-            id={id}
-            rows={3}
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('description')}
-          />
-        )}
-      </Field>
-
-      <FormActions
-        mode="create"
-        noun="tax rate"
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
-    </form>
+      </form>
+    </FormPage>
   )
 }
 
@@ -164,6 +179,7 @@ export function TaxRateEditForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  trail,
 }: TaxRateEditFormProps) {
   const form = useForm<EditTaxRate>({
     resolver: standardSchemaResolver(editTaxRateSchema) as Resolver<EditTaxRate>,
@@ -174,62 +190,72 @@ export function TaxRateEditForm({
   const errors = form.formState.errors
 
   return (
-    <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-5"
+    <FormPage
+      title="Edit tax rate"
+      description="Rename, recode or archive the rate. Its value and scope are fixed once created."
+      trail={trail}
+      width="narrow"
+      footer={
+        <FormActions
+          mode="edit"
+          noun="tax rate"
+          formId="tax-rate-edit-form"
+          onCancel={onCancel}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      }
     >
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Name" required error={errors.name?.message}>
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-          )}
-        </Field>
-        <Field label="Code" required error={errors.code?.message}>
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('code')} />
-          )}
-        </Field>
-      </div>
-
-      <Field label="Status" error={errors.status?.message}>
-        {({ id, ...field }) => (
-          <Controller
-            control={form.control}
-            name="status"
-            render={({ field: control }) => (
-              <OptionSelect
-                id={id}
-                {...field}
-                value={control.value ?? TaxRateStatus.Published}
-                onValueChange={(value) => control.onChange(value)}
-                options={STATUS_OPTIONS}
-                disabled={isSubmitting}
-              />
+      <form
+        id="tax-rate-edit-form"
+        onSubmit={form.handleSubmit((values) => onSubmit(values))}
+        noValidate
+        className="flex flex-col gap-5"
+      >
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field label="Name" required error={errors.name?.message}>
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
             )}
-          />
-        )}
-      </Field>
+          </Field>
+          <Field label="Code" required error={errors.code?.message}>
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('code')} />
+            )}
+          </Field>
+        </div>
 
-      <Field label="Description" error={errors.description?.message}>
-        {({ id, ...field }) => (
-          <Textarea
-            id={id}
-            rows={3}
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('description')}
-          />
-        )}
-      </Field>
+        <Field label="Status" error={errors.status?.message}>
+          {({ id, ...field }) => (
+            <Controller
+              control={form.control}
+              name="status"
+              render={({ field: control }) => (
+                <OptionSelect
+                  id={id}
+                  {...field}
+                  value={control.value ?? TaxRateStatus.Published}
+                  onValueChange={(value) => control.onChange(value)}
+                  options={STATUS_OPTIONS}
+                  disabled={isSubmitting}
+                />
+              )}
+            />
+          )}
+        </Field>
 
-      <FormActions
-        mode="edit"
-        noun="tax rate"
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
-    </form>
+        <Field label="Description" error={errors.description?.message}>
+          {({ id, ...field }) => (
+            <Textarea
+              id={id}
+              rows={3}
+              disabled={isSubmitting}
+              {...field}
+              {...form.register('description')}
+            />
+          )}
+        </Field>
+      </form>
+    </FormPage>
   )
 }

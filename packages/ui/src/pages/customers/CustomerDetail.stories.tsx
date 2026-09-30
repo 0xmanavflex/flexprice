@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import {
   type CustomerDetail as CustomerDetailModel,
@@ -88,16 +88,25 @@ function Harness({
   invoices = INVOICES,
   onCreateSubscription,
   onBack,
+  onEdit,
+  onUpdateField,
+  initialTab = 'overview',
+  creatingSubscription = false,
 }: {
   customer?: CustomerDetailModel
   subscriptions?: Subscription[]
   invoices?: Invoice[]
   onCreateSubscription?: () => void
   onBack?: () => void
+  onEdit?: () => void
+  onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
+  initialTab?: CustomerTab
+  creatingSubscription?: boolean
 }) {
-  const [tab, setTab] = useState<CustomerTab>('overview')
+  const [tab, setTab] = useState<CustomerTab>(initialTab)
+  const [creating, setCreating] = useState(creatingSubscription)
   return (
-    <div className="flex h-screen flex-col bg-background">
+    <div className="bg-background flex h-screen flex-col">
       <CustomerDetail
         customer={customer}
         subscriptions={subscriptions}
@@ -105,16 +114,39 @@ function Harness({
         tab={tab}
         onTabChange={setTab}
         onBack={onBack ?? (() => {})}
-        onCreateSubscription={onCreateSubscription ?? (() => {})}
+        onCreateSubscription={() => {
+          onCreateSubscription?.()
+          setTab('subscriptions')
+          setCreating(true)
+        }}
+        {...(onEdit ? { onEdit } : {})}
+        {...(onUpdateField ? { onUpdateField } : {})}
+        {...(creating
+          ? {
+              subscriptionForm: (
+                <div role="group" aria-label="Subscription steps">
+                  Subscription steps go here.
+                </div>
+              ),
+              onCancelSubscriptionCreate: () => setCreating(false),
+            }
+          : {})}
       />
     </div>
   )
 }
 
+const withHeight: Decorator = (Story) => (
+  <div className="flex h-[720px] flex-col">
+    <Story />
+  </div>
+)
+
 const meta = {
   title: 'Surfaces/CustomerDetail',
   component: Harness,
   parameters: { layout: 'fullscreen' },
+  decorators: [withHeight],
 } satisfies Meta<typeof Harness>
 
 export default meta
@@ -146,14 +178,35 @@ export const NavigatesSections: Story = {
   },
 }
 
-/** The header's primary action creates a subscription for this customer. */
+/**
+ * The header's primary action opens the create form inside the Subscriptions
+ * section: the customer and the tab stay, Cancel brings the table back.
+ */
 export const CreatesSubscription: Story = {
   args: { onCreateSubscription: fn() },
   play: async ({ canvasElement, args }) => {
-    await userEvent.click(
-      within(canvasElement).getByRole('button', { name: 'Create subscription' }),
-    )
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Create subscription' }))
     await expect(args.onCreateSubscription).toHaveBeenCalledOnce()
+    await expect(
+      canvas.getByRole('heading', { level: 2, name: 'Create subscription' }),
+    ).toBeVisible()
+    await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Subscriptions' }))
+    await expect(canvas.getByRole('table')).toBeVisible()
+  },
+}
+
+/** Name, email and phone edit where they are shown. */
+export const EditsInline: Story = {
+  args: { initialTab: 'information', onUpdateField: fn(async () => undefined), onEdit: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit Phone' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Phone' }), '+1 555 0100{Enter}')
+    await expect(args.onUpdateField).toHaveBeenCalledWith({ phone: '+1 555 0100' })
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer' }))
+    await expect(args.onEdit).toHaveBeenCalledOnce()
   },
 }
 

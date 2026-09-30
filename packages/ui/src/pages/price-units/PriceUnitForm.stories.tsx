@@ -1,18 +1,30 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import type { CreatePriceUnit } from '@fp/domain'
 import { PriceUnitForm } from './PriceUnitForm'
 
 /**
- * Create or edit a price unit's details — the drawer's contents. Fixtures in, a
- * validated `CreatePriceUnit` out. The backend fixes everything but the name
- * once a unit exists, so edit locks the other four. No provider, no network.
+ * Create a price unit, on a full page. Fixtures in, a validated
+ * `CreatePriceUnit` out. Create only: the backend fixes everything but the name
+ * once a unit exists, and the name is edited in place on the detail page.
+ * No provider, no network.
  */
+const withHeight: Decorator = (Story) => (
+  <div className="flex h-[720px] flex-col">
+    <Story />
+  </div>
+)
+
 const meta = {
   title: 'Surfaces/PriceUnitForm',
   component: PriceUnitForm,
-  parameters: { layout: 'padded' },
-  args: { mode: 'create', onSubmit: fn(), onCancel: fn() },
+  parameters: { layout: 'fullscreen' },
+  decorators: [withHeight],
+  args: {
+    trail: [{ label: 'Price Units' }, { label: 'Create price unit' }],
+    onSubmit: fn(),
+    onCancel: fn(),
+  },
 } satisfies Meta<typeof PriceUnitForm>
 
 export default meta
@@ -28,13 +40,13 @@ const credits: CreatePriceUnit = {
 
 export const Create: Story = {}
 
-/** Everything but the name is locked on edit — the values stay visible to check. */
-export const Edit: Story = {
-  args: { mode: 'edit', defaultValue: credits },
-  play: async ({ canvasElement }) => {
+export const Prefilled: Story = {
+  args: { defaultValue: credits },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('textbox', { name: 'Code' })).toHaveAttribute('readonly')
-    await expect(canvas.getByRole('textbox', { name: 'Name' })).not.toHaveAttribute('readonly')
+    await expect(canvas.getByRole('textbox', { name: /^Name/ })).toHaveValue('Credits')
+    await userEvent.click(canvas.getByRole('button', { name: 'Create price unit' }))
+    await expect(args.onSubmit).toHaveBeenCalled()
   },
 }
 

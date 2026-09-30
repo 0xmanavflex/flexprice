@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { PlusIcon } from 'lucide-react'
+import { PencilIcon, PlusIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
@@ -20,6 +20,8 @@ import { DetailShell } from '@ui/compositions/DetailShell'
 import { ResourceNavigation } from '@ui/compositions/ResourceNavigation'
 import type { ResourceNavItem } from '@ui/compositions/ResourceNavigation'
 import { Section } from '@ui/compositions/Section'
+import { ContextualSection } from '@ui/compositions/ContextualSection'
+import { InlineField } from '@ui/compositions/InlineField'
 import { DetailList } from '@ui/compositions/DetailList'
 import type { DetailItem } from '@ui/compositions/DetailList'
 import { EmptyState } from '@ui/compositions/EmptyState'
@@ -58,12 +60,7 @@ export const CustomerDetailProvenance = provenance({
 })
 
 export type CustomerTab =
-  | 'overview'
-  | 'subscriptions'
-  | 'invoices'
-  | 'wallet'
-  | 'usage'
-  | 'information'
+  'overview' | 'subscriptions' | 'invoices' | 'wallet' | 'usage' | 'information'
 
 export const CUSTOMER_TABS = [
   'overview',
@@ -84,6 +81,22 @@ export interface CustomerDetailProps {
   onBack: () => void
   /** The header's primary action. */
   onCreateSubscription: () => void
+  /** Open the full Edit page for the customer. */
+  onEdit?: () => void
+  /**
+   * Save one of the simple fields in place (name, email, phone). Omitted, the
+   * Information tab is read-only. Resolve to commit; reject with an Error to
+   * show its message beside the field.
+   */
+  onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
+  /**
+   * The stepped create-subscription form. While present, the Subscriptions
+   * section shows it in place of the table; the customer, its header and the
+   * open tab stay put.
+   */
+  subscriptionForm?: ReactNode
+  /** The way back out of `subscriptionForm`. */
+  onCancelSubscriptionCreate?: () => void
   subscriptionsLoading?: boolean
   invoicesLoading?: boolean
   /**
@@ -116,6 +129,10 @@ export function CustomerDetail({
   onTabChange,
   onBack,
   onCreateSubscription,
+  onEdit,
+  onUpdateField,
+  subscriptionForm,
+  onCancelSubscriptionCreate,
   subscriptionsLoading = false,
   invoicesLoading = false,
   usage,
@@ -152,7 +169,7 @@ export function CustomerDetail({
       badges={
         <>
           {customer.externalId ? (
-            <Badge variant="outline" className="font-mono font-normal text-muted-foreground">
+            <Badge variant="outline" className="text-muted-foreground font-mono font-normal">
               {customer.externalId}
             </Badge>
           ) : null}
@@ -162,13 +179,26 @@ export function CustomerDetail({
       }
       {...(subtitle ? { description: subtitle } : {})}
       actions={
-        <Button onClick={onCreateSubscription}>
-          <PlusIcon aria-hidden />
-          Create subscription
-        </Button>
+        <>
+          {onEdit ? (
+            <Button variant="outline" onClick={onEdit}>
+              <PencilIcon aria-hidden />
+              Edit customer
+            </Button>
+          ) : null}
+          <Button onClick={onCreateSubscription}>
+            <PlusIcon aria-hidden />
+            Create subscription
+          </Button>
+        </>
       }
     >
-      <ResourceNavigation items={items} value={tab} onChange={(id) => onTabChange(id as CustomerTab)} label="Customer sections" />
+      <ResourceNavigation
+        items={items}
+        value={tab}
+        onChange={(id) => onTabChange(id as CustomerTab)}
+        label="Customer sections"
+      />
 
       {tab === 'overview' ? (
         <OverviewTab
@@ -187,6 +217,8 @@ export function CustomerDetail({
           subscriptions={subscriptions}
           isLoading={subscriptionsLoading}
           onCreateSubscription={onCreateSubscription}
+          form={subscriptionForm}
+          onCancelCreate={onCancelSubscriptionCreate}
           formatDate={formatDate}
         />
       ) : null}
@@ -202,17 +234,17 @@ export function CustomerDetail({
         />
       ) : null}
 
-      {tab === 'usage' ? (
-        (usage ?? (
-          <EmptyState
-            title="No usage to show yet"
-            description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
-          />
-        ))
-      ) : null}
+      {tab === 'usage'
+        ? (usage ?? (
+            <EmptyState
+              title="No usage to show yet"
+              description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
+            />
+          ))
+        : null}
 
       {tab === 'information' ? (
-        <InformationTab customer={customer} formatDate={formatDate} />
+        <InformationTab customer={customer} formatDate={formatDate} onUpdateField={onUpdateField} />
       ) : null}
     </DetailShell>
   )
@@ -236,7 +268,7 @@ function SubscriptionSummary({
     <div className="flex items-center justify-between gap-4">
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate text-sm font-medium">{subscription.planName}</span>
-        <span className="truncate text-xs text-muted-foreground">{line}</span>
+        <span className="text-muted-foreground truncate text-xs">{line}</span>
       </div>
       <SubscriptionStatusBadge status={subscription.status} />
     </div>
@@ -334,15 +366,27 @@ function SubscriptionsTab({
   subscriptions,
   isLoading,
   onCreateSubscription,
+  form,
+  onCancelCreate,
   formatDate,
 }: {
   subscriptions: Subscription[]
   isLoading: boolean
   onCreateSubscription: () => void
+  form: ReactNode | undefined
+  onCancelCreate: (() => void) | undefined
   formatDate: (date: Date | null) => string
 }) {
   return (
-    <Section title="Subscriptions" description="Every plan this customer is on.">
+    <ContextualSection
+      title="Subscriptions"
+      description="Every plan this customer is on."
+      formTitle="Create subscription"
+      formDescription="Set up a plan for this customer. Nothing is created until the last step."
+      backLabel="Subscriptions"
+      {...(form ? { form } : {})}
+      {...(onCancelCreate ? { onBack: onCancelCreate } : {})}
+    >
       {isLoading ? (
         <LoadingRows />
       ) : subscriptions.length > 0 ? (
@@ -384,7 +428,7 @@ function SubscriptionsTab({
           action={<Button onClick={onCreateSubscription}>Create subscription</Button>}
         />
       )}
-    </Section>
+    </ContextualSection>
   )
 }
 
@@ -457,12 +501,17 @@ function InvoiceTable({
   )
 }
 
+/** The update patches, so a blank is omitted and cannot clear a stored value. */
+const CLEAR_UNSUPPORTED = 'Clearing this value is not supported; enter a new one.'
+
 function InformationTab({
   customer,
   formatDate,
+  onUpdateField,
 }: {
   customer: CustomerDetailModel
   formatDate: (date: Date | null) => string
+  onUpdateField: CustomerDetailProps['onUpdateField']
 }) {
   const address = [
     customer.addressLine1,
@@ -476,10 +525,17 @@ function InformationTab({
     .join('\n')
 
   const items: DetailItem[] = [
-    { label: 'Name', value: customer.name },
-    { label: 'External ID', value: <span className="font-mono text-xs">{customer.externalId || '—'}</span> },
-    { label: 'Email', value: customer.email || '—' },
-    { label: 'Phone', value: customer.phone || '—' },
+    ...(onUpdateField
+      ? []
+      : [
+          { label: 'Name', value: customer.name },
+          { label: 'Email', value: customer.email || '—' },
+          { label: 'Phone', value: customer.phone || '—' },
+        ]),
+    {
+      label: 'External ID',
+      value: <span className="font-mono text-xs">{customer.externalId || '—'}</span>,
+    },
     { label: 'Timezone', value: customer.timezone || '—' },
     {
       label: 'Tax treatment',
@@ -498,7 +554,46 @@ function InformationTab({
 
   return (
     <div className="flex flex-col gap-5">
-      <Section title="Information" description="The full customer record.">
+      <Section
+        title="Information"
+        description={
+          onUpdateField
+            ? 'The full customer record. Click the pencil to change name, email or phone in place.'
+            : 'The full customer record.'
+        }
+      >
+        {onUpdateField ? (
+          <div className="mb-5 grid gap-4 sm:grid-cols-3">
+            <InlineField
+              label="Name"
+              value={customer.name}
+              required
+              onSave={(name) => onUpdateField({ name })}
+            />
+            <InlineField
+              label="Email"
+              value={customer.email}
+              placeholder="No email"
+              validate={(next) =>
+                next === ''
+                  ? customer.email
+                    ? CLEAR_UNSUPPORTED
+                    : null
+                  : /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(next)
+                    ? null
+                    : 'Enter a valid email address.'
+              }
+              onSave={(email) => onUpdateField({ email })}
+            />
+            <InlineField
+              label="Phone"
+              value={customer.phone}
+              placeholder="No phone"
+              validate={(next) => (next === '' && customer.phone ? CLEAR_UNSUPPORTED : null)}
+              onSave={(phone) => onUpdateField({ phone })}
+            />
+          </div>
+        ) : null}
         <DetailList items={items} columns={2} />
       </Section>
 

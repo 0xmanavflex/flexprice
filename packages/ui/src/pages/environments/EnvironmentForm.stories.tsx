@@ -1,19 +1,24 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { EnvironmentForm } from './EnvironmentForm'
 
-/** The form ends with the shared footer, so the stories submit through its Create button. */
+const withHeight: Decorator = (Story) => (
+  <div className="flex h-[720px] flex-col">
+    <Story />
+  </div>
+)
+
+/** The page ends with the shared footer, so the stories submit through its Create button. */
 const meta = {
   title: 'Flexprice/EnvironmentForm',
   component: EnvironmentForm,
-  decorators: [
-    (Story) => (
-      <div className="flex w-full max-w-sm flex-col gap-4">
-        <Story />
-      </div>
-    ),
-  ],
-  args: { onSubmit: fn() },
+  parameters: { layout: 'fullscreen' },
+  decorators: [withHeight],
+  args: {
+    trail: [{ label: 'Environments' }, { label: 'Create environment' }],
+    onSubmit: fn(),
+    onCancel: fn(),
+  },
 } satisfies Meta<typeof EnvironmentForm>
 
 export default meta

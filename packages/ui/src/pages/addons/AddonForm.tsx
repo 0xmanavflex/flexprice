@@ -5,10 +5,15 @@ import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
+import { FormPage } from '@ui/compositions/FormPage'
+import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
 
 /**
- * Create or edit an add-on's details.
+ * Create or edit an add-on's details, on a full page.
+ *
+ * One section, so a single `FormPage` rather than a stepper: name, lookup key,
+ * description. Charges and entitlements are added on the detail page afterwards.
  *
  * Presentational, like every form here: it takes a default value and emits a
  * validated `CreateAddon`, holding no state of its own beyond the field values
@@ -21,7 +26,7 @@ import { provenance } from '@ui/provenance'
  */
 export const AddonFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'ui/textarea', 'ui/label'],
+  composes: ['ui/input', 'ui/textarea', 'compositions/form-page', 'compositions/form-actions'],
   note: 'RHF + the domain schema. Details only; charges are the surface shared with plans.',
 })
 
@@ -30,14 +35,19 @@ export interface AddonFormProps {
   mode: 'create' | 'edit'
   defaultValue?: CreateAddon
   onSubmit: (addon: CreateAddon) => void
-  onCancel?: () => void
+  onCancel: () => void
+  /** Breadcrumb; the last crumb is the page itself. */
+  trail: DetailCrumb[]
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
 }
 
+const FORM_ID = 'addon-form'
+
 export function AddonForm({
   mode,
+  trail,
   defaultValue,
   onSubmit,
   onCancel,
@@ -53,57 +63,71 @@ export function AddonForm({
   const errors = form.formState.errors
 
   return (
-    <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-5"
+    <FormPage
+      title={mode === 'create' ? 'Create add-on' : `Edit ${defaultValue?.name || 'add-on'}`}
+      description={
+        mode === 'create'
+          ? 'An optional extra customers buy alongside a plan. Charges and entitlements are added afterwards.'
+          : 'Update the add-on’s details. Its charges are edited separately.'
+      }
+      trail={trail}
+      width="narrow"
+      footer={
+        <FormActions
+          mode={mode}
+          noun="add-on"
+          formId={FORM_ID}
+          onCancel={onCancel}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      }
     >
-      <Field label="Name" required error={errors.name?.message}>
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-        )}
-      </Field>
-
-      <Field
-        label="Lookup key"
-        required={mode === 'create'}
-        hint={
-          mode === 'edit'
-            ? 'Fixed once set — integrations key off it.'
-            : 'Stable identifier used by the API. Lowercase, numbers and underscores.'
-        }
-        error={errors.lookupKey?.message}
+      <form
+        id={FORM_ID}
+        onSubmit={form.handleSubmit((values) => onSubmit(values))}
+        noValidate
+        className="flex flex-col gap-5"
       >
-        {({ id, ...field }) => (
-          <Input
-            id={id}
-            disabled={isSubmitting || mode === 'edit'}
-            readOnly={mode === 'edit'}
-            {...field}
-            {...form.register('lookupKey')}
-          />
-        )}
-      </Field>
+        <Field label="Name" required error={errors.name?.message}>
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+          )}
+        </Field>
 
-      <Field label="Description" error={errors.description?.message}>
-        {({ id, ...field }) => (
-          <Textarea
-            id={id}
-            rows={3}
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('description')}
-          />
-        )}
-      </Field>
+        <Field
+          label="Lookup key"
+          required={mode === 'create'}
+          hint={
+            mode === 'edit'
+              ? 'Fixed once set — integrations key off it.'
+              : 'Stable identifier used by the API. Lowercase, numbers and underscores.'
+          }
+          error={errors.lookupKey?.message}
+        >
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              disabled={isSubmitting || mode === 'edit'}
+              readOnly={mode === 'edit'}
+              {...field}
+              {...form.register('lookupKey')}
+            />
+          )}
+        </Field>
 
-      <FormActions
-        mode={mode}
-        noun="add-on"
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
-    </form>
+        <Field label="Description" error={errors.description?.message}>
+          {({ id, ...field }) => (
+            <Textarea
+              id={id}
+              rows={3}
+              disabled={isSubmitting}
+              {...field}
+              {...form.register('description')}
+            />
+          )}
+        </Field>
+      </form>
+    </FormPage>
   )
 }

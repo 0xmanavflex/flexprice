@@ -76,6 +76,7 @@ interface SharedProps {
   onCancel?: () => void
   isSubmitting?: boolean
   submitError?: string | null
+  submitLabel?: string
 }
 
 export interface EntitlementCreateFormProps extends SharedProps {
@@ -90,6 +91,7 @@ export function EntitlementCreateForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  submitLabel,
 }: EntitlementCreateFormProps) {
   const form = useForm<CreateEntitlement>({
     resolver: standardSchemaResolver(createEntitlementSchema) as Resolver<CreateEntitlement>,
@@ -268,6 +270,7 @@ export function EntitlementCreateForm({
         onCancel={onCancel}
         isSubmitting={isSubmitting}
         submitError={submitError}
+        {...(submitLabel ? { submitLabel } : {})}
       />
     </form>
   )

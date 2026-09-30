@@ -4,10 +4,12 @@ import { type EditCoupon, editCouponSchema } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
+import { FormPage } from '@ui/compositions/FormPage'
+import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
 
 /**
- * Edit a coupon.
+ * Edit a coupon, on a full page.
  *
  * A coupon's editor is a rename. The API's `UpdateCouponRequest` accepts only
  * the name (and metadata) — a coupon already redeemed against live
@@ -18,7 +20,7 @@ import { provenance } from '@ui/provenance'
  */
 export const CouponFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'ui/label'],
+  composes: ['ui/input', 'compositions/form-page', 'compositions/form-actions'],
   note: 'RHF + the domain schema. A rename — the discount is immutable, shown as context.',
 })
 
@@ -27,14 +29,19 @@ export interface CouponFormProps {
   /** Read-only context, so the person knows which coupon they are renaming. */
   summary?: { code: string; discount: string }
   onSubmit: (coupon: EditCoupon) => void
-  onCancel?: () => void
+  onCancel: () => void
+  /** Breadcrumb; the last crumb is the page itself. */
+  trail: DetailCrumb[]
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
 }
 
+const FORM_ID = 'coupon-edit-form'
+
 export function CouponForm({
   defaultValue,
+  trail,
   summary,
   onSubmit,
   onCancel,
@@ -50,44 +57,54 @@ export function CouponForm({
   const errors = form.formState.errors
 
   return (
-    <form
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-5"
+    <FormPage
+      title={`Edit ${defaultValue.name || 'coupon'}`}
+      description="Rename the coupon. Its discount, cadence and redemption window are fixed once created."
+      trail={trail}
+      width="narrow"
+      footer={
+        <FormActions
+          mode="edit"
+          formId={FORM_ID}
+          onCancel={onCancel}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      }
     >
-      <Field label="Name" required error={errors.name?.message}>
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-        )}
-      </Field>
+      <form
+        id={FORM_ID}
+        onSubmit={form.handleSubmit((values) => onSubmit(values))}
+        noValidate
+        className="flex flex-col gap-5"
+      >
+        <Field label="Name" required error={errors.name?.message}>
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+          )}
+        </Field>
 
-      {summary ? (
-        <div className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3 text-sm">
-          {/* The note is a sibling of the <dl>, not a child: a <dl> may only
+        {summary ? (
+          <div className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3 text-sm">
+            {/* The note is a sibling of the <dl>, not a child: a <dl> may only
               directly contain dt/dd (or <div>s that wrap them), so descriptive
               prose inside it fails axe's definition-list rule. */}
-          <dl className="flex flex-col gap-3">
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-muted-foreground">Code</dt>
-              <dd className="font-mono">{summary.code || '—'}</dd>
-            </div>
-            <div className="flex items-baseline justify-between gap-3">
-              <dt className="text-muted-foreground">Discount</dt>
-              <dd className="tabular-nums">{summary.discount}</dd>
-            </div>
-          </dl>
-          <p className="text-muted-foreground text-xs">
-            The discount and how long it lasts are fixed once a coupon is created.
-          </p>
-        </div>
-      ) : null}
-
-      <FormActions
-        mode="edit"
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
-    </form>
+            <dl className="flex flex-col gap-3">
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted-foreground">Code</dt>
+                <dd className="font-mono">{summary.code || '—'}</dd>
+              </div>
+              <div className="flex items-baseline justify-between gap-3">
+                <dt className="text-muted-foreground">Discount</dt>
+                <dd className="tabular-nums">{summary.discount}</dd>
+              </div>
+            </dl>
+            <p className="text-muted-foreground text-xs">
+              The discount and how long it lasts are fixed once a coupon is created.
+            </p>
+          </div>
+        ) : null}
+      </form>
+    </FormPage>
   )
 }

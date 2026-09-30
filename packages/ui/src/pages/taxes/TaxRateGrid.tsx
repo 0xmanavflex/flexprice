@@ -1,5 +1,13 @@
 import { useMemo } from 'react'
-import { CopyIcon, LinkIcon, ListIcon, PencilIcon, PercentIcon, PlusIcon, Trash2Icon } from 'lucide-react'
+import {
+  CopyIcon,
+  LinkIcon,
+  ListIcon,
+  PencilIcon,
+  PercentIcon,
+  PlusIcon,
+  Trash2Icon,
+} from 'lucide-react'
 import {
   DEFAULT_TAX_RATE_QUERY,
   TAX_RATE_SCOPE_LABEL,

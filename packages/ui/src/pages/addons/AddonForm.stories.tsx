@@ -1,22 +1,39 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { AddonForm } from './AddonForm'
 
 /**
- * The add-on details form — the drawer's contents, proved the same way as every
+ * The add-on details form — the full-page Create/Edit body, proved the same way as every
  * form here: fixtures in, a validated `CreateAddon` out, no provider, no network.
  */
+const trail: { label: string }[] = [{ label: 'Add-ons' }, { label: 'Create add-on' }]
+
+const withHeight: Decorator = (Story) => (
+  <div className="flex h-[720px] flex-col">
+    <Story />
+  </div>
+)
+
 const meta = {
   title: 'Surfaces/AddonForm',
   component: AddonForm,
-  parameters: { layout: 'padded' },
-  args: { mode: 'create', onSubmit: fn(), onCancel: fn() },
+  parameters: { layout: 'fullscreen' },
+  decorators: [withHeight],
+  args: { mode: 'create', trail, onSubmit: fn(), onCancel: fn() },
 } satisfies Meta<typeof AddonForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Create: Story = {}
+
+/** Cancel hands control back to the caller. */
+export const CancelReturns: Story = {
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /cancel/i }))
+    await expect(args.onCancel).toHaveBeenCalled()
+  },
+}
 
 export const Edit: Story = {
   args: {
@@ -30,7 +47,10 @@ export const Edit: Story = {
 }
 
 export const Submitting: Story = {
-  args: { isSubmitting: true, defaultValue: { name: 'Priority support', lookupKey: 'priority_support' } },
+  args: {
+    isSubmitting: true,
+    defaultValue: { name: 'Priority support', lookupKey: 'priority_support' },
+  },
 }
 
 export const SubmitError: Story = {

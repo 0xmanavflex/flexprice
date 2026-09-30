@@ -85,6 +85,8 @@ export interface ChargeFormProps {
   onCancel?: () => void
   isSubmitting?: boolean
   submitError?: string | null
+  /** Overrides the submit label, e.g. "Add charge" when the charge is staged, not saved. */
+  submitLabel?: string
 }
 
 const BILLING_MODELS = [BillingModel.FlatFee, BillingModel.Package, BillingModel.Tiered] as const
@@ -120,6 +122,7 @@ export function ChargeForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  submitLabel,
 }: ChargeFormProps) {
   const isEdit = mode === 'edit'
   const form = useForm<CreateCharge>({
@@ -413,7 +416,7 @@ export function ChargeForm({
       </div>
 
       {isUsage ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Usage charges bill in arrears — once the period’s usage is known.
         </p>
       ) : null}
@@ -492,7 +495,7 @@ export function ChargeForm({
               disabled={isSubmitting}
             />
             {tierMessage ? (
-              <p role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-destructive text-xs">
                 {tierMessage}
               </p>
             ) : null}
@@ -532,7 +535,7 @@ export function ChargeForm({
         onCancel={onCancel}
         isSubmitting={isSubmitting}
         submitError={submitError}
-        {...(isEdit ? { submitLabel: 'Save new version' } : {})}
+        {...(submitLabel ? { submitLabel } : isEdit ? { submitLabel: 'Save new version' } : {})}
       />
     </form>
   )

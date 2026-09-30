@@ -23,7 +23,6 @@ async function popupClosed(role: 'menu' | 'listbox') {
   await waitFor(() => expect(within(document.body).queryByRole(role)).toBeNull())
 }
 
-
 /**
  * The group list, over the shared `EntityList`.
  *

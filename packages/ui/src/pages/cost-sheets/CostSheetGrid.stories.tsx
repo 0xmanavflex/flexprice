@@ -22,7 +22,6 @@ async function popupClosed(role: 'menu' | 'listbox') {
   await waitFor(() => expect(within(document.body).queryByRole(role)).toBeNull())
 }
 
-
 /**
  * The cost sheet list, over the shared `EntityList`.
  *

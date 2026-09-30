@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react-vite'
+import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { CouponForm } from './CouponForm'
 
@@ -7,11 +7,21 @@ import { CouponForm } from './CouponForm'
  * fixed once created, so only the name is a control; the rest is shown as
  * read-only context. Fixtures in, a validated `EditCoupon` out — no network.
  */
+const trail: { label: string }[] = [{ label: 'Coupons' }, { label: 'Edit Launch 20% off' }]
+
+const withHeight: Decorator = (Story) => (
+  <div className="flex h-[720px] flex-col">
+    <Story />
+  </div>
+)
+
 const meta = {
   title: 'Surfaces/CouponForm',
   component: CouponForm,
-  parameters: { layout: 'padded' },
+  parameters: { layout: 'fullscreen' },
+  decorators: [withHeight],
   args: {
+    trail,
     defaultValue: { name: 'Launch 20% off' },
     onSubmit: fn(),
     onCancel: fn(),

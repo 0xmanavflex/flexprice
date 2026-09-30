@@ -19,85 +19,36 @@ import { Input } from '@ui/components/primitives/input'
 import { DateInput } from '@ui/compositions/DateInput'
 import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
-import { FormDialog } from '@ui/compositions/FormDialog'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
 
 /**
- * Add or edit a credit grant, in a dialog.
+ * Add or edit a credit grant, as a form.
  *
  * Create: a *recurring* grant asks for the period it refreshes on; a *duration*
  * expiry asks how long the credits last. The rules are the domain schema's.
  * Edit: a grant already applied to subscriptions cannot be re-priced, so only
- * its name and end date change; the rest is shown as fixed.
- *
- * It emits a validated `CreateCreditGrant` or `EditCreditGrant`; the page saves
- * it (there is no bulk grant endpoint, so one dialog makes one grant).
+ * its name and end date change. It emits a validated `CreateCreditGrant` or
+ * `EditCreditGrant`; the caller saves it (one grant per submit).
  */
-export const CreditGrantDialogProvenance = provenance({
+export const CreditGrantFormProvenance = provenance({
   source: 'composition',
   composes: [
-    'compositions/form-dialog',
     'compositions/field',
     'compositions/form-actions',
     'compositions/option-select',
     'compositions/date-input',
     'ui/input',
   ],
-  note: 'Credit-grant dialog, create or edit; period and duration fields appear conditionally.',
+  note: 'Credit-grant form, create or edit; period and duration fields appear conditionally.',
 })
 
-export interface CreditGrantDialogProps {
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  mode?: 'create' | 'edit'
-  onSubmit?: (grant: CreateCreditGrant) => void
-  /** Edit: the grant's current name and end date. */
-  defaultValue?: EditCreditGrant
-  onEditSubmit?: (edit: EditCreditGrant) => void
+export interface CreditGrantFormProps<T> {
   isSubmitting?: boolean
   submitError?: string | null
-}
-
-export function CreditGrantDialog(props: CreditGrantDialogProps) {
-  const { open, onOpenChange, isSubmitting = false, submitError = null } = props
-  const editing = props.mode === 'edit' && props.defaultValue
-  return (
-    <FormDialog
-      open={open}
-      onOpenChange={onOpenChange}
-      title={editing ? 'Edit credit grant' : 'Add credit grant'}
-      description={
-        editing
-          ? 'Rename the grant or change when it ends. Its credits and schedule are fixed.'
-          : 'Hand subscribers a balance of credits to spend against usage.'
-      }
-    >
-      {editing ? (
-        <CreditGrantEditFields
-          defaultValue={editing}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-          onSubmit={(edit) => props.onEditSubmit?.(edit)}
-          onCancel={() => onOpenChange(false)}
-        />
-      ) : (
-        <CreditGrantCreateFields
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-          onSubmit={(grant) => props.onSubmit?.(grant)}
-          onCancel={() => onOpenChange(false)}
-        />
-      )}
-    </FormDialog>
-  )
-}
-
-interface FieldsProps<T> {
-  isSubmitting: boolean
-  submitError: string | null
   onSubmit: (grant: T) => void
-  onCancel: () => void
+  onCancel?: () => void
+  submitLabel?: string
 }
 
 const messageOf = (errors: unknown, key: string): string | undefined =>
@@ -114,13 +65,14 @@ const endOfDay = (iso: string) => {
   return y && m && d ? new Date(y, m - 1, d, 23, 59, 59) : undefined
 }
 
-function CreditGrantEditFields({
+export function CreditGrantEditForm({
   defaultValue,
-  isSubmitting,
-  submitError,
+  isSubmitting = false,
+  submitError = null,
   onSubmit,
   onCancel,
-}: FieldsProps<EditCreditGrant> & { defaultValue: EditCreditGrant }) {
+  submitLabel,
+}: CreditGrantFormProps<EditCreditGrant> & { defaultValue: EditCreditGrant }) {
   const form = useForm<EditCreditGrant>({
     resolver: standardSchemaResolver(editCreditGrantSchema) as Resolver<EditCreditGrant>,
     defaultValues: defaultValue,
@@ -168,17 +120,19 @@ function CreditGrantEditFields({
         onCancel={onCancel}
         isSubmitting={isSubmitting}
         submitError={submitError}
+        {...(submitLabel ? { submitLabel } : {})}
       />
     </form>
   )
 }
 
-function CreditGrantCreateFields({
-  isSubmitting,
-  submitError,
+export function CreditGrantCreateForm({
+  isSubmitting = false,
+  submitError = null,
   onSubmit,
   onCancel,
-}: FieldsProps<CreateCreditGrant>) {
+  submitLabel,
+}: CreditGrantFormProps<CreateCreditGrant>) {
   const form = useForm<CreateCreditGrant>({
     resolver: standardSchemaResolver(createCreditGrantSchema) as Resolver<CreateCreditGrant>,
     defaultValues: emptyCreditGrant(),
@@ -349,6 +303,7 @@ function CreditGrantCreateFields({
         onCancel={onCancel}
         isSubmitting={isSubmitting}
         submitError={submitError}
+        {...(submitLabel ? { submitLabel } : {})}
       />
     </form>
   )
