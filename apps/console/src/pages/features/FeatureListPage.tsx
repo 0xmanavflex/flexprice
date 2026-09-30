@@ -1,32 +1,93 @@
-import { type Feature, type FeatureQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, useFeatures } from '@fp/query'
-import { FeatureGrid } from '@fp/ui/flexprice'
-import { ListState, PageBody } from '@fp/ui/compositions'
+import { useMemo, useState } from 'react'
+import {
+  type CloneFeature,
+  type CreateFeature,
+  type EditFeature,
+  type Feature,
+  type FeatureQuery,
+  DEFAULT_GROUP_QUERY,
+  GroupEntityType,
+} from '@fp/domain'
+import {
+  ApiError,
+  useCatalogStats,
+  useCloneFeature,
+  useCreateFeature,
+  useDeleteFeature,
+  useFeatures,
+  useGroups,
+  useUpdateFeature,
+} from '@fp/query'
+import { FeatureCloneDialog, FeatureEditorDialog, FeatureGrid } from '@fp/ui/flexprice'
+import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { GaugeIcon } from 'lucide-react'
 import { Button } from '@fp/ui/primitives'
+import { toSubmitError } from './featureMessages'
 
 export interface FeatureListPageProps {
   query: FeatureQuery
   onQueryChange: (query: FeatureQuery) => void
-  onCreate: () => void
+  /** Opens with the create dialog showing — the `/features/new` entry point. */
+  initialCreate?: boolean
   onOpenFeature: (feature: Feature) => void
 }
 
+type Editing = { mode: 'create' } | { mode: 'edit'; feature: Feature } | null
+
 /**
- * The wiring layer, and nothing else.
+ * The feature surface: a list, and dialogs to create, edit, clone and delete.
  *
- * Replaces V1's `Features.tsx`, which additionally owns drawer state for
- * editing and reaches into `FeatureApi` directly. This fetches, turns an error
- * into a sentence, and hands the grid plain props. No `useState`: the query
- * lives in the URL.
+ * The query lives in the URL. The dialogs are the only local state, because a
+ * half-typed feature is not worth a URL; opening one keeps the list behind it.
  */
 export function FeatureListPage({
   query,
   onQueryChange,
-  onCreate,
+  initialCreate = false,
   onOpenFeature,
 }: FeatureListPageProps) {
   const features = useFeatures(query)
+  const create = useCreateFeature()
+  const update = useUpdateFeature()
+  const clone = useCloneFeature()
+  const remove = useDeleteFeature()
+  const groups = useGroups({ ...DEFAULT_GROUP_QUERY, pageSize: 100 })
+
+  const [editing, setEditing] = useState<Editing>(initialCreate ? { mode: 'create' } : null)
+  const [cloning, setCloning] = useState<Feature | null>(null)
+  const [deleting, setDeleting] = useState<Feature | null>(null)
+
+  const groupOptions = useMemo(
+    () =>
+      (groups.data?.groups ?? [])
+        .filter((group) => group.entityType === GroupEntityType.Feature)
+        .map((group) => ({ value: group.id, label: group.name })),
+    [groups.data],
+  )
+
+  const onCreate = () => setEditing({ mode: 'create' })
+  const active = editing?.mode === 'edit' ? update : create
+
+  const closeEditor = () => {
+    setEditing(null)
+    create.reset()
+    update.reset()
+  }
+  const closeClone = () => {
+    setCloning(null)
+    clone.reset()
+  }
+  const closeDelete = () => {
+    setDeleting(null)
+    remove.reset()
+  }
+
+  const submitCreate = (draft: CreateFeature) => create.mutate(draft, { onSuccess: closeEditor })
+  const submitEdit = (feature: Feature) => (draft: EditFeature) =>
+    update.mutate({ id: feature.id, draft }, { onSuccess: closeEditor })
+  const submitClone = (draft: CloneFeature) => {
+    if (cloning) clone.mutate({ id: cloning.id, draft }, { onSuccess: closeClone })
+  }
   // Counts per status for the toolbar's status dropdown. Each is one
   // `limit: 1` request read for its `pagination.total` — the server's count,
   // not the twenty-five rows that happen to be on screen.
@@ -78,6 +139,15 @@ export function FeatureListPage({
             onQueryChange={onQueryChange}
             onFeatureClick={onOpenFeature}
             onCreate={onCreate}
+            onEdit={(feature) => setEditing({ mode: 'edit', feature })}
+            onClone={setCloning}
+            onDelete={setDeleting}
+            onRename={(feature, name) =>
+              update.mutateAsync({ id: feature.id, draft: { name } }).then(
+                () => undefined,
+                () => undefined,
+              )
+            }
             onClearFilters={clearFilters}
             statusCounts={{
               total: stats.total,
@@ -87,6 +157,60 @@ export function FeatureListPage({
           />
         </ListState>
       </PageBody>
+
+      {editing?.mode === 'edit' ? (
+        <FeatureEditorDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) closeEditor()
+          }}
+          mode="edit"
+          feature={editing.feature}
+          onSubmit={submitEdit(editing.feature)}
+          groups={groupOptions}
+          isSubmitting={active.isPending}
+          submitError={toSubmitError(active.error)}
+        />
+      ) : (
+        <FeatureEditorDialog
+          open={editing?.mode === 'create'}
+          onOpenChange={(open) => {
+            if (!open) closeEditor()
+          }}
+          mode="create"
+          onSubmit={submitCreate}
+          groups={groupOptions}
+          isSubmitting={create.isPending}
+          submitError={toSubmitError(create.error, 'create')}
+        />
+      )}
+
+      <FeatureCloneDialog
+        open={cloning !== null}
+        onOpenChange={(open) => {
+          if (!open) closeClone()
+        }}
+        source={cloning}
+        onSubmit={submitClone}
+        isSubmitting={clone.isPending}
+        submitError={toSubmitError(clone.error, 'clone')}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        onOpenChange={(open) => {
+          if (!open) closeDelete()
+        }}
+        title="Delete feature"
+        description={`Delete ${deleting?.name ?? 'this feature'}? Plans and entitlements that use it lose it.`}
+        confirmLabel="Delete feature"
+        destructive
+        isPending={remove.isPending}
+        error={toSubmitError(remove.error, 'delete')}
+        onConfirm={() => {
+          if (deleting) remove.mutate(deleting.id, { onSuccess: closeDelete })
+        }}
+      />
     </>
   )
 }

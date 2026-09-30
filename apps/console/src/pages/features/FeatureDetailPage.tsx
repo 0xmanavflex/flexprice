@@ -1,14 +1,16 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import {
   AGGREGATION_LABEL,
+  DEFAULT_GROUP_QUERY,
+  GroupEntityType,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   FeatureType,
   needsAggregationTarget,
   type Feature,
 } from '@fp/domain'
-import { ApiError, useFeature } from '@fp/query'
-import { CatalogStatusBadge, FeatureTypeBadge } from '@fp/ui/flexprice'
+import { ApiError, useFeature, useGroups, useUpdateFeature } from '@fp/query'
+import { CatalogStatusBadge, FeatureEditorDialog, FeatureTypeBadge } from '@fp/ui/flexprice'
 import {
   AppFailure,
   type DetailItem,
@@ -21,7 +23,8 @@ import {
   Section,
 } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { CheckIcon, CopyIcon, GaugeIcon, ReceiptIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, GaugeIcon, PencilIcon, ReceiptIcon } from 'lucide-react'
+import { toSubmitError } from './featureMessages'
 
 export interface FeatureDetailPageProps {
   featureId: string
@@ -48,13 +51,21 @@ type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
  * there is no linked-price or entitlement read hook yet, so they say what will
  * appear rather than inventing rows.
  *
- * No Edit action: there is no `useUpdateFeature` mutation in `@fp/query`, so an
- * edit control would be a button with nowhere to go. It is omitted rather than
- * invented.
+ * Edit opens the same dialog the list uses, prefilled.
  */
 export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
   const [tab, setTab] = useState<FeatureTab>('overview')
+  const [editing, setEditing] = useState(false)
+  const update = useUpdateFeature()
+  const groups = useGroups({ ...DEFAULT_GROUP_QUERY, pageSize: 100 })
+  const groupOptions = useMemo(
+    () =>
+      (groups.data?.groups ?? [])
+        .filter((group) => group.entityType === GroupEntityType.Feature)
+        .map((group) => ({ value: group.id, label: group.name })),
+    [groups.data],
+  )
 
   if (feature.isPending) {
     return (
@@ -104,6 +115,12 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
         </>
       }
       identifier={data.lookupKey || data.id}
+      actions={
+        <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
+          <PencilIcon aria-hidden className="size-4" />
+          Edit
+        </Button>
+      }
       {...(data.description ? { description: data.description } : {})}
     >
       {/* The shared line nav, the same section strip the customer and plan pages use. */}
@@ -186,6 +203,32 @@ export function FeatureDetailPage({ featureId, onNavigateToList }: FeatureDetail
           </Section>
         ) : null}
       </div>
+
+      <FeatureEditorDialog
+        open={editing}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEditing(false)
+            update.reset()
+          }
+        }}
+        mode="edit"
+        feature={data}
+        groups={groupOptions}
+        onSubmit={(draft) =>
+          update.mutate(
+            { id: data.id, draft },
+            {
+              onSuccess: () => {
+                setEditing(false)
+                update.reset()
+              },
+            },
+          )
+        }
+        isSubmitting={update.isPending}
+        submitError={toSubmitError(update.error)}
+      />
     </DetailShell>
   )
 }

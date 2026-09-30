@@ -2,6 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { AggregationType, FeatureType, ResetUsage } from '@fp/domain'
 import { FeatureForm } from './FeatureForm'
+import { featureFixtures } from './featureFixtures'
 
 /**
  * The replacement for `AddFeature.tsx` — 1,106 lines and four state slices —
@@ -23,7 +24,7 @@ const meta = {
   title: 'Surfaces/FeatureForm',
   component: FeatureForm,
   parameters: { layout: 'padded' },
-  args: { onSubmit: fn(), onCancel: fn() },
+  args: { mode: 'create', onSubmit: fn(), onCancel: fn() },
 } satisfies Meta<typeof FeatureForm>
 
 export default meta
@@ -89,20 +90,20 @@ export const SwitchingTypeDropsTheMeter: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.getByLabelText('Event name')).toBeInTheDocument()
+    await expect(canvas.getByLabelText(/^Event name/)).toBeInTheDocument()
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Boolean' }))
-    await expect(canvas.queryByLabelText('Event name')).not.toBeInTheDocument()
+    await chooseOption('Type', 'Boolean')
+    await expect(canvas.queryByLabelText(/^Event name/)).not.toBeInTheDocument()
 
-    await userEvent.type(canvas.getByLabelText('Name'), 'SSO')
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'SSO')
     await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
 
-    await expect(args.onSubmit).toHaveBeenCalledWith({
-      name: 'SSO',
-      type: FeatureType.Boolean,
-      lookupKey: '',
-      description: '',
-    })
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'SSO', type: FeatureType.Boolean, lookupKey: 'feat-sso' }),
+    )
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.not.objectContaining({ meter: expect.anything() }),
+    )
   },
 }
 
@@ -111,13 +112,13 @@ export const CountHidesTheAggregationTarget: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.queryByLabelText('Event field')).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Event field/)).not.toBeInTheDocument()
 
     await chooseOption('Aggregation', 'Sum of a field')
-    await expect(await canvas.findByLabelText('Event field')).toBeInTheDocument()
+    await expect(await canvas.findByLabelText(/^Event field/)).toBeInTheDocument()
 
     await chooseOption('Aggregation', 'Count of events')
-    await expect(canvas.queryByLabelText('Event field')).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Event field/)).not.toBeInTheDocument()
   },
 }
 
@@ -126,11 +127,11 @@ export const MultiplierOnlyForSumWithMultiplier: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.queryByLabelText('Multiplier')).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Multiplier/)).not.toBeInTheDocument()
 
     await chooseOption('Aggregation', 'Sum, multiplied')
 
-    await expect(await canvas.findByLabelText('Multiplier')).toBeInTheDocument()
+    await expect(await canvas.findByLabelText(/^Multiplier/)).toBeInTheDocument()
   },
 }
 
@@ -144,11 +145,11 @@ export const ZeroMultiplierRejected: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.type(canvas.getByLabelText('Name'), 'Weighted tokens')
-    await userEvent.type(canvas.getByLabelText('Event name'), 'llm_completion')
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'Weighted tokens')
+    await userEvent.type(canvas.getByLabelText(/^Event name/), 'llm_completion')
     await chooseOption('Aggregation', 'Sum, multiplied')
-    await userEvent.type(await canvas.findByLabelText('Event field'), 'tokens')
-    await userEvent.type(await canvas.findByLabelText('Multiplier'), '0')
+    await userEvent.type(await canvas.findByLabelText(/^Event field/), 'tokens')
+    await userEvent.type(await canvas.findByLabelText(/^Multiplier/), '0')
 
     await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
 
@@ -162,9 +163,10 @@ export const SubmitsAValidatedDomainValue: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.type(canvas.getByLabelText('Name'), 'API calls')
-    await userEvent.type(canvas.getByLabelText('Lookup key'), 'api_calls')
-    await userEvent.type(canvas.getByLabelText('Event name'), 'api_call')
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
+    await userEvent.clear(canvas.getByLabelText(/^Lookup key/))
+    await userEvent.type(canvas.getByLabelText(/^Lookup key/), 'api_calls')
+    await userEvent.type(canvas.getByLabelText(/^Event name/), 'api_call')
 
     await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
 
@@ -178,6 +180,79 @@ export const SubmitsAValidatedDomainValue: Story = {
           aggregationType: AggregationType.Count,
         }),
       }),
+    )
+  },
+}
+
+/** The lookup key follows the name until the person types a key of their own. */
+export const LookupKeyFollowsName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
+    await expect(canvas.getByLabelText(/^Lookup key/)).toHaveValue('feat-api-calls')
+
+    await userEvent.clear(canvas.getByLabelText(/^Lookup key/))
+    await userEvent.type(canvas.getByLabelText(/^Lookup key/), 'mine')
+    await userEvent.type(canvas.getByLabelText(/^Name/), ' more')
+    await expect(canvas.getByLabelText(/^Lookup key/)).toHaveValue('mine')
+  },
+}
+
+/** Group by is offered only with the Maximum aggregation. */
+export const GroupByOnlyForMax: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByLabelText(/^Group by/)).not.toBeInTheDocument()
+    await chooseOption('Aggregation', 'Maximum value')
+    await expect(await canvas.findByLabelText(/^Group by/)).toBeInTheDocument()
+  },
+}
+
+/** A filter needs a property and at least one value. */
+export const FilterValidation: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
+    await userEvent.type(canvas.getByLabelText(/^Event name/), 'api_call')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add filter' }))
+    await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
+    await expect(await canvas.findByText('Enter the event property')).toBeInTheDocument()
+    await expect(args.onSubmit).not.toHaveBeenCalled()
+
+    await userEvent.type(canvas.getByLabelText('Filter 1 property'), 'region')
+    await userEvent.type(canvas.getByLabelText('Filter 1 values'), 'eu, us')
+    await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({
+        meter: expect.objectContaining({
+          filters: [{ key: 'region', values: ['eu', 'us'] }],
+        }),
+      }),
+    )
+  },
+}
+
+/** Editing: type, lookup key and meter are read-only; a rename submits an EditFeature. */
+export const EditRename: Story = {
+  args: {
+    mode: 'edit',
+    feature: featureFixtures[0]!,
+    onSubmit: fn(),
+  } as never,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByLabelText(/^Lookup key/)).toHaveAttribute('readonly')
+    await expect(canvas.getByLabelText(/^Event name/)).toHaveAttribute('readonly')
+
+    await userEvent.clear(canvas.getByLabelText(/^Name/))
+    await userEvent.type(canvas.getByLabelText(/^Name/), 'API requests')
+    await userEvent.click(canvas.getByRole('button', { name: /save changes/i }))
+
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.objectContaining({ name: 'API requests' }),
+    )
+    await expect(args.onSubmit).toHaveBeenCalledWith(
+      expect.not.objectContaining({ lookupKey: expect.anything() }),
     )
   },
 }

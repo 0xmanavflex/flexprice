@@ -1,5 +1,14 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, GaugeIcon, ScrollTextIcon, SquareStackIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  CopyIcon,
+  CopyPlusIcon,
+  GaugeIcon,
+  PencilIcon,
+  ScrollTextIcon,
+  SquareStackIcon,
+  Trash2Icon,
+} from 'lucide-react'
 import {
   AGGREGATION_LABEL,
   DEFAULT_FEATURE_QUERY,
@@ -134,6 +143,14 @@ export interface FeatureGridProps {
   onFeatureClick?: (feature: Feature) => void
   /** The primary create action; renders a "New feature" CTA at the toolbar's end. */
   onCreate?: () => void
+  /** Row-menu Edit; opens the editor dialog. */
+  onEdit?: ((feature: Feature) => void) | undefined
+  /** Row-menu Clone. */
+  onClone?: ((feature: Feature) => void) | undefined
+  /** Row-menu Delete; the caller confirms. */
+  onDelete?: ((feature: Feature) => void) | undefined
+  /** Inline rename from the name cell. */
+  onRename?: ((feature: Feature, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Fills the counts beside each status option. */
@@ -151,6 +168,10 @@ export function FeatureGrid({
   onRetry,
   onFeatureClick,
   onCreate,
+  onEdit,
+  onClone,
+  onDelete,
+  onRename,
   onClearFilters,
   statusCounts,
   locale,
@@ -164,6 +185,7 @@ export function FeatureGrid({
         // The column the list is *for*. Hiding it leaves a table of
         // attributes belonging to nothing.
         hideable: false,
+        ...(onRename ? { onEdit: onRename } : {}),
       }),
       pillColumn<Feature>(
         'type',
@@ -195,7 +217,7 @@ export function FeatureGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale],
+    [locale, onRename],
   )
 
   /*
@@ -244,11 +266,33 @@ export function FeatureGrid({
         onSelect: () => onFeatureClick(feature),
       })
     }
+    if (onEdit) {
+      actions.push({
+        label: 'Edit feature',
+        icon: <PencilIcon aria-hidden className="size-4" />,
+        onSelect: () => onEdit(feature),
+      })
+    }
+    if (onClone) {
+      actions.push({
+        label: 'Clone feature',
+        icon: <CopyPlusIcon aria-hidden className="size-4" />,
+        onSelect: () => onClone(feature),
+      })
+    }
     actions.push({
       label: 'Copy feature ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(feature.id),
     })
+    if (onDelete) {
+      actions.push({
+        label: 'Delete feature',
+        icon: <Trash2Icon aria-hidden className="size-4" />,
+        onSelect: () => onDelete(feature),
+        destructive: true,
+      })
+    }
     return actions
   }
 
