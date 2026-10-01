@@ -28,6 +28,7 @@ import { Switch } from '@ui/components/primitives/switch'
 import { Textarea } from '@ui/components/primitives/textarea'
 import type { ReactNode } from 'react'
 import { Field } from '@ui/compositions/Field'
+import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSteps'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
@@ -414,36 +415,30 @@ export function FeatureForm(props: FeatureFormProps) {
   )
 
   const detailsStep = (
-    <>
-      <div className="grid gap-4 sm:grid-cols-2">
-        <Field label="Name" required error={message('name')}>
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...nameField} />
-          )}
-        </Field>
-
-        <Field
-          label="Lookup key"
-          hint={
-            isEdit
-              ? 'Fixed once set — integrations key off it.'
-              : 'Stable identifier used by the API. Follows the name until you edit it.'
-          }
-          error={message('lookupKey')}
-        >
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              disabled={isSubmitting || isEdit}
-              readOnly={isEdit}
-              {...field}
-              {...form.register('lookupKey')}
-            />
-          )}
-        </Field>
-      </div>
-
-      <Field label="Description" error={message('description')}>
+    <FormCard>
+      <FormRow label="Name" required error={message('name')}>
+        {({ id, ...field }) => <Input id={id} disabled={isSubmitting} {...field} {...nameField} />}
+      </FormRow>
+      <FormRow
+        label="Lookup key"
+        hint={
+          isEdit
+            ? 'Fixed once set — integrations key off it.'
+            : 'Stable identifier used by the API. Follows the name until you edit it.'
+        }
+        error={message('lookupKey')}
+      >
+        {({ id, ...field }) => (
+          <Input
+            id={id}
+            disabled={isSubmitting || isEdit}
+            readOnly={isEdit}
+            {...field}
+            {...form.register('lookupKey')}
+          />
+        )}
+      </FormRow>
+      <FormRow label="Description" align="start" error={message('description')}>
         {({ id, ...field }) => (
           <Textarea
             id={id}
@@ -453,9 +448,9 @@ export function FeatureForm(props: FeatureFormProps) {
             {...form.register('description')}
           />
         )}
-      </Field>
+      </FormRow>
       {groups.length > 0 ? (
-        <Field label="Group" hint="File the feature under a group." error={message('groupId')}>
+        <FormRow label="Group" hint="File the feature under a group." error={message('groupId')}>
           {({ id, ...field }) => (
             <OptionSelect
               id={id}
@@ -467,14 +462,14 @@ export function FeatureForm(props: FeatureFormProps) {
               onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
             />
           )}
-        </Field>
+        </FormRow>
       ) : null}
-    </>
+    </FormCard>
   )
 
   const typeStep = (
-    <>
-      <Field label="Type" hint={TYPE_HINT[type]}>
+    <FormCard>
+      <FormRow label="Type" hint={TYPE_HINT[type]}>
         {({ id, ...field }) => (
           <OptionSelect
             id={id}
@@ -490,85 +485,86 @@ export function FeatureForm(props: FeatureFormProps) {
             }}
           />
         )}
-      </Field>
-    </>
+      </FormRow>
+    </FormCard>
   )
 
   const eventStep = (
-    <>
+    <div className="flex flex-col gap-4">
       {isEdit ? (
         <p className="text-muted-foreground text-xs">
           The event, aggregation and reset are fixed once the meter exists. Filters can still
           change.
         </p>
       ) : null}
-      <Field label="Event name" required error={message('meter.eventName')}>
-        {({ id, ...field }) => (
-          <Input
-            id={id}
-            readOnly={isEdit}
-            disabled={isEdit}
-            {...field}
-            {...form.register('meter.eventName')}
-          />
-        )}
-      </Field>
-      <div className="flex flex-col gap-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm font-medium">Event filters</p>
-            <p className="text-muted-foreground text-xs">
-              Only events whose property matches one of the values are counted.
-            </p>
-          </div>
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => filters.append({ key: '', valuesText: '' })}
-          >
-            <PlusIcon aria-hidden className="size-4" />
-            Add filter
-          </Button>
-        </div>
-        {filters.fields.map((row, index) => (
-          <div key={row.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
-            <Field
-              label={`Filter ${index + 1} property`}
-              error={message(`${filterPath}.${index}.key`)}
-            >
-              {({ id, ...field }) => (
-                <Input id={id} {...field} {...form.register(`filters.${index}.key`)} />
-              )}
-            </Field>
-            <Field
-              label={`Filter ${index + 1} values`}
-              hint="Comma separated."
-              error={message(`${filterPath}.${index}.values`)}
-            >
-              {({ id, ...field }) => (
-                <Input id={id} {...field} {...form.register(`filters.${index}.valuesText`)} />
-              )}
-            </Field>
+      <FormCard>
+        <FormRow label="Event name" required error={message('meter.eventName')}>
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              readOnly={isEdit}
+              disabled={isEdit}
+              {...field}
+              {...form.register('meter.eventName')}
+            />
+          )}
+        </FormRow>
+        <FormRow
+          label="Event filters"
+          hint="Only events whose property matches one of the values are counted."
+          align="start"
+        >
+          <div className="flex flex-col gap-3">
+            {filters.fields.map((row, index) => (
+              <div key={row.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
+                <Field
+                  label={`Filter ${index + 1} property`}
+                  error={message(`${filterPath}.${index}.key`)}
+                >
+                  {({ id, ...field }) => (
+                    <Input id={id} {...field} {...form.register(`filters.${index}.key`)} />
+                  )}
+                </Field>
+                <Field
+                  label={`Filter ${index + 1} values`}
+                  hint="Comma separated."
+                  error={message(`${filterPath}.${index}.values`)}
+                >
+                  {({ id, ...field }) => (
+                    <Input id={id} {...field} {...form.register(`filters.${index}.valuesText`)} />
+                  )}
+                </Field>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="mt-6"
+                  aria-label={`Remove filter ${index + 1}`}
+                  onClick={() => filters.remove(index)}
+                >
+                  <Trash2Icon aria-hidden className="size-4" />
+                </Button>
+              </div>
+            ))}
             <Button
               type="button"
-              variant="ghost"
-              size="icon"
-              className="mt-6"
-              aria-label={`Remove filter ${index + 1}`}
-              onClick={() => filters.remove(index)}
+              variant="outline"
+              size="sm"
+              className="self-start"
+              onClick={() => filters.append({ key: '', valuesText: '' })}
             >
-              <Trash2Icon aria-hidden className="size-4" />
+              <PlusIcon aria-hidden className="size-4" />
+              Add filter
             </Button>
           </div>
-        ))}
-      </div>
-    </>
+        </FormRow>
+      </FormCard>
+    </div>
   )
 
   const aggregationStep = (
-    <div className="grid gap-4 sm:grid-cols-2">
-      <Field label="Aggregation">
+    <FormCard>
+      <FormRow label="Aggregation">
         {({ id, ...field }) => (
           <OptionSelect
             id={id}
@@ -583,10 +579,10 @@ export function FeatureForm(props: FeatureFormProps) {
             }
           />
         )}
-      </Field>
+      </FormRow>
 
       {needsAggregationTarget(aggregationType) ? (
-        <Field
+        <FormRow
           label="Event field"
           required
           hint="The property on the event to aggregate."
@@ -601,11 +597,11 @@ export function FeatureForm(props: FeatureFormProps) {
               {...form.register('meter.field')}
             />
           )}
-        </Field>
+        </FormRow>
       ) : null}
 
       {aggregationType === AggregationType.SumWithMultiplier ? (
-        <Field label="Multiplier" required error={message('meter.multiplier')}>
+        <FormRow label="Multiplier" required error={message('meter.multiplier')}>
           {({ id, ...field }) => (
             <Input
               id={id}
@@ -615,11 +611,11 @@ export function FeatureForm(props: FeatureFormProps) {
               {...form.register('meter.multiplier')}
             />
           )}
-        </Field>
+        </FormRow>
       ) : null}
 
       {aggregationType === AggregationType.Max ? (
-        <Field
+        <FormRow
           label="Group by"
           hint="An event property to group by before taking the maximum."
           error={message('meter.groupBy')}
@@ -633,10 +629,10 @@ export function FeatureForm(props: FeatureFormProps) {
               {...form.register('meter.groupBy')}
             />
           )}
-        </Field>
+        </FormRow>
       ) : null}
 
-      <Field label="Reset usage">
+      <FormRow label="Reset usage">
         {({ id, ...field }) => (
           <OptionSelect
             id={id}
@@ -649,42 +645,39 @@ export function FeatureForm(props: FeatureFormProps) {
             }
           />
         )}
-      </Field>
-    </div>
+      </FormRow>
+    </FormCard>
   )
 
   const additionalStep = (
-    <>
-      <fieldset className="flex flex-col gap-4 rounded-lg border p-4" disabled={isSubmitting}>
-        <legend className="px-1 text-sm font-medium">Units</legend>
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Unit (singular)" error={message('unitSingular')}>
+    <div className="flex flex-col gap-6">
+      <fieldset className="min-w-0 border-0 p-0" disabled={isSubmitting}>
+        <legend className="sr-only">Units</legend>
+        <FormCard
+          title="Units"
+          description="Reporting unit: how usage is displayed in reports, as the feature unit times a conversion rate. Fill all three or none."
+        >
+          <FormRow label="Unit (singular)" error={message('unitSingular')}>
             {({ id, ...field }) => (
               <Input id={id} placeholder="call" {...field} {...form.register('unitSingular')} />
             )}
-          </Field>
-          <Field label="Unit (plural)" error={message('unitPlural')}>
+          </FormRow>
+          <FormRow label="Unit (plural)" error={message('unitPlural')}>
             {({ id, ...field }) => (
               <Input id={id} placeholder="calls" {...field} {...form.register('unitPlural')} />
             )}
-          </Field>
-        </div>
-        <p className="text-muted-foreground text-xs">
-          Reporting unit: how usage is displayed in reports, as the feature unit times a conversion
-          rate. Fill all three or none.
-        </p>
-        <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Reporting unit (singular)" error={message('reportingUnit.unitSingular')}>
+          </FormRow>
+          <FormRow label="Reporting unit (singular)" error={message('reportingUnit.unitSingular')}>
             {({ id, ...field }) => (
               <Input id={id} {...field} {...form.register('reportingUnit.unitSingular')} />
             )}
-          </Field>
-          <Field label="Reporting unit (plural)" error={message('reportingUnit.unitPlural')}>
+          </FormRow>
+          <FormRow label="Reporting unit (plural)" error={message('reportingUnit.unitPlural')}>
             {({ id, ...field }) => (
               <Input id={id} {...field} {...form.register('reportingUnit.unitPlural')} />
             )}
-          </Field>
-          <Field label="Conversion rate" error={message('reportingUnit.conversionRate')}>
+          </FormRow>
+          <FormRow label="Conversion rate" error={message('reportingUnit.conversionRate')}>
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -693,33 +686,33 @@ export function FeatureForm(props: FeatureFormProps) {
                 {...form.register('reportingUnit.conversionRate')}
               />
             )}
-          </Field>
-        </div>
+          </FormRow>
+        </FormCard>
       </fieldset>
-      <fieldset className="flex flex-col gap-4 rounded-lg border p-4" disabled={isSubmitting}>
-        <legend className="px-1 text-sm font-medium">Alerts</legend>
-        <Field
-          label="Usage alerts"
-          hint={
-            isEdit
-              ? 'Turning this on replaces the feature’s current alert thresholds.'
-              : 'Notify when usage crosses a threshold.'
-          }
-          error={message('alertSettings.info')}
-        >
-          {({ id, ...field }) => (
-            <Switch
-              id={id}
-              aria-describedby={field['aria-describedby']}
-              checked={alertsOn}
-              onCheckedChange={setAlertsOn}
-            />
-          )}
-        </Field>
+      <fieldset className="min-w-0 border-0 p-0" disabled={isSubmitting}>
+        <legend className="sr-only">Alerts</legend>
+        <FormCard title="Alerts">
+          <FormRow
+            label="Usage alerts"
+            hint={
+              isEdit
+                ? 'Turning this on replaces the feature’s current alert thresholds.'
+                : 'Notify when usage crosses a threshold.'
+            }
+            error={message('alertSettings.info')}
+          >
+            {({ id, ...field }) => (
+              <Switch
+                id={id}
+                aria-describedby={field['aria-describedby']}
+                checked={alertsOn}
+                onCheckedChange={setAlertsOn}
+              />
+            )}
+          </FormRow>
 
-        {alertsOn ? (
-          <div className="flex flex-col gap-4">
-            <Field label="Threshold type">
+          {alertsOn ? (
+            <FormRow label="Threshold type">
               {({ id, ...field }) => (
                 <OptionSelect
                   id={id}
@@ -733,10 +726,14 @@ export function FeatureForm(props: FeatureFormProps) {
                   }
                 />
               )}
-            </Field>
-            {ALERT_SEVERITY_ORDER.map((severity) => (
-              <div key={severity} className="grid gap-3 sm:grid-cols-2">
-                <Field label={`${ALERT_SEVERITY_LABEL[severity]} condition`}>
+            </FormRow>
+          ) : null}
+          {alertsOn
+            ? ALERT_SEVERITY_ORDER.flatMap((severity) => [
+                <FormRow
+                  key={`${severity}-condition`}
+                  label={`${ALERT_SEVERITY_LABEL[severity]} condition`}
+                >
                   {({ id, ...field }) => (
                     <OptionSelect
                       id={id}
@@ -750,8 +747,9 @@ export function FeatureForm(props: FeatureFormProps) {
                       }
                     />
                   )}
-                </Field>
-                <Field
+                </FormRow>,
+                <FormRow
+                  key={`${severity}-threshold`}
                   label={`${ALERT_SEVERITY_LABEL[severity]} threshold`}
                   error={
                     message(`alertSettings.${severity}.threshold`) ??
@@ -766,13 +764,12 @@ export function FeatureForm(props: FeatureFormProps) {
                       {...form.register(`alerts.${severity}.threshold`)}
                     />
                   )}
-                </Field>
-              </div>
-            ))}
-          </div>
-        ) : null}
+                </FormRow>,
+              ])
+            : null}
+        </FormCard>
       </fieldset>
-    </>
+    </div>
   )
 
   const content: Record<string, ReactNode> = {
@@ -806,12 +803,7 @@ export function FeatureForm(props: FeatureFormProps) {
       }
     >
       <FormSteps flow={flow} label="Feature steps">
-        <form
-          id={FORM_ID}
-          onSubmit={flow.guardSubmit(submitAll)}
-          noValidate
-          className="flex flex-col gap-5"
-        >
+        <form id={FORM_ID} onSubmit={flow.guardSubmit(submitAll)} noValidate>
           {content[flow.step]}
         </form>
       </FormSteps>

@@ -9,7 +9,7 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import type { ReactNode } from 'react'
-import { Field } from '@ui/compositions/Field'
+import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSteps'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
@@ -115,74 +115,70 @@ export function CustomerForm({
   )
 
   const detailsStep = (
-    <>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Name" required error={errors.name?.message}>
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-          )}
-        </Field>
-        <Field
-          label="External ID"
-          required
-          hint="Your own identifier. Usage events are matched to the customer by it."
-          error={errors.externalId?.message}
-        >
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('externalId')} />
-          )}
-        </Field>
-      </div>
-      <div className="grid gap-5 sm:grid-cols-2">
-        <Field label="Email" error={errors.email?.message}>
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              type="email"
-              disabled={isSubmitting}
-              {...field}
-              {...form.register('email')}
-            />
-          )}
-        </Field>
-        <Field label="Phone" error={errors.phone?.message}>
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              type="tel"
-              disabled={isSubmitting}
-              {...field}
-              {...form.register('phone')}
-            />
-          )}
-        </Field>
-      </div>
-    </>
+    <FormCard>
+      <FormRow label="Name" required error={errors.name?.message}>
+        {({ id, ...field }) => (
+          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+        )}
+      </FormRow>
+      <FormRow
+        label="External ID"
+        required
+        hint="Your own identifier. Usage events are matched to the customer by it."
+        error={errors.externalId?.message}
+      >
+        {({ id, ...field }) => (
+          <Input id={id} disabled={isSubmitting} {...field} {...form.register('externalId')} />
+        )}
+      </FormRow>
+      <FormRow label="Email" error={errors.email?.message}>
+        {({ id, ...field }) => (
+          <Input
+            id={id}
+            type="email"
+            disabled={isSubmitting}
+            {...field}
+            {...form.register('email')}
+          />
+        )}
+      </FormRow>
+      <FormRow label="Phone" error={errors.phone?.message}>
+        {({ id, ...field }) => (
+          <Input
+            id={id}
+            type="tel"
+            disabled={isSubmitting}
+            {...field}
+            {...form.register('phone')}
+          />
+        )}
+      </FormRow>
+    </FormCard>
   )
 
   const addressStep = (
-    <div className="grid gap-5 sm:grid-cols-2">
-      <Field label="Address line 1" error={errors.addressLine1?.message}>
+    <FormCard>
+      <FormRow label="Address line 1" error={errors.addressLine1?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressLine1')} />
         )}
-      </Field>
-      <Field label="Address line 2" error={errors.addressLine2?.message}>
+      </FormRow>
+      <FormRow label="Address line 2" error={errors.addressLine2?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressLine2')} />
         )}
-      </Field>
-      <Field label="City" error={errors.addressCity?.message}>
+      </FormRow>
+      <FormRow label="City" error={errors.addressCity?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressCity')} />
         )}
-      </Field>
-      <Field label="State" error={errors.addressState?.message}>
+      </FormRow>
+      <FormRow label="State" error={errors.addressState?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressState')} />
         )}
-      </Field>
-      <Field label="Postal code" error={errors.addressPostalCode?.message}>
+      </FormRow>
+      <FormRow label="Postal code" error={errors.addressPostalCode?.message}>
         {({ id, ...field }) => (
           <Input
             id={id}
@@ -191,8 +187,8 @@ export function CustomerForm({
             {...form.register('addressPostalCode')}
           />
         )}
-      </Field>
-      <Field
+      </FormRow>
+      <FormRow
         label="Country"
         hint="Two-letter code, e.g. GB."
         error={errors.addressCountry?.message}
@@ -206,13 +202,13 @@ export function CustomerForm({
             {...form.register('addressCountry')}
           />
         )}
-      </Field>
-    </div>
+      </FormRow>
+    </FormCard>
   )
 
   const additionalStep = (
-    <div className="grid gap-5 sm:grid-cols-2">
-      <Field
+    <FormCard>
+      <FormRow
         label="Timezone"
         hint="An IANA name, e.g. Europe/London."
         error={errors.timezone?.message}
@@ -220,8 +216,8 @@ export function CustomerForm({
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('timezone')} />
         )}
-      </Field>
-      <Field label="Tax treatment" error={errors.taxTreatment?.message}>
+      </FormRow>
+      <FormRow label="Tax treatment" error={errors.taxTreatment?.message}>
         {({ id, ...field }) => (
           <Controller
             control={form.control}
@@ -238,8 +234,8 @@ export function CustomerForm({
             )}
           />
         )}
-      </Field>
-    </div>
+      </FormRow>
+    </FormCard>
   )
 
   const content: Record<string, ReactNode> = {
@@ -271,12 +267,7 @@ export function CustomerForm({
       }
     >
       <FormSteps flow={flow} label="Customer steps">
-        <form
-          id={FORM_ID}
-          onSubmit={flow.guardSubmit(submitAll)}
-          noValidate
-          className="flex flex-col gap-5"
-        >
+        <form id={FORM_ID} onSubmit={flow.guardSubmit(submitAll)} noValidate>
           {content[flow.step]}
         </form>
       </FormSteps>
