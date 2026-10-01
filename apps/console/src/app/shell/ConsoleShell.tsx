@@ -30,6 +30,7 @@ import {
   type ShellEnvironment,
   type ShellUser,
 } from '@fp/ui/compositions'
+import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { searchableDestinations, useGlobalSearch } from './useGlobalSearch'
 import {
@@ -110,6 +111,7 @@ export function ConsoleShell({
   const activeItemId = navEntryForPath(pathname)
   const openGroup = groupForNavId(activeItemId)
   const [detailTrail, setDetailTrail] = useState<ShellDetailCrumb[] | null>(null)
+  const [creatingEnvironment, setCreatingEnvironment] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const destinations = useMemo(() => searchableDestinations(), [])
   const found = useGlobalSearch(searchTerm)
@@ -183,7 +185,7 @@ export function ConsoleShell({
                     current={environment}
                     environments={environments}
                     onChange={onEnvironmentChange}
-                    onCreate={() => onNavigate('/environments/new')}
+                    onCreate={() => setCreatingEnvironment(true)}
                     onManage={() => goTo('settings')}
                   />
                 ),
@@ -232,6 +234,7 @@ export function ConsoleShell({
       >
         {children}
       </AppShell>
+      <EnvironmentFormPage open={creatingEnvironment} onOpenChange={setCreatingEnvironment} />
     </ShellDetailTrailProvider>
   )
 }

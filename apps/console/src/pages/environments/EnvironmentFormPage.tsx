@@ -9,36 +9,38 @@ import { mutationMessage } from '../settings/panelKit'
 const MOCK_TOKEN = 'mock-session-token'
 
 export interface EnvironmentFormPageProps {
-  onCancel: () => void
-  onDone: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
 }
 
 /**
- * Create an environment on its own page, `/environments/new`.
+ * Create an environment in a dialog over the current page.
  *
  * Opened from the switcher and from Settings. It stays open on failure with the
- * API's own sentence under the form (a tenant limit is a real 400), and on
+ * API's own sentence under the fields (a tenant limit is a real 400), and on
  * success switches the console into what was just made — but only when the
  * response named it, since switching to an unknown id would 403 everything.
  */
-export function EnvironmentFormPage({ onCancel, onDone }: EnvironmentFormPageProps) {
+export function EnvironmentFormPage({ open, onOpenChange }: EnvironmentFormPageProps) {
   const { session, setEnvironmentId } = useSession()
   const token = env.apiKey ?? session?.token ?? (env.useMocks ? MOCK_TOKEN : null)
   const create = useCreateEnvironment(token)
 
   return (
     <EnvironmentForm
-      trail={[{ label: 'Environments', onClick: onCancel }, { label: 'Create environment' }]}
+      open={open}
+      onOpenChange={onOpenChange}
       canCreateProduction={false}
       productionUnavailableReason="Set up with your account contact."
-      onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={mutationMessage(create.error, 'The environment could not be created.')}
+      submitError={
+        create.error ? mutationMessage(create.error, 'The environment could not be created.') : null
+      }
       onSubmit={(draft: CreateEnvironment) =>
         create.mutate(draft, {
           onSuccess: (created) => {
             if (created.id) setEnvironmentId(created.id)
-            onDone()
+            onOpenChange(false)
           },
         })
       }

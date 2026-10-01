@@ -73,13 +73,17 @@ test.describe('price unit edit', () => {
 })
 
 test.describe('environment create', () => {
-  test('opens as a full page from Settings and returns on cancel', async ({ page }) => {
+  test('opens as a dialog from Settings and closes on cancel', async ({ page }) => {
     await page.goto('/settings?section=organization&tab=environments')
     await page.getByRole('button', { name: 'New environment' }).click()
-    await expect(page).toHaveURL(/\/environments\/new$/)
-    await expect(page.getByRole('heading', { name: 'Create environment' })).toBeVisible()
+    await expect(page).toHaveURL(/\/settings/)
 
-    await page.getByRole('button', { name: 'Cancel' }).click()
+    const dialog = page.getByRole('dialog', { name: 'Create environment' })
+    await expect(dialog).toBeVisible()
+    await expect(dialog.getByRole('radio', { name: /sandbox/i })).toBeChecked()
+
+    await dialog.getByRole('button', { name: 'Cancel' }).click()
+    await expect(dialog).toBeHidden()
     await expect(page).toHaveURL(/\/settings/)
   })
 })

@@ -1,28 +1,22 @@
-import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
+import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { EnvironmentForm } from './EnvironmentForm'
 
-const withHeight: Decorator = (Story) => (
-  <div className="flex h-[720px] flex-col">
-    <Story />
-  </div>
-)
-
-/** The page ends with the shared footer, so the stories submit through its Create button. */
+/** The dialog portals to the document, so the play functions read from there. */
 const meta = {
   title: 'Flexprice/EnvironmentForm',
   component: EnvironmentForm,
-  parameters: { layout: 'fullscreen' },
-  decorators: [withHeight],
   args: {
-    trail: [{ label: 'Environments' }, { label: 'Create environment' }],
+    open: true,
+    onOpenChange: fn(),
     onSubmit: fn(),
-    onCancel: fn(),
   },
 } satisfies Meta<typeof EnvironmentForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+const dialog = () => within(document.body)
 
 export const Default: Story = {}
 
@@ -31,14 +25,14 @@ export const Default: Story = {}
  * choosing.
  */
 export const SandboxIsPreselected: Story = {
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('radio', { name: /sandbox/i })).toBeChecked()
+  play: async () => {
+    await expect(dialog().getByRole('radio', { name: /sandbox/i })).toBeChecked()
   },
 }
 
 export const RequiresAName: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
+  play: async ({ args }) => {
+    const canvas = dialog()
     await userEvent.click(canvas.getByRole('button', { name: 'Create environment' }))
     await expect(await canvas.findByText('Enter a name')).toBeVisible()
     await expect(args.onSubmit).not.toHaveBeenCalled()
@@ -46,11 +40,10 @@ export const RequiresAName: Story = {
 }
 
 export const SubmitsAValidEnvironment: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
+  play: async ({ args }) => {
+    const canvas = dialog()
     await userEvent.type(canvas.getByRole('textbox', { name: /name/i }), 'EU staging')
     await userEvent.click(canvas.getByRole('button', { name: 'Create environment' }))
-    // One argument: the form emits a validated value, not a form event.
     await expect(args.onSubmit).toHaveBeenCalledWith({
       name: 'EU staging',
       type: 'development',
@@ -69,11 +62,8 @@ export const ProductionUnavailable: Story = {
     canCreateProduction: false,
     productionUnavailableReason: 'Set up with your account contact.',
   },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    // Base UI renders a radio as `span[role=radio]`, so it carries
-    // `aria-disabled` rather than the form-element `disabled` attribute —
-    // which is also why the form refuses the value rather than trusting it.
+  play: async () => {
+    const canvas = dialog()
     await expect(canvas.getByRole('radio', { name: /production/i })).toHaveAttribute(
       'aria-disabled',
       'true',
@@ -85,15 +75,15 @@ export const ProductionUnavailable: Story = {
 /** Submitting disables the fields. */
 export const Submitting: Story = {
   args: { isSubmitting: true },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('textbox', { name: /name/i })).toBeDisabled()
+  play: async () => {
+    await expect(dialog().getByRole('textbox', { name: /name/i })).toBeDisabled()
   },
 }
 
 export const Failed: Story = {
   args: { submitError: 'An environment with that name already exists.' },
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('alert')).toHaveTextContent(/already exists/i)
+  play: async () => {
+    await expect(dialog().getByRole('alert')).toHaveTextContent(/already exists/i)
   },
 }
 
@@ -110,8 +100,8 @@ export const ProductionCannotBeSubmittedWhenWithheld: Story = {
     productionUnavailableReason: 'Set up with your account contact.',
     defaultValue: { name: 'Sneaky', type: 'production' },
   },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
+  play: async ({ args }) => {
+    const canvas = dialog()
     await userEvent.click(canvas.getByRole('button', { name: 'Create environment' }))
     await expect(args.onSubmit).not.toHaveBeenCalled()
     await expect(await canvas.findByRole('alert')).toHaveTextContent(/account contact/i)

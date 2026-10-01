@@ -1,4 +1,4 @@
-import { useNavigate } from '@tanstack/react-router'
+import { useState } from 'react'
 import { ENVIRONMENT_TYPE_DESCRIPTION, ENVIRONMENT_TYPE_LABEL, EnvironmentType } from '@fp/domain'
 import { useEnvironmentList } from '@fp/query'
 import { LoadingRows, Section } from '@fp/ui/compositions'
@@ -14,6 +14,7 @@ import {
 } from '@fp/ui/primitives'
 import { env } from '@/env'
 import { useSession } from '@/app/session'
+import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
 import { PanelError, WidePanel, toFailure } from './panelKit'
 
 /** The token the mocked build signs every request with — the same one `useEnvironments` uses. */
@@ -22,16 +23,15 @@ const MOCK_TOKEN = 'mock-session-token'
 /**
  * The environments this token may work in, and a way to make another.
  *
- * Creating one is the full page at `/environments/new` — the same page the
- * switcher opens — so there is one create flow, and it keeps the API's own
- * failure sentence (a tenant limit is a real 400) on screen.
+ * Creating one opens the same dialog the switcher opens, over this page, and
+ * it keeps the API's own failure sentence (a tenant limit is a real 400).
  */
 export function EnvironmentsPanel() {
   const { session } = useSession()
   const token = env.apiKey ?? session?.token ?? (env.useMocks ? MOCK_TOKEN : null)
 
   const list = useEnvironmentList(token)
-  const navigate = useNavigate()
+  const [creating, setCreating] = useState(false)
 
   const failure = toFailure(list.error, 'your environments')
   const environments = list.data ?? []
@@ -65,7 +65,7 @@ export function EnvironmentsPanel() {
         title="Environments"
         description="Separate places to work. Production bills real customers; a sandbox charges nobody."
         actions={
-          <Button size="sm" onClick={() => void navigate({ to: '/environments/new' })}>
+          <Button size="sm" onClick={() => setCreating(true)}>
             New environment
           </Button>
         }
@@ -115,6 +115,7 @@ export function EnvironmentsPanel() {
           </Table>
         )}
       </Section>
+      <EnvironmentFormPage open={creating} onOpenChange={setCreating} />
     </WidePanel>
   )
 }

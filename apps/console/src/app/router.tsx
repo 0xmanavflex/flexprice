@@ -190,11 +190,6 @@ const PriceUnitFormPage = lazy(() =>
 const GroupFormPage = lazy(() =>
   import('@/pages/groups/GroupFormPage').then((m) => ({ default: m.GroupFormPage })),
 )
-const EnvironmentFormPage = lazy(() =>
-  import('@/pages/environments/EnvironmentFormPage').then((m) => ({
-    default: m.EnvironmentFormPage,
-  })),
-)
 const TaxFormPage = lazy(() =>
   import('@/pages/taxes/TaxFormPage').then((m) => ({ default: m.TaxFormPage })),
 )
@@ -1085,23 +1080,21 @@ function GroupCreateRouteComponent() {
   )
 }
 
-/** Environment create: `/environments/new`, opened from the switcher and from Settings. */
+/**
+ * Environment create used to be this page. It is a dialog now, opened from the
+ * switcher and from Settings, so a bookmark of the old address lands on the
+ * list the button lives on.
+ */
 const environmentCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/environments/new',
-  component: EnvironmentCreateRouteComponent,
-})
-
-function EnvironmentCreateRouteComponent() {
-  const navigate = useNavigate()
-  const toEnvironments = () =>
-    void navigate({
+  beforeLoad: () => {
+    throw redirect({
       to: '/settings',
-      search: { section: 'organization', tab: 'environments' },
+      search: { section: 'organization', tab: 'environments' } as never,
     })
-
-  return <EnvironmentFormPage onCancel={toEnvironments} onDone={toEnvironments} />
-}
+  },
+})
 
 /** The group detail page. `/groups/$groupId` — a read-only view for now. */
 const groupDetailRoute = createRoute({
