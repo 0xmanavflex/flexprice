@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   DEFAULT_MEMBER_QUERY,
   type InviteMember,
@@ -22,6 +22,12 @@ import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/c
 import {
   Badge,
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Table,
   TableBody,
@@ -87,11 +93,9 @@ export function MembersPanel() {
         title="Members"
         description="Everyone who can sign in to this organisation."
         actions={
-          isInviting ? null : (
-            <Button size="sm" onClick={() => setIsInviting(true)}>
-              Invite member
-            </Button>
-          )
+          <Button size="sm" onClick={() => setIsInviting(true)}>
+            Invite member
+          </Button>
         }
       >
         <div className="flex flex-col gap-1.5">
@@ -189,9 +193,13 @@ export function MembersPanel() {
         ) : null}
       </Section>
 
-      {isInviting ? (
-        <InviteSection roles={roles.data ?? []} onDone={() => setIsInviting(false)} />
-      ) : null}
+      <InviteDialog
+        open={isInviting}
+        roles={roles.data ?? []}
+        onOpenChange={(open) => {
+          if (!open) setIsInviting(false)
+        }}
+      />
 
       {editing ? (
         <EditRolesSection
@@ -233,20 +241,49 @@ export function MembersPanel() {
  * invite, then find them in the table, then edit — for something the create
  * call already accepts.
  */
-function InviteSection({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
+function InviteDialog({
+  open,
+  roles,
+  onOpenChange,
+}: {
+  open: boolean
+  roles: Role[]
+  onOpenChange: (open: boolean) => void
+}) {
   const invite = useInviteMember()
   const draft = useDraft<InviteMember>(inviteMemberSchema, emptyInvite())
-
   const error = mutationMessage(invite.error, 'The invitation could not be sent.')
   const busy = invite.isPending
+  const wasOpen = useRef(false)
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      draft.reset(emptyInvite())
+      invite.reset()
+    }
+    wasOpen.current = open
+  }, [open, draft, invite])
 
   return (
-    <Section title="Invite a member" description="They can sign in as soon as the account exists.">
-      <form
-        className="flex flex-col gap-4"
-        noValidate
-        onSubmit={draft.handleSubmit((value) => invite.mutate(value, { onSuccess: onDone }))}
-      >
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && busy) return
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Invite a member</DialogTitle>
+          <DialogDescription>They can sign in as soon as the account exists.</DialogDescription>
+        </DialogHeader>
+        <form
+          id="invite-member"
+          className="flex max-h-[min(24rem,50vh)] flex-col gap-4 overflow-y-auto"
+          noValidate
+          onSubmit={draft.handleSubmit((value) =>
+            invite.mutate(value, { onSuccess: () => onOpenChange(false) }),
+          )}
+        >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Email"
@@ -293,17 +330,17 @@ function InviteSection({ roles, onDone }: { roles: Role[]; onDone: () => void })
         </div>
 
         <ActionError message={error} />
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={busy}>
-            {busy ? 'Inviting…' : 'Send invitation'}
-          </Button>
-          <Button type="button" variant="ghost" disabled={busy} onClick={onDone}>
+      </form>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-        </div>
-      </form>
-    </Section>
+          <Button type="submit" form="invite-member" disabled={busy}>
+            {busy ? 'Inviting…' : 'Send invitation'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 

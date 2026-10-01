@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   API_KEY_STATUS_LABEL,
   API_KEY_TYPE_LABEL,
@@ -17,6 +17,12 @@ import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/c
 import {
   Badge,
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Table,
   TableBody,
@@ -83,11 +89,9 @@ export function ApiKeysPanel() {
         title="API keys"
         description="What your systems authenticate with when they send usage or read billing data."
         actions={
-          isCreating ? null : (
-            <Button size="sm" onClick={() => setIsCreating(true)}>
-              Create API key
-            </Button>
-          )
+          <Button size="sm" onClick={() => setIsCreating(true)}>
+            Create API key
+          </Button>
         }
       >
         {keys.isPending ? (
@@ -157,15 +161,16 @@ export function ApiKeysPanel() {
         )}
       </Section>
 
-      {isCreating ? (
-        <CreateKeySection
-          isPending={create.isPending}
-          error={mutationMessage(create.error, 'The key could not be created.')}
-          onCancel={() => {
-            setIsCreating(false)
-            create.reset()
-          }}
-          onSubmit={(draft) => {
+      <CreateKeyDialog
+        open={isCreating}
+        isPending={create.isPending}
+        error={mutationMessage(create.error, 'The key could not be created.')}
+        onOpenChange={(open) => {
+          if (open) return
+          setIsCreating(false)
+          create.reset()
+        }}
+        onSubmit={(draft) => {
             void create
               .mutateAsync(draft)
               .then((result) => {
@@ -180,8 +185,7 @@ export function ApiKeysPanel() {
                 // rejection is not an unhandled one.
               })
           }}
-        />
-      ) : null}
+      />
 
       <ConfirmDialog
         open={revoking !== null}
@@ -256,18 +260,25 @@ function IssuedSecret({ issued, onDismiss }: { issued: CreatedApiKey; onDismiss:
   )
 }
 
-function CreateKeySection({
+function CreateKeyDialog({
+  open,
   isPending,
   error,
   onSubmit,
-  onCancel,
+  onOpenChange,
 }: {
+  open: boolean
   isPending: boolean
   error: string | null
   onSubmit: (draft: CreateApiKey) => void
-  onCancel: () => void
+  onOpenChange: (open: boolean) => void
 }) {
   const draft = useDraft<CreateApiKey>(createApiKeySchema, emptyApiKey())
+  const wasOpen = useRef(false)
+  useEffect(() => {
+    if (open && !wasOpen.current) draft.reset(emptyApiKey())
+    wasOpen.current = open
+  }, [open, draft])
   const type = draft.value.type
 
   /*
@@ -283,8 +294,24 @@ function CreateKeySection({
   )
 
   return (
-    <Section title="New API key" description="Name it after the system that will hold it.">
-      <form className="flex flex-col gap-4" noValidate onSubmit={draft.handleSubmit(onSubmit)}>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && isPending) return
+        onOpenChange(next)
+      }}
+    >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>New API key</DialogTitle>
+          <DialogDescription>Name it after the system that will hold it.</DialogDescription>
+        </DialogHeader>
+        <form
+          id="create-api-key"
+          className="flex flex-col gap-4"
+          noValidate
+          onSubmit={draft.handleSubmit(onSubmit)}
+        >
         <div className="grid gap-4 sm:grid-cols-2">
           <Field
             label="Name"
@@ -346,16 +373,21 @@ function CreateKeySection({
         </fieldset>
 
         <ActionError message={error} />
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={isPending}>
-            {isPending ? 'Creating…' : 'Create key'}
-          </Button>
-          <Button type="button" variant="ghost" disabled={isPending} onClick={onCancel}>
+      </form>
+        <DialogFooter>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
-        </div>
-      </form>
-    </Section>
+          <Button type="submit" form="create-api-key" disabled={isPending}>
+            {isPending ? 'Creating…' : 'Create key'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import {
   type CreateServiceAccount,
   DEFAULT_SERVICE_ACCOUNT_QUERY,
@@ -22,6 +22,12 @@ import {
 import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
 import {
   Button,
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
   Input,
   Table,
   TableBody,
@@ -81,11 +87,9 @@ export function ServiceAccountsPanel() {
         title="Service accounts"
         description="Identities for your systems rather than your people. An API key is issued against one."
         actions={
-          isCreating ? null : (
-            <Button size="sm" onClick={() => setIsCreating(true)}>
-              New service account
-            </Button>
-          )
+          <Button size="sm" onClick={() => setIsCreating(true)}>
+            New service account
+          </Button>
         }
       >
         <div className="flex flex-col gap-1.5">
@@ -167,9 +171,13 @@ export function ServiceAccountsPanel() {
         )}
       </Section>
 
-      {isCreating ? (
-        <CreateSection roles={roles.data ?? []} onDone={() => setIsCreating(false)} />
-      ) : null}
+      <CreateAccountDialog
+        open={isCreating}
+        roles={roles.data ?? []}
+        onOpenChange={(open) => {
+          if (!open) setIsCreating(false)
+        }}
+      />
 
       {renaming ? <RenameSection account={renaming} onDone={() => setRenaming(null)} /> : null}
 
@@ -196,21 +204,48 @@ export function ServiceAccountsPanel() {
   )
 }
 
-function CreateSection({ roles, onDone }: { roles: Role[]; onDone: () => void }) {
+function CreateAccountDialog({
+  open,
+  roles,
+  onOpenChange,
+}: {
+  open: boolean
+  roles: Role[]
+  onOpenChange: (open: boolean) => void
+}) {
   const create = useCreateServiceAccount()
   const draft = useDraft<CreateServiceAccount>(createServiceAccountSchema, emptyServiceAccount())
   const busy = create.isPending
+  const wasOpen = useRef(false)
+  useEffect(() => {
+    if (open && !wasOpen.current) {
+      draft.reset(emptyServiceAccount())
+      create.reset()
+    }
+    wasOpen.current = open
+  }, [open, draft, create])
 
   return (
-    <Section
-      title="New service account"
-      description="Give it only the roles the system actually needs."
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next && busy) return
+        onOpenChange(next)
+      }}
     >
-      <form
-        className="flex flex-col gap-4"
-        noValidate
-        onSubmit={draft.handleSubmit((value) => create.mutate(value, { onSuccess: onDone }))}
-      >
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>New service account</DialogTitle>
+          <DialogDescription>Give it only the roles the system actually needs.</DialogDescription>
+        </DialogHeader>
+        <form
+          id="create-service-account"
+          className="flex max-h-[min(24rem,50vh)] flex-col gap-4 overflow-y-auto"
+          noValidate
+          onSubmit={draft.handleSubmit((value) =>
+            create.mutate(value, { onSuccess: () => onOpenChange(false) }),
+          )}
+        >
         <Field
           label="Name"
           required
@@ -248,17 +283,17 @@ function CreateSection({ roles, onDone }: { roles: Role[]; onDone: () => void })
         </div>
 
         <ActionError message={mutationMessage(create.error, 'It could not be created.')} />
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={busy}>
-            {busy ? 'Creating…' : 'Create service account'}
-          </Button>
-          <Button type="button" variant="ghost" disabled={busy} onClick={onDone}>
+      </form>
+        <DialogFooter>
+          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
             Cancel
           </Button>
-        </div>
-      </form>
-    </Section>
+          <Button type="submit" form="create-service-account" disabled={busy}>
+            {busy ? 'Creating…' : 'Create service account'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }
 
