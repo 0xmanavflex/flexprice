@@ -18,6 +18,8 @@ export interface CostSheetDetailPageProps {
   costSheetId: string
   /** Open with the details already in edit mode (the list row's Edit). */
   startEditing?: boolean
+  /** Open the full edit form. */
+  onEdit?: () => void
   onNavigateToList: () => void
 }
 
@@ -40,6 +42,7 @@ export interface CostSheetDetailPageProps {
 export function CostSheetDetailPage({
   costSheetId,
   startEditing = false,
+  onEdit,
   onNavigateToList,
 }: CostSheetDetailPageProps) {
   const costSheet = useCostSheet(costSheetId)
@@ -97,7 +100,10 @@ export function CostSheetDetailPage({
       }
       id={data.lookupKey || data.id}
       menuLabel="Cost sheet actions"
-      menu={[{ id: 'costs', label: 'View costs', onSelect: () => setTab('costs') }]}
+      menu={[
+        ...(onEdit ? [{ id: 'edit', label: 'Edit cost sheet', onSelect: onEdit }] : []),
+        { id: 'costs', label: 'View costs', onSelect: () => setTab('costs') },
+      ]}
       tab={tab}
       onTabChange={(next) => setTab(next as CostSheetTab)}
       tabs={[

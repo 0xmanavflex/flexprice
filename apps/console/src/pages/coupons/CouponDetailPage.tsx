@@ -28,6 +28,8 @@ export interface CouponDetailPageProps {
   onBack: () => void
   /** Open with the details already in edit mode. */
   startEditing?: boolean
+  /** Open the full edit form. */
+  onEdit?: () => void
 }
 
 /**
@@ -50,6 +52,7 @@ export function CouponDetailPage({
   couponId,
   onBack,
   startEditing = false,
+  onEdit,
 }: CouponDetailPageProps) {
   const coupon = useCoupon(couponId)
   const update = useUpdateCoupon()
@@ -97,6 +100,7 @@ export function CouponDetailPage({
         isArchived
           ? []
           : [
+              ...(onEdit ? [{ id: 'edit', label: 'Edit coupon', onSelect: onEdit }] : []),
               {
                 id: 'archive',
                 label: 'Archive',

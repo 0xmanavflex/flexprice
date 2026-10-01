@@ -67,6 +67,8 @@ export interface AddonDetailPageProps {
   addonId: string
   /** Open with the details already in edit mode (the list row's Edit). */
   startEditing?: boolean
+  /** Open the full edit form. */
+  onEdit?: () => void
   onNavigateToList: () => void
 }
 
@@ -95,6 +97,7 @@ type AddonTab = 'charges' | 'entitlements' | 'subscriptions' | 'information'
 export function AddonDetailPage({
   addonId,
   startEditing = false,
+  onEdit,
   onNavigateToList,
 }: AddonDetailPageProps) {
   const addon = useAddon(addonId)
@@ -173,6 +176,7 @@ export function AddonDetailPage({
       id={data.lookupKey || data.id}
       menuLabel="Add-on actions"
       menu={[
+        ...(onEdit ? [{ id: 'edit', label: 'Edit add-on', onSelect: onEdit }] : []),
         {
           id: 'entitlements',
           label: 'Manage entitlements',

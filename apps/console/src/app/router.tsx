@@ -873,6 +873,72 @@ function CostSheetCreateRouteComponent() {
   )
 }
 
+const addonEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/addons/$addonId/edit',
+  component: AddonEditRouteComponent,
+})
+
+function AddonEditRouteComponent() {
+  const { addonId } = addonEditRoute.useParams()
+  const navigate = useNavigate()
+  const cancel = useCancelToList('/addons/$addonId', { addonId })
+
+  return (
+    <AddonFormPage
+      mode="edit"
+      addonId={addonId}
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
+      onDone={() => void navigate({ to: '/addons/$addonId', params: { addonId } })}
+    />
+  )
+}
+
+const couponEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/coupons/$couponId/edit',
+  component: CouponEditRouteComponent,
+})
+
+function CouponEditRouteComponent() {
+  const { couponId } = couponEditRoute.useParams()
+  const navigate = useNavigate()
+  const cancel = useCancelToList('/coupons/$couponId', { couponId })
+
+  return (
+    <CouponFormPage
+      mode="edit"
+      couponId={couponId}
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/coupons', search: {} as never })}
+      onDone={() => void navigate({ to: '/coupons/$couponId', params: { couponId } })}
+    />
+  )
+}
+
+const costSheetEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/cost-sheets/$costSheetId/edit',
+  component: CostSheetEditRouteComponent,
+})
+
+function CostSheetEditRouteComponent() {
+  const { costSheetId } = costSheetEditRoute.useParams()
+  const navigate = useNavigate()
+  const cancel = useCancelToList('/cost-sheets/$costSheetId', { costSheetId })
+
+  return (
+    <CostSheetFormPage
+      mode="edit"
+      costSheetId={costSheetId}
+      onCancel={cancel}
+      onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
+      onDone={() => void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId } })}
+    />
+  )
+}
+
 /**
  * Add-ons: the list, plus a create/edit drawer the page owns.
  *
@@ -928,6 +994,7 @@ function AddonDetailRouteComponent() {
     <AddonDetailPage
       addonId={addonId}
       startEditing={edit === true}
+      onEdit={() => void navigate({ to: '/addons/$addonId/edit', params: { addonId } })}
       onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
     />
   )
@@ -981,6 +1048,7 @@ function CouponDetailRouteComponent() {
     <CouponDetailPage
       couponId={couponId}
       startEditing={edit === true}
+      onEdit={() => void navigate({ to: '/coupons/$couponId/edit', params: { couponId } })}
       onBack={() => void navigate({ to: '/coupons', search: {} as never })}
     />
   )
@@ -1197,6 +1265,9 @@ function CostSheetDetailRouteComponent() {
     <CostSheetDetailPage
       costSheetId={costSheetId}
       startEditing={edit === true}
+      onEdit={() =>
+        void navigate({ to: '/cost-sheets/$costSheetId/edit', params: { costSheetId } })
+      }
       onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
     />
   )
@@ -1851,9 +1922,11 @@ export const routeTree = rootRoute.addChildren([
     addonsRoute,
     addonCreateRoute,
     addonDetailRoute,
+    addonEditRoute,
     couponsRoute,
     couponCreateRoute,
     couponDetailRoute,
+    couponEditRoute,
     priceUnitsRoute,
     priceUnitCreateRoute,
     priceUnitDetailRoute,
@@ -1864,6 +1937,7 @@ export const routeTree = rootRoute.addChildren([
     costSheetsRoute,
     costSheetCreateRoute,
     costSheetDetailRoute,
+    costSheetEditRoute,
     customersRoute,
     customerCreateRoute,
     customerEditRoute,
