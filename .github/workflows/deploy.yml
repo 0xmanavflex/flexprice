@@ -29,6 +29,9 @@ on:
     branches:
       - main
       - feat/v2-foundation
+      # A change to CI should prove itself on its own branch, before it reaches
+      # one where a mistake blocks everyone.
+      - 'ci/**'
   pull_request:
 
 permissions:
