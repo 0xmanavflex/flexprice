@@ -1,13 +1,21 @@
 import type { PriceOverride } from '@fp/domain'
-import { EmptyState, type WorkflowStep, WorkflowStepper } from '@fp/ui/compositions'
+import {
+  EmptyState,
+  FormPage,
+  type WorkflowStep,
+  WorkflowStepper,
+} from '@fp/ui/compositions'
 import { PriceOverrideForm } from '@fp/ui/pages'
-import { Button } from '@fp/ui/primitives'
+import { Button, Card, CardContent } from '@fp/ui/primitives'
 import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
+import { useRef } from 'react'
 import {
   SUBSCRIPTION_STEPS,
   type SubscriptionStepId,
   toWorkflowSteps,
 } from '@/app/subscriptionSteps'
+
+const PRICE_FORM_ID = 'subscription-price-override'
 
 export interface SubscriptionCreatePageProps {
   step: SubscriptionStepId
@@ -78,62 +86,96 @@ export function SubscriptionCreatePage({
   // Prices is the only step that collects anything today, so it is the only one
   // that can be complete. When the rest land, each adds its own condition here.
   const completed = new Set<SubscriptionStepId>(override ? ['prices'] : [])
+  // The prices step is optional. Next saves only after an amount or a tier is
+  // entered; a blank step just moves on.
+  const priceStarted = useRef(false)
 
-  const Shell = embedded ? 'div' : 'main'
+  const flow = (
+    <WorkflowStepper
+      steps={toSteps(step, furthestReached, completed).filter((entry) =>
+        steps.some((kept) => kept.id === entry.id),
+      )}
+      currentStep={step}
+      onStepChange={(id) => onStepChange(id as SubscriptionStepId)}
+      aria-label="Subscription setup"
+    >
+      {step === 'prices' ? (
+        <div className="flex flex-col gap-6">
+          {/*
+            The wizard footer is the only action row. Next submits this form
+            once something has been entered; Cancel leaves the whole flow.
+          */}
+          <PriceOverrideForm
+            priceId={priceId}
+            formId={PRICE_FORM_ID}
+            hideActions
+            onStartedChange={(started) => {
+              priceStarted.current = started
+            }}
+            {...(override ? { defaultValue: override } : {})}
+            onSubmit={(value) => {
+              onOverrideChange(value)
+              if (next) onStepChange(next.id)
+            }}
+          />
+
+          {override ? (
+            <p role="status" className="text-muted-foreground text-sm">
+              This override is saved to the draft and will be applied when the subscription is
+              created.
+            </p>
+          ) : null}
+        </div>
+      ) : (
+        <UnbuiltStep title={current?.title ?? 'This step'} />
+      )}
+    </WorkflowStepper>
+  )
+
+  const footer = (
+    <WizardFooter
+      {...(previous ? { onBack: () => onStepChange(previous.id) } : {})}
+      {...(next
+        ? {
+            onNext: () => {
+              if (step === 'prices' && priceStarted.current) {
+                const form = document.getElementById(PRICE_FORM_ID)
+                if (form instanceof HTMLFormElement) form.requestSubmit()
+                return
+              }
+              onStepChange(next.id)
+            },
+          }
+        : {})}
+      {...(embedded && !next && onCreate ? { onCreate } : {})}
+      onCancel={onCancel}
+    />
+  )
+
+  if (embedded) {
+    return (
+      <Card className="gap-0 p-0 shadow-xs">
+        <CardContent className="flex flex-col gap-6 px-5 py-5 sm:px-6 sm:py-6">
+          {flow}
+          {footer}
+        </CardContent>
+      </Card>
+    )
+  }
 
   return (
-    <Shell
-      className={
-        embedded
-          ? 'flex flex-col gap-8'
-          : 'mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-8 overflow-y-auto p-6'
-      }
+    <FormPage
+      title="New subscription"
+      description="Put a customer on a plan. Prices is the step you can fill in today; the other steps are still being built."
+      trail={[
+        { label: 'Subscriptions', onClick: onCancel },
+        { label: 'New subscription' },
+      ]}
+      width="narrow"
+      footer={footer}
     >
-      {embedded ? null : <h1 className="text-xl font-semibold">New subscription</h1>}
-
-      <WorkflowStepper
-        steps={toSteps(step, furthestReached, completed).filter((entry) =>
-          steps.some((kept) => kept.id === entry.id),
-        )}
-        currentStep={step}
-        onStepChange={(id) => onStepChange(id as SubscriptionStepId)}
-        aria-label="Subscription setup"
-      >
-        <div className="flex flex-col gap-8">
-          {step === 'prices' ? (
-            <div className="flex flex-col gap-6">
-              {/*
-                `onCancel` is deliberately not passed down: leaving the whole
-                flow is a wizard-level action and lives in the footer below,
-                so the step shows one button ("Save override") rather than a
-                second Cancel three inches above the first.
-              */}
-              <PriceOverrideForm
-                priceId={priceId}
-                {...(override ? { defaultValue: override } : {})}
-                onSubmit={onOverrideChange}
-              />
-
-              {override ? (
-                <p role="status" className="text-muted-foreground text-sm">
-                  This override is saved to the draft and will be applied when the subscription is
-                  created.
-                </p>
-              ) : null}
-            </div>
-          ) : (
-            <UnbuiltStep title={current?.title ?? 'This step'} />
-          )}
-
-          <WizardFooter
-            {...(previous ? { onBack: () => onStepChange(previous.id) } : {})}
-            {...(next ? { onNext: () => onStepChange(next.id) } : {})}
-            {...(embedded && !next && onCreate ? { onCreate } : {})}
-            onCancel={onCancel}
-          />
-        </div>
-      </WorkflowStepper>
-    </Shell>
+      {flow}
+    </FormPage>
   )
 }
 
@@ -182,7 +224,7 @@ function WizardFooter({
   onCancel: () => void
 }) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t pt-5">
+    <div className="flex flex-wrap items-center justify-between gap-3">
       <div>
         {onBack ? (
           <Button type="button" variant="outline" onClick={onBack}>

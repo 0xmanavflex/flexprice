@@ -38,10 +38,7 @@ export function CustomerSubscriptionCreate({
       onStepChange={goTo}
       priceId="price_01"
       override={override}
-      onOverrideChange={(value) => {
-        setOverride(value)
-        goTo('entitlements')
-      }}
+      onOverrideChange={setOverride}
       onCancel={onCancel}
       onCreate={onCreated}
     />

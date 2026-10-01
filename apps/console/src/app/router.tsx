@@ -490,10 +490,7 @@ function SubscriptionCreateRouteComponent() {
       onStepChange={goToStep}
       priceId="price_01"
       override={override}
-      onOverrideChange={(value) => {
-        setOverride(value)
-        goToStep('entitlements')
-      }}
+      onOverrideChange={setOverride}
       onCancel={() => void navigate({ to: '/subscriptions', search: {} as never })}
     />
   )

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useFieldArray, useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
@@ -23,6 +23,7 @@ import {
   TableRow,
 } from '@ui/components/primitives/table'
 import { Input } from '@ui/components/primitives/input'
+import { ChoiceCards } from '@ui/compositions/DetailKit'
 import { Field } from '@ui/compositions/Field'
 import { provenance } from '@ui/provenance'
 
@@ -59,10 +60,33 @@ export interface PriceOverrideFormProps {
   isSubmitting?: boolean
   /** Server-side failure, already turned into a sentence by the page. */
   submitError?: string | null
+  /** Lets a wizard footer submit this form from outside the element. */
+  formId?: string
+  /** Hides Save override when the surrounding wizard owns Cancel and Next. */
+  hideActions?: boolean
+  /**
+   * True once an amount or a tier has been entered. A wizard uses this so Next
+   * saves a started override and still skips the step when it was left blank.
+   */
+  onStartedChange?: (started: boolean) => void
 }
 
-const BILLING_MODELS = [BillingModel.FlatFee, BillingModel.Package, BillingModel.Tiered] as const
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
+
+function overrideStarted(value: PriceOverride): boolean {
+  if (value.billingModel === BillingModel.Tiered) {
+    return value.tiers.some(
+      (tier) =>
+        (tier.unitAmount ?? '').trim() !== '' ||
+        (tier.flatAmount ?? '').trim() !== '' ||
+        tier.upTo != null,
+    )
+  }
+  if (value.billingModel === BillingModel.Package) {
+    return (value.amount ?? '').trim() !== '' || value.divideBy !== 1
+  }
+  return (value.amount ?? '').trim() !== ''
+}
 
 export function PriceOverrideForm({
   priceId,
@@ -71,6 +95,9 @@ export function PriceOverrideForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  formId,
+  hideActions = false,
+  onStartedChange,
 }: PriceOverrideFormProps) {
   const form = useForm<PriceOverride>({
     resolver: standardSchemaResolver(priceOverrideSchema) as Resolver<PriceOverride>,
@@ -102,6 +129,13 @@ export function PriceOverrideForm({
     if (defaultValue) form.reset(defaultValue)
   }, [defaultValue, form])
 
+  const started = overrideStarted(form.watch())
+  const onStartedChangeRef = useRef(onStartedChange)
+  onStartedChangeRef.current = onStartedChange
+  useEffect(() => {
+    onStartedChangeRef.current?.(started)
+  }, [started])
+
   const errors = form.formState.errors
   const tierErrors = (errors as { tiers?: { message?: string } }).tiers
 
@@ -111,30 +145,40 @@ export function PriceOverrideForm({
       // second argument, the React submit event. Forwarding it would leak a
       // form-library detail through a prop that declares one parameter, and a
       // caller could start depending on it.
+      {...(formId ? { id: formId } : {})}
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
       noValidate
       aria-labelledby="price-override-heading"
-      className="flex max-w-2xl flex-col gap-6"
+      className="flex flex-col gap-6"
     >
-      <h2 id="price-override-heading" className="text-lg font-semibold">
+      <h2 id="price-override-heading" className="sr-only">
         Override price
       </h2>
 
-      <fieldset className="flex flex-col gap-2" disabled={isSubmitting}>
-        <legend className="mb-2 text-sm font-medium">Billing model</legend>
-        <div className="flex gap-2">
-          {BILLING_MODELS.map((model) => (
-            <Button
-              key={model}
-              type="button"
-              variant={model === billingModel ? 'default' : 'outline'}
-              aria-pressed={model === billingModel}
-              onClick={() => changeModel(model)}
-            >
-              {BILLING_MODEL_LABEL[model]}
-            </Button>
-          ))}
-        </div>
+      <fieldset disabled={isSubmitting}>
+        <legend className="sr-only">Billing model</legend>
+        <ChoiceCards
+          label="Billing model"
+          value={billingModel}
+          onChange={changeModel}
+          choices={[
+            {
+              value: BillingModel.FlatFee,
+              title: BILLING_MODEL_LABEL[BillingModel.FlatFee],
+              description: 'One amount for the charge.',
+            },
+            {
+              value: BillingModel.Package,
+              title: BILLING_MODEL_LABEL[BillingModel.Package],
+              description: 'A price for each pack of units.',
+            },
+            {
+              value: BillingModel.Tiered,
+              title: BILLING_MODEL_LABEL[BillingModel.Tiered],
+              description: 'A different rate in each band.',
+            },
+          ]}
+        />
       </fieldset>
 
       {billingModel !== BillingModel.Tiered ? (
@@ -309,16 +353,18 @@ export function PriceOverrideForm({
         </p>
       ) : null}
 
-      <div className="flex gap-2">
-        <Button type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Saving…' : 'Save override'}
-        </Button>
-        {onCancel ? (
-          <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
-            Cancel
+      {hideActions ? null : (
+        <div className="flex justify-end gap-2 border-t pt-4">
+          {onCancel ? (
+            <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+              Cancel
+            </Button>
+          ) : null}
+          <Button type="submit" disabled={isSubmitting}>
+            {isSubmitting ? 'Saving…' : 'Save override'}
           </Button>
-        ) : null}
-      </div>
+        </div>
+      )}
     </form>
   )
 }

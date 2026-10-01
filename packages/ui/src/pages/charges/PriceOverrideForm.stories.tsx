@@ -115,7 +115,7 @@ export const SwitchingModelResets: Story = {
 
     await expect(canvas.getByRole('table')).toBeInTheDocument()
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Flat fee' }))
+    await userEvent.click(canvas.getByRole('radio', { name: /Flat fee/ }))
 
     await expect(canvas.queryByRole('table')).not.toBeInTheDocument()
     await expect(canvas.getByLabelText('Amount')).toHaveValue('')
@@ -207,7 +207,7 @@ export const SubmitsAValidatedDomainValue: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Package' }))
+    await userEvent.click(canvas.getByRole('radio', { name: /Package/ }))
     await userEvent.type(canvas.getByLabelText('Price per package'), '12.50')
     const units = canvas.getByLabelText('Units per package')
     await userEvent.clear(units)

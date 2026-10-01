@@ -17,7 +17,7 @@ import {
   emptyCharge,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
+import { ChoiceCards } from '@ui/compositions/DetailKit'
 import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { DateInput } from '@ui/compositions/DateInput'
 import { Field } from '@ui/compositions/Field'
@@ -30,10 +30,10 @@ import { TierTable, type TierRowError } from './TierTable'
 /**
  * One charge (a price), as a form — create or edit.
  *
- * Fixed and usage are one form: the type tab decides which fields exist — a
+ * Fixed and usage are one form: the type choice decides which fields exist — a
  * usage charge names the meter it bills and always bills in arrears; a fixed
  * charge chooses its invoice cadence and may carry a free trial. The billing
- * model tabs (flat fee, package, tiered) each show only their own fields.
+ * model (flat fee, package, tiered) shows only its own fields.
  *
  * On an edit the API lets only the price itself change — amount or bands, model,
  * display name. Currency, period, meter, cadence and price unit are shown but
@@ -48,7 +48,7 @@ import { TierTable, type TierRowError } from './TierTable'
 export const ChargeFormProvenance = provenance({
   source: 'composition',
   composes: [
-    'ui/tabs',
+    'compositions/choice-cards',
     'compositions/field',
     'compositions/form-actions',
     'compositions/option-select',
@@ -57,7 +57,7 @@ export const ChargeFormProvenance = provenance({
     '@reui/alert',
     'ui/input',
   ],
-  note: 'RHF + the domain charge schema; type and billing model as stock Tabs, tier table for banded pricing.',
+  note: 'RHF + the domain charge schema; charge type and billing model as choice cards, tier table for banded pricing.',
 })
 
 /** A metered feature the usage variant can charge against. */
@@ -91,7 +91,6 @@ export interface ChargeFormProps {
   lockType?: boolean
 }
 
-const BILLING_MODELS = [BillingModel.FlatFee, BillingModel.Package, BillingModel.Tiered] as const
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
 const DEFAULT_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR']
 const FIAT = 'FIAT'
@@ -220,15 +219,23 @@ export function ChargeForm({
           </AlertDescription>
         </Alert>
       ) : lockType ? null : (
-        <Tabs value={type} onValueChange={(next) => reseed(next as PriceType, billingModel)}>
-          <TabsList aria-label="Charge type">
-            {[PriceType.Fixed, PriceType.Usage].map((value) => (
-              <TabsTrigger key={value} value={value} disabled={isSubmitting}>
-                {PRICE_TYPE_LABEL[value]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
+        <ChoiceCards
+          label="Charge type"
+          value={type}
+          onChange={(next) => reseed(next, billingModel)}
+          choices={[
+            {
+              value: PriceType.Fixed,
+              title: PRICE_TYPE_LABEL[PriceType.Fixed],
+              description: 'A flat fee, billed at the start of each period.',
+            },
+            {
+              value: PriceType.Usage,
+              title: PRICE_TYPE_LABEL[PriceType.Usage],
+              description: 'Billed at the end of the period for what was used.',
+            },
+          ]}
+        />
       )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -424,87 +431,102 @@ export function ChargeForm({
         </p>
       ) : null}
 
-      <div className="flex flex-col gap-2">
-        <span className="text-sm font-medium">Billing model</span>
-        <Tabs value={billingModel} onValueChange={(next) => reseed(type, next as BillingModel)}>
-          <TabsList aria-label="Billing model">
-            {BILLING_MODELS.map((model) => (
-              <TabsTrigger key={model} value={model} disabled={isSubmitting}>
-                {BILLING_MODEL_LABEL[model]}
-              </TabsTrigger>
-            ))}
-          </TabsList>
+      <fieldset disabled={isSubmitting} className="flex flex-col gap-2">
+        <legend className="mb-1 text-sm font-medium">Billing model</legend>
+        <ChoiceCards
+          label="Billing model"
+          value={billingModel}
+          onChange={(next) => reseed(type, next)}
+          choices={[
+            {
+              value: BillingModel.FlatFee,
+              title: BILLING_MODEL_LABEL[BillingModel.FlatFee],
+              description: 'One amount for the charge.',
+            },
+            {
+              value: BillingModel.Package,
+              title: BILLING_MODEL_LABEL[BillingModel.Package],
+              description: 'A price for each pack of units.',
+            },
+            {
+              value: BillingModel.Tiered,
+              title: BILLING_MODEL_LABEL[BillingModel.Tiered],
+              description: 'A different rate in each band.',
+            },
+          ]}
+        />
+      </fieldset>
 
-          <TabsContent value={BillingModel.FlatFee} className="pt-2">
-            <div className="max-w-xs">{amountField(`Amount (${unitLabel})`)}</div>
-          </TabsContent>
+      {billingModel === BillingModel.FlatFee ? (
+        <div className="max-w-xs">{amountField(`Amount (${unitLabel})`)}</div>
+      ) : null}
 
-          <TabsContent value={BillingModel.Package} className="pt-2">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {amountField(`Price per package (${unitLabel})`)}
-              <Field
-                label="Units per package"
-                hint="The price buys this many units."
-                error={messageOf(errors, 'divideBy')}
-              >
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
-                    type="number"
-                    min={1}
-                    inputMode="numeric"
-                    disabled={isSubmitting}
-                    {...field}
-                    {...form.register('divideBy' as never, { valueAsNumber: true })}
-                  />
-                )}
-              </Field>
-            </div>
-          </TabsContent>
+      {billingModel === BillingModel.Package ? (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {amountField(`Price per package (${unitLabel})`)}
+          <Field
+            label="Units per package"
+            hint="The price buys this many units."
+            error={messageOf(errors, 'divideBy')}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                type="number"
+                min={1}
+                inputMode="numeric"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('divideBy' as never, { valueAsNumber: true })}
+              />
+            )}
+          </Field>
+        </div>
+      ) : null}
 
-          <TabsContent value={BillingModel.Tiered} className="flex flex-col gap-3 pt-2">
-            <div className="max-w-sm">
-              <Field label="Tier mode">
-                {({ id }) => (
-                  <Controller
-                    control={form.control}
-                    name={'tierMode' as never}
-                    render={({ field }) => (
-                      <OptionSelect
-                        id={id}
-                        value={(field.value as string) || TierMode.Volume}
-                        onValueChange={field.onChange}
-                        options={TIER_MODES.map((tierMode) => ({
-                          value: tierMode,
-                          label: TIER_MODE_LABEL[tierMode],
-                        }))}
-                        disabled={isSubmitting}
-                      />
-                    )}
-                  />
-                )}
-              </Field>
-            </div>
-            <TierTable
-              tiers={tiers}
-              currencySymbol={unitLabel}
-              rowErrors={tierRowErrors}
-              onChange={(next) =>
-                form.setValue('tiers' as never, next as never, {
-                  shouldDirty: true,
-                  shouldValidate: true,
-                })
-              }
-              disabled={isSubmitting}
-            />
-            {tierMessage ? (
-              <p role="alert" className="text-destructive text-xs">
-                {tierMessage}
-              </p>
-            ) : null}
-          </TabsContent>
-        </Tabs>
-      </div>
+      {billingModel === BillingModel.Tiered ? (
+        <div className="flex flex-col gap-3">
+          <div className="max-w-sm">
+            <Field label="Tier mode">
+              {({ id }) => (
+                <Controller
+                  control={form.control}
+                  name={'tierMode' as never}
+                  render={({ field }) => (
+                    <OptionSelect
+                      id={id}
+                      value={(field.value as string) || TierMode.Volume}
+                      onValueChange={field.onChange}
+                      options={TIER_MODES.map((tierMode) => ({
+                        value: tierMode,
+                        label: TIER_MODE_LABEL[tierMode],
+                      }))}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </Field>
+          </div>
+          <TierTable
+            tiers={tiers}
+            currencySymbol={unitLabel}
+            rowErrors={tierRowErrors}
+            onChange={(next) =>
+              form.setValue('tiers' as never, next as never, {
+                shouldDirty: true,
+                shouldValidate: true,
+              })
+            }
+            disabled={isSubmitting}
+          />
+          {tierMessage ? (
+            <p role="alert" className="text-destructive text-xs">
+              {tierMessage}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       {isEdit ? (
         <div className="max-w-xs">

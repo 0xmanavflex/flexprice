@@ -74,7 +74,7 @@ export const Usage: Story = {
   args: { meters },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: 'Usage' }))
+    await userEvent.click(canvas.getByRole('radio', { name: /Usage/ }))
     await expect(await canvas.findByText('Metered feature')).toBeInTheDocument()
   },
 }

@@ -279,15 +279,17 @@ export function PlanForm({
       trail={trail}
       width="narrow"
       footer={
-        <StepFooter
-          flow={flow}
-          mode={mode}
-          noun="plan"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
+        adding ? null : (
+          <StepFooter
+            flow={flow}
+            mode={mode}
+            noun="plan"
+            formId={FORM_ID}
+            onCancel={onCancel}
+            isSubmitting={isSubmitting}
+            submitError={submitError}
+          />
+        )
       }
     >
       {/* The staged steps hold their own forms, which cannot nest in this one, so
@@ -365,7 +367,7 @@ function StagedStep({
         </ul>
       )}
       {adding ? (
-        <div className="rounded-lg border p-4">{form}</div>
+        <div className="border-t pt-4">{form}</div>
       ) : (
         <Button type="button" variant="outline" className="w-fit" onClick={onAdd}>
           <PlusIcon aria-hidden className="size-4" />
