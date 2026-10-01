@@ -34,6 +34,7 @@ import {
 export interface InvoiceDetailViewProps {
   invoice: InvoiceDocument
   onBack?: () => void
+  onEdit?: () => void
   onFinalize?: () => void
   onVoid?: () => void
   isFinalizing?: boolean
@@ -47,6 +48,7 @@ const LINE_DOT = ['bg-chart-1', 'bg-chart-2', 'bg-chart-3', 'bg-chart-4', 'bg-ch
 export function InvoiceDetailView({
   invoice,
   onBack,
+  onEdit,
   onFinalize,
   onVoid,
   isFinalizing = false,
@@ -88,6 +90,11 @@ export function InvoiceDetailView({
             <DownloadIcon aria-hidden className="size-3.5" />
             PDF
           </Button>
+          {isDraft && onEdit ? (
+            <Button variant="outline" size="sm" onClick={onEdit}>
+              Edit
+            </Button>
+          ) : null}
           {isDraft ? (
             <Button size="sm" onClick={onFinalize} disabled={isFinalizing}>
               Finalize

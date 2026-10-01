@@ -1724,6 +1724,19 @@ function InvoiceCreateRouteComponent() {
   )
 }
 
+const invoiceEditRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/invoices/$invoiceId/edit',
+  component: InvoiceEditRouteComponent,
+})
+
+function InvoiceEditRouteComponent() {
+  const { invoiceId } = invoiceEditRoute.useParams()
+  const navigate = useNavigate()
+  const toDetail = () => void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
+  return <InvoiceFormPage invoiceId={invoiceId} onCancel={toDetail} onDone={toDetail} />
+}
+
 const invoiceDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/invoices/$invoiceId',
@@ -1737,6 +1750,7 @@ function InvoiceDetailRouteComponent() {
     <InvoiceDetailPage
       invoiceId={invoiceId}
       onBack={() => void navigate({ to: '/invoices', search: {} as never })}
+      onEdit={() => void navigate({ to: '/invoices/$invoiceId/edit', params: { invoiceId } })}
       onOpenCustomer={(customerId) =>
         void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
       }
@@ -1946,6 +1960,7 @@ export const routeTree = rootRoute.addChildren([
     subscriptionsRoute,
     invoicesRoute,
     invoiceCreateRoute,
+    invoiceEditRoute,
     invoiceDetailRoute,
     paymentsRoute,
     paymentCreateRoute,

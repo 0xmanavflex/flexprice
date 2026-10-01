@@ -15,9 +15,9 @@ test.beforeEach(async ({ context }) => {
 
 test('creates a draft invoice from the form', async ({ page }) => {
   await page.goto('/invoices/new')
-  await expect(page.getByRole('heading', { level: 1, name: 'New invoice' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Create invoice' })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Create invoice' }).click()
+  await page.getByRole('button', { name: 'Save draft' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Choose a customer' })).toBeVisible()
 
   await page.getByRole('combobox', { name: /Customer/ }).click()
@@ -26,11 +26,11 @@ test('creates a draft invoice from the form', async ({ page }) => {
   await page.getByRole('option', { name: 'USD' }).click()
   await page.getByLabel('Line 1 description').fill('Onboarding')
   await page.getByLabel('Line 1 amount').fill('250')
-  await page.getByRole('button', { name: 'Add line' }).click()
+  await page.getByRole('button', { name: 'Add item' }).click()
   await page.getByLabel('Line 2 description').fill('Training')
   await page.getByLabel('Line 2 amount').fill('99.99')
-  await expect(page.getByText('349.99 USD')).toBeVisible()
-  await page.getByRole('button', { name: 'Create invoice' }).click()
+  await expect(page.getByText('$349.99')).toBeVisible()
+  await page.getByRole('button', { name: 'Save draft' }).click()
 
   await expect(page).toHaveURL(/\/invoices\/inv_new_/)
 })

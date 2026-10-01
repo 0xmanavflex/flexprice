@@ -13,11 +13,17 @@ import { toInvoiceDocument } from './invoiceDocumentAdapter'
 export interface InvoiceDetailPageProps {
   invoiceId: string
   onBack: () => void
+  onEdit?: () => void
   onOpenCustomer: (customerId: string) => void
 }
 
 /** One invoice, read through `useInvoice`; finalize, void and retry run here, outside the view. */
-export function InvoiceDetailPage({ invoiceId, onBack, onOpenCustomer }: InvoiceDetailPageProps) {
+export function InvoiceDetailPage({
+  invoiceId,
+  onBack,
+  onEdit,
+  onOpenCustomer,
+}: InvoiceDetailPageProps) {
   const invoice = useInvoice(invoiceId)
   const finalize = useFinalizeInvoice()
   const voidInvoice = useVoidInvoice()
@@ -58,6 +64,7 @@ export function InvoiceDetailPage({ invoiceId, onBack, onOpenCustomer }: Invoice
       <InvoiceDetailView
         invoice={toInvoiceDocument(data)}
         onBack={onBack}
+        {...(onEdit ? { onEdit } : {})}
         isFinalizing={finalize.isPending}
         onFinalize={() => run(finalize, 'Invoice finalized')}
         onVoid={() => setConfirmVoid(true)}

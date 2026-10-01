@@ -23,7 +23,7 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
   await page.getByRole('option', { name: 'USD' }).click()
   await page.getByLabel('Line 1 description').fill('Setup')
   await page.getByLabel('Line 1 amount').fill('75.50')
-  await page.getByRole('button', { name: 'Create invoice' }).click()
+  await page.getByRole('button', { name: 'Save draft' }).click()
 
   await expect(page).toHaveURL(/\/invoices\/inv_new_/)
   const id = new URL(page.url()).pathname.split('/').pop() ?? ''
@@ -100,8 +100,7 @@ async function createInvoice(page: Page, finalizeNow: boolean) {
   await page.getByRole('option', { name: 'USD' }).click()
   await page.getByLabel('Line 1 description').fill('Setup')
   await page.getByLabel('Line 1 amount').fill('20.00')
-  if (finalizeNow) await page.getByRole('switch', { name: /Finalize now/ }).click()
-  await page.getByRole('button', { name: 'Create invoice' }).click()
+  await page.getByRole('button', { name: finalizeNow ? 'Send invoice' : 'Save draft' }).click()
   await expect(page).toHaveURL(/\/invoices\/inv_new_/)
 }
 
