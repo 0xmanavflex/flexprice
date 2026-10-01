@@ -277,13 +277,24 @@ export {
 export type { Payment, PaymentDetail, PaymentQuery, RecordPayment } from './payment'
 
 export {
+  CREDIT_NOTE_REASON_LABEL,
+  CREDIT_NOTE_REFUND_TARGET_LABEL,
   CREDIT_NOTE_STATUS_LABEL,
   CREDIT_NOTE_TYPE_LABEL,
+  CreditNoteReason,
   CreditNoteStatus,
   CreditNoteType,
   DEFAULT_CREDIT_NOTE_QUERY,
+  createCreditNoteSchema,
+  emptyCreditNote,
 } from './creditNote'
-export type { CreditNote, CreditNoteQuery } from './creditNote'
+export type {
+  CreateCreditNote,
+  CreditNote,
+  CreditNoteDetail,
+  CreditNoteDetailLine,
+  CreditNoteQuery,
+} from './creditNote'
 
 export {
   DEFAULT_TAX_RATE_QUERY,

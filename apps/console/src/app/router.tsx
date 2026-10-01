@@ -27,6 +27,16 @@ const PaymentFormPage = lazy(() =>
 const PaymentDetailPage = lazy(() =>
   import('@/pages/payments/PaymentDetailPage').then((m) => ({ default: m.PaymentDetailPage })),
 )
+const CreditNoteFormPage = lazy(() =>
+  import('@/pages/credit-notes/CreditNoteFormPage').then((m) => ({
+    default: m.CreditNoteFormPage,
+  })),
+)
+const CreditNoteDetailPage = lazy(() =>
+  import('@/pages/credit-notes/CreditNoteDetailPage').then((m) => ({
+    default: m.CreditNoteDetailPage,
+  })),
+)
 const InvoiceDetailPage = lazy(() =>
   import('@/pages/invoices/InvoiceDetailPage').then((m) => ({ default: m.InvoiceDetailPage })),
 )
@@ -1504,7 +1514,57 @@ function CreditNotesRouteComponent() {
   return (
     <CreditNoteListPage
       query={query}
+      onCreate={() => void navigate({ to: '/credit-notes/new' })}
+      onCreditNoteClick={(note) =>
+        void navigate({ to: '/credit-notes/$creditNoteId', params: { creditNoteId: note.id } })
+      }
       onQueryChange={(next) => void navigate({ to: '/credit-notes', search: next, replace: true })}
+    />
+  )
+}
+
+const creditNoteCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/credit-notes/new',
+  component: CreditNoteCreateRouteComponent,
+})
+
+function CreditNoteCreateRouteComponent() {
+  const navigate = useNavigate()
+  const toList = () => void navigate({ to: '/credit-notes', search: {} as never })
+  return (
+    <CreditNoteFormPage
+      onCancel={toList}
+      onDone={(creditNoteId) =>
+        void navigate(
+          creditNoteId
+            ? { to: '/credit-notes/$creditNoteId', params: { creditNoteId } }
+            : { to: '/credit-notes', search: {} as never },
+        )
+      }
+    />
+  )
+}
+
+const creditNoteDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/credit-notes/$creditNoteId',
+  component: CreditNoteDetailRouteComponent,
+})
+
+function CreditNoteDetailRouteComponent() {
+  const { creditNoteId } = creditNoteDetailRoute.useParams()
+  const navigate = useNavigate()
+  return (
+    <CreditNoteDetailPage
+      creditNoteId={creditNoteId}
+      onBack={() => void navigate({ to: '/credit-notes', search: {} as never })}
+      onOpenInvoice={(invoiceId) =>
+        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
+      }
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
     />
   )
 }
@@ -1817,6 +1877,8 @@ export const routeTree = rootRoute.addChildren([
     paymentCreateRoute,
     paymentDetailRoute,
     creditNotesRoute,
+    creditNoteCreateRoute,
+    creditNoteDetailRoute,
     workflowsRoute,
     exportsRoute,
     pricingWidgetRoute,

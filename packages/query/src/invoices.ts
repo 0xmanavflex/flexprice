@@ -219,10 +219,11 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
 }
 
 /** One invoice with its lines — `GET /invoices/{id}`. */
-export function useInvoice(id: string) {
+export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
   return useQuery({
+    enabled: options.enabled ?? true,
     queryKey: queryKeys.invoices.detail(id),
     queryFn: async () =>
       toInvoiceDetail((await call(() => client.invoices.getInvoice(id))) as InvoiceDetailWire),

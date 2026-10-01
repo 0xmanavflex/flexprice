@@ -2386,6 +2386,72 @@ export const handlers = [
     })
   }),
 
+  http.post(`${BASE}/creditnotes`, async ({ request }) => {
+    const body = await readBody(request)
+    const invoiceId = String(body['invoice_id'] ?? '')
+    const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === invoiceId)
+    const lineItems: Record<string, unknown>[] = (
+      (body['line_items'] as Record<string, unknown>[] | undefined) ?? []
+    ).map((line, index) => ({ ...line, id: `cnli_${index + 1}`, currency: 'usd' }))
+    // The mock stands in for the backend, which owns the total.
+    const total = lineItems.reduce((sum, line) => sum + Number(line['amount'] ?? 0), 0)
+    const processed = body['process_credit_note'] === true
+    const row = {
+      id: `cnote_new_${creditNotes.length + 1}`,
+      credit_note_number: `CN-NEW-${creditNotes.length + 1}`,
+      credit_note_status: processed ? 'FINALIZED' : 'DRAFT',
+      credit_note_type: 'ADJUSTMENT',
+      currency: 'usd',
+      total_amount: String(total),
+      invoice_id: invoiceId,
+      invoice: {
+        invoice_number: invoice ? (readString(invoice, 'invoice_number') ?? invoiceId) : invoiceId,
+      },
+      customer_id: invoice ? readString(invoice, 'customer_id') : undefined,
+      customer: { id: 'cust_0', name: 'Acme Corp' },
+      reason: body['reason'],
+      memo: body['memo'],
+      line_items: lineItems,
+      created_at: new Date().toISOString(),
+      ...(processed ? { finalized_at: new Date().toISOString() } : {}),
+    }
+    creditNotes.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.get(`${BASE}/creditnotes/:id`, ({ params }) => {
+    const row = creditNotes.find((note) => note['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Credit note not found' }, { status: 404 })
+    return HttpResponse.json({ ...row, total_amount: String(row['total_amount']) })
+  }),
+  http.post(`${BASE}/creditnotes/:id/finalize`, ({ params }) => {
+    const id = String(params['id'])
+    if (!creditNotes.some((note) => note['id'] === id)) {
+      return HttpResponse.json({ message: 'Credit note not found' }, { status: 404 })
+    }
+    patchRow(creditNotes, id, {
+      credit_note_status: 'FINALIZED',
+      finalized_at: new Date().toISOString(),
+    })
+    return HttpResponse.json({
+      ...creditNotes.find((note) => note['id'] === id),
+      total_amount: String(creditNotes.find((note) => note['id'] === id)?.['total_amount']),
+    })
+  }),
+  http.post(`${BASE}/creditnotes/:id/void`, ({ params }) => {
+    const id = String(params['id'])
+    if (!creditNotes.some((note) => note['id'] === id)) {
+      return HttpResponse.json({ message: 'Credit note not found' }, { status: 404 })
+    }
+    patchRow(creditNotes, id, {
+      credit_note_status: 'VOIDED',
+      voided_at: new Date().toISOString(),
+    })
+    return HttpResponse.json({
+      ...creditNotes.find((note) => note['id'] === id),
+      total_amount: String(creditNotes.find((note) => note['id'] === id)?.['total_amount']),
+    })
+  }),
+
   /*
    * `GET /connections` — which integrations the environment has connected.
    * Stripe is published, QuickBooks has a draft (which must not count).
@@ -2738,9 +2804,21 @@ export const handlers = [
     const invoice =
       byId('invoices', id) ??
       sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
-    return invoice
-      ? HttpResponse.json(invoice)
-      : HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+    if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+    // Generated invoices carry no lines; give the detail one so line-level actions have a target.
+    const lines = invoice['line_items']
+    if (Array.isArray(lines) && lines.length > 0) return HttpResponse.json(invoice)
+    return HttpResponse.json({
+      ...invoice,
+      line_items: [
+        {
+          id: `${id}_line_1`,
+          display_name: 'Platform subscription',
+          amount: String(invoice['total'] ?? '0'),
+          currency: 'usd',
+        },
+      ],
+    })
   }),
   http.post(`${BASE}/invoices/:id/finalize`, ({ params }) => {
     patchRow((corpus['invoices'] as Corpus).items, String(params['id']), {

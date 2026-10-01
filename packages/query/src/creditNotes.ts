@@ -1,14 +1,16 @@
-import { useQuery } from '@tanstack/react-query'
-import { ApiError, type AuthSource, ErrorKind, listCreditNotes } from '@fp/api'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { ApiError, type AuthSource, ErrorKind, call, listCreditNotes } from '@fp/api'
 import {
+  type CreateCreditNote,
   type CreditNote,
+  type CreditNoteDetail,
   type CreditNoteQuery,
   CreditNoteStatus,
   CreditNoteType,
   moneyOr,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
  * Credit notes, through `GET /creditnotes` — a route the SDK has no method for,
@@ -48,7 +50,10 @@ export function toCreditNote(wire: CreditNoteWire): CreditNote {
     number: wire.credit_note_number || id.slice(0, 8),
     status: STATUS_FROM_WIRE[wire.credit_note_status ?? ''] ?? CreditNoteStatus.Draft,
     type: TYPE_FROM_WIRE[wire.credit_note_type ?? ''] ?? null,
-    amount: moneyOr(wire.total_amount === undefined ? undefined : String(wire.total_amount), wire.currency),
+    amount: moneyOr(
+      wire.total_amount === undefined ? undefined : String(wire.total_amount),
+      wire.currency,
+    ),
     invoiceNumber: wire.invoice?.invoice_number || (wire.invoice_id ?? '').slice(0, 8),
     customerName: wire.customer?.name || wire.customer?.external_id || '',
     createdAt: created && !Number.isNaN(created.getTime()) ? created : null,
@@ -73,7 +78,10 @@ export async function fetchCreditNotes(
     offset: (query.page - 1) * query.pageSize,
     statuses: query.statuses.map((status) => status.toUpperCase()),
   })
-  const record = (body ?? {}) as { items?: CreditNoteWire[] | null; pagination?: { total?: number } }
+  const record = (body ?? {}) as {
+    items?: CreditNoteWire[] | null
+    pagination?: { total?: number }
+  }
   const all = (record.items ?? []).map(toCreditNote)
 
   const term = query.search.trim().toLowerCase()
@@ -96,5 +104,132 @@ export function useCreditNotes(query: CreditNoteQuery) {
     queryKey: queryKeys.creditNotes.list({ ...query, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchCreditNotes(serverURL, auth, query),
     placeholderData: (previous) => previous,
+  })
+}
+
+/** What `GET /creditnotes/{id}` sends once the SDK has camelCased it. */
+export interface CreditNoteDetailWire {
+  id?: string | undefined
+  creditNoteNumber?: string | undefined
+  creditNoteStatus?: string | undefined
+  creditNoteType?: string | undefined
+  currency?: string | undefined
+  totalAmount?: string | undefined
+  createdAt?: Date | undefined
+  finalizedAt?: Date | undefined
+  voidedAt?: Date | undefined
+  invoiceId?: string | undefined
+  invoice?: { invoiceNumber?: string | undefined } | undefined
+  customerId?: string | undefined
+  customer?: { name?: string | undefined; externalId?: string | undefined } | undefined
+  reason?: string | undefined
+  memo?: string | undefined
+  refundStatus?: string | undefined
+  lineItems?:
+    | {
+        id?: string | undefined
+        invoiceLineItemId?: string | undefined
+        displayName?: string | undefined
+        amount?: string | undefined
+        currency?: string | undefined
+      }[]
+    | undefined
+}
+
+export function toCreditNoteDetail(wire: CreditNoteDetailWire): CreditNoteDetail {
+  const id = wire.id ?? ''
+  return {
+    id,
+    number: wire.creditNoteNumber || id.slice(0, 8),
+    status: STATUS_FROM_WIRE[wire.creditNoteStatus ?? ''] ?? CreditNoteStatus.Draft,
+    type: TYPE_FROM_WIRE[wire.creditNoteType ?? ''] ?? null,
+    amount: moneyOr(wire.totalAmount, wire.currency),
+    invoiceNumber: wire.invoice?.invoiceNumber || (wire.invoiceId ?? '').slice(0, 8),
+    customerName: wire.customer?.name || wire.customer?.externalId || '',
+    createdAt: wire.createdAt ?? null,
+    invoiceId: wire.invoiceId ?? '',
+    customerId: wire.customerId ?? '',
+    reason: wire.reason ?? '',
+    memo: wire.memo ?? '',
+    refundStatus: wire.refundStatus ?? '',
+    lines: (wire.lineItems ?? []).map((line, index) => ({
+      id: line.id ?? `line_${index}`,
+      invoiceLineItemId: line.invoiceLineItemId ?? '',
+      description: line.displayName || 'Invoice line',
+      amount: moneyOr(line.amount, line.currency ?? wire.currency),
+    })),
+    finalizedAt: wire.finalizedAt ?? null,
+    voidedAt: wire.voidedAt ?? null,
+  }
+}
+
+/** `POST /creditnotes`: only lines with an amount are credited. */
+export function toCreateCreditNoteRequest(draft: CreateCreditNote): Record<string, unknown> {
+  const memo = draft.memo.trim()
+  return {
+    invoiceId: draft.invoiceId,
+    reason: draft.reason,
+    lineItems: draft.lines
+      .filter((line) => line.amount.trim() !== '')
+      .map((line) => ({
+        invoiceLineItemId: line.invoiceLineItemId,
+        amount: line.amount.trim(),
+        ...(line.label ? { displayName: line.label } : {}),
+      })),
+    processCreditNote: draft.processNow,
+    ...(memo ? { memo } : {}),
+    ...(draft.refundTarget ? { refundTarget: draft.refundTarget } : {}),
+  }
+}
+
+export function useCreditNote(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.creditNotes.detail(id),
+    queryFn: async () =>
+      toCreditNoteDetail(
+        (await call(() => client.creditNotes.getCreditNote(id))) as CreditNoteDetailWire,
+      ),
+  })
+}
+
+function useInvalidateCreditNotes() {
+  const queryClient = useQueryClient()
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.creditNotes.all() })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+  }
+}
+
+export function useCreateCreditNote() {
+  const client = useFlexprice()
+  const invalidate = useInvalidateCreditNotes()
+
+  return useMutation({
+    mutationFn: (draft: CreateCreditNote) =>
+      call(() => client.creditNotes.createCreditNote(toCreateCreditNoteRequest(draft) as never)),
+    onSuccess: invalidate,
+  })
+}
+
+/** Lock a draft and apply it — `POST /creditnotes/{id}/finalize`. */
+export function useFinalizeCreditNote() {
+  const client = useFlexprice()
+  const invalidate = useInvalidateCreditNotes()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.creditNotes.processCreditNote(id)),
+    onSuccess: invalidate,
+  })
+}
+
+export function useVoidCreditNote() {
+  const client = useFlexprice()
+  const invalidate = useInvalidateCreditNotes()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.creditNotes.voidCreditNote(id)),
+    onSuccess: invalidate,
   })
 }

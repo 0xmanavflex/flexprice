@@ -7,6 +7,7 @@ import {
   type CreditNoteQuery,
   CreditNoteStatus,
 } from '@fp/domain'
+import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import {
   type EntityColumn,
@@ -70,6 +71,7 @@ export interface CreditNoteGridProps {
   error?: string | null
   onRetry?: () => void
   onCreditNoteClick?: (creditNote: CreditNote) => void
+  onCreate?: () => void
   onClearFilters?: () => void
   locale?: string
 }
@@ -83,6 +85,7 @@ export function CreditNoteGrid({
   error = null,
   onRetry,
   onCreditNoteClick,
+  onCreate,
   onClearFilters,
   locale,
 }: CreditNoteGridProps) {
@@ -176,6 +179,7 @@ export function CreditNoteGrid({
       })}
       rowActions={rowActions}
       exportFileName="credit-notes"
+      {...(onCreate ? { primaryAction: <Button onClick={onCreate}>New credit note</Button> } : {})}
       {...(onCreditNoteClick ? { onRowClick: onCreditNoteClick } : {})}
       isLoading={isLoading}
       error={error}

@@ -1,0 +1,45 @@
+import { expect, test } from '@playwright/test'
+
+test.beforeEach(async ({ context }) => {
+  await context.addInitScript(
+    (value) => {
+      try {
+        window.localStorage.setItem('flexprice.session', value)
+      } catch {
+        /* private-mode browser: the guard falls back to sign-in, tested elsewhere */
+      }
+    },
+    JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }),
+  )
+})
+
+test('creates a draft credit note, finalizes it, then voids it', async ({ page }) => {
+  await page.goto('/credit-notes')
+  await page.getByRole('button', { name: 'New credit note' }).click()
+  await expect(page).toHaveURL(/\/credit-notes\/new$/)
+
+  await page.getByRole('combobox', { name: /Invoice/ }).click()
+  await page.getByRole('option').first().click()
+
+  const firstLine = page.getByLabel(/^Credit for /).first()
+  await expect(firstLine).toBeVisible()
+  await page.getByRole('button', { name: 'Create credit note' }).click()
+  await expect(
+    page.getByRole('alert').filter({ hasText: 'Credit at least one line' }),
+  ).toBeVisible()
+
+  await firstLine.fill('10.00')
+  await page.getByRole('button', { name: 'Create credit note' }).click()
+
+  await expect(page).toHaveURL(/\/credit-notes\/cnote_new_/)
+  await expect(page.getByText('Draft').first()).toBeVisible()
+
+  await page.getByRole('button', { name: 'Finalize' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Finalize' }).click()
+  await expect(page.getByText('Finalized').first()).toBeVisible()
+
+  await page.getByRole('button', { name: 'Credit note actions' }).click()
+  await page.getByRole('menuitem', { name: 'Void credit note' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Void credit note' }).click()
+  await expect(page.getByText('Voided').first()).toBeVisible()
+})

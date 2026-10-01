@@ -1,5 +1,5 @@
 import { FileMinusIcon } from 'lucide-react'
-import { type CreditNoteQuery } from '@fp/domain'
+import { type CreditNote, type CreditNoteQuery } from '@fp/domain'
 import { ApiError, useCreditNotes } from '@fp/query'
 import { CreditNoteGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
@@ -7,10 +7,17 @@ import { ListState, PageBody } from '@fp/ui/compositions'
 export interface CreditNoteListPageProps {
   query: CreditNoteQuery
   onQueryChange: (query: CreditNoteQuery) => void
+  onCreate?: () => void
+  onCreditNoteClick?: (creditNote: CreditNote) => void
 }
 
 /** The wiring layer: fetch, turn an error into a sentence, hand the grid plain props. */
-export function CreditNoteListPage({ query, onQueryChange }: CreditNoteListPageProps) {
+export function CreditNoteListPage({
+  query,
+  onQueryChange,
+  onCreate,
+  onCreditNoteClick,
+}: CreditNoteListPageProps) {
   const creditNotes = useCreditNotes(query)
 
   const rows = creditNotes.data?.creditNotes ?? []
@@ -35,6 +42,8 @@ export function CreditNoteListPage({ query, onQueryChange }: CreditNoteListPageP
           total={creditNotes.data?.total ?? 0}
           query={query}
           onQueryChange={onQueryChange}
+          {...(onCreate ? { onCreate } : {})}
+          {...(onCreditNoteClick ? { onCreditNoteClick } : {})}
           onClearFilters={clearFilters}
         />
       </ListState>

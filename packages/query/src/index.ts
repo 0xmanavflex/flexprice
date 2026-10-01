@@ -209,8 +209,18 @@ export {
 } from './subscriptions'
 export type { SubscriptionPage, SubscriptionWire } from './subscriptions'
 
-export { fetchCreditNotes, toCreditNote, useCreditNotes } from './creditNotes'
-export type { CreditNotePage, CreditNoteWire } from './creditNotes'
+export {
+  fetchCreditNotes,
+  toCreateCreditNoteRequest,
+  toCreditNote,
+  toCreditNoteDetail,
+  useCreateCreditNote,
+  useCreditNote,
+  useCreditNotes,
+  useFinalizeCreditNote,
+  useVoidCreditNote,
+} from './creditNotes'
+export type { CreditNoteDetailWire, CreditNotePage, CreditNoteWire } from './creditNotes'
 export {
   fetchPayments,
   toPayment,
