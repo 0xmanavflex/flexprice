@@ -197,9 +197,12 @@ export function toUsageAnalytics(wire: AnalyticsResponseWire): UsageAnalytics {
   const eventCount = features.reduce((sum, feature) => sum + feature.eventCount, 0)
 
   // The server prices the window; this file does not. No subtotal, no revenue.
+  // A blank currency is the same absence: Intl throws RangeError on "", and
+  // that error is thrown during render, which replaces the whole route.
+  const currency = wire.currency?.trim() ?? ''
   const revenue =
-    wire.subtotal !== undefined && wire.subtotal !== '' && wire.currency !== undefined
-      ? money(wire.subtotal, wire.currency)
+    wire.subtotal !== undefined && wire.subtotal !== '' && currency !== ''
+      ? money(wire.subtotal, currency)
       : null
 
   return { points, features, eventCount, revenue }

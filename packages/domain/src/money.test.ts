@@ -25,6 +25,13 @@ describe('money', () => {
     expect(moneyOr(null, null)).toEqual({ amount: '0', currency: 'USD' })
     expect(moneyOr('9.99', 'gbp')).toEqual({ amount: '9.99', currency: 'GBP' })
   })
+
+  it('rejects a blank currency, and treats one as absent in moneyOr', () => {
+    expect(() => money('1.00', '')).toThrow(InvalidMoneyError)
+    expect(() => money('1.00', '   ')).toThrow(InvalidMoneyError)
+    expect(moneyOr('1.00', '')).toEqual({ amount: '1.00', currency: 'USD' })
+    expect(moneyOr('1.00', '  ')).toEqual({ amount: '1.00', currency: 'USD' })
+  })
 })
 
 describe('formatMoney', () => {

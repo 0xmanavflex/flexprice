@@ -48,7 +48,11 @@ export class InvalidMoneyError extends Error {
  */
 export function money(amount: string, currency: string): Money {
   if (!DECIMAL.test(amount)) throw new InvalidMoneyError(amount)
-  return { amount, currency: currency.toUpperCase() }
+  const code = currency.trim().toUpperCase()
+  // Intl.NumberFormat throws RangeError on "" and takes the route down with it.
+  // A blank code is not a currency; reject it here, where the value is built.
+  if (code === '') throw new InvalidMoneyError(currency)
+  return { amount, currency: code }
 }
 
 /**
@@ -62,7 +66,9 @@ export function moneyOr(
   currency: string | null | undefined,
   fallbackCurrency = 'USD',
 ): Money {
-  return money(amount ?? '0', currency ?? fallbackCurrency)
+  // `??` leaves "" in place, and "" is not a currency. Treat it as absent.
+  const code = currency?.trim()
+  return money(amount ?? '0', code ? code : fallbackCurrency)
 }
 
 /**
