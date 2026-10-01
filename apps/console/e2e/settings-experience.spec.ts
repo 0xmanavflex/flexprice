@@ -15,7 +15,7 @@ test.beforeEach(async ({ context }) => {
 
 test('portal: switching a section off saves and survives leaving the tab', async ({ page }) => {
   await page.goto('/settings?section=customer-experience&tab=portal')
-  await expect(page.getByRole('heading', { name: 'Customer portal' })).toBeVisible()
+  await expect(page.getByText('Customer portal', { exact: true })).toBeVisible()
 
   const group = page.getByRole('group', { name: /visibility$/ }).first()
   await group.getByRole('button', { name: 'Off' }).click()

@@ -29,11 +29,12 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
   const id = new URL(page.url()).pathname.split('/').pop() ?? ''
   await expect(page.getByRole('heading', { name: 'Draft invoice', level: 1 })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Finalize invoice' }).click()
+  await page.getByRole('button', { name: 'Finalize', exact: true }).click()
   await expect(page.getByRole('button', { name: 'Void invoice' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Draft invoice', level: 1 })).toBeHidden()
 
-  await page.getByRole('button', { name: 'Invoices' }).first().click()
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await page.getByRole('menuitem', { name: 'Back to invoices' }).click()
   await expect(page).toHaveURL(/\/invoices$/)
   await expect(page.getByText(id).first()).toBeVisible()
 })
@@ -109,11 +110,11 @@ test('finalize now creates an open invoice that can be voided from the detail', 
 }) => {
   await createInvoice(page, true)
   await expect(page.getByRole('heading', { name: 'Draft invoice', level: 1 })).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Finalize invoice' })).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Finalize', exact: true })).toBeHidden()
 
   await page.getByRole('button', { name: 'Void invoice' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Void invoice' }).click()
-  await expect(page.getByText('Void', { exact: true }).first()).toBeVisible()
+  await expect(page.getByText('The invoice was voided.')).toBeVisible()
   await expect(page.getByRole('button', { name: 'Void invoice' })).toBeHidden()
 })
 
