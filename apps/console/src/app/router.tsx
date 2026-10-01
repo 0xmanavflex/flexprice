@@ -578,22 +578,15 @@ function FeaturesRouteComponent() {
 const featureCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/features/new',
-  validateSearch: (search: Record<string, unknown>): { step?: string } =>
-    typeof search.step === 'string' ? { step: search.step } : {},
   component: FeatureCreateRouteComponent,
 })
 
 function FeatureCreateRouteComponent() {
   const navigate = useNavigate()
-  const { step } = featureCreateRoute.useSearch()
 
   return (
     <FeatureFormPage
       mode="create"
-      {...(step ? { step } : {})}
-      onStepChange={(next) =>
-        void navigate({ to: '/features/new', search: { step: next }, replace: true })
-      }
       onCancel={() => void navigate({ to: '/features', search: {} as never })}
       onDone={(featureId) => void navigate({ to: '/features/$featureId', params: { featureId } })}
     />
@@ -603,14 +596,11 @@ function FeatureCreateRouteComponent() {
 const featureEditRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/features/$featureId/edit',
-  validateSearch: (search: Record<string, unknown>): { step?: string } =>
-    typeof search.step === 'string' ? { step: search.step } : {},
   component: FeatureEditRouteComponent,
 })
 
 function FeatureEditRouteComponent() {
   const { featureId } = featureEditRoute.useParams()
-  const { step } = featureEditRoute.useSearch()
   const navigate = useNavigate()
   const toDetail = (id: string) =>
     void navigate({ to: '/features/$featureId', params: { featureId: id } })
@@ -619,15 +609,6 @@ function FeatureEditRouteComponent() {
     <FeatureFormPage
       mode="edit"
       featureId={featureId}
-      {...(step ? { step } : {})}
-      onStepChange={(next) =>
-        void navigate({
-          to: '/features/$featureId/edit',
-          params: { featureId },
-          search: { step: next },
-          replace: true,
-        })
-      }
       onCancel={() => toDetail(featureId)}
       onDone={toDetail}
     />

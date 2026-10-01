@@ -26,11 +26,12 @@ import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
 import { Textarea } from '@ui/components/primitives/textarea'
-import type { ReactNode } from 'react'
 import { Field } from '@ui/compositions/Field'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
+import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
-import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSteps'
+import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
+import { FeaturePreviewCard } from './FeaturePreviewCard'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect, type Option } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
@@ -72,8 +73,6 @@ type FeatureFormProps = {
   /** The groups a feature can be filed under; the field is hidden when there are none. */
   groups?: readonly Option[]
   trail: DetailCrumb[]
-  step?: string
-  onStepChange?: (id: string) => void
 } & (
   | {
       mode: 'create'
@@ -124,37 +123,7 @@ interface FormValues {
 
 const FORM_ID = 'feature-form'
 
-const DETAILS_STEP = { id: 'details', title: 'Details' }
-const TYPE_STEP = { id: 'type', title: 'Type' }
-const METERED_STEPS = [
-  DETAILS_STEP,
-  TYPE_STEP,
-  { id: 'event', title: 'Event' },
-  { id: 'aggregation', title: 'Aggregation' },
-  { id: 'additional', title: 'Additional' },
-] as const
-const PLAIN_STEPS = [DETAILS_STEP, TYPE_STEP, { id: 'additional', title: 'Additional' }] as const
-
-const STEP_FIELDS: Record<string, string[]> = {
-  details: ['name', 'lookupKey', 'description', 'groupId'],
-  type: [],
-  event: ['meter.eventName', 'meter.filters', 'filters'],
-  aggregation: [
-    'meter.aggregationType',
-    'meter.field',
-    'meter.multiplier',
-    'meter.groupBy',
-    'meter.resetUsage',
-  ],
-  additional: ['unitSingular', 'unitPlural', 'reportingUnit', 'alertSettings'],
-}
-
 const TYPES = [FeatureType.Metered, FeatureType.Boolean, FeatureType.Static] as const
-
-const TYPE_OPTIONS: Option[] = TYPES.map((value) => ({
-  value,
-  label: FEATURE_TYPE_LABEL[value],
-}))
 
 const TYPE_HINT: Record<FeatureType, string> = {
   [FeatureType.Metered]: 'Measured from events you send. Needs a meter.',
@@ -346,8 +315,6 @@ export function FeatureForm(props: FeatureFormProps) {
     submitError = null,
     groups = [],
     trail,
-    step,
-    onStepChange,
   } = props
   const feature = props.mode === 'edit' ? props.feature : undefined
   const isEdit = mode === 'edit'
@@ -391,31 +358,14 @@ export function FeatureForm(props: FeatureFormProps) {
 
   const setAlertsOn = (on: boolean) => form.setValue('alertsOn', on, { shouldDirty: true })
 
-  const flow = useFormSteps({
-    steps: isMetered ? METERED_STEPS : PLAIN_STEPS,
-    step,
-    onStepChange,
-    unlockAll: isEdit,
-    validate: (id) => form.trigger(STEP_FIELDS[id] as never),
+  const submitAll = form.handleSubmit((values) => {
+    // The resolver returns the schema's parsed output, not the form value.
+    if (props.mode === 'edit') props.onSubmit(values as unknown as EditFeature)
+    else props.onSubmit(values as unknown as CreateFeature)
   })
 
-  const submitAll = form.handleSubmit(
-    (values) => {
-      // The resolver returns the schema's parsed output, not the form value.
-      if (props.mode === 'edit') props.onSubmit(values as unknown as EditFeature)
-      else props.onSubmit(values as unknown as CreateFeature)
-    },
-    (errors) => {
-      // Send the person to the first step that has something to fix.
-      const bad = flow.steps.find((s) =>
-        STEP_FIELDS[s.id]?.some((path) => get(errors, path.split('.')[0] ?? '') !== undefined),
-      )
-      if (bad) flow.goTo(bad.id)
-    },
-  )
-
   const detailsStep = (
-    <FormCard>
+    <FormCard title="Basics">
       <FormRow label="Name" required error={message('name')}>
         {({ id, ...field }) => <Input id={id} disabled={isSubmitting} {...field} {...nameField} />}
       </FormRow>
@@ -468,24 +418,41 @@ export function FeatureForm(props: FeatureFormProps) {
   )
 
   const typeStep = (
-    <FormCard>
-      <FormRow label="Type" hint={TYPE_HINT[type]}>
-        {({ id, ...field }) => (
-          <OptionSelect
-            id={id}
-            aria-describedby={field['aria-describedby']}
-            value={type}
-            options={TYPE_OPTIONS}
-            disabled={isSubmitting || isEdit}
-            onValueChange={(next) => {
-              if (next === type || isEdit) return
-              // A type switch keeps the shared fields and lets the schema drop the rest.
-              form.setValue('type', next as FeatureType, { shouldDirty: true })
-              form.clearErrors()
-            }}
-          />
-        )}
-      </FormRow>
+    <FormCard
+      title="Type"
+      description={
+        isEdit
+          ? 'The type is fixed once the feature exists.'
+          : 'What kind of feature this is decides what you configure next.'
+      }
+    >
+      <div className="px-5 py-4 sm:px-6">
+        <RadioGroup
+          aria-label="Feature type"
+          value={type}
+          disabled={isSubmitting || isEdit}
+          className="grid gap-3 sm:grid-cols-3"
+          onValueChange={(next) => {
+            if (next === type || isEdit) return
+            // A type switch keeps the shared fields and lets the schema drop the rest.
+            form.setValue('type', next as FeatureType, { shouldDirty: true })
+            form.clearErrors()
+          }}
+        >
+          {TYPES.map((value) => (
+            <label
+              key={value}
+              className="has-data-checked:border-primary has-data-checked:bg-primary/5 hover:bg-muted/40 flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-60"
+            >
+              <RadioGroupItem value={value} className="mt-0.5" />
+              <span className="flex flex-col gap-0.5">
+                <span className="text-sm font-medium">{FEATURE_TYPE_LABEL[value]}</span>
+                <span className="text-muted-foreground text-xs">{TYPE_HINT[value]}</span>
+              </span>
+            </label>
+          ))}
+        </RadioGroup>
+      </div>
     </FormCard>
   )
 
@@ -497,7 +464,10 @@ export function FeatureForm(props: FeatureFormProps) {
           change.
         </p>
       ) : null}
-      <FormCard>
+      <FormCard
+        title="Configuration"
+        description="How usage is measured from the events you send."
+      >
         <FormRow label="Event name" required error={message('meter.eventName')}>
           {({ id, ...field }) => (
             <Input
@@ -632,6 +602,16 @@ export function FeatureForm(props: FeatureFormProps) {
         </FormRow>
       ) : null}
 
+      <FormRow label="Unit (singular)" error={message('unitSingular')}>
+        {({ id, ...field }) => (
+          <Input id={id} placeholder="call" {...field} {...form.register('unitSingular')} />
+        )}
+      </FormRow>
+      <FormRow label="Unit (plural)" error={message('unitPlural')}>
+        {({ id, ...field }) => (
+          <Input id={id} placeholder="calls" {...field} {...form.register('unitPlural')} />
+        )}
+      </FormRow>
       <FormRow label="Reset usage">
         {({ id, ...field }) => (
           <OptionSelect
@@ -654,19 +634,23 @@ export function FeatureForm(props: FeatureFormProps) {
       <fieldset className="min-w-0 border-0 p-0" disabled={isSubmitting}>
         <legend className="sr-only">Units</legend>
         <FormCard
-          title="Units"
+          title={isMetered ? 'Reporting unit' : 'Units'}
           description="Reporting unit: how usage is displayed in reports, as the feature unit times a conversion rate. Fill all three or none."
         >
-          <FormRow label="Unit (singular)" error={message('unitSingular')}>
-            {({ id, ...field }) => (
-              <Input id={id} placeholder="call" {...field} {...form.register('unitSingular')} />
-            )}
-          </FormRow>
-          <FormRow label="Unit (plural)" error={message('unitPlural')}>
-            {({ id, ...field }) => (
-              <Input id={id} placeholder="calls" {...field} {...form.register('unitPlural')} />
-            )}
-          </FormRow>
+          {isMetered ? null : (
+            <FormRow label="Unit (singular)" error={message('unitSingular')}>
+              {({ id, ...field }) => (
+                <Input id={id} placeholder="seat" {...field} {...form.register('unitSingular')} />
+              )}
+            </FormRow>
+          )}
+          {isMetered ? null : (
+            <FormRow label="Unit (plural)" error={message('unitPlural')}>
+              {({ id, ...field }) => (
+                <Input id={id} placeholder="seats" {...field} {...form.register('unitPlural')} />
+              )}
+            </FormRow>
+          )}
           <FormRow label="Reporting unit (singular)" error={message('reportingUnit.unitSingular')}>
             {({ id, ...field }) => (
               <Input id={id} {...field} {...form.register('reportingUnit.unitSingular')} />
@@ -772,27 +756,52 @@ export function FeatureForm(props: FeatureFormProps) {
     </div>
   )
 
-  const content: Record<string, ReactNode> = {
-    details: detailsStep,
-    type: typeStep,
-    event: eventStep,
-    aggregation: aggregationStep,
-    additional: additionalStep,
-  }
+  const meterSteps = isMetered ? (
+    <>
+      {eventStep}
+      {aggregationStep}
+    </>
+  ) : null
+
+  const formEl = (
+    <form
+      id={FORM_ID}
+      onSubmit={submitAll}
+      noValidate
+      className="flex flex-col gap-6"
+    >
+      {typeStep}
+      {detailsStep}
+      {meterSteps}
+      {additionalStep}
+    </form>
+  )
+
+  const preview = isEdit ? null : (
+    <aside aria-label="Feature preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+      <FeaturePreviewCard
+        name={form.watch('name')}
+        lookupKey={form.watch('lookupKey')}
+        type={type}
+        eventName={form.watch('meter.eventName')}
+        aggregationType={aggregationType}
+        resetUsage={form.watch('meter.resetUsage')}
+      />
+    </aside>
+  )
 
   return (
     <FormPage
       title={isEdit ? `Edit ${feature?.name ?? 'feature'}` : 'Create feature'}
       description={
         isEdit
-          ? 'Update this feature. Steps are the same as when it was created.'
+          ? 'Update this feature.'
           : 'Define what you measure or gate. Plans price it and entitlements limit it.'
       }
       trail={trail}
-      width="narrow"
+      width={isEdit ? 'narrow' : 'wide'}
       footer={
-        <StepFooter
-          flow={flow}
+        <FormActions
           mode={mode}
           noun="feature"
           formId={FORM_ID}
@@ -802,11 +811,14 @@ export function FeatureForm(props: FeatureFormProps) {
         />
       }
     >
-      <FormSteps flow={flow} label="Feature steps">
-        <form id={FORM_ID} onSubmit={flow.guardSubmit(submitAll)} noValidate>
-          {content[flow.step]}
-        </form>
-      </FormSteps>
+      {isEdit ? (
+        formEl
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+          <div className="min-w-0">{formEl}</div>
+          {preview}
+        </div>
+      )}
     </FormPage>
   )
 }

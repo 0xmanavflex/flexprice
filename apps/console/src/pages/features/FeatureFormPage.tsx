@@ -11,8 +11,6 @@ import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { toSubmitError } from './featureMessages'
 
 export type FeatureFormPageProps = {
-  step?: string
-  onStepChange: (id: string) => void
   onCancel: () => void
 } & (
   | { mode: 'create'; onDone: (featureId: string) => void }
@@ -22,12 +20,12 @@ export type FeatureFormPageProps = {
 /**
  * Create or edit a feature on its own page.
  *
- * Same form both ways (`FeatureForm`), stepped, with the step in the URL. Create
+ * Same single-page form both ways (`FeatureForm`). Create
  * ends on the new feature's detail page; edit returns to the one it came from.
  * The data layer is the hooks the dialogs used — nothing about saving changed.
  */
 export function FeatureFormPage(props: FeatureFormPageProps) {
-  const { step, onStepChange, onCancel } = props
+  const { onCancel } = props
   const create = useCreateFeature()
   const update = useUpdateFeature()
   const existing = useFeature(props.mode === 'edit' ? props.featureId : '')
@@ -39,14 +37,14 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
         .map((group) => ({ value: group.id, label: group.name })),
     [groups.data],
   )
-  const stepProps = { ...(step ? { step } : {}), onStepChange, onCancel, groups: groupOptions }
+  const formProps = { onCancel, groups: groupOptions }
 
   if (props.mode === 'create') {
     return (
       <FeatureForm
         mode="create"
         trail={[{ label: 'Features', onClick: onCancel }, { label: 'Create feature' }]}
-        {...stepProps}
+        {...formProps}
         isSubmitting={create.isPending}
         submitError={toSubmitError(create.error, 'create')}
         onSubmit={(draft: CreateFeature) =>
@@ -89,7 +87,7 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
         { label: feature.name, onClick: () => props.onDone(feature.id) },
         { label: 'Edit' },
       ]}
-      {...stepProps}
+      {...formProps}
       isSubmitting={update.isPending}
       submitError={toSubmitError(update.error)}
       onSubmit={(draft: EditFeature) =>
