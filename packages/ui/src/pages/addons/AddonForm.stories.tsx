@@ -121,3 +121,30 @@ export const SubmitsAValidatedDomainValue: Story = {
     )
   },
 }
+
+/** The "How it will look" rail follows the draft on create. */
+export const PreviewFollowsTheDraft: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const rail = canvas.getByRole('complementary', { name: 'Add-on preview' })
+
+    await expect(within(rail).getByText('Untitled add-on')).toBeInTheDocument()
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Name' }), 'Priority support')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Lookup key' }), 'priority_support')
+    await userEvent.type(canvas.getByRole('textbox', { name: 'Description' }), 'Named contact')
+
+    await expect(within(rail).getByText('Priority support')).toBeInTheDocument()
+    await expect(within(rail).getByText('priority_support')).toBeInTheDocument()
+    await expect(within(rail).getByText('Named contact')).toBeInTheDocument()
+  },
+}
+
+/** Edit stays narrow with no rail. */
+export const EditHasNoPreview: Story = {
+  args: { mode: 'edit', defaultValue: { name: 'Priority support', lookupKey: 'priority_support' } },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByRole('complementary', { name: 'Add-on preview' }),
+    ).toBeNull()
+  },
+}

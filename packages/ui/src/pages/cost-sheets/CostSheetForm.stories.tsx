@@ -50,3 +50,31 @@ export const ValidatesRequiredFields: Story = {
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
+
+export const SummaryFollowsDraft: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const rail = canvas.getByRole('complementary', { name: /cost sheet summary/i })
+    await expect(within(rail).getByText('Untitled cost sheet')).toBeInTheDocument()
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Infrastructure')
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Lookup key/ }), 'infra')
+    await expect(within(rail).getByText('Infrastructure')).toBeInTheDocument()
+    await expect(within(rail).getByText('infra')).toBeInTheDocument()
+  },
+}
+
+export const EditHasNoSummary: Story = {
+  args: {
+    mode: 'edit',
+    defaultValue: {
+      name: 'Infrastructure',
+      lookupKey: 'infrastructure',
+      description: 'Cloud spend',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByRole('complementary', { name: /cost sheet summary/i }),
+    ).not.toBeInTheDocument()
+  },
+}

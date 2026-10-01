@@ -80,48 +80,55 @@ export function GroupForm({
       }
     >
       <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
-        <FormCard>
-          <FormRow label="Name" required error={errors.name?.message}>
-            {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-            )}
-          </FormRow>
-
-          <FormRow
-            label="Lookup key"
-            required
-            hint="Stable identifier used by the API. Lowercase letters, numbers, hyphens and underscores."
-            error={errors.lookupKey?.message}
+        <div className="flex flex-col gap-6">
+          <FormCard
+            title="Details"
+            description="What this group is called and how the API refers to it."
           >
-            {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
-            )}
-          </FormRow>
+            <FormRow label="Name" required error={errors.name?.message}>
+              {({ id, ...field }) => (
+                <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+              )}
+            </FormRow>
 
-          <FormRow
-            label="Holds"
-            required
-            hint="A group holds prices or features, never both. Fixed once created."
-            error={errors.entityType?.message}
-          >
-            {({ id, ...field }) => (
-              <Controller
-                control={form.control}
-                name="entityType"
-                render={({ field: control }) => (
-                  <OptionSelect
-                    id={id}
-                    {...field}
-                    value={control.value}
-                    onValueChange={(value) => control.onChange(value)}
-                    options={ENTITY_OPTIONS}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )}
-          </FormRow>
-        </FormCard>
+            <FormRow
+              label="Lookup key"
+              required
+              hint="Stable identifier used by the API. Lowercase letters, numbers, hyphens and underscores."
+              error={errors.lookupKey?.message}
+            >
+              {({ id, ...field }) => (
+                <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
+              )}
+            </FormRow>
+          </FormCard>
+
+          <FormCard title="Contents" description="What the group can hold.">
+            <FormRow
+              label="Holds"
+              required
+              hint="A group holds prices or features, never both. Fixed once created."
+              error={errors.entityType?.message}
+            >
+              {({ id, ...field }) => (
+                <Controller
+                  control={form.control}
+                  name="entityType"
+                  render={({ field: control }) => (
+                    <OptionSelect
+                      id={id}
+                      {...field}
+                      value={control.value}
+                      onValueChange={(value) => control.onChange(value)}
+                      options={ENTITY_OPTIONS}
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </FormRow>
+          </FormCard>
+        </div>
       </form>
     </FormPage>
   )

@@ -8,10 +8,11 @@ import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
+import { CostSheetSummaryCard } from './CostSheetSummaryCard'
 
 /**
- * Create or edit a cost sheet's details on a full page: name, lookup key, description.
- * One section, so a single `FormPage` with no stepper.
+ * Create or edit a cost sheet's details on one page: Details (name, description) and
+ * Reference (lookup key) cards, with a compact summary rail on create.
  *
  * Presentational: it emits a validated `CreateCostSheet` and never imports
  * `@fp/query`. The backend treats a blank field on update as "unchanged", so an
@@ -25,6 +26,7 @@ export const CostSheetFormProvenance = provenance({
     'compositions/form-card',
     'compositions/form-page',
     'compositions/form-actions',
+    'pages/cost-sheet-summary-card',
   ],
   note: 'RHF + the domain schema. Prices are attached afterwards.',
 })
@@ -58,17 +60,64 @@ export function CostSheetForm({
   })
 
   const errors = form.formState.errors
+  const isEdit = mode === 'edit'
+
+  const formEl = (
+    <form
+      id={FORM_ID}
+      onSubmit={form.handleSubmit((values) => onSubmit(values))}
+      noValidate
+      className="flex flex-col gap-6"
+    >
+      <FormCard title="Details" description="What this cost sheet is called and what it covers.">
+        <FormRow label="Name" required error={errors.name?.message}>
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+          )}
+        </FormRow>
+
+        <FormRow
+          align="start"
+          label="Description"
+          {...(isEdit ? { hint: 'A blank field leaves the saved value unchanged.' } : {})}
+          error={errors.description?.message}
+        >
+          {({ id, ...field }) => (
+            <Textarea
+              id={id}
+              rows={3}
+              disabled={isSubmitting}
+              {...field}
+              {...form.register('description')}
+            />
+          )}
+        </FormRow>
+      </FormCard>
+
+      <FormCard title="Reference" description="How other systems refer to this cost sheet.">
+        <FormRow
+          label="Lookup key"
+          hint="A stable identifier to reference the cost sheet by. Optional."
+          error={errors.lookupKey?.message}
+        >
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
+          )}
+        </FormRow>
+      </FormCard>
+    </form>
+  )
 
   return (
     <FormPage
-      title={mode === 'create' ? 'Create cost sheet' : `Edit ${defaultValue?.name || 'cost sheet'}`}
+      title={isEdit ? `Edit ${defaultValue?.name || 'cost sheet'}` : 'Create cost sheet'}
       description={
-        mode === 'create'
-          ? 'Record what each unit of usage costs you, so margin can be measured.'
-          : 'Update the cost sheet’s details.'
+        isEdit
+          ? 'Update the cost sheet’s details.'
+          : 'Record what each unit of usage costs you, so margin can be measured.'
       }
       trail={trail}
-      width="narrow"
+      width={isEdit ? 'narrow' : 'wide'}
       footer={
         <FormActions
           mode={mode}
@@ -80,44 +129,20 @@ export function CostSheetForm({
         />
       }
     >
-      <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
-        <FormCard>
-          <FormRow label="Name" required error={errors.name?.message}>
-            {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-            )}
-          </FormRow>
-
-          <FormRow
-            label="Lookup key"
-            hint="A stable identifier to reference the cost sheet by. Optional."
-            error={errors.lookupKey?.message}
-          >
-            {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
-            )}
-          </FormRow>
-
-          <FormRow
-            align="start"
-            label="Description"
-            {...(mode === 'edit'
-              ? { hint: 'A blank field leaves the saved value unchanged.' }
-              : {})}
-            error={errors.description?.message}
-          >
-            {({ id, ...field }) => (
-              <Textarea
-                id={id}
-                rows={3}
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('description')}
-              />
-            )}
-          </FormRow>
-        </FormCard>
-      </form>
+      {isEdit ? (
+        formEl
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+          <div className="min-w-0">{formEl}</div>
+          <aside aria-label="Cost sheet summary" className="flex flex-col gap-4 lg:sticky lg:top-4">
+            <CostSheetSummaryCard
+              name={form.watch('name') ?? ''}
+              lookupKey={form.watch('lookupKey') ?? ''}
+              description={form.watch('description') ?? ''}
+            />
+          </aside>
+        </div>
+      )}
     </FormPage>
   )
 }

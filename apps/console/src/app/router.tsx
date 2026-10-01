@@ -1320,27 +1320,20 @@ function CustomersRouteComponent() {
 
 /**
  * Customer create and edit are full pages: `/customers/new` and
- * `/customers/$customerId/edit`, the step in `?step=` so a half-finished form is a link.
+ * `/customers/$customerId/edit`.
  */
 const customerCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/customers/new',
-  validateSearch: (search: Record<string, unknown>): { step?: string } =>
-    typeof search.step === 'string' ? { step: search.step } : {},
   component: CustomerCreateRouteComponent,
 })
 
 function CustomerCreateRouteComponent() {
   const navigate = useNavigate()
-  const { step } = customerCreateRoute.useSearch()
 
   return (
     <CustomerFormPage
       mode="create"
-      {...(step ? { step } : {})}
-      onStepChange={(next) =>
-        void navigate({ to: '/customers/new', search: { step: next }, replace: true })
-      }
       onCancel={() => void navigate({ to: '/customers', search: {} as never })}
       onDone={(customerId) =>
         void navigate({
@@ -1356,14 +1349,11 @@ function CustomerCreateRouteComponent() {
 const customerEditRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/customers/$customerId/edit',
-  validateSearch: (search: Record<string, unknown>): { step?: string } =>
-    typeof search.step === 'string' ? { step: search.step } : {},
   component: CustomerEditRouteComponent,
 })
 
 function CustomerEditRouteComponent() {
   const { customerId } = customerEditRoute.useParams()
-  const { step } = customerEditRoute.useSearch()
   const navigate = useNavigate()
   const toDetail = (id: string) =>
     void navigate({ to: '/customers/$customerId', params: { customerId: id }, search: {} as never })
@@ -1372,15 +1362,6 @@ function CustomerEditRouteComponent() {
     <CustomerFormPage
       mode="edit"
       customerId={customerId}
-      {...(step ? { step } : {})}
-      onStepChange={(next) =>
-        void navigate({
-          to: '/customers/$customerId/edit',
-          params: { customerId },
-          search: { step: next },
-          replace: true,
-        })
-      }
       onCancel={() => toDetail(customerId)}
       onDone={toDetail}
     />

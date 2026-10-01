@@ -8,13 +8,13 @@ import {
   emptyCustomer,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
-import type { ReactNode } from 'react'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
-import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSteps'
+import { FormActions } from '@ui/compositions/FormActions'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
+import { CustomerPreviewCard } from './CustomerPreviewCard'
 
 /**
  * Create or edit a customer on its own page: details, billing address, additional.
@@ -31,7 +31,7 @@ export const CustomerFormProvenance = provenance({
     'compositions/field',
     'compositions/option-select',
   ],
-  note: 'RHF + the domain schema, stepped: details, billing address, additional. Create and edit share it.',
+  note: 'RHF + the domain schema, one page: details, billing address, additional, with a live profile rail on create. Create and edit share it.',
 })
 
 export interface CustomerFormProps {
@@ -44,30 +44,9 @@ export interface CustomerFormProps {
   isSubmitting?: boolean
   submitError?: string | null
   trail: DetailCrumb[]
-  step?: string
-  onStepChange?: (id: string) => void
 }
 
 const FORM_ID = 'customer-form'
-
-const STEPS = [
-  { id: 'details', title: 'Details' },
-  { id: 'address', title: 'Billing address' },
-  { id: 'additional', title: 'Additional' },
-] as const
-
-const STEP_FIELDS: Record<string, (keyof CreateCustomer)[]> = {
-  details: ['name', 'externalId', 'email', 'phone'],
-  address: [
-    'addressLine1',
-    'addressLine2',
-    'addressCity',
-    'addressState',
-    'addressPostalCode',
-    'addressCountry',
-  ],
-  additional: ['timezone', 'taxTreatment'],
-}
 
 const TAX_OPTIONS = Object.values(CustomerTaxTreatment).map((value) => ({
   value,
@@ -83,8 +62,6 @@ export function CustomerForm({
   isSubmitting = false,
   submitError = null,
   trail,
-  step,
-  onStepChange,
 }: CustomerFormProps) {
   const isEdit = mode === 'edit'
   const form = useForm<CreateCustomer>({
@@ -95,27 +72,10 @@ export function CustomerForm({
 
   const errors = form.formState.errors
 
-  const flow = useFormSteps({
-    steps: STEPS,
-    step,
-    onStepChange,
-    unlockAll: isEdit,
-    validate: (id) => form.trigger(STEP_FIELDS[id] as never),
-  })
-
-  const submitAll = form.handleSubmit(
-    (values) => onSubmit(values),
-    (failed) => {
-      // Send the person to the first step that has something to fix.
-      const bad = flow.steps.find((s) =>
-        STEP_FIELDS[s.id]?.some((field) => failed[field] !== undefined),
-      )
-      if (bad) flow.goTo(bad.id)
-    },
-  )
+  const submitAll = form.handleSubmit((values) => onSubmit(values))
 
   const detailsStep = (
-    <FormCard>
+    <FormCard title="Details">
       <FormRow label="Name" required error={errors.name?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -157,7 +117,7 @@ export function CustomerForm({
   )
 
   const addressStep = (
-    <FormCard>
+    <FormCard title="Billing address">
       <FormRow label="Address line 1" error={errors.addressLine1?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressLine1')} />
@@ -207,7 +167,7 @@ export function CustomerForm({
   )
 
   const additionalStep = (
-    <FormCard>
+    <FormCard title="Additional">
       <FormRow
         label="Timezone"
         hint="An IANA name, e.g. Europe/London."
@@ -238,25 +198,50 @@ export function CustomerForm({
     </FormCard>
   )
 
-  const content: Record<string, ReactNode> = {
-    details: detailsStep,
-    address: addressStep,
-    additional: additionalStep,
-  }
+  const formEl = (
+    <form
+      id={FORM_ID}
+      onSubmit={(event) => void submitAll(event)}
+      noValidate
+      className="flex flex-col gap-6"
+    >
+      {detailsStep}
+      {addressStep}
+      {additionalStep}
+    </form>
+  )
+
+  const preview = isEdit ? null : (
+    <aside aria-label="Customer preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+      <CustomerPreviewCard
+        name={form.watch('name')}
+        externalId={form.watch('externalId')}
+        email={form.watch('email')}
+        phone={form.watch('phone')}
+        addressLine1={form.watch('addressLine1')}
+        addressLine2={form.watch('addressLine2')}
+        addressCity={form.watch('addressCity')}
+        addressState={form.watch('addressState')}
+        addressPostalCode={form.watch('addressPostalCode')}
+        addressCountry={form.watch('addressCountry')}
+        timezone={form.watch('timezone')}
+        taxTreatment={form.watch('taxTreatment')}
+      />
+    </aside>
+  )
 
   return (
     <FormPage
       title={isEdit ? `Edit ${customerName || 'customer'}` : 'Create customer'}
       description={
         isEdit
-          ? 'Update this customer. Steps are the same as when it was created.'
+          ? 'Update this customer.'
           : 'Add someone you bill. Subscriptions and invoices are attached afterwards.'
       }
       trail={trail}
-      width="narrow"
+      width={isEdit ? 'narrow' : 'wide'}
       footer={
-        <StepFooter
-          flow={flow}
+        <FormActions
           mode={mode}
           noun="customer"
           formId={FORM_ID}
@@ -266,11 +251,14 @@ export function CustomerForm({
         />
       }
     >
-      <FormSteps flow={flow} label="Customer steps">
-        <form id={FORM_ID} onSubmit={flow.guardSubmit(submitAll)} noValidate>
-          {content[flow.step]}
-        </form>
-      </FormSteps>
+      {isEdit ? (
+        formEl
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+          <div className="min-w-0">{formEl}</div>
+          {preview}
+        </div>
+      )}
     </FormPage>
   )
 }

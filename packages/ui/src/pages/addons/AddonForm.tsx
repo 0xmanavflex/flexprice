@@ -7,13 +7,14 @@ import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
+import { AddonPreviewCard } from './AddonPreviewCard'
 import { provenance } from '@ui/provenance'
 
 /**
  * Create or edit an add-on's details, on a full page.
  *
- * One section, so a single `FormPage` rather than a stepper: name, lookup key,
- * description. Charges and entitlements are added on the detail page afterwards.
+ * One page (no stepper): Basics (name, description), Identifier (lookup key),
+ * and on create a live preview rail. Charges and entitlements are added on the detail page afterwards.
  *
  * Presentational, like every form here: it takes a default value and emits a
  * validated `CreateAddon`, holding no state of its own beyond the field values
@@ -67,6 +68,59 @@ export function AddonForm({
   })
 
   const errors = form.formState.errors
+  const isEdit = mode === 'edit'
+
+  const formEl = (
+    <form
+      id={FORM_ID}
+      onSubmit={form.handleSubmit((values) => onSubmit(values))}
+      noValidate
+      className="flex flex-col gap-6"
+    >
+      <FormCard title="Basics">
+        <FormRow label="Name" required error={errors.name?.message}>
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+          )}
+        </FormRow>
+
+        <FormRow label="Description" align="start" error={errors.description?.message}>
+          {({ id, ...field }) => (
+            <Textarea
+              id={id}
+              rows={3}
+              disabled={isSubmitting}
+              {...field}
+              {...form.register('description')}
+            />
+          )}
+        </FormRow>
+      </FormCard>
+
+      <FormCard title="Identifier">
+        <FormRow
+          label="Lookup key"
+          required={!isEdit}
+          hint={
+            isEdit
+              ? 'Fixed once set — integrations key off it.'
+              : 'Stable identifier used by the API. Lowercase, numbers and underscores.'
+          }
+          error={errors.lookupKey?.message}
+        >
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              disabled={isSubmitting || isEdit}
+              readOnly={isEdit}
+              {...field}
+              {...form.register('lookupKey')}
+            />
+          )}
+        </FormRow>
+      </FormCard>
+    </form>
+  )
 
   return (
     <FormPage
@@ -77,7 +131,7 @@ export function AddonForm({
           : 'Update the add-on’s details. Its charges are edited separately.'
       }
       trail={trail}
-      width="narrow"
+      width={isEdit ? 'narrow' : 'wide'}
       footer={
         <FormActions
           mode={mode}
@@ -89,48 +143,20 @@ export function AddonForm({
         />
       }
     >
-      <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
-        <FormCard>
-          <FormRow label="Name" required error={errors.name?.message}>
-            {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-            )}
-          </FormRow>
-
-          <FormRow
-            label="Lookup key"
-            required={mode === 'create'}
-            hint={
-              mode === 'edit'
-                ? 'Fixed once set — integrations key off it.'
-                : 'Stable identifier used by the API. Lowercase, numbers and underscores.'
-            }
-            error={errors.lookupKey?.message}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                disabled={isSubmitting || mode === 'edit'}
-                readOnly={mode === 'edit'}
-                {...field}
-                {...form.register('lookupKey')}
-              />
-            )}
-          </FormRow>
-
-          <FormRow label="Description" align="start" error={errors.description?.message}>
-            {({ id, ...field }) => (
-              <Textarea
-                id={id}
-                rows={3}
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('description')}
-              />
-            )}
-          </FormRow>
-        </FormCard>
-      </form>
+      {isEdit ? (
+        formEl
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+          <div className="min-w-0">{formEl}</div>
+          <aside aria-label="Add-on preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+            <AddonPreviewCard
+              name={form.watch('name')}
+              lookupKey={form.watch('lookupKey')}
+              description={form.watch('description') ?? ''}
+            />
+          </aside>
+        </div>
+      )}
     </FormPage>
   )
 }

@@ -49,3 +49,17 @@ export const CancelReturns: Story = {
     await expect(args.onCancel).toHaveBeenCalled()
   },
 }
+
+/** The summary rail follows the draft: typing a name and percentage updates it. */
+export const PreviewFollowsDraft: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Launch offer')
+    await userEvent.type(canvas.getByRole('textbox', { name: /Percentage off/ }), '20')
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Code/ }), 'LAUNCH20')
+    const rail = within(canvas.getByRole('complementary', { name: /coupon preview/i }))
+    await expect(rail.getByText('Launch offer')).toBeInTheDocument()
+    await expect(rail.getByText('20% off')).toBeInTheDocument()
+    await expect(rail.getByText('LAUNCH20')).toBeInTheDocument()
+  },
+}

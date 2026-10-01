@@ -11,13 +11,14 @@ import {
   emptyCoupon,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
-import { Field } from '@ui/compositions/Field'
+import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { DateInput } from '@ui/compositions/DateInput'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
+import { CouponPreviewCard } from './CouponPreviewCard'
 
 /**
  * Create a coupon, on a full page.
@@ -30,8 +31,14 @@ import { provenance } from '@ui/provenance'
  */
 export const CouponCreateFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/input', 'compositions/form-page', 'compositions/form-actions'],
-  note: 'RHF + the domain schema. Type and cadence reveal only the fields that apply.',
+  composes: [
+    'ui/input',
+    'compositions/form-card',
+    'compositions/form-page',
+    'compositions/form-actions',
+    'pages/coupon-preview-card',
+  ],
+  note: 'RHF + the domain schema. One page of titled sections with a live summary rail; type and cadence reveal only the fields that apply.',
 })
 
 export interface CouponCreateFormProps {
@@ -86,97 +93,83 @@ export function CouponCreateForm({
   const type = form.watch('type')
   const cadence = form.watch('cadence')
 
-  return (
-    <FormPage
-      title="Create coupon"
-      description="A discount customers can redeem. Its type, amount and duration are fixed once created."
-      trail={trail}
-      width="narrow"
-      footer={
-        <FormActions
-          mode="create"
-          noun="coupon"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+  const formEl = (
+    <form
+      id={FORM_ID}
+      onSubmit={form.handleSubmit((values) => onSubmit(values))}
+      noValidate
+      className="flex flex-col gap-6"
     >
-      <form
-        id={FORM_ID}
-        onSubmit={form.handleSubmit((values) => onSubmit(values))}
-        noValidate
-        className="flex flex-col gap-5"
-      >
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Name" required error={errors.name?.message}>
-            {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-            )}
-          </Field>
-          <Field
-            label="Code"
-            hint="What a customer types to redeem it. Optional."
-            error={errors.couponCode?.message}
-          >
-            {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('couponCode')} />
-            )}
-          </Field>
-        </div>
+      <FormCard title="Basics">
+        <FormRow label="Name" required error={errors.name?.message}>
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+          )}
+        </FormRow>
+        <FormRow
+          label="Code"
+          hint="What a customer types to redeem it. Optional."
+          error={errors.couponCode?.message}
+        >
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('couponCode')} />
+          )}
+        </FormRow>
+      </FormCard>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Discount type" required error={errors.type?.message}>
+      <FormCard
+        title="Discount"
+        description="The type, amount and duration are fixed once the coupon is created."
+      >
+        <FormRow label="Discount type" required error={errors.type?.message}>
+          {({ id, ...field }) => (
+            <Controller
+              control={form.control}
+              name="type"
+              render={({ field: control }) => (
+                <OptionSelect
+                  id={id}
+                  {...field}
+                  value={control.value}
+                  onValueChange={(value) => control.onChange(value)}
+                  options={TYPE_OPTIONS}
+                  disabled={isSubmitting}
+                />
+              )}
+            />
+          )}
+        </FormRow>
+
+        {type === CouponType.Percentage ? (
+          <FormRow label="Percentage off" required error={errors.percentageOff?.message}>
             {({ id, ...field }) => (
-              <Controller
-                control={form.control}
-                name="type"
-                render={({ field: control }) => (
-                  <OptionSelect
-                    id={id}
-                    {...field}
-                    value={control.value}
-                    onValueChange={(value) => control.onChange(value)}
-                    options={TYPE_OPTIONS}
-                    disabled={isSubmitting}
-                  />
-                )}
+              <Input
+                id={id}
+                inputMode="decimal"
+                placeholder="10"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('percentageOff')}
               />
             )}
-          </Field>
-
-          {type === CouponType.Percentage ? (
-            <Field label="Percentage off" required error={errors.percentageOff?.message}>
-              {({ id, ...field }) => (
-                <Input
-                  id={id}
-                  inputMode="decimal"
-                  placeholder="10"
-                  disabled={isSubmitting}
-                  {...field}
-                  {...form.register('percentageOff')}
-                />
-              )}
-            </Field>
-          ) : (
-            <Field label="Amount off" required error={errors.amountOff?.message}>
-              {({ id, ...field }) => (
-                <Input
-                  id={id}
-                  inputMode="decimal"
-                  placeholder="25.00"
-                  disabled={isSubmitting}
-                  {...field}
-                  {...form.register('amountOff')}
-                />
-              )}
-            </Field>
-          )}
-        </div>
+          </FormRow>
+        ) : (
+          <FormRow label="Amount off" required error={errors.amountOff?.message}>
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                inputMode="decimal"
+                placeholder="25.00"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('amountOff')}
+              />
+            )}
+          </FormRow>
+        )}
 
         {type === CouponType.Fixed ? (
-          <Field label="Currency" required error={errors.currency?.message}>
+          <FormRow label="Currency" required error={errors.currency?.message}>
             {({ id, ...field }) => (
               <Controller
                 control={form.control}
@@ -194,46 +187,46 @@ export function CouponCreateForm({
                 )}
               />
             )}
-          </Field>
+          </FormRow>
         ) : null}
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Duration" required error={errors.cadence?.message}>
-            {({ id, ...field }) => (
-              <Controller
-                control={form.control}
-                name="cadence"
-                render={({ field: control }) => (
-                  <OptionSelect
-                    id={id}
-                    {...field}
-                    value={control.value}
-                    onValueChange={(value) => control.onChange(value)}
-                    options={CADENCE_OPTIONS}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )}
-          </Field>
-
-          {cadence === CouponCadence.Repeated ? (
-            <Field label="Billing periods" required error={errors.durationInPeriods?.message}>
-              {({ id, ...field }) => (
-                <Input
+        <FormRow label="Duration" required error={errors.cadence?.message}>
+          {({ id, ...field }) => (
+            <Controller
+              control={form.control}
+              name="cadence"
+              render={({ field: control }) => (
+                <OptionSelect
                   id={id}
-                  inputMode="numeric"
-                  placeholder="3"
-                  disabled={isSubmitting}
                   {...field}
-                  {...form.register('durationInPeriods', { setValueAs: toNumber })}
+                  value={control.value}
+                  onValueChange={(value) => control.onChange(value)}
+                  options={CADENCE_OPTIONS}
+                  disabled={isSubmitting}
                 />
               )}
-            </Field>
-          ) : null}
-        </div>
+            />
+          )}
+        </FormRow>
 
-        <Field
+        {cadence === CouponCadence.Repeated ? (
+          <FormRow label="Billing periods" required error={errors.durationInPeriods?.message}>
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                inputMode="numeric"
+                placeholder="3"
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('durationInPeriods', { setValueAs: toNumber })}
+              />
+            )}
+          </FormRow>
+        ) : null}
+      </FormCard>
+
+      <FormCard title="Limits">
+        <FormRow
           label="Max redemptions"
           hint="Leave blank for unlimited."
           error={errors.maxRedemptions?.message}
@@ -247,45 +240,80 @@ export function CouponCreateForm({
               {...form.register('maxRedemptions', { setValueAs: toNumber })}
             />
           )}
-        </Field>
+        </FormRow>
+        <FormRow label="Redeemable from" error={errors.redeemAfter?.message}>
+          {({ id, ...field }) => (
+            <Controller
+              control={form.control}
+              name="redeemAfter"
+              render={({ field: control }) => (
+                <DateInput
+                  id={id}
+                  {...field}
+                  value={toIso(control.value)}
+                  onValueChange={(value) => control.onChange(fromIso(value))}
+                  disabled={isSubmitting}
+                />
+              )}
+            />
+          )}
+        </FormRow>
+        <FormRow label="Redeemable until" error={errors.redeemBefore?.message}>
+          {({ id, ...field }) => (
+            <Controller
+              control={form.control}
+              name="redeemBefore"
+              render={({ field: control }) => (
+                <DateInput
+                  id={id}
+                  {...field}
+                  value={toIso(control.value)}
+                  onValueChange={(value) => control.onChange(fromIso(value))}
+                  disabled={isSubmitting}
+                />
+              )}
+            />
+          )}
+        </FormRow>
+      </FormCard>
+    </form>
+  )
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Redeemable from" error={errors.redeemAfter?.message}>
-            {({ id, ...field }) => (
-              <Controller
-                control={form.control}
-                name="redeemAfter"
-                render={({ field: control }) => (
-                  <DateInput
-                    id={id}
-                    {...field}
-                    value={toIso(control.value)}
-                    onValueChange={(value) => control.onChange(fromIso(value))}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )}
-          </Field>
-          <Field label="Redeemable until" error={errors.redeemBefore?.message}>
-            {({ id, ...field }) => (
-              <Controller
-                control={form.control}
-                name="redeemBefore"
-                render={({ field: control }) => (
-                  <DateInput
-                    id={id}
-                    {...field}
-                    value={toIso(control.value)}
-                    onValueChange={(value) => control.onChange(fromIso(value))}
-                    disabled={isSubmitting}
-                  />
-                )}
-              />
-            )}
-          </Field>
-        </div>
-      </form>
+  return (
+    <FormPage
+      title="Create coupon"
+      description="A discount customers can redeem. Its type, amount and duration are fixed once created."
+      trail={trail}
+      width="wide"
+      footer={
+        <FormActions
+          mode="create"
+          noun="coupon"
+          formId={FORM_ID}
+          onCancel={onCancel}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      }
+    >
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+        <div className="min-w-0">{formEl}</div>
+        <aside aria-label="Coupon preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+          <CouponPreviewCard
+            name={form.watch('name')}
+            code={form.watch('couponCode') ?? ''}
+            type={type}
+            percentageOff={form.watch('percentageOff')}
+            amountOff={form.watch('amountOff')}
+            currency={form.watch('currency')}
+            cadence={cadence}
+            durationInPeriods={form.watch('durationInPeriods')}
+            maxRedemptions={form.watch('maxRedemptions')}
+            redeemAfter={form.watch('redeemAfter')}
+            redeemBefore={form.watch('redeemBefore')}
+          />
+        </aside>
+      </div>
     </FormPage>
   )
 }

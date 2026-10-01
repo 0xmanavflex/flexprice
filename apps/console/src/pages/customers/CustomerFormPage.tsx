@@ -4,8 +4,6 @@ import { CustomerForm } from '@fp/ui/pages'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 
 export type CustomerFormPageProps = {
-  step?: string
-  onStepChange: (id: string) => void
   onCancel: () => void
 } & (
   | { mode: 'create'; onDone: (customerId: string) => void }
@@ -15,23 +13,22 @@ export type CustomerFormPageProps = {
 /**
  * Create or edit a customer on its own page.
  *
- * Same stepped form both ways (`CustomerForm`), the step in the URL. Create ends
+ * Same single-page form both ways (`CustomerForm`). Create ends
  * on the new customer's detail page; edit returns to the one it came from. The
  * data layer is the hooks the dialog used — nothing about saving changed.
  */
 export function CustomerFormPage(props: CustomerFormPageProps) {
-  const { step, onStepChange, onCancel } = props
+  const { onCancel } = props
   const create = useCreateCustomer()
   const update = useUpdateCustomer()
   const existing = useCustomer(props.mode === 'edit' ? props.customerId : '')
-  const stepProps = { ...(step ? { step } : {}), onStepChange, onCancel }
 
   if (props.mode === 'create') {
     return (
       <CustomerForm
         mode="create"
         trail={[{ label: 'Customers', onClick: onCancel }, { label: 'Create customer' }]}
-        {...stepProps}
+        onCancel={onCancel}
         isSubmitting={create.isPending}
         submitError={toSubmitError(create.error)}
         onSubmit={(draft: CreateCustomer) =>
@@ -75,7 +72,7 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
         { label: customer.name, onClick: () => props.onDone(customer.id) },
         { label: 'Edit' },
       ]}
-      {...stepProps}
+      onCancel={onCancel}
       isSubmitting={update.isPending}
       submitError={toSubmitError(update.error)}
       onSubmit={(draft: CreateCustomer) =>
