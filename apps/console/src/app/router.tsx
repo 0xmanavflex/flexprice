@@ -111,6 +111,11 @@ const SubscriptionListPage = lazy(() =>
     default: m.SubscriptionListPage,
   })),
 )
+const SubscriptionDetailPage = lazy(() =>
+  import('@/pages/subscriptions/SubscriptionDetailPage').then((m) => ({
+    default: m.SubscriptionDetailPage,
+  })),
+)
 import { parseSubscriptionSearch } from './subscriptionSearch'
 import { DEFAULT_SUBSCRIPTION_QUERY, type SubscriptionQuery } from '@fp/domain'
 const PaymentListPage = lazy(() =>
@@ -467,6 +472,30 @@ const subscriptionCreateRoute = createRoute({
   validateSearch: (search: Record<string, unknown>) => ({ step: parseStep(search['step']) }),
   component: SubscriptionCreateRouteComponent,
 })
+
+const subscriptionDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/subscriptions/$subscriptionId',
+  component: SubscriptionDetailRouteComponent,
+})
+
+function SubscriptionDetailRouteComponent() {
+  const { subscriptionId } = subscriptionDetailRoute.useParams()
+  const navigate = useNavigate()
+
+  return (
+    <SubscriptionDetailPage
+      subscriptionId={subscriptionId}
+      onNavigateToList={() => void navigate({ to: '/subscriptions', search: {} as never })}
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+      onOpenPlan={(planId) =>
+        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+      }
+    />
+  )
+}
 
 function SubscriptionCreateRouteComponent() {
   const { step } = subscriptionCreateRoute.useSearch()
@@ -1369,6 +1398,13 @@ function SubscriptionsRouteComponent() {
       query={query}
       onQueryChange={(next) => void navigate({ to: '/subscriptions', search: next, replace: true })}
       onCreate={() => void navigate({ to: '/subscriptions/new', search: {} as never })}
+      onOpen={(subscriptionId) =>
+        void navigate({
+          to: '/subscriptions/$subscriptionId',
+          params: { subscriptionId },
+          search: {} as never,
+        })
+      }
       onOpenCustomer={(customerId) =>
         void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
       }
@@ -1705,6 +1741,7 @@ export const routeTree = rootRoute.addChildren([
     eventsRoute,
     settingsRoute,
     subscriptionCreateRoute,
+    subscriptionDetailRoute,
     ...developerRedirects,
     ...placeholderRoutes,
   ]),

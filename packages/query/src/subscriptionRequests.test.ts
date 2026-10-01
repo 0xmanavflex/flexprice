@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { CreateSubscriptionRequest$outboundSchema } from '@flexprice/sdk/sdk/models'
+import {
+  CancelSubscriptionRequest$outboundSchema,
+  CreateSubscriptionRequest$outboundSchema,
+} from '@flexprice/sdk/sdk/models'
 import {
   BillingModel,
   CreditGrantCadence,
@@ -7,7 +10,7 @@ import {
   type CreateSubscription,
   emptySubscription,
 } from '@fp/domain'
-import { toCreateSubscriptionRequest } from './subscriptions'
+import { toCancelSubscriptionRequest, toCreateSubscriptionRequest } from './subscriptions'
 
 const base: CreateSubscription = {
   ...emptySubscription(),
@@ -44,7 +47,10 @@ describe('toCreateSubscriptionRequest', () => {
         },
       ],
     })
-    const parsed = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<string, unknown>
+    const parsed = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<
+      string,
+      unknown
+    >
     expect(Object.keys(parsed)).toHaveLength(Object.keys(request).length)
     expect(parsed['credit_grants']).toHaveLength(1)
     expect(parsed['override_line_items']).toHaveLength(1)
@@ -67,5 +73,23 @@ describe('toCreateSubscriptionRequest', () => {
     const [grant] = request['creditGrants'] as Record<string, unknown>[]
     expect(grant).toMatchObject({ scope: 'SUBSCRIPTION' })
     expect(grant).not.toHaveProperty('planId')
+  })
+})
+
+describe('toCancelSubscriptionRequest', () => {
+  it('sends the type, and a reason only when one was given', () => {
+    expect(toCancelSubscriptionRequest({ cancellationType: 'end_of_period', reason: ' ' })).toEqual(
+      {
+        cancellationType: 'end_of_period',
+      },
+    )
+    const request = toCancelSubscriptionRequest({
+      cancellationType: 'immediate',
+      reason: 'Churned',
+    })
+    expect(CancelSubscriptionRequest$outboundSchema.parse(request)).toEqual({
+      cancellation_type: 'immediate',
+      reason: 'Churned',
+    })
   })
 })

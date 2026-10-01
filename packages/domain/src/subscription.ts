@@ -155,3 +155,21 @@ export function emptySubscription(): CreateSubscription {
     creditGrants: [],
   }
 }
+
+/** The detail read model: the list row plus what the detail page adds. */
+export interface SubscriptionDetail extends Subscription {
+  billingPeriodCount: number
+  cancelAt: Date | null
+  cancelAtPeriodEnd: boolean
+  cancelledAt: Date | null
+  endDate: Date | null
+  trialEnd: Date | null
+}
+
+export const SUBSCRIPTION_CANCELLATION_TYPES = ['immediate', 'end_of_period'] as const
+export type SubscriptionCancellationType = (typeof SUBSCRIPTION_CANCELLATION_TYPES)[number]
+
+export interface CancelSubscription {
+  cancellationType: SubscriptionCancellationType
+  reason: string
+}

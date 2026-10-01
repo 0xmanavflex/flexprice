@@ -189,10 +189,15 @@ export type {
 
 export {
   fetchSubscriptions,
+  toCancelSubscriptionRequest,
   toCreateSubscriptionRequest,
   toSubscription,
+  toSubscriptionDetail,
   toSubscriptionFilter,
+  useActivateSubscription,
+  useCancelSubscription,
   useCreateSubscription,
+  useSubscription,
   useSubscriptions,
 } from './subscriptions'
 export type { SubscriptionPage, SubscriptionWire } from './subscriptions'
@@ -390,5 +395,10 @@ export { fetchUsageSyncs, toUsageSync, useUsageSyncs } from './usageSyncs'
 export type { UsageSyncPage, UsageSyncWire, UsageSyncEntryWire } from './usageSyncs'
 export { fetchDataExports, toDataExport, toDataExportFilter, useDataExports } from './dataExports'
 export type { DataExportPage, DataExportWire } from './dataExports'
-export { countConnections, fetchIntegrations, toIntegrations, useIntegrations } from './integrations'
+export {
+  countConnections,
+  fetchIntegrations,
+  toIntegrations,
+  useIntegrations,
+} from './integrations'
 export type { ConnectionWire } from './integrations'

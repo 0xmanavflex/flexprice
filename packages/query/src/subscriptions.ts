@@ -3,8 +3,10 @@ import { type Flexprice, call } from '@fp/api'
 import {
   BILLING_PERIOD_LABEL,
   type BillingPeriod,
+  type CancelSubscription,
   type CreateSubscription,
   type Subscription,
+  type SubscriptionDetail,
   type SubscriptionQuery,
   SubscriptionSortField,
   SubscriptionStatus,
@@ -43,6 +45,12 @@ export interface SubscriptionWire {
   currentPeriodEnd?: Date | undefined
   startDate?: Date | undefined
   createdAt?: Date | undefined
+  billingPeriodCount?: number | undefined
+  cancelAt?: Date | undefined
+  cancelAtPeriodEnd?: boolean | undefined
+  cancelledAt?: Date | undefined
+  endDate?: Date | undefined
+  trialEnd?: Date | undefined
 }
 
 const SUBSCRIPTION_STATUSES = new Set<string>(Object.values(SubscriptionStatus))
@@ -69,6 +77,18 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
     currentPeriodEnd: wire.currentPeriodEnd ?? null,
     startDate: wire.startDate ?? null,
     createdAt: wire.createdAt ?? null,
+  }
+}
+
+export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail {
+  return {
+    ...toSubscription(wire),
+    billingPeriodCount: wire.billingPeriodCount ?? 1,
+    cancelAt: wire.cancelAt ?? null,
+    cancelAtPeriodEnd: wire.cancelAtPeriodEnd ?? false,
+    cancelledAt: wire.cancelledAt ?? null,
+    endDate: wire.endDate ?? null,
+    trialEnd: wire.trialEnd ?? null,
   }
 }
 
@@ -202,11 +222,80 @@ export function useCreateSubscription() {
 
   return useMutation({
     mutationFn: (draft: CreateSubscription) =>
-      call(() => client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never)),
+      call(() =>
+        client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
     },
+  })
+}
+
+/**
+ * One subscription, with its customer and plan resolved.
+ *
+ * Read through search by id rather than `GET /subscriptions/{id}`, because only
+ * the search accepts `expand: 'customer,plan'` — the single read returns the
+ * customer as a bare id, which would put a ULID in the page header.
+ */
+export function useSubscription(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.detail(id),
+    queryFn: async () => {
+      const response = await call(() =>
+        client.subscriptions.querySubscription({
+          subscriptionIds: [id],
+          expand: 'customer,plan',
+          limit: 1,
+          offset: 0,
+        } as never),
+      )
+      const [item] = response.items ?? []
+      return item ? toSubscriptionDetail(item as SubscriptionWire) : null
+    },
+    enabled: id.length > 0,
+  })
+}
+
+export function toCancelSubscriptionRequest(draft: CancelSubscription): Record<string, unknown> {
+  return {
+    cancellationType: draft.cancellationType,
+    ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
+  }
+}
+
+const invalidateSubscription = (queryClient: ReturnType<typeof useQueryClient>) => {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+}
+
+/** End a subscription now or at the end of the period — `POST /subscriptions/{id}/cancel`. */
+export function useCancelSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: CancelSubscription }) =>
+      call(() =>
+        client.subscriptions.cancelSubscription(id, toCancelSubscriptionRequest(draft) as never),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Start a draft subscription — `POST /subscriptions/{id}/activate`. */
+export function useActivateSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, startDate }: { id: string; startDate: Date }) =>
+      call(() => client.subscriptions.activateSubscription(id, { startDate })),
+    onSuccess: () => invalidateSubscription(queryClient),
   })
 }

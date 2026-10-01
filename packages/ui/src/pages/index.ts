@@ -57,6 +57,7 @@ export type {
 export {
   CellsProvenance,
   EmDash,
+  EntityLink,
   FEATURE_TYPE_GLYPH,
   FeatureTypePill,
   Pill,

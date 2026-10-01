@@ -34,6 +34,8 @@ interface SearchBody {
    * `packages/query/src/search.ts`.
    */
   filters?: { field?: string; operator?: string; value?: { string?: string } }[]
+  subscription_ids?: string[]
+  subscriptionIds?: string[]
   feature_ids?: string[]
   featureIds?: string[]
   /** How the charges/entitlements searches scope to one plan (or add-on). */
@@ -88,6 +90,10 @@ function page(source: Corpus, body: SearchBody) {
     const needle = search.toLowerCase()
     rows = rows.filter((row) => readString(row, 'name').toLowerCase().includes(needle))
   }
+
+  const subscriptionIds = body.subscription_ids ?? body.subscriptionIds
+  if (subscriptionIds?.length)
+    rows = rows.filter((row) => subscriptionIds.includes(readString(row, 'id')))
 
   const ids = body.feature_ids ?? body.featureIds
   if (ids?.length) rows = rows.filter((row) => ids.includes(readString(row, 'id')))
@@ -2604,6 +2610,22 @@ export const handlers = [
     const row = { ...body, id: `cust_new_${Date.now()}`, status: 'published' }
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
+  }),
+  http.post(`${BASE}/subscriptions/:id/cancel`, async ({ request, params }) => {
+    const body = await readBody(request)
+    const immediate = body['cancellation_type'] === 'immediate'
+    const patch = immediate
+      ? { subscription_status: 'cancelled', cancelled_at: new Date().toISOString() }
+      : { cancel_at_period_end: true }
+    patchRow((corpus['subscriptions'] as Corpus).items, String(params['id']), patch)
+    return HttpResponse.json({ subscription_id: params['id'], ...patch })
+  }),
+  http.post(`${BASE}/subscriptions/:id/activate`, async ({ request, params }) => {
+    const body = await readBody(request)
+    return patchRow((corpus['subscriptions'] as Corpus).items, String(params['id']), {
+      subscription_status: 'active',
+      start_date: body['start_date'],
+    })
   }),
   http.post(`${BASE}/subscriptions`, async ({ request }) => {
     const body = await readBody(request)
