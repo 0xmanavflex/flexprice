@@ -3216,7 +3216,7 @@
       "invoice_type": "ONE_OFF",
       "invoice_status": "FINALIZED",
       "payment_status": "PENDING",
-      "currency": "INR",
+      "currency": "USD",
       "amount_due": "128.40",
       "amount_paid": "0.00",
       "subtotal": "128.40",
