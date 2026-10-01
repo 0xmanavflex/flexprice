@@ -14,6 +14,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
 
@@ -49,6 +50,10 @@ const SORT_OPTIONS = Object.values(CouponSortField).map((value) => ({
 /** `all` is a value, not the absence of one — a Select with an empty value
  *  renders its placeholder and reads as unset. */
 const STATUS_ALL = 'all'
+const STATUS_CHOICES = Object.values(CouponStatus).map((value) => ({
+  value,
+  label: COUPON_STATUS_LABEL[value],
+}))
 
 /**
  * What the coupon takes off — an amount, or a percentage.
@@ -252,6 +257,7 @@ export function CouponGrid({
       searchPlaceholder="Search coupons…"
       status={{
         value: statusValue,
+        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({
@@ -277,6 +283,11 @@ export function CouponGrid({
           },
         ],
       }}
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,

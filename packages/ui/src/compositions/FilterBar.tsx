@@ -2,7 +2,11 @@ import { useState, type ReactNode } from 'react'
 import { FilterIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Filters } from '@ui/components/reui/filters/filters'
-import { createFilterQuery, flattenFilterConditions } from '@ui/components/reui/filters/filters-query'
+import {
+  createFilterQuery,
+  createFilterRule,
+  flattenFilterConditions,
+} from '@ui/components/reui/filters/filters-query'
 import {
   getFilterOperator,
   operatorTakesValue,
@@ -63,6 +67,8 @@ export interface FilterBarProps {
   variant?: 'basic' | 'advanced'
   /** Where the advanced builder renders. Ignored in `basic`. */
   advancedMode?: 'popover' | 'inline'
+  /** Where the advanced panel sits against its trigger. */
+  advancedAlign?: 'start' | 'center' | 'end'
   /** A Clear button once the query holds anything (the reference bar has one). */
   showClear?: boolean
   /**
@@ -131,6 +137,7 @@ export function FilterBar({
   size = 'sm',
   variant = 'basic',
   advancedMode = 'popover',
+  advancedAlign = 'start',
   showClear = true,
   trigger,
 }: FilterBarProps) {
@@ -194,6 +201,7 @@ export function FilterBar({
       size={size}
       variant={variant}
       advancedMode={advancedMode}
+      advancedAlign={advancedAlign}
       showClear={showClear}
       fields={fields}
       query={draft}
@@ -223,4 +231,111 @@ export function FilterBar({
       }
     />
   )
+}
+
+const ANY_OF = [{ value: 'is_any_of', label: 'is any of', arity: 'many' as const }]
+const IS = [{ value: 'is', label: 'is' }]
+
+/** A select field whose only operator is `is_any_of`, so the result is a list a URL can store. */
+export function selectFilterField(
+  id: string,
+  label: string,
+  options: { value: string; label: string }[],
+): FilterField {
+  return { id, label, type: 'select', options, operators: ANY_OF, defaultOperator: 'is_any_of' }
+}
+
+/** Rebuilds the tree from the values the URL is holding, so the chips cannot drift from it. */
+export function selectFilterQuery(id: string, values: readonly string[]): FilterQuery {
+  if (values.length === 0) return createFilterQuery()
+  return createFilterQuery([
+    createFilterRule({ id, path: [id], operator: 'is_any_of', value: [...values] }),
+  ])
+}
+
+/** Every value chosen for `field`, across rules, keeping only ones the schema allows. */
+export function readSelectFilter(
+  flat: FlatFilter[],
+  field: string,
+  allowed: ReadonlySet<string>,
+): string[] {
+  const values = flat
+    .filter((entry) => entry.field === field)
+    .flatMap((entry) => entry.values.map(String))
+    .filter((value) => allowed.has(value))
+  return [...new Set(values)]
+}
+
+/**
+ * Status (or any multi-value enum) as the advanced filter's one field.
+ *
+ * The dropdown and this builder write the same array, so picking "Published"
+ * in either place shows up in the other.
+ */
+export function statusFilter<S extends string>({
+  values,
+  choices,
+  onChange,
+  label = 'Status',
+}: {
+  values: readonly S[]
+  choices: readonly { value: S; label: string }[]
+  onChange: (values: S[]) => void
+  label?: string
+}) {
+  const allowed = new Set<string>(choices.map((choice) => choice.value))
+  return {
+    fields: [selectFilterField('status', label, choices.map((choice) => ({ ...choice })))],
+    query: selectFilterQuery('status', values),
+    activeCount: values.length > 0 ? 1 : 0,
+    onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
+      onChange(readSelectFilter(flat, 'status', allowed) as S[])
+    },
+  }
+}
+
+/**
+ * A single-value enum, such as a sync state that is either set or "all".
+ *
+ * `empty` is the unfiltered value and is not offered as a choice — clearing
+ * the rule is what returns to it.
+ */
+export function singleChoiceFilter<S extends string>({
+  id,
+  label,
+  value,
+  empty,
+  choices,
+  onChange,
+}: {
+  id: string
+  label: string
+  value: S
+  empty: S
+  choices: readonly { value: S; label: string }[]
+  onChange: (value: S) => void
+}) {
+  const offered = choices.filter((choice) => choice.value !== empty)
+  const allowed = new Set<string>(offered.map((choice) => choice.value))
+  const active = value !== empty && allowed.has(value)
+  return {
+    fields: [
+      {
+        id,
+        label,
+        type: 'select' as const,
+        options: offered.map((choice) => ({ value: choice.value, label: choice.label })),
+        operators: IS,
+        defaultOperator: 'is',
+      } satisfies FilterField,
+    ],
+    query: active
+      ? createFilterQuery([createFilterRule({ id, path: [id], operator: 'is', value })])
+      : createFilterQuery(),
+    activeCount: active ? 1 : 0,
+    onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
+      const next = String(flat.find((entry) => entry.field === id)?.values[0] ?? '')
+      onChange((allowed.has(next) ? next : empty) as S)
+    },
+  }
 }

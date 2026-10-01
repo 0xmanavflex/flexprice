@@ -7,6 +7,7 @@ import {
   type UsageSyncQuery,
   type UsageSyncState,
 } from '@fp/domain'
+import { singleChoiceFilter } from '@ui/compositions/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
@@ -151,6 +152,17 @@ export function UsageSyncGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search by customer, subscription or plan…"
+      filter={singleChoiceFilter({
+        id: 'state',
+        label: 'Sync',
+        value: query.state,
+        empty: USAGE_SYNC_STATE.All,
+        choices: Object.values(USAGE_SYNC_STATE).map((value) => ({
+          value,
+          label: USAGE_SYNC_STATE_LABEL[value],
+        })),
+        onChange: (state) => onQueryChange({ ...query, state, page: 1 }),
+      })}
       status={{
         value: query.state,
         label: 'Sync',

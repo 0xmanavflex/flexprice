@@ -20,6 +20,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import { type EntityColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
 
@@ -55,6 +56,10 @@ const SORT_OPTIONS = Object.values(TaxRateSortField).map((value) => ({
 }))
 
 const STATUS_ALL = 'all'
+const STATUS_CHOICES = Object.values(TaxRateStatus).map((value) => ({
+  value,
+  label: TAX_RATE_STATUS_LABEL[value],
+}))
 
 /** Every URL requested and confirmed 200. The `api-reference/tax-rates/…`
  *  namespace a first draft guessed at 404s; associations is the real one. */
@@ -208,6 +213,7 @@ export function TaxRateGrid({
        */
       status={{
         value: statusValue,
+        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({
@@ -223,6 +229,11 @@ export function TaxRateGrid({
           })),
         ],
       }}
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,

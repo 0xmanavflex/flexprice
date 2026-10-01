@@ -11,6 +11,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
 
@@ -21,13 +22,10 @@ import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from 
  * complete — name, code, symbol, conversion and status, nothing dashed and
  * nothing added.
  *
- * **No status dropdown and no filter builder**, which the redesign asks for
- * explicitly: a tenant has a handful of price units, not a page of them, and
- * the Status column says everything a dropdown would. The trade is real and
- * worth naming — a deep link carrying `?status=archived` is still honoured,
- * but there is no longer a control that sets one. If archived units start
- * getting lost, the dropdown is three lines and `useCatalogStats` already
- * counts this entity.
+ * Status is the advanced filter rather than a dropdown: a tenant has a
+ * handful of price units, and the Status column already says what each one
+ * is. A deep link carrying `?status=archived` is the same list the filter
+ * rebuilds.
  */
 export const PriceUnitGridProvenance = provenance({
   source: 'composition',
@@ -73,6 +71,11 @@ const GUIDES: EntityGuide[] = [
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]
+
+const STATUS_CHOICES = Object.values(PriceUnitStatus).map((value) => ({
+  value,
+  label: PRICE_UNIT_STATUS_LABEL[value],
+}))
 
 export interface PriceUnitGridProps {
   priceUnits: PriceUnit[]
@@ -192,6 +195,11 @@ export function PriceUnitGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search price units…"
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,

@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, RefreshCwIcon } from 'lucide-react'
 import { type DataExport, type DataExportQuery, EXPORT_STATE, type ExportState } from '@fp/domain'
+import { singleChoiceFilter } from '@ui/compositions/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
@@ -114,6 +115,17 @@ export function DataExportGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search by bucket or data…"
+      filter={singleChoiceFilter({
+        id: 'state',
+        label: 'Status',
+        value: query.state,
+        empty: EXPORT_STATE.All,
+        choices: Object.values(EXPORT_STATE).map((value) => ({
+          value,
+          label: STATE_LABEL[value],
+        })),
+        onChange: (state) => onQueryChange({ ...query, state, page: 1 }),
+      })}
       status={{
         value: query.state,
         label: 'Status',

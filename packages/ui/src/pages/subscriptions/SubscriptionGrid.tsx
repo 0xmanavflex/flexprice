@@ -11,6 +11,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import { type EntityColumn, type PillTone, dateColumn, pillColumn, textColumn } from '../shared/cells'
 
@@ -59,6 +60,10 @@ const SORT_OPTIONS = Object.values(SubscriptionSortField).map((value) => ({
 }))
 
 const STATUS_ALL = 'all'
+const STATUS_CHOICES = Object.values(SubscriptionStatus).map((value) => ({
+  value,
+  label: SUBSCRIPTION_STATUS_LABEL[value],
+}))
 
 /** How each lifecycle state reads at a glance. Only `active` is a success and
  *  only `cancelled` is a dead end; the rest are states you watch, not states
@@ -234,6 +239,7 @@ export function SubscriptionGrid({
        */
       status={{
         value: statusValue,
+        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({
@@ -249,6 +255,11 @@ export function SubscriptionGrid({
           })),
         ],
       }}
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,

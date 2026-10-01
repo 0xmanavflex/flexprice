@@ -10,6 +10,7 @@ import {
   PaymentStatus,
   isStoredInvoiceStatus,
 } from '@fp/domain'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
@@ -38,13 +39,9 @@ import {
  * and tell you nothing; in the second they are "—" and "Failed", and only one
  * of them needs a phone call today.
  *
- * The dropdown then carries the *single* question people actually navigate by
- * — `InvoiceStatus`, the domain's fold of both — because two controls writing
- * `query.statuses` disagree the moment either is touched. That is also what
- * happened to `InvoiceFilters`: its only field was this same status, so the
- * builder is not mounted here at all and the control it held now lives in the
- * toolbar. Nothing was lost; the skipped-invoice case it was added for is
- * still reachable, from the dropdown.
+ * The dropdown and the advanced filter both write `query.statuses` — the
+ * domain's fold of document and payment — so a choice in either place is the
+ * same list. The skipped-invoice case is one of those options.
  *
  * ## Which of those the server can answer
  *
@@ -126,6 +123,10 @@ const STATUS_ORDER: InvoiceStatus[] = [
   InvoiceStatus.Void,
   InvoiceStatus.Skipped,
 ]
+const STATUS_CHOICES = STATUS_ORDER.map((value) => ({
+  value,
+  label: STATUS_LABEL[value],
+}))
 
 /** Every URL requested and confirmed 200. */
 const GUIDES: EntityGuide[] = [
@@ -304,6 +305,9 @@ export function InvoiceGrid({
          */
         status={{
           value: statusValue,
+          ...(query.statuses.length > 1
+            ? { valueLabel: `${query.statuses.length} selected` }
+            : {}),
           label: 'Status',
           onChange: (value) =>
             onQueryChange({
@@ -316,6 +320,11 @@ export function InvoiceGrid({
             ...STATUS_ORDER.map((value) => ({ value, label: STATUS_LABEL[value] })),
           ],
         }}
+        filter={statusFilter({
+          values: query.statuses,
+          choices: STATUS_CHOICES,
+          onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+        })}
         sort={{
           options: SORT_OPTIONS,
           field: query.sortBy,

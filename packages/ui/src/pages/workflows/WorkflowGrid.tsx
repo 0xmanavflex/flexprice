@@ -9,6 +9,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import { type EntityColumn, type PillTone, idColumn, pillColumn, textColumn } from '../shared/cells'
 
@@ -27,6 +28,10 @@ export const WorkflowGridProvenance = provenance({
 })
 
 const STATUS_ALL = 'all'
+const STATUS_CHOICES = Object.values(WorkflowStatus).map((value) => ({
+  value,
+  label: WORKFLOW_STATUS_LABEL[value],
+}))
 
 const STATUS_TONE: Record<WorkflowStatus, PillTone> = {
   [WorkflowStatus.Running]: 'info',
@@ -161,6 +166,7 @@ export function WorkflowGrid({
       searchPlaceholder="Search by workflow ID…"
       status={{
         value: statusValue,
+        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({
@@ -176,6 +182,11 @@ export function WorkflowGrid({
           })),
         ],
       }}
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: 'start_time',

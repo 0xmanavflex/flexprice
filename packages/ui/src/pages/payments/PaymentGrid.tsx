@@ -19,6 +19,7 @@ import {
   pillColumn,
   textColumn,
 } from '../shared/cells'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 
 /**
@@ -60,6 +61,10 @@ const SORT_OPTIONS = Object.values(PaymentSortField).map((value) => ({
 }))
 
 const STATUS_ALL = 'all'
+const STATUS_CHOICES = Object.values(PaymentStatus).map((value) => ({
+  value,
+  label: PAYMENT_STATUS_LABEL[value],
+}))
 
 const STATUS_TONE: Record<PaymentStatus, PillTone> = {
   [PaymentStatus.Pending]: 'warning',
@@ -220,6 +225,7 @@ export function PaymentGrid({
        */
       status={{
         value: statusValue,
+        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({
@@ -235,6 +241,11 @@ export function PaymentGrid({
           })),
         ],
       }}
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,

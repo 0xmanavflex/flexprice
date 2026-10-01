@@ -16,6 +16,7 @@ import {
   pillColumn,
   textColumn,
 } from '../shared/cells'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 
 /**
@@ -33,6 +34,10 @@ export const CreditNoteGridProvenance = provenance({
 })
 
 const STATUS_ALL = 'all'
+const STATUS_CHOICES = Object.values(CreditNoteStatus).map((value) => ({
+  value,
+  label: CREDIT_NOTE_STATUS_LABEL[value],
+}))
 
 const STATUS_TONE: Record<CreditNoteStatus, PillTone> = {
   [CreditNoteStatus.Draft]: 'neutral',
@@ -148,6 +153,7 @@ export function CreditNoteGrid({
       searchPlaceholder="Search by number, invoice or customer…"
       status={{
         value: statusValue,
+        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({
@@ -163,6 +169,11 @@ export function CreditNoteGrid({
           })),
         ],
       }}
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       rowActions={rowActions}
       exportFileName="credit-notes"
       {...(onCreditNoteClick ? { onRowClick: onCreditNoteClick } : {})}

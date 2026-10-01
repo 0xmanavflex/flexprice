@@ -19,6 +19,7 @@ import {
   PlanSortField,
   PlanStatus,
 } from '@fp/domain'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
@@ -66,6 +67,10 @@ const SORT_OPTIONS = Object.values(PlanSortField).map((value) => ({
 /** `all` is a value, not the absence of one — a Select with an empty value
  *  renders its placeholder and reads as unset. */
 const STATUS_ALL = 'all'
+const STATUS_CHOICES = Object.values(PlanStatus).map((value) => ({
+  value,
+  label: PLAN_STATUS_LABEL[value],
+}))
 
 /** Indexed by the raw wire period, which is a plain string on `PlanHeadline`. */
 const PERIOD_SHORT: Record<string, string | undefined> = BILLING_PERIOD_SHORT
@@ -282,6 +287,9 @@ export function PlanGrid({
       searchPlaceholder="Search plans…"
       status={{
         value: statusValue,
+        ...(query.statuses.length > 1
+          ? { valueLabel: `${query.statuses.length} selected` }
+          : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({
@@ -307,6 +315,11 @@ export function PlanGrid({
           },
         ],
       }}
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,

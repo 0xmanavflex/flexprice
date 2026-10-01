@@ -168,6 +168,8 @@ export interface EntityStatusSelect {
   options: EntityStatusOption[]
   /** The control's accessible name. Defaults to "Status". */
   label?: string | undefined
+  /** Trigger text when it is not one of the options, e.g. several statuses at once. */
+  valueLabel?: string | undefined
 }
 
 /** The filter button and the ReUI Filters chip row behind it. */
@@ -736,7 +738,11 @@ export function EntityList<T extends object>({
                 to itself reads "all" and "published" rather than the labels
                 in the list below it. */}
             <SelectValue>
-              {(value) => status.options.find((option) => option.value === value)?.label ?? value}
+              {(value) =>
+                status.valueLabel ??
+                status.options.find((option) => option.value === value)?.label ??
+                value
+              }
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -763,6 +769,8 @@ export function EntityList<T extends object>({
 
         {filter ? (
           <FilterBar
+            variant="advanced"
+            advancedAlign="end"
             fields={filter.fields}
             query={filter.query}
             onQueryChange={filter.onQueryChange}

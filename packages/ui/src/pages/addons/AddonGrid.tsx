@@ -11,6 +11,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
 
@@ -49,6 +50,10 @@ const SORT_OPTIONS = Object.values(AddonSortField).map((value) => ({
 /** `all` is a value, not the absence of one — a Select with an empty value
  *  renders its placeholder and reads as unset. */
 const STATUS_ALL = 'all'
+const STATUS_CHOICES = Object.values(AddonStatus).map((value) => ({
+  value,
+  label: ADDON_STATUS_LABEL[value],
+}))
 
 /** Every URL requested and returned 200; all three are in the docs sitemap. */
 const GUIDES: EntityGuide[] = [
@@ -201,6 +206,7 @@ export function AddonGrid({
       searchPlaceholder="Search add-ons…"
       status={{
         value: statusValue,
+        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({
@@ -226,6 +232,11 @@ export function AddonGrid({
           },
         ],
       }}
+      filter={statusFilter({
+        values: query.statuses,
+        choices: STATUS_CHOICES,
+        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,
