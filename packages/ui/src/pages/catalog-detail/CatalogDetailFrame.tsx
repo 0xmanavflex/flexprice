@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { MoreHorizontalIcon } from 'lucide-react'
-import { DetailBreadcrumb, DetailHeader } from '../../compositions'
-import { CopyId, DetailTabs, type DetailTabSpec } from '../../compositions/DetailKit'
+import { DetailTabs, type DetailTabSpec } from '../../compositions/DetailKit'
+import { EntityHeader } from '../shared/EntityHeader'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -25,7 +25,6 @@ export interface CatalogDetailFrameProps {
   onBack: () => void
   icon: ReactNode
   title: string
-  badges?: ReactNode
   /** One line under the title. */
   subtitle?: string
   /** Copyable identifier. */
@@ -42,15 +41,13 @@ export interface CatalogDetailFrameProps {
 
 /**
  * The shared shell for catalog detail pages (coupon, add-on, cost sheet, group):
- * breadcrumb, icon tile + `DetailHeader` (title, badges, one-line subtitle), a
- * copyable id, one primary button with a ⋯ overflow menu, then `DetailTabs`.
+ * icon-tile `EntityHeader` (title, one-line subtitle, id chip), one primary button with a ⋯ overflow menu, then `DetailTabs`.
  */
 export function CatalogDetailFrame({
   listLabel,
   onBack,
   icon,
   title,
-  badges,
   subtitle,
   id,
   primary,
@@ -70,7 +67,9 @@ export function CatalogDetailFrame({
       ) : null}
       {menu.length > 0 ? (
         <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label={menuLabel} />}>
+          <DropdownMenuTrigger
+            render={<Button variant="outline" size="icon" aria-label={menuLabel} />}
+          >
             <MoreHorizontalIcon aria-hidden />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="min-w-44">
@@ -94,26 +93,14 @@ export function CatalogDetailFrame({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <DetailBreadcrumb trail={[{ label: listLabel, onClick: onBack }, { label: title }]} />
-      <div className="flex items-start gap-3 px-6 pt-6">
-        <div
-          aria-hidden
-          className="bg-muted text-muted-foreground mt-1 flex size-10 shrink-0 items-center justify-center rounded-lg border [&_svg]:size-5"
-        >
-          {icon}
-        </div>
-        <div className="min-w-0 flex-1 [&>header]:px-0 [&>header]:pt-0">
-          <DetailHeader
-            title={title}
-            {...(badges ? { badges } : {})}
-            {...(subtitle ? { description: subtitle } : {})}
-            actions={actions}
-          />
-        </div>
-      </div>
-      <div className="flex items-center gap-2 px-6 pb-4 pl-[4.75rem]">
-        <CopyId value={id} />
-      </div>
+      <EntityHeader
+        trail={[{ label: listLabel, onClick: onBack }, { label: title }]}
+        icon={icon}
+        title={title}
+        {...(subtitle ? { subtitle } : {})}
+        id={id}
+        actions={actions}
+      />
       <div className="px-6 pb-10">
         <DetailTabs
           tabs={tabs}

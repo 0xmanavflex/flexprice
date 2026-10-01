@@ -78,7 +78,6 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
       onBack={onNavigateToList}
       icon={<LayersIcon />}
       title={data.name}
-      badges={<CatalogStatusBadge status={data.status} />}
       subtitle={`${new Intl.NumberFormat().format(data.entityCount)} ${kind}`}
       id={data.lookupKey || data.id}
       menuLabel="Group actions"

@@ -73,7 +73,7 @@ test.describe('the plans list', () => {
 })
 
 test.describe('the coupons list', () => {
-  test('opens a coupon whose detail says where it is used', async ({ page }) => {
+  test('opens a coupon whose detail shows its terms', async ({ page }) => {
     const coupons = new CatalogListPage(page, {
       heading: 'Coupons',
       searchLabel: 'Search coupons',
@@ -86,8 +86,6 @@ test.describe('the coupons list', () => {
     await coupons.openFirstRow()
     await expect(page).toHaveURL(/\/coupons\/[^/?#]+$/)
 
-    // The V2 addition over V1's detail page: the "Where used" section reads the
-    // associations endpoint to answer which subscriptions the coupon applies to.
-    await expect(detail.whereUsed).toBeVisible()
+    await expect(detail.terms).toBeVisible()
   })
 })

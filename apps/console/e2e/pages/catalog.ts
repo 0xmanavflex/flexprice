@@ -49,8 +49,8 @@ export class CatalogListPage {
  * section is a titled region (`Section`), so it is addressable by its heading.
  */
 export class CouponDetailPage {
-  /** The V2 addition: `Section title="Where used"`, an `<h2>` region heading. */
-  readonly whereUsed: Locator
+  /** The Overview's `Section title="Terms"`, an `<h2>` region heading. */
+  readonly terms: Locator
   /** The way back to the list, so a detail page is not a dead end. */
   readonly back: Locator
 
@@ -58,7 +58,7 @@ export class CouponDetailPage {
 
   constructor(page: Page) {
     this.page = page
-    this.whereUsed = page.getByRole('heading', { name: 'Where used' })
+    this.terms = page.getByRole('heading', { name: 'Terms' })
     this.back = page.getByRole('button', { name: 'Coupons' })
   }
 }

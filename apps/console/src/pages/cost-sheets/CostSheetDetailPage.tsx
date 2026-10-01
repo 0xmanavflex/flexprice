@@ -94,7 +94,6 @@ export function CostSheetDetailPage({
       onBack={onNavigateToList}
       icon={<CalculatorIcon />}
       title={data.name}
-      badges={<CatalogStatusBadge status={data.status} />}
       subtitle={data.description || `${count} ${count === 1 ? 'price' : 'prices'} grouped to measure cost`}
       id={data.lookupKey || data.id}
       primary={{

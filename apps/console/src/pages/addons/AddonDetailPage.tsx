@@ -169,7 +169,6 @@ export function AddonDetailPage({
       onBack={onNavigateToList}
       icon={<PuzzleIcon />}
       title={data.name}
-      badges={<CatalogStatusBadge status={data.status} />}
       subtitle={subtitle}
       id={data.lookupKey || data.id}
       primary={{
