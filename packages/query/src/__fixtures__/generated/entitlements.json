@@ -14,7 +14,11 @@
       "status": "published",
       "created_at": "2026-09-24T04:39:41.483773Z",
       "updated_at": "2026-09-24T04:39:41.483773Z",
-      "feature": { "id": "feat_synth_0000", "name": "API calls", "type": "metered" }
+      "feature": {
+        "id": "feat_synth_0000",
+        "name": "API calls",
+        "type": "metered"
+      }
     },
     {
       "id": "ent_plan0000_sso",
@@ -28,7 +32,11 @@
       "status": "published",
       "created_at": "2026-09-24T04:39:41.483773Z",
       "updated_at": "2026-09-24T04:39:41.483773Z",
-      "feature": { "id": "feat_synth_0005", "name": "Single sign-on", "type": "boolean" }
+      "feature": {
+        "id": "feat_synth_0005",
+        "name": "Single sign-on",
+        "type": "boolean"
+      }
     },
     {
       "id": "ent_plan0000_seats",
@@ -42,7 +50,11 @@
       "status": "published",
       "created_at": "2026-09-24T04:39:41.483773Z",
       "updated_at": "2026-09-24T04:39:41.483773Z",
-      "feature": { "id": "feat_synth_0006", "name": "Seats", "type": "static" }
+      "feature": {
+        "id": "feat_synth_0006",
+        "name": "Seats",
+        "type": "static"
+      }
     },
     {
       "id": "ent_plan0000_retention",
@@ -50,14 +62,100 @@
       "feature_type": "config",
       "entity_type": "PLAN",
       "entity_id": "plan_synth_0000",
-      "config_value": { "retention_days": 30 },
+      "config_value": {
+        "retention_days": 30
+      },
       "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
       "tenant_id": "00000000-0000-0000-0000-000000000000",
       "status": "published",
       "created_at": "2026-09-24T04:39:41.483773Z",
       "updated_at": "2026-09-24T04:39:41.483773Z",
-      "feature": { "id": "feat_synth_0007", "name": "Retention window", "type": "config" }
+      "feature": {
+        "id": "feat_synth_0007",
+        "name": "Retention window",
+        "type": "config"
+      }
+    },
+    {
+      "id": "ent_plan0011_api",
+      "feature_id": "feat_synth_0000",
+      "feature_type": "metered",
+      "entity_type": "PLAN",
+      "entity_id": "plan_synth_0011",
+      "usage_limit": 50000,
+      "usage_reset_period": "MONTHLY",
+      "is_soft_limit": false,
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z",
+      "feature": {
+        "id": "feat_synth_0000",
+        "name": "API calls",
+        "type": "metered"
+      }
+    },
+    {
+      "id": "ent_plan0011_sso",
+      "feature_id": "feat_synth_0005",
+      "feature_type": "boolean",
+      "entity_type": "PLAN",
+      "entity_id": "plan_synth_0011",
+      "is_enabled": true,
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z",
+      "feature": {
+        "id": "feat_synth_0005",
+        "name": "Single sign-on",
+        "type": "boolean"
+      }
+    },
+    {
+      "id": "ent_plan0011_seats",
+      "feature_id": "feat_synth_0006",
+      "feature_type": "static",
+      "entity_type": "PLAN",
+      "entity_id": "plan_synth_0011",
+      "static_value": "25",
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z",
+      "feature": {
+        "id": "feat_synth_0006",
+        "name": "Seats",
+        "type": "static"
+      }
+    },
+    {
+      "id": "ent_plan0011_retention",
+      "feature_id": "feat_synth_0007",
+      "feature_type": "config",
+      "entity_type": "PLAN",
+      "entity_id": "plan_synth_0011",
+      "config_value": {
+        "retention_days": 30
+      },
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z",
+      "feature": {
+        "id": "feat_synth_0007",
+        "name": "Retention window",
+        "type": "config"
+      }
     }
   ],
-  "pagination": { "total": 4, "limit": 25, "offset": 0 }
+  "pagination": {
+    "total": 8,
+    "limit": 25,
+    "offset": 0
+  }
 }

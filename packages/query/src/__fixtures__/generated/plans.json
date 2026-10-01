@@ -1451,7 +1451,7 @@
       "id": "plan_synth_0011",
       "name": "Globex 12",
       "lookup_key": "plan_premier_12",
-      "description": "Replaced.",
+      "description": "Platform fee, metered usage, and a monthly credit budget.",
       "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
       "metadata": null,
       "display_order": 0,

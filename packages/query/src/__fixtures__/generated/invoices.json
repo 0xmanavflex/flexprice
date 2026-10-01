@@ -5,16 +5,16 @@
       "customer_id": "cus_synth_0000",
       "subscription_id": "subs_01M38PVDWEP6D630RYM9FXGPHX",
       "invoice_type": "ONE_OFF",
-      "invoice_status": "DRAFT",
-      "payment_status": "PENDING",
+      "invoice_status": "FINALIZED",
+      "payment_status": "SUCCEEDED",
       "currency": "USD",
-      "amount_due": "12225600000000000.00",
-      "amount_paid": "0.00",
-      "subtotal": "12225600000000000.00",
-      "total": "12225600000000000.00",
+      "amount_due": "490.00",
+      "amount_paid": "490.00",
+      "subtotal": "490.00",
+      "total": "490.00",
       "total_discount": "0",
-      "amount_remaining": "12225600000000000.00",
-      "invoice_number": "",
+      "amount_remaining": "0.00",
+      "invoice_number": "INV-1042",
       "idempotency_key": "proration_charge-b3c7c800b4a072f1",
       "billing_sequence": 3,
       "billing_period": "MONTHLY",
@@ -103,7 +103,8 @@
           "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
         }
       ],
-      "issue_date": "2026-03-08T00:00:00.000Z"
+      "issue_date": "2026-08-25T00:00:00.000Z",
+      "due_date": "2026-09-01T00:00:00.000Z"
     },
     {
       "id": "inv_synth_0001",
@@ -3213,21 +3214,21 @@
       "customer_id": "cus_synth_0000",
       "subscription_id": "subs_01M38PVDWEP6D630RYM9FXGPHX",
       "invoice_type": "ONE_OFF",
-      "invoice_status": "VOIDED",
+      "invoice_status": "FINALIZED",
       "payment_status": "PENDING",
       "currency": "INR",
-      "amount_due": "897.75",
+      "amount_due": "128.40",
       "amount_paid": "0.00",
-      "subtotal": "897.75",
-      "total": "897.75",
+      "subtotal": "128.40",
+      "total": "128.40",
       "total_discount": "0",
-      "amount_remaining": "897.75",
-      "invoice_number": "INV-9030",
+      "amount_remaining": "128.40",
+      "invoice_number": "INV-1088",
       "idempotency_key": "proration_charge-b3c7c800b4a072f1",
       "billing_sequence": 3,
       "billing_period": "MONTHLY",
       "finalized_at": "2026-09-24T03:20:24.942102Z",
-      "issue_date": "2026-06-06T00:00:00.000Z",
+      "issue_date": "2026-09-25T00:00:00.000Z",
       "last_computed_at": "2026-09-24T03:20:24.908437Z",
       "period_start": "2026-05-07T00:00:00.000Z",
       "period_end": "2026-06-06T00:00:00.000Z",
@@ -3313,7 +3314,7 @@
           "updated_by": "dde9a118-f186-45a6-969b-a9dab4590a75"
         }
       ],
-      "due_date": "2026-09-10T00:00:00.000Z"
+      "due_date": "2026-10-01T00:00:00.000Z"
     },
     {
       "id": "inv_synth_0031",

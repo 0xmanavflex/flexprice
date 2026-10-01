@@ -99,7 +99,7 @@
       "id": "feat_synth_0003",
       "name": "Active users",
       "lookup_key": "active_users",
-      "description": "Replaced.",
+      "description": "Unique people who used the product in the billing period.",
       "meter_id": "meter_synth_3",
       "metadata": null,
       "type": "metered",

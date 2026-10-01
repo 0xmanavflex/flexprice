@@ -1045,10 +1045,150 @@
       "description": "Monthly base fee",
       "entity_type": "PLAN",
       "entity_id": "plan_synth_0001"
+    },
+    {
+      "currency": "usd",
+      "price_unit_type": "FIAT",
+      "price_unit_amount": "0",
+      "conversion_rate": "1",
+      "billing_period_count": 1,
+      "billing_cadence": "RECURRING",
+      "trial_period_days": 0,
+      "lookup_key": "",
+      "metadata": {},
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "sequence": 9000,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z",
+      "created_by": "authored",
+      "updated_by": "authored",
+      "id": "price_plan0011_base",
+      "amount": "29",
+      "display_amount": "$29.00",
+      "type": "FIXED",
+      "billing_period": "MONTHLY",
+      "billing_model": "FLAT_FEE",
+      "display_name": "Platform base",
+      "invoice_cadence": "ADVANCE",
+      "description": "Monthly platform fee",
+      "entity_type": "PLAN",
+      "entity_id": "plan_synth_0011"
+    },
+    {
+      "currency": "usd",
+      "price_unit_type": "FIAT",
+      "price_unit_amount": "0",
+      "conversion_rate": "1",
+      "billing_period_count": 1,
+      "billing_cadence": "RECURRING",
+      "trial_period_days": 0,
+      "lookup_key": "",
+      "metadata": {},
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "sequence": 9000,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z",
+      "created_by": "authored",
+      "updated_by": "authored",
+      "id": "price_plan0011_api",
+      "amount": "",
+      "display_amount": "",
+      "type": "USAGE",
+      "billing_period": "MONTHLY",
+      "billing_model": "TIERED",
+      "tier_mode": "VOLUME",
+      "tiers": [
+        {
+          "up_to": 10000,
+          "unit_amount": "0.002",
+          "flat_amount": "0"
+        },
+        {
+          "up_to": 100000,
+          "unit_amount": "0.0015"
+        },
+        {
+          "up_to": null,
+          "unit_amount": "0.001"
+        }
+      ],
+      "display_name": "API calls",
+      "invoice_cadence": "ARREAR",
+      "description": "Metered API usage",
+      "meter_id": "meter_synth_0",
+      "meter": {
+        "id": "meter_synth_0",
+        "name": "API calls",
+        "tenant_id": "00000000-0000-0000-0000-000000000000",
+        "event_name": "api_call",
+        "aggregation": {
+          "type": "COUNT"
+        },
+        "filters": [],
+        "reset_usage": "BILLING_PERIOD",
+        "created_at": "2026-09-24T04:39:41.483773Z",
+        "updated_at": "2026-09-24T04:39:41.483773Z",
+        "status": "published"
+      },
+      "entity_type": "PLAN",
+      "entity_id": "plan_synth_0011"
+    },
+    {
+      "currency": "usd",
+      "price_unit_type": "FIAT",
+      "price_unit_amount": "0",
+      "conversion_rate": "1",
+      "billing_period_count": 1,
+      "billing_cadence": "RECURRING",
+      "trial_period_days": 0,
+      "lookup_key": "",
+      "metadata": {},
+      "environment_id": "env_01M38PES5XS6MB3AMGAMV9SB64",
+      "sequence": 9000,
+      "tenant_id": "00000000-0000-0000-0000-000000000000",
+      "status": "published",
+      "created_at": "2026-09-24T04:39:41.483773Z",
+      "updated_at": "2026-09-24T04:39:41.483773Z",
+      "created_by": "authored",
+      "updated_by": "authored",
+      "id": "price_plan0011_tokens",
+      "amount": "2",
+      "display_amount": "$2.00",
+      "type": "USAGE",
+      "billing_period": "MONTHLY",
+      "billing_model": "PACKAGE",
+      "transform_quantity": {
+        "divide_by": 1000,
+        "round": "up"
+      },
+      "display_name": "Tokens",
+      "invoice_cadence": "ARREAR",
+      "description": "$2 per 1,000 tokens",
+      "meter_id": "meter_synth_1",
+      "meter": {
+        "id": "meter_synth_1",
+        "name": "Tokens processed",
+        "tenant_id": "00000000-0000-0000-0000-000000000000",
+        "event_name": "tokens",
+        "aggregation": {
+          "type": "COUNT"
+        },
+        "filters": [],
+        "reset_usage": "BILLING_PERIOD",
+        "created_at": "2026-09-24T04:39:41.483773Z",
+        "updated_at": "2026-09-24T04:39:41.483773Z",
+        "status": "published"
+      },
+      "entity_type": "PLAN",
+      "entity_id": "plan_synth_0011"
     }
   ],
   "pagination": {
-    "total": 24,
+    "total": 27,
     "limit": 25,
     "offset": 0
   }
