@@ -259,6 +259,8 @@ export type {
   Subscription,
   SubscriptionCancellationType,
   SubscriptionDetail,
+  SubscriptionEntitlement,
+  SubscriptionLine,
   SubscriptionQuery,
 } from './subscription'
 

@@ -2844,6 +2844,55 @@ export const handlers = [
     ;(corpus['invoices'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
+  http.get(`${BASE}/subscriptions/:id/entitlements`, () =>
+    HttpResponse.json({
+      features: [
+        {
+          feature: { id: 'feat_api_calls', name: 'API calls' },
+          entitlement: {
+            is_enabled: true,
+            is_soft_limit: false,
+            usage_limit: 100000,
+            usage_reset_period: 'MONTHLY',
+          },
+        },
+        {
+          feature: { id: 'feat_sso', name: 'Single sign-on' },
+          entitlement: { is_enabled: true },
+        },
+      ],
+    }),
+  ),
+  http.get(`${BASE}/subscriptions/:id`, ({ params }) => {
+    const row = sourceFor('subscriptions').items.find(
+      (item) => readString(item, 'id') === params['id'],
+    )
+    if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    const currency = String(row['currency'] ?? 'USD')
+    return HttpResponse.json({
+      ...row,
+      line_items: [
+        {
+          id: `${String(row['id'])}_line_1`,
+          display_name: 'Platform fee',
+          price_type: 'FIXED',
+          quantity: '1',
+          billing_period: 'MONTHLY',
+          currency,
+          price: { amount: '99.00', currency },
+        },
+        {
+          id: `${String(row['id'])}_line_2`,
+          display_name: 'API usage',
+          price_type: 'USAGE',
+          quantity: '0',
+          billing_period: 'MONTHLY',
+          currency,
+          price: { amount: '0.002', currency },
+        },
+      ],
+    })
+  }),
   http.post(`${BASE}/subscriptions/:id/cancel`, async ({ request, params }) => {
     const body = await readBody(request)
     const immediate = body['cancellation_type'] === 'immediate'

@@ -200,11 +200,15 @@ export {
   toCreateSubscriptionRequest,
   toSubscription,
   toSubscriptionDetail,
+  toSubscriptionEntitlement,
   toSubscriptionFilter,
+  toSubscriptionLine,
   useActivateSubscription,
   useCancelSubscription,
   useCreateSubscription,
   useSubscription,
+  useSubscriptionEntitlements,
+  useSubscriptionLines,
   useSubscriptions,
 } from './subscriptions'
 export type { SubscriptionPage, SubscriptionWire } from './subscriptions'

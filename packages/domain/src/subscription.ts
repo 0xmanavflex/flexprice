@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
+import { type Money } from './money'
 import { BillingPeriod } from './price'
 import { priceOverrideSchema } from './priceOverride'
 
@@ -164,6 +165,33 @@ export interface SubscriptionDetail extends Subscription {
   cancelledAt: Date | null
   endDate: Date | null
   trialEnd: Date | null
+  paymentTerms: string
+  collectionMethod: string
+  metadata: Record<string, string>
+}
+
+/** One billed line on a subscription — a fixed charge or a metered one. */
+export interface SubscriptionLine {
+  id: string
+  name: string
+  kind: 'fixed' | 'usage'
+  quantity: string
+  billingPeriodLabel: string
+  /** The unit price as the API sent it; formatted by the screen. */
+  amount: Money
+  startDate: Date | null
+  endDate: Date | null
+}
+
+/** One feature the subscription entitles the customer to. */
+export interface SubscriptionEntitlement {
+  featureId: string
+  name: string
+  enabled: boolean
+  /** `null` is unlimited. */
+  usageLimit: number | null
+  softLimit: boolean
+  resetPeriodLabel: string
 }
 
 export const SUBSCRIPTION_CANCELLATION_TYPES = ['immediate', 'end_of_period'] as const

@@ -2,6 +2,9 @@ import { useState } from 'react'
 import { RefreshCwIcon } from 'lucide-react'
 import {
   SUBSCRIPTION_STATUS_LABEL,
+  type SubscriptionEntitlement,
+  type SubscriptionLine,
+  formatMoney,
   type SubscriptionCancellationType,
   SubscriptionStatus,
 } from '@fp/domain'
@@ -10,6 +13,8 @@ import {
   useActivateSubscription,
   useCancelSubscription,
   useSubscription,
+  useSubscriptionEntitlements,
+  useSubscriptionLines,
 } from '@fp/query'
 import { CatalogDetailFrame, EntityLink, SubscriptionStatusBadge } from '@fp/ui/pages'
 import {
@@ -20,6 +25,7 @@ import {
   LoadingRows,
   OptionSelect,
   PageBody,
+  SimpleTable,
 } from '@fp/ui/compositions'
 import { Input } from '@fp/ui/primitives'
 
@@ -207,6 +213,32 @@ export function SubscriptionDetailPage({
                       },
                     ]
                   : []),
+                ...(data.collectionMethod
+                  ? [
+                      {
+                        key: 'collection',
+                        label: 'Collection',
+                        value: data.collectionMethod.replaceAll('_', ' '),
+                        readOnly: true,
+                      },
+                    ]
+                  : []),
+                ...(data.paymentTerms
+                  ? [
+                      {
+                        key: 'terms',
+                        label: 'Payment terms',
+                        value: data.paymentTerms.replaceAll('_', ' '),
+                        readOnly: true,
+                      },
+                    ]
+                  : []),
+                ...Object.entries(data.metadata).map(([key, value]) => ({
+                  key: `meta_${key}`,
+                  label: key,
+                  value,
+                  readOnly: true,
+                })),
                 {
                   key: 'id',
                   label: 'Subscription ID',
@@ -218,6 +250,16 @@ export function SubscriptionDetailPage({
               onSave={async () => undefined}
             />
           ),
+        },
+        {
+          value: 'pricing',
+          label: 'Pricing',
+          content: <PricingTab subscriptionId={data.id} />,
+        },
+        {
+          value: 'entitlements',
+          label: 'Entitlements',
+          content: <EntitlementsTab subscriptionId={data.id} />,
         },
       ]}
     >
@@ -290,4 +332,71 @@ function toError(error: unknown, verb: 'cancel' | 'activate'): string | null {
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
   return `Could not ${verb} the subscription. Try again.`
+}
+
+function PricingTab({ subscriptionId }: { subscriptionId: string }) {
+  const lines = useSubscriptionLines(subscriptionId)
+  if (lines.isPending) return <LoadingRows />
+  if (lines.error) {
+    return <AppFailure title="Pricing could not be loaded" onRetry={() => void lines.refetch()} />
+  }
+  return (
+    <SimpleTable<SubscriptionLine>
+      rows={lines.data ?? []}
+      getRowId={(line) => line.id}
+      empty="This subscription has no priced lines."
+      columns={[
+        { key: 'name', header: 'Charge', cell: (line) => line.name },
+        {
+          key: 'kind',
+          header: 'Type',
+          cell: (line) => (line.kind === 'usage' ? 'Usage' : 'Fixed'),
+        },
+        { key: 'quantity', header: 'Quantity', cell: (line) => line.quantity || '—' },
+        { key: 'period', header: 'Billed', cell: (line) => line.billingPeriodLabel },
+        {
+          key: 'amount',
+          header: 'Price',
+          className: 'text-right',
+          cell: (line) => formatMoney(line.amount),
+        },
+      ]}
+    />
+  )
+}
+
+function EntitlementsTab({ subscriptionId }: { subscriptionId: string }) {
+  const entitlements = useSubscriptionEntitlements(subscriptionId)
+  if (entitlements.isPending) return <LoadingRows />
+  if (entitlements.error) {
+    return (
+      <AppFailure
+        title="Entitlements could not be loaded"
+        onRetry={() => void entitlements.refetch()}
+      />
+    )
+  }
+  return (
+    <SimpleTable<SubscriptionEntitlement>
+      rows={entitlements.data ?? []}
+      getRowId={(row) => row.featureId || row.name}
+      empty="This subscription includes no features."
+      columns={[
+        { key: 'feature', header: 'Feature', cell: (row) => row.name },
+        {
+          key: 'access',
+          header: 'Access',
+          cell: (row) => (row.enabled ? 'Included' : 'Not included'),
+        },
+        {
+          key: 'limit',
+          header: 'Limit',
+          cell: (row) =>
+            row.usageLimit === null
+              ? 'Unlimited'
+              : `${row.usageLimit.toLocaleString()}${row.softLimit ? ' (soft)' : ''}${row.resetPeriodLabel ? ` / ${row.resetPeriodLabel.toLowerCase()}` : ''}`,
+        },
+      ]}
+    />
+  )
 }

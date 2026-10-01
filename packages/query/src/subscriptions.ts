@@ -7,9 +7,12 @@ import {
   type CreateSubscription,
   type Subscription,
   type SubscriptionDetail,
+  type SubscriptionEntitlement,
+  type SubscriptionLine,
   type SubscriptionQuery,
   SubscriptionSortField,
   SubscriptionStatus,
+  moneyOr,
 } from '@fp/domain'
 import { toCreditGrantTerms } from './creditGrants'
 import { queryKeys } from './keys'
@@ -51,6 +54,9 @@ export interface SubscriptionWire {
   cancelledAt?: Date | undefined
   endDate?: Date | undefined
   trialEnd?: Date | undefined
+  paymentTerms?: string | undefined
+  collectionMethod?: string | undefined
+  metadata?: Record<string, string> | undefined
 }
 
 const SUBSCRIPTION_STATUSES = new Set<string>(Object.values(SubscriptionStatus))
@@ -89,6 +95,61 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
     cancelledAt: wire.cancelledAt ?? null,
     endDate: wire.endDate ?? null,
     trialEnd: wire.trialEnd ?? null,
+    paymentTerms: wire.paymentTerms ?? '',
+    collectionMethod: wire.collectionMethod ?? '',
+    metadata: wire.metadata ?? {},
+  }
+}
+
+export interface SubscriptionLineWire {
+  id?: string | undefined
+  displayName?: string | undefined
+  planDisplayName?: string | undefined
+  meterDisplayName?: string | undefined
+  priceType?: string | undefined
+  quantity?: string | undefined
+  billingPeriod?: string | undefined
+  currency?: string | undefined
+  price?: { amount?: string | undefined; currency?: string | undefined } | undefined
+  startDate?: Date | undefined
+  endDate?: Date | undefined
+}
+
+export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): SubscriptionLine {
+  return {
+    id: wire.id ?? `line_${index}`,
+    name: wire.displayName || wire.planDisplayName || wire.meterDisplayName || 'Charge',
+    kind: wire.priceType === 'USAGE' ? 'usage' : 'fixed',
+    quantity: wire.quantity ?? '',
+    billingPeriodLabel: BILLING_PERIOD_LABEL[(wire.billingPeriod ?? '') as BillingPeriod] ?? '—',
+    amount: moneyOr(wire.price?.amount, wire.price?.currency || wire.currency),
+    startDate: wire.startDate ?? null,
+    endDate: wire.endDate ?? null,
+  }
+}
+
+export interface SubscriptionFeatureWire {
+  feature?: { id?: string | undefined; name?: string | undefined } | undefined
+  entitlement?:
+    | {
+        isEnabled?: boolean | undefined
+        isSoftLimit?: boolean | undefined
+        usageLimit?: number | undefined
+        usageResetPeriod?: string | undefined
+      }
+    | undefined
+}
+
+export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): SubscriptionEntitlement {
+  const period = wire.entitlement?.usageResetPeriod ?? ''
+  return {
+    featureId: wire.feature?.id ?? '',
+    name: wire.feature?.name || wire.feature?.id || 'Feature',
+    enabled: wire.entitlement?.isEnabled ?? false,
+    usageLimit: wire.entitlement?.usageLimit ?? null,
+    softLimit: wire.entitlement?.isSoftLimit ?? false,
+    resetPeriodLabel:
+      period && period !== 'NEVER' ? (BILLING_PERIOD_LABEL[period as BillingPeriod] ?? period) : '',
   }
 }
 
@@ -256,6 +317,34 @@ export function useSubscription(id: string) {
       )
       const [item] = response.items ?? []
       return item ? toSubscriptionDetail(item as SubscriptionWire) : null
+    },
+    enabled: id.length > 0,
+  })
+}
+
+/** The priced lines — `GET /subscriptions/{id}`, the only read that carries them. */
+export function useSubscriptionLines(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.lines(id),
+    queryFn: async () => {
+      const response = await call(() => client.subscriptions.getSubscription(id))
+      return ((response.lineItems ?? []) as SubscriptionLineWire[]).map(toSubscriptionLine)
+    },
+    enabled: id.length > 0,
+  })
+}
+
+/** What the subscription includes — `GET /subscriptions/{id}/entitlements`. */
+export function useSubscriptionEntitlements(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.entitlements(id),
+    queryFn: async () => {
+      const response = await call(() => client.subscriptions.getSubscriptionEntitlements(id))
+      return ((response.features ?? []) as SubscriptionFeatureWire[]).map(toSubscriptionEntitlement)
     },
     enabled: id.length > 0,
   })
