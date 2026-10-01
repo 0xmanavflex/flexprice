@@ -27,5 +27,5 @@ export type {
   ShellUser,
 } from './types'
 export { MENU_CONTENT, MENU_ITEM, MENU_LABEL } from './menuSurface'
-export { ShellDetailTrailProvider, useShellDetailTrail } from './ShellDetailTrail'
+export { ShellDetailTrailProvider, usePublishDetailTrail, useShellDetailTrail } from './ShellDetailTrail'
 export type { ShellDetailCrumb } from './ShellDetailTrail'

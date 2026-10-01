@@ -31,8 +31,9 @@ import type { ReactNode } from 'react'
  *
  * The shell's navigation is nested two deep, so this has real work to do:
  * "Features" alone does not say it sits under Product Catalog, and on a detail
- * screen it does not say which feature. The last crumb is the current page and
- * is never a link, because a link to where you already are does nothing.
+ * screen it does not say which feature. A crumb with nowhere to go — the page
+ * you are already on — is not a link. Any earlier crumb, and a last crumb that
+ * still has somewhere to go, is.
  */
 export const ShellBreadcrumbProvenance = provenance({
   source: 'composition',
@@ -128,7 +129,15 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
               >
                 {crumb.content ? (
                   crumb.content
-                ) : isLast || !crumb.onClick ? (
+                ) : crumb.onClick ? (
+                  <BreadcrumbLink
+                    render={<button type="button" onClick={crumb.onClick} />}
+                    aria-label={crumb.label}
+                    className="flex min-w-0 items-center gap-1.5"
+                  >
+                    {content}
+                  </BreadcrumbLink>
+                ) : (
                   // The label can be hidden at narrow widths, so the crumb
                   // carries its own name for anything reading the tree.
                   <BreadcrumbPage
@@ -137,14 +146,6 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
                   >
                     {content}
                   </BreadcrumbPage>
-                ) : (
-                  <BreadcrumbLink
-                    render={<button type="button" onClick={crumb.onClick} />}
-                    aria-label={crumb.label}
-                    className="flex min-w-0 items-center gap-1.5"
-                  >
-                    {content}
-                  </BreadcrumbLink>
                 )}
               </BreadcrumbItem>
 

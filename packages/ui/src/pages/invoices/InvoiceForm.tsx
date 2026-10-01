@@ -88,6 +88,7 @@ import { InvoiceDateField } from '@ui/components/blocks/form-3/components/invoic
 import { InvoiceSection } from '@ui/components/blocks/form-3/components/invoice-section'
 import { InvoiceSummary } from '@ui/components/blocks/form-3/components/invoice-summary'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
+import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -124,7 +125,7 @@ export interface InvoiceCustomerOption {
 export interface InvoiceFormProps {
   mode?: 'create' | 'edit'
   customers: readonly InvoiceCustomerOption[]
-  /** Accepted so callers keep a trail. Form 3 draws its own toolbar instead. */
+  /** The way back, then this form. The shell header draws it. */
   trail: DetailCrumb[]
   defaultValue?: CreateInvoice
   /** Shown on edit, when the invoice already has a number. */
@@ -222,6 +223,7 @@ function currencyError(error: z.ZodError | null): { error: string } | Record<str
 export function InvoiceForm({
   mode = 'create',
   customers,
+  trail,
   defaultValue,
   invoiceNumber = '',
   onSubmit,
@@ -229,6 +231,7 @@ export function InvoiceForm({
   isSubmitting = false,
   submitError = null,
 }: InvoiceFormProps) {
+  usePublishDetailTrail(trail)
   const draft = defaultValue ?? emptyInvoice()
   const formRef = useRef<HTMLFormElement>(null)
   const nextLineId = useRef(draft.lines.length + 1)

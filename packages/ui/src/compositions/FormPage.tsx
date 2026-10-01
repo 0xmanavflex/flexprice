@@ -11,6 +11,7 @@ import { Separator } from '@ui/components/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import type { DetailCrumb } from './DetailShell'
+import { usePublishDetailTrail } from './shell/ShellDetailTrail'
 import { PageBody } from './Page'
 
 /**
@@ -34,7 +35,7 @@ export const FormPageProvenance = provenance({
 export interface FormPageProps {
   title: string
   description?: string
-  /** Accepted so existing callers keep compiling. The shell owns navigation, so it is not drawn here. */
+  /** The way back, then this form. The shell header draws it; the parent crumb is a link. */
   trail: DetailCrumb[]
   children: ReactNode
   /** The sticky bar: usually `FormActions` or a stepper's footer. */
@@ -46,11 +47,14 @@ export interface FormPageProps {
 export function FormPage({
   title,
   description,
+  trail,
   children,
   footer,
   width = 'narrow',
   className,
 }: FormPageProps) {
+  usePublishDetailTrail(trail)
+
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       {/* `self-center`: this column is a flex child, and a flex child with only

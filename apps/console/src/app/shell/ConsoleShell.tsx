@@ -37,8 +37,10 @@ import {
   breadcrumbForPath,
   GROUP_COUNTS,
   groupForNavId,
+  labelForNavId,
   NAV,
   navEntryForPath,
+  parentForNavId,
   pathForNavId,
   toNavGroups,
 } from './navigation'
@@ -131,7 +133,20 @@ export function ConsoleShell({
 
   // A detail page hands up "list, record": the list crumb becomes a link back
   // and the record's name is appended, so the header carries the one trail.
-  const navTrail: ShellCrumb[] = breadcrumbForPath(pathname)
+  // The group crumb goes where the sidebar's group goes — its first page.
+  // The page crumb is a link whenever you are somewhere under it.
+  const pagePath = activeItemId ? pathForNavId(activeItemId) : undefined
+  const pageLabel = activeItemId ? labelForNavId(activeItemId) : undefined
+  const parent = parentForNavId(activeItemId)
+  const navTrail: ShellCrumb[] = breadcrumbForPath(pathname).map((crumb) => {
+    if (parent && crumb.label === parent.label) {
+      return { ...crumb, onClick: () => goTo(parent.id) }
+    }
+    if (pagePath && pageLabel && crumb.label === pageLabel && pathname !== pagePath) {
+      return { ...crumb, onClick: () => onNavigate(pagePath) }
+    }
+    return crumb
+  })
   const trail: ShellCrumb[] =
     detailTrail && detailTrail.length >= 2 && navTrail.length > 0
       ? [
