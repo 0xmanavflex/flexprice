@@ -29,11 +29,16 @@ export interface WalletTransaction {
   value: string
   source: 'invoice' | 'top-up' | 'grant' | 'expiry'
   date: string
+  /** Secondary line under the source, e.g. the invoice number. */
+  detail?: string
 }
 
 export interface WalletModel {
   currentBalance: number
   ongoingBalance: number
+  /** Formatted currency value of each balance, shown beside the credits. */
+  currentBalanceValue?: string
+  ongoingBalanceValue?: string
   usedSinceInvoice: number
   conversionRate: string
   topUpRate: string
@@ -108,43 +113,46 @@ export function CustomerWalletView({ wallet, onTopUp, onAction }: CustomerWallet
         </div>
       </div>
 
-      <div className="bg-card grid gap-6 rounded-xl border p-5 lg:grid-cols-3">
-        <Balance
-          label="Current balance"
-          hint="The balance when the last invoice was finalized."
-          value={fmt(wallet.currentBalance)}
-        />
-        <Balance
-          label="Ongoing balance"
-          hint="Current balance minus usage recorded since then."
-          value={fmt(wallet.ongoingBalance)}
-        />
-        <div className="flex flex-col justify-center gap-2">
-          <div className="text-muted-foreground flex justify-between text-xs">
-            <span>Since the last invoice</span>
-            <span className="tabular-nums">{usedPct.toFixed(1)}% used</span>
-          </div>
-          <Progress value={usedPct} />
-          <div className="text-muted-foreground flex justify-between text-xs tabular-nums">
-            <span>{fmt(wallet.usedSinceInvoice)} used</span>
-            <span>{fmt(wallet.ongoingBalance)} available</span>
+      <div className="bg-card overflow-hidden rounded-xl border">
+        <div className="grid divide-y lg:grid-cols-3 lg:divide-x lg:divide-y-0">
+          <Balance
+            label="Current balance"
+            hint="The balance when the last invoice was finalized."
+            credits={wallet.currentBalance}
+            value={wallet.currentBalanceValue}
+          />
+          <Balance
+            label="Ongoing balance"
+            hint="Current balance minus usage recorded since then."
+            credits={wallet.ongoingBalance}
+            value={wallet.ongoingBalanceValue}
+          />
+          <div className="flex flex-col justify-center gap-3 p-5">
+            <div className="text-muted-foreground flex justify-between text-xs">
+              <span>Since the last invoice</span>
+              <span className="tabular-nums">{usedPct.toFixed(1)}% used</span>
+            </div>
+            <Progress value={usedPct} />
+            <div className="text-muted-foreground flex justify-between text-xs tabular-nums">
+              <span>{fmt(wallet.usedSinceInvoice)} used, not yet invoiced</span>
+              <span>{fmt(wallet.ongoingBalance)} available</span>
+            </div>
           </div>
         </div>
+        <dl className="grid grid-cols-2 gap-6 border-t p-5 text-sm lg:grid-cols-4">
+          {[
+            ['Conversion', wallet.conversionRate],
+            ['Top-up rate', wallet.topUpRate],
+            ['Auto top-up', wallet.autoTopUp],
+            ['Expiring soon', wallet.expiringSoon],
+          ].map(([label, value]) => (
+            <div key={label} className="flex flex-col gap-1">
+              <dt className="text-muted-foreground text-xs">{label}</dt>
+              <dd>{value}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
-
-      <dl className="bg-card grid grid-cols-2 gap-6 rounded-xl border p-5 text-sm lg:grid-cols-4">
-        {[
-          ['Conversion', wallet.conversionRate],
-          ['Top-up rate', wallet.topUpRate],
-          ['Auto top-up', wallet.autoTopUp],
-          ['Expiring soon', wallet.expiringSoon],
-        ].map(([label, value]) => (
-          <div key={label} className="flex flex-col gap-1">
-            <dt className="text-muted-foreground text-xs">{label}</dt>
-            <dd>{value}</dd>
-          </div>
-        ))}
-      </dl>
 
       <Section
         title="Transactions"
@@ -185,14 +193,19 @@ export function CustomerWalletView({ wallet, onTopUp, onAction }: CustomerWallet
               </span>
               <div className="flex min-w-0 flex-col">
                 <span className="font-medium">{SOURCE_LABEL[row.source]}</span>
-                <span className="text-muted-foreground text-xs">{row.value}</span>
+                <span className="text-muted-foreground text-xs">{row.detail ?? row.value}</span>
               </div>
               <span className="text-muted-foreground ml-auto text-xs">{row.date}</span>
-              <span
-                className={`w-32 text-right tabular-nums ${row.direction === 'in' ? 'text-emerald-700' : 'text-red-700'}`}
-              >
-                {row.direction === 'in' ? '+' : '-'}
-                {fmt(row.credits)} credits
+              <span className="flex w-36 flex-col items-end tabular-nums">
+                <span
+                  className={`font-medium ${row.direction === 'in' ? 'text-emerald-700' : 'text-red-700'}`}
+                >
+                  {row.direction === 'in' ? '+' : '-'} {row.value}
+                </span>
+                <span className="text-muted-foreground text-xs">
+                  {row.direction === 'in' ? '+' : '-'}
+                  {fmt(row.credits)} credits
+                </span>
               </span>
             </li>
           ))}
@@ -237,9 +250,19 @@ export function CustomerWalletView({ wallet, onTopUp, onAction }: CustomerWallet
   )
 }
 
-function Balance({ label, hint, value }: { label: string; hint: string; value: string }) {
+function Balance({
+  label,
+  hint,
+  credits,
+  value,
+}: {
+  label: string
+  hint: string
+  credits: number
+  value: string | undefined
+}) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-1 p-5">
       <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
         {label}
         <Tooltip>
@@ -249,7 +272,10 @@ function Balance({ label, hint, value }: { label: string; hint: string; value: s
           <TooltipContent>{hint}</TooltipContent>
         </Tooltip>
       </div>
-      <span className="text-2xl font-medium tabular-nums">{value}</span>
+      <span className="text-3xl font-medium tabular-nums">{value ?? fmt(credits)}</span>
+      {value ? (
+        <span className="text-muted-foreground text-xs tabular-nums">{fmt(credits)} credits</span>
+      ) : null}
     </div>
   )
 }
@@ -257,6 +283,8 @@ function Balance({ label, hint, value }: { label: string; hint: string; value: s
 export const DEMO_WALLET: WalletModel = {
   currentBalance: 12000,
   ongoingBalance: 9350,
+  currentBalanceValue: '$120.00',
+  ongoingBalanceValue: '$93.50',
   usedSinceInvoice: 2650,
   conversionRate: '1 credit = $0.01',
   topUpRate: '1 credit = $0.01',
@@ -269,6 +297,7 @@ export const DEMO_WALLET: WalletModel = {
       credits: 2650,
       value: '$26.50',
       source: 'invoice',
+      detail: 'INV-2026-01452 · April usage',
       date: 'May 12, 2026',
     },
     {
@@ -277,6 +306,7 @@ export const DEMO_WALLET: WalletModel = {
       credits: 10000,
       value: '$100.00',
       source: 'top-up',
+      detail: 'Purchased credits',
       date: 'May 2, 2026',
     },
     {
@@ -285,6 +315,7 @@ export const DEMO_WALLET: WalletModel = {
       credits: 2000,
       value: '$20.00',
       source: 'grant',
+      detail: 'Starter · monthly grant',
       date: 'May 1, 2026',
     },
     {
@@ -293,6 +324,7 @@ export const DEMO_WALLET: WalletModel = {
       credits: 300,
       value: '$3.00',
       source: 'expiry',
+      detail: 'April monthly grant',
       date: 'Apr 30, 2026',
     },
   ],
