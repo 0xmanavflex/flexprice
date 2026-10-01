@@ -489,6 +489,7 @@
  * blocks stay unmodified.
  */
 :root:not(.dark) .text-emerald-500,
-:root:not(.dark) .text-emerald-600 {
+:root:not(.dark) .text-emerald-600,
+:root:not(.dark) .text-success {
     color: #047857;
 }

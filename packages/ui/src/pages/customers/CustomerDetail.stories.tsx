@@ -140,23 +140,22 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
     // Overview is the opening section.
-    await expect(canvas.getByRole('heading', { name: 'Subscription' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Subscriptions' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Details' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Recent activity' })).toBeVisible()
   },
 }
 
-/** The section strip switches the whole content region. */
+/** The tab strip switches the whole content region. */
 export const NavigatesSections: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /Invoices/ }))
-    // The Invoices section, with the full invoice number, is now on screen.
-    await expect(canvas.getByRole('heading', { name: 'Invoices' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: /Invoices/ }))
+    // The Invoices tab, with the full invoice number, is now on screen.
     await expect(canvas.getByText('INV-2026-01450')).toBeInTheDocument()
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Information' }))
-    await expect(canvas.getByRole('heading', { name: 'Information' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: 'Information' }))
+    await expect(canvas.getByRole('heading', { name: 'Billing' })).toBeVisible()
     await expect(canvas.getByText('America/Los_Angeles')).toBeInTheDocument()
   },
 }
@@ -177,21 +176,25 @@ export const EditsInline: Story = {
   args: { initialTab: 'information', onUpdateField: fn(async () => undefined), onEdit: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Edit Phone' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer' }))
     await userEvent.type(canvas.getByRole('textbox', { name: 'Phone' }), '+1 555 0100{Enter}')
     await expect(args.onUpdateField).toHaveBeenCalledWith({ phone: '+1 555 0100' })
     await expect(args.onEdit).not.toHaveBeenCalled()
   },
 }
 
-/** Header Edit flips the fields in place, one save; billing details stays the stepped page. */
+/** The customer card edits in place with one Save; billing details stays the stepped page. */
 export const HeaderEditInPlace: Story = {
-  args: { onUpdateField: fn(async () => undefined), onEdit: fn() },
+  args: {
+    initialTab: 'information',
+    onUpdateField: fn(async () => undefined),
+    onEdit: fn(),
+  },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Edit' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer' }))
     await userEvent.type(canvas.getByRole('textbox', { name: 'Phone' }), '1')
-    await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
     await expect(args.onUpdateField).toHaveBeenCalledOnce()
     await expect(args.onEdit).not.toHaveBeenCalled()
     await userEvent.click(canvas.getByRole('button', { name: 'Edit billing details' }))

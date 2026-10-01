@@ -39,7 +39,11 @@ export function DetailTabs({
     >
       <TabsList variant="line" className="w-full justify-start border-b">
         {tabs.map((tab) => (
-          <TabsTrigger key={tab.value} value={tab.value} className="flex-none px-3 font-normal">
+          <TabsTrigger
+            key={tab.value}
+            value={tab.value}
+            className="text-foreground/70 flex-none px-3 font-normal"
+          >
             {tab.label}
             {tab.count !== undefined ? (
               <span className="text-muted-foreground text-xs tabular-nums">{tab.count}</span>

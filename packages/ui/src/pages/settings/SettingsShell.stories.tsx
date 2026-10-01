@@ -145,8 +145,8 @@ function Controlled({
 }
 
 /**
- * Two-level settings navigation: a section rail (`settings-7`) beside the
- * selected section's underlined tab strip (`settings-11`) above its content.
+ * Two-level settings navigation: a section rail (`settings-7`) whose active
+ * section expands its tabs in place, beside the active tab's content.
  *
  * Fully controlled. The stories own both ids the way a page owns them, because
  * on a real screen they live in the URL.
@@ -177,58 +177,50 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The rail on the left, the section's tabs above its content. */
+/** The active section is expanded; picking a tab or another section is reported. */
 export const Default: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
+    const nav = canvas.getByRole('navigation', { name: 'Settings' })
 
-    const rail = canvas.getByRole('tablist', { name: 'Settings sections' })
-    await expect(rail).toHaveAttribute('aria-orientation', 'vertical')
-    await expect(within(rail).getByRole('tab', { name: 'Organization' })).toHaveAttribute(
-      'data-active',
+    await expect(within(nav).getByRole('button', { name: 'Organization' })).toHaveAttribute(
+      'aria-expanded',
+      'true',
     )
+    await expect(within(nav).getByRole('button', { name: 'Profile' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+    await expect(within(nav).queryByRole('button', { name: 'People' })).toBeNull()
 
-    // The inner strip belongs to the selected section, and clicking one of its
-    // tabs is reported to the page rather than swallowed.
-    const strip = canvas.getByRole('tablist', { name: 'Organization tabs' })
-    await userEvent.click(within(strip).getByRole('tab', { name: 'Branding' }))
+    await userEvent.click(within(nav).getByRole('button', { name: 'Branding' }))
     await expect(args.onTabChange).toHaveBeenCalledWith('branding')
 
-    // Changing section is reported too — and the shell does not quietly pick a
-    // tab for the new section; the page does (see `Controlled`).
-    await userEvent.click(within(rail).getByRole('tab', { name: 'Members' }))
+    // The shell does not pick a tab for the new section; the page does.
+    await userEvent.click(within(nav).getByRole('button', { name: 'Members' }))
     await expect(args.onSectionChange).toHaveBeenCalledWith('members')
-    await expect(canvas.getByRole('tablist', { name: 'Members tabs' })).toBeInTheDocument()
+    await expect(within(nav).getByRole('button', { name: 'People' })).toBeInTheDocument()
   },
 }
 
-/**
- * Keyboard.
- *
- * Both levels are real `Tabs`, so arrows move between triggers (Base UI moves
- * focus without activating — Enter or Space commits), and the moved-to trigger
- * matches `:focus-visible`, which is what draws the teal ring.
- */
+/** Every control is a real button: Tab reaches it and Enter commits. */
 export const Keyboard: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    const strip = canvas.getByRole('tablist', { name: 'Organization tabs' })
+    const nav = canvas.getByRole('navigation', { name: 'Settings' })
 
-    within(strip).getByRole('tab', { name: 'Profile' }).focus()
-    await userEvent.keyboard('{ArrowRight}')
-
-    const branding = within(strip).getByRole('tab', { name: 'Branding' })
+    const branding = within(nav).getByRole('button', { name: 'Branding' })
+    branding.focus()
     await expect(branding).toHaveFocus()
     await expect(branding.matches(':focus-visible')).toBe(true)
 
     await userEvent.keyboard('{Enter}')
     await expect(args.onTabChange).toHaveBeenCalledWith('branding')
 
-    // The rail is vertical at this width, so it answers to up and down.
-    const rail = canvas.getByRole('tablist', { name: 'Settings sections' })
-    within(rail).getByRole('tab', { name: 'Organization' }).focus()
-    await userEvent.keyboard('{ArrowDown}')
-    await expect(within(rail).getByRole('tab', { name: 'Members' })).toHaveFocus()
+    const members = within(nav).getByRole('button', { name: 'Members' })
+    members.focus()
+    await userEvent.keyboard('{Enter}')
+    await expect(args.onSectionChange).toHaveBeenCalledWith('members')
   },
 }
 
@@ -237,25 +229,20 @@ export const Keyboard: Story = {
  *
  * It stays in the rail and stays selectable — the alternative is a section that
  * silently disappears, which reads as "the feature was removed" rather than
- * "not on this account". The panel says which it is, through `EmptyState`, so
- * the state is announced and not merely blank.
+ * "not on this account". The panel says which it is, through `EmptyState`.
  */
 export const SectionEntirelyUnavailable: Story = {
   args: { sectionId: 'integrations', tabId: 'connected' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    const nav = canvas.getByRole('navigation', { name: 'Settings' })
 
-    const rail = canvas.getByRole('tablist', { name: 'Settings sections' })
-    const integrations = within(rail).getByRole('tab', { name: 'Integrations' })
+    const integrations = within(nav).getByRole('button', { name: 'Integrations' })
     await expect(integrations).toBeEnabled()
-    await expect(integrations).toHaveAttribute('data-active')
-
+    await expect(integrations).toHaveAttribute('aria-expanded', 'true')
     await expect(canvas.getByText('Integrations is unavailable')).toBeInTheDocument()
 
-    // Its tabs are still there and still reachable, so the state is explained
-    // from either of them rather than only from the first.
-    const strip = canvas.getByRole('tablist', { name: 'Integrations tabs' })
-    await userEvent.click(within(strip).getByRole('tab', { name: 'Marketplace' }))
+    await userEvent.click(within(nav).getByRole('button', { name: 'Marketplace' }))
     await expect(canvas.getByText('Integrations is unavailable')).toBeInTheDocument()
   },
 }
@@ -265,11 +252,11 @@ export const SingleTabUnavailable: Story = {
   args: { sectionId: 'invoicing', tabId: 'templates' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const strip = canvas.getByRole('tablist', { name: 'Invoicing tabs' })
+    const nav = canvas.getByRole('navigation', { name: 'Settings' })
 
     await expect(canvas.getByText(/Invoicing \/ Templates/)).toBeInTheDocument()
 
-    await userEvent.click(within(strip).getByRole('tab', { name: 'Dunning' }))
+    await userEvent.click(within(nav).getByRole('button', { name: 'Dunning' }))
     await expect(canvas.getByText('Dunning is unavailable')).toBeInTheDocument()
   },
 }
@@ -301,36 +288,29 @@ export const LongLabels: Story = {
   args: { sections: LONG_SECTIONS, sectionId: 'long', tabId: 'a' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const rail = canvas.getByRole('tablist', { name: 'Settings sections' })
-    const label = within(rail)
-      .getByRole('tab', { name: 'Organization profile and legal entity details' })
-      .querySelector('span')
+    const nav = canvas.getByRole('navigation', { name: 'Settings' })
 
-    await expect(label).not.toBeNull()
-    if (!label) return
+    for (const name of [
+      'Organization profile and legal entity details',
+      'Registered legal entity and trading address',
+    ]) {
+      const label = within(nav).getByRole('button', { name }).querySelector('span')
+      await expect(label).not.toBeNull()
+      if (!label) return
 
-    const style = getComputedStyle(label)
-    await expect(style.textOverflow).toBe('ellipsis')
-    await expect(style.whiteSpace).toBe('nowrap')
-    await expect(style.overflowX).toBe('hidden')
+      const style = getComputedStyle(label)
+      await expect(style.textOverflow).toBe('ellipsis')
+      await expect(style.whiteSpace).toBe('nowrap')
+      await expect(style.overflowX).toBe('hidden')
+      await expect(label.getBoundingClientRect().height).toBeLessThan(32)
+    }
 
-    // One line, not three.
-    await expect(label.getBoundingClientRect().height).toBeLessThan(32)
-
-    // And the page is not wider than the window because of it.
     const root = canvasElement.ownerDocument.documentElement
     await expect(root.scrollWidth).toBe(root.clientWidth)
   },
 }
 
-/**
- * 390, the narrowest width this console is audited at.
- *
- * Below `lg` the rail becomes a horizontally scrolling strip and the section's
- * tab strip scrolls too. The assertion that matters is the one the audit found
- * broken elsewhere: the **last** tab of an overflowing strip can be scrolled to
- * and is genuinely on screen. And nothing overflows the page itself.
- */
+/** 390, the narrowest width this console is audited at: the nav stacks above the content. */
 export const PhoneWidth: Story = {
   args: { sectionId: 'billing', tabId: 'plan' },
   globals: { viewport: { value: 'phone', isRotated: false } },
@@ -338,60 +318,26 @@ export const PhoneWidth: Story = {
     const canvas = within(canvasElement)
     const root = canvasElement.ownerDocument.documentElement
 
-    // The story is genuinely at 390 — asserted, because every claim below is
-    // worthless if the viewport global silently stopped being applied.
+    // Asserted, because every claim below is worthless if the viewport global
+    // silently stopped being applied.
     await expect(root.clientWidth).toBe(390)
 
-    // The rail is a row now, not a column: Base UI only writes
-    // `aria-orientation` when vertical, so its absence is the horizontal case.
-    const rail = await canvas.findByRole('tablist', { name: 'Settings sections' })
-    await expect(rail).not.toHaveAttribute('aria-orientation')
-    await expect(getComputedStyle(rail).overflowX).toBe('auto')
-    await expect(rail.scrollWidth).toBeGreaterThan(rail.clientWidth)
-
-    // Nothing is painted outside the viewport: no horizontal page scroll.
+    const nav = await canvas.findByRole('navigation', { name: 'Settings' })
     await expect(root.scrollWidth).toBe(root.clientWidth)
 
-    // Billing has five tabs; at 390 they cannot all fit.
-    const strip = canvas.getByRole('tablist', { name: 'Billing tabs' })
-    await expect(getComputedStyle(strip).overflowX).toBe('auto')
-    await expect(strip.scrollWidth).toBeGreaterThan(strip.clientWidth)
-    await expect(getComputedStyle(strip).scrollSnapType).toContain('x')
+    const last = within(nav).getByRole('button', { name: 'Usage and limits' })
+    const navBox = nav.getBoundingClientRect()
+    const lastBox = last.getBoundingClientRect()
+    await expect(lastBox.left).toBeGreaterThanOrEqual(navBox.left - 1)
+    await expect(lastBox.right).toBeLessThanOrEqual(navBox.right + 1)
 
-    // An overflowing strip fades at the edge that is hiding something, so
-    // there is a visible signal that it continues.
-    await expect(getComputedStyle(strip).maskImage).toContain('linear-gradient')
-
-    // The last one is reachable by scrolling, and then really inside the strip
-    // — the defect guarded against is a tab painted beyond it, where no scroll
-    // could ever bring it back.
-    const last = within(strip).getByRole('tab', { name: 'Usage and limits' })
-    last.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-    await expect(strip.scrollLeft).toBeGreaterThan(0)
-
-    const stripBox = strip.getBoundingClientRect()
-    const tabBox = last.getBoundingClientRect()
-    await expect(tabBox.left).toBeGreaterThanOrEqual(stripBox.left - 1)
-    await expect(tabBox.right).toBeLessThanOrEqual(stripBox.right + 1)
-
-    // And it works when clicked, which is the whole reason it had to be
-    // reachable.
     await userEvent.click(last)
     await expect(args.onTabChange).toHaveBeenCalledWith('usage')
-
-    // Still no page-level horizontal overflow after all of that.
     await expect(root.scrollWidth).toBe(root.clientWidth)
   },
 }
 
-/**
- * 768 — the width the audit found worst, because it is neither thing.
- *
- * The shell's sidebar is still a 260px push panel here, so the rail has to be
- * the strip and not the column: `lg`, not `md`, is what makes that true. Eight
- * sections do not fit across 768 either, so the rail scrolls exactly as it does
- * on a phone — and the page still does not.
- */
+/** 768 — still below `lg`, so the nav stacks above the content rather than sitting beside it. */
 export const TabletWidth: Story = {
   args: { sectionId: 'billing', tabId: 'plan' },
   globals: { viewport: { value: 'tablet', isRotated: false } },
@@ -401,24 +347,10 @@ export const TabletWidth: Story = {
 
     await expect(root.clientWidth).toBe(768)
 
-    // Below `lg`, so still the strip — 768 is precisely the width a `md`
-    // breakpoint would have got wrong.
-    const rail = await canvas.findByRole('tablist', { name: 'Settings sections' })
-    await expect(rail).not.toHaveAttribute('aria-orientation')
-    await expect(rail.scrollWidth).toBeGreaterThan(rail.clientWidth)
+    const nav = await canvas.findByRole('navigation', { name: 'Settings' })
     await expect(root.scrollWidth).toBe(root.clientWidth)
 
-    // The last section is reachable, really on screen, and selecting it is
-    // reported to the page.
-    const last = within(rail).getByRole('tab', { name: 'Invoicing' })
-    last.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-    await expect(rail.scrollLeft).toBeGreaterThan(0)
-
-    const railBox = rail.getBoundingClientRect()
-    const tabBox = last.getBoundingClientRect()
-    await expect(tabBox.left).toBeGreaterThanOrEqual(railBox.left - 1)
-    await expect(tabBox.right).toBeLessThanOrEqual(railBox.right + 1)
-
+    const last = within(nav).getByRole('button', { name: 'Invoicing' })
     await userEvent.click(last)
     await expect(args.onSectionChange).toHaveBeenCalledWith('invoicing')
     await expect(root.scrollWidth).toBe(root.clientWidth)

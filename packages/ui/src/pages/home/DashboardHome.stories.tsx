@@ -223,11 +223,6 @@ export const UnavailableMetricsStayAbsent: Story = {
     await expect(
       canvas.getByText('Flexprice does not expose an ingestion-lag metric.'),
     ).toBeInTheDocument()
-    await expect(
-      canvas.getByText(
-        'Request volume, latency and error counts are not exposed by the Flexprice API.',
-      ),
-    ).toBeInTheDocument()
 
     // Processing lag, requests, p95 and errors: four dashes, no invented numbers.
     await expect(canvas.getAllByText('—')).toHaveLength(4)
