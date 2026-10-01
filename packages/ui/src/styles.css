@@ -480,3 +480,15 @@
     font-size: 0.8125rem !important; /* 13px, from 14px */
   }
 }
+
+/*
+ * Semantic text green. The ReUI blocks colour small delta text with
+ * text-emerald-500/600, which fails WCAG AA on a light card. Only the light
+ * theme's text is darkened here; bg-emerald-* fills (chart, meter, donut
+ * encodings) and the dark theme's lighter text are left as designed, and the
+ * blocks stay unmodified.
+ */
+:root:not(.dark) .text-emerald-500,
+:root:not(.dark) .text-emerald-600 {
+    color: #047857;
+}
