@@ -144,13 +144,34 @@ interface Line {
 }
 
 function linesFromDraft(draft: CreateInvoice): Line[] {
-  return draft.lines.map((line, index) => ({
-    id: `line-${index + 1}`,
-    description: line.description,
-    quantity: line.quantity || '1',
-    rate: line.amount,
-    taxRate: '0',
-  }))
+  return draft.lines.map((line, index) => {
+    const quantity = line.quantity || '1'
+    return {
+      id: `line-${index + 1}`,
+      description: line.description,
+      quantity,
+      rate: unitRate(quantity, line.amount),
+      taxRate: '0',
+    }
+  })
+}
+
+/** Line amount is the total. The rate field is per unit, so edit divides it back. */
+function unitRate(quantity: string, amount: string): string {
+  const qty = /^(\d+)(?:\.(\d+))?$/.exec(quantity.trim())
+  const amt = /^(\d+)(?:\.(\d+))?$/.exec(amount.trim())
+  if (!qty || !amt) return amount
+  const qtyFrac = qty[2] ?? ''
+  const amtFrac = amt[2] ?? ''
+  const qtyInt = BigInt(qty[1]!) * 10n ** BigInt(qtyFrac.length) + BigInt(qtyFrac || '0')
+  if (qtyInt === 0n) return amount
+  const amtInt = BigInt(amt[1]!) * 10n ** BigInt(amtFrac.length) + BigInt(amtFrac || '0')
+  const scale = 8
+  const quotient = (amtInt * 10n ** BigInt(scale + qtyFrac.length)) / (qtyInt * 10n ** BigInt(amtFrac.length))
+  const digits = quotient.toString().padStart(scale + 1, '0')
+  const whole = digits.slice(0, -scale)
+  const fraction = digits.slice(-scale).replace(/0+$/, '')
+  return fraction ? `${whole}.${fraction}` : whole
 }
 
 function optionLabel(options: readonly SelectOption[], value: string) {
