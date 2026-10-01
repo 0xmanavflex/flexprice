@@ -9,6 +9,8 @@ export interface SubscriptionListPageProps {
   query: SubscriptionQuery
   onQueryChange: (query: SubscriptionQuery) => void
   onCreate: () => void
+  onOpenCustomer?: (customerId: string) => void
+  onOpenPlan?: (planId: string) => void
 }
 
 /**
@@ -21,6 +23,8 @@ export function SubscriptionListPage({
   query,
   onQueryChange,
   onCreate,
+  onOpenCustomer,
+  onOpenPlan,
 }: SubscriptionListPageProps) {
   const subscriptions = useSubscriptions(query)
 
@@ -49,6 +53,8 @@ export function SubscriptionListPage({
             query={query}
             onQueryChange={onQueryChange}
             onCreate={onCreate}
+            {...(onOpenCustomer ? { onOpenCustomer } : {})}
+            {...(onOpenPlan ? { onOpenPlan } : {})}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
           />
         </ListState>

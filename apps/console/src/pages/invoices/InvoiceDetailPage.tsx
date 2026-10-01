@@ -12,7 +12,13 @@ export function InvoiceDetailPage() {
         onFinalize={() => toast('Finalize is not wired yet')}
         onRetryPayment={() => toast('Retry payment is not wired yet')}
         onDownload={() => toast('Download is not wired yet')}
-        onOpenCustomer={() => void navigate({ to: '/customers', search: {} as never })}
+        onOpenCustomer={() =>
+          void navigate({
+            to: '/customers/$customerId',
+            params: { customerId: DEMO_INVOICE.customerId },
+            search: {} as never,
+          })
+        }
       />
       <Toaster />
     </>

@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   type Addon,
@@ -280,6 +281,7 @@ function PricesTab({ addonId }: { addonId: string }) {
 
 /** Entitlements — what the add-on includes of each feature. Removal is confirmed. */
 function EntitlementsTab({ addonId }: { addonId: string }) {
+  const navigate = useNavigate()
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
   const features = useFeatures({ ...DEFAULT_FEATURE_QUERY, pageSize: 100 })
   const create = useCreateBulkEntitlements()
@@ -364,6 +366,9 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
           onAdd={() => setAdding(true)}
           onEdit={(entitlement) => setEditing(entitlement)}
           onDelete={(entitlement) => setTarget(entitlement)}
+          onOpenFeature={(featureId) =>
+            void navigate({ to: '/features/$featureId', params: { featureId } })
+          }
         />
       </ContextualSection>
       <ConfirmDialog

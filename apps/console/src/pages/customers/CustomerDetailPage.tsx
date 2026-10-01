@@ -120,6 +120,9 @@ export function CustomerDetailPage({
       onOpenInvoice={(invoiceId) =>
         void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
       }
+      onOpenPlan={(planId) =>
+        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+      }
       onUpdateField={(patch) =>
         update.mutateAsync({
           id: customer.data.id,

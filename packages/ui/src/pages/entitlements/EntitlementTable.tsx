@@ -15,6 +15,7 @@ import {
 } from '@ui/components/primitives/table'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { provenance } from '@ui/provenance'
+import { EntityLink } from '../shared/cells'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 
 /**
@@ -35,6 +36,7 @@ export interface EntitlementTableProps {
   onAdd?: () => void
   onEdit?: (entitlement: Entitlement) => void
   onDelete?: (entitlement: Entitlement) => void
+  onOpenFeature?: (featureId: string) => void
 }
 
 const TYPE_LABEL: Record<FeatureType, string> = {
@@ -60,7 +62,13 @@ function valueOf(entitlement: Entitlement): string {
   }
 }
 
-export function EntitlementTable({ entitlements, onAdd, onEdit, onDelete }: EntitlementTableProps) {
+export function EntitlementTable({
+  entitlements,
+  onAdd,
+  onEdit,
+  onDelete,
+  onOpenFeature,
+}: EntitlementTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   if (entitlements.length === 0) {
     return (
@@ -108,7 +116,14 @@ export function EntitlementTable({ entitlements, onAdd, onEdit, onDelete }: Enti
             {entitlements.map((entitlement) => (
               <TableRow key={entitlement.id}>
                 <TableCell>
-                  {entitlement.featureName ?? entitlement.featureId}
+                  {onOpenFeature ? (
+                    <EntityLink
+                      label={entitlement.featureName ?? entitlement.featureId}
+                      onOpen={() => onOpenFeature(entitlement.featureId)}
+                    />
+                  ) : (
+                    (entitlement.featureName ?? entitlement.featureId)
+                  )}
                 </TableCell>
                 <TableCell>
                   <Badge variant="secondary">{TYPE_LABEL[entitlement.featureType]}</Badge>

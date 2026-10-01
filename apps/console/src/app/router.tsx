@@ -435,6 +435,9 @@ function InvoicesRouteComponent() {
     <InvoiceListPage
       query={query}
       onCreate={() => void navigate({ to: '/invoices/new' })}
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
       onInvoiceClick={(invoice) =>
         void navigate({ to: '/invoices/$invoiceId', params: { invoiceId: invoice.id } })
       }
@@ -1353,6 +1356,12 @@ function SubscriptionsRouteComponent() {
       query={query}
       onQueryChange={(next) => void navigate({ to: '/subscriptions', search: next, replace: true })}
       onCreate={() => void navigate({ to: '/subscriptions/new', search: {} as never })}
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+      onOpenPlan={(planId) =>
+        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+      }
     />
   )
 }

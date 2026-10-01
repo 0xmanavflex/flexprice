@@ -104,6 +104,8 @@ export interface SubscriptionGridProps {
   error?: string | null
   onRetry?: () => void
   onSubscriptionClick?: (subscription: Subscription) => void
+  onOpenCustomer?: (customerId: string) => void
+  onOpenPlan?: (planId: string) => void
   /** The primary create action; renders a "New subscription" CTA at the toolbar's end. */
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
@@ -121,6 +123,8 @@ export function SubscriptionGrid({
   error = null,
   onRetry,
   onSubscriptionClick,
+  onOpenCustomer,
+  onOpenPlan,
   onCreate,
   onClearFilters,
   locale,
@@ -153,8 +157,12 @@ export function SubscriptionGrid({
         width: 220,
         // Who is being billed. Hiding it leaves a list of anonymous plans.
         hideable: false,
+        onOpen: onOpenCustomer ? (row) => onOpenCustomer(row.customerId) : undefined,
       }),
-      textColumn<Subscription>('plan', 'Plan', (row) => row.planName, { width: 180 }),
+      textColumn<Subscription>('plan', 'Plan', (row) => row.planName, {
+        width: 180,
+        onOpen: onOpenPlan ? (row) => onOpenPlan(row.planId) : undefined,
+      }),
       textColumn<Subscription>('billing', 'Billing', (row) => row.billingPeriodLabel, {
         width: 120,
       }),
@@ -173,7 +181,7 @@ export function SubscriptionGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [formatPeriod, locale],
+    [formatPeriod, locale, onOpenCustomer, onOpenPlan],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL

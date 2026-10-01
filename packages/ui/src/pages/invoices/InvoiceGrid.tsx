@@ -165,6 +165,7 @@ export interface InvoiceGridProps {
   error?: string | null
   onRetry?: () => void
   onInvoiceClick?: (invoice: Invoice) => void
+  onOpenCustomer?: (customerId: string) => void
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
@@ -181,6 +182,7 @@ export function InvoiceGrid({
   error = null,
   onRetry,
   onInvoiceClick,
+  onOpenCustomer,
   onCreate,
   onClearFilters,
   locale,
@@ -192,7 +194,10 @@ export function InvoiceGrid({
         // The document's own identity. A row without it is unciteable.
         hideable: false,
       }),
-      textColumn<Invoice>('customer', 'Customer', (row) => row.customerName, { width: 200 }),
+      textColumn<Invoice>('customer', 'Customer', (row) => row.customerName, {
+        width: 200,
+        onOpen: onOpenCustomer ? (row) => onOpenCustomer(row.customerId) : undefined,
+      }),
       moneyColumn<Invoice>('total', 'Total', (row) => row.total, {
         width: 150,
         sortable: true,
@@ -226,7 +231,7 @@ export function InvoiceGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale],
+    [locale, onOpenCustomer],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL

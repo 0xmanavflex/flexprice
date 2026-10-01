@@ -316,6 +316,34 @@ function InlineTextCell({
  * simply lost the data. An empty string renders the em dash, because "" and
  * "not set" look identical in a table and only one of them is true.
  */
+/** A cell value that opens the entity it names, without firing the row's own click. */
+export function EntityLink({
+  label,
+  onOpen,
+  muted,
+}: {
+  label: string
+  onOpen: () => void
+  muted?: boolean | undefined
+}) {
+  return (
+    <button
+      type="button"
+      title={label}
+      className={cn(
+        'block max-w-full truncate text-left underline-offset-4 hover:underline focus-visible:underline',
+        muted && 'text-muted-foreground',
+      )}
+      onClick={(event) => {
+        event.stopPropagation()
+        onOpen()
+      }}
+    >
+      {label}
+    </button>
+  )
+}
+
 export function textColumn<T>(
   id: string,
   header: string,
@@ -324,9 +352,12 @@ export function textColumn<T>(
     muted?: boolean
     /** Makes the cell click-to-edit; saved by the caller's mutation. */
     onEdit?: ((row: T, value: string) => void | Promise<void>) | undefined
+    /** Renders the value as a link to the entity it names; the row click is not fired. */
+    onOpen?: ((row: T) => void) | undefined
   },
 ): EntityColumn<T> {
   const onEdit = options?.onEdit
+  const onOpen = options?.onOpen
   return {
     id,
     header,
@@ -344,6 +375,15 @@ export function textColumn<T>(
         )
       }
       if (!value) return <EmDash />
+      if (onOpen) {
+        return (
+          <EntityLink
+            label={value}
+            muted={options?.muted}
+            onOpen={() => onOpen(row)}
+          />
+        )
+      }
       return (
         <span
           title={value}

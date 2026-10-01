@@ -29,6 +29,7 @@ import { CatalogStatusBadge, InvoiceStatusBadge } from '../shared/StatusBadge'
 import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
 import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
+import { EntityLink } from '../shared/cells'
 import { CustomerSubscriptionCards } from './CustomerSubscriptionCards'
 
 /**
@@ -86,6 +87,7 @@ export interface CustomerDetailProps {
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
   /** Open an invoice from a row action. */
   onOpenInvoice?: (invoiceId: string) => void
+  onOpenPlan?: (planId: string) => void
   /**
    * The stepped create-subscription form. While present, the Subscriptions
    * section shows it in place of the table; the customer, its header and the
@@ -131,6 +133,7 @@ export function CustomerDetail({
   onEdit,
   onUpdateField,
   onOpenInvoice,
+  onOpenPlan,
   subscriptionForm,
   onCancelSubscriptionCreate,
   subscriptionsLoading = false,
@@ -199,6 +202,7 @@ export function CustomerDetail({
                   onCreateSubscription={onCreateSubscription}
                   formatDate={formatDate}
                   onOpenInvoice={onOpenInvoice}
+                  onOpenPlan={onOpenPlan}
                 />
               ),
             },
@@ -214,6 +218,7 @@ export function CustomerDetail({
                   form={subscriptionForm}
                   onCancelCreate={onCancelSubscriptionCreate}
                   formatDate={formatDate}
+                  onOpenPlan={onOpenPlan}
                 />
               ),
             },
@@ -345,6 +350,7 @@ function OverviewTab({
   onCreateSubscription,
   formatDate,
   onOpenInvoice,
+  onOpenPlan,
 }: {
   subscriptions: Subscription[]
   invoices: Invoice[]
@@ -354,6 +360,7 @@ function OverviewTab({
   onCreateSubscription: () => void
   formatDate: (date: Date | null) => string
   onOpenInvoice: ((invoiceId: string) => void) | undefined
+  onOpenPlan: ((planId: string) => void) | undefined
 }) {
   const recent = invoices.slice(0, 5)
 
@@ -375,6 +382,7 @@ function OverviewTab({
                 subscriptions={subscriptions}
                 formatDate={formatDate}
                 onViewAll={onViewSubscriptions}
+                onOpenPlan={onOpenPlan}
               />
             ) : (
               <EmptyState
@@ -426,6 +434,7 @@ function SubscriptionsTab({
   form,
   onCancelCreate,
   formatDate,
+  onOpenPlan,
 }: {
   subscriptions: Subscription[]
   isLoading: boolean
@@ -433,6 +442,7 @@ function SubscriptionsTab({
   form: ReactNode | undefined
   onCancelCreate: (() => void) | undefined
   formatDate: (date: Date | null) => string
+  onOpenPlan: ((planId: string) => void) | undefined
 }) {
   return (
     <ContextualSection
@@ -459,7 +469,12 @@ function SubscriptionsTab({
             {
               key: 'plan',
               header: 'Plan',
-              cell: (s) => <span className="font-medium">{s.planName}</span>,
+              cell: (s) =>
+                onOpenPlan ? (
+                  <EntityLink label={s.planName} onOpen={() => onOpenPlan(s.planId)} />
+                ) : (
+                  <span className="font-medium">{s.planName}</span>
+                ),
             },
             {
               key: 'status',

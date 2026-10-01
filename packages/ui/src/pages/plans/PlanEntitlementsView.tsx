@@ -1,4 +1,5 @@
 import { PlusIcon } from 'lucide-react'
+import { EntityLink } from '../shared/cells'
 import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
@@ -20,6 +21,7 @@ export interface PlanEntitlementsViewProps {
   onAdd: () => void
   onEdit: (entitlement: Entitlement) => void
   onDelete: (entitlement: Entitlement) => void
+  onOpenFeature?: (featureId: string) => void
 }
 
 const TYPE_LABEL: Record<FeatureType, string> = {
@@ -49,6 +51,7 @@ export function PlanEntitlementsView({
   onAdd,
   onEdit,
   onDelete,
+  onOpenFeature,
 }: PlanEntitlementsViewProps) {
   if (entitlements.length === 0) {
     return (
@@ -90,7 +93,16 @@ export function PlanEntitlementsView({
               const price = e.featureType === FeatureType.Metered ? usagePrice(e) : null
               return (
                 <TableRow key={e.id}>
-                  <TableCell>{e.featureName ?? e.featureId}</TableCell>
+                  <TableCell>
+                    {onOpenFeature ? (
+                      <EntityLink
+                        label={e.featureName ?? e.featureId}
+                        onOpen={() => onOpenFeature(e.featureId)}
+                      />
+                    ) : (
+                      (e.featureName ?? e.featureId)
+                    )}
+                  </TableCell>
                   <TableCell>
                     <Badge variant="secondary">{TYPE_LABEL[e.featureType]}</Badge>
                   </TableCell>

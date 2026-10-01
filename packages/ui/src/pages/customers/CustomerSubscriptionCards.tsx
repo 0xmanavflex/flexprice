@@ -1,4 +1,5 @@
 import { SubscriptionStatus, SUBSCRIPTION_STATUS_LABEL, type Subscription } from '@fp/domain'
+import { EntityLink } from '../shared/cells'
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
 
@@ -26,10 +27,12 @@ export function periodProgress(subscription: Subscription, now = new Date()) {
 function SubscriptionCard({
   subscription,
   formatDate,
+  onOpenPlan,
   className,
 }: {
   subscription: Subscription
   formatDate: (date: Date | null) => string
+  onOpenPlan?: ((planId: string) => void) | undefined
   className?: string
 }) {
   const progress = periodProgress(subscription)
@@ -40,7 +43,16 @@ function SubscriptionCard({
   return (
     <article className={cn('bg-card flex flex-col gap-4 rounded-xl border p-5', className)}>
       <div className="flex flex-col gap-1">
-        <h3 className="truncate text-sm font-medium">{subscription.planName}</h3>
+        <h3 className="truncate text-sm font-medium">
+          {onOpenPlan ? (
+            <EntityLink
+              label={subscription.planName}
+              onOpen={() => onOpenPlan(subscription.planId)}
+            />
+          ) : (
+            subscription.planName
+          )}
+        </h3>
         <p className="text-muted-foreground flex items-center gap-2 text-xs">
           <span
             aria-hidden
@@ -86,10 +98,12 @@ export function CustomerSubscriptionCards({
   subscriptions,
   formatDate,
   onViewAll,
+  onOpenPlan,
 }: {
   subscriptions: Subscription[]
   formatDate: (date: Date | null) => string
   onViewAll?: () => void
+  onOpenPlan?: ((planId: string) => void) | undefined
 }) {
   const collapsed = subscriptions.length >= 5 && onViewAll !== undefined
   const shown = collapsed ? subscriptions.slice(0, 4) : subscriptions
@@ -101,6 +115,7 @@ export function CustomerSubscriptionCards({
             key={subscription.id}
             subscription={subscription}
             formatDate={formatDate}
+            onOpenPlan={onOpenPlan}
             className={cn(shown.length % 2 === 1 && index === 0 && shown.length <= 3
               ? 'sm:col-span-2'
               : undefined)}

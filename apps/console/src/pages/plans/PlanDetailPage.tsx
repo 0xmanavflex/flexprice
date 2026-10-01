@@ -1,3 +1,4 @@
+import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   type CreateEntitlement,
@@ -411,6 +412,7 @@ function ChargesTab({ planId }: { planId: string }) {
  * meter to a usage charge; usage beyond the value bills at that price.
  */
 function EntitlementsTab({ planId }: { planId: string }) {
+  const navigate = useNavigate()
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const charges = usePrices(PriceEntityType.Plan, planId)
   const { featureOptions, allFeatures } = usePlanFormOptions()
@@ -461,6 +463,9 @@ function EntitlementsTab({ planId }: { planId: string }) {
         onAdd={() => setForm('add')}
         onEdit={(entitlement) => setForm(entitlement)}
         onDelete={(entitlement) => setRemoving(entitlement)}
+        onOpenFeature={(featureId) =>
+          void navigate({ to: '/features/$featureId', params: { featureId } })
+        }
       />
 
       <FormDialog
