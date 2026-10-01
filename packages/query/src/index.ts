@@ -43,11 +43,18 @@ export type { CurrentUser, SessionCredentials } from './session'
 export {
   fetchInvoices,
   isServerFilterable,
+  toCreateInvoiceRequest,
   toInvoice,
+  toInvoiceDetail,
   toInvoiceFilter,
+  useAttemptInvoicePayment,
+  useCreateInvoice,
+  useFinalizeInvoice,
+  useInvoice,
   useInvoices,
+  useVoidInvoice,
 } from './invoices'
-export type { InvoicePage, InvoiceWire } from './invoices'
+export type { InvoiceDetailWire, InvoicePage, InvoiceWire } from './invoices'
 
 export { toOverrideLineItem } from './priceOverrides'
 export type { OverrideLineItem } from './priceOverrides'

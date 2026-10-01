@@ -22,6 +22,7 @@ import {
   TimelineSeparator,
   TimelineTitle,
 } from '@ui/components/reui/timeline'
+import { InvoiceStatus } from '@fp/domain'
 import { cn } from '@ui/lib/cn'
 import {
   displayStatus,
@@ -34,6 +35,8 @@ export interface InvoiceDetailViewProps {
   invoice: InvoiceDocument
   onBack?: () => void
   onFinalize?: () => void
+  onVoid?: () => void
+  isFinalizing?: boolean
   onRetryPayment?: () => void
   onDownload?: () => void
   onOpenCustomer?: () => void
@@ -45,6 +48,8 @@ export function InvoiceDetailView({
   invoice,
   onBack,
   onFinalize,
+  onVoid,
+  isFinalizing = false,
   onRetryPayment,
   onDownload,
   onOpenCustomer,
@@ -84,8 +89,13 @@ export function InvoiceDetailView({
             PDF
           </Button>
           {isDraft ? (
-            <Button size="sm" onClick={onFinalize}>
+            <Button size="sm" onClick={onFinalize} disabled={isFinalizing}>
               Finalize
+            </Button>
+          ) : null}
+          {onVoid && (invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue) ? (
+            <Button variant="outline" size="sm" onClick={onVoid}>
+              Void invoice
             </Button>
           ) : null}
           {onBack || paymentFailed ? (
@@ -203,7 +213,7 @@ export function InvoiceDetailView({
                       <Info label="Invoice ID" value={invoice.id} mono />
                       <Info label="Currency" value={invoice.currency} />
                       <Info label="Customer" value={invoice.billTo.name} />
-                      <Info label="Payment terms" value={invoice.payment.terms} />
+                      {invoice.payment ? <Info label="Payment terms" value={invoice.payment.terms} /> : null}
                     </dl>
                   </CardContent>
                 </Card>
@@ -268,11 +278,15 @@ function InvoiceDocumentCard({
             heading="Bill to"
             lines={[invoice.billTo.name, invoice.billTo.email, ...addressLines(invoice.billTo.address)]}
           />
-          <Party heading="From" lines={[invoice.from.name, ...addressLines(invoice.from.address)]} />
-          <Party
-            heading="Payment"
-            lines={[invoice.payment.method, invoice.payment.terms && `Terms: ${invoice.payment.terms}`]}
-          />
+          {invoice.from ? (
+            <Party heading="From" lines={[invoice.from.name, ...addressLines(invoice.from.address)]} />
+          ) : null}
+          {invoice.payment ? (
+            <Party
+              heading="Payment"
+              lines={[invoice.payment.method, invoice.payment.terms && `Terms: ${invoice.payment.terms}`]}
+            />
+          ) : null}
         </div>
 
         <div className="flex flex-col gap-1 border-t pt-5">

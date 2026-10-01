@@ -31,12 +31,21 @@ export {
   DEFAULT_INVOICE_QUERY,
   InvoiceSortField,
   InvoiceStatus,
+  createInvoiceSchema,
   deriveInvoiceStatus,
+  emptyInvoice,
   isStoredInvoiceStatus,
   needsAttention,
   STORED_INVOICE_STATUSES,
 } from './invoice'
-export type { Invoice, InvoiceQuery, InvoiceStatusInput } from './invoice'
+export type {
+  CreateInvoice,
+  Invoice,
+  InvoiceDetail,
+  InvoiceDetailLine,
+  InvoiceQuery,
+  InvoiceStatusInput,
+} from './invoice'
 
 export {
   BILLING_MODEL_LABEL,
@@ -490,11 +499,7 @@ export {
   WorkflowStatus,
 } from './workflowRun'
 export type { WorkflowQuery, WorkflowRun } from './workflowRun'
-export {
-  DEFAULT_USAGE_SYNC_QUERY,
-  USAGE_SYNC_STATE,
-  USAGE_SYNC_STATE_LABEL,
-} from './usageSync'
+export { DEFAULT_USAGE_SYNC_QUERY, USAGE_SYNC_STATE, USAGE_SYNC_STATE_LABEL } from './usageSync'
 export type { UsageSync, UsageSyncEntry, UsageSyncQuery, UsageSyncState } from './usageSync'
 export {
   DEFAULT_DATA_EXPORT_QUERY,

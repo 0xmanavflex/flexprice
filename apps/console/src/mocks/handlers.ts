@@ -2611,6 +2611,36 @@ export const handlers = [
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
+  http.get(`${BASE}/invoices/:id`, ({ params }) => {
+    const id = String(params['id'])
+    const invoice =
+      byId('invoices', id) ??
+      sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+    return invoice
+      ? HttpResponse.json(invoice)
+      : HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+  }),
+  http.post(`${BASE}/invoices/:id/finalize`, ({ params }) => {
+    patchRow((corpus['invoices'] as Corpus).items, String(params['id']), {
+      invoice_status: 'FINALIZED',
+      finalized_at: new Date().toISOString(),
+    })
+    return HttpResponse.json({ message: 'ok' })
+  }),
+  http.post(`${BASE}/invoices/:id/void`, ({ params }) => {
+    patchRow((corpus['invoices'] as Corpus).items, String(params['id']), {
+      invoice_status: 'VOIDED',
+      voided_at: new Date().toISOString(),
+    })
+    return HttpResponse.json({ message: 'ok' })
+  }),
+  http.post(`${BASE}/invoices/:id/payment/attempt`, () => HttpResponse.json({ message: 'ok' })),
+  http.post(`${BASE}/invoices`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = { ...body, id: `inv_new_${Date.now()}`, status: 'published' }
+    ;(corpus['invoices'] as Corpus).items.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
   http.post(`${BASE}/subscriptions/:id/cancel`, async ({ request, params }) => {
     const body = await readBody(request)
     const immediate = body['cancellation_type'] === 'immediate'

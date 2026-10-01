@@ -1,8 +1,10 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Flexprice } from '@fp/api'
 import { call } from '@fp/api'
 import {
+  type CreateInvoice,
   type Invoice,
+  type InvoiceDetail,
   type InvoiceQuery,
   InvoiceSortField,
   InvoiceStatus,
@@ -155,3 +157,134 @@ export function useInvoices(query: InvoiceQuery, options: { enabled?: boolean } 
     placeholderData: (previous) => previous,
   })
 }
+
+/** The detail shape this mapper reads; a superset of {@link InvoiceWire}. */
+export interface InvoiceDetailWire extends InvoiceWire {
+  description?: string | undefined
+  subscriptionId?: string | undefined
+  invoicePdfUrl?: string | undefined
+  subtotal?: string | undefined
+  totalTax?: string | undefined
+  totalPrepaidCreditsApplied?: string | undefined
+  amountPaid?: string | undefined
+  finalizedAt?: Date | undefined
+  paidAt?: Date | undefined
+  voidedAt?: Date | undefined
+  createdAt?: Date | undefined
+  lineItems?:
+    | {
+        id?: string | undefined
+        displayName?: string | undefined
+        planDisplayName?: string | undefined
+        meterDisplayName?: string | undefined
+        quantity?: string | undefined
+        amount?: string | undefined
+        periodStart?: Date | undefined
+        periodEnd?: Date | undefined
+      }[]
+    | undefined
+}
+
+const formatDay = (date: Date) =>
+  new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date)
+
+export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDetail {
+  const base = toInvoice(wire, now)
+  return {
+    ...base,
+    currency: wire.currency ?? '',
+    customerEmail: wire.customer?.email ?? '',
+    description: wire.description ?? '',
+    subscriptionId: wire.subscriptionId || null,
+    invoicePdfUrl: wire.invoicePdfUrl || null,
+    subtotal: wire.subtotal ?? '0',
+    tax: wire.totalTax ?? '0',
+    prepaidCredits: wire.totalPrepaidCreditsApplied ?? '0',
+    amountPaid: wire.amountPaid ?? '0',
+    lines: (wire.lineItems ?? []).map((line, index) => ({
+      id: line.id ?? `line_${index}`,
+      description: line.displayName || line.planDisplayName || line.meterDisplayName || 'Line item',
+      detail:
+        line.periodStart && line.periodEnd
+          ? `${formatDay(line.periodStart)} – ${formatDay(line.periodEnd)}`
+          : '',
+      quantity: line.quantity ?? '',
+      amount: line.amount ?? '0',
+    })),
+    finalizedAt: wire.finalizedAt ?? null,
+    paidAt: wire.paidAt ?? null,
+    voidedAt: wire.voidedAt ?? null,
+    createdAt: wire.createdAt ?? null,
+  }
+}
+
+/** One invoice with its lines — `GET /invoices/{id}`. */
+export function useInvoice(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.invoices.detail(id),
+    queryFn: async () =>
+      toInvoiceDetail((await call(() => client.invoices.getInvoice(id))) as InvoiceDetailWire),
+  })
+}
+
+/** Builds `POST /invoices`. Money stays a string; the form's total is sent as given. */
+export function toCreateInvoiceRequest(draft: CreateInvoice): Record<string, unknown> {
+  const description = draft.description.trim()
+  return {
+    customerId: draft.customerId,
+    currency: draft.currency.toUpperCase(),
+    subtotal: draft.total,
+    total: draft.total,
+    amountDue: draft.total,
+    invoiceType: 'ONE_OFF',
+    invoiceStatus: draft.finalize ? 'FINALIZED' : 'DRAFT',
+    ...(description ? { description } : {}),
+    ...(draft.dueDate ? { dueDate: new Date(`${draft.dueDate}T00:00:00Z`) } : {}),
+    lineItems: draft.lines.map((line) => ({
+      displayName: line.description.trim(),
+      quantity: line.quantity,
+      amount: line.amount,
+    })),
+  }
+}
+
+export function useCreateInvoice() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateInvoice) =>
+      call(() => client.invoices.createInvoice(toCreateInvoiceRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    },
+  })
+}
+
+function useInvoiceAction(run: (client: Flexprice, id: string) => Promise<unknown>) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => run(client, id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    },
+  })
+}
+
+/** Lock a draft and send it — `POST /invoices/{id}/finalize`. */
+export const useFinalizeInvoice = () =>
+  useInvoiceAction((client, id) => client.invoices.finalizeInvoice(id))
+
+/** Void an open invoice — `POST /invoices/{id}/void`. */
+export const useVoidInvoice = () =>
+  useInvoiceAction((client, id) => client.invoices.voidInvoice(id))
+
+/** Try to collect payment again — `POST /invoices/{id}/payment/attempt`. */
+export const useAttemptInvoicePayment = () =>
+  useInvoiceAction((client, id) => client.invoices.attemptInvoicePayment(id))

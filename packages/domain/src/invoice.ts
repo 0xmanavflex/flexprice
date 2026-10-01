@@ -1,3 +1,4 @@
+import { z } from 'zod'
 import type { Money } from './money'
 import type { PaymentStatus } from './payment'
 
@@ -178,4 +179,87 @@ export const DEFAULT_INVOICE_QUERY: InvoiceQuery = {
   sortDirection: 'desc',
   statuses: [],
   search: '',
+}
+
+/** One line of an invoice, as the detail page shows it. Amounts stay exact strings. */
+export interface InvoiceDetailLine {
+  id: string
+  description: string
+  /** The period or unit note under the description, when the API sent one. */
+  detail: string
+  quantity: string
+  amount: string
+}
+
+/**
+ * The detail read model: the list row plus what the document page adds.
+ *
+ * Every figure is what the API computed. Nothing here is summed or derived, so
+ * the page cannot disagree with the invoice the customer receives.
+ */
+export interface InvoiceDetail extends Invoice {
+  currency: string
+  customerEmail: string
+  description: string
+  subscriptionId: string | null
+  invoicePdfUrl: string | null
+  subtotal: string
+  tax: string
+  prepaidCredits: string
+  amountPaid: string
+  lines: InvoiceDetailLine[]
+  finalizedAt: Date | null
+  paidAt: Date | null
+  voidedAt: Date | null
+  createdAt: Date | null
+}
+
+/**
+ * A manual (one-off) invoice.
+ *
+ * The API takes `subtotal`, `total` and `amount_due` as given and the money
+ * module deliberately has no arithmetic, so the form asks for the invoice total
+ * itself rather than summing the lines on the client.
+ */
+export const createInvoiceSchema = z.object({
+  customerId: z.string().min(1, 'Choose a customer'),
+  currency: z.string().trim().length(3, 'Choose a currency'),
+  description: z.string().trim().max(500, 'Keep it under 500 characters'),
+  /** `YYYY-MM-DD`, or empty for no due date. */
+  dueDate: z.string(),
+  total: z
+    .string()
+    .trim()
+    .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount like 120 or 120.50'),
+  /** Finalize on creation instead of leaving a draft. */
+  finalize: z.boolean(),
+  lines: z
+    .array(
+      z.object({
+        description: z.string().trim().min(1, 'Describe the line'),
+        quantity: z
+          .string()
+          .trim()
+          .regex(/^\d+(\.\d+)?$/, 'Enter a quantity'),
+        amount: z
+          .string()
+          .trim()
+          .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount'),
+      }),
+    )
+    .min(1, 'Add at least one line'),
+})
+
+export type CreateInvoice = z.infer<typeof createInvoiceSchema>
+
+export function emptyInvoice(): CreateInvoice {
+  return {
+    customerId: '',
+    currency: '',
+    description: '',
+    dueDate: '',
+    total: '',
+    finalize: false,
+    lines: [{ description: '', quantity: '1', amount: '' }],
+  }
 }

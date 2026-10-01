@@ -18,8 +18,8 @@ import { ConsoleShell } from './shell/ConsoleShell'
 import { hasSession, needsSignIn, useSession } from './session'
 import { useEnvironments } from './shell/useEnvironments'
 import type { InvoiceQuery } from '@fp/domain'
-const InvoiceCreatePage = lazy(() =>
-  import('@/pages/invoices/InvoiceCreatePage').then((m) => ({ default: m.InvoiceCreatePage })),
+const InvoiceFormPage = lazy(() =>
+  import('@/pages/invoices/InvoiceFormPage').then((m) => ({ default: m.InvoiceFormPage })),
 )
 const InvoiceDetailPage = lazy(() =>
   import('@/pages/invoices/InvoiceDetailPage').then((m) => ({ default: m.InvoiceDetailPage })),
@@ -1520,14 +1520,45 @@ function ExportsRouteComponent() {
 const invoiceCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/invoices/new',
-  component: InvoiceCreatePage,
+  component: InvoiceCreateRouteComponent,
 })
+
+function InvoiceCreateRouteComponent() {
+  const navigate = useNavigate()
+  const toList = () => void navigate({ to: '/invoices', search: {} as never })
+  return (
+    <InvoiceFormPage
+      onCancel={toList}
+      onDone={(invoiceId) =>
+        void navigate(
+          invoiceId
+            ? { to: '/invoices/$invoiceId', params: { invoiceId } }
+            : { to: '/invoices', search: {} as never },
+        )
+      }
+    />
+  )
+}
 
 const invoiceDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/invoices/$invoiceId',
-  component: InvoiceDetailPage,
+  component: InvoiceDetailRouteComponent,
 })
+
+function InvoiceDetailRouteComponent() {
+  const { invoiceId } = invoiceDetailRoute.useParams()
+  const navigate = useNavigate()
+  return (
+    <InvoiceDetailPage
+      invoiceId={invoiceId}
+      onBack={() => void navigate({ to: '/invoices', search: {} as never })}
+      onOpenCustomer={(customerId) =>
+        void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
+      }
+    />
+  )
+}
 
 const pricingWidgetRoute = createRoute({
   getParentRoute: () => shellRoute,

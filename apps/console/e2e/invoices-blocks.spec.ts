@@ -18,12 +18,13 @@ test('the invoice list opens the invoice creator', async ({ page }) => {
   await page.getByRole('button', { name: 'New invoice' }).click()
 
   await expect(page).toHaveURL(/\/invoices\/new$/)
-  await expect(page.getByRole('button', { name: /Send/ }).first()).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Create invoice' })).toBeVisible()
 })
 
 test('an invoice opens the billing detail block', async ({ page }) => {
-  await page.goto('/invoices/inv_demo')
+  await page.goto('/invoices')
+  await page.getByRole('row').nth(1).click()
 
   await expect(page.getByRole('heading').first()).toBeVisible()
-  await expect(page.getByRole("tab", { name: "Payments" })).toBeVisible()
+  await expect(page.getByRole('tab', { name: 'Payments' })).toBeVisible()
 })
