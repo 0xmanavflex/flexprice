@@ -46,7 +46,10 @@ export function FormPage({
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
       <h1 className="sr-only">{title}</h1>
-      <PageBody width={width}>
+      {/* `self-center`: this column is a flex child, and a flex child with only
+          `mx-auto` stays pinned to the start. The cap (`narrow` / `wide`) then
+          sits in the middle of the page. */}
+      <PageBody width={width} className="self-center">
         {/* form-3's card. The actions sit under the fields, in the same card,
             so Cancel and Next are not stranded at the bottom of the viewport. */}
         <Card className="gap-0 p-0 shadow-xs">
