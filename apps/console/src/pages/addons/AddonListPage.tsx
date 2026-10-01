@@ -1,5 +1,5 @@
 import { type Addon, type AddonQuery } from '@fp/domain'
-import { ApiError, useAddons, useCatalogStats, useUpdateAddon } from '@fp/query'
+import { ApiError, useAddons, useCatalogStats } from '@fp/query'
 import { AddonGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PuzzleIcon } from 'lucide-react'
@@ -30,7 +30,6 @@ export function AddonListPage({
   // The server's counts for the status dropdown — one `limit: 1` request each,
   // read for `pagination.total`, never counted off the page on screen.
   const stats = useCatalogStats('addons')
-  const update = useUpdateAddon()
 
   const failure = toFailure(addons.error)
   const rows = addons.data?.addons ?? []
@@ -58,17 +57,6 @@ export function AddonListPage({
           query={query}
           onQueryChange={onQueryChange}
           onAddonClick={onOpenAddon}
-          onRename={(addon, name) =>
-            update
-              .mutateAsync({
-                id: addon.id,
-                draft: { name, lookupKey: addon.lookupKey, description: addon.description },
-              })
-              .then(
-                () => undefined,
-                () => undefined,
-              )
-          }
           onCreate={onCreateAddon}
           onEdit={onEditAddon}
           onClearFilters={clearFilters}

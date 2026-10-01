@@ -87,8 +87,6 @@ export interface PriceUnitGridProps {
   onCreate?: () => void
   /** Row menu: open the editor. Only the name is editable once created. */
   onEdit?: ((priceUnit: PriceUnit) => void) | undefined
-  /** Inline rename from the name cell. Absent leaves the name read-only. */
-  onRename?: ((priceUnit: PriceUnit, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   locale?: string
@@ -105,14 +103,12 @@ export function PriceUnitGrid({
   onPriceUnitClick,
   onCreate,
   onEdit,
-  onRename,
   onClearFilters,
   locale,
 }: PriceUnitGridProps) {
   const columns = useMemo<EntityColumn<PriceUnit>[]>(
     () => [
       textColumn<PriceUnit>('name', 'Name', (row) => row.name, {
-        ...(onRename ? { onEdit: onRename } : {}),
         width: 220,
         sortable: true,
         sortValue: PriceUnitSortField.Name,
@@ -151,7 +147,7 @@ export function PriceUnitGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale, onRename],
+    [locale],
   )
 
   const isDefaultSort =

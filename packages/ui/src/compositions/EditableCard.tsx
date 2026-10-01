@@ -111,7 +111,7 @@ export function EditableCard({
               return (
                 <div key={field.key} className={`flex min-w-0 flex-col gap-1 ${wide}`}>
                   <dt className="text-muted-foreground text-xs">{field.label}</dt>
-                  <dd className="min-w-0 font-medium break-words">
+                  <dd className="min-w-0 font-normal break-words">
                     {field.display ??
                       (field.value || (
                         <span className="text-muted-foreground font-normal">

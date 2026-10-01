@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { type CostSheet, type CostSheetQuery } from '@fp/domain'
-import { ApiError, useCostSheets, useDeleteCostSheet, useUpdateCostSheet } from '@fp/query'
+import { ApiError, useCostSheets, useDeleteCostSheet } from '@fp/query'
 import { CostSheetGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -28,7 +28,6 @@ export function CostSheetListPage({
   onEditCostSheet,
 }: CostSheetListPageProps) {
   const costSheets = useCostSheets(query)
-  const update = useUpdateCostSheet()
   const remove = useDeleteCostSheet()
 
   const [deleting, setDeleting] = useState<CostSheet | null>(null)
@@ -64,12 +63,6 @@ export function CostSheetListPage({
             query={query}
             onQueryChange={onQueryChange}
             onCostSheetClick={onOpenCostSheet}
-            onRename={(costSheet, name) =>
-              update.mutateAsync({ id: costSheet.id, draft: { name } }).then(
-                () => undefined,
-                () => undefined,
-              )
-            }
             onCreate={onCreateCostSheet}
             onEdit={onEditCostSheet}
             onDelete={setDeleting}

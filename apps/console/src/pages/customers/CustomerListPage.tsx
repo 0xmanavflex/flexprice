@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { type Customer, type CustomerQuery } from '@fp/domain'
-import { ApiError, useCustomers, useDeleteCustomer, useUpdateCustomer } from '@fp/query'
+import { ApiError, useCustomers, useDeleteCustomer } from '@fp/query'
 import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -31,7 +31,6 @@ export function CustomerListPage({
   onEditCustomer,
 }: CustomerListPageProps) {
   const customers = useCustomers(query)
-  const update = useUpdateCustomer()
   const remove = useDeleteCustomer()
 
   const [deleting, setDeleting] = useState<Customer | null>(null)
@@ -69,14 +68,6 @@ export function CustomerListPage({
             {...(onOpenCustomer
               ? { onCustomerClick: (customer) => onOpenCustomer(customer.id) }
               : {})}
-            onRename={(customer, name) =>
-              update
-                .mutateAsync({ id: customer.id, draft: { externalId: customer.externalId, name } })
-                .then(
-                  () => undefined,
-                  () => undefined,
-                )
-            }
             onCreate={onCreateCustomer}
             onEdit={(customer) => onEditCustomer(customer.id)}
             onDelete={setDeleting}

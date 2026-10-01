@@ -1,11 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import {
   type ColumnDef,
   type PaginationState,
@@ -30,10 +23,7 @@ import {
   DataGridTableRowSelect,
   DataGridTableRowSelectAll,
 } from '@ui/components/reui/data-grid/data-grid-table'
-import type {
-  FilterField,
-  FilterQuery,
-} from '@ui/components/reui/filters/filters-types'
+import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -698,7 +688,11 @@ export function EntityList<T extends object>({
   const showFirstRun = !isLoading && rows.length === 0 && !isFiltered && empty !== undefined
 
   const toolbar = (
-    <div role="search" aria-label={`Search and filter ${noun}`} className="flex flex-wrap items-center gap-2">
+    <div
+      role="search"
+      aria-label={`Search and filter ${noun}`}
+      className="flex flex-wrap items-center gap-2"
+    >
       {/* 288px, at every width. Wide enough for a realistic query, narrow
           enough that it does not read as the page's main field. `max-w-full`
           rather than a breakpoint: on the narrowest phone the row wraps and
@@ -742,9 +736,7 @@ export function EntityList<T extends object>({
                 to itself reads "all" and "published" rather than the labels
                 in the list below it. */}
             <SelectValue>
-              {(value) =>
-                status.options.find((option) => option.value === value)?.label ?? value
-              }
+              {(value) => status.options.find((option) => option.value === value)?.label ?? value}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>
@@ -779,11 +771,7 @@ export function EntityList<T extends object>({
                 type="button"
                 variant="outline"
                 size="icon"
-                aria-label={
-                  filter.activeCount
-                    ? `Filter. ${filter.activeCount} active`
-                    : 'Filter'
-                }
+                aria-label={filter.activeCount ? `Filter. ${filter.activeCount} active` : 'Filter'}
                 className="relative"
               >
                 <FilterIcon aria-hidden className="size-4" />
@@ -890,6 +878,7 @@ export function EntityList<T extends object>({
         ) : (
           <DataGrid
             table={table as never}
+            className="[&_tbody_tr:hover]:bg-muted/20"
             recordCount={total}
             isLoading={isLoading}
             loadingMode="skeleton"

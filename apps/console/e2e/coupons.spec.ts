@@ -69,19 +69,4 @@ test.describe('the coupons list', () => {
     await request
     await expect(page.getByLabel('Name', { exact: true })).toBeHidden()
   })
-
-  test('renames a coupon inline', async ({ page }) => {
-    await page.goto('/coupons')
-    const first = list(page).rows().first()
-    await expect(first).toBeVisible({ timeout: 45_000 })
-
-    await first.getByRole('button', { name: /^Coupon: .*Edit$/ }).click()
-    const input = first.getByRole('textbox', { name: 'Coupon' })
-    await input.fill('Renamed coupon')
-
-    const request = page.waitForRequest(isWrite('PUT', /\/v1\/coupons\/[^/]+$/))
-    await input.press('Enter')
-    await request
-    await expect(first.getByRole('textbox', { name: 'Coupon' })).toBeHidden()
-  })
 })

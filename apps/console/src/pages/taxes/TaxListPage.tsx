@@ -1,6 +1,6 @@
 import { useState } from 'react'
-import { type TaxRate, type TaxRateQuery, taxRateToEdit } from '@fp/domain'
-import { ApiError, useDeleteTaxRate, useTaxRates, useUpdateTaxRate } from '@fp/query'
+import { type TaxRate, type TaxRateQuery } from '@fp/domain'
+import { ApiError, useDeleteTaxRate, useTaxRates } from '@fp/query'
 import { TaxRateGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -28,7 +28,6 @@ export function TaxListPage({
   onEditTaxRate,
 }: TaxListPageProps) {
   const taxRates = useTaxRates(query)
-  const update = useUpdateTaxRate()
   const remove = useDeleteTaxRate()
 
   const [deleting, setDeleting] = useState<TaxRate | null>(null)
@@ -63,14 +62,6 @@ export function TaxListPage({
             total={taxRates.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
-            onRename={(taxRate, name) =>
-              update
-                .mutateAsync({ id: taxRate.id, draft: { ...taxRateToEdit(taxRate), name } })
-                .then(
-                  () => undefined,
-                  () => undefined,
-                )
-            }
             onCreate={onCreateTaxRate}
             onEdit={onEditTaxRate}
             onDelete={setDeleting}

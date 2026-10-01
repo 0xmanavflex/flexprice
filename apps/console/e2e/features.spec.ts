@@ -16,7 +16,7 @@ test.beforeEach(async ({ context }) => {
 })
 
 /**
- * Features are created and edited on full pages, renamed inline in the name cell,
+ * Features are created and edited on full pages,
  * and cloned / deleted from the row menu. The mock
  * echoes writes back, so these assert the request each action sends and the
  * dialog closing.
@@ -73,23 +73,6 @@ test.describe('the features list', () => {
     await page.getByRole('button', { name: 'Save changes' }).click()
     await request
     await expect(page).not.toHaveURL(/\/edit/)
-  })
-
-  test('renames a feature inline', async ({ page }) => {
-    await page.goto('/features')
-    const first = list(page).rows().first()
-    await expect(first).toBeVisible({ timeout: 45_000 })
-
-    await first.getByRole('button', { name: /^Feature: .*Edit$/ }).click()
-    const input = first.getByRole('textbox', { name: 'Feature' })
-    await input.fill('Renamed feature')
-
-    const request = page.waitForRequest(
-      (r) => r.method() === 'PUT' && /\/v1\/features\/[^/]+$/.test(new URL(r.url()).pathname),
-    )
-    await input.press('Enter')
-    await request
-    await expect(first.getByRole('textbox', { name: 'Feature' })).toBeHidden()
   })
 
   test('clones a feature under a new name', async ({ page }) => {

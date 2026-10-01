@@ -52,13 +52,13 @@ const SENTIMENT_VARIANT: Record<Sentiment, 'success-light' | 'destructive-light'
 
 export function Metric({ label, value, hint, change, isLoading = false }: MetricProps) {
   return (
-    <div className="flex flex-col gap-1 rounded-xl border bg-card p-4">
-      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+    <div className="bg-card flex flex-col gap-1 rounded-xl border p-4">
+      <span className="text-muted-foreground text-xs font-medium">{label}</span>
 
       {isLoading ? (
-        <div aria-hidden className="h-7 w-24 animate-pulse rounded bg-muted" />
+        <div aria-hidden className="bg-muted h-7 w-24 animate-pulse rounded" />
       ) : (
-        <span className="text-2xl font-semibold tabular-nums">{value}</span>
+        <span className="text-2xl font-medium tabular-nums">{value}</span>
       )}
       {isLoading ? <span className="sr-only">Loading {label}</span> : null}
 
@@ -70,7 +70,7 @@ export function Metric({ label, value, hint, change, isLoading = false }: Metric
         </Badge>
       ) : null}
 
-      {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
+      {hint ? <span className="text-muted-foreground text-xs">{hint}</span> : null}
     </div>
   )
 }

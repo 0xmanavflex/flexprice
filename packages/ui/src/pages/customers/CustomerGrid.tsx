@@ -111,8 +111,6 @@ export interface CustomerGridProps {
   onEdit?: ((customer: Customer) => void) | undefined
   /** Row menu: delete. The page confirms before it runs. */
   onDelete?: ((customer: Customer) => void) | undefined
-  /** Inline rename from the name cell. Absent leaves the name read-only. */
-  onRename?: ((customer: Customer, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for dates. Supplied by the app, never read from a global. */
@@ -131,7 +129,6 @@ export function CustomerGrid({
   onCreate,
   onEdit,
   onDelete,
-  onRename,
   onClearFilters,
   locale,
 }: CustomerGridProps) {
@@ -144,7 +141,6 @@ export function CustomerGrid({
         // The column the list is *for*. Hiding it leaves a table of
         // attributes belonging to nobody.
         hideable: false,
-        ...(onRename ? { onEdit: onRename } : {}),
       }),
       // Its own column rather than a subtitle under the name. Stacked, it was
       // unsortable, unexportable and clipped twice as often; beside the name
@@ -171,7 +167,7 @@ export function CustomerGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale, onRename],
+    [locale],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL

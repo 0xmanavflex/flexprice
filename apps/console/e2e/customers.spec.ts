@@ -72,21 +72,6 @@ test.describe('the customers list', () => {
     await expect(page).toHaveURL(/\/customers\/(?!new)[^/]+$/)
   })
 
-  test('renames a customer inline', async ({ page }) => {
-    await page.goto('/customers')
-    const first = list(page).rows().first()
-    await expect(first).toBeVisible({ timeout: 20_000 })
-
-    await first.getByRole('button', { name: /^Customer: .*Edit$/ }).click()
-    const input = first.getByRole('textbox', { name: 'Customer' })
-    await input.fill('Renamed customer')
-
-    const request = page.waitForRequest(isWrite('PUT', /\/v1\/customers$/))
-    await input.press('Enter')
-    await request
-    await expect(first.getByRole('textbox', { name: 'Customer' })).toBeHidden()
-  })
-
   test('deletes a customer after confirming', async ({ page }) => {
     await page.goto('/customers')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })

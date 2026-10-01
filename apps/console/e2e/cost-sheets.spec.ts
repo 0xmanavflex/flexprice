@@ -72,21 +72,6 @@ test.describe('the cost sheets list', () => {
     await expect(page.getByLabel('Description', { exact: true })).toBeHidden()
   })
 
-  test('renames a cost sheet inline', async ({ page }) => {
-    await page.goto('/cost-sheets')
-    const first = list(page).rows().first()
-    await expect(first).toBeVisible({ timeout: 45_000 })
-
-    await first.getByRole('button', { name: /^Cost sheet: .*Edit$/ }).click()
-    const input = first.getByRole('textbox', { name: 'Cost sheet' })
-    await input.fill('Renamed cost sheet')
-
-    const request = page.waitForRequest(isWrite('PUT', /\/v1\/costs\/[^/]+$/))
-    await input.press('Enter')
-    await request
-    await expect(first.getByRole('textbox', { name: 'Cost sheet' })).toBeHidden()
-  })
-
   test('deletes a cost sheet after confirming', async ({ page }) => {
     await page.goto('/cost-sheets')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })

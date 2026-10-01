@@ -96,8 +96,6 @@ export interface TaxRateGridProps {
   onEdit?: ((taxRate: TaxRate) => void) | undefined
   /** Row menu: delete. The page confirms before it runs. */
   onDelete?: ((taxRate: TaxRate) => void) | undefined
-  /** Inline rename from the name cell. Absent leaves the name read-only. */
-  onRename?: ((taxRate: TaxRate, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
 }
@@ -114,7 +112,6 @@ export function TaxRateGrid({
   onCreate,
   onEdit,
   onDelete,
-  onRename,
   onClearFilters,
 }: TaxRateGridProps) {
   const columns = useMemo<EntityColumn<TaxRate>[]>(
@@ -124,7 +121,6 @@ export function TaxRateGrid({
         sortable: true,
         sortValue: TaxRateSortField.Name,
         hideable: false,
-        ...(onRename ? { onEdit: onRename } : {}),
       }),
       idColumn<TaxRate>('code', 'Code', (row) => row.code, { width: 160 }),
       /*
@@ -150,7 +146,7 @@ export function TaxRateGrid({
         tone: row.status === TaxRateStatus.Published ? 'success' : 'neutral',
       })),
     ],
-    [onRename],
+    [],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL

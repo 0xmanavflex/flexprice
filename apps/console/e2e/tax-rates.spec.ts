@@ -71,21 +71,6 @@ test.describe('the tax rates list', () => {
     await expect(page).toHaveURL(/\/taxes$/)
   })
 
-  test('renames a tax rate inline', async ({ page }) => {
-    await page.goto('/taxes')
-    const first = list(page).rows().first()
-    await expect(first).toBeVisible({ timeout: 20_000 })
-
-    await first.getByRole('button', { name: /^Tax rate: .*Edit$/ }).click()
-    const input = first.getByRole('textbox', { name: 'Tax rate' })
-    await input.fill('Renamed tax rate')
-
-    const request = page.waitForRequest(isWrite('PUT', /\/v1\/taxes\/rates\/[^/]+$/))
-    await input.press('Enter')
-    await request
-    await expect(first.getByRole('textbox', { name: 'Tax rate' })).toBeHidden()
-  })
-
   test('deletes a tax rate after confirming', async ({ page }) => {
     await page.goto('/taxes')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 20_000 })

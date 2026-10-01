@@ -111,8 +111,6 @@ export interface CostSheetGridProps {
   onEdit?: ((costSheet: CostSheet) => void) | undefined
   /** Row menu: delete. The page confirms before it runs. */
   onDelete?: ((costSheet: CostSheet) => void) | undefined
-  /** Inline rename from the name cell. Absent leaves the name read-only. */
-  onRename?: ((costSheet: CostSheet, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   locale?: string
@@ -130,7 +128,6 @@ export function CostSheetGrid({
   onCreate,
   onEdit,
   onDelete,
-  onRename,
   onClearFilters,
   locale,
 }: CostSheetGridProps) {
@@ -141,7 +138,6 @@ export function CostSheetGrid({
         sortable: true,
         sortValue: CostSheetSortField.Name,
         hideable: false,
-        ...(onRename ? { onEdit: onRename } : {}),
       }),
       idColumn<CostSheet>('lookupKey', 'Key', (row) => row.lookupKey, { width: 170 }),
       textColumn<CostSheet>('description', 'Description', (row) => row.description, {
@@ -176,7 +172,7 @@ export function CostSheetGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale, onRename],
+    [locale],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL

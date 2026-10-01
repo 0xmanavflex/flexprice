@@ -43,16 +43,14 @@ export function Section({
   return (
     <section
       aria-labelledby={id}
-      className={cn('flex flex-col gap-4 rounded-xl border bg-card p-5', className)}
+      className={cn('bg-card flex flex-col gap-4 rounded-xl border p-5', className)}
     >
       <header className="flex items-start justify-between gap-4">
         <div className="flex flex-col gap-1">
-          <Heading id={id} className="text-sm font-semibold">
+          <Heading id={id} className="text-sm font-medium">
             {title}
           </Heading>
-          {description ? (
-            <p className="text-xs text-muted-foreground">{description}</p>
-          ) : null}
+          {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
         </div>
         {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
       </header>

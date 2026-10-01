@@ -6,7 +6,6 @@ import {
   useCloneFeature,
   useDeleteFeature,
   useFeatures,
-  useUpdateFeature,
 } from '@fp/query'
 import { FeatureCloneDialog, FeatureGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
@@ -34,7 +33,6 @@ export function FeatureListPage({
   onOpenFeature,
 }: FeatureListPageProps) {
   const features = useFeatures(query)
-  const update = useUpdateFeature()
   const clone = useCloneFeature()
   const remove = useDeleteFeature()
 
@@ -107,12 +105,6 @@ export function FeatureListPage({
             onEdit={onEditFeature}
             onClone={setCloning}
             onDelete={setDeleting}
-            onRename={(feature, name) =>
-              update.mutateAsync({ id: feature.id, draft: { name } }).then(
-                () => undefined,
-                () => undefined,
-              )
-            }
             onClearFilters={clearFilters}
             statusCounts={{
               total: stats.total,

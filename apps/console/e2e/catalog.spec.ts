@@ -10,13 +10,16 @@ import { CatalogListPage, CouponDetailPage } from './pages/catalog'
  * through `/sign-in` on every test. Its shape matches `session/storage.ts`.
  */
 test.beforeEach(async ({ context }) => {
-  await context.addInitScript((value) => {
-    try {
-      window.localStorage.setItem('flexprice.session', value)
-    } catch {
-      /* private-mode browser: the guard falls back to sign-in, tested elsewhere */
-    }
-  }, JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }))
+  await context.addInitScript(
+    (value) => {
+      try {
+        window.localStorage.setItem('flexprice.session', value)
+      } catch {
+        /* private-mode browser: the guard falls back to sign-in, tested elsewhere */
+      }
+    },
+    JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }),
+  )
 })
 
 /**

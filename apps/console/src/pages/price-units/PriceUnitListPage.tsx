@@ -1,5 +1,5 @@
 import { type PriceUnit, type PriceUnitQuery } from '@fp/domain'
-import { ApiError, usePriceUnits, useUpdatePriceUnit } from '@fp/query'
+import { ApiError, usePriceUnits } from '@fp/query'
 import { PriceUnitGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { CoinsIcon } from 'lucide-react'
@@ -26,7 +26,6 @@ export function PriceUnitListPage({
   onCreatePriceUnit,
 }: PriceUnitListPageProps) {
   const priceUnits = usePriceUnits(query)
-  const update = useUpdatePriceUnit()
 
   const failure = toFailure(priceUnits.error)
   const rows = priceUnits.data?.priceUnits ?? []
@@ -54,23 +53,6 @@ export function PriceUnitListPage({
           query={query}
           onQueryChange={onQueryChange}
           onPriceUnitClick={onOpenPriceUnit}
-          onRename={(priceUnit, name) =>
-            update
-              .mutateAsync({
-                id: priceUnit.id,
-                draft: {
-                  name,
-                  code: priceUnit.code,
-                  symbol: priceUnit.symbol,
-                  baseCurrency: priceUnit.baseCurrency.toUpperCase(),
-                  conversionRate: Number(priceUnit.conversionRate) || 1,
-                },
-              })
-              .then(
-                () => undefined,
-                () => undefined,
-              )
-          }
           onCreate={onCreatePriceUnit}
           onClearFilters={clearFilters}
         />

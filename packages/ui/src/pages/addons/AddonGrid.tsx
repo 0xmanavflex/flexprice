@@ -93,8 +93,6 @@ export interface AddonGridProps {
   onCreate?: () => void
   /** Row menu: open the add-on's editor. Left out of the menu when absent. */
   onEdit?: ((addon: Addon) => void) | undefined
-  /** Inline rename from the name cell. Absent leaves the name read-only. */
-  onRename?: ((addon: Addon, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Fills the counts beside each status option. */
@@ -113,7 +111,6 @@ export function AddonGrid({
   onAddonClick,
   onCreate,
   onEdit,
-  onRename,
   onClearFilters,
   statusCounts,
   locale,
@@ -121,7 +118,6 @@ export function AddonGrid({
   const columns = useMemo<EntityColumn<Addon>[]>(
     () => [
       textColumn<Addon>('name', 'Add-on', (row) => row.name, {
-        ...(onRename ? { onEdit: onRename } : {}),
         width: 240,
         sortable: true,
         sortValue: AddonSortField.Name,
@@ -156,7 +152,7 @@ export function AddonGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale, onRename],
+    [locale],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL

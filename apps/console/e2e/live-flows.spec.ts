@@ -104,15 +104,6 @@ async function openRowMenu(name: string, action: string | RegExp) {
   await page.getByRole('menuitem', { name: action }).click()
 }
 
-async function inlineRename(from: string, to: string) {
-  await row(from).getByRole('button', { name: /Edit$/ }).first().click()
-  // While editing, the row's text is an input value, so `row(from)` no longer matches.
-  const input = page.getByRole('row').getByRole('textbox')
-  await input.fill(to)
-  await input.press('Enter')
-  await expect(row(to)).toBeVisible({ timeout: 30_000 })
-}
-
 /** Confirm a destructive action in the confirm dialog, by its button label. */
 async function confirm(label: string | RegExp) {
   const scope = page.getByRole('alertdialog').or(page.getByRole('dialog'))
@@ -198,7 +189,7 @@ test.describe('live flows', () => {
 
   const nextStep = () => page.getByRole('button', { name: 'Next' }).click()
 
-  test('feature: boolean create, edit, inline rename', async () => {
+  test('feature: boolean create, edit', async () => {
     test.setTimeout(90_000)
     const name = `${run}-flag`
     await open('/features')
@@ -220,11 +211,10 @@ test.describe('live flows', () => {
 
     await open('/features')
     await search(name)
-    await inlineRename(name, `${name}-renamed`)
-    await openRowMenu(`${name}-renamed`, 'Delete feature')
+    await openRowMenu(name, 'Delete feature')
     await confirm(/Delete/)
     // Deleted features linger as "Archived" rather than leaving the list.
-    await expect(row(`${name}-renamed`).filter({ hasText: 'Published' })).toHaveCount(0, {
+    await expect(row(name).filter({ hasText: 'Published' })).toHaveCount(0, {
       timeout: 30_000,
     })
   })
@@ -256,10 +246,9 @@ test.describe('live flows', () => {
 
     await open('/features')
     await search(name)
-    await inlineRename(name, `${name}-renamed`)
-    await openRowMenu(`${name}-renamed`, 'Delete feature')
+    await openRowMenu(name, 'Delete feature')
     await confirm(/Delete/)
-    await expect(row(`${name}-renamed`).filter({ hasText: 'Published' })).toHaveCount(0, {
+    await expect(row(name).filter({ hasText: 'Published' })).toHaveCount(0, {
       timeout: 30_000,
     })
   })
@@ -279,7 +268,7 @@ test.describe('live flows', () => {
     await removeFrom('/groups', name, 'Delete group', 'Delete group')
   })
 
-  test('add-on: create, edit, inline rename', async () => {
+  test('add-on: create, edit', async () => {
     const name = `${run}-addon`
     await open('/addons')
     await page.getByRole('button', { name: 'New add-on' }).first().click()
@@ -298,10 +287,9 @@ test.describe('live flows', () => {
     await expect(page.getByText('edited by live e2e').first()).toBeVisible({ timeout: 30_000 })
     await open('/addons')
     await search(name)
-    await inlineRename(name, `${name}-renamed`)
   })
 
-  test('coupon: create percentage, rename, inline rename, archive', async () => {
+  test('coupon: create percentage, rename, archive', async () => {
     const name = `${run}-coupon`
     await open('/coupons')
     await page.getByRole('button', { name: 'New coupon' }).first().click()
@@ -315,11 +303,10 @@ test.describe('live flows', () => {
     await open('/coupons')
     await search(name)
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
-    await inlineRename(name, `${name}-renamed`)
 
     // The list only renames inline; the in-place edit and Archive live on the detail page.
-    await row(`${name}-renamed`).getByText(`E2E${tag}`).click()
-    await expect(page.getByRole('heading', { name: `${name}-renamed` })).toBeVisible()
+    await row(name).getByText(`E2E${tag}`).click()
+    await expect(page.getByRole('heading', { name: name })).toBeVisible()
     await page.getByRole('button', { name: 'Edit', exact: true }).click()
     await fill(main, 'Name', `${name}-edited`)
     await saveInPlace(/\/v1\/coupons\/[^/]+$/)
@@ -332,7 +319,7 @@ test.describe('live flows', () => {
     await expect(page.getByText('Archived').first()).toBeVisible({ timeout: 30_000 })
   })
 
-  test('price unit: create, rename, inline rename', async () => {
+  test('price unit: create, rename', async () => {
     const name = `${run}-unit`
     await open('/price-units')
     await page.getByRole('button', { name: 'New price unit' }).first().click()
@@ -348,10 +335,9 @@ test.describe('live flows', () => {
     await open('/price-units')
     await search(name)
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
-    await inlineRename(name, `${name}-renamed`)
   })
 
-  test('cost sheet: create, edit, inline rename, delete', async () => {
+  test('cost sheet: create, edit, delete', async () => {
     const name = `${run}-costsheet`
     await open('/cost-sheets')
     await page.getByRole('button', { name: 'New cost sheet' }).first().click()
@@ -369,18 +355,10 @@ test.describe('live flows', () => {
     await expect(page.getByText('edited by live e2e').first()).toBeVisible({ timeout: 30_000 })
     await open('/cost-sheets')
     await search(name)
-    // The cost sheet search matches the name exactly, so the renamed row leaves
-    // the filtered list: rename in place, then search for the new name.
-    await row(name).getByRole('button', { name: /Edit$/ }).first().click()
-    const input = page.getByRole('row').getByRole('textbox')
-    await input.fill(`${name}-renamed`)
-    await input.press('Enter')
-    await search(`${name}-renamed`)
-    await expect(row(`${name}-renamed`)).toBeVisible({ timeout: 30_000 })
-    await removeFrom('/cost-sheets', `${name}-renamed`, 'Delete cost sheet', 'Delete cost sheet')
+    await removeFrom('/cost-sheets', name, 'Delete cost sheet', 'Delete cost sheet')
   })
 
-  test('tax rate: create, edit, inline rename, delete', async () => {
+  test('tax rate: create, edit, delete', async () => {
     const name = `${run}-tax`
     await open('/taxes')
     await page.getByRole('button', { name: 'New tax rate' }).first().click()
@@ -395,11 +373,10 @@ test.describe('live flows', () => {
     await fill(page.getByRole('main'), 'Description', 'edited by live e2e')
     await submitPage()
     await search(name)
-    await inlineRename(name, `${name}-renamed`)
-    await removeFrom('/taxes', `${name}-renamed`, 'Delete tax rate', 'Delete tax rate')
+    await removeFrom('/taxes', name, 'Delete tax rate', 'Delete tax rate')
   })
 
-  test('customer: create, edit, inline rename, delete', async () => {
+  test('customer: create, edit, delete', async () => {
     const name = `${run}-customer`
     await open('/customers')
     await page.getByRole('button', { name: 'New customer' }).first().click()
@@ -419,8 +396,7 @@ test.describe('live flows', () => {
     await submitPage()
     await open('/customers')
     await search(name)
-    await inlineRename(name, `${name}-renamed`)
-    await removeFrom('/customers', `${name}-renamed`, 'Delete customer', 'Delete customer')
+    await removeFrom('/customers', name, 'Delete customer', 'Delete customer')
   })
   test('plan: create, edit, charges, entitlement, credit grant, archive', async () => {
     test.setTimeout(240_000)

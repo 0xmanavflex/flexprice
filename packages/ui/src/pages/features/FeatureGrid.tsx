@@ -27,7 +27,13 @@ import type { FlatFilter } from '@ui/compositions/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import { FeatureTypePill, type EntityColumn, dateColumn, pillColumn, textColumn } from '../shared/cells'
+import {
+  FeatureTypePill,
+  type EntityColumn,
+  dateColumn,
+  pillColumn,
+  textColumn,
+} from '../shared/cells'
 
 /**
  * The feature list — and the reference migration onto `EntityList`.
@@ -149,8 +155,6 @@ export interface FeatureGridProps {
   onClone?: ((feature: Feature) => void) | undefined
   /** Row-menu Delete; the caller confirms. */
   onDelete?: ((feature: Feature) => void) | undefined
-  /** Inline rename from the name cell. */
-  onRename?: ((feature: Feature, name: string) => void | Promise<void>) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Fills the counts beside each status option. */
@@ -171,7 +175,6 @@ export function FeatureGrid({
   onEdit,
   onClone,
   onDelete,
-  onRename,
   onClearFilters,
   statusCounts,
   locale,
@@ -185,14 +188,10 @@ export function FeatureGrid({
         // The column the list is *for*. Hiding it leaves a table of
         // attributes belonging to nothing.
         hideable: false,
-        ...(onRename ? { onEdit: onRename } : {}),
       }),
-      pillColumn<Feature>(
-        'type',
-        'Type',
-        (row) => ({ label: FEATURE_TYPE_LABEL[row.type] }),
-        { width: 150 },
-      ),
+      pillColumn<Feature>('type', 'Type', (row) => ({ label: FEATURE_TYPE_LABEL[row.type] }), {
+        width: 150,
+      }),
       pillColumn<Feature>('status', 'Status', (row) => ({
         label: FEATURE_STATUS_LABEL[row.status],
         tone: row.status === FeatureStatus.Published ? 'success' : 'neutral',
@@ -217,7 +216,7 @@ export function FeatureGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale, onRename],
+    [locale],
   )
 
   /*
@@ -250,8 +249,7 @@ export function FeatureGrid({
     )
   }
 
-  const statusValue =
-    query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
   const isDefaultSort =
     query.sortBy === DEFAULT_FEATURE_QUERY.sortBy &&
@@ -320,7 +318,11 @@ export function FeatureGrid({
             page: 1,
           }),
         options: [
-          { value: STATUS_ALL, label: 'All', ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }) },
+          {
+            value: STATUS_ALL,
+            label: 'All',
+            ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }),
+          },
           {
             value: FeatureStatus.Published,
             label: FEATURE_STATUS_LABEL[FeatureStatus.Published],

@@ -131,8 +131,6 @@ export interface CouponGridProps {
   onCreate?: () => void
   /** Row menu: rename the coupon — the one field the API will take. */
   onEdit?: ((coupon: Coupon) => void) | undefined
-  /** Inline rename from the name cell. Absent leaves the name read-only. */
-  onRename?: ((coupon: Coupon, name: string) => void | Promise<void>) | undefined
   /** Row menu: archive the coupon. Rendered destructive, under a separator. */
   onArchive?: ((coupon: Coupon) => void) | undefined
   /** Offered when a filter is what emptied the list. */
@@ -153,7 +151,6 @@ export function CouponGrid({
   onCouponClick,
   onCreate,
   onEdit,
-  onRename,
   onArchive,
   onClearFilters,
   statusCounts,
@@ -162,7 +159,6 @@ export function CouponGrid({
   const columns = useMemo<EntityColumn<Coupon>[]>(
     () => [
       textColumn<Coupon>('name', 'Coupon', (row) => row.name, {
-        ...(onRename ? { onEdit: onRename } : {}),
         width: 220,
         sortable: true,
         sortValue: CouponSortField.Name,
@@ -199,7 +195,7 @@ export function CouponGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale, onRename],
+    [locale],
   )
 
   const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
