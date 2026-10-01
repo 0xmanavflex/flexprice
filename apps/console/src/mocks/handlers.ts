@@ -2917,10 +2917,16 @@ export const handlers = [
   }),
   http.post(`${BASE}/subscriptions`, async ({ request }) => {
     const body = await readBody(request)
-    return HttpResponse.json(
-      { ...body, id: `sub_new_${Date.now()}`, subscription_status: 'active' },
-      { status: 201 },
-    )
+    const start = typeof body['start_date'] === 'string' ? Date.parse(body['start_date']) : NaN
+    // A future start leaves the subscription incomplete until it is activated.
+    const row = {
+      ...body,
+      id: `sub_new_${Date.now()}`,
+      subscription_status: start > Date.now() ? 'incomplete' : 'active',
+      status: 'published',
+    }
+    sourceFor('subscriptions').items.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/customers`, async ({ request }) =>
     patchRow(
