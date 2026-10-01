@@ -1,17 +1,8 @@
-import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
-import { CatalogStatusBadge } from '@fp/ui/pages'
-import {
-  AppFailure,
-  DetailList,
-  DetailShell,
-  EditableFields,
-  LoadingRows,
-  Section,
-} from '@fp/ui/compositions'
-import { Button } from '@fp/ui/primitives'
-import { PencilIcon } from 'lucide-react'
+import { CatalogDetailFrame, CatalogStatusBadge } from '@fp/ui/pages'
+import { AppFailure, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
+import { CoinsIcon } from 'lucide-react'
 
 export interface PriceUnitDetailPageProps {
   priceUnitId: string
@@ -44,7 +35,6 @@ export function PriceUnitDetailPage({
 }: PriceUnitDetailPageProps) {
   const priceUnit = usePriceUnit(priceUnitId)
   const update = useUpdatePriceUnit()
-  const [editing, setEditing] = useState(startEditing)
 
   if (priceUnit.isPending) {
     return (
@@ -84,104 +74,127 @@ export function PriceUnitDetailPage({
   const symbolDisplay = data.symbol.trim() ? data.symbol : '—'
 
   return (
-    <DetailShell
-      breadcrumb={
-        <button
-          type="button"
-          onClick={onNavigateToList}
-          className="text-muted-foreground hover:text-foreground focus-visible:ring-ring -ml-1 inline-flex w-fit items-center gap-1 rounded-md px-1 py-0.5 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none"
-        >
-          ← Price Units
-        </button>
-      }
+    <CatalogDetailFrame
+      listLabel="Price Units"
+      onBack={onNavigateToList}
+      icon={<CoinsIcon />}
       title={data.name}
-      badges={<CatalogStatusBadge status={data.status} />}
-      identifier={data.code || data.id}
-      actions={
-        <Button variant="outline" size="sm" disabled={editing} onClick={() => setEditing(true)}>
-          <PencilIcon aria-hidden className="size-4" />
-          Edit
-        </Button>
+      subtitle={
+        baseCurrency && data.conversionRate
+          ? `1 ${codeLabel} = ${data.conversionRate} ${baseCurrency}`
+          : 'Custom pricing unit'
       }
-    >
-      <Section
-        title="Details"
-        description="Click the pencil to rename it. Its other fields are fixed once created."
-      >
-        <EditableFields
-          editing={editing}
-          onEditingChange={setEditing}
-          fields={[{ key: 'name', label: 'Name', value: data.name, required: true }]}
-          onSave={(changes) =>
-            update.mutateAsync({
-              id: data.id,
-              draft: {
-                name: changes.name ?? data.name,
-                code: data.code,
-                symbol: data.symbol,
-                baseCurrency: data.baseCurrency.toUpperCase(),
-                // Display-only: the update payload is name-only, so this only has to satisfy the schema.
-                conversionRate: Number(data.conversionRate) || 1,
-              },
-            })
-          }
-        />
-      </Section>
-
-      <Section
-        title="Conversion"
-        description={
-          conversion
-            ? `How ${codeLabel === 'unit' ? 'this unit' : codeLabel} converts into ${baseCurrency}.`
-            : 'How this unit converts into its base currency.'
-        }
-      >
-        {conversion ? (
-          <div className="bg-muted/40 rounded-lg border p-4">
-            <p className="text-muted-foreground text-xs font-medium">Worked example</p>
-            <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg tabular-nums">
-              <span className="font-semibold">1 {codeLabel}</span>
-              <span className="text-muted-foreground">=</span>
-              <span>{conversion.unit}</span>
-              <span aria-hidden className="text-muted-foreground px-1">
-                →
-              </span>
-              <span className="font-semibold">
-                {SAMPLE_QUANTITY.toLocaleString()} {codeLabel}
-              </span>
-              <span className="text-muted-foreground">=</span>
-              <span>{conversion.total}</span>
-            </p>
-          </div>
-        ) : (
-          <p className="text-muted-foreground text-sm">
-            This unit has no conversion rate and base currency set, so an example can't be shown.
-          </p>
-        )}
-      </Section>
-
-      <Section title="Information" description="Every attribute of this price unit.">
-        <DetailList
-          items={[
-            { label: 'Name', value: data.name },
-            {
-              label: 'Code',
-              value: data.code ? <span className="font-mono">{data.code}</span> : '—',
-            },
-            { label: 'Symbol', value: symbolDisplay },
-            { label: 'Base currency', value: baseCurrency ?? '—' },
-            {
-              label: 'Conversion rate',
-              value: <span className="tabular-nums">{data.conversionRate || '—'}</span>,
-            },
-            { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-            { label: 'Price unit ID', value: <span className="font-mono text-xs">{data.id}</span> },
-            { label: 'Created', value: formatDate(data.createdAt) },
-            { label: 'Updated', value: formatDate(data.updatedAt) },
-          ]}
-        />
-      </Section>
-    </DetailShell>
+      id={data.code || data.id}
+      menuLabel="Price unit actions"
+      {...(startEditing ? { tab: 'information' } : {})}
+      tabs={[
+        {
+          value: 'overview',
+          label: 'Overview',
+          content: (
+            <Section
+              title="Conversion"
+              description={
+                conversion
+                  ? `How ${codeLabel === 'unit' ? 'this unit' : codeLabel} converts into ${baseCurrency}.`
+                  : 'How this unit converts into its base currency.'
+              }
+            >
+              {conversion ? (
+                <div className="bg-muted/40 rounded-lg border p-4">
+                  <p className="text-muted-foreground text-xs font-medium">Worked example</p>
+                  <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg tabular-nums">
+                    <span className="font-semibold">1 {codeLabel}</span>
+                    <span className="text-muted-foreground">=</span>
+                    <span>{conversion.unit}</span>
+                    <span aria-hidden className="text-muted-foreground px-1">
+                      →
+                    </span>
+                    <span className="font-semibold">
+                      {SAMPLE_QUANTITY.toLocaleString()} {codeLabel}
+                    </span>
+                    <span className="text-muted-foreground">=</span>
+                    <span>{conversion.total}</span>
+                  </p>
+                </div>
+              ) : (
+                <p className="text-muted-foreground text-sm">
+                  This unit has no conversion rate and base currency set, so an example can't be
+                  shown.
+                </p>
+              )}
+            </Section>
+          ),
+        },
+        {
+          value: 'information',
+          label: 'Information',
+          content: (
+            <EditableCard
+              title="General"
+              description="The name is the only field that can change once a unit is created."
+              locked={data.status === 'archived'}
+              fields={[
+                { key: 'name', label: 'Name', value: data.name, required: true },
+                {
+                  key: 'code',
+                  label: 'Code',
+                  value: data.code,
+                  display: data.code ? <span className="font-mono">{data.code}</span> : '—',
+                  readOnly: true,
+                },
+                { key: 'symbol', label: 'Symbol', value: symbolDisplay, readOnly: true },
+                { key: 'base', label: 'Base currency', value: baseCurrency ?? '—', readOnly: true },
+                {
+                  key: 'rate',
+                  label: 'Conversion rate',
+                  value: data.conversionRate || '—',
+                  readOnly: true,
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  value: data.status,
+                  display: <CatalogStatusBadge status={data.status} />,
+                  readOnly: true,
+                },
+                {
+                  key: 'id',
+                  label: 'Price unit ID',
+                  value: data.id,
+                  display: <span className="font-mono text-xs">{data.id}</span>,
+                  readOnly: true,
+                },
+                {
+                  key: 'created',
+                  label: 'Created',
+                  value: formatDate(data.createdAt),
+                  readOnly: true,
+                },
+                {
+                  key: 'updated',
+                  label: 'Updated',
+                  value: formatDate(data.updatedAt),
+                  readOnly: true,
+                },
+              ]}
+              onSave={(changes) =>
+                update.mutateAsync({
+                  id: data.id,
+                  draft: {
+                    name: changes.name ?? data.name,
+                    code: data.code,
+                    symbol: data.symbol,
+                    baseCurrency: data.baseCurrency.toUpperCase(),
+                    conversionRate: Number(data.conversionRate) || 1,
+                  },
+                })
+              }
+            />
+          ),
+        },
+      ]}
+    />
   )
 }
 

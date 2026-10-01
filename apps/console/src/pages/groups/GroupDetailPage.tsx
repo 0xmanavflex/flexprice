@@ -2,13 +2,7 @@ import { useState } from 'react'
 import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
 import { ApiError, useGroup } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView } from '@fp/ui/pages'
-import {
-  AppFailure,
-  DetailList,
-  LoadingRows,
-  PageBody,
-  Section,
-} from '@fp/ui/compositions'
+import { AppFailure, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { LayersIcon } from 'lucide-react'
 
 export interface GroupDetailPageProps {
@@ -94,22 +88,48 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           value: 'information',
           label: 'Information',
           content: (
-            <Section title="Information" description="Every attribute of this group.">
-              <DetailList
-                items={[
-                  { label: 'Name', value: data.name },
-                  { label: 'Lookup key', value: data.lookupKey || '—' },
-                  { label: 'Holds', value: noun },
-                  { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-                  {
-                    label: 'Group ID',
-                    value: <span className="font-mono text-xs">{data.id}</span>,
-                  },
-                  { label: 'Created', value: formatDate(data.createdAt) },
-                  { label: 'Updated', value: formatDate(data.updatedAt) },
-                ]}
-              />
-            </Section>
+            <EditableCard
+              title="General"
+              locked
+              fields={[
+                { key: 'name', label: 'Name', value: data.name, readOnly: true },
+                {
+                  key: 'lookupKey',
+                  label: 'Lookup key',
+                  value: data.lookupKey || '',
+                  display: <span className="font-mono text-xs">{data.lookupKey || '—'}</span>,
+                  readOnly: true,
+                },
+                { key: 'holds', label: 'Holds', value: noun, readOnly: true },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  value: data.status,
+                  display: <CatalogStatusBadge status={data.status} />,
+                  readOnly: true,
+                },
+                {
+                  key: 'id',
+                  label: 'Group ID',
+                  value: data.id,
+                  display: <span className="font-mono text-xs">{data.id}</span>,
+                  readOnly: true,
+                },
+                {
+                  key: 'created',
+                  label: 'Created',
+                  value: formatDate(data.createdAt),
+                  readOnly: true,
+                },
+                {
+                  key: 'updated',
+                  label: 'Updated',
+                  value: formatDate(data.updatedAt),
+                  readOnly: true,
+                },
+              ]}
+              onSave={() => undefined}
+            />
           ),
         },
       ]}

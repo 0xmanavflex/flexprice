@@ -61,12 +61,13 @@ test.describe('the cost sheets list', () => {
 
     await openRowMenu(page, 'Edit cost sheet')
     await expect(page).toHaveURL(/\/cost-sheets\/(?!new)[^/?]+\?edit=true/)
+    await page.getByRole('button', { name: 'Edit general' }).click()
     await expect(page.getByLabel('Name', { exact: true })).toBeVisible()
 
     await page.getByLabel('Description', { exact: true }).fill('Updated in place')
 
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/costs\/[^/]+$/))
-    await page.getByRole('button', { name: 'Save changes' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await request
     await expect(page.getByLabel('Description', { exact: true })).toBeHidden()
   })

@@ -47,7 +47,7 @@ test.describe('price unit create', () => {
 })
 
 test.describe('price unit edit', () => {
-  test('header Edit edits the name in place', async ({ page }) => {
+  test('the General pencil edits the name in place', async ({ page }) => {
     await page.goto('/price-units')
     const list = new CatalogListPage(page, {
       heading: 'Price units',
@@ -59,13 +59,14 @@ test.describe('price unit edit', () => {
     await expect(page).toHaveURL(/\/price-units\/(?!new)[^/?]+$/)
 
     const url = page.url()
-    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await page.getByRole('tab', { name: /Information/ }).click()
+    await page.getByRole('button', { name: 'Edit general' }).click()
     await expect(page).toHaveURL(url)
     await page.getByLabel('Name', { exact: true }).fill('Renamed in place')
     const request = page.waitForRequest(
       (r) => r.method() === 'PUT' && /\/v1\/prices\/units\/[^/]+$/.test(new URL(r.url()).pathname),
     )
-    await page.getByRole('button', { name: 'Save changes' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await request
     await expect(page.getByLabel('Name', { exact: true })).toBeHidden()
   })

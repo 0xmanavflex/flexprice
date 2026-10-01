@@ -54,14 +54,12 @@ import {
   AppFailure,
   ConfirmDialog,
   ContextualSection,
-  DetailList,
   type DetailMetric,
-  EditableFields,
+  EditableCard,
   LoadingRows,
   PageBody,
   Properties,
 } from '@fp/ui/compositions'
-import { Card, CardContent } from '@fp/ui/primitives'
 import { PuzzleIcon } from 'lucide-react'
 
 export interface AddonDetailPageProps {
@@ -105,7 +103,6 @@ export function AddonDetailPage({
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
 
   const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'charges')
-  const [editing, setEditing] = useState(startEditing)
 
   if (addon.isPending) {
     return (
@@ -152,7 +149,9 @@ export function AddonDetailPage({
     value: (
       <span className="tabular-nums">
         {metric.value}
-        {metric.hint ? <span className="text-muted-foreground font-normal"> / {metric.hint}</span> : null}
+        {metric.hint ? (
+          <span className="text-muted-foreground font-normal"> / {metric.hint}</span>
+        ) : null}
       </span>
     ),
   }))
@@ -171,14 +170,6 @@ export function AddonDetailPage({
       title={data.name}
       subtitle={subtitle}
       id={data.lookupKey || data.id}
-      primary={{
-        label: 'Edit',
-        disabled: editing || data.status === 'archived',
-        onClick: () => {
-          setTab('information')
-          setEditing(true)
-        },
-      }}
       menuLabel="Add-on actions"
       menu={[
         {
@@ -220,8 +211,6 @@ export function AddonDetailPage({
           content: (
             <InformationTab
               addon={data}
-              editing={editing}
-              onEditingChange={setEditing}
               onSave={(patch) =>
                 update
                   .mutateAsync({
@@ -480,60 +469,54 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   )
 }
 
-/** Information — name and description edit in place (pencil or header Edit); the rest is read-only. */
+/** Information — one pencil edits the name and description in place; the rest is read-only. */
 function InformationTab({
   addon,
-  editing,
-  onEditingChange,
   onSave,
 }: {
   addon: Addon
-  editing: boolean
-  onEditingChange: (editing: boolean) => void
   onSave: (patch: { name?: string; description?: string }) => Promise<void>
 }) {
   return (
-    <Card className="max-w-2xl">
-      <CardContent className="flex flex-col gap-4 pt-5">
-        <EditableFields
-          editing={editing}
-          onEditingChange={onEditingChange}
-          fields={[
-            {
-              key: 'name',
-              label: 'Name',
-              value: addon.name,
-              required: true,
-              readOnly: addon.status === 'archived',
-            },
-            {
-              key: 'description',
-              label: 'Description',
-              value: addon.description ?? '',
-              multiline: true,
-              placeholder: 'Add a description',
-              readOnly: addon.status === 'archived',
-            },
-            {
-              // Integrations key off it, so the API never lets it change.
-              key: 'lookupKey',
-              label: 'Lookup key',
-              value: addon.lookupKey,
-              readOnly: true,
-            },
-          ]}
-          onSave={(changes) => onSave(changes)}
-        />
-        <DetailList
-          items={[
-            { label: 'Status', value: <CatalogStatusBadge status={addon.status} /> },
-            { label: 'Add-on ID', value: <span className="font-mono text-xs">{addon.id}</span> },
-            { label: 'Created', value: formatDate(addon.createdAt) },
-            { label: 'Updated', value: formatDate(addon.updatedAt) },
-          ]}
-        />
-      </CardContent>
-    </Card>
+    <EditableCard
+      title="General"
+      locked={addon.status === 'archived'}
+      fields={[
+        { key: 'name', label: 'Name', value: addon.name, required: true },
+        {
+          // Integrations key off it, so the API never lets it change.
+          key: 'lookupKey',
+          label: 'Lookup key',
+          value: addon.lookupKey,
+          display: <span className="font-mono text-xs">{addon.lookupKey}</span>,
+          readOnly: true,
+        },
+        {
+          key: 'status',
+          label: 'Status',
+          value: addon.status,
+          display: <CatalogStatusBadge status={addon.status} />,
+          readOnly: true,
+        },
+        {
+          key: 'id',
+          label: 'Add-on ID',
+          value: addon.id,
+          display: <span className="font-mono text-xs">{addon.id}</span>,
+          readOnly: true,
+        },
+        { key: 'created', label: 'Created', value: formatDate(addon.createdAt), readOnly: true },
+        { key: 'updated', label: 'Updated', value: formatDate(addon.updatedAt), readOnly: true },
+        {
+          key: 'description',
+          label: 'Description',
+          value: addon.description ?? '',
+          multiline: true,
+          placeholder: 'Add a description',
+        },
+      ]}
+      onSave={(changes) => onSave(changes)}
+    />
   )
 }
 

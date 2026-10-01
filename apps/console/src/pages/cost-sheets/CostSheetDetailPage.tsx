@@ -4,8 +4,7 @@ import { ApiError, useCostSheet, usePrices, useUpdateCostSheet } from '@fp/query
 import { CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CostMarginCard } from '@fp/ui/pages'
 import {
   AppFailure,
-  DetailList,
-  EditableFields,
+  EditableCard,
   EmptyState,
   LoadingRows,
   PageBody,
@@ -46,7 +45,6 @@ export function CostSheetDetailPage({
   const costSheet = useCostSheet(costSheetId)
   const prices = usePrices(PriceEntityType.CostSheet, costSheetId)
   const update = useUpdateCostSheet()
-  const [editing, setEditing] = useState(startEditing)
   const [tab, setTab] = useState<CostSheetTab>(startEditing ? 'information' : 'costs')
 
   if (costSheet.isPending) {
@@ -94,16 +92,10 @@ export function CostSheetDetailPage({
       onBack={onNavigateToList}
       icon={<CalculatorIcon />}
       title={data.name}
-      subtitle={data.description || `${count} ${count === 1 ? 'price' : 'prices'} grouped to measure cost`}
+      subtitle={
+        data.description || `${count} ${count === 1 ? 'price' : 'prices'} grouped to measure cost`
+      }
       id={data.lookupKey || data.id}
-      primary={{
-        label: 'Edit',
-        disabled: editing || data.status === 'archived',
-        onClick: () => {
-          setTab('information')
-          setEditing(true)
-        },
-      }}
       menuLabel="Cost sheet actions"
       menu={[{ id: 'costs', label: 'View costs', onSelect: () => setTab('costs') }]}
       tab={tab}
@@ -117,7 +109,10 @@ export function CostSheetDetailPage({
             <div className="flex flex-col gap-6">
               {/* Margin numbers are DEMO_COST_MARGIN: the API carries no revenue/cost totals. */}
               <CostMarginCard />
-              <Section title="Prices" description="The prices this cost sheet groups to measure cost.">
+              <Section
+                title="Prices"
+                description="The prices this cost sheet groups to measure cost."
+              >
                 {prices.isPending ? (
                   <LoadingRows />
                 ) : charges && charges.length > 0 ? (
@@ -138,50 +133,62 @@ export function CostSheetDetailPage({
           value: 'information',
           label: 'Information',
           content: (
-            <Section title="Information" description="Every attribute of this cost sheet.">
-              <EditableFields
-                editing={editing}
-                onEditingChange={setEditing}
-                className="mb-4"
-                fields={[
-                  { key: 'name', label: 'Name', value: data.name, required: true },
-                  {
-                    key: 'lookupKey',
-                    label: 'Lookup key',
-                    value: data.lookupKey ?? '',
-                    placeholder: 'No lookup key',
+            <EditableCard
+              title="General"
+              locked={data.status === 'archived'}
+              fields={[
+                { key: 'name', label: 'Name', value: data.name, required: true },
+                {
+                  key: 'lookupKey',
+                  label: 'Lookup key',
+                  value: data.lookupKey ?? '',
+                  placeholder: 'No lookup key',
+                },
+                {
+                  key: 'id',
+                  label: 'Cost sheet ID',
+                  value: data.id,
+                  display: <span className="font-mono text-xs">{data.id}</span>,
+                  readOnly: true,
+                },
+                {
+                  key: 'status',
+                  label: 'Status',
+                  value: data.status,
+                  display: <CatalogStatusBadge status={data.status} />,
+                  readOnly: true,
+                },
+                {
+                  key: 'created',
+                  label: 'Created',
+                  value: formatDate(data.createdAt),
+                  readOnly: true,
+                },
+                {
+                  key: 'updated',
+                  label: 'Updated',
+                  value: formatDate(data.updatedAt),
+                  readOnly: true,
+                },
+                {
+                  key: 'description',
+                  label: 'Description',
+                  value: data.description ?? '',
+                  multiline: true,
+                  placeholder: 'No description',
+                },
+              ]}
+              onSave={(changes) =>
+                update.mutateAsync({
+                  id: data.id,
+                  draft: {
+                    name: changes.name ?? data.name,
+                    lookupKey: changes.lookupKey ?? data.lookupKey,
+                    description: changes.description ?? data.description,
                   },
-                  {
-                    key: 'description',
-                    label: 'Description',
-                    value: data.description ?? '',
-                    multiline: true,
-                    placeholder: 'No description',
-                  },
-                ]}
-                onSave={(changes) =>
-                  update.mutateAsync({
-                    id: data.id,
-                    draft: {
-                      name: changes.name ?? data.name,
-                      lookupKey: changes.lookupKey ?? data.lookupKey,
-                      description: changes.description ?? data.description,
-                    },
-                  })
-                }
-              />
-              <DetailList
-                items={[
-                  { label: 'Status', value: <CatalogStatusBadge status={data.status} /> },
-                  {
-                    label: 'Cost sheet ID',
-                    value: <span className="font-mono text-xs">{data.id}</span>,
-                  },
-                  { label: 'Created', value: formatDate(data.createdAt) },
-                  { label: 'Updated', value: formatDate(data.updatedAt) },
-                ]}
-              />
-            </Section>
+                })
+              }
+            />
           ),
         },
       ]}
