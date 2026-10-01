@@ -93,11 +93,11 @@ export function MetricRail({ metrics, className }: MetricRailProps) {
     >
       {metrics.map((metric) => (
         <div key={metric.label} className="bg-card flex flex-col gap-1.5 p-4">
-          <dt className="text-muted-foreground text-xs font-medium">{metric.label}</dt>
+          <dt className="text-muted-foreground text-xs">{metric.label}</dt>
           {/* Value and hint both live in the <dd> so the group is dt+dd only —
               a hint as a sibling of dt/dd breaks axe's definition-list rule. */}
           <dd className="flex flex-col gap-1">
-            <span className="text-foreground text-2xl leading-none font-semibold tabular-nums">
+            <span className="text-foreground text-xl leading-none font-medium tabular-nums">
               {metric.value}
             </span>
             {metric.hint ? (

@@ -1,5 +1,6 @@
 import type { Preview } from '@storybook/react-vite'
 import '../src/styles.css'
+import './preview.css'
 
 const preview: Preview = {
   // Every story also generates a docs page from its props and TSDoc, so the

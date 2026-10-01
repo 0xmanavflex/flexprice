@@ -512,7 +512,7 @@ function InvoiceTable({
               : '—'
           return (
             <TableRow key={invoice.id}>
-              <TableCell className="font-medium">{invoice.number}</TableCell>
+              <TableCell>{invoice.number}</TableCell>
               <TableCell className="text-muted-foreground">{period}</TableCell>
               <TableCell>
                 <InvoiceStatusBadge status={invoice.status} />

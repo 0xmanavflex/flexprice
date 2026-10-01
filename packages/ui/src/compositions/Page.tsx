@@ -40,7 +40,7 @@ export function PageHeader({ title, description, action, menu, breadcrumb }: Pag
       {breadcrumb}
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="truncate text-xl font-semibold">{title}</h1>
+          <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
           {description ? (
             <p className="text-sm text-muted-foreground">{description}</p>
           ) : null}

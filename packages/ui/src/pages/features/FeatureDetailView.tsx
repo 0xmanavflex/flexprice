@@ -223,7 +223,7 @@ export function FeatureDetailView({
                       {
                         key: 'plan',
                         header: 'Plan / add-on',
-                        cell: (row) => <span className="font-medium">{row.plan}</span>,
+                        cell: (row) => row.plan,
                       },
                       { key: 'model', header: 'Billing model', cell: (row) => row.model },
                       { key: 'billed', header: 'Billed', cell: (row) => row.billed },
@@ -255,7 +255,7 @@ export function FeatureDetailView({
                       {
                         key: 'plan',
                         header: 'Plan',
-                        cell: (row) => <span className="font-medium">{row.plan}</span>,
+                        cell: (row) => row.plan,
                       },
                       { key: 'allowance', header: 'Allowance', cell: (row) => row.allowance },
                       { key: 'resets', header: 'Usage resets', cell: (row) => row.resets },
@@ -301,11 +301,19 @@ function OverviewTab({
   const usage = isMetered ? demoUsagePoints() : []
   const total = usage.reduce((sum, point) => sum + point.value, 0)
   const unit = feature.unitPlural || 'units'
+  const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
   const chartTabs = [
     {
       id: 'usage',
       label: 'Usage, last 30 days',
-      value: isMetered ? `${total.toLocaleString('en-US')} ${unit}` : '—',
+      value: isMetered ? (
+        <>
+          {compact.format(total)}
+          <span className="text-muted-foreground ms-1.5 text-sm font-normal">{unit}</span>
+        </>
+      ) : (
+        '—'
+      ),
       points: usage,
     },
     {
@@ -365,7 +373,7 @@ function OverviewTab({
               {
                 key: 'plan',
                 header: 'Plan',
-                cell: (row) => <span className="font-medium">{row.plan}</span>,
+                cell: (row) => row.plan,
               },
               {
                 key: 'model',

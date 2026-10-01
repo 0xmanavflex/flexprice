@@ -16,7 +16,7 @@ import { EmptyState } from '@ui/compositions/EmptyState'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ArcGauge } from '../shared/ArcGauge'
-import { BlurredEmpty, MetricChart, TrendBadge } from '../shared/charts'
+import { BlurredEmpty, MetricChart } from '../shared/charts'
 import type { MetricTab } from '../shared/charts'
 import { HalfDonut } from '../shared/HalfDonut'
 import type { DonutSlice } from '../shared/HalfDonut'
@@ -246,7 +246,7 @@ function Panel({
       <header className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
           <div className="flex items-center gap-1.5">
-            <h2 id={id} className="text-sm font-semibold">
+            <h2 id={id} className="text-sm font-medium">
               {title}
             </h2>
             {info ? (
@@ -434,9 +434,6 @@ function EventsSection({
   const [metric, setMetric] = useState(METRIC_EVENTS)
 
   const ready = events.status === 'ready'
-  const values = events.points.map((point) => point.events)
-  const min = values.length ? Math.min(...values) : null
-  const max = values.length ? Math.max(...values) : null
 
   /**
    * The tab strip is the stat strip.
@@ -506,14 +503,6 @@ function EventsSection({
       title="Events monitoring"
       description={`Ingestion, revenue and processing lag, ${rangeLabel}.`}
       info="Every metered event Flexprice accepted in this window, bucketed by the granularity above."
-      action={
-        ready && metric === METRIC_EVENTS && min !== null && max !== null ? (
-          <div className="text-muted-foreground flex items-center gap-3 text-xs tabular-nums">
-            <span>Min {compact.format(min)}</span>
-            <span>Max {compact.format(max)}</span>
-          </div>
-        ) : null
-      }
     >
       {ready ? (
         chart
@@ -596,10 +585,23 @@ function SubscriptionsCard({
         </Button>
       }
     >
-      <div className="flex items-baseline gap-2.5">
-        <span className="text-3xl font-semibold tabular-nums">{ready ? total : 0}</span>
-        <span className="text-muted-foreground text-xs">new subscriptions</span>
-        {ready && changePercent !== null ? <TrendBadge percent={changePercent} /> : null}
+      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        <span className="text-4xl font-semibold tabular-nums tracking-tight">
+          {ready ? total : 0}
+        </span>
+        <span className="text-muted-foreground text-sm">new subscriptions</span>
+        {ready && changePercent !== null ? (
+          <span
+            className={cn(
+              'text-sm font-medium tabular-nums',
+              changePercent >= 0 ? 'text-success' : 'text-destructive',
+            )}
+          >
+            {changePercent >= 0 ? '+' : ''}
+            {new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(changePercent)}%
+            {' vs prior period'}
+          </span>
+        ) : null}
       </div>
 
       {ready ? (
@@ -781,22 +783,14 @@ function ApiCard({
       }
     >
       {ready ? (
-        <div className="flex flex-col items-center gap-2">
-          <ArcGauge
-            value={api.activeKeys}
-            max={api.totalKeys}
-            display={`${whole.format(api.activeKeys)}/${whole.format(api.totalKeys)}`}
-            caption="keys active"
-            tone={healthy ? 'good' : 'warning'}
-            label="API keys active"
-          />
-          <span className="text-sm font-semibold">{healthy ? 'Healthy' : 'Attention'}</span>
-          <p className="text-muted-foreground text-center text-xs">
-            {api.lastUsedLabel !== null
-              ? `Last used ${api.lastUsedLabel}.`
-              : 'No key has been used yet.'}
-          </p>
-        </div>
+        <ArcGauge
+          value={api.activeKeys}
+          max={api.totalKeys}
+          display={healthy ? 'Healthy' : 'Attention'}
+          caption={`${whole.format(api.activeKeys)} of ${whole.format(api.totalKeys)} keys active`}
+          tone={healthy ? 'good' : 'warning'}
+          label="API keys active"
+        />
       ) : api.status === 'unavailable' ? (
         <Unavailable what="API keys could not be loaded." />
       ) : (
@@ -818,19 +812,18 @@ function ApiCard({
        * absent with the reason, in the same shape they would take if they
        * arrived.
        */}
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 text-center">
         {[
           { label: 'Requests', value: NOTHING },
           { label: 'p95 latency', value: NOTHING },
           { label: 'Errors', value: NOTHING },
         ].map((stat) => (
-          <div key={stat.label} className="flex flex-col gap-1">
+          <div key={stat.label} className="flex flex-col items-center gap-1">
             <span className="text-muted-foreground text-xs">{stat.label}</span>
             <span className="text-base font-medium tabular-nums">{stat.value}</span>
           </div>
         ))}
       </div>
-      <Unavailable what="Request volume, latency and error counts are not exposed by the Flexprice API." />
     </Panel>
   )
 }

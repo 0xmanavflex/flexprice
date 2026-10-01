@@ -80,7 +80,7 @@ export function ResourceNavigation({
                   // `text-foreground/60` blend: the blend computes to 4.27:1 on
                   // white and fails the contrast check, where the muted token is
                   // validated for exactly this small-secondary use across the app.
-                  'relative inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-0.5 pt-1 pb-2.5 text-sm font-medium text-muted-foreground transition-colors',
+                  'relative inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-0.5 pt-1 pb-2.5 text-sm font-normal text-muted-foreground transition-colors',
                   'hover:text-foreground focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                   active && 'border-foreground text-foreground',
                   item.disabled && 'pointer-events-none opacity-50',

@@ -35,7 +35,7 @@ export function EntityHeader({ trail, icon, title, subtitle, id, actions }: Enti
             {icon}
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <h1 className="truncate text-lg leading-tight font-medium">{title}</h1>
+            <h1 className="truncate text-xl leading-tight font-medium tracking-tight">{title}</h1>
             {subtitle ? <span className="text-muted-foreground text-sm">{subtitle}</span> : null}
           </div>
         </div>

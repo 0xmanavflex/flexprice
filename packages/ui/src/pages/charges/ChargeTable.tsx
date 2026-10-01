@@ -126,7 +126,7 @@ export function ChargeTable({
           <TableBody>
             {charges.map((charge) => (
               <TableRow key={charge.id}>
-                <TableCell className="font-medium">
+                <TableCell>
                   {charge.displayName || charge.meterName || 'Charge'}
                 </TableCell>
                 <TableCell>

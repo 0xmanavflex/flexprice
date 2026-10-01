@@ -39,7 +39,7 @@ export function DetailTabs({
     >
       <TabsList variant="line" className="w-full justify-start border-b">
         {tabs.map((tab) => (
-          <TabsTrigger key={tab.value} value={tab.value} className="flex-none px-3">
+          <TabsTrigger key={tab.value} value={tab.value} className="flex-none px-3 font-normal">
             {tab.label}
             {tab.count !== undefined ? (
               <span className="text-muted-foreground text-xs tabular-nums">{tab.count}</span>
@@ -84,12 +84,15 @@ export function SimpleTable<T>({
     <div className="overflow-x-auto">
       <table className="w-full text-sm">
         <thead>
-          <tr className="bg-muted/50 text-muted-foreground text-left text-xs font-medium">
+          <tr className="bg-muted/50 text-left">
             {columns.map((column) => (
               <th
                 key={column.key}
                 scope="col"
-                className={cn('px-4 py-2.5 font-medium', column.className)}
+                className={cn(
+                  'text-muted-foreground px-4 py-2.5 text-[11px] font-medium tracking-[0.08em] uppercase',
+                  column.className,
+                )}
               >
                 {column.header}
               </th>

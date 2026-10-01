@@ -4,7 +4,7 @@ import { expect, within } from 'storybook/test'
 /**
  * The type system.
  *
- * One family — Geist Variable — carries the whole console. `--font-heading` is
+ * One family — Inter Variable — carries the whole console. `--font-heading` is
  * aliased to `--font-sans`, so there is no second display face: hierarchy comes
  * from weight and size, not from a change of typeface. The density is compact
  * (ported from Ferry): UI text sits at the small end of the scale, and every
@@ -20,17 +20,17 @@ const SCALE: { class: string; token: string; px: string; use: string }[] = [
   },
   { class: 'text-sm', token: '0.875rem', px: '14px', use: 'Body and form text.' },
   { class: 'text-base', token: '1rem', px: '16px', use: 'Rarely — dense UI lives below this.' },
-  { class: 'text-lg', token: '1.125rem', px: '18px', use: 'Section headings.' },
-  { class: 'text-xl', token: '1.25rem', px: '20px', use: 'Card titles.' },
-  { class: 'text-2xl', token: '1.5rem', px: '24px', use: 'Metric values, page titles.' },
+  { class: 'text-lg', token: '1.125rem', px: '18px', use: 'Rarely — page titles sit at xl.' },
+  { class: 'text-xl', token: '1.25rem', px: '20px', use: 'Page titles and metric values, at medium weight.' },
+  { class: 'text-2xl', token: '1.5rem', px: '24px', use: 'Chart figures, at medium weight.' },
   { class: 'text-3xl', token: '1.875rem', px: '30px', use: 'Hero figures.' },
   { class: 'text-4xl', token: '2.25rem', px: '36px', use: 'Marketing / auth surfaces.' },
 ]
 
 const WEIGHTS: { class: string; weight: string; use: string }[] = [
   { class: 'font-normal', weight: '400', use: 'Body, table cells.' },
-  { class: 'font-medium', weight: '500', use: 'Labels, badges, active nav.' },
-  { class: 'font-semibold', weight: '600', use: 'Headings, metric values.' },
+  { class: 'font-medium', weight: '500', use: 'Page titles, section titles, metric values, table headers.' },
+  { class: 'font-semibold', weight: '600', use: 'Not used on product pages.' },
   { class: 'font-bold', weight: '700', use: 'Reserved for emphasis.' },
 ]
 

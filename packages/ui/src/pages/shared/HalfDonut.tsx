@@ -83,6 +83,11 @@ export function HalfDonut({
   return (
     <div className={cn('flex flex-col', className)}>
       <div className="relative mx-auto h-[158px] w-full max-w-[300px]">
+        {/* chart-12's faded square grid behind the arc. */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-0 top-0 h-28 overflow-hidden [mask-image:linear-gradient(to_bottom,black_0%,black_42%,transparent_100%)] opacity-35 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:8px_8px]"
+        />
         <ChartContainer
           config={{}}
           className="aspect-auto h-full w-full overflow-visible"
@@ -115,7 +120,7 @@ export function HalfDonut({
                         <span className="text-popover-foreground text-xs font-medium">
                           {slice.label}
                         </span>
-                        <span className="text-popover-foreground ms-2 text-xs font-semibold tabular-nums">
+                        <span className="text-popover-foreground ms-2 text-xs font-medium tabular-nums">
                           {format(slice.value)}
                         </span>
                         <span className="text-muted-foreground text-xs tabular-nums">{share}%</span>
@@ -139,7 +144,6 @@ export function HalfDonut({
               cornerRadius={3}
               stroke="var(--card)"
               strokeWidth={1.5}
-              isAnimationActive={false}
             >
               {data.map((slice) => (
                 <Cell key={slice.id} fill={toneColor(slice.tone)} />
@@ -150,7 +154,7 @@ export function HalfDonut({
 
         <div className="pointer-events-none absolute inset-x-0 top-[82px] flex flex-col items-center">
           <span className="text-muted-foreground text-xs">{centerLabel}</span>
-          <span className="text-2xl font-semibold tabular-nums">{centerValue}</span>
+          <span className="text-2xl font-medium tabular-nums">{centerValue}</span>
         </div>
       </div>
 

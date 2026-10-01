@@ -45,7 +45,7 @@ export function DetailHeader({
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-2">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h1 className="truncate text-xl font-semibold">{title}</h1>
+            <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
             {badges}
             {identifier ? (
               <span className="truncate font-mono text-xs text-muted-foreground">{identifier}</span>

@@ -158,7 +158,7 @@ export function SplitMeter({
         <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
           {title === undefined ? null : <span className="text-sm font-medium">{title}</span>}
           {value === undefined ? null : (
-            <span className="text-xl leading-none font-semibold tabular-nums">{value}</span>
+            <span className="text-2xl leading-none font-medium tabular-nums">{value}</span>
           )}
         </div>
       )}
@@ -201,13 +201,13 @@ export function SplitMeter({
                   />
                   {part.label}
                 </span>
-                <span className="text-xs font-semibold tabular-nums">{format(part.value)}</span>
+                <span className="text-xs font-medium tabular-nums">{format(part.value)}</span>
               </div>
             ))}
             {total === undefined ? null : (
               <div className="border-border mt-0.5 flex items-center justify-between gap-3 border-t pt-1">
                 <span className="text-xs">Total</span>
-                <span className="text-xs font-semibold tabular-nums">{format(ceiling)}</span>
+                <span className="text-xs font-medium tabular-nums">{format(ceiling)}</span>
               </div>
             )}
           </div>

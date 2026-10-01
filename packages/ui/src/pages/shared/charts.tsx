@@ -34,8 +34,8 @@ import { provenance } from '@ui/provenance'
  */
 export const ChartsProvenance = provenance({
   source: 'composition',
-  composes: ['ui/chart', 'ui/tabs', 'compositions/EmptyState'],
-  note: 'MetricChart (shadcn Chart + Tabs, after the Vercel console) and BlurredEmpty. Also the ChartTone vocabulary the rest of the chart library paints with.',
+  composes: ['@reui/chart-6', '@reui/chart-18', 'ui/chart', 'ui/tabs', 'compositions/EmptyState'],
+  note: 'MetricChart (chart-6 metric tabs over chart-18’s gradient area) and BlurredEmpty. Also the ChartTone vocabulary the rest of the chart library paints with.',
 })
 
 /* ---- Tones -------------------------------------------------------------- */
@@ -213,12 +213,14 @@ export interface MetricChartProps {
 }
 
 /**
- * Tabs across the top, a line below — the Vercel console's metric panel.
+ * KPI tabs over one series — ReUI `chart-6`, drawn as `chart-18`'s area.
  *
- * Not a ReUI block. The shape is shadcn's `Chart` (recharts) under a tab strip
- * where each tab is a *stat*: a label, the figure for the window, and its
- * trend. That is what makes the strip worth its height — you read four numbers
- * without switching, and switching plots the one you read.
+ * `chart-6` is the metric switcher: a row of stat cells, and clicking one
+ * swaps the series underneath. `chart-18` is the plot: a monotone area, a
+ * gradient that is visible at the line and nearly gone at the axis, and an
+ * ease-out reveal. The active cell keeps the line-tab underline (a foreground
+ * rule on the cell's bottom edge) rather than a tinted fill, which is the
+ * mark in the console's reference for this panel.
  *
  * Fully controlled, and that is load-bearing rather than stylistic. Which
  * metric you are looking at is the kind of thing a page wants to put in the
@@ -258,15 +260,20 @@ export function MetricChart({
             key={tab.id}
             value={tab.id}
             className={cn(
-              'h-auto flex-1 flex-col items-start justify-start gap-2 rounded-none px-4 py-3.5 text-left',
-              // The accent sits on the bottom edge, against the plot it drives.
-              'border-0 border-transparent',
-              'data-active:border-chart-1 data-active:bg-muted',
+              'h-auto flex-1 flex-col items-start justify-start gap-1.5 rounded-none px-4 py-3.5 text-left shadow-none',
+              // The rule is the cell's own bottom edge, not a blue border or a
+              // tinted fill. `after:bottom-0` pulls the line-tab mark up onto
+              // that edge; the default sits 5px below it and gets clipped.
+              'border-0 bg-transparent data-active:bg-transparent data-active:shadow-none',
+              // The line-tab mark ships at `bottom: -5px`, which tailwind-merge
+              // does not treat as the same class as `bottom-0`. The important
+              // flag is what actually seats it on the cell edge.
+              'after:bottom-0! after:h-0.5',
             )}
           >
-            <span className="text-muted-foreground text-xs font-medium">{tab.label}</span>
+            <span className="text-muted-foreground text-xs font-normal">{tab.label}</span>
             <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="text-foreground text-xl leading-none font-semibold tabular-nums">
+              <span className="text-foreground text-2xl leading-none font-semibold tabular-nums">
                 {tab.value}
               </span>
               {tab.changePercent === undefined ? null : <TrendBadge percent={tab.changePercent} />}
@@ -327,9 +334,17 @@ function MetricSeries({
   const values = tab.points.map((point) => point.value)
   const min = Math.min(...values)
   const max = Math.max(...values)
+  const compact = new Intl.NumberFormat(undefined, {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  })
 
   return (
     <div className="flex flex-col gap-2">
+      <div className="text-muted-foreground flex justify-end gap-3 text-[11px] tabular-nums">
+        <span>Min {compact.format(min)}</span>
+        <span>Max {compact.format(max)}</span>
+      </div>
       <ChartContainer
         config={config}
         className="aspect-auto w-full"
@@ -343,17 +358,13 @@ function MetricSeries({
           margin={{ top: 12, right: 12, bottom: 4, left: 12 }}
         >
           {/*
-            The wash under the line. The design carries one and it is doing
-            work: a bare stroke on a white card leaves the plot reading as a
-            thin squiggle, and the fill gives the series a body so the shape of
-            the window is legible at a glance. Kept very faint — 18% at the
-            line falling to nothing at the axis — because it is there to seat
-            the line, not to be read as an area.
+            chart-18's wash: strong enough at the stroke to read as an area,
+            gone by the axis so the grid still shows through.
           */}
           <defs>
             <linearGradient id={`${chartId}-wash`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.18} />
-              <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0} />
+              <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.3} />
+              <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0.05} />
             </linearGradient>
           </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
@@ -362,17 +373,20 @@ function MetricSeries({
             tickLine={false}
             axisLine={false}
             tickMargin={10}
-            tick={{ fontSize: 12 }}
+            tick={{ fontSize: 11 }}
             minTickGap={24}
           />
-          <YAxis hide domain={[0, 'auto']} />
+          {/* No pinned zero. A series that only moves a little then sits as a
+              flat stripe at the top; chart-18 lets the axis fit the data so
+              the shape fills the plot. */}
+          <YAxis hide />
           {/* The crosshair: a dashed vertical rule following the pointer. */}
           <ChartTooltip
             cursor={{ stroke: 'var(--border)', strokeWidth: 1, strokeDasharray: '4 4' }}
             content={({ active: hovered, payload, label }) =>
               hovered && payload?.length ? (
                 <div className="bg-popover min-w-[11rem] rounded-lg border p-3 shadow-lg">
-                  <div className="border-border text-popover-foreground mb-2 border-b pb-1.5 text-sm font-semibold">
+                  <div className="border-border text-popover-foreground mb-2 border-b pb-1.5 text-sm font-medium">
                     {String(label)}
                   </div>
                   <div className="flex items-center justify-between gap-3">
@@ -380,7 +394,7 @@ function MetricSeries({
                       <span aria-hidden className="bg-chart-1 size-2.5 rounded-sm" />
                       {tab.label}
                     </span>
-                    <span className="text-popover-foreground text-sm font-semibold tabular-nums">
+                    <span className="text-popover-foreground text-sm font-medium tabular-nums">
                       {format(Number(payload[0]?.value ?? 0))}
                     </span>
                   </div>
@@ -396,7 +410,10 @@ function MetricSeries({
             fill={`url(#${chartId}-wash)`}
             dot={false}
             activeDot={{ r: 4, fill: 'var(--color-value)', stroke: 'var(--card)', strokeWidth: 2 }}
-            isAnimationActive={false}
+            isAnimationActive
+            animationBegin={0}
+            animationDuration={850}
+            animationEasing="ease-out"
           />
         </AreaChart>
       </ChartContainer>

@@ -1,8 +1,17 @@
 import { fileURLToPath } from 'node:url'
+import tailwindcss from '@tailwindcss/vite'
+import { mergeConfig } from 'vite'
 import type { StorybookConfig } from '@storybook/react-vite'
 
 const config: StorybookConfig = {
   stories: ['../src/**/*.mdx', '../src/**/*.stories.@(ts|tsx)'],
+  core: {
+    disableWhatsNewNotifications: true,
+  },
+  features: {
+    sidebarOnboardingChecklist: false,
+    menuOnboardingChecklist: false,
+  },
   addons: [
     '@storybook/addon-docs',
     // Every story becomes a test in a real browser, and an accessibility check.
@@ -14,22 +23,23 @@ const config: StorybookConfig = {
   framework: { name: '@storybook/react-vite', options: {} },
 
   /**
-   * `@ui/*` has to resolve here too.
+   * The workbench has to build CSS the same way the app and the story tests do.
    *
-   * The alias lived only in `vitest.config.ts`, so the story *tests* passed
-   * while `pnpm storybook` — the workbench a developer actually opens — failed
-   * to resolve every import. The tests passing is exactly what hid it.
+   * `@tailwindcss/vite` lived only in `vitest.config.ts` and `apps/console`.
+   * `pnpm storybook` then served the stylesheet as raw CSS: `@theme`, `@apply`
+   * and the utility classes never expanded, so every story looked unstyled.
+   * The alias has the same history — it lived only in the test config, so the
+   * tests passed while the workbench failed to resolve `@ui/*`.
    */
-  viteFinal: (config) => ({
-    ...config,
-    resolve: {
-      ...config.resolve,
-      alias: {
-        ...config.resolve?.alias,
-        '@ui/': fileURLToPath(new URL('../src/', import.meta.url)),
+  viteFinal: (config) =>
+    mergeConfig(config, {
+      plugins: [tailwindcss()],
+      resolve: {
+        alias: {
+          '@ui/': fileURLToPath(new URL('../src/', import.meta.url)),
+        },
       },
-    },
-  }),
+    }),
 }
 
 export default config

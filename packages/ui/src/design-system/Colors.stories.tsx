@@ -36,24 +36,24 @@ const GROUPS: Group[] = [
   {
     title: 'Brand',
     description:
-      'One confident indigo (~274°). Swap these three lines to rebrand — nothing else in the system names a colour.',
+      'One deep teal. Swap these three lines to rebrand — nothing else in the system names a colour.',
     tokens: [
       {
         name: '--brand',
-        light: 'oklch(0.52 0.196 274)',
-        dark: 'oklch(0.62 0.17 274)',
-        note: 'The accent. Lighter and less saturated on dark so it holds without glowing.',
+        light: '#07383e',
+        dark: '#81cec4',
+        note: 'The accent. Lighter on dark so it holds without glowing.',
       },
       {
         name: '--brand-foreground',
-        light: 'oklch(0.985 0 0)',
-        dark: 'oklch(0.985 0 0)',
+        light: '#ffffff',
+        dark: '#07383e',
         note: 'Text/icon on brand.',
       },
       {
         name: '--brand-muted',
-        light: 'oklch(0.955 0.018 274)',
-        dark: 'oklch(0.28 0.05 274)',
+        light: '#eaf5f1',
+        dark: '#173b3b',
         note: 'A faint brand wash for tinted surfaces.',
       },
     ],
@@ -76,8 +76,8 @@ const GROUPS: Group[] = [
       },
       {
         name: '--ring',
-        light: 'oklch(0.55 0.18 274)',
-        dark: 'oklch(0.62 0.16 274)',
+        light: 'var(--brand)',
+        dark: 'var(--brand)',
         note: 'Focus ring, in the brand.',
       },
     ],
@@ -141,12 +141,12 @@ const GROUPS: Group[] = [
       { name: '--sidebar-primary', light: 'var(--brand)', dark: 'var(--brand)' },
       {
         name: '--sidebar-accent',
-        light: 'oklch(0.905 0.028 274)',
-        dark: 'oklch(0.275 0.03 274)',
+        light: '#e6f3f2',
+        dark: 'oklch(0.34 0.03 190)',
         note: 'The active row — a brand wash, not a flat grey.',
       },
       { name: '--sidebar-border', light: 'oklch(0.922 0 0)', dark: 'oklch(1 0 0 / 10%)' },
-      { name: '--sidebar-ring', light: 'oklch(0.55 0.18 274)', dark: 'oklch(0.62 0.16 274)' },
+      { name: '--sidebar-ring', light: 'var(--brand)', dark: 'var(--brand)' },
     ],
   },
 ]

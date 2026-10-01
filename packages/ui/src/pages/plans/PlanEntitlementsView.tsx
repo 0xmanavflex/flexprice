@@ -90,7 +90,7 @@ export function PlanEntitlementsView({
               const price = e.featureType === FeatureType.Metered ? usagePrice(e) : null
               return (
                 <TableRow key={e.id}>
-                  <TableCell className="font-medium">{e.featureName ?? e.featureId}</TableCell>
+                  <TableCell>{e.featureName ?? e.featureId}</TableCell>
                   <TableCell>
                     <Badge variant="secondary">{TYPE_LABEL[e.featureType]}</Badge>
                   </TableCell>

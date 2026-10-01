@@ -159,10 +159,13 @@ export function ArcGauge({
        * `aria-hidden` because the button above already reads the same figure —
        * without it every gauge announces itself twice.
        */}
-      <div aria-hidden="true" className="-mt-8 flex flex-col items-center gap-0.5 text-center">
-        <span className="text-2xl leading-none font-semibold tabular-nums">
-          {display ?? `${percent}%`}
-        </span>
+      {/*
+        chart-7 puts the reading beside the arc, in text, not inside the SVG.
+        Sitting it just under the arc keeps that: a real line of type, not a
+        label drawn over the ticks.
+      */}
+      <div aria-hidden="true" className="flex flex-col items-center gap-1 text-center">
+        <span className="text-sm font-medium">{display ?? `${percent}%`}</span>
         {caption === undefined ? null : (
           <span className="text-muted-foreground text-xs">{caption}</span>
         )}

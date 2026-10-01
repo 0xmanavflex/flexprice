@@ -178,7 +178,7 @@ export function DetailShell({
              * even gap among themselves and wrap together under a long title.
              */}
             <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="min-w-0 truncate text-2xl font-semibold leading-tight tracking-tight">
+              <h1 className="min-w-0 truncate text-xl leading-tight font-medium tracking-tight">
                 {title}
               </h1>
               {badges ? (

@@ -1,0 +1,16 @@
+/*
+ * The preview iframe is the product surface.
+ *
+ * Storybook's canvas defaults to white, and its docs preview block paints its
+ * own. The design system already sets the page colour on the tokens, including
+ * under `.dark`, so the canvas follows that instead of sitting on a second white.
+ */
+body.sb-show-main {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+.docs-story {
+  background: var(--background);
+  color: var(--foreground);
+}

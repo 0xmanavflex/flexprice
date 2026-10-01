@@ -1,7 +1,7 @@
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { TrendBadge, formatWhole } from './charts'
+import { formatWhole } from './charts'
 
 /**
  * A row per thing, each with a segmented bar meter.
@@ -15,20 +15,17 @@ import { TrendBadge, formatWhole } from './charts'
  * has several features, plans or customers to compare, and the comparison is
  * the entire reason to draw a meter instead of printing the number.
  *
- * The segments are also what makes the rows comparable at a glance. Solid bars
- * of slightly different lengths are hard to rank; counting uprights is not.
- *
- * Two deviations from the block, both deliberate. Its trend delta is
- * `text-success` at 12px, which measures 2.95:1 against the card and fails —
- * `TrendBadge` puts that colour in a tinted fill behind dark text instead. And
- * its meter is a bare `role="img"`; here each track is a focusable tooltip
- * trigger, so the exact figure behind the approximation is reachable by
- * keyboard and not only by hovering a mouse over a 28px-tall strip.
+ * The block draws that meter once, under a single figure. A usage list repeats
+ * it: the name and its key on the left, the track in the middle, the figure
+ * and the block's delta on the right. The delta keeps the block's classes —
+ * `text-xs font-medium` in `text-success` or `text-destructive` — and each
+ * track is a focusable tooltip trigger so the exact figure is reachable by
+ * keyboard.
  */
 export const SegmentMeterProvenance = provenance({
   source: 'composition',
   composes: ['@reui/chart-14', 'ui/tooltip'],
-  note: 'chart-14 segmented meter, one per row, over real values. Primary series tone; badge trend rather than the block failing-contrast coloured text.',
+  note: 'chart-14 segmented meter, one per row: label, track, figure, and the block’s coloured delta.',
 })
 
 /** One row of the meter list. */
@@ -66,6 +63,25 @@ export interface SegmentMeterProps {
   /** Shown in place of the rows when there are none. */
   emptyMessage?: string | undefined
   className?: string | undefined
+}
+
+/** chart-14's delta: coloured 12px text, sign included, no badge. */
+function MeterDelta({ percent }: { percent: number }) {
+  const positive = percent >= 0
+  const formatted = `${positive ? '+' : ''}${new Intl.NumberFormat(undefined, {
+    maximumFractionDigits: 1,
+  }).format(percent)}%`
+
+  return (
+    <span
+      className={cn(
+        'text-xs font-medium tabular-nums',
+        positive ? 'text-success' : 'text-destructive',
+      )}
+    >
+      {formatted}
+    </span>
+  )
 }
 
 /** How many of `segments` a value fills, given its denominator. */
@@ -136,24 +152,15 @@ export function SegmentMeter({
         const reading = `${row.label}: ${format(row.value)} of ${format(max)}, ${share}%`
 
         return (
-          <li key={row.id} className="flex flex-col gap-2">
-            <div className="flex items-baseline justify-between gap-3">
-              <div className="flex min-w-0 flex-col gap-0.5">
-                <span className="truncate text-sm font-medium">{row.label}</span>
-                {row.caption ? (
-                  <span className="text-muted-foreground truncate font-mono text-xs">
-                    {row.caption}
-                  </span>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 items-center gap-2">
-                <span className="text-sm font-semibold tabular-nums">
-                  {row.display ?? format(row.value)}
-                </span>
-                {row.changePercent === undefined ? null : (
-                  <TrendBadge percent={row.changePercent} />
-                )}
-              </div>
+          <li
+            key={row.id}
+            className="grid grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_auto] items-center gap-x-4"
+          >
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span className="truncate text-sm font-medium">{row.label}</span>
+              {row.caption ? (
+                <span className="text-muted-foreground truncate font-mono text-xs">{row.caption}</span>
+              ) : null}
             </div>
 
             <Tooltip>
@@ -172,6 +179,13 @@ export function SegmentMeter({
                 {reading}
               </TooltipContent>
             </Tooltip>
+
+            <div className="flex shrink-0 items-baseline gap-3">
+              <span className="text-sm font-medium tabular-nums">
+                {row.display ?? format(row.value)}
+              </span>
+              {row.changePercent === undefined ? null : <MeterDelta percent={row.changePercent} />}
+            </div>
           </li>
         )
       })}

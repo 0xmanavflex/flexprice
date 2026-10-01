@@ -94,7 +94,7 @@ export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGran
           <TableBody>
             {grants.map((grant) => (
               <TableRow key={grant.id}>
-                <TableCell className="font-medium">{grant.name}</TableCell>
+                <TableCell>{grant.name}</TableCell>
                 <TableCell className="tabular-nums">{grant.credits}</TableCell>
                 <TableCell>
                   <Badge variant="secondary">{cadenceLabel(grant)}</Badge>

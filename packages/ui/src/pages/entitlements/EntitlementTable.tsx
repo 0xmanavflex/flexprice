@@ -107,7 +107,7 @@ export function EntitlementTable({ entitlements, onAdd, onEdit, onDelete }: Enti
           <TableBody>
             {entitlements.map((entitlement) => (
               <TableRow key={entitlement.id}>
-                <TableCell className="font-medium">
+                <TableCell>
                   {entitlement.featureName ?? entitlement.featureId}
                 </TableCell>
                 <TableCell>

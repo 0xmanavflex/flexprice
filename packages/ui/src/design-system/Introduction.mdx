@@ -54,7 +54,7 @@ export const Panel = ({ children, dark }) => (
 
 # Flexprice Design System
 
-The Flexprice V2 console is one confident indigo on a neutral field. It is built on **ReUI’s `base-nova`** preset — shadcn tokens on the [Base UI](https://base-ui.com/) primitives — extended with Tailwind v4 tokens, a small semantic palette, compact density and restrained depth. Nothing here is decorative for its own sake: the single accent carries meaning precisely because everything around it stays grey.
+The Flexprice V2 console is one deep teal on a warm neutral field. It is built on **ReUI’s `base-nova`** preset — shadcn tokens on the [Base UI](https://base-ui.com/) primitives — extended with Tailwind v4 tokens, a small semantic palette, compact density and restrained depth. Nothing here is decorative for its own sake: the single accent carries meaning precisely because everything around it stays grey.
 
 This section is the source of truth for the design language. The pages beside it are **live** — every swatch, type sample and radius block is filled from the real CSS custom properties, so this documentation cannot drift from the console it describes.
 
@@ -82,14 +82,14 @@ This exists because of what V1 became: **616 component files, 371 of them in a s
 
 ## One accent on a neutral field
 
-The console was once entirely greyscale — every token `oklch(x 0 0)` — which read as a wireframe rather than a product. One indigo hue (**~274°**) now carries the primary action, the active navigation, focus rings and links. Everything else stays neutral so the accent means something.
+The console was once entirely greyscale — every token `oklch(x 0 0)` — which read as a wireframe rather than a product. One deep teal (`#07383e`) now carries the primary action, the active navigation, focus rings and links. Everything else stays neutral so the accent means something.
 
 <Grid>
-  <Swatch token="--brand" value="oklch(0.52 0.196 274)" note="The accent." />
-  <Swatch token="--brand-foreground" value="oklch(0.985 0 0)" note="Text on brand." />
-  <Swatch token="--brand-muted" value="oklch(0.955 0.018 274)" note="Faint brand wash." />
-  <Swatch token="--primary" value="= var(--brand)" note="Primary action." />
-  <Swatch token="--ring" value="oklch(0.55 0.18 274)" note="Focus, on-brand." />
+  <Swatch token="--brand" value="#07383e" note="The accent." />
+  <Swatch token="--brand-foreground" value="#ffffff" note="Text on brand." />
+  <Swatch token="--brand-muted" value="#eaf5f1" note="Faint brand wash." />
+  <Swatch token="--primary" value="var(--brand)" note="Primary action." />
+  <Swatch token="--ring" value="var(--brand)" note="Focus, on-brand." />
 </Grid>
 
 **To rebrand the entire console, swap three lines** — `--brand`, `--brand-foreground`, `--brand-muted`. Nothing else in the system names a colour; `--primary`, the active sidebar row, the focus ring and the links all resolve back to those three.

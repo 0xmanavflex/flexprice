@@ -13,16 +13,20 @@
  */
 
 @import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+@import '@fontsource-variable/inter';
 
 /*
  * Tell Tailwind where this package's markup lives. v4 auto-detects sources from
  * the consuming app's root (`apps/console`), which does not include
  * `packages/ui/src` — without this, classes reach the DOM with no CSS generated.
+ *
+ * This follows the imports. An `@source` earlier is a statement, and the CSS
+ * spec then drops every `@import` after it — the font, the animation utilities
+ * and the shadcn layer.
  */
-@source "./";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-@import "@fontsource-variable/inter";
+@source './';
 
 @custom-variant dark (&:is(.dark *));
 
