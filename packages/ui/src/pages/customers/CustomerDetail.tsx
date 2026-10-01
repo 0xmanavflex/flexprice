@@ -336,16 +336,6 @@ const DEMO_ACTIVITY = [
   },
 ]
 
-function StatCard({ label, value, hint }: { label: string; value: ReactNode; hint?: string }) {
-  return (
-    <div className="bg-card flex flex-col gap-1 rounded-xl border p-5">
-      <span className="text-muted-foreground text-xs">{label}</span>
-      <span className="text-2xl font-medium tabular-nums">{value}</span>
-      {hint ? <span className="text-muted-foreground text-xs">{hint}</span> : null}
-    </div>
-  )
-}
-
 function OverviewTab({
   subscriptions,
   invoices,
@@ -366,29 +356,9 @@ function OverviewTab({
   onOpenInvoice: ((invoiceId: string) => void) | undefined
 }) {
   const recent = invoices.slice(0, 5)
-  const active = subscriptions.filter(
-    (s) => SUBSCRIPTION_STATUS_LABEL[s.status] === 'Active',
-  ).length
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
-        <StatCard label="Subscriptions" value={subscriptions.length} hint={`${active} active`} />
-        <StatCard label="Invoices" value={invoices.length} />
-        <StatCard
-          label="Open invoices"
-          value={invoices.filter((i) => i.status === 'open').length}
-        />
-        <StatCard
-          label="Next renewal"
-          value={
-            <span className="text-lg">
-              {formatDate(subscriptions[0]?.currentPeriodEnd ?? null)}
-            </span>
-          }
-        />
-      </div>
-
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
           <Section
