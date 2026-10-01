@@ -77,6 +77,11 @@ export const queryKeys = {
       ['costSheets', 'list', filter] as const,
     detail: (id: string) => ['costSheets', 'detail', id] as const,
   },
+  wallets: {
+    all: () => ['wallets'] as const,
+    forCustomer: (customerId: string) => ['wallets', 'customer', customerId] as const,
+    transactions: (walletId: string) => ['wallets', 'transactions', walletId] as const,
+  },
   invoices: {
     all: () => ['invoices'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) => ['invoices', 'list', filter] as const,

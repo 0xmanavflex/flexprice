@@ -511,3 +511,19 @@ export {
 export type { DataExport, DataExportQuery, ExportEntity, ExportState } from './dataExport'
 export { INTEGRATION_CATALOG } from './integration'
 export type { Integration, IntegrationSpec } from './integration'
+export {
+  WALLET_STATUS_LABEL,
+  WalletStatus,
+  WalletTopUpKind,
+  createWalletSchema,
+  emptyTopUp,
+  emptyWallet,
+  topUpWalletSchema,
+} from './wallet'
+export type {
+  CreateWallet,
+  TopUpWallet,
+  Wallet,
+  WalletTransaction,
+  WalletTransactionDirection,
+} from './wallet'

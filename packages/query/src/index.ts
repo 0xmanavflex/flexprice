@@ -409,3 +409,15 @@ export {
   useIntegrations,
 } from './integrations'
 export type { ConnectionWire } from './integrations'
+export {
+  toCreateWalletRequest,
+  toTopUpRequest,
+  toWallet,
+  toWalletTransaction,
+  useCreateWallet,
+  useCustomerWallets,
+  useTerminateWallet,
+  useTopUpWallet,
+  useWalletTransactions,
+} from './wallets'
+export type { WalletTransactionWire, WalletWire } from './wallets'

@@ -264,14 +264,8 @@ export { IntegrationsBlock } from './integrations/IntegrationsBlock'
 export { PricingCatalogBlock } from './pricing-widget/PricingCatalogBlock'
 export { toast, Toaster } from 'sonner'
 
-export { CustomerWalletView, DEMO_WALLET } from './customers/CustomerWalletView'
-export type {
-  CustomerWalletViewProps,
-  WalletModel,
-  WalletTransaction,
-  WalletAction,
-  TopUpRequest,
-} from './customers/CustomerWalletView'
+export { CustomerWalletView } from './customers/CustomerWalletView'
+export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
 export { CustomerAnalyticsView, DEMO_FEATURE_ANALYTICS } from './customers/CustomerAnalyticsView'
 export type {
   CustomerAnalyticsViewProps,

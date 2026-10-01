@@ -12,13 +12,11 @@ import {
   CUSTOMER_TABS,
   CustomerAnalyticsView,
   CustomerDetail,
-  CustomerWalletView,
   DEMO_FEATURE_ANALYTICS,
-  DEMO_WALLET,
   QuotaCard,
-  toast,
   type CustomerTab,
 } from '@fp/ui/pages'
+import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
 
 /**
@@ -129,15 +127,7 @@ export function CustomerDetailPage({
       }
       subscriptionsLoading={subscriptions.isLoading}
       invoicesLoading={invoices.isLoading}
-      wallet={
-        <CustomerWalletView
-          wallet={DEMO_WALLET}
-          onTopUp={(request) =>
-            toast.info(`Top-up of ${request.credits} ${request.kind} credits queued`)
-          }
-          onAction={(action) => toast.info(`Wallet action: ${action}`)}
-        />
-      }
+      wallet={<CustomerWalletPanel customerId={customer.data.id} />}
       usage={
         <div className="flex flex-col gap-8">
           <CustomerAnalyticsView features={DEMO_FEATURE_ANALYTICS} />

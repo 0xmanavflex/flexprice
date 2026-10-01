@@ -1412,6 +1412,39 @@ const groupStore: Record<string, unknown>[] = [
   },
 ]
 
+/**
+ * Wallets, authored: the capture had none, so they start empty and hold what
+ * this session creates. Wire shape is snake_case, as the live API sends it.
+ * The arithmetic here is the mock standing in for the backend, not client logic.
+ */
+const walletStore: Record<string, unknown>[] = []
+const walletTransactionStore: Record<string, unknown>[] = []
+
+function recordWalletCredit(
+  wallet: Record<string, unknown>,
+  credits: number,
+  reason: string,
+  description: string,
+) {
+  const rate = Number(wallet['conversion_rate'] ?? 1)
+  const next = Number(wallet['credit_balance'] ?? 0) + credits
+  wallet['credit_balance'] = String(next)
+  wallet['real_time_credit_balance'] = String(next)
+  wallet['balance'] = String(next * rate)
+  wallet['real_time_balance'] = String(next * rate)
+  walletTransactionStore.unshift({
+    id: `wtx_${walletTransactionStore.length + 1}`,
+    wallet_id: wallet['id'],
+    type: credits < 0 ? 'debit' : 'credit',
+    transaction_reason: reason,
+    description,
+    credit_amount: String(Math.abs(credits)),
+    amount: String(Math.abs(credits) * rate),
+    currency: wallet['currency'],
+    created_at: new Date().toISOString(),
+  })
+}
+
 async function readBody(request: Request): Promise<Record<string, unknown>> {
   return ((await request.json().catch(() => ({}))) ?? {}) as Record<string, unknown>
 }
@@ -2392,6 +2425,53 @@ export const handlers = [
   // Entities the capture environment had nothing in are deliberately absent.
   // An empty list from a real endpoint is a state worth seeing; a fabricated
   // row is not.
+  http.get(`${BASE}/customers/:id/wallets`, ({ params }) =>
+    HttpResponse.json(walletStore.filter((w) => w['customer_id'] === String(params['id']))),
+  ),
+  http.post(`${BASE}/wallets`, async ({ request }) => {
+    const body = await readBody(request)
+    const wallet: Record<string, unknown> = {
+      id: `wal_new_${walletStore.length + 1}`,
+      customer_id: body['customer_id'],
+      currency: body['currency'],
+      description: body['description'] ?? '',
+      conversion_rate: String(body['conversion_rate'] ?? '1'),
+      topup_conversion_rate: String(body['conversion_rate'] ?? '1'),
+      wallet_status: 'active',
+      wallet_type: 'PRE_PAID',
+      credit_balance: '0',
+      balance: '0',
+      real_time_credit_balance: '0',
+      real_time_balance: '0',
+      created_at: new Date().toISOString(),
+    }
+    walletStore.push(wallet)
+    const initial = Number(body['initial_credits_to_load'] ?? 0)
+    if (initial > 0) recordWalletCredit(wallet, initial, 'FREE_CREDIT_GRANT', 'Initial credits')
+    return HttpResponse.json(wallet)
+  }),
+  http.post(`${BASE}/wallets/:id/top-up`, async ({ request, params }) => {
+    const wallet = walletStore.find((w) => w['id'] === String(params['id']))
+    if (!wallet) return HttpResponse.json({ message: 'Wallet not found' }, { status: 404 })
+    const body = await readBody(request)
+    recordWalletCredit(
+      wallet,
+      Number(body['credits_to_add'] ?? 0),
+      String(body['transaction_reason'] ?? 'PURCHASED_CREDIT_DIRECT'),
+      String(body['description'] ?? ''),
+    )
+    return HttpResponse.json({ wallet, wallet_transaction: walletTransactionStore[0] })
+  }),
+  http.post(`${BASE}/wallets/:id/terminate`, ({ params }) => {
+    const wallet = walletStore.find((w) => w['id'] === String(params['id']))
+    if (!wallet) return HttpResponse.json({ message: 'Wallet not found' }, { status: 404 })
+    wallet['wallet_status'] = 'closed'
+    return HttpResponse.json(wallet)
+  }),
+  http.get(`${BASE}/wallets/:id/transactions`, ({ params }) => {
+    const items = walletTransactionStore.filter((t) => t['wallet_id'] === String(params['id']))
+    return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
+  }),
   http.post(`${BASE}/wallets/search`, () =>
     HttpResponse.json({ items: [], pagination: { total: 0, limit: 25, offset: 0 } }),
   ),
