@@ -1,6 +1,13 @@
 import type { ReactNode } from 'react'
-import { Card, CardContent } from '@ui/components/primitives/card'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@ui/components/primitives/card'
 import { FieldGroup, FieldSet } from '@ui/components/primitives/field'
+import { Separator } from '@ui/components/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import type { DetailCrumb } from './DetailShell'
@@ -11,9 +18,9 @@ import { PageBody } from './Page'
  *
  * Create and Edit share it: the same body measure, and the actions sit in the
  * card under the fields. Edit is the same form prepopulated, so a person who has
- * created a plan already knows how to edit one. The shell already shows where
- * you are, so this page does not draw its own breadcrumb or title. The title
- * stays in the document outline only.
+ * created a plan already knows how to edit one. The card opens with what this
+ * form is for — the title and the one-line description — the same heading the
+ * invoice creator uses. The shell still owns the breadcrumb.
  *
  * Layout only: the `<form>` (and its state) lives in the caller. Pass the
  * form's `id` to `FormActions` so the bar can sit outside the `<form>` element.
@@ -21,7 +28,7 @@ import { PageBody } from './Page'
 export const FormPageProvenance = provenance({
   source: 'composition',
   composes: ['compositions/page', 'ui/card', 'ui/field'],
-  note: 'Full-page create/edit shell. No page heading or breadcrumb — the shell already shows where you are. The body is form-3’s card, and the actions sit inside it under the fields.',
+  note: 'Full-page create/edit shell. The card heading says what the form is for. Actions sit inside the card under the fields.',
 })
 
 export interface FormPageProps {
@@ -38,6 +45,7 @@ export interface FormPageProps {
 
 export function FormPage({
   title,
+  description,
   children,
   footer,
   width = 'narrow',
@@ -45,14 +53,20 @@ export function FormPage({
 }: FormPageProps) {
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-      <h1 className="sr-only">{title}</h1>
       {/* `self-center`: this column is a flex child, and a flex child with only
           `mx-auto` stays pinned to the start. The cap (`narrow` / `wide`) then
-          sits in the middle of the page. */}
+          sits in the middle of the page. `my-auto` on the card centres it
+          vertically when the page is taller than the form; a taller form keeps
+          its top reachable and scrolls. */}
       <PageBody width={width} className="self-center">
-        {/* form-3's card. The actions sit under the fields, in the same card,
-            so Cancel and Next are not stranded at the bottom of the viewport. */}
-        <Card className="gap-0 p-0 shadow-xs">
+        <Card className="my-auto gap-0 p-0 shadow-xs">
+          <CardHeader className="gap-1 px-5 py-5 sm:px-6">
+            <CardTitle>
+              <h1 className="text-base leading-snug font-medium">{title}</h1>
+            </CardTitle>
+            {description ? <CardDescription>{description}</CardDescription> : null}
+          </CardHeader>
+          <Separator />
           <CardContent className="px-5 py-5 sm:px-6 sm:py-6">
             <FieldSet className="gap-0">
               <FieldGroup>{children}</FieldGroup>

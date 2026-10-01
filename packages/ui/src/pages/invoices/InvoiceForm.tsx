@@ -347,8 +347,14 @@ export function InvoiceForm({
           </div>
         </header>
 
-        <div className="flex flex-1 justify-center overflow-y-auto px-4 py-7 sm:px-8 sm:py-9 lg:px-10">
-          <form ref={formRef} id={FORM_ID} onSubmit={submit} noValidate className="w-full max-w-5xl">
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-7 sm:px-8 sm:py-9 lg:px-10">
+          <form
+            ref={formRef}
+            id={FORM_ID}
+            onSubmit={submit}
+            noValidate
+            className="mx-auto my-auto w-full max-w-5xl"
+          >
             <Card className="gap-0 p-0">
               <CardHeader className="gap-1 px-5 py-5 sm:px-6">
                 <CardTitle>Invoice Details</CardTitle>
