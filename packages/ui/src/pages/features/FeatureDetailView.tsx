@@ -8,6 +8,7 @@ import {
   type Feature,
 } from '@fp/domain'
 import { CheckIcon, CopyIcon, MoreHorizontalIcon } from 'lucide-react'
+import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -170,12 +171,13 @@ export function FeatureDetailView({
               >
                 <MoreHorizontalIcon aria-hidden className="size-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-48">
+              <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={onEditConfiguration}>
+                  <DropdownMenuItem className={MENU_ITEM} onClick={onEditConfiguration}>
                     Edit configuration
                   </DropdownMenuItem>
                   <DropdownMenuItem
+                    className={MENU_ITEM}
                     onClick={() => {
                       void navigator.clipboard?.writeText(feature.id)
                       setCopied(true)

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ArrowDownLeftIcon, ArrowUpRightIcon, InfoIcon, MoreHorizontalIcon } from 'lucide-react'
+import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Label } from '@ui/components/primitives/label'
@@ -100,10 +101,14 @@ export function CustomerWalletView({ wallet, onTopUp, onAction }: CustomerWallet
             >
               <MoreHorizontalIcon aria-hidden className="size-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
               <DropdownMenuGroup>
                 {ACTIONS.map((action) => (
-                  <DropdownMenuItem key={action.id} onClick={() => onAction?.(action.id)}>
+                  <DropdownMenuItem
+                    key={action.id}
+                    className={MENU_ITEM}
+                    onClick={() => onAction?.(action.id)}
+                  >
                     {action.label}
                   </DropdownMenuItem>
                 ))}

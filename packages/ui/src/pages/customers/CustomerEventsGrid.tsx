@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { MoreHorizontalIcon } from 'lucide-react'
+import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -132,9 +133,11 @@ export function CustomerEventsGrid({ events }: { events: CustomerEvent[] }) {
                   >
                     <MoreHorizontalIcon aria-hidden />
                   </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
+                  <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
                     <DropdownMenuGroup>
-                      <DropdownMenuItem onClick={() => setSelected(e)}>View event</DropdownMenuItem>
+                      <DropdownMenuItem className={MENU_ITEM} onClick={() => setSelected(e)}>
+                        View event
+                      </DropdownMenuItem>
                     </DropdownMenuGroup>
                   </DropdownMenuContent>
                 </DropdownMenu>

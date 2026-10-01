@@ -18,6 +18,7 @@ import {
 } from '@ui/components/primitives/dropdown-menu'
 import { ScrollArea } from '@ui/components/primitives/scroll-area'
 import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
+import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
 import { DetailTabs, SimpleTable } from '@ui/compositions/DetailKit'
 import { Section } from '@ui/compositions/Section'
 import { ContextualSection } from '@ui/compositions/ContextualSection'
@@ -169,14 +170,14 @@ export function CustomerDetail({
             >
               <MoreHorizontalIcon aria-hidden />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="min-w-44">
+            <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
               <DropdownMenuGroup>
                 {onEdit ? (
-                  <DropdownMenuItem onClick={onEdit}>
+                  <DropdownMenuItem className={MENU_ITEM} onClick={onEdit}>
                     {onUpdateField ? 'Edit billing details' : 'Edit customer'}
                   </DropdownMenuItem>
                 ) : null}
-                <DropdownMenuItem onClick={onCreateSubscription}>
+                <DropdownMenuItem className={MENU_ITEM} onClick={onCreateSubscription}>
                   Create subscription
                 </DropdownMenuItem>
               </DropdownMenuGroup>

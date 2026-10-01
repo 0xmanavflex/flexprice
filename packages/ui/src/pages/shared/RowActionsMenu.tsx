@@ -1,3 +1,4 @@
+import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -40,10 +41,14 @@ export function RowActionsMenu({
       >
         <MoreHorizontalIcon aria-hidden className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {onEdit ? <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem> : null}
+      <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
+        {onEdit ? (
+          <DropdownMenuItem className={MENU_ITEM} onClick={onEdit}>
+            Edit
+          </DropdownMenuItem>
+        ) : null}
         {onRemove ? (
-          <DropdownMenuItem variant="destructive" onClick={onRemove}>
+          <DropdownMenuItem className={MENU_ITEM} variant="destructive" onClick={onRemove}>
             {removeLabel}
           </DropdownMenuItem>
         ) : null}

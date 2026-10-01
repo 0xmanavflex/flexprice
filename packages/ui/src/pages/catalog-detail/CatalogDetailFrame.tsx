@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { MoreHorizontalIcon } from 'lucide-react'
+import { MENU_CONTENT, MENU_ITEM } from '../../compositions/shell/menuSurface'
 import { DetailTabs, type DetailTabSpec } from '../../compositions/DetailKit'
 import { EntityHeader } from '../shared/EntityHeader'
 import { Button } from '@ui/components/primitives/button'
@@ -72,11 +73,12 @@ export function CatalogDetailFrame({
           >
             <MoreHorizontalIcon aria-hidden />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-44">
+          <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
             <DropdownMenuGroup>
               {menu.map((item) => (
                 <DropdownMenuItem
                   key={item.id}
+                  className={MENU_ITEM}
                   disabled={item.disabled ?? false}
                   {...(item.destructive ? { variant: 'destructive' as const } : {})}
                   onClick={item.onSelect}

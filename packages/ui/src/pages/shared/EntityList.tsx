@@ -36,6 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
+import { MENU_CONTENT, MENU_ITEM, MENU_LABEL } from '@ui/compositions/shell/menuSurface'
 import {
   InputGroup,
   InputGroupAddon,
@@ -822,19 +823,19 @@ export function EntityList<T extends object>({
             >
               <MoreHorizontalIcon aria-hidden className="size-4" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className="min-w-52">
+            <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
               {/* Every part inside a group: Base UI reads its label, its
                   checkbox items and their roles off a group context, and a
                   bare item throws rather than degrading. */}
               {hideableColumns.length > 0 ? (
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className="text-muted-foreground px-2.5 py-1.5 text-xs font-normal">
+                  <DropdownMenuLabel className={MENU_LABEL}>
                     Columns
                   </DropdownMenuLabel>
                   {hideableColumns.map((column) => (
                     <DropdownMenuCheckboxItem
                       key={column.id}
-                      className="px-2.5 py-2"
+                      className="py-2.5 pl-3"
                       checked={columnVisibility[column.id] !== false}
                       onCheckedChange={(checked: boolean) =>
                         setColumnVisibility((previous) => ({ ...previous, [column.id]: checked }))
@@ -848,7 +849,7 @@ export function EntityList<T extends object>({
               {hideableColumns.length > 0 && exportFileName ? <DropdownMenuSeparator /> : null}
               {exportFileName ? (
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className="gap-2 px-2.5 py-2" onClick={handleExport}>
+                  <DropdownMenuItem className={MENU_ITEM} onClick={handleExport}>
                     <DownloadIcon aria-hidden className="size-4" />
                     Export CSV
                   </DropdownMenuItem>
@@ -1000,12 +1001,12 @@ function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
       >
         <MoreHorizontalIcon aria-hidden className="size-4" />
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={4} className="min-w-44">
+      <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
         <DropdownMenuGroup>
           {ordinary.map((action) => (
             <DropdownMenuItem
               key={action.label}
-              className="gap-2 px-2.5 py-2"
+              className={MENU_ITEM}
               disabled={action.disabled ?? false}
               onClick={(event: React.MouseEvent) => {
                 event.stopPropagation()
@@ -1024,7 +1025,7 @@ function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
               <DropdownMenuItem
                 key={action.label}
                 variant="destructive"
-                className="gap-2 px-2.5 py-2"
+                className={MENU_ITEM}
                 disabled={action.disabled ?? false}
                 onClick={(event: React.MouseEvent) => {
                   event.stopPropagation()

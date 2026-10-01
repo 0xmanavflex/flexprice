@@ -64,6 +64,8 @@ import {
   EditableCard,
   FormDialog,
   LoadingRows,
+  MENU_CONTENT,
+  MENU_ITEM,
   Section,
 } from '@fp/ui/compositions'
 import {
@@ -194,12 +196,13 @@ export function PlanDetailPage({
               >
                 <MoreHorizontalIcon aria-hidden className="size-4" />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => onEdit(planId)}>
+              <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
+                <DropdownMenuItem className={MENU_ITEM} onClick={() => onEdit(planId)}>
                   <PencilIcon aria-hidden className="size-4" />
                   Edit configuration
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  className={MENU_ITEM}
                   onClick={() =>
                     clone.mutate(
                       { id: planId, name: `${record.name} (copy)` },
@@ -216,7 +219,11 @@ export function PlanDetailPage({
                   Duplicate
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
+                <DropdownMenuItem
+                  className={MENU_ITEM}
+                  disabled={isArchived}
+                  onClick={() => setArchiving(true)}
+                >
                   <EyeOffIcon aria-hidden className="size-4" />
                   Archive
                 </DropdownMenuItem>
