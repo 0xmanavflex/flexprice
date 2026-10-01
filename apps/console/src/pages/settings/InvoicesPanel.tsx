@@ -8,8 +8,25 @@ import {
   splitDelay,
 } from '@fp/domain'
 import { useInvoiceConfig, useResetInvoiceConfig, useUpdateInvoiceConfig } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
-import { Button, Input } from '@fp/ui/primitives'
+import {
+  ConfirmDialog,
+  EmptyState,
+  LoadingRows,
+  SettingRow,
+  SettingsCard,
+  SettingsFieldGroup,
+} from '@fp/ui/compositions'
+import {
+  Button,
+  Input,
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+  Switch,
+} from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
 import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
@@ -200,14 +217,14 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
         })}
       >
         <Panel>
-          <SettingsBlock
+          <SettingsCard
             title="Invoice numbering"
             description="The parts an invoice number is built from. Stored per environment, so production and sandbox never share a sequence."
           >
-            <div className="bg-muted/40 flex flex-col gap-1 rounded-lg border p-4">
+            <div className="flex flex-col gap-1 border-b px-5 py-4">
               <span className="text-muted-foreground text-xs">Example invoice number</span>
               {preview ? (
-                <code className="font-mono text-base font-medium">{preview}</code>
+                <code className="font-mono text-lg font-medium tracking-tight">{preview}</code>
               ) : (
                 <span className="text-muted-foreground text-sm">
                   Fix the fields below to see an example.
@@ -218,186 +235,171 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 wherever this environment has reached.
               </span>
             </div>
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Prefix"
+            <SettingsFieldGroup
+              legend="Invoice numbering"
+              description="The parts an invoice number is built from."
+            >
+              <TextRow
+                id="invoice-prefix"
+                title="Prefix"
+                description="The literal an invoice number opens with."
                 required
-                hint="The literal an invoice number opens with."
-                {...(draft.error('prefix') ? { error: draft.error('prefix') } : {})}
+                busy={busy}
+                placeholder="INV"
+                value={draft.text('prefix')}
+                error={draft.error('prefix')}
+                onChange={(value) => draft.setText('prefix', value)}
+              />
+              <TextRow
+                id="invoice-separator"
+                title="Separator"
+                description="Between the parts. Leave it empty for INV2026090001."
+                busy={busy}
+                placeholder="-"
+                value={draft.text('separator')}
+                error={draft.error('separator')}
+                onChange={(value) => draft.setText('separator', value)}
+              />
+              <SettingRow
+                title="Date format"
+                description="The date segment of the number."
+                labelFor="invoice-format"
               >
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
+                <div className="flex w-full flex-col gap-1">
+                  <Select
+                    value={draft.value.format}
                     disabled={busy}
-                    placeholder="INV"
-                    value={draft.text('prefix')}
-                    onChange={(event) => draft.setText('prefix', event.target.value)}
-                    {...field}
-                  />
-                )}
-              </Field>
-
-              <Field
-                label="Separator"
-                hint="Between the parts. Leave it empty for INV2026090001."
-                {...(draft.error('separator') ? { error: draft.error('separator') } : {})}
-              >
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
-                    disabled={busy}
-                    placeholder="-"
-                    value={draft.text('separator')}
-                    onChange={(event) => draft.setText('separator', event.target.value)}
-                    {...field}
-                  />
-                )}
-              </Field>
-
-              <div className="flex flex-col gap-1.5 sm:col-span-2">
-                <span className="text-sm font-medium">Date format</span>
-                <div role="group" aria-label="Date format" className="flex flex-wrap gap-1.5">
-                  {INVOICE_NUMBER_FORMATS.map((option) => (
-                    <Button
-                      key={option}
-                      type="button"
-                      size="sm"
-                      disabled={busy}
-                      variant={draft.value.format === option ? 'default' : 'outline'}
-                      aria-pressed={draft.value.format === option}
-                      onClick={() => draft.update((current) => ({ ...current, format: option }))}
-                    >
-                      {INVOICE_NUMBER_FORMAT_LABEL[option]}
-                    </Button>
-                  ))}
+                    onValueChange={(value) => {
+                      if (value == null) return
+                      draft.update((current) => ({ ...current, format: value }))
+                    }}
+                  >
+                    <SelectTrigger id="invoice-format" className="w-full">
+                      <SelectValue>
+                        {INVOICE_NUMBER_FORMAT_LABEL[
+                          draft.value.format as (typeof INVOICE_NUMBER_FORMATS)[number]
+                        ] ?? draft.value.format}
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        {INVOICE_NUMBER_FORMATS.map((option) => (
+                          <SelectItem key={option} value={option}>
+                            {INVOICE_NUMBER_FORMAT_LABEL[option]}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                  {draft.error('format') ? (
+                    <p role="alert" className="text-destructive text-xs">
+                      {draft.error('format')}
+                    </p>
+                  ) : null}
                 </div>
-                <ActionError message={draft.error('format') ?? null} />
-              </div>
-
-              <Field
-                label="Timezone"
+              </SettingRow>
+              <TextRow
+                id="invoice-timezone"
+                title="Timezone"
+                description="Any IANA name — Asia/Kolkata, America/New_York — or an abbreviation such as IST. It decides which day the date segment lands on."
                 required
-                hint="Any IANA name — Asia/Kolkata, America/New_York — or an abbreviation such as IST. It decides which day the date segment lands on."
-                {...(draft.error('timezone') ? { error: draft.error('timezone') } : {})}
-              >
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
-                    disabled={busy}
-                    placeholder="UTC"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={draft.text('timezone')}
-                    onChange={(event) => draft.setText('timezone', event.target.value)}
-                    {...field}
-                  />
-                )}
-              </Field>
-
-              <Field
-                label="Start number"
+                busy={busy}
+                placeholder="UTC"
+                value={draft.text('timezone')}
+                error={draft.error('timezone')}
+                onChange={(value) => draft.setText('timezone', value)}
+                spellCheck={false}
+                autoComplete="off"
+              />
+              <TextRow
+                id="invoice-start"
+                title="Start number"
+                description="The first number the sequence issues."
                 required
-                hint="The first number the sequence issues."
-                {...(draft.error('startSequence') ? { error: draft.error('startSequence') } : {})}
-              >
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
-                    disabled={busy}
-                    inputMode="numeric"
-                    value={numberText('startSequence')}
-                    onChange={(event) => setNumber('startSequence', event.target.value)}
-                    {...field}
-                  />
-                )}
-              </Field>
-
-              <Field
-                label="Sequence length"
+                numeric
+                busy={busy}
+                value={numberText('startSequence')}
+                error={draft.error('startSequence')}
+                onChange={(value) => setNumber('startSequence', value)}
+              />
+              <TextRow
+                id="invoice-length"
+                title="Sequence length"
+                description="How many digits the number is padded to, from 1 to 10."
                 required
-                hint="How many digits the number is padded to, from 1 to 10."
-                {...(draft.error('suffixLength') ? { error: draft.error('suffixLength') } : {})}
-              >
-                {({ id, ...field }) => (
-                  <Input
-                    id={id}
-                    disabled={busy}
-                    inputMode="numeric"
-                    value={numberText('suffixLength')}
-                    onChange={(event) => setNumber('suffixLength', event.target.value)}
-                    {...field}
-                  />
-                )}
-              </Field>
-            </div>
-          </SettingsBlock>
+                numeric
+                last
+                busy={busy}
+                value={numberText('suffixLength')}
+                error={draft.error('suffixLength')}
+                onChange={(value) => setNumber('suffixLength', value)}
+              />
+            </SettingsFieldGroup>
+          </SettingsCard>
 
-          <SettingsBlock
+          <SettingsCard
             title="Dates and delivery"
             description="When an invoice falls due, and how long it waits before your customer sees it."
           >
-            <div className="grid gap-4 sm:grid-cols-2">
-              <Field
-                label="Payment due after (days)"
+            <SettingsFieldGroup
+              legend="Dates and delivery"
+              description="When an invoice falls due, and how long it waits before a customer sees it."
+            >
+              <TextRow
+                id="invoice-due"
+                title="Payment due"
+                description="Days after the invoice is finalised."
                 required
-                hint="Counted from the day the invoice is finalised."
-                {...(draft.error('dueDateDays') ? { error: draft.error('dueDateDays') } : {})}
+                numeric
+                busy={busy}
+                value={numberText('dueDateDays')}
+                error={draft.error('dueDateDays')}
+                onChange={(value) => setNumber('dueDateDays', value)}
+              />
+              <SettingRow
+                title="Finalisation delay"
+                description="A grace period, not a queue: the window in which a finalised invoice can still be corrected. 0 sends it immediately."
+                labelFor="invoice-delay"
+                last
               >
-                {({ id, ...field }) => (
+                <div className="flex w-full flex-col gap-2">
                   <Input
-                    id={id}
+                    id="invoice-delay"
                     disabled={busy}
                     inputMode="numeric"
-                    value={numberText('dueDateDays')}
-                    onChange={(event) => setNumber('dueDateDays', event.target.value)}
-                    {...field}
+                    aria-invalid={draft.error('finalizationDelaySeconds') ? true : undefined}
+                    value={delayText}
+                    onChange={(event) => setDelay(event.target.value, delayUnit)}
                   />
-                )}
-              </Field>
-
-              <div className="flex flex-col gap-1.5">
-                <Field
-                  label="Finalisation delay"
-                  hint="A grace period, not a queue: the window in which a finalised invoice can still be corrected. 0 sends it immediately."
-                  {...(draft.error('finalizationDelaySeconds')
-                    ? { error: draft.error('finalizationDelaySeconds') }
-                    : {})}
-                >
-                  {({ id, ...field }) => (
-                    <Input
-                      id={id}
-                      disabled={busy}
-                      inputMode="numeric"
-                      value={delayText}
-                      onChange={(event) => setDelay(event.target.value, delayUnit)}
-                      {...field}
-                    />
-                  )}
-                </Field>
-                <div role="group" aria-label="Delay unit" className="flex flex-wrap gap-1.5">
-                  {DELAY_UNITS.map((option) => (
-                    <Button
-                      key={option.unit}
-                      type="button"
-                      size="xs"
-                      disabled={busy}
-                      variant={delayUnit === option.unit ? 'default' : 'outline'}
-                      aria-pressed={delayUnit === option.unit}
-                      onClick={() => setDelay(delayText, option.unit)}
-                    >
-                      {option.label}
-                    </Button>
-                  ))}
+                  <div role="group" aria-label="Delay unit" className="flex flex-wrap gap-1.5">
+                    {DELAY_UNITS.map((option) => (
+                      <Button
+                        key={option.unit}
+                        type="button"
+                        size="xs"
+                        disabled={busy}
+                        variant={delayUnit === option.unit ? 'default' : 'outline'}
+                        aria-pressed={delayUnit === option.unit}
+                        onClick={() => setDelay(delayText, option.unit)}
+                      >
+                        {option.label}
+                      </Button>
+                    ))}
+                  </div>
+                  {draft.error('finalizationDelaySeconds') ? (
+                    <p role="alert" className="text-destructive text-xs">
+                      {draft.error('finalizationDelaySeconds')}
+                    </p>
+                  ) : null}
                 </div>
-              </div>
-            </div>
-          </SettingsBlock>
+              </SettingRow>
+            </SettingsFieldGroup>
+          </SettingsCard>
 
-          <SettingsBlock
+          <SettingsCard
             title="Purchased credits"
             description="What happens when a customer buys wallet credits."
-            actions={
+            footer={
               <div className="flex w-full flex-wrap items-center justify-end gap-3">
                 <ActionError message={saveError} />
                 {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
@@ -418,56 +420,30 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
               </div>
             }
           >
-            <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">
-                Complete the credit transaction automatically
-              </span>
-              <div
-                role="group"
-                aria-label="Complete the credit transaction automatically"
-                className="flex gap-1.5"
+            <SettingsFieldGroup
+              legend="Purchased credits"
+              description="What happens when a customer buys wallet credits."
+            >
+              <SettingRow
+                title="Settle automatically"
+                description="On, buying credits settles its own transaction straight away. Off, it waits to be completed."
+                labelFor="invoice-auto-complete"
+                last
               >
-                <Button
-                  type="button"
-                  size="sm"
+                <Switch
+                  id="invoice-auto-complete"
+                  checked={draft.value.autoCompletePurchasedCreditTransaction}
                   disabled={busy}
-                  variant={
-                    draft.value.autoCompletePurchasedCreditTransaction ? 'default' : 'outline'
-                  }
-                  aria-pressed={draft.value.autoCompletePurchasedCreditTransaction}
-                  onClick={() =>
+                  onCheckedChange={(checked) =>
                     draft.update((current) => ({
                       ...current,
-                      autoCompletePurchasedCreditTransaction: true,
+                      autoCompletePurchasedCreditTransaction: checked,
                     }))
                   }
-                >
-                  On
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={busy}
-                  variant={
-                    draft.value.autoCompletePurchasedCreditTransaction ? 'outline' : 'default'
-                  }
-                  aria-pressed={!draft.value.autoCompletePurchasedCreditTransaction}
-                  onClick={() =>
-                    draft.update((current) => ({
-                      ...current,
-                      autoCompletePurchasedCreditTransaction: false,
-                    }))
-                  }
-                >
-                  Off
-                </Button>
-              </div>
-              <p className="text-muted-foreground text-xs">
-                On, buying credits settles its own transaction straight away. Off, it waits to be
-                completed.
-              </p>
-            </div>
-          </SettingsBlock>
+                />
+              </SettingRow>
+            </SettingsFieldGroup>
+          </SettingsCard>
         </Panel>
       </form>
 
@@ -490,5 +466,67 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
         }
       />
     </>
+  )
+}
+
+/** One labelled input on a settings row. */
+function TextRow({
+  id,
+  title,
+  description,
+  value,
+  onChange,
+  busy,
+  error,
+  required,
+  placeholder,
+  numeric,
+  last,
+  spellCheck,
+  autoComplete,
+}: {
+  id: string
+  title: string
+  description: string
+  value: string
+  onChange: (value: string) => void
+  busy: boolean
+  error: string | undefined
+  required?: boolean
+  placeholder?: string
+  numeric?: boolean
+  last?: boolean
+  spellCheck?: boolean
+  autoComplete?: string
+}) {
+  return (
+    <SettingRow
+      title={title}
+      description={description}
+      labelFor={id}
+      {...(last ? { last: true } : {})}
+      {...(required
+        ? { titleAddon: <span className="text-destructive" aria-hidden="true">*</span> }
+        : {})}
+    >
+      <div className="flex w-full flex-col gap-1">
+        <Input
+          id={id}
+          disabled={busy}
+          aria-invalid={error ? true : undefined}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          {...(placeholder ? { placeholder } : {})}
+          {...(numeric ? { inputMode: 'numeric' as const } : {})}
+          {...(spellCheck === false ? { spellCheck: false } : {})}
+          {...(autoComplete ? { autoComplete } : {})}
+        />
+        {error ? (
+          <p role="alert" className="text-destructive text-xs">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </SettingRow>
   )
 }

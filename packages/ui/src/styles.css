@@ -240,11 +240,20 @@
   * {
     @apply border-border outline-ring/50;
     }
+  html {
+    @apply bg-background font-sans;
+    min-height: 100dvh;
+    }
   body {
     @apply bg-background text-foreground;
+    min-height: 100dvh;
     }
-  html {
-    @apply font-sans;
+  /*
+   * The app fills the window. A root that is only as tall as its content leaves
+   * the webview's own background — black — showing as a bar under the shell.
+   */
+  #root {
+    min-height: 100dvh;
     }
 }
 

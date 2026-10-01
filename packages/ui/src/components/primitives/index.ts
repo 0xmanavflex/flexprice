@@ -14,6 +14,14 @@
 export { Button } from './button'
 export { Input } from './input'
 export { Switch } from './switch'
+export {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from './select'
 export { Label } from './label'
 export { Textarea } from './textarea'
 export { Separator } from './separator'

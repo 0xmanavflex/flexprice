@@ -176,7 +176,13 @@ export function AppShell({
       // rail is a quiet column of icons with flyouts. Width lives in styles.css;
       // colours too. (To make the rail the first-load default for everyone, pass
       // `defaultOpen={false}` here.)
-      className={cn('bg-sidebar h-screen', FLUX)}
+      className={cn(
+        'bg-sidebar h-dvh min-h-dvh',
+        // The inset frame keeps its top and side margin. The bottom is flush,
+        // so the window's own background cannot show as a bar under the shell.
+        '[&_[data-slot=sidebar-container]]:pb-0',
+        FLUX,
+      )}
       style={{ '--sidebar-width': '260px' } as CSSProperties}
     >
       {/*
@@ -242,7 +248,7 @@ export function AppShell({
         reads as the panel floating a little in front of the rail — a light 3D
         depth in both modes rather than a flat seam.
       */}
-        <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border lg:peer-data-[variant=inset]:rounded-2xl">
+        <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border lg:peer-data-[variant=inset]:mb-0! lg:peer-data-[variant=inset]:rounded-b-none lg:peer-data-[variant=inset]:rounded-t-2xl">
           {/* A rule under the header, so the breadcrumb is not floating over
             whatever the page happens to start with. The header spans the full
             width now: the breadcrumb leads at the left edge and Search/Create

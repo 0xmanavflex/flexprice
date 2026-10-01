@@ -69,8 +69,8 @@ export function SettingsShell({
   const tabUnavailable = activeTab?.unavailable ?? false
 
   return (
-    <div className="flex w-full min-w-0 flex-col gap-6 lg:flex-row lg:gap-8">
-      <nav aria-label="Settings" className="w-full shrink-0 lg:w-56">
+    <div className="flex min-h-full w-full min-w-0 flex-1 flex-col gap-6 lg:flex-row lg:gap-8">
+      <nav aria-label="Settings" className="w-full shrink-0 lg:sticky lg:top-0 lg:w-56 lg:self-start">
         <ul className="flex flex-col gap-0.5">
           {sections.map((entry) => {
             const isOpen = entry.id === section?.id
@@ -130,7 +130,7 @@ export function SettingsShell({
         </ul>
       </nav>
 
-      <div className="min-w-0 flex-1">
+      <div className="flex min-w-0 flex-1 flex-col">
         {sectionUnavailable || tabUnavailable ? (
           <Unavailable
             title={

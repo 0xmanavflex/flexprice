@@ -10,7 +10,14 @@ import {
   useResetCustomCurrencyConfig,
   useUpdateCustomCurrencyConfig,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
+import {
+  ConfirmDialog,
+  EmptyState,
+  LoadingRows,
+  SettingRow,
+  SettingsCard,
+  SettingsFieldGroup,
+} from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
 import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
@@ -249,96 +256,206 @@ function CurrencyForm({
         })}
       >
         <Panel>
-          <SettingsBlock
+          <SettingsCard
             title="Settlement currencies"
             description="The fiat currencies your custom currencies convert to. Every custom currency quotes the same set — that is the backend's rule, not a simplification here."
           >
-            <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Quoted fiat currencies</span>
-              {fiats.length === 0 ? (
-                <p className="text-muted-foreground text-sm">
-                  None yet. Add one before defining a custom currency.
-                </p>
-              ) : (
-                <ul className="flex flex-wrap gap-2">
-                  {fiats.map((fiat) => (
-                    <li
-                      key={fiat}
-                      className="flex items-center gap-1 rounded-md border py-1 pr-1 pl-2"
-                    >
-                      <span className="font-mono text-sm">{fiat.toUpperCase()}</span>
-                      <Button
-                        type="button"
-                        size="xs"
-                        disabled={busy}
-                        variant={settlement === fiat ? 'default' : 'ghost'}
-                        aria-pressed={settlement === fiat}
-                        aria-label={`Settle in ${fiat.toUpperCase()}`}
-                        onClick={() =>
-                          draft.update((current) => ({ ...current, defaultFiatCurrency: fiat }))
-                        }
-                      >
-                        {settlement === fiat ? 'Settlement' : 'Use'}
-                      </Button>
-                      <Button
-                        type="button"
-                        size="xs"
-                        variant="ghost"
-                        disabled={busy}
-                        aria-label={`Remove ${fiat.toUpperCase()}`}
-                        onClick={() => removeFiat(fiat)}
-                      >
-                        Remove
-                      </Button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-              <p className="text-muted-foreground text-xs">
-                One of them is the settlement currency — what an invoice priced in a custom currency
-                is actually collected in.
-              </p>
-              <ActionError message={draft.error('defaultFiatCurrency') ?? null} />
-            </div>
-
-            <div className="flex flex-col gap-1.5">
-              <div className="flex max-w-sm items-end gap-2">
-                <div className="flex-1">
-                  <Field label="Add a fiat currency" hint="Three letters, for example usd.">
-                    {({ id, ...field }) => (
-                      <Input
-                        id={id}
-                        disabled={busy}
-                        placeholder="usd"
-                        autoComplete="off"
-                        spellCheck={false}
-                        value={newFiat}
-                        onChange={(event) => setNewFiat(event.target.value)}
-                        onKeyDown={(event) => {
-                          // A three-letter code plus Enter should not submit
-                          // the whole form — it should add the code.
-                          if (event.key === 'Enter') {
-                            event.preventDefault()
-                            addFiat()
-                          }
-                        }}
-                        {...field}
-                      />
-                    )}
-                  </Field>
+            <SettingsFieldGroup
+              legend="Settlement currencies"
+              description="The fiat currencies custom currencies convert to."
+            >
+              <SettingRow
+                title="Quoted currencies"
+                description="One of them is the settlement currency — what an invoice priced in a custom currency is actually collected in."
+                contentClassName="@md/field-group:w-96"
+                last={false}
+              >
+                <div className="flex w-full flex-col gap-2">
+                  {fiats.length === 0 ? (
+                    <p className="text-muted-foreground text-sm">
+                      None yet. Add one before defining a custom currency.
+                    </p>
+                  ) : (
+                    <ul className="flex flex-wrap justify-end gap-2">
+                      {fiats.map((fiat) => (
+                        <li
+                          key={fiat}
+                          className="bg-muted/40 flex items-center gap-1 rounded-lg border py-1 pr-1 pl-2"
+                        >
+                          <span className="font-mono text-sm">{fiat.toUpperCase()}</span>
+                          <Button
+                            type="button"
+                            size="xs"
+                            disabled={busy}
+                            variant={settlement === fiat ? 'default' : 'ghost'}
+                            aria-pressed={settlement === fiat}
+                            aria-label={`Settle in ${fiat.toUpperCase()}`}
+                            onClick={() =>
+                              draft.update((current) => ({
+                                ...current,
+                                defaultFiatCurrency: fiat,
+                              }))
+                            }
+                          >
+                            {settlement === fiat ? 'Settlement' : 'Use'}
+                          </Button>
+                          <Button
+                            type="button"
+                            size="xs"
+                            variant="ghost"
+                            disabled={busy}
+                            aria-label={`Remove ${fiat.toUpperCase()}`}
+                            onClick={() => removeFiat(fiat)}
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                  <ActionError message={draft.error('defaultFiatCurrency') ?? null} />
                 </div>
-                <Button type="button" variant="outline" disabled={busy} onClick={addFiat}>
-                  Add
-                </Button>
-              </div>
-              <ActionError message={fiatIssue} />
-            </div>
-          </SettingsBlock>
+              </SettingRow>
+              <SettingRow
+                title="Add a fiat currency"
+                description="Three letters, for example usd."
+                labelFor="currency-add-fiat"
+                last
+              >
+                <div className="flex w-full flex-col gap-1">
+                  <div className="flex gap-2">
+                    <Input
+                      id="currency-add-fiat"
+                      disabled={busy}
+                      placeholder="usd"
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-invalid={fiatIssue ? true : undefined}
+                      value={newFiat}
+                      onChange={(event) => setNewFiat(event.target.value)}
+                      onKeyDown={(event) => {
+                        // A three-letter code plus Enter should not submit
+                        // the whole form — it should add the code.
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          addFiat()
+                        }
+                      }}
+                    />
+                    <Button type="button" variant="outline" disabled={busy} onClick={addFiat}>
+                      Add
+                    </Button>
+                  </div>
+                  <ActionError message={fiatIssue} />
+                </div>
+              </SettingRow>
+            </SettingsFieldGroup>
+          </SettingsCard>
 
-          <SettingsBlock
-            title="Custom currencies"
-            description="Units you invoice in that no central bank issues — credits, tokens, minutes, seats. Each needs a name, a symbol, and what one unit is worth in each fiat currency above."
-            actions={
+          {currencies.length === 0 ? (
+            <SettingsCard
+              title="Custom currencies"
+              description="Units you invoice in that no central bank issues — credits, tokens, minutes, seats."
+            >
+              <div className="px-5 py-4">
+                <EmptyState
+                  size="inline"
+                  title="No custom currencies"
+                  description="Invoices are denominated in ordinary fiat currency until you define one."
+                />
+              </div>
+            </SettingsCard>
+          ) : (
+            currencies.map(([code]) => {
+              const rowError =
+                draft.error(`customCurrencies.${code}`) ??
+                draft.error(`customCurrencies.${code}.fiatConversionFactors`)
+              const nameError = draft.error(`customCurrencies.${code}.name`)
+              const symbolError = draft.error(`customCurrencies.${code}.symbol`)
+
+              return (
+                <SettingsCard
+                  key={code}
+                  title={code.toUpperCase()}
+                  description="The code is fixed once added. Remove it and add it again to change the code."
+                  footer={
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={busy}
+                      onClick={() => removeCurrency(code)}
+                    >
+                      Remove {code.toUpperCase()}
+                    </Button>
+                  }
+                >
+                  <SettingsFieldGroup
+                    legend={code.toUpperCase()}
+                    description="Name, symbol, and what one unit is worth in each quoted currency."
+                  >
+                    <CurrencyField
+                      id={`currency-${code}-name`}
+                      title="Name"
+                      required
+                      busy={busy}
+                      placeholder="Credits"
+                      value={draft.text(`customCurrencies.${code}.name`)}
+                      error={nameError}
+                      onChange={(value) => draft.setText(`customCurrencies.${code}.name`, value)}
+                    />
+                    <CurrencyField
+                      id={`currency-${code}-symbol`}
+                      title="Symbol"
+                      description="Printed beside the amount on an invoice."
+                      required
+                      busy={busy}
+                      placeholder="✦"
+                      value={draft.text(`customCurrencies.${code}.symbol`)}
+                      error={symbolError}
+                      last={fiats.length === 0}
+                      onChange={(value) => draft.setText(`customCurrencies.${code}.symbol`, value)}
+                    />
+                    {fiats.length === 0 ? (
+                      <p className="text-muted-foreground px-5 pb-4 text-sm">
+                        Add a fiat currency above to set what one {code.toUpperCase()} is worth.
+                      </p>
+                    ) : (
+                      fiats.map((fiat, fiatIndex) => {
+                        const path = `customCurrencies.${code}.fiatConversionFactors.${fiat}`
+                        return (
+                          <CurrencyField
+                            key={fiat}
+                            id={`currency-${code}-${fiat}`}
+                            title={`Value in ${fiat.toUpperCase()}`}
+                            description={`What one ${code.toUpperCase()} is worth in ${fiat.toUpperCase()}.`}
+                            required
+                            decimal
+                            busy={busy}
+                            placeholder="0.01"
+                            value={draft.text(path)}
+                            error={draft.error(path)}
+                            last={fiatIndex === fiats.length - 1}
+                            onChange={(value) => draft.setText(path, value)}
+                          />
+                        )
+                      })
+                    )}
+                  </SettingsFieldGroup>
+                  {rowError ? (
+                    <div className="px-5 pb-4">
+                      <ActionError message={rowError} />
+                    </div>
+                  ) : null}
+                </SettingsCard>
+              )
+            })
+          )}
+
+          <SettingsCard
+            title="Add a currency"
+            description="Three letters, for example cre. Each currency needs a name, a symbol, and a rate in every quoted fiat currency."
+            footer={
               <div className="flex w-full flex-wrap items-center justify-end gap-3">
                 <ActionError message={saveError} />
                 {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
@@ -359,163 +476,40 @@ function CurrencyForm({
               </div>
             }
           >
-            {currencies.length === 0 ? (
-              <EmptyState
-                size="inline"
-                title="No custom currencies"
-                description="Invoices are denominated in ordinary fiat currency until you define one."
-              />
-            ) : (
-              <ul className="flex flex-col gap-4">
-                {currencies.map(([code]) => {
-                  const rowError =
-                    draft.error(`customCurrencies.${code}`) ??
-                    draft.error(`customCurrencies.${code}.fiatConversionFactors`)
-
-                  return (
-                    <li key={code} className="flex flex-col gap-4 rounded-lg border p-4">
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex flex-col">
-                          <span className="font-mono text-sm font-medium">
-                            {code.toUpperCase()}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            The code is fixed once added. Remove and re-add it to change it.
-                          </span>
-                        </div>
-                        <Button
-                          type="button"
-                          size="sm"
-                          variant="ghost"
-                          disabled={busy}
-                          onClick={() => removeCurrency(code)}
-                        >
-                          Remove
-                        </Button>
-                      </div>
-
-                      <div className="grid gap-4 sm:grid-cols-2">
-                        <Field
-                          label="Name"
-                          required
-                          {...(draft.error(`customCurrencies.${code}.name`)
-                            ? { error: draft.error(`customCurrencies.${code}.name`) }
-                            : {})}
-                        >
-                          {({ id, ...field }) => (
-                            <Input
-                              id={id}
-                              disabled={busy}
-                              placeholder="Credits"
-                              value={draft.text(`customCurrencies.${code}.name`)}
-                              onChange={(event) =>
-                                draft.setText(`customCurrencies.${code}.name`, event.target.value)
-                              }
-                              {...field}
-                            />
-                          )}
-                        </Field>
-
-                        <Field
-                          label="Symbol"
-                          required
-                          hint="Printed beside the amount on an invoice."
-                          {...(draft.error(`customCurrencies.${code}.symbol`)
-                            ? { error: draft.error(`customCurrencies.${code}.symbol`) }
-                            : {})}
-                        >
-                          {({ id, ...field }) => (
-                            <Input
-                              id={id}
-                              disabled={busy}
-                              placeholder="✦"
-                              value={draft.text(`customCurrencies.${code}.symbol`)}
-                              onChange={(event) =>
-                                draft.setText(`customCurrencies.${code}.symbol`, event.target.value)
-                              }
-                              {...field}
-                            />
-                          )}
-                        </Field>
-                      </div>
-
-                      {fiats.length === 0 ? (
-                        <p className="text-muted-foreground text-sm">
-                          Add a fiat currency above to set what one {code.toUpperCase()} is worth.
-                        </p>
-                      ) : (
-                        <div className="grid gap-4 sm:grid-cols-2">
-                          {fiats.map((fiat) => {
-                            const path = `customCurrencies.${code}.fiatConversionFactors.${fiat}`
-                            return (
-                              <Field
-                                key={fiat}
-                                label={`Value in ${fiat.toUpperCase()}`}
-                                required
-                                hint={`What one ${code.toUpperCase()} is worth in ${fiat.toUpperCase()}.`}
-                                {...(draft.error(path) ? { error: draft.error(path) } : {})}
-                              >
-                                {({ id, ...field }) => (
-                                  <Input
-                                    id={id}
-                                    disabled={busy}
-                                    inputMode="decimal"
-                                    placeholder="0.01"
-                                    value={draft.text(path)}
-                                    onChange={(event) => draft.setText(path, event.target.value)}
-                                    {...field}
-                                  />
-                                )}
-                              </Field>
-                            )
-                          })}
-                        </div>
-                      )}
-
-                      {/*
-                        The row-level complaints — a duplicate code, a clash
-                        with the settlement currency, a missing rate — land on
-                        the row rather than on any one input, because that is
-                        what they are about.
-                      */}
-                      <ActionError message={rowError ?? null} />
-                    </li>
-                  )
-                })}
-              </ul>
-            )}
-
-            <div className="flex flex-col gap-1.5">
-              <div className="flex max-w-sm items-end gap-2">
-                <div className="flex-1">
-                  <Field label="Add a custom currency" hint="Three letters, for example cre.">
-                    {({ id, ...field }) => (
-                      <Input
-                        id={id}
-                        disabled={busy}
-                        placeholder="cre"
-                        autoComplete="off"
-                        spellCheck={false}
-                        value={newCode}
-                        onChange={(event) => setNewCode(event.target.value)}
-                        onKeyDown={(event) => {
-                          if (event.key === 'Enter') {
-                            event.preventDefault()
-                            addCurrency()
-                          }
-                        }}
-                        {...field}
-                      />
-                    )}
-                  </Field>
+            <SettingsFieldGroup legend="Add a currency" description="Three letters, for example cre.">
+              <SettingRow
+                title="Currency code"
+                description="Three letters. It cannot be changed after it is added."
+                labelFor="currency-add-code"
+                last
+              >
+                <div className="flex w-full flex-col gap-1">
+                  <div className="flex gap-2">
+                    <Input
+                      id="currency-add-code"
+                      disabled={busy}
+                      placeholder="cre"
+                      autoComplete="off"
+                      spellCheck={false}
+                      aria-invalid={codeIssue ? true : undefined}
+                      value={newCode}
+                      onChange={(event) => setNewCode(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault()
+                          addCurrency()
+                        }
+                      }}
+                    />
+                    <Button type="button" variant="outline" disabled={busy} onClick={addCurrency}>
+                      Add
+                    </Button>
+                  </div>
+                  <ActionError message={codeIssue} />
                 </div>
-                <Button type="button" variant="outline" disabled={busy} onClick={addCurrency}>
-                  Add
-                </Button>
-              </div>
-              <ActionError message={codeIssue} />
-            </div>
-          </SettingsBlock>
+              </SettingRow>
+            </SettingsFieldGroup>
+          </SettingsCard>
         </Panel>
       </form>
 
@@ -538,5 +532,61 @@ function CurrencyForm({
         }
       />
     </>
+  )
+}
+
+/** One labelled input on a currency settings row. */
+function CurrencyField({
+  id,
+  title,
+  description,
+  value,
+  onChange,
+  busy,
+  error,
+  required,
+  placeholder,
+  decimal,
+  last,
+}: {
+  id: string
+  title: string
+  description?: string
+  value: string
+  onChange: (value: string) => void
+  busy: boolean
+  error: string | undefined
+  required?: boolean
+  placeholder?: string
+  decimal?: boolean
+  last?: boolean
+}) {
+  return (
+    <SettingRow
+      title={title}
+      labelFor={id}
+      {...(description ? { description } : {})}
+      {...(last ? { last: true } : {})}
+      {...(required
+        ? { titleAddon: <span className="text-destructive" aria-hidden="true">*</span> }
+        : {})}
+    >
+      <div className="flex w-full flex-col gap-1">
+        <Input
+          id={id}
+          disabled={busy}
+          aria-invalid={error ? true : undefined}
+          value={value}
+          placeholder={placeholder}
+          onChange={(event) => onChange(event.target.value)}
+          {...(decimal ? { inputMode: 'decimal' as const } : {})}
+        />
+        {error ? (
+          <p role="alert" className="text-destructive text-xs">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </SettingRow>
   )
 }

@@ -1,8 +1,9 @@
 import { Link } from '@tanstack/react-router'
 import { DEFAULT_TAX_RATE_QUERY } from '@fp/domain'
 import { useTaxRates } from '@fp/query'
+import { SettingRow, SettingsCard, SettingsFieldGroup } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { PanelError, Panel, toFailure, SettingsBlock } from './panelKit'
+import { PanelError, Panel, toFailure } from './panelKit'
 
 /**
  * Taxes: a signpost, not a second tax screen.
@@ -22,43 +23,51 @@ export function TaxesPanel() {
   const rates = useTaxRates({ ...DEFAULT_TAX_RATE_QUERY, pageSize: 1 })
   const failure = toFailure(rates.error, 'your tax rates')
 
+  const total = rates.data?.total ?? 0
+  const summary = rates.isPending
+    ? 'Counting your tax rates…'
+    : total === 0
+      ? 'No tax rates are configured yet. Rates are managed on their own page, where they can be searched and filtered.'
+      : `${total} tax rate${total === 1 ? '' : 's'} configured. Rates are managed on their own page, where they can be searched and filtered.`
+
   return (
     <Panel>
-      <SettingsBlock
+      <SettingsCard
         title="Taxes"
         description="Which tax is added to an invoice, and where each rate applies."
-        actions={
-          /*
-           * A real link, rendered with the button's styling — so it can be
-           * middle-clicked, opened in a new tab and copied, which a `<button>`
-           * that calls `navigate()` cannot.
-           *
-           * `nativeButton={false}` is required, not decorative: Base UI's
-           * `Button` assumes it is rendering a `<button>` and, told otherwise,
-           * adds the keyboard and role handling an `<a>` needs to behave like
-           * one. Leaving it out logs a warning and ships an anchor with button
-           * semantics half-applied.
-           */
-          <Button size="sm" nativeButton={false} render={<Link to="/taxes" search={{} as never} />}>
-            Open tax rates
-          </Button>
-        }
       >
         {failure ? (
-          <PanelError failure={failure} onRetry={() => void rates.refetch()} />
-        ) : rates.isPending ? (
-          <p className="text-muted-foreground text-sm">Counting your tax rates…</p>
+          <div className="px-5 py-4">
+            <PanelError failure={failure} onRetry={() => void rates.refetch()} />
+          </div>
         ) : (
-          <p className="text-sm">
-            {rates.data?.total === 0
-              ? 'No tax rates are configured yet.'
-              : `${rates.data?.total ?? 0} tax rate${rates.data?.total === 1 ? '' : 's'} configured.`}{' '}
-            <span className="text-muted-foreground">
-              Rates are managed on their own page, where they can be searched and filtered.
-            </span>
-          </p>
+          <SettingsFieldGroup
+            legend="Taxes"
+            description="Which tax is added to an invoice, and where each rate applies."
+          >
+            <SettingRow title="Tax rates" description={summary} last>
+              {/*
+               * A real link, rendered with the button's styling — so it can be
+               * middle-clicked, opened in a new tab and copied, which a `<button>`
+               * that calls `navigate()` cannot.
+               *
+               * `nativeButton={false}` is required, not decorative: Base UI's
+               * `Button` assumes it is rendering a `<button>` and, told otherwise,
+               * adds the keyboard and role handling an `<a>` needs to behave like
+               * one. Leaving it out logs a warning and ships an anchor with button
+               * semantics half-applied.
+               */}
+              <Button
+                size="sm"
+                nativeButton={false}
+                render={<Link to="/taxes" search={{} as never} />}
+              >
+                Open tax rates
+              </Button>
+            </SettingRow>
+          </SettingsFieldGroup>
         )}
-      </SettingsBlock>
+      </SettingsCard>
     </Panel>
   )
 }
