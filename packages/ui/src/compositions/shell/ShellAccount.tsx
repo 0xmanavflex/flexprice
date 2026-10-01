@@ -13,18 +13,17 @@ import { MENU_CONTENT, MENU_ITEM } from './menuSurface'
 import type { ShellUser } from './types'
 
 /**
- * The account, as a single icon in the sidebar footer.
+ * The account, as a color strip in the sidebar footer.
  *
- * Reduced from a row with an avatar and two lines of identity to a plain person
- * icon that opens the same menu — who I am, and how I leave. It sits in the
- * footer beside Bell and Theme, all three the same `icon-sm` ghost button, so
- * the rail ends in a tidy row of utilities rather than a heavy account card. The
- * name and organisation have not gone: they head the menu it opens.
+ * The whole row is the strip — avatar and email sit on one bar. The email is
+ * plain text on that bar, so the tint belongs to the footer and not to a chip
+ * behind the words. It opens the same menu: who I am, and how I leave. The
+ * name and organisation head that menu.
  */
 export const ShellAccountProvenance = provenance({
   source: 'composition',
   composes: ['ui/dropdown-menu', 'ui/button'],
-  note: 'The footer identity, reduced to a profile icon; name/org head the menu it opens.',
+  note: 'The footer identity as one color strip; name/org head the menu it opens.',
 })
 
 export interface ShellAccountProps {
@@ -60,17 +59,17 @@ export function ShellAccount({
           <button
             type="button"
             aria-label={`Account: ${user.name}. Open account menu`}
-            className="hover:bg-sidebar-accent/80 focus-visible:ring-sidebar-ring flex w-full min-w-0 items-center gap-2.5 rounded-xl p-1 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none in-data-[state=collapsed]:justify-center"
+            className="bg-muted hover:bg-sidebar-accent focus-visible:ring-sidebar-ring flex w-full min-w-0 items-center gap-2.5 rounded-xl px-1.5 py-1 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none in-data-[state=collapsed]:justify-center"
           />
         }
       >
         <span
           aria-hidden
-          className="bg-muted text-foreground/80 flex size-10 shrink-0 items-center justify-center rounded-full border"
+          className="bg-background text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-full border"
         >
           <UserIcon className="size-5" />
         </span>
-        <span className="bg-muted text-foreground/80 min-w-0 flex-1 truncate rounded-md px-2 py-1 text-xs in-data-[state=collapsed]:hidden">
+        <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs in-data-[state=collapsed]:hidden">
           {user.name}
         </span>
       </DropdownMenuTrigger>
