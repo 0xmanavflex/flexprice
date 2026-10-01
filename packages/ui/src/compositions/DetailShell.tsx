@@ -189,7 +189,7 @@ export function DetailShell({
               <span className="font-mono text-xs text-muted-foreground">{identifier}</span>
             ) : null}
             {description ? (
-              <p className="max-w-3xl text-sm leading-relaxed text-muted-foreground">
+              <p className="max-w-3xl text-xs leading-relaxed font-normal text-muted-foreground">
                 {description}
               </p>
             ) : null}

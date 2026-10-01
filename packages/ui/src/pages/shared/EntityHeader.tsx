@@ -49,7 +49,7 @@ export function EntityHeader({
               <h1 className="truncate text-xl leading-tight font-medium tracking-tight">{title}</h1>
               {badge}
             </div>
-            {subtitle ? <span className="text-muted-foreground text-sm">{subtitle}</span> : null}
+            {subtitle ? <span className="text-muted-foreground text-xs font-normal">{subtitle}</span> : null}
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
