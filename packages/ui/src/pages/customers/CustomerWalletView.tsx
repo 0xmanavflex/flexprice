@@ -10,9 +10,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
+import { Progress } from '@ui/components/primitives/progress'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@ui/components/primitives/select'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { FormDialog, Section } from '../../compositions'
-import { ChoiceCards, Composer, SplitMeter } from '../../compositions/DetailKit'
+import { ChoiceCards, Composer } from '../../compositions/DetailKit'
 
 export interface WalletTransaction {
   id: string
@@ -65,106 +73,138 @@ export function CustomerWalletView({ wallet, onTopUp, onAction }: CustomerWallet
   const [filter, setFilter] = useState<'all' | 'in' | 'out'>('all')
   const rows = wallet.transactions.filter((t) => filter === 'all' || t.direction === filter)
 
+  const usedPct =
+    wallet.currentBalance > 0 ? (wallet.usedSinceInvoice / wallet.currentBalance) * 100 : 0
+
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-end gap-2">
-        <Button onClick={() => setTopUpOpen(true)}>Top up wallet</Button>
-        <DropdownMenu>
-          <DropdownMenuTrigger render={<Button variant="outline" size="icon" aria-label="Wallet actions" />}>
-            <MoreHorizontalIcon aria-hidden className="size-4" />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="min-w-44">
-            <DropdownMenuGroup>
-              {ACTIONS.map((action) => (
-                <DropdownMenuItem key={action.id} onClick={() => onAction?.(action.id)}>
-                  {action.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
+      <div className="flex items-center justify-between gap-2">
+        <Select value="prepaid">
+          <SelectTrigger className="h-9 w-56" aria-label="Wallet">
+            <SelectValue>{() => 'Prepaid credits · USD'}</SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start">
+            <SelectItem value="prepaid">Prepaid credits · USD</SelectItem>
+          </SelectContent>
+        </Select>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setTopUpOpen(true)}>Top up wallet</Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={<Button variant="outline" size="icon" aria-label="Wallet actions" />}
+            >
+              <MoreHorizontalIcon aria-hidden className="size-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="min-w-44">
+              <DropdownMenuGroup>
+                {ACTIONS.map((action) => (
+                  <DropdownMenuItem key={action.id} onClick={() => onAction?.(action.id)}>
+                    {action.label}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        <Section title="Balance">
-          <div className="grid grid-cols-2 gap-6">
-            <Balance
-              label="Current balance"
-              hint="The balance when the last invoice was finalized."
-              value={fmt(wallet.currentBalance)}
-            />
-            <Balance
-              label="Ongoing balance"
-              hint="Current balance minus usage recorded since then."
-              value={fmt(wallet.ongoingBalance)}
-            />
+      <div className="bg-card grid gap-6 rounded-xl border p-5 lg:grid-cols-3">
+        <Balance
+          label="Current balance"
+          hint="The balance when the last invoice was finalized."
+          value={fmt(wallet.currentBalance)}
+        />
+        <Balance
+          label="Ongoing balance"
+          hint="Current balance minus usage recorded since then."
+          value={fmt(wallet.ongoingBalance)}
+        />
+        <div className="flex flex-col justify-center gap-2">
+          <div className="text-muted-foreground flex justify-between text-xs">
+            <span>Since the last invoice</span>
+            <span className="tabular-nums">{usedPct.toFixed(1)}% used</span>
           </div>
-        </Section>
-        <Section title="Since the last invoice">
-          <SplitMeter
-            used={wallet.usedSinceInvoice}
-            total={wallet.currentBalance}
-            usedLabel={`${fmt(wallet.usedSinceInvoice)} used`}
-            availableLabel={`${fmt(wallet.ongoingBalance)} available`}
-          />
-        </Section>
+          <Progress value={usedPct} />
+          <div className="text-muted-foreground flex justify-between text-xs tabular-nums">
+            <span>{fmt(wallet.usedSinceInvoice)} used</span>
+            <span>{fmt(wallet.ongoingBalance)} available</span>
+          </div>
+        </div>
       </div>
 
-      <Section title="Terms">
-        <dl className="grid grid-cols-2 gap-6 text-sm lg:grid-cols-4">
-          {[
-            ['Conversion rate', wallet.conversionRate],
-            ['Top-up rate', wallet.topUpRate],
-            ['Auto top-up', wallet.autoTopUp],
-            ['Credits expiring soon', wallet.expiringSoon],
-          ].map(([label, value]) => (
-            <div key={label} className="flex flex-col gap-1">
-              <dt className="text-xs text-muted-foreground">{label}</dt>
-              <dd className="font-medium">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </Section>
+      <dl className="bg-card grid grid-cols-2 gap-6 rounded-xl border p-5 text-sm lg:grid-cols-4">
+        {[
+          ['Conversion', wallet.conversionRate],
+          ['Top-up rate', wallet.topUpRate],
+          ['Auto top-up', wallet.autoTopUp],
+          ['Expiring soon', wallet.expiringSoon],
+        ].map(([label, value]) => (
+          <div key={label} className="flex flex-col gap-1">
+            <dt className="text-muted-foreground text-xs">{label}</dt>
+            <dd>{value}</dd>
+          </div>
+        ))}
+      </dl>
 
       <Section
         title="Transactions"
+        description="Credits in and out of this wallet"
         actions={
-          <div className="flex gap-1" role="group" aria-label="Filter transactions">
-            {(['all', 'in', 'out'] as const).map((value) => (
-              <Button
-                key={value}
-                size="sm"
-                variant={filter === value ? 'secondary' : 'ghost'}
-                aria-pressed={filter === value}
-                onClick={() => setFilter(value)}
-              >
-                {{ all: 'All activity', in: 'Credits in', out: 'Debits out' }[value]}
-              </Button>
-            ))}
-          </div>
+          <Select
+            value={filter}
+            onValueChange={(value) => value !== null && setFilter(value as 'all' | 'in' | 'out')}
+          >
+            <SelectTrigger className="h-8 w-36" aria-label="Filter transactions">
+              <SelectValue>
+                {(value) =>
+                  ({ all: 'All activity', in: 'Credits in', out: 'Debits out' })[value as 'all'] ??
+                  value
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent align="end">
+              <SelectItem value="all">All activity</SelectItem>
+              <SelectItem value="in">Credits in</SelectItem>
+              <SelectItem value="out">Debits out</SelectItem>
+            </SelectContent>
+          </Select>
         }
       >
         <ul className="flex flex-col divide-y">
           {rows.map((row) => (
-            <li key={row.id} className="flex items-center gap-4 py-3 text-sm">
-              {row.direction === 'in' ? (
-                <ArrowDownLeftIcon aria-hidden className="size-4 text-emerald-600" />
-              ) : (
-                <ArrowUpRightIcon aria-hidden className="size-4 text-red-600" />
-              )}
-              <span className={row.direction === 'in' ? 'font-medium text-emerald-700 tabular-nums' : 'font-medium text-red-700 tabular-nums'}>
+            <li key={row.id} className="flex items-center gap-3 py-3 text-sm">
+              <span
+                aria-hidden
+                className="bg-muted flex size-9 shrink-0 items-center justify-center rounded-lg border"
+              >
+                {row.direction === 'in' ? (
+                  <ArrowDownLeftIcon className="size-4 text-emerald-600" />
+                ) : (
+                  <ArrowUpRightIcon className="size-4 text-red-600" />
+                )}
+              </span>
+              <div className="flex min-w-0 flex-col">
+                <span className="font-medium">{SOURCE_LABEL[row.source]}</span>
+                <span className="text-muted-foreground text-xs">{row.value}</span>
+              </div>
+              <span className="text-muted-foreground ml-auto text-xs">{row.date}</span>
+              <span
+                className={`w-32 text-right tabular-nums ${row.direction === 'in' ? 'text-emerald-700' : 'text-red-700'}`}
+              >
                 {row.direction === 'in' ? '+' : '-'}
                 {fmt(row.credits)} credits
               </span>
-              <span className="text-muted-foreground tabular-nums">{row.value}</span>
-              <span className="ml-auto text-muted-foreground">{SOURCE_LABEL[row.source]}</span>
-              <span className="w-28 text-right text-muted-foreground">{row.date}</span>
             </li>
           ))}
         </ul>
       </Section>
 
-      <FormDialog open={topUpOpen} onOpenChange={setTopUpOpen} title="Top up wallet" description="Add credits to this customer's wallet.">
+      <FormDialog
+        open={topUpOpen}
+        onOpenChange={setTopUpOpen}
+        title="Top up wallet"
+        description="Add credits to this customer's wallet."
+      >
         <Composer
           submitLabel="Top up"
           onCancel={() => setTopUpOpen(false)}
@@ -184,7 +224,12 @@ export function CustomerWalletView({ wallet, onTopUp, onAction }: CustomerWallet
           />
           <div className="flex flex-col gap-2">
             <Label htmlFor="topup-credits">Credits</Label>
-            <Input id="topup-credits" inputMode="numeric" value={credits} onChange={(e) => setCredits(e.target.value)} />
+            <Input
+              id="topup-credits"
+              inputMode="numeric"
+              value={credits}
+              onChange={(e) => setCredits(e.target.value)}
+            />
           </div>
         </Composer>
       </FormDialog>
@@ -195,7 +240,7 @@ export function CustomerWalletView({ wallet, onTopUp, onAction }: CustomerWallet
 function Balance({ label, hint, value }: { label: string; hint: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+      <div className="text-muted-foreground flex items-center gap-1.5 text-xs">
         {label}
         <Tooltip>
           <TooltipTrigger render={<span aria-label={hint} className="inline-flex" />}>
@@ -218,9 +263,37 @@ export const DEMO_WALLET: WalletModel = {
   autoTopUp: 'Off',
   expiringSoon: '500 credits · Jun 30',
   transactions: [
-    { id: 't1', direction: 'out', credits: 2650, value: '$26.50', source: 'invoice', date: 'May 12, 2026' },
-    { id: 't2', direction: 'in', credits: 10000, value: '$100.00', source: 'top-up', date: 'May 2, 2026' },
-    { id: 't3', direction: 'in', credits: 2000, value: '$20.00', source: 'grant', date: 'May 1, 2026' },
-    { id: 't4', direction: 'out', credits: 300, value: '$3.00', source: 'expiry', date: 'Apr 30, 2026' },
+    {
+      id: 't1',
+      direction: 'out',
+      credits: 2650,
+      value: '$26.50',
+      source: 'invoice',
+      date: 'May 12, 2026',
+    },
+    {
+      id: 't2',
+      direction: 'in',
+      credits: 10000,
+      value: '$100.00',
+      source: 'top-up',
+      date: 'May 2, 2026',
+    },
+    {
+      id: 't3',
+      direction: 'in',
+      credits: 2000,
+      value: '$20.00',
+      source: 'grant',
+      date: 'May 1, 2026',
+    },
+    {
+      id: 't4',
+      direction: 'out',
+      credits: 300,
+      value: '$3.00',
+      source: 'expiry',
+      date: 'Apr 30, 2026',
+    },
   ],
 }

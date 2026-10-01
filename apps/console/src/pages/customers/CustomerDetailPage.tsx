@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import type { TenantFeatureUsage } from '@fp/domain'
 import {
   ApiError,
@@ -67,6 +68,7 @@ export function CustomerDetailPage({
   // subscription and invoice reads above, which are scoped by the external one.
   const usage = useCustomerUsageSummary(customerId)
   const update = useUpdateCustomer()
+  const navigate = useNavigate()
   // Subscription creation happens inside the Subscriptions section, in place.
   const [creatingSubscription, setCreatingSubscription] = useState(false)
 
@@ -115,6 +117,9 @@ export function CustomerDetailPage({
         setCreatingSubscription(true)
       }}
       onEdit={() => onEdit(customer.data.id)}
+      onOpenInvoice={(invoiceId) =>
+        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
+      }
       onUpdateField={(patch) =>
         update.mutateAsync({
           id: customer.data.id,
@@ -140,7 +145,9 @@ export function CustomerDetailPage({
       wallet={
         <CustomerWalletView
           wallet={DEMO_WALLET}
-          onTopUp={(request) => toast.info(`Top-up of ${request.credits} ${request.kind} credits queued`)}
+          onTopUp={(request) =>
+            toast.info(`Top-up of ${request.credits} ${request.kind} credits queued`)
+          }
           onAction={(action) => toast.info(`Wallet action: ${action}`)}
         />
       }

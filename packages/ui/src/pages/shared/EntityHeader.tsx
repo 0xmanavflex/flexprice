@@ -7,6 +7,8 @@ export interface EntityHeaderProps {
   /** Glyph shown inside the neutral icon tile. */
   icon: ReactNode
   title: string
+  /** Status badge shown beside the title. */
+  badge?: ReactNode
   /** One short line under the name, e.g. the feature type. */
   subtitle?: string
   /** Copyable identifier shown beside the subtitle. */
@@ -22,7 +24,15 @@ export interface EntityHeaderProps {
  * Built here (not in `DetailHeader`) because the tile needs a slot that shared
  * header does not have.
  */
-export function EntityHeader({ trail, icon, title, subtitle, id, actions }: EntityHeaderProps) {
+export function EntityHeader({
+  trail,
+  icon,
+  title,
+  badge,
+  subtitle,
+  id,
+  actions,
+}: EntityHeaderProps) {
   return (
     <header className="flex flex-col gap-4 px-6 pt-6 pb-4">
       <DetailBreadcrumb trail={trail} />
@@ -35,7 +45,10 @@ export function EntityHeader({ trail, icon, title, subtitle, id, actions }: Enti
             {icon}
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <h1 className="truncate text-xl leading-tight font-medium tracking-tight">{title}</h1>
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-xl leading-tight font-medium tracking-tight">{title}</h1>
+              {badge}
+            </div>
             {subtitle ? <span className="text-muted-foreground text-sm">{subtitle}</span> : null}
           </div>
         </div>
