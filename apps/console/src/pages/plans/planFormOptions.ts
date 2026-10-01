@@ -16,7 +16,11 @@ export function usePlanFormOptions() {
   // A usage charge bills against a meter; only metered features have one.
   const meters: MeterOption[] = allFeatures
     .filter((f) => f.type === FeatureType.Metered && f.meterId)
-    .map((f) => ({ id: f.meterId as string, name: f.name }))
+    .map((f) => ({
+      id: f.meterId as string,
+      name: f.name,
+      ...(f.unitSingular ? { unit: f.unitSingular } : {}),
+    }))
   const units: PriceUnitOption[] = (priceUnits.data?.priceUnits ?? [])
     .filter((unit) => unit.status === PriceUnitStatus.Published)
     .map((unit) => ({ code: unit.code, name: unit.name, baseCurrency: unit.baseCurrency }))

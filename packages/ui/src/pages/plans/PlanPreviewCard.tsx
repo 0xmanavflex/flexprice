@@ -5,9 +5,8 @@ import {
   BillingModel,
   type BillingPeriod,
   type CreateCharge,
-  CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
-  type CreditGrantPeriod,
+  CreditGrantPeriod,
   FeatureType,
   PriceType,
 } from '@fp/domain'
@@ -39,6 +38,8 @@ export interface PlanPreviewCardProps {
   charges: CreateCharge[]
   /** Resolves a usage charge's meter id to a readable feature name. */
   meterLabel?: (meterId: string) => string
+  /** Resolves a meter id to its singular unit ("call"), for "per call" wording. */
+  meterUnit?: (meterId: string) => string | undefined
   /** Free-trial length in days, when the plan has one. */
   trialDays?: number | null | undefined
   /** What the plan includes, one line per entitlement (see `includedLine`). */
@@ -54,7 +55,16 @@ export interface PreviewLine {
   value?: ReactNode
 }
 
-/** One "Credits" line for a grant: "5,000 once" or "2,000 monthly". */
+const CREDIT_PERIOD_SHORT: Record<CreditGrantPeriod, string> = {
+  [CreditGrantPeriod.Daily]: 'day',
+  [CreditGrantPeriod.Weekly]: 'wk',
+  [CreditGrantPeriod.Monthly]: 'mo',
+  [CreditGrantPeriod.Quarterly]: 'qtr',
+  [CreditGrantPeriod.HalfYearly]: '6 mo',
+  [CreditGrantPeriod.Annual]: 'yr',
+}
+
+/** One "Credits" line for a grant: "5,000 once" or "2,000 / mo". */
 export function creditLine(g: {
   key: string
   name: string
@@ -65,7 +75,7 @@ export function creditLine(g: {
   const amount = Number(g.credits || 0).toLocaleString()
   const when =
     g.cadence === CreditGrantCadence.Recurring && g.period
-      ? CREDIT_GRANT_PERIOD_LABEL[g.period].toLowerCase()
+      ? `/ ${CREDIT_PERIOD_SHORT[g.period]}`
       : 'once'
   return { key: g.key, label: g.name || 'Credit grant', value: `${amount} ${when}` }
 }
@@ -77,6 +87,8 @@ const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumF
 export function includedLine(e: {
   key: string
   name: string
+  /** Plural unit of a metered feature ("tokens"), shown after the allowance. */
+  unit?: string | undefined
   featureType: FeatureType
   usageLimit?: number | null | undefined
   staticValue?: string | null | undefined
@@ -87,7 +99,10 @@ export function includedLine(e: {
       return {
         key: e.key,
         label: e.name,
-        value: e.usageLimit == null ? 'Unlimited' : `${compact.format(e.usageLimit)}`,
+        value:
+          e.usageLimit == null
+            ? 'Unlimited'
+            : [compact.format(e.usageLimit), e.unit].filter(Boolean).join(' '),
       }
     case FeatureType.Static:
       return { key: e.key, label: e.name, value: e.staticValue || undefined }
@@ -105,20 +120,32 @@ export function chargeLabel(charge: CreateCharge, meterLabel: (id: string) => st
 
 export function money(amount: number, currency: string, locale?: string): string {
   try {
-    return new Intl.NumberFormat(locale, { style: 'currency', currency }).format(amount)
+    // Sub-cent unit prices ($0.002 per call) must not round to $0.00.
+    const wholeCents = Math.abs(amount * 100 - Math.round(amount * 100)) < 1e-9
+    return new Intl.NumberFormat(locale, {
+      style: 'currency',
+      currency,
+      ...(wholeCents ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 6 }),
+    }).format(amount)
   } catch {
     return `${currency} ${amount.toFixed(2)}`
   }
 }
 
 /** A short human line describing how a charge prices, e.g. "$2 per 1,000". */
-export function pricingSummary(charge: CreateCharge, currency: string, locale?: string): string {
+export function pricingSummary(
+  charge: CreateCharge,
+  currency: string,
+  locale?: string,
+  unit?: string,
+): string {
+  const per = `per ${unit || 'unit'}`
   switch (charge.billingModel) {
     case BillingModel.FlatFee: {
       const amount = Number(charge.amount || 0)
       return charge.type === PriceType.Fixed
         ? money(amount, currency, locale)
-        : `${money(amount, currency, locale)} / unit`
+        : `${money(amount, currency, locale)} ${per}`
     }
     case BillingModel.Package: {
       const amount = Number(charge.amount || 0)
@@ -128,7 +155,7 @@ export function pricingSummary(charge: CreateCharge, currency: string, locale?: 
       const first = charge.tiers[0]
       const from = first ? Number(first.unitAmount || 0) : 0
       const n = charge.tiers.length
-      return `${n} tier${n === 1 ? '' : 's'}, from ${money(from, currency, locale)} / unit`
+      return `${n} tier${n === 1 ? '' : 's'}, from ${money(from, currency, locale)} ${per}`
     }
   }
 }
@@ -145,6 +172,7 @@ export function PlanPreviewCard({
   name,
   charges,
   meterLabel = (id) => id,
+  meterUnit,
   trialDays,
   included = [],
   credits = [],
@@ -204,7 +232,12 @@ export function PlanPreviewCard({
                 <div key={index} className="flex flex-col text-sm">
                   <span className="font-medium">{chargeLabel(charge, meterLabel)}</span>
                   <span className="text-muted-foreground">
-                    {pricingSummary(charge, currency, locale)}
+                    {pricingSummary(
+                      charge,
+                      currency,
+                      locale,
+                      charge.meterId ? meterUnit?.(charge.meterId) : undefined,
+                    )}
                   </span>
                 </div>
               ))}

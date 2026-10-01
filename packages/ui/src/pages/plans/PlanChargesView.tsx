@@ -22,6 +22,8 @@ export interface PlanChargesViewProps {
   onEdit: (charge: Charge) => void
   onTerminate: (charge: Charge) => void
   readOnly?: boolean
+  /** Singular unit of a meter ("call"), for "per call" wording. */
+  meterUnit?: (meterId: string) => string | undefined
 }
 
 const GROUPS = [
@@ -66,6 +68,7 @@ export function PlanChargesView({
   onEdit,
   onTerminate,
   readOnly,
+  meterUnit,
 }: PlanChargesViewProps) {
   const meterName = (id: string) => charges.find((c) => c.meterId === id)?.meterName ?? id
 
@@ -142,7 +145,12 @@ export function PlanChargesView({
                       <span className="flex-1 basis-1/4 text-left tabular-nums">
                         {charge.displayAmount && charge.billingModel === BillingModel.FlatFee
                           ? charge.displayAmount
-                          : pricingSummary(draft, currency)}
+                          : pricingSummary(
+                              draft,
+                              currency,
+                              undefined,
+                              charge.meterId ? meterUnit?.(charge.meterId) : undefined,
+                            )}
                       </span>
                       {readOnly ? (
                         <span className="w-9" />

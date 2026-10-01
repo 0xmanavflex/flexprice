@@ -243,7 +243,9 @@ export function PlanDetailPage({
                 value: 'overview',
                 label: 'Charges',
                 ...count(charges.data),
-                content: <ChargesTab planId={planId} planName={record.name} readOnly={isArchived} />,
+                content: (
+                  <ChargesTab planId={planId} planName={record.name} readOnly={isArchived} />
+                ),
               },
               {
                 value: 'entitlements',
@@ -287,7 +289,6 @@ export function PlanDetailPage({
             ]}
           />
         </div>
-
       </div>
 
       <ConfirmDialog
@@ -329,7 +330,7 @@ function ChargesTab({
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
-  const { meters, units } = usePlanFormOptions()
+  const { meters, units, featureOptions } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const terminate = useTerminatePrice()
@@ -367,6 +368,7 @@ function ChargesTab({
         <PlanChargesView
           charges={rows}
           readOnly={readOnly}
+          meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
           onAdd={() => setForm('add')}
           onEdit={(charge) => setForm(charge)}
           onTerminate={(charge) => setTerminating(charge)}
@@ -377,6 +379,8 @@ function ChargesTab({
             charges={rows}
             entitlements={entitlements.data ?? []}
             grants={grants.data ?? []}
+            meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+            featureUnit={(id) => featureOptions.find((f) => f.id === id)?.unit}
           />
         </aside>
       </div>

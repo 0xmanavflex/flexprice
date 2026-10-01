@@ -8,7 +8,7 @@ import {
   PriceType,
   TierMode,
 } from '@fp/domain'
-import { FeatureType } from '@fp/domain'
+import { CreditGrantCadence, CreditGrantPeriod, FeatureType } from '@fp/domain'
 import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
 
 /**
@@ -122,5 +122,40 @@ export const FullPlan: Story = {
     const c = within(canvasElement)
     await expect(c.getByText('14-day free trial · plus usage')).toBeInTheDocument()
     await expect(c.getByText('and 1 more')).toBeInTheDocument()
+  },
+}
+
+/** Units read as words, and recurring credits as a rate, as in the redesign. */
+export const ReadsLikeTheRedesign: Story = {
+  args: {
+    name: 'Starter',
+    trialDays: 14,
+    charges: [base, tieredUsage],
+    meterLabel: () => 'API Calls',
+    meterUnit: () => 'call',
+    included: [
+      includedLine({
+        key: 'tokens',
+        name: 'AI Tokens',
+        unit: 'tokens',
+        featureType: FeatureType.Metered,
+        usageLimit: 10_000,
+      }),
+    ],
+    credits: [
+      creditLine({
+        key: 'monthly',
+        name: 'Monthly included credits',
+        credits: 2000,
+        cadence: CreditGrantCadence.Recurring,
+        period: CreditGrantPeriod.Monthly,
+      }),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const card = within(canvasElement)
+    await expect(card.getByText('2 tiers, from $0.002 per call')).toBeInTheDocument()
+    await expect(card.getByText('10K tokens')).toBeInTheDocument()
+    await expect(card.getByText('2,000 / mo')).toBeInTheDocument()
   },
 }

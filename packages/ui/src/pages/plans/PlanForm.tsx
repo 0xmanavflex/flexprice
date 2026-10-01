@@ -323,10 +323,12 @@ export function PlanForm({
               name={planDraftName}
               charges={charges}
               meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}
+              meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
               included={entitlements.map((e, i) =>
                 includedLine({
                   key: `${e.featureId}-${i}`,
                   name: featureName(e.featureId),
+                  unit: features.find((f) => f.id === e.featureId)?.unit,
                   featureType: e.featureType,
                   usageLimit: 'usageLimit' in e ? e.usageLimit : undefined,
                   staticValue: 'staticValue' in e ? e.staticValue : undefined,

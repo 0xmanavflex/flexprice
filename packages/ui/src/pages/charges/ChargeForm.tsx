@@ -64,6 +64,8 @@ export const ChargeFormProvenance = provenance({
 export interface MeterOption {
   id: string
   name: string
+  /** Singular unit of the meter's feature ("call"), for "per call" wording. */
+  unit?: string
 }
 
 /** A custom price unit a charge can be denominated in instead of a currency. */
