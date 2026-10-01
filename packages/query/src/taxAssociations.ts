@@ -1,0 +1,124 @@
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { call } from '@fp/api'
+import {
+  type CreateTaxAssociation,
+  type EditTaxAssociation,
+  type TaxAssociation,
+  TaxBehavior,
+} from '@fp/domain'
+import { queryKeys } from './keys'
+import { useFlexprice } from './provider'
+
+/**
+ * Tax associations: a tax rate attached to a customer, so invoices raised for
+ * them carry it. Reached through `/taxes/associations`; the list is filtered
+ * server-side by entity.
+ */
+
+export interface TaxAssociationWire {
+  id?: string | undefined
+  taxRateId?: string | undefined
+  taxBehavior?: string | undefined
+  priority?: number | undefined
+  autoApply?: boolean | undefined
+  taxRate?:
+    | { name?: string | undefined; code?: string | undefined; percentageValue?: string | undefined }
+    | undefined
+}
+
+export function toTaxAssociation(wire: TaxAssociationWire): TaxAssociation {
+  return {
+    id: wire.id ?? '',
+    taxRateId: wire.taxRateId ?? '',
+    taxRateName: wire.taxRate?.name ?? '',
+    taxRateCode: wire.taxRate?.code ?? '',
+    percentage: wire.taxRate?.percentageValue ?? '',
+    taxBehavior:
+      wire.taxBehavior === TaxBehavior.Inclusive ? TaxBehavior.Inclusive : TaxBehavior.Exclusive,
+    priority: wire.priority ?? 0,
+    autoApply: wire.autoApply ?? false,
+  }
+}
+
+export function toCreateTaxAssociationRequest(
+  entityId: string,
+  draft: CreateTaxAssociation,
+): Record<string, unknown> {
+  return {
+    entityType: 'customer',
+    entityId,
+    taxRateCode: draft.taxRateCode,
+    taxBehavior: draft.taxBehavior,
+    priority: Number(draft.priority),
+    autoApply: draft.autoApply,
+  }
+}
+
+export function toUpdateTaxAssociationRequest(draft: EditTaxAssociation): Record<string, unknown> {
+  return {
+    taxBehavior: draft.taxBehavior,
+    priority: Number(draft.priority),
+    autoApply: draft.autoApply,
+  }
+}
+
+export function useCustomerTaxAssociations(customerId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.taxAssociations.forEntity('customer', customerId),
+    queryFn: async () => {
+      const response = await call(() =>
+        client.taxAssociations.listTaxAssociations('customer', customerId),
+      )
+      return (response.items ?? []).map((item) => toTaxAssociation(item as TaxAssociationWire))
+    },
+  })
+}
+
+export function useCreateTaxAssociation(customerId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateTaxAssociation) =>
+      call(() =>
+        client.taxAssociations.createTaxAssociation(
+          toCreateTaxAssociationRequest(customerId, draft) as never,
+        ),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taxAssociations.all() })
+    },
+  })
+}
+
+export function useUpdateTaxAssociation() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, draft }: { id: string; draft: EditTaxAssociation }) =>
+      call(() =>
+        client.taxAssociations.updateTaxAssociation(
+          id,
+          toUpdateTaxAssociationRequest(draft) as never,
+        ),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taxAssociations.all() })
+    },
+  })
+}
+
+export function useDeleteTaxAssociation() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.taxAssociations.deleteTaxAssociation(id)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.taxAssociations.all() })
+    },
+  })
+}

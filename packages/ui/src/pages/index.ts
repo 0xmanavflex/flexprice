@@ -270,6 +270,8 @@ export { toast, Toaster } from 'sonner'
 
 export { CustomerWalletView } from './customers/CustomerWalletView'
 export type { CustomerWalletViewProps } from './customers/CustomerWalletView'
+export { CustomerTaxSection } from './customers/CustomerTaxSection'
+export type { CustomerTaxSectionProps, TaxRateOption } from './customers/CustomerTaxSection'
 export { CustomerAnalyticsView, DEMO_FEATURE_ANALYTICS } from './customers/CustomerAnalyticsView'
 export type {
   CustomerAnalyticsViewProps,

@@ -542,3 +542,11 @@ export type {
   WalletTransaction,
   WalletTransactionDirection,
 } from './wallet'
+export {
+  TAX_BEHAVIOR_LABEL,
+  TaxBehavior,
+  createTaxAssociationSchema,
+  editTaxAssociationSchema,
+  emptyTaxAssociation,
+} from './taxAssociation'
+export type { CreateTaxAssociation, EditTaxAssociation, TaxAssociation } from './taxAssociation'

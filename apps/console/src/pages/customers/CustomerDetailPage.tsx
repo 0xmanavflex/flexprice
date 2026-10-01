@@ -16,6 +16,7 @@ import {
   QuotaCard,
   type CustomerTab,
 } from '@fp/ui/pages'
+import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
 
@@ -128,6 +129,7 @@ export function CustomerDetailPage({
       subscriptionsLoading={subscriptions.isLoading}
       invoicesLoading={invoices.isLoading}
       wallet={<CustomerWalletPanel customerId={customer.data.id} />}
+      taxes={<CustomerTaxPanel customerId={customer.data.id} />}
       usage={
         <div className="flex flex-col gap-8">
           <CustomerAnalyticsView features={DEMO_FEATURE_ANALYTICS} />

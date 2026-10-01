@@ -442,3 +442,13 @@ export {
   useWalletTransactions,
 } from './wallets'
 export type { WalletTransactionWire, WalletWire } from './wallets'
+export {
+  toCreateTaxAssociationRequest,
+  toTaxAssociation,
+  toUpdateTaxAssociationRequest,
+  useCreateTaxAssociation,
+  useCustomerTaxAssociations,
+  useDeleteTaxAssociation,
+  useUpdateTaxAssociation,
+} from './taxAssociations'
+export type { TaxAssociationWire } from './taxAssociations'

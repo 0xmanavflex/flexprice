@@ -102,6 +102,8 @@ export interface CustomerDetailProps {
   usage?: ReactNode
   /** The Wallet section's contents; omitted, the empty state shows. */
   wallet?: ReactNode
+  /** The Taxes section on the Information tab; omitted, it is not shown. */
+  taxes?: ReactNode
   locale?: string
 }
 
@@ -130,6 +132,7 @@ export function CustomerDetail({
   invoicesLoading = false,
   usage,
   wallet,
+  taxes,
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
@@ -267,6 +270,7 @@ export function CustomerDetail({
                   formatDate={formatDate}
                   onUpdateField={onUpdateField}
                   onEdit={onEdit}
+                  taxes={taxes}
                 />
               ),
             },
@@ -568,11 +572,13 @@ function InformationTab({
   formatDate,
   onUpdateField,
   onEdit,
+  taxes,
 }: {
   customer: CustomerDetailModel
   formatDate: (date: Date | null) => string
   onUpdateField: CustomerDetailProps['onUpdateField']
   onEdit: (() => void) | undefined
+  taxes: ReactNode
 }) {
   const address = [
     customer.addressLine1,
@@ -655,6 +661,8 @@ function InformationTab({
           </Button>
         ) : null}
       </EditableCard>
+
+      {taxes}
 
       {metadata.length > 0 ? (
         <Section title="Metadata" description="Keys your own system attached to this customer">

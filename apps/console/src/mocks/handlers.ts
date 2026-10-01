@@ -916,6 +916,9 @@ const scheduledTasks: Record<string, unknown>[] = [
  *
  * Northwind sells into four jurisdictions and has one rate it has retired.
  */
+/** Tax rates attached to entities, mutated by the association handlers. */
+const taxAssociations: Record<string, unknown>[] = []
+
 const taxRates: Record<string, unknown>[] = [
   {
     id: 'tax_01M38QTAX00000000000001',
@@ -2878,6 +2881,46 @@ export const handlers = [
     removeRow((corpus['customers'] as Corpus).items, String(params['id'])),
   ),
 
+  http.get(`${BASE}/taxes/associations`, ({ request }) => {
+    const url = new URL(request.url)
+    const entityId = url.searchParams.get('entity_id')
+    const items = taxAssociations.filter((row) => !entityId || row['entity_id'] === entityId)
+    return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
+  }),
+  http.post(`${BASE}/taxes/associations`, async ({ request }) => {
+    const body = await readBody(request)
+    const rate = taxRates.find((row) => row['code'] === body['tax_rate_code'])
+    if (!rate) return HttpResponse.json({ message: 'Tax rate not found' }, { status: 404 })
+    const row = {
+      id: `taxassoc_new_${taxAssociations.length + 1}`,
+      entity_type: body['entity_type'],
+      entity_id: body['entity_id'],
+      tax_rate_id: rate['id'],
+      tax_rate: rate,
+      tax_behavior: body['tax_behavior'],
+      priority: body['priority'],
+      auto_apply: body['auto_apply'],
+      status: 'published',
+    }
+    taxAssociations.push(row)
+    return HttpResponse.json(row)
+  }),
+  http.put(`${BASE}/taxes/associations/:id`, async ({ request, params }) => {
+    const id = String(params['id'])
+    patchRow(taxAssociations, id, await readBody(request))
+    const row = taxAssociations.find((item) => item['id'] === id)
+    return row
+      ? HttpResponse.json(row)
+      : HttpResponse.json({ message: 'Tax association not found' }, { status: 404 })
+  }),
+  http.delete(`${BASE}/taxes/associations/:id`, ({ params }) => {
+    const id = String(params['id'])
+    const index = taxAssociations.findIndex((item) => item['id'] === id)
+    if (index < 0)
+      return HttpResponse.json({ message: 'Tax association not found' }, { status: 404 })
+    const [row] = taxAssociations.splice(index, 1)
+    return HttpResponse.json(row)
+  }),
   http.post(`${BASE}/taxes/rates`, async ({ request }) => {
     const body = await readBody(request)
     const row = {
