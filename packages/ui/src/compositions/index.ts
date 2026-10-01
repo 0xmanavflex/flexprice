@@ -86,6 +86,8 @@ export { ContextualSection, ContextualSectionProvenance } from './ContextualSect
 export type { ContextualSectionProps } from './ContextualSection'
 export { EditableFields, EditableFieldsProvenance } from './EditableFields'
 export type { EditableFieldDef, EditableFieldsProps } from './EditableFields'
+export { EditableCard, EditableCardProvenance } from './EditableCard'
+export type { EditableCardProps } from './EditableCard'
 export { InlineField, InlineFieldProvenance } from './InlineField'
 export type { InlineFieldProps } from './InlineField'
 

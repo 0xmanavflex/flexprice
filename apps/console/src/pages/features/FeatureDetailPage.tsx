@@ -20,7 +20,6 @@ export interface FeatureDetailPageProps {
 export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
   const [tab, setTab] = useState<FeatureTab>('overview')
-  const [editing, setEditing] = useState(false)
   const update = useUpdateFeature()
 
   if (feature.isPending) {
@@ -65,13 +64,7 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
       tab={tab}
       onTabChange={setTab}
       onBack={onNavigateToList}
-      onEdit={() => {
-        setTab('information')
-        setEditing(true)
-      }}
       onEditConfiguration={() => onEdit(featureId)}
-      editing={editing}
-      onEditingChange={setEditing}
       onSave={(changes) =>
         update.mutateAsync({
           id: data.id,

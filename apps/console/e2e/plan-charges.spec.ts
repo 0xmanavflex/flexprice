@@ -101,17 +101,18 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await expect(page.getByLabel(/^Name/)).not.toHaveValue('')
   })
 
-  test('header Edit edits plan details in place', async ({ page }) => {
+  test('the Plan details pencil edits in place', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()
     const url = page.url()
-    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await page.getByRole('tab', { name: 'Information' }).click()
+    await page.getByRole('button', { name: 'Edit plan details' }).click()
     await expect(page.getByRole('textbox', { name: 'Name' })).toBeVisible()
     await page.getByRole('textbox', { name: 'Description' }).fill('edited in place')
     const request = page.waitForRequest(
       (r) => r.method() === 'PUT' && /\/v1\/plans\//.test(r.url()),
     )
-    await page.getByRole('button', { name: 'Save changes' }).click()
+    await page.getByRole('button', { name: 'Save', exact: true }).click()
     await request
     await expect(page).not.toHaveURL(/\/edit/)
     expect(page.url()).toContain(new URL(url).pathname)

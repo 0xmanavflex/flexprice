@@ -4,6 +4,8 @@ import {
   type EditEntitlement,
   type EditCreditGrant,
   type CreateCreditGrant,
+  BILLING_PERIOD_LABEL,
+  type BillingPeriod,
   type Charge,
   type CreateCharge,
   type CreditGrant,
@@ -58,7 +60,7 @@ import {
   ConfirmDialog,
   DetailList,
   DetailTabs,
-  EditableFields,
+  EditableCard,
   FormDialog,
   LoadingRows,
   Section,
@@ -145,7 +147,6 @@ export function PlanDetailPage({
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
 
   const [archiving, setArchiving] = useState(false)
-  const [editing, setEditing] = useState(false)
 
   if (plan.isPending) {
     return (
@@ -174,19 +175,17 @@ export function PlanDetailPage({
         trail={[{ label: 'Plans', onClick: onNavigateToList }, { label: record.name }]}
         icon={<LayersIcon aria-hidden className="size-5" />}
         title={record.name}
-        subtitle={PLAN_STATUS_LABEL[record.status]}
+        subtitle={planSubtitle(record.status, charges.data ?? [])}
         id={record.lookupKey || record.id}
         actions={
           <>
             <Button
-              disabled={editing || isArchived}
-              onClick={() => {
-                onTabChange('information')
-                setEditing(true)
-              }}
+              variant="outline"
+              disabled={sync.isPending || isArchived}
+              onClick={() => sync.mutate(planId)}
             >
-              <PencilIcon aria-hidden className="size-4" />
-              Edit
+              <RefreshCwIcon aria-hidden className="size-4" />
+              {sync.isPending ? 'Syncing…' : 'Sync to subscriptions'}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -195,35 +194,31 @@ export function PlanDetailPage({
                 <MoreHorizontalIcon aria-hidden className="size-4" />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => onEdit(planId)}>
-                    <PencilIcon aria-hidden className="size-4" />
-                    Edit configuration
-                  </DropdownMenuItem>
-                  <DropdownMenuItem
-                    onClick={() =>
-                      clone.mutate(
-                        { id: planId, name: `${record.name} (copy)` },
-                        {
-                          onSuccess: (result) => {
-                            const id = (result as { id?: string }).id
-                            if (id) onDuplicated(id)
-                          },
+                <DropdownMenuItem onClick={() => onEdit(planId)}>
+                  <PencilIcon aria-hidden className="size-4" />
+                  Edit configuration
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    clone.mutate(
+                      { id: planId, name: `${record.name} (copy)` },
+                      {
+                        onSuccess: (result) => {
+                          const id = (result as { id?: string }).id
+                          if (id) onDuplicated(id)
                         },
-                      )
-                    }
-                  >
-                    <CopyIcon aria-hidden className="size-4" />
-                    Duplicate
-                  </DropdownMenuItem>
-                  <DropdownMenuItem disabled={sync.isPending} onClick={() => sync.mutate(planId)}>
-                    <RefreshCwIcon aria-hidden className="size-4" />
-                    {sync.isPending ? 'Syncing…' : 'Sync usage charges'}
-                  </DropdownMenuItem>
+                      },
+                    )
+                  }
+                >
+                  <CopyIcon aria-hidden className="size-4" />
+                  Duplicate
+                </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                  <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
-                    <EyeOffIcon aria-hidden className="size-4" />
-                    Archive
-                  </DropdownMenuItem>
+                <DropdownMenuItem disabled={isArchived} onClick={() => setArchiving(true)}>
+                  <EyeOffIcon aria-hidden className="size-4" />
+                  Archive
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </>
@@ -236,15 +231,22 @@ export function PlanDetailPage({
             value={tab}
             onValueChange={(next) => onTabChange(parsePlanTab(next))}
             tabs={[
-              { value: 'overview', label: 'Charges', content: <ChargesTab planId={planId} /> },
+              {
+                value: 'overview',
+                label: 'Charges',
+                ...count(charges.data),
+                content: <ChargesTab planId={planId} />,
+              },
               {
                 value: 'entitlements',
                 label: 'Entitlements',
+                ...count(entitlements.data),
                 content: <EntitlementsTab planId={planId} />,
               },
               {
                 value: 'credit-grants',
                 label: 'Credit grants',
+                ...count(grants.data),
                 content: <CreditGrantsTab planId={planId} />,
               },
               {
@@ -271,8 +273,6 @@ export function PlanDetailPage({
                         },
                       })
                     }
-                    editing={editing}
-                    onEditingChange={setEditing}
                   />
                 ),
               },
@@ -471,7 +471,9 @@ function EntitlementsTab({ planId }: { planId: string }) {
         size="md"
         title={editing ? 'Edit entitlement' : 'Add entitlement'}
         description={
-          editing ? 'Change what this entitlement grants.' : 'Grant a feature to everyone on this plan.'
+          editing
+            ? 'Change what this entitlement grants.'
+            : 'Grant a feature to everyone on this plan.'
         }
       >
         {form === null ? null : editing && editingOption ? (
@@ -586,7 +588,10 @@ function CreditGrantsTab({ planId }: { planId: string }) {
         ) : (
           <CreditGrantCreateForm
             onSubmit={(grant: CreateCreditGrant) =>
-              create.mutate({ scope: CreditGrantScope.Plan, id: planId, grant }, { onSuccess: close })
+              create.mutate(
+                { scope: CreditGrantScope.Plan, id: planId, grant },
+                { onSuccess: close },
+              )
             }
             onCancel={close}
             isSubmitting={create.isPending}
@@ -618,10 +623,7 @@ function CreditGrantsTab({ planId }: { planId: string }) {
   )
 }
 
-/**
- * Information — the plan record itself. Name, lookup key and description edit
- * in place, per field or together via the header Edit.
- */
+/** Information — the plan record. One pencil on the card edits its fields in place. */
 function InformationTab({
   name,
   lookupKey,
@@ -632,8 +634,6 @@ function InformationTab({
   updatedAt,
   readOnly,
   onSave,
-  editing,
-  onEditingChange,
 }: {
   name: string
   lookupKey: string
@@ -644,52 +644,63 @@ function InformationTab({
   updatedAt: Date | null
   readOnly: boolean
   onSave: (patch: { name?: string; lookupKey?: string; description?: string }) => Promise<unknown>
-  editing: boolean
-  onEditingChange: (editing: boolean) => void
 }) {
   return (
-    <Section
-      title="Plan details"
-      description="Use the pencil on a value, or Edit above to change them together."
-      className="max-w-3xl"
-    >
-      <div className="flex flex-col gap-5">
-        <EditableFields
-          editing={editing}
-          onEditingChange={onEditingChange}
-          fields={[
-            { key: 'name', label: 'Name', value: name, required: true, readOnly },
-            {
-              key: 'lookupKey',
-              label: 'Lookup key',
-              value: lookupKey,
-              placeholder: 'No lookup key',
-              readOnly,
-              validate: (next) =>
-                next === '' || /^[a-z0-9_]+$/.test(next)
-                  ? null
-                  : 'Use lowercase letters, numbers and underscores',
-            },
-            {
-              key: 'description',
-              label: 'Description',
-              value: description,
-              placeholder: 'No description',
-              multiline: true,
-              readOnly,
-            },
-          ]}
-          onSave={(changes) => onSave(changes)}
-        />
+    <div className="flex flex-col gap-6">
+      <EditableCard
+        title="Plan details"
+        locked={readOnly}
+        fields={[
+          { key: 'name', label: 'Name', value: name, required: true },
+          {
+            key: 'lookupKey',
+            label: 'Lookup key',
+            value: lookupKey,
+            placeholder: 'No lookup key',
+            display: <span className="font-mono text-xs">{lookupKey || '—'}</span>,
+            validate: (next) =>
+              next === '' || /^[a-z0-9_]+$/.test(next)
+                ? null
+                : 'Use lowercase letters, numbers and underscores',
+          },
+          { key: 'status', label: 'Status', value: status, readOnly: true },
+          { key: 'created', label: 'Created', value: formatDate(createdAt), readOnly: true },
+          { key: 'updated', label: 'Updated', value: formatDate(updatedAt), readOnly: true },
+          {
+            key: 'description',
+            label: 'Description',
+            value: description,
+            placeholder: 'No description',
+            multiline: true,
+          },
+        ]}
+        onSave={(changes) => onSave(changes)}
+      />
+      <Section title="Metadata">
         <DetailList
-          items={[
-            { label: 'Status', value: status },
-            { label: 'Plan ID', value: <span className="font-mono text-xs">{planId}</span> },
-            { label: 'Created', value: formatDate(createdAt) },
-            { label: 'Updated', value: formatDate(updatedAt) },
-          ]}
+          items={[{ label: 'Plan ID', value: <span className="font-mono text-xs">{planId}</span> }]}
         />
-      </div>
-    </Section>
+      </Section>
+    </div>
   )
+}
+
+function count(rows: readonly unknown[] | undefined): { count?: number } {
+  return rows ? { count: rows.length } : {}
+}
+
+function planSubtitle(status: PlanStatus, charges: Charge[]): string {
+  const hasFixed = charges.some((c) => c.type === PriceType.Fixed)
+  const hasUsage = charges.some((c) => c.type === PriceType.Usage)
+  const kind =
+    hasFixed && hasUsage
+      ? 'Hybrid plan'
+      : hasUsage
+        ? 'Usage plan'
+        : hasFixed
+          ? 'Fixed plan'
+          : 'Plan'
+  const period = charges.find((c) => c.type === PriceType.Fixed)?.billingPeriod
+  const label = period ? BILLING_PERIOD_LABEL[period as BillingPeriod] : undefined
+  return [kind, label ? `Billed ${label.toLowerCase()}` : PLAN_STATUS_LABEL[status]].join(' · ')
 }

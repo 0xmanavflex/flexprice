@@ -18,7 +18,7 @@ import {
 } from '@ui/components/primitives/dropdown-menu'
 import { Badge } from '@ui/components/reui/badge'
 import { Switch } from '@ui/components/primitives/switch'
-import { EditableFields } from '../../compositions/EditableFields'
+import { EditableCard } from '../../compositions/EditableCard'
 import { Section } from '../../compositions/Section'
 import { DetailTabs, Properties, SimpleTable } from '../../compositions/DetailKit'
 import { BlurredEmpty, MetricChart, type MetricPoint } from '../shared/charts'
@@ -32,12 +32,8 @@ export interface FeatureDetailViewProps {
   tab: FeatureTab
   onTabChange: (tab: FeatureTab) => void
   onBack?: () => void
-  /** Header primary: switches to Information and opens in-place editing. */
-  onEdit: () => void
   /** The stepped configuration flow. */
   onEditConfiguration: () => void
-  editing: boolean
-  onEditingChange: (editing: boolean) => void
   /** Real save of name/description; rejects to show an inline error. */
   onSave: (changes: Record<string, string>) => Promise<unknown>
 }
@@ -147,10 +143,7 @@ export function FeatureDetailView({
   tab,
   onTabChange,
   onBack,
-  onEdit,
   onEditConfiguration,
-  editing,
-  onEditingChange,
   onSave,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
@@ -171,9 +164,6 @@ export function FeatureDetailView({
         id={feature.lookupKey || feature.id}
         actions={
           <>
-            <Button disabled={editing || archived} onClick={onEdit}>
-              Edit
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={<Button variant="outline" size="icon" aria-label="More actions" />}
@@ -287,8 +277,6 @@ export function FeatureDetailView({
                   feature={feature}
                   isMetered={isMetered}
                   archived={archived}
-                  editing={editing}
-                  onEditingChange={onEditingChange}
                   onSave={onSave}
                 />
               ),
@@ -440,15 +428,11 @@ function InformationTab({
   feature,
   isMetered,
   archived,
-  editing,
-  onEditingChange,
   onSave,
 }: {
   feature: Feature
   isMetered: boolean
   archived: boolean
-  editing: boolean
-  onEditingChange: (editing: boolean) => void
   onSave: (changes: Record<string, string>) => Promise<unknown>
 }) {
   const [enabled, setEnabled] = useState<Record<string, boolean>>({
@@ -460,45 +444,47 @@ function InformationTab({
   return (
     <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex min-w-0 flex-col gap-6">
-        <Section
+        <EditableCard
           title="General"
-          description="Use the pencil on a value, or Edit above to change them together."
-        >
-          <div className="flex flex-col gap-5">
-            <EditableFields
-              editing={editing}
-              onEditingChange={onEditingChange}
-              fields={[
-                {
-                  key: 'name',
-                  label: 'Name',
-                  value: feature.name,
-                  required: true,
-                  readOnly: archived,
-                },
-                {
-                  key: 'description',
-                  label: 'Description',
-                  value: feature.description,
-                  placeholder: 'No description',
-                  multiline: true,
-                  readOnly: archived,
-                },
-              ]}
-              onSave={onSave}
-            />
-            <Properties
-              columns={3}
-              items={[
-                { label: 'Type', value: FEATURE_TYPE_LABEL[feature.type] },
-                { label: 'Lookup key', value: mono(feature.lookupKey) },
-                { label: 'Status', value: FEATURE_STATUS_LABEL[feature.status] },
-                { label: 'Created', value: formatDate(feature.createdAt) },
-                { label: 'Updated', value: formatDate(feature.updatedAt) },
-              ]}
-            />
-          </div>
-        </Section>
+          locked={archived}
+          fields={[
+            { key: 'name', label: 'Name', value: feature.name, required: true },
+            { key: 'type', label: 'Type', value: FEATURE_TYPE_LABEL[feature.type], readOnly: true },
+            {
+              key: 'lookupKey',
+              label: 'Lookup key',
+              value: feature.lookupKey,
+              display: mono(feature.lookupKey),
+              readOnly: true,
+            },
+            {
+              key: 'status',
+              label: 'Status',
+              value: FEATURE_STATUS_LABEL[feature.status],
+              readOnly: true,
+            },
+            {
+              key: 'created',
+              label: 'Created',
+              value: formatDate(feature.createdAt),
+              readOnly: true,
+            },
+            {
+              key: 'updated',
+              label: 'Updated',
+              value: formatDate(feature.updatedAt),
+              readOnly: true,
+            },
+            {
+              key: 'description',
+              label: 'Description',
+              value: feature.description,
+              placeholder: 'No description',
+              multiline: true,
+            },
+          ]}
+          onSave={onSave}
+        />
 
         <Section
           title="Event and aggregation"
