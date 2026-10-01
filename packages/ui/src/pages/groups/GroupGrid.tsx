@@ -13,7 +13,6 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import {
   type EntityColumn,
@@ -59,11 +58,6 @@ const SORT_OPTIONS = Object.values(GroupSortField).map((value) => ({
 /** `all` is a value, not the absence of one — a Select with an empty value
  *  renders its placeholder and reads as unset. */
 const STATUS_ALL = 'all'
-const STATUS_CHOICES = Object.values(GroupStatus).map((value) => ({
-  value,
-  label: GROUP_STATUS_LABEL[value],
-}))
-
 /** Every URL requested and returned 200; all three are in the docs sitemap. */
 const GUIDES: EntityGuide[] = [
   {
@@ -240,11 +234,13 @@ export function GroupGrid({
           { value: GroupStatus.Archived, label: GROUP_STATUS_LABEL[GroupStatus.Archived] },
         ],
       }}
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
-      })}
+      /*
+       * No filter control. `useGroups` applies status on the page — "Status is
+       * not a server-side filter here" (query/src/groups.ts) — so a filter
+       * would narrow the rows already fetched while the footer went on
+       * reporting the server's total. That mismatch is the reason
+       * `NoEntityFilter` exists, and it fails the moment one is added.
+       */
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,

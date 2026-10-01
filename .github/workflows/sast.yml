@@ -1,0 +1,104 @@
+name: SAST
+
+# Static application security testing — Semgrep.
+#
+# Ported from flexprice-front, with one change forced by this repository:
+# it is private, so `upload-sarif` needs GitHub Advanced Security. Without it
+# the upload answers 403, and a security workflow that fails for a billing
+# reason trains people to ignore it. The upload is therefore attempted and its
+# failure reported as a warning, while the findings are always written to the
+# run summary where they can be read without any of that.
+#
+# PHASE 1: SOFT-FAIL. Findings are reported, they do not block a merge. Flip to
+# blocking on high-confidence rules once the existing baseline is triaged.
+#
+# Secret scanning is deliberately absent — that belongs to GitGuardian.
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+      # A change to CI should prove itself on its own branch, before it reaches
+      # one where a mistake blocks everyone.
+      - 'ci/**'
+  pull_request:
+
+permissions:
+  contents: read
+  security-events: write # upload-sarif writes to the code-scanning API
+
+concurrency:
+  group: sast-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  semgrep:
+    name: Semgrep
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      # Pinned to a full commit SHA — tags are mutable and can be repointed.
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          # Nothing later in this job performs authenticated Git operations.
+          persist-credentials: false
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Scan
+        id: scan
+        run: |
+          set +e
+          semgrep scan \
+            --config p/default \
+            --config p/typescript \
+            --config p/react \
+            --exclude 'packages/ui/src/components/**' \
+            --exclude '**/dist/**' \
+            --exclude '**/*.gen.ts' \
+            --metrics=off \
+            --sarif --output semgrep.sarif
+          code=$?
+          # 1 means findings, which do not block in phase 1. Anything above 1 is
+          # the scanner itself failing and must fail the job.
+          if [ "$code" -gt 1 ]; then exit "$code"; fi
+
+      # Readable without Advanced Security, and without opening the SARIF.
+      - name: Summarise the findings
+        if: always() && steps.scan.outcome != 'skipped'
+        run: |
+          if [ ! -f semgrep.sarif ]; then
+            echo "No SARIF produced." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          total=$(jq '[.runs[].results[]] | length' semgrep.sarif)
+          {
+            echo "### Semgrep"
+            echo ""
+            echo "**$total** finding(s). Not blocking in phase 1."
+            if [ "$total" -gt 0 ]; then
+              echo ""
+              echo "| Rule | File | Line |"
+              echo "| --- | --- | --- |"
+              jq -r '
+                [.runs[].results[]][:25][]
+                | "| `\(.ruleId)` | `\(.locations[0].physicalLocation.artifactLocation.uri)` | \(.locations[0].physicalLocation.region.startLine) |"
+              ' semgrep.sarif
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # Best effort. A private repository without Advanced Security cannot
+      # accept this, and that is a plan question rather than a code one.
+      - name: Upload SARIF to code scanning
+        id: upload
+        if: always() && hashFiles('semgrep.sarif') != ''
+        continue-on-error: true
+        uses: github/codeql-action/upload-sarif@2d92b76c45b91eb80fc44c74ce3fce0ee94e8f9d # v3.30.0
+        with:
+          sarif_file: semgrep.sarif
+
+      - name: Say why the upload did not happen
+        if: always() && steps.upload.outcome == 'failure'
+        run: |
+          echo "::warning::SARIF upload failed — this repository is private, so code scanning needs GitHub Advanced Security. The findings are in the run summary above."

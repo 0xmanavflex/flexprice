@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { EnvironmentForm } from './EnvironmentForm'
 
 /** The dialog portals to the document, so the play functions read from there. */
@@ -68,7 +68,11 @@ export const ProductionUnavailable: Story = {
       'aria-disabled',
       'true',
     )
-    await expect(canvas.getByText(/account contact/i)).toBeVisible()
+    // Waited for, not asserted once. The dialog fades in, so at the moment the
+    // radio above resolves its panel can still be at opacity 0 — the text is
+    // in the DOM and laid out, and `toBeVisible` is correctly saying no. A
+    // single assertion here is a race the suite loses on a slower machine.
+    await waitFor(() => expect(canvas.getByText(/account contact/i)).toBeVisible())
   },
 }
 

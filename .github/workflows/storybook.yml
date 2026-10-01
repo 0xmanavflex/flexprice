@@ -1,0 +1,90 @@
+name: Storybook
+
+# Every story is a test. Vitest runs them in a real Chromium through Storybook's
+# addon, and `.storybook/preview.ts` sets `a11y: { test: 'error' }`, so an axe
+# violation fails the run rather than leaving a panel for someone to read.
+#
+# That makes this workflow the accessibility gate as well as the rendering one.
+# It is the reason a contrast regression on a 12px delta is caught here and not
+# in review.
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+      # A change to CI should prove itself on its own branch, before it reaches
+      # one where a mistake blocks everyone.
+      - 'ci/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: storybook-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  stories:
+    name: Stories (browser + a11y)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      # Separate from the run below on purpose: without the browser, Vitest
+      # fails with "Executable doesn't exist", which reads like a broken test
+      # and is a missing binary.
+      - name: Install the browser the stories run in
+        run: pnpm --filter @fp/ui exec playwright install --with-deps chromium
+
+      - name: Run every story as a browser and accessibility test
+        run: pnpm --filter @fp/ui test:stories
+
+  build:
+    name: Build the workbench
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      # A story can pass as a test and still break the static build — an
+      # autodocs page that cannot resolve a type, a lazily imported language
+      # for the code block. This catches that, and the artifact is a browsable
+      # copy of the design system for the pull request.
+      - name: Build Storybook
+        run: pnpm --filter @fp/ui build-storybook
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: storybook-${{ github.run_id }}
+          path: packages/ui/dist/storybook
+          retention-days: 7

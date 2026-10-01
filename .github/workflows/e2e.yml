@@ -1,0 +1,71 @@
+name: E2E
+
+# The Playwright journeys, against a mock-backed copy of the console.
+#
+# The Playwright config starts the app itself (`VITE_USE_MOCKS=true`) and waits
+# for it, so there is no separate "start the server" step — the journeys own
+# their server for as long as they run.
+#
+# This tests the application, not a deployment. Once `deploy.yml` has its
+# credentials and produces a preview URL, the stronger version of this layer is
+# to point `E2E_BASE_URL` at that URL instead: a suite that boots its own copy
+# of the bundle cannot catch a broken build output, a bad rewrite rule or a
+# missing environment variable, which is the whole reason the layer exists.
+# Watchtower's CI already works that way and is the model to follow.
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+      # A change to CI should prove itself on its own branch, before it reaches
+      # one where a mistake blocks everyone.
+      - 'ci/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  journeys:
+    name: Journeys
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      - name: Install the Playwright browser
+        run: pnpm --filter console exec playwright install --with-deps chromium
+
+      - name: Run the journeys against the mocked console
+        run: pnpm --filter console test:e2e
+
+      # `always() && failure()` so the trace, video and screenshots survive the
+      # failure they document. Without it the upload is skipped exactly when it
+      # is needed.
+      - name: Keep the failure artifacts
+        if: always() && failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-${{ github.run_id }}
+          path: |
+            apps/console/playwright-report
+            apps/console/test-results
+          retention-days: 7

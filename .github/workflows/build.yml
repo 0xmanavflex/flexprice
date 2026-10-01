@@ -1,0 +1,73 @@
+name: Build
+
+# The production bundle, built the way a deployment would build it.
+#
+# Separate from lint and from the tests because it fails for its own reasons —
+# a circular import, a package that typechecks but cannot be bundled, a
+# `VITE_` variable read at module scope that is undefined at build time. None
+# of those show up in a test run.
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+      # A change to CI should prove itself on its own branch, before it reaches
+      # one where a mistake blocks everyone.
+      - 'ci/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Production bundle
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      - name: Build every package
+        run: pnpm nx run-many -t build
+
+      # Names the number rather than announcing success. A bundle that doubles
+      # overnight is worth seeing in the run summary without opening anything.
+      - name: Report the bundle size
+        run: |
+          dist=apps/console/dist
+          if [ ! -d "$dist" ]; then
+            echo "::warning::$dist does not exist — nothing to measure."
+            exit 0
+          fi
+          total=$(du -sh "$dist" | cut -f1)
+          {
+            echo "### Bundle"
+            echo ""
+            echo "Total \`$dist\`: **$total**"
+            echo ""
+            echo "| File | Size |"
+            echo "| --- | --- |"
+            find "$dist/assets" -name '*.js' -printf '%s %p\n' 2>/dev/null \
+              | sort -rn | head -10 \
+              | while read -r bytes path; do
+                  printf '| `%s` | %s |\n' "$(basename "$path")" "$(numfmt --to=iec "$bytes")"
+                done
+          } >> "$GITHUB_STEP_SUMMARY"

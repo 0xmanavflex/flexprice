@@ -183,6 +183,12 @@ export const uiSeamRules = {
     // FilterBar.tsx and GridFooter.tsx above are allowed.
     'packages/ui/src/compositions/FilterBar.stories.tsx',
     'packages/ui/src/compositions/GridFooter.stories.tsx',
+    // The settings seam, and the same argument as FilterBar: this file exists
+    // *to be* the one place that knows the vendored settings-7 path, so the
+    // panels can compose `SettingsCard` and `SettingRow` without naming a
+    // block. Forbidding it here would not remove the import, it would scatter
+    // it across every settings panel — the opposite of the rule's intent.
+    'packages/ui/src/compositions/settingsSurface.ts',
   ],
   rules: {
     'no-restricted-imports': [
