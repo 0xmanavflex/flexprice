@@ -1,0 +1,47 @@
+name: Unit tests
+
+# Everything that runs in Node, with no browser: the domain models, the query
+# hooks, the URL codecs, the fixtures.
+#
+# `@fp/ui` is excluded here because every one of its tests is a story, and
+# those need a browser — they are the Storybook workflow's job. Excluding it
+# keeps this workflow at a few seconds and keeps the two failures separable:
+# a broken money calculation and a broken rendering are not the same bug.
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  unit:
+    name: Unit
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      - name: Test every package except the component library
+        run: pnpm nx run-many -t test --exclude=@fp/ui

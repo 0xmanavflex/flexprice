@@ -1,0 +1,61 @@
+name: Lint
+
+# Static checks: the ones that need no browser and no server, so they answer
+# fastest and are the first thing a pull request hears back about.
+#
+# Split from the test workflows deliberately. A failing lint and a failing
+# story test are different problems with different owners, and one combined
+# red check makes you open the run to find out which you have.
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: lint-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    name: ESLint and types
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      - name: Typecheck and lint
+        run: pnpm nx run-many -t typecheck lint
+
+      # Reported, not enforced. 367 files are unformatted and there is no
+      # .prettierignore, so a repo-wide gate fails on vendored primitives and
+      # generated fixtures — reasons unrelated to any change under review.
+      # Flip this to a gate (drop the `|| true`) once the repo is formatted and
+      # the vendored and generated paths are ignored.
+      - name: Formatting (reported, not enforced)
+        run: |
+          pnpm format:check > format.txt 2>&1 || true
+          count=$(grep -c '^\[warn\] ' format.txt || true)
+          echo "::notice::$count file(s) are not Prettier-formatted. Not a gate yet — see the comment in lint.yml."
+          {
+            echo "### Formatting"
+            echo "$count file(s) differ from Prettier. Not gating."
+          } >> "$GITHUB_STEP_SUMMARY"
