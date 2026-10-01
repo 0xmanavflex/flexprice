@@ -264,13 +264,17 @@ export type {
 
 export {
   DEFAULT_PAYMENT_QUERY,
+  PAYMENT_METHOD_LABEL,
   PAYMENT_SORT_LABEL,
   PAYMENT_STATUS_LABEL,
+  PaymentMethod,
   PaymentSortField,
   PaymentStatus,
+  emptyPayment,
+  recordPaymentSchema,
   toPaymentStatus,
 } from './payment'
-export type { Payment, PaymentQuery } from './payment'
+export type { Payment, PaymentDetail, PaymentQuery, RecordPayment } from './payment'
 
 export {
   CREDIT_NOTE_STATUS_LABEL,

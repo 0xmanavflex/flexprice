@@ -153,6 +153,8 @@ export { CreditNoteGrid, CreditNoteGridProvenance } from './credit-notes/CreditN
 export type { CreditNoteGridProps } from './credit-notes/CreditNoteGrid'
 export { PaymentGrid, PaymentGridProvenance } from './payments/PaymentGrid'
 export type { PaymentGridProps } from './payments/PaymentGrid'
+export { PaymentForm, PaymentFormProvenance } from './payments/PaymentForm'
+export type { PaymentFormProps } from './payments/PaymentForm'
 export { PaymentStatusBadge, PaymentStatusBadgeProvenance } from './payments/PaymentStatusBadge'
 export { TaxRateGrid, TaxRateGridProvenance } from './taxes/TaxRateGrid'
 export type { TaxRateGridProps } from './taxes/TaxRateGrid'

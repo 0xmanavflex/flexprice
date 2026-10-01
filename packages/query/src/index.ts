@@ -211,8 +211,19 @@ export type { SubscriptionPage, SubscriptionWire } from './subscriptions'
 
 export { fetchCreditNotes, toCreditNote, useCreditNotes } from './creditNotes'
 export type { CreditNotePage, CreditNoteWire } from './creditNotes'
-export { fetchPayments, toPayment, toPaymentFilter, usePayments } from './payments'
-export type { PaymentPage, PaymentWire } from './payments'
+export {
+  fetchPayments,
+  toPayment,
+  toPaymentDetail,
+  toPaymentFilter,
+  toRecordPaymentRequest,
+  useDeletePayment,
+  usePayment,
+  usePayments,
+  useProcessPayment,
+  useRecordPayment,
+} from './payments'
+export type { PaymentDetailWire, PaymentPage, PaymentWire } from './payments'
 
 export {
   fetchTaxRates,

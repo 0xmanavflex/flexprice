@@ -1,4 +1,4 @@
-import { type PaymentQuery } from '@fp/domain'
+import { type Payment, type PaymentQuery } from '@fp/domain'
 import { ApiError, usePayments } from '@fp/query'
 import { PaymentGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
@@ -7,17 +7,23 @@ import { CreditCardIcon } from 'lucide-react'
 export interface PaymentListPageProps {
   query: PaymentQuery
   onQueryChange: (query: PaymentQuery) => void
+  onCreate?: () => void
+  onPaymentClick?: (payment: Payment) => void
 }
 
 /**
  * The wiring layer, and nothing else — the same shape as `InvoiceListPage`.
  *
  * Fetches, turns an error into a sentence, and hands the grid plain props. No
- * `useState`: the query lives in the URL. And no create button — payments
- * arrive as money is collected against invoices, they are not authored here, so
- * the page is read-only.
+ * `useState`: the query lives in the URL. Recording a payment and opening one
+ * are navigation, so the route supplies both.
  */
-export function PaymentListPage({ query, onQueryChange }: PaymentListPageProps) {
+export function PaymentListPage({
+  query,
+  onQueryChange,
+  onCreate,
+  onPaymentClick,
+}: PaymentListPageProps) {
   const payments = usePayments(query)
 
   const failure = toFailure(payments.error)
@@ -43,6 +49,8 @@ export function PaymentListPage({ query, onQueryChange }: PaymentListPageProps) 
             total={payments.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            {...(onCreate ? { onCreate } : {})}
+            {...(onPaymentClick ? { onPaymentClick } : {})}
             onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
           />
         </ListState>

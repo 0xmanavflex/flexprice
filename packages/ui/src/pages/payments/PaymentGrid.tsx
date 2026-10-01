@@ -9,6 +9,7 @@ import {
   PaymentSortField,
   PaymentStatus,
 } from '@fp/domain'
+import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import {
   type EntityColumn,
@@ -126,6 +127,7 @@ export interface PaymentGridProps {
   error?: string | null
   onRetry?: () => void
   onPaymentClick?: (payment: Payment) => void
+  onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   /** Locale for dates and amounts. Supplied by the app, never read from a global. */
@@ -141,6 +143,7 @@ export function PaymentGrid({
   error = null,
   onRetry,
   onPaymentClick,
+  onCreate,
   onClearFilters,
   locale,
 }: PaymentGridProps) {
@@ -262,6 +265,7 @@ export function PaymentGrid({
       selectable
       rowActions={rowActions}
       exportFileName="payments"
+      {...(onCreate ? { primaryAction: <Button onClick={onCreate}>Record payment</Button> } : {})}
       {...(onPaymentClick ? { onRowClick: onPaymentClick } : {})}
       isLoading={isLoading}
       error={error}

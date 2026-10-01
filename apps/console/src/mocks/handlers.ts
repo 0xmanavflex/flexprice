@@ -171,21 +171,6 @@ const search = (path: string, key: string) =>
     return HttpResponse.json(key === 'features' ? applyFeatureExpand(result, body.expand) : result)
   })
 
-const list = (path: string, key: string) =>
-  http.get(`${BASE}${path}`, ({ request }) => {
-    const url = new URL(request.url)
-    const window = {
-      limit: Number(url.searchParams.get('limit') ?? 25),
-      offset: Number(url.searchParams.get('offset') ?? 0),
-    }
-    // The GET lists honour the empty-tenant switch for the same reason the
-    // search endpoints do: a brand-new tenant with a populated Payments table
-    // is not a brand-new tenant, and a half-empty demo world is worse than
-    // either state on its own.
-    if (demoEmpty()) return HttpResponse.json(emptyPage(window))
-    return HttpResponse.json(page(corpus[key] as Corpus, window))
-  })
-
 /** Finds one row in a corpus by id — the by-id GET endpoints read it. */
 function byId(key: string, id: string): Record<string, unknown> | null {
   return (corpus[key] as Corpus).items.find((row) => readString(row, 'id') === id) ?? null
@@ -1418,6 +1403,8 @@ const groupStore: Record<string, unknown>[] = [
  * The arithmetic here is the mock standing in for the backend, not client logic.
  */
 const walletStore: Record<string, unknown>[] = []
+/** Payments recorded this session, newest first; the list prepends them. */
+const paymentStore: Record<string, unknown>[] = []
 const walletTransactionStore: Record<string, unknown>[] = []
 
 function recordWalletCredit(
@@ -1929,7 +1916,62 @@ export const handlers = [
   search('/coupons/search', 'coupons'),
   search('/prices/units/search', 'priceUnits'),
 
-  list('/payments', 'invoices'),
+  http.get(`${BASE}/payments`, ({ request }) => {
+    const url = new URL(request.url)
+    const window = {
+      limit: Number(url.searchParams.get('limit') ?? 25),
+      offset: Number(url.searchParams.get('offset') ?? 0),
+    }
+    if (demoEmpty()) return HttpResponse.json(emptyPage(window))
+    const base = page(corpus['invoices'] as Corpus, window) as {
+      items: Record<string, unknown>[]
+      pagination: { total: number }
+    }
+    return HttpResponse.json({
+      ...base,
+      items: window.offset === 0 ? [...paymentStore, ...base.items] : base.items,
+      pagination: { ...base.pagination, total: base.pagination.total + paymentStore.length },
+    })
+  }),
+  http.post(`${BASE}/payments`, async ({ request }) => {
+    const body = await readBody(request)
+    const processed = body['process_payment'] === true
+    const row = {
+      ...body,
+      id: `pay_new_${paymentStore.length + 1}_${Date.now()}`,
+      payment_status: processed ? 'SUCCEEDED' : 'INITIATED',
+      payment_gateway: body['payment_method_type'] === 'OFFLINE' ? undefined : 'stripe',
+      created_at: new Date().toISOString(),
+      ...(processed ? { succeeded_at: new Date().toISOString() } : {}),
+      attempts: processed ? [{ id: 'att_1', attempt_number: 1 }] : [],
+    }
+    paymentStore.unshift(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.get(`${BASE}/payments/:id`, ({ params }) => {
+    const id = String(params['id'])
+    const stored = paymentStore.find((row) => readString(row, 'id') === id)
+    if (stored) return HttpResponse.json(stored)
+    const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+    return invoice
+      ? HttpResponse.json({ ...invoice, destination_type: 'INVOICE', destination_id: id })
+      : HttpResponse.json({ message: 'Payment not found' }, { status: 404 })
+  }),
+  http.post(`${BASE}/payments/:id/process`, ({ params }) => {
+    const id = String(params['id'])
+    if (!paymentStore.some((row) => readString(row, 'id') === id)) {
+      return HttpResponse.json({ message: 'Payment not found' }, { status: 404 })
+    }
+    return patchRow(paymentStore, id, {
+      payment_status: 'SUCCEEDED',
+      succeeded_at: new Date().toISOString(),
+      attempts: [{ id: 'att_1', attempt_number: 1 }],
+    })
+  }),
+  http.delete(`${BASE}/payments/:id`, ({ params }) => {
+    removeRow(paymentStore, String(params['id']))
+    return HttpResponse.json({ message: 'Payment deleted' })
+  }),
 
   // Charges and entitlements, scoped by entity — the plan detail page's tabs.
   search('/entitlements/search', 'entitlements'),

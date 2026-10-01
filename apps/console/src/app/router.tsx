@@ -21,6 +21,12 @@ import type { InvoiceQuery } from '@fp/domain'
 const InvoiceFormPage = lazy(() =>
   import('@/pages/invoices/InvoiceFormPage').then((m) => ({ default: m.InvoiceFormPage })),
 )
+const PaymentFormPage = lazy(() =>
+  import('@/pages/payments/PaymentFormPage').then((m) => ({ default: m.PaymentFormPage })),
+)
+const PaymentDetailPage = lazy(() =>
+  import('@/pages/payments/PaymentDetailPage').then((m) => ({ default: m.PaymentDetailPage })),
+)
 const InvoiceDetailPage = lazy(() =>
   import('@/pages/invoices/InvoiceDetailPage').then((m) => ({ default: m.InvoiceDetailPage })),
 )
@@ -1430,7 +1436,54 @@ function PaymentsRouteComponent() {
   return (
     <PaymentListPage
       query={query}
+      onCreate={() => void navigate({ to: '/payments/new' })}
+      onPaymentClick={(payment) =>
+        void navigate({ to: '/payments/$paymentId', params: { paymentId: payment.id } })
+      }
       onQueryChange={(next) => void navigate({ to: '/payments', search: next, replace: true })}
+    />
+  )
+}
+
+const paymentCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/payments/new',
+  component: PaymentCreateRouteComponent,
+})
+
+function PaymentCreateRouteComponent() {
+  const navigate = useNavigate()
+  const toList = () => void navigate({ to: '/payments', search: {} as never })
+  return (
+    <PaymentFormPage
+      onCancel={toList}
+      onDone={(paymentId) =>
+        void navigate(
+          paymentId
+            ? { to: '/payments/$paymentId', params: { paymentId } }
+            : { to: '/payments', search: {} as never },
+        )
+      }
+    />
+  )
+}
+
+const paymentDetailRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/payments/$paymentId',
+  component: PaymentDetailRouteComponent,
+})
+
+function PaymentDetailRouteComponent() {
+  const { paymentId } = paymentDetailRoute.useParams()
+  const navigate = useNavigate()
+  return (
+    <PaymentDetailPage
+      paymentId={paymentId}
+      onBack={() => void navigate({ to: '/payments', search: {} as never })}
+      onOpenInvoice={(invoiceId) =>
+        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
+      }
     />
   )
 }
@@ -1761,6 +1814,8 @@ export const routeTree = rootRoute.addChildren([
     invoiceCreateRoute,
     invoiceDetailRoute,
     paymentsRoute,
+    paymentCreateRoute,
+    paymentDetailRoute,
     creditNotesRoute,
     workflowsRoute,
     exportsRoute,

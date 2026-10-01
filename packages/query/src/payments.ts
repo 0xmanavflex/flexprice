@@ -1,9 +1,11 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Flexprice } from '@fp/api'
 import { call } from '@fp/api'
 import {
   type Payment,
+  type PaymentDetail,
   type PaymentQuery,
+  type RecordPayment,
   PaymentStatus,
   moneyOr,
   toPaymentStatus,
@@ -86,10 +88,7 @@ export interface PaymentPage {
   total: number
 }
 
-export async function fetchPayments(
-  client: Flexprice,
-  query: PaymentQuery,
-): Promise<PaymentPage> {
+export async function fetchPayments(client: Flexprice, query: PaymentQuery): Promise<PaymentPage> {
   const response = await call(() => client.payments.listPayments(toPaymentFilter(query) as never))
   const payments = (response.items ?? []).map((item) => toPayment(item as PaymentWire))
 
@@ -126,5 +125,94 @@ export function usePayments(query: PaymentQuery) {
     // Keeps the previous page on screen while the next one loads, so paging does
     // not blank the grid. TanStack's replacement for keepPreviousData.
     placeholderData: (previous) => previous,
+  })
+}
+
+export interface PaymentDetailWire extends PaymentWire {
+  destinationId?: string | undefined
+  gatewayPaymentId?: string | undefined
+  paymentUrl?: string | undefined
+  errorMessage?: string | undefined
+  attempts?: unknown[] | undefined
+  failedAt?: Date | undefined
+  refundedAt?: Date | undefined
+  voidedAt?: Date | undefined
+}
+
+export function toPaymentDetail(wire: PaymentDetailWire): PaymentDetail {
+  return {
+    ...toPayment(wire),
+    invoiceId: wire.destinationType === 'INVOICE' ? (wire.destinationId ?? '') : '',
+    destinationType: wire.destinationType ?? '',
+    gatewayPaymentId: wire.gatewayPaymentId ?? '',
+    paymentUrl: wire.paymentUrl ?? '',
+    errorMessage: wire.errorMessage ?? '',
+    attempts: wire.attempts?.length ?? 0,
+    failedAt: wire.failedAt ?? null,
+    refundedAt: wire.refundedAt ?? null,
+    voidedAt: wire.voidedAt ?? null,
+  }
+}
+
+/** `POST /payments`: a payment recorded against an invoice. */
+export function toRecordPaymentRequest(draft: RecordPayment): Record<string, unknown> {
+  return {
+    amount: draft.amount.trim(),
+    currency: draft.currency.trim().toUpperCase(),
+    destinationId: draft.invoiceId,
+    destinationType: 'INVOICE',
+    paymentMethodType: draft.methodType,
+    processPayment: draft.processNow,
+  }
+}
+
+export function usePayment(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.payments.detail(id),
+    queryFn: async () =>
+      toPaymentDetail((await call(() => client.payments.getPayment(id))) as PaymentDetailWire),
+  })
+}
+
+function useInvalidatePayments() {
+  const queryClient = useQueryClient()
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.payments.all() })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+    void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+  }
+}
+
+export function useRecordPayment() {
+  const client = useFlexprice()
+  const invalidate = useInvalidatePayments()
+
+  return useMutation({
+    mutationFn: (draft: RecordPayment) =>
+      call(() => client.payments.createPayment(toRecordPaymentRequest(draft) as never)),
+    onSuccess: invalidate,
+  })
+}
+
+/** Run an initiated payment — `POST /payments/{id}/process`. */
+export function useProcessPayment() {
+  const client = useFlexprice()
+  const invalidate = useInvalidatePayments()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.payments.processPayment(id)),
+    onSuccess: invalidate,
+  })
+}
+
+export function useDeletePayment() {
+  const client = useFlexprice()
+  const invalidate = useInvalidatePayments()
+
+  return useMutation({
+    mutationFn: (id: string) => call(() => client.payments.deletePayment(id)),
+    onSuccess: invalidate,
   })
 }

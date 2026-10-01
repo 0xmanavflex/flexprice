@@ -12,6 +12,7 @@
  * (never the API's bare `amount` string beside a separate `currency`), so no
  * cell ever sees the two apart or reaches for `parseFloat`.
  */
+import { z } from 'zod'
 import type { Money } from './money'
 
 /**
@@ -136,4 +137,51 @@ export const DEFAULT_PAYMENT_QUERY: PaymentQuery = {
   // one.
   sortBy: PaymentSortField.CreatedAt,
   sortDirection: 'desc',
+}
+
+/** One payment with the fields only its own page shows. */
+export interface PaymentDetail extends Payment {
+  invoiceId: string
+  destinationType: string
+  gatewayPaymentId: string
+  paymentUrl: string
+  errorMessage: string
+  attempts: number
+  failedAt: Date | null
+  refundedAt: Date | null
+  voidedAt: Date | null
+}
+
+export const PaymentMethod = {
+  Offline: 'OFFLINE',
+  Card: 'CARD',
+  Ach: 'ACH',
+  Upi: 'UPI',
+} as const
+export type PaymentMethod = (typeof PaymentMethod)[keyof typeof PaymentMethod]
+
+export const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
+  OFFLINE: 'Offline (recorded manually)',
+  CARD: 'Card',
+  ACH: 'ACH',
+  UPI: 'UPI',
+}
+
+/** Record a payment against an invoice. The amount is typed; the API owns the arithmetic. */
+export const recordPaymentSchema = z.object({
+  invoiceId: z.string().min(1, 'Choose an invoice'),
+  currency: z.string().trim().length(3, 'Choose a currency'),
+  amount: z
+    .string()
+    .trim()
+    .regex(/^\d+(\.\d{1,8})?$/, 'Enter an amount like 120 or 120.50')
+    .refine((value) => Number(value) > 0, 'Enter an amount above zero'),
+  methodType: z.enum(['OFFLINE', 'CARD', 'ACH', 'UPI']),
+  /** Run the payment straight away instead of leaving it initiated. */
+  processNow: z.boolean(),
+})
+export type RecordPayment = z.infer<typeof recordPaymentSchema>
+
+export function emptyPayment(): RecordPayment {
+  return { invoiceId: '', currency: '', amount: '', methodType: 'OFFLINE', processNow: true }
 }
