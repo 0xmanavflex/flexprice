@@ -120,28 +120,20 @@ test.describe('a customer detail page', () => {
     await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
   })
 
-  test('creates a subscription inside the Subscriptions section', async ({ page }) => {
+  test('opens subscription creation on its own page for this customer', async ({ page }) => {
     await openFirstCustomer(page)
+    const customerUrl = page.url()
+    const customerId = customerUrl.match(/\/customers\/([^/?]+)/)?.[1]
     await page.getByRole('button', { name: 'Customer actions' }).click()
     await page.getByRole('menuitem', { name: 'Create subscription' }).click()
 
-    // Same page, same customer, Subscriptions tab: nothing navigated away.
-    await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)
-    await expect(page.getByRole('heading', { level: 2, name: 'Create subscription' })).toBeVisible()
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible()
+    await expect(page).toHaveURL(new RegExp(`/customers/${customerId}/subscriptions/new`))
+    await expect(page.getByRole('combobox', { name: 'Plan' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Cancel' }).click()
-    await expect(
-      page.getByRole('heading', { level: 2, name: 'Subscriptions', exact: true }),
-    ).toBeVisible()
-
-    await page.getByRole('button', { name: 'Customer actions' }).click()
-    await page.getByRole('menuitem', { name: 'Create subscription' }).click()
-    for (let i = 0; i < 4; i += 1) await page.getByRole('button', { name: 'Next' }).click()
-    await page.getByRole('button', { name: 'Create Subscription', exact: true }).click()
-    await expect(
-      page.getByRole('heading', { level: 2, name: 'Subscriptions', exact: true }),
-    ).toBeVisible()
     await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)
+    await expect(
+      page.getByRole('heading', { level: 2, name: 'Subscriptions', exact: true }),
+    ).toBeVisible()
   })
 })

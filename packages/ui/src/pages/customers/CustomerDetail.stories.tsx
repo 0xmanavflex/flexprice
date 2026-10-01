@@ -91,7 +91,6 @@ function Harness({
   onEdit,
   onUpdateField,
   initialTab = 'overview',
-  creatingSubscription = false,
 }: {
   customer?: CustomerDetailModel
   subscriptions?: Subscription[]
@@ -101,10 +100,8 @@ function Harness({
   onEdit?: () => void
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
   initialTab?: CustomerTab
-  creatingSubscription?: boolean
 }) {
   const [tab, setTab] = useState<CustomerTab>(initialTab)
-  const [creating, setCreating] = useState(creatingSubscription)
   return (
     <div className="bg-background flex h-screen flex-col">
       <CustomerDetail
@@ -114,23 +111,9 @@ function Harness({
         tab={tab}
         onTabChange={setTab}
         onBack={onBack ?? (() => {})}
-        onCreateSubscription={() => {
-          onCreateSubscription?.()
-          setTab('subscriptions')
-          setCreating(true)
-        }}
+        onCreateSubscription={() => onCreateSubscription?.()}
         {...(onEdit ? { onEdit } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
-        {...(creating
-          ? {
-              subscriptionForm: (
-                <div role="group" aria-label="Subscription steps">
-                  Subscription steps go here.
-                </div>
-              ),
-              onCancelSubscriptionCreate: () => setCreating(false),
-            }
-          : {})}
       />
     </div>
   )
@@ -178,22 +161,14 @@ export const NavigatesSections: Story = {
   },
 }
 
-/**
- * The header's primary action opens the create form inside the Subscriptions
- * section: the customer and the tab stay, Cancel brings the table back.
- */
+/** Create subscription leaves this page. The detail view only hands off. */
 export const CreatesSubscription: Story = {
   args: { onCreateSubscription: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Create subscription' }))
     await expect(args.onCreateSubscription).toHaveBeenCalledOnce()
-    await expect(
-      canvas.getByRole('heading', { level: 2, name: 'Create subscription' }),
-    ).toBeVisible()
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
-    await userEvent.click(canvas.getByRole('button', { name: 'Subscriptions' }))
-    await expect(canvas.getByRole('table')).toBeVisible()
   },
 }
 

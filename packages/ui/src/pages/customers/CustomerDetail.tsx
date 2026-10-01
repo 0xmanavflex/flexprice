@@ -21,7 +21,6 @@ import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/co
 import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
 import { DetailTabs, SimpleTable } from '@ui/compositions/DetailKit'
 import { Section } from '@ui/compositions/Section'
-import { ContextualSection } from '@ui/compositions/ContextualSection'
 import { EditableCard } from '@ui/compositions/EditableCard'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { LoadingRows } from '@ui/compositions/States'
@@ -89,14 +88,6 @@ export interface CustomerDetailProps {
   /** Open an invoice from a row action. */
   onOpenInvoice?: (invoiceId: string) => void
   onOpenPlan?: (planId: string) => void
-  /**
-   * The stepped create-subscription form. While present, the Subscriptions
-   * section shows it in place of the table; the customer, its header and the
-   * open tab stay put.
-   */
-  subscriptionForm?: ReactNode
-  /** The way back out of `subscriptionForm`. */
-  onCancelSubscriptionCreate?: () => void
   subscriptionsLoading?: boolean
   invoicesLoading?: boolean
   /**
@@ -135,8 +126,6 @@ export function CustomerDetail({
   onUpdateField,
   onOpenInvoice,
   onOpenPlan,
-  subscriptionForm,
-  onCancelSubscriptionCreate,
   subscriptionsLoading = false,
   invoicesLoading = false,
   usage,
@@ -216,8 +205,6 @@ export function CustomerDetail({
                   subscriptions={subscriptions}
                   isLoading={subscriptionsLoading}
                   onCreateSubscription={onCreateSubscription}
-                  form={subscriptionForm}
-                  onCancelCreate={onCancelSubscriptionCreate}
                   formatDate={formatDate}
                   onOpenPlan={onOpenPlan}
                 />
@@ -432,21 +419,17 @@ function SubscriptionsTab({
   subscriptions,
   isLoading,
   onCreateSubscription,
-  form,
-  onCancelCreate,
   formatDate,
   onOpenPlan,
 }: {
   subscriptions: Subscription[]
   isLoading: boolean
   onCreateSubscription: () => void
-  form: ReactNode | undefined
-  onCancelCreate: (() => void) | undefined
   formatDate: (date: Date | null) => string
   onOpenPlan: ((planId: string) => void) | undefined
 }) {
   return (
-    <ContextualSection
+    <Section
       title="Subscriptions"
       description="Every subscription this customer has had"
       actions={
@@ -454,11 +437,6 @@ function SubscriptionsTab({
           <PlusIcon aria-hidden /> Create subscription
         </Button>
       }
-      formTitle="Create subscription"
-      formDescription="Set up a plan for this customer. Nothing is created until the last step."
-      backLabel="Subscriptions"
-      {...(form ? { form } : {})}
-      {...(onCancelCreate ? { onBack: onCancelCreate } : {})}
     >
       {isLoading ? (
         <LoadingRows />
@@ -519,7 +497,7 @@ function SubscriptionsTab({
           }
         />
       )}
-    </ContextualSection>
+    </Section>
   )
 }
 

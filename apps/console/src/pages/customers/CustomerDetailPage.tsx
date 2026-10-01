@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import type { TenantFeatureUsage } from '@fp/domain'
 import {
@@ -20,7 +19,6 @@ import {
   toast,
   type CustomerTab,
 } from '@fp/ui/pages'
-import { CustomerSubscriptionCreate } from '@/pages/subscriptions/CustomerSubscriptionCreate'
 import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
 
 /**
@@ -69,8 +67,6 @@ export function CustomerDetailPage({
   const usage = useCustomerUsageSummary(customerId)
   const update = useUpdateCustomer()
   const navigate = useNavigate()
-  // Subscription creation happens inside the Subscriptions section, in place.
-  const [creatingSubscription, setCreatingSubscription] = useState(false)
 
   if (customer.isPending) {
     return (
@@ -112,10 +108,12 @@ export function CustomerDetailPage({
       tab={tab}
       onTabChange={onTabChange}
       onBack={onNavigateToList}
-      onCreateSubscription={() => {
-        onTabChange('subscriptions')
-        setCreatingSubscription(true)
-      }}
+      onCreateSubscription={() =>
+        void navigate({
+          to: '/customers/$customerId/subscriptions/new',
+          params: { customerId: customer.data.id },
+        })
+      }
       onEdit={() => onEdit(customer.data.id)}
       onOpenInvoice={(invoiceId) =>
         void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
@@ -129,20 +127,6 @@ export function CustomerDetailPage({
           draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
         })
       }
-      {...(creatingSubscription
-        ? {
-            subscriptionForm: (
-              <CustomerSubscriptionCreate
-                onCancel={() => setCreatingSubscription(false)}
-                onCreated={() => {
-                  void subscriptions.refetch()
-                  setCreatingSubscription(false)
-                }}
-              />
-            ),
-            onCancelSubscriptionCreate: () => setCreatingSubscription(false),
-          }
-        : {})}
       subscriptionsLoading={subscriptions.isLoading}
       invoicesLoading={invoices.isLoading}
       wallet={

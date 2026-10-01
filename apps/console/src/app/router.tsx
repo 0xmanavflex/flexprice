@@ -100,6 +100,11 @@ import { parseCustomerTab } from '@/pages/customers/CustomerDetailPage'
 const CustomerFormPage = lazy(() =>
   import('@/pages/customers/CustomerFormPage').then((m) => ({ default: m.CustomerFormPage })),
 )
+const CustomerSubscriptionFormPage = lazy(() =>
+  import('@/pages/subscriptions/CustomerSubscriptionFormPage').then((m) => ({
+    default: m.CustomerSubscriptionFormPage,
+  })),
+)
 import type { CustomerTab } from '@fp/ui/pages'
 import { parseCustomerSearch } from './customerSearch'
 import { DEFAULT_CUSTOMER_QUERY, type CustomerQuery } from '@fp/domain'
@@ -1299,6 +1304,32 @@ function CustomerEditRouteComponent() {
 }
 
 /**
+ * Create a subscription for a customer who is already open.
+ *
+ * `/customers/$customerId/subscriptions/new` — the id is the path, so the form
+ * does not ask which customer this is. Cancel returns to that customer's
+ * Subscriptions tab.
+ */
+const customerSubscriptionCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/customers/$customerId/subscriptions/new',
+  component: CustomerSubscriptionCreateRouteComponent,
+})
+
+function CustomerSubscriptionCreateRouteComponent() {
+  const { customerId } = customerSubscriptionCreateRoute.useParams()
+  const navigate = useNavigate()
+  const back = () =>
+    void navigate({
+      to: '/customers/$customerId',
+      params: { customerId },
+      search: { tab: 'subscriptions' },
+    })
+
+  return <CustomerSubscriptionFormPage customerId={customerId} onCancel={back} />
+}
+
+/**
  * A customer's detail page. `/customers/$customerId?tab=` — the id is a path
  * param, the open section a search param, so a customer's invoices or wallet is
  * a link. Overview is the default and stays out of the address bar.
@@ -1674,6 +1705,7 @@ export const routeTree = rootRoute.addChildren([
     customersRoute,
     customerCreateRoute,
     customerEditRoute,
+    customerSubscriptionCreateRoute,
     customerDetailRoute,
     subscriptionsRoute,
     invoicesRoute,
