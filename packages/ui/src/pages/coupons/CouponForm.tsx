@@ -2,7 +2,7 @@ import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type EditCoupon, editCouponSchema } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
-import { Field } from '@ui/compositions/Field'
+import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
@@ -20,7 +20,12 @@ import { provenance } from '@ui/provenance'
  */
 export const CouponFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/input', 'compositions/form-page', 'compositions/form-actions'],
+  composes: [
+    'ui/input',
+    'compositions/form-card',
+    'compositions/form-page',
+    'compositions/form-actions',
+  ],
   note: 'RHF + the domain schema. A rename — the discount is immutable, shown as context.',
 })
 
@@ -72,38 +77,33 @@ export function CouponForm({
         />
       }
     >
-      <form
-        id={FORM_ID}
-        onSubmit={form.handleSubmit((values) => onSubmit(values))}
-        noValidate
-        className="flex flex-col gap-5"
-      >
-        <Field label="Name" required error={errors.name?.message}>
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-          )}
-        </Field>
+      <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
+        <FormCard>
+          <FormRow label="Name" required error={errors.name?.message}>
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            )}
+          </FormRow>
 
-        {summary ? (
-          <div className="bg-muted/40 flex flex-col gap-3 rounded-lg border p-3 text-sm">
-            {/* The note is a sibling of the <dl>, not a child: a <dl> may only
-              directly contain dt/dd (or <div>s that wrap them), so descriptive
-              prose inside it fails axe's definition-list rule. */}
-            <dl className="flex flex-col gap-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-muted-foreground">Code</dt>
-                <dd className="font-mono">{summary.code || '—'}</dd>
-              </div>
-              <div className="flex items-baseline justify-between gap-3">
-                <dt className="text-muted-foreground">Discount</dt>
-                <dd className="tabular-nums">{summary.discount}</dd>
-              </div>
-            </dl>
-            <p className="text-muted-foreground text-xs">
-              The discount and how long it lasts are fixed once a coupon is created.
-            </p>
-          </div>
-        ) : null}
+          {summary ? (
+            <FormRow
+              label="Fixed terms"
+              hint="The discount and how long it lasts are fixed once a coupon is created."
+              align="start"
+            >
+              <dl className="flex flex-col gap-2 text-sm">
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted-foreground">Code</dt>
+                  <dd className="font-mono">{summary.code || '—'}</dd>
+                </div>
+                <div className="flex items-baseline justify-between gap-3">
+                  <dt className="text-muted-foreground">Discount</dt>
+                  <dd className="tabular-nums">{summary.discount}</dd>
+                </div>
+              </dl>
+            </FormRow>
+          ) : null}
+        </FormCard>
       </form>
     </FormPage>
   )

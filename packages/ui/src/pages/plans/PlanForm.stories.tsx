@@ -108,3 +108,26 @@ export const CreatesWithDetailsOnly: Story = {
     )
   },
 }
+
+/** Create shows a live preview beside the steps; it follows the name as it is typed. */
+export const PreviewFollowsTheDraft: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const preview = canvas.getByRole('complementary', { name: 'Plan preview' })
+
+    await expect(within(preview).getByText('Untitled plan')).toBeInTheDocument()
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
+    await expect(within(preview).getByText('Pro')).toBeInTheDocument()
+    await expect(within(preview).getByText('No charges yet', { exact: false })).toBeInTheDocument()
+  },
+}
+
+/** Edit is the details step alone, so there is nothing to preview. */
+export const EditHasNoPreview: Story = {
+  args: Edit.args ?? {},
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByRole('complementary', { name: 'Plan preview' }),
+    ).not.toBeInTheDocument()
+  },
+}

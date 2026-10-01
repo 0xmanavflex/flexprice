@@ -45,7 +45,8 @@ async function chooseFeature(canvas: ReturnType<typeof within>, name: string) {
 export const MeteredRevealsLimit: Story = {
   play: async ({ canvasElement }) => {
     await chooseFeature(within(canvasElement), 'API calls')
-    await expect(await screen.findByText('Unlimited — no cap on usage')).toBeInTheDocument()
+    await expect(await screen.findByText('Value type')).toBeInTheDocument()
+    await expect(await screen.findByText(/Customers get .* resetting/)).toBeInTheDocument()
   },
 }
 

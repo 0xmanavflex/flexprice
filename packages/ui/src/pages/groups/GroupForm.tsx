@@ -8,7 +8,7 @@ import {
   emptyGroup,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
-import { Field } from '@ui/compositions/Field'
+import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
@@ -23,7 +23,7 @@ export const GroupFormProvenance = provenance({
   source: 'composition',
   composes: [
     'ui/input',
-    'compositions/field',
+    'compositions/form-card',
     'compositions/form-page',
     'compositions/form-actions',
   ],
@@ -79,52 +79,49 @@ export function GroupForm({
         />
       }
     >
-      <form
-        id={FORM_ID}
-        onSubmit={form.handleSubmit((values) => onSubmit(values))}
-        noValidate
-        className="flex flex-col gap-5"
-      >
-        <Field label="Name" required error={errors.name?.message}>
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-          )}
-        </Field>
+      <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
+        <FormCard>
+          <FormRow label="Name" required error={errors.name?.message}>
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            )}
+          </FormRow>
 
-        <Field
-          label="Lookup key"
-          required
-          hint="Stable identifier used by the API. Lowercase letters, numbers, hyphens and underscores."
-          error={errors.lookupKey?.message}
-        >
-          {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
-          )}
-        </Field>
+          <FormRow
+            label="Lookup key"
+            required
+            hint="Stable identifier used by the API. Lowercase letters, numbers, hyphens and underscores."
+            error={errors.lookupKey?.message}
+          >
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
+            )}
+          </FormRow>
 
-        <Field
-          label="Holds"
-          required
-          hint="A group holds prices or features, never both. Fixed once created."
-          error={errors.entityType?.message}
-        >
-          {({ id, ...field }) => (
-            <Controller
-              control={form.control}
-              name="entityType"
-              render={({ field: control }) => (
-                <OptionSelect
-                  id={id}
-                  {...field}
-                  value={control.value}
-                  onValueChange={(value) => control.onChange(value)}
-                  options={ENTITY_OPTIONS}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          )}
-        </Field>
+          <FormRow
+            label="Holds"
+            required
+            hint="A group holds prices or features, never both. Fixed once created."
+            error={errors.entityType?.message}
+          >
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="entityType"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value}
+                    onValueChange={(value) => control.onChange(value)}
+                    options={ENTITY_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </FormRow>
+        </FormCard>
       </form>
     </FormPage>
   )

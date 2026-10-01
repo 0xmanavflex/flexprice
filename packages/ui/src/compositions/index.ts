@@ -11,6 +11,9 @@ export type { StepStatus, WorkflowStep, WorkflowStepperProps } from './WorkflowS
 export { Field, FieldProvenance } from './Field'
 export type { FieldProps } from './Field'
 
+export { FormCard, FormRow, FormCardProvenance } from './FormCard'
+export type { FormCardProps, FormRowProps } from './FormCard'
+
 export { Section, SectionProvenance } from './Section'
 export type { SectionProps } from './Section'
 

@@ -13,7 +13,7 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
-import { Field } from '@ui/compositions/Field'
+import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
@@ -33,7 +33,7 @@ export const TaxRateFormProvenance = provenance({
   composes: [
     'ui/input',
     'ui/textarea',
-    'compositions/field',
+    'compositions/form-card',
     'compositions/form-page',
     'compositions/form-actions',
   ],
@@ -104,15 +104,14 @@ export function TaxRateCreateForm({
         id="tax-rate-create-form"
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
-        className="flex flex-col gap-5"
       >
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Name" required error={errors.name?.message}>
+        <FormCard>
+          <FormRow label="Name" required error={errors.name?.message}>
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
             )}
-          </Field>
-          <Field
+          </FormRow>
+          <FormRow
             label="Code"
             required
             hint="Letters and numbers. Case-sensitive."
@@ -121,11 +120,9 @@ export function TaxRateCreateForm({
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('code')} />
             )}
-          </Field>
-        </div>
+          </FormRow>
 
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Rate (%)" required error={errors.percentageValue?.message}>
+          <FormRow label="Rate (%)" required error={errors.percentageValue?.message}>
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -136,8 +133,8 @@ export function TaxRateCreateForm({
                 {...form.register('percentageValue')}
               />
             )}
-          </Field>
-          <Field label="Scope" required hint="Fixed once created." error={errors.scope?.message}>
+          </FormRow>
+          <FormRow label="Scope" required hint="Fixed once created." error={errors.scope?.message}>
             {({ id, ...field }) => (
               <Controller
                 control={form.control}
@@ -154,20 +151,20 @@ export function TaxRateCreateForm({
                 )}
               />
             )}
-          </Field>
-        </div>
+          </FormRow>
 
-        <Field label="Description" error={errors.description?.message}>
-          {({ id, ...field }) => (
-            <Textarea
-              id={id}
-              rows={3}
-              disabled={isSubmitting}
-              {...field}
-              {...form.register('description')}
-            />
-          )}
-        </Field>
+          <FormRow label="Description" align="start" error={errors.description?.message}>
+            {({ id, ...field }) => (
+              <Textarea
+                id={id}
+                rows={3}
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('description')}
+              />
+            )}
+          </FormRow>
+        </FormCard>
       </form>
     </FormPage>
   )
@@ -210,51 +207,50 @@ export function TaxRateEditForm({
         id="tax-rate-edit-form"
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
-        className="flex flex-col gap-5"
       >
-        <div className="grid gap-5 sm:grid-cols-2">
-          <Field label="Name" required error={errors.name?.message}>
+        <FormCard>
+          <FormRow label="Name" required error={errors.name?.message}>
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
             )}
-          </Field>
-          <Field label="Code" required error={errors.code?.message}>
+          </FormRow>
+          <FormRow label="Code" required error={errors.code?.message}>
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('code')} />
             )}
-          </Field>
-        </div>
+          </FormRow>
 
-        <Field label="Status" error={errors.status?.message}>
-          {({ id, ...field }) => (
-            <Controller
-              control={form.control}
-              name="status"
-              render={({ field: control }) => (
-                <OptionSelect
-                  id={id}
-                  {...field}
-                  value={control.value ?? TaxRateStatus.Published}
-                  onValueChange={(value) => control.onChange(value)}
-                  options={STATUS_OPTIONS}
-                  disabled={isSubmitting}
-                />
-              )}
-            />
-          )}
-        </Field>
+          <FormRow label="Status" error={errors.status?.message}>
+            {({ id, ...field }) => (
+              <Controller
+                control={form.control}
+                name="status"
+                render={({ field: control }) => (
+                  <OptionSelect
+                    id={id}
+                    {...field}
+                    value={control.value ?? TaxRateStatus.Published}
+                    onValueChange={(value) => control.onChange(value)}
+                    options={STATUS_OPTIONS}
+                    disabled={isSubmitting}
+                  />
+                )}
+              />
+            )}
+          </FormRow>
 
-        <Field label="Description" error={errors.description?.message}>
-          {({ id, ...field }) => (
-            <Textarea
-              id={id}
-              rows={3}
-              disabled={isSubmitting}
-              {...field}
-              {...form.register('description')}
-            />
-          )}
-        </Field>
+          <FormRow label="Description" align="start" error={errors.description?.message}>
+            {({ id, ...field }) => (
+              <Textarea
+                id={id}
+                rows={3}
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('description')}
+              />
+            )}
+          </FormRow>
+        </FormCard>
       </form>
     </FormPage>
   )

@@ -1,0 +1,161 @@
+import { Children, useId, type ReactNode } from 'react'
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@ui/components/primitives/card'
+import {
+  Field as FieldRoot,
+  FieldContent,
+  FieldDescription,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+  FieldTitle,
+} from '@ui/components/primitives/field'
+import { Separator } from '@ui/components/primitives/separator'
+import { cn } from '@ui/lib/cn'
+import { provenance } from '@ui/provenance'
+
+/**
+ * The single-page form layout from ReUI's `form-12`: one Card, and inside it
+ * label-and-hint on the left of each row, the control on the right, rows split
+ * by inset dashed rules.
+ *
+ * `form-12` is an ecommerce block, so only its structure is taken, not its
+ * fields. The stock Card / Field / Separator primitives do the work; this adds
+ * the row grid, the separators between rows, and the same id and aria wiring
+ * as `Field` so labels, hints and errors stay connected to the control.
+ */
+export const FormCardProvenance = provenance({
+  source: 'composition',
+  composes: ['ui/card', 'ui/field', 'ui/separator'],
+  note: 'form-12 layout: Card, label/control rows, dashed inset separators.',
+})
+
+const dashedRule =
+  'border-border bg-transparent data-horizontal:h-0 data-horizontal:border-t data-horizontal:border-dashed'
+
+export interface FormCardProps {
+  title?: string
+  description?: string
+  children: ReactNode
+  className?: string
+}
+
+export function FormCard({ title, description, children, className }: FormCardProps) {
+  const rows = Children.toArray(children)
+  return (
+    <Card className={cn('w-full gap-0 p-0', className)}>
+      {title ? (
+        <CardHeader className="gap-1 border-b px-5 py-4 sm:px-6">
+          <CardTitle>{title}</CardTitle>
+          {description ? <CardDescription>{description}</CardDescription> : null}
+        </CardHeader>
+      ) : null}
+      <CardContent className="p-0">
+        <FieldGroup className="gap-0">
+          {rows.map((row, index) => (
+            <div key={index}>
+              {index > 0 ? (
+                <div className="px-5 sm:px-6">
+                  <Separator className={dashedRule} />
+                </div>
+              ) : null}
+              {row}
+            </div>
+          ))}
+        </FieldGroup>
+      </CardContent>
+    </Card>
+  )
+}
+
+interface ControlProps {
+  id: string
+  'aria-describedby': string | undefined
+  'aria-invalid': true | undefined
+  required: boolean | undefined
+}
+
+export interface FormRowProps {
+  label: string
+  /** Supporting text under the label; also the control's accessible description. */
+  hint?: string
+  error?: string | undefined
+  required?: boolean
+  /** Top-align the control, for tall ones (a textarea, a radio group). */
+  align?: 'center' | 'start'
+  /**
+   * A function receives the wired control props (a labelled input). A plain
+   * node is for a group of controls, where the label becomes a group title.
+   */
+  children: ReactNode | ((props: ControlProps) => ReactNode)
+}
+
+export function FormRow({
+  label,
+  hint,
+  error,
+  required,
+  align = 'center',
+  children,
+}: FormRowProps) {
+  const id = useId()
+  const hintId = hint ? `${id}-hint` : undefined
+  const errorId = error ? `${id}-error` : undefined
+  const describedBy = [hintId, errorId].filter(Boolean).join(' ') || undefined
+  const isControl = typeof children === 'function'
+
+  const asterisk = required ? (
+    <span aria-hidden className="text-destructive">
+      *
+    </span>
+  ) : null
+
+  return (
+    <FieldRoot
+      data-invalid={error ? true : undefined}
+      className={cn(
+        'grid gap-3 px-5 py-4 sm:px-6 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]',
+        align === 'start' ? 'md:items-start' : 'md:items-center',
+      )}
+    >
+      <FieldContent className="gap-0.5 md:pt-0.5">
+        {isControl ? (
+          <FieldLabel htmlFor={id}>
+            {label}
+            {asterisk}
+          </FieldLabel>
+        ) : (
+          <FieldTitle>
+            {label}
+            {asterisk}
+          </FieldTitle>
+        )}
+        {hint ? (
+          <FieldDescription id={hintId} className="text-xs">
+            {hint}
+          </FieldDescription>
+        ) : null}
+      </FieldContent>
+      <div className="flex min-w-0 flex-col gap-1.5">
+        {isControl
+          ? children({
+              id,
+              'aria-describedby': describedBy,
+              'aria-invalid': error ? true : undefined,
+              required: required || undefined,
+            })
+          : children}
+        {error ? (
+          <FieldError id={errorId} className="text-xs">
+            {error}
+          </FieldError>
+        ) : null}
+      </div>
+    </FieldRoot>
+  )
+}

@@ -15,14 +15,16 @@ import {
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
+import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/primitives/card'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
-import { Field } from '@ui/compositions/Field'
+import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSteps'
 import { provenance } from '@ui/provenance'
 import { ChargeForm, type MeterOption, type PriceUnitOption } from '../charges/ChargeForm'
 import { CreditGrantCreateForm } from '../credit-grants/CreditGrantForm'
 import { EntitlementCreateForm, type FeatureOption } from '../entitlements/EntitlementForm'
+import { PlanPreviewCard } from './PlanPreviewCard'
 
 /**
  * Create or edit a plan, on a full page.
@@ -46,12 +48,12 @@ export const PlanFormProvenance = provenance({
   composes: [
     'compositions/form-page',
     'compositions/form-steps',
-    'compositions/field',
+    'compositions/form-card',
     'ui/input',
     'ui/textarea',
     'ui/button',
   ],
-  note: 'Full-page stepped plan form: details plus staged charges, entitlements and credit grants.',
+  note: 'Full-page stepped plan form: details plus staged charges, entitlements and credit grants, with a live preview beside it on create.',
 })
 
 /** What a create emits: the plan and the children to write after it. */
@@ -136,36 +138,39 @@ export function PlanForm({
     onSubmit({ plan, charges, entitlements, creditGrants: grants }),
   )
 
+  const planDraftName = form.watch('name')
   const featureName = (id: string) => features.find((f) => f.id === id)?.name ?? id
   const grantable = features.filter((f) => !entitlements.some((e) => e.featureId === f.id))
 
   const detailsStep = (
     <>
-      <Field label="Name" required error={errors.name?.message}>
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-        )}
-      </Field>
-      <Field
-        label="Lookup key"
-        hint="Optional stable identifier for the API. Lowercase, numbers and underscores."
-        error={errors.lookupKey?.message}
-      >
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
-        )}
-      </Field>
-      <Field label="Description" error={errors.description?.message}>
-        {({ id, ...field }) => (
-          <Textarea
-            id={id}
-            rows={3}
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('description')}
-          />
-        )}
-      </Field>
+      <FormCard>
+        <FormRow label="Name" required error={errors.name?.message}>
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+          )}
+        </FormRow>
+        <FormRow
+          label="Lookup key"
+          hint="Optional stable identifier for the API. Lowercase, numbers and underscores."
+          error={errors.lookupKey?.message}
+        >
+          {({ id, ...field }) => (
+            <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
+          )}
+        </FormRow>
+        <FormRow label="Description" align="start" error={errors.description?.message}>
+          {({ id, ...field }) => (
+            <Textarea
+              id={id}
+              rows={3}
+              disabled={isSubmitting}
+              {...field}
+              {...form.register('description')}
+            />
+          )}
+        </FormRow>
+      </FormCard>
       <p className="text-muted-foreground text-xs">
         {isEdit
           ? 'Charges, entitlements and credit grants are edited in place on the plan page.'
@@ -277,7 +282,7 @@ export function PlanForm({
           : 'Plans are what customers subscribe to. Set it up here, or add the pieces later from the plan page.'
       }
       trail={trail}
-      width="narrow"
+      width={isEdit ? 'narrow' : 'wide'}
       footer={
         adding ? null : (
           <StepFooter
@@ -295,17 +300,51 @@ export function PlanForm({
       {/* The staged steps hold their own forms, which cannot nest in this one, so
           the plan form is rendered around the details fields only. The footer's
           submit reaches it by `form={FORM_ID}` on every step. */}
-      <FormSteps flow={flow} label="Plan steps">
-        <form
-          id={FORM_ID}
-          onSubmit={flow.guardSubmit(submitAll)}
-          noValidate
-          className="flex flex-col gap-5"
-        >
-          {inForm ? content['details'] : null}
-        </form>
-        {inForm ? null : content[flow.step]}
-      </FormSteps>
+      <div
+        className={
+          isEdit ? undefined : 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start'
+        }
+      >
+        <div className="min-w-0">
+          <FormSteps flow={flow} label="Plan steps">
+            <form
+              id={FORM_ID}
+              onSubmit={flow.guardSubmit(submitAll)}
+              noValidate
+              className="flex flex-col gap-4"
+            >
+              {inForm ? content['details'] : null}
+            </form>
+            {inForm ? null : content[flow.step]}
+          </FormSteps>
+        </div>
+        {isEdit ? null : (
+          <aside aria-label="Plan preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+            <PlanPreviewCard
+              name={planDraftName}
+              charges={charges}
+              meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}
+            />
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-sm">Includes</CardTitle>
+              </CardHeader>
+              <CardContent className="flex flex-col gap-3 text-sm">
+                <PreviewList
+                  title="Entitlements"
+                  empty="None yet"
+                  rows={entitlements.map((e) => featureName(e.featureId))}
+                />
+                <PreviewList
+                  title="Credit grants"
+                  empty="None yet"
+                  rows={grants.map((g) => `${g.name} · ${g.credits} credits`)}
+                />
+              </CardContent>
+            </Card>
+          </aside>
+        )}
+      </div>
     </FormPage>
   )
 }
@@ -375,5 +414,24 @@ function StagedStep({
         </Button>
       )}
     </section>
+  )
+}
+
+function PreviewList({ title, rows, empty }: { title: string; rows: string[]; empty: string }) {
+  return (
+    <div className="flex flex-col gap-1">
+      <span className="text-muted-foreground text-xs font-medium">{title}</span>
+      {rows.length === 0 ? (
+        <span className="text-muted-foreground">{empty}</span>
+      ) : (
+        <ul className="flex flex-col gap-0.5">
+          {rows.map((row, index) => (
+            <li key={`${row}-${index}`} className="truncate">
+              {row}
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
