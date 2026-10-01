@@ -26,7 +26,10 @@ test('creates a draft invoice from the form', async ({ page }) => {
   await page.getByRole('option', { name: 'USD' }).click()
   await page.getByLabel('Line 1 description').fill('Onboarding')
   await page.getByLabel('Line 1 amount').fill('250')
-  await page.getByLabel('Invoice total').fill('250')
+  await page.getByRole('button', { name: 'Add line' }).click()
+  await page.getByLabel('Line 2 description').fill('Training')
+  await page.getByLabel('Line 2 amount').fill('99.99')
+  await expect(page.getByText('349.99 USD')).toBeVisible()
   await page.getByRole('button', { name: 'Create invoice' }).click()
 
   await expect(page).toHaveURL(/\/invoices\/inv_new_/)

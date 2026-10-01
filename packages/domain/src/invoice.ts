@@ -214,12 +214,37 @@ export interface InvoiceDetail extends Invoice {
   createdAt: Date | null
 }
 
+const LINE_AMOUNT = /^(\d+)(?:\.(\d{1,8}))?$/
+
+/**
+ * Sums the amounts a person typed on a one-off invoice, exactly.
+ *
+ * This is not money arithmetic in the sense `money.ts` rules out: the numbers
+ * are the author's own line amounts, not a tax, proration or discount the
+ * backend owns, and the sum is done on integers (scaled by 10^8, the schema's
+ * precision) so no float ever touches it. Returns `null` while any amount is
+ * blank or malformed, so a half-typed form shows no total instead of a wrong one.
+ */
+export function sumLineAmounts(amounts: readonly string[]): string | null {
+  const SCALE = 8
+  let total = 0n
+  for (const raw of amounts) {
+    const match = LINE_AMOUNT.exec(raw.trim())
+    if (!match) return null
+    total += BigInt(match[1]!) * 10n ** BigInt(SCALE) + BigInt((match[2] ?? '').padEnd(SCALE, '0'))
+  }
+  const digits = total.toString().padStart(SCALE + 1, '0')
+  const whole = digits.slice(0, -SCALE)
+  const fraction = digits.slice(-SCALE).replace(/0+$/, '').padEnd(2, '0')
+  return `${whole}.${fraction}`
+}
+
 /**
  * A manual (one-off) invoice.
  *
- * The API takes `subtotal`, `total` and `amount_due` as given and the money
- * module deliberately has no arithmetic, so the form asks for the invoice total
- * itself rather than summing the lines on the client.
+ * The API requires `subtotal`, `total` and `amount_due`, so the form sends the
+ * exact sum of the lines ({@link sumLineAmounts}) — the total is derived from
+ * the line items, never typed separately, so the two cannot disagree.
  */
 export const createInvoiceSchema = z.object({
   customerId: z.string().min(1, 'Choose a customer'),

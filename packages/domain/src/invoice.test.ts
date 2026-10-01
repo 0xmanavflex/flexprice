@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { InvoiceStatus, deriveInvoiceStatus, needsAttention } from './invoice'
+import { InvoiceStatus, deriveInvoiceStatus, needsAttention, sumLineAmounts } from './invoice'
 
 const PAST = new Date('2026-01-01T00:00:00Z')
 const FUTURE = new Date('2027-01-01T00:00:00Z')
@@ -81,5 +81,23 @@ describe('needsAttention', () => {
     ]) {
       expect(needsAttention(status), status).toBe(false)
     }
+  })
+})
+
+describe('sumLineAmounts', () => {
+  it('sums exactly where a float would drift', () => {
+    expect(sumLineAmounts(['0.1', '0.2'])).toBe('0.30')
+    expect(sumLineAmounts(['12345678901234567.89', '0.01'])).toBe('12345678901234567.90')
+  })
+
+  it('keeps at least two decimals and trims the rest', () => {
+    expect(sumLineAmounts(['250'])).toBe('250.00')
+    expect(sumLineAmounts(['1.123', '1'])).toBe('2.123')
+  })
+
+  it('returns null while any amount is blank or malformed', () => {
+    expect(sumLineAmounts(['10', ''])).toBeNull()
+    expect(sumLineAmounts(['abc'])).toBeNull()
+    expect(sumLineAmounts(['-5'])).toBeNull()
   })
 })

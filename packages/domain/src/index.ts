@@ -32,6 +32,7 @@ export {
   InvoiceSortField,
   InvoiceStatus,
   createInvoiceSchema,
+  sumLineAmounts,
   deriveInvoiceStatus,
   emptyInvoice,
   isStoredInvoiceStatus,

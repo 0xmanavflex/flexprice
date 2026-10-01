@@ -1,7 +1,8 @@
+import { useEffect } from 'react'
 import { Controller, useFieldArray, useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { PlusIcon, Trash2Icon } from 'lucide-react'
-import { type CreateInvoice, createInvoiceSchema, emptyInvoice } from '@fp/domain'
+import { type CreateInvoice, createInvoiceSchema, emptyInvoice, sumLineAmounts } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
@@ -20,8 +21,8 @@ import { provenance } from '@ui/provenance'
  *
  * ReUI's `form-3` invoice creator is a self-contained demo with its own product
  * catalogue and no props, so it cannot be fed real customers or submit anywhere
- * without being edited; this form replaces it. The total is typed, not summed:
- * the money module has no arithmetic by design.
+ * without being edited; this form replaces it, keeping the block's behaviour:
+ * the invoice total is the exact sum of the line amounts, shown read-only.
  */
 export const InvoiceFormProvenance = provenance({
   source: 'composition',
@@ -63,6 +64,13 @@ export function InvoiceForm({
     mode: 'onTouched',
   })
   const lines = useFieldArray({ control: form.control, name: 'lines' })
+  const watchedLines = form.watch('lines')
+  const derivedTotal = sumLineAmounts((watchedLines ?? []).map((line) => line.amount ?? ''))
+  const currency = form.watch('currency')
+
+  useEffect(() => {
+    form.setValue('total', derivedTotal ?? '', { shouldValidate: form.formState.isSubmitted })
+  }, [derivedTotal, form])
   const errors = form.formState.errors
 
   return (
@@ -213,19 +221,13 @@ export function InvoiceForm({
           </FormRow>
           <FormRow
             label="Invoice total"
-            required
-            hint="The amount the customer owes. Entered, not summed from the lines."
+            hint="The sum of the line amounts. It updates as you edit the lines."
             error={errors.total?.message}
           >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="decimal"
-                placeholder="0.00"
-                disabled={isSubmitting}
-                {...field}
-                {...form.register('total')}
-              />
+            {({ id }) => (
+              <output id={id} className="text-sm font-medium tabular-nums">
+                {derivedTotal === null ? '—' : `${derivedTotal}${currency ? ` ${currency}` : ''}`}
+              </output>
             )}
           </FormRow>
           <FormRow label="Finalize now" hint="Locks the invoice and sends it. Off keeps a draft.">
