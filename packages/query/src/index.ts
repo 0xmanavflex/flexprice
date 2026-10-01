@@ -189,8 +189,10 @@ export type {
 
 export {
   fetchSubscriptions,
+  toCreateSubscriptionRequest,
   toSubscription,
   toSubscriptionFilter,
+  useCreateSubscription,
   useSubscriptions,
 } from './subscriptions'
 export type { SubscriptionPage, SubscriptionWire } from './subscriptions'

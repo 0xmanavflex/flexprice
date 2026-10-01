@@ -1,7 +1,7 @@
-import { DEFAULT_PLAN_QUERY } from '@fp/domain'
-import { ApiError, useCustomer, usePlans } from '@fp/query'
-import { SubscriptionForm, toast } from '@fp/ui/pages'
+import { useState } from 'react'
+import { ApiError, useCustomer } from '@fp/query'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { SubscriptionFormPage } from './SubscriptionFormPage'
 
 export interface CustomerSubscriptionFormPageProps {
   customerId: string
@@ -11,18 +11,18 @@ export interface CustomerSubscriptionFormPageProps {
 /**
  * New subscription for one customer, on its own page.
  *
- * The customer id is the route param, so the form does not ask who this is for.
- * Plans are the published catalogue. Saving a subscription has no API in this
- * build, so submit says so instead of pretending a record was created.
+ * The customer id is the route param, so the Customer step is dropped. The step
+ * is local: leaving the page discards it, and a created subscription returns to
+ * the customer.
  */
 export function CustomerSubscriptionFormPage({
   customerId,
   onCancel,
 }: CustomerSubscriptionFormPageProps) {
   const customer = useCustomer(customerId)
-  const plans = usePlans({ ...DEFAULT_PLAN_QUERY, pageSize: 100 })
+  const [step, setStep] = useState('plan')
 
-  if (customer.isPending || plans.isPending) {
+  if (customer.isPending) {
     return (
       <div className="p-6">
         <LoadingRows />
@@ -42,23 +42,13 @@ export function CustomerSubscriptionFormPage({
     )
   }
 
-  const record = customer.data
-
   return (
-    <SubscriptionForm
-      customerId={record.id}
-      customerName={record.name}
-      plans={(plans.data?.plans ?? []).map((plan) => ({ id: plan.id, name: plan.name }))}
-      trail={[
-        { label: 'Customers', onClick: onCancel },
-        { label: record.name, onClick: onCancel },
-        { label: 'New subscription' },
-      ]}
+    <SubscriptionFormPage
+      customerId={customer.data.id}
+      step={step}
+      onStepChange={setStep}
       onCancel={onCancel}
-      submitError={plans.error ? 'Plans could not be loaded. The rest of the form still works.' : null}
-      onSubmit={() => {
-        toast.info('Saving a subscription is not available yet.')
-      }}
+      onDone={onCancel}
     />
   )
 }

@@ -29,14 +29,12 @@ const InvoiceListPage = lazy(() =>
 )
 import { DEFAULT_INVOICE_QUERY } from '@fp/domain'
 import { parseInvoiceSearch } from './searchParams'
-import { useState } from 'react'
-import type { PriceOverride } from '@fp/domain'
-const SubscriptionCreatePage = lazy(() =>
-  import('@/pages/subscriptions/SubscriptionCreatePage').then((m) => ({
-    default: m.SubscriptionCreatePage,
+const SubscriptionFormPage = lazy(() =>
+  import('@/pages/subscriptions/SubscriptionFormPage').then((m) => ({
+    default: m.SubscriptionFormPage,
   })),
 )
-import { type SubscriptionStepId, furthestOf, parseStep, toStepSearch } from './subscriptionSteps'
+import { parseStep, toStepSearch } from './subscriptionSteps'
 import { DEFAULT_FEATURE_QUERY, type FeatureQuery } from '@fp/domain'
 /**
  * Routes are split, from the first one.
@@ -474,27 +472,18 @@ function SubscriptionCreateRouteComponent() {
   const { step } = subscriptionCreateRoute.useSearch()
   const navigate = useNavigate()
 
-  // Progress and the collected override are local only because the remaining
-  // steps do not exist. Once they do, this becomes the wizard's own draft —
-  // the step itself never needs to change.
-  const [furthestReached, setFurthestReached] = useState<SubscriptionStepId>(step)
-  const [override, setOverride] = useState<PriceOverride>()
-
-  const goToStep = (next: SubscriptionStepId) => {
-    // Progress only advances, so stepping back does not re-lock what was reached.
-    setFurthestReached((furthest) => furthestOf(furthest, next))
-    void navigate({ to: '/subscriptions/new', search: toStepSearch(next) as never })
-  }
-
   return (
-    <SubscriptionCreatePage
-      step={step}
-      furthestReached={furthestReached}
-      onStepChange={goToStep}
-      priceId="price_01"
-      override={override}
-      onOverrideChange={setOverride}
+    <SubscriptionFormPage
+      {...(step === 'customer' ? {} : { step })}
+      onStepChange={(next) =>
+        void navigate({
+          to: '/subscriptions/new',
+          search: toStepSearch(parseStep(next)) as never,
+          replace: true,
+        })
+      }
       onCancel={() => void navigate({ to: '/subscriptions', search: {} as never })}
+      onDone={() => void navigate({ to: '/subscriptions', search: {} as never })}
     />
   )
 }

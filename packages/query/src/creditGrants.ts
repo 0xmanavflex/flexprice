@@ -95,6 +95,17 @@ export function toCreditGrantRequest(
     cadence: draft.cadence,
     scope,
     ...(scope === CreditGrantScope.Plan ? { planId: id } : { addonId: id }),
+    ...toCreditGrantTerms(draft),
+  }
+}
+
+/**
+ * A grant's terms, without a scope: what it grants, how often, and when it
+ * lapses. A grant created inside a subscription request is scoped by that
+ * request, so it carries these and nothing else.
+ */
+export function toCreditGrantTerms(draft: CreateCreditGrant): Record<string, unknown> {
+  return {
     ...(draft.cadence === CreditGrantCadence.Recurring && draft.period
       ? { period: draft.period, periodCount: draft.periodCount ?? 1 }
       : {}),

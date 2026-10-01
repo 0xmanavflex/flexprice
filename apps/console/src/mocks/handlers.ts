@@ -2605,6 +2605,13 @@ export const handlers = [
     ;(corpus['customers'] as Corpus).items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
+  http.post(`${BASE}/subscriptions`, async ({ request }) => {
+    const body = await readBody(request)
+    return HttpResponse.json(
+      { ...body, id: `sub_new_${Date.now()}`, subscription_status: 'active' },
+      { status: 201 },
+    )
+  }),
   http.put(`${BASE}/customers`, async ({ request }) =>
     patchRow(
       (corpus['customers'] as Corpus).items,

@@ -1,3 +1,8 @@
+import { z } from 'zod'
+import { createCreditGrantSchema } from './creditGrant'
+import { BillingPeriod } from './price'
+import { priceOverrideSchema } from './priceOverride'
+
 /**
  * A subscription, as the list reads it.
  *
@@ -82,4 +87,71 @@ export const DEFAULT_SUBSCRIPTION_QUERY: SubscriptionQuery = {
   statuses: [],
   sortBy: SubscriptionSortField.StartDate,
   sortDirection: 'desc',
+}
+
+/**
+ * The cadences a subscription can bill on. One-time is a price's shape, not a
+ * subscription's, so it is not offered here.
+ */
+export const SUBSCRIPTION_BILLING_PERIODS = [
+  BillingPeriod.Daily,
+  BillingPeriod.Weekly,
+  BillingPeriod.Monthly,
+  BillingPeriod.Quarterly,
+  BillingPeriod.HalfYearly,
+  BillingPeriod.Annual,
+] as const
+
+/**
+ * The rules for starting a subscription.
+ *
+ * Six steps, one draft: who (`customerId`), what (`planId`, with the currency
+ * and period it bills in), the price overrides for this customer alone, the
+ * entitlement overrides, the credit grants, and — on review — nothing new. The
+ * overrides and grants are lists because a subscription carries any number of
+ * them, including none, and an empty list is the common case.
+ */
+export const createSubscriptionSchema = z.object({
+  customerId: z.string().min(1, 'Choose a customer'),
+  planId: z.string().min(1, 'Choose a plan'),
+  currency: z.string().trim().min(3, 'Choose a currency').max(3, 'Choose a currency'),
+  billingPeriod: z.enum(SUBSCRIPTION_BILLING_PERIODS, { error: 'Choose a billing period' }),
+  billingPeriodCount: z
+    .number({ error: 'Enter a number' })
+    .int('Must be a whole number')
+    .positive('Must be greater than zero'),
+  /** `YYYY-MM-DD`, or empty to start now. */
+  startDate: z.string(),
+  trialPeriodDays: z
+    .number({ error: 'Enter a number' })
+    .int('Must be a whole number')
+    .nonnegative('Cannot be negative')
+    .optional(),
+  priceOverrides: z.array(priceOverrideSchema),
+  entitlementOverrides: z.array(
+    z.object({
+      entitlementId: z.string().min(1),
+      /** Metered: the allowance for this customer; omitted keeps the plan's. */
+      usageLimit: z.number().int().nonnegative('Cannot be negative').optional(),
+      /** Boolean: whether the feature is on; omitted keeps the plan's. */
+      isEnabled: z.boolean().optional(),
+    }),
+  ),
+  creditGrants: z.array(createCreditGrantSchema),
+})
+
+export type CreateSubscription = z.infer<typeof createSubscriptionSchema>
+
+export function emptySubscription(): CreateSubscription {
+  return {
+    customerId: '',
+    planId: '',
+    currency: '',
+    billingPeriod: BillingPeriod.Monthly as CreateSubscription['billingPeriod'],
+    billingPeriodCount: 1,
+    startDate: '',
+    priceOverrides: [],
+    entitlementOverrides: [],
+    creditGrants: [],
+  }
 }

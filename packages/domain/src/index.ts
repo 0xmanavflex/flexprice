@@ -235,12 +235,15 @@ export type {
 
 export {
   DEFAULT_SUBSCRIPTION_QUERY,
+  SUBSCRIPTION_BILLING_PERIODS,
   SUBSCRIPTION_SORT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
   SubscriptionSortField,
   SubscriptionStatus,
+  createSubscriptionSchema,
+  emptySubscription,
 } from './subscription'
-export type { Subscription, SubscriptionQuery } from './subscription'
+export type { CreateSubscription, Subscription, SubscriptionQuery } from './subscription'
 
 export {
   DEFAULT_PAYMENT_QUERY,

@@ -1,14 +1,17 @@
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
   BILLING_PERIOD_LABEL,
   type BillingPeriod,
+  type CreateSubscription,
   type Subscription,
   type SubscriptionQuery,
   SubscriptionSortField,
   SubscriptionStatus,
 } from '@fp/domain'
+import { toCreditGrantTerms } from './creditGrants'
 import { queryKeys } from './keys'
+import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice } from './provider'
 
 /**
@@ -146,5 +149,64 @@ export function useSubscriptions(query: SubscriptionQuery) {
     queryKey: queryKeys.subscriptions.list({ ...query, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchSubscriptions(client, query),
     placeholderData: (previous) => previous,
+  })
+}
+
+/**
+ * A subscription draft, as a `CreateSubscriptionRequest`.
+ *
+ * Empty lists and blank optionals are left out rather than sent empty: an
+ * `overrideLineItems: []` is noise on the wire and, on some deployments, a
+ * validation error. Credit grants are scoped by the request itself, so each one
+ * carries `scope: 'SUBSCRIPTION'` and no target id.
+ */
+export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<string, unknown> {
+  return {
+    customerId: draft.customerId,
+    planId: draft.planId,
+    currency: draft.currency.toLowerCase(),
+    billingPeriod: draft.billingPeriod,
+    billingPeriodCount: draft.billingPeriodCount,
+    ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
+    ...(draft.trialPeriodDays ? { trialPeriodDays: draft.trialPeriodDays } : {}),
+    ...(draft.priceOverrides.length > 0
+      ? { overrideLineItems: draft.priceOverrides.map(toOverrideLineItem) }
+      : {}),
+    ...(draft.entitlementOverrides.length > 0
+      ? {
+          overrideEntitlements: draft.entitlementOverrides.map((override) => ({
+            entitlementId: override.entitlementId,
+            ...(override.usageLimit !== undefined ? { usageLimit: override.usageLimit } : {}),
+            ...(override.isEnabled !== undefined ? { isEnabled: override.isEnabled } : {}),
+          })),
+        }
+      : {}),
+    ...(draft.creditGrants.length > 0
+      ? {
+          creditGrants: draft.creditGrants.map((grant) => ({
+            name: grant.name,
+            credits: grant.credits,
+            cadence: grant.cadence,
+            scope: 'SUBSCRIPTION',
+            ...toCreditGrantTerms(grant),
+          })),
+        }
+      : {}),
+  }
+}
+
+/** Start a subscription — `POST /subscriptions`. Call `mutateAsync(draft)`. */
+export function useCreateSubscription() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateSubscription) =>
+      call(() => client.subscriptions.createSubscription(toCreateSubscriptionRequest(draft) as never)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    },
   })
 }
