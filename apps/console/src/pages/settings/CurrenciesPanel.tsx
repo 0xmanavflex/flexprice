@@ -10,10 +10,10 @@ import {
   useResetCustomCurrencyConfig,
   useUpdateCustomCurrencyConfig,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
+import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -65,7 +65,7 @@ export function CurrenciesPanel() {
   if (!environmentId) {
     return (
       <Panel>
-        <Section
+        <SettingsBlock
           title="Currencies"
           description="Stored per environment, so a sandbox rate cannot reach a real invoice."
         >
@@ -74,7 +74,7 @@ export function CurrenciesPanel() {
             title="No environment selected"
             description="Choose an environment from the switcher to see the currencies it invoices in."
           />
-        </Section>
+        </SettingsBlock>
       </Panel>
     )
   }
@@ -249,7 +249,7 @@ function CurrencyForm({
         })}
       >
         <Panel>
-          <Section
+          <SettingsBlock
             title="Settlement currencies"
             description="The fiat currencies your custom currencies convert to. Every custom currency quotes the same set — that is the backend's rule, not a simplification here."
           >
@@ -333,11 +333,31 @@ function CurrencyForm({
               </div>
               <ActionError message={fiatIssue} />
             </div>
-          </Section>
+          </SettingsBlock>
 
-          <Section
+          <SettingsBlock
             title="Custom currencies"
             description="Units you invoice in that no central bank issues — credits, tokens, minutes, seats. Each needs a name, a symbol, and what one unit is worth in each fiat currency above."
+            actions={
+              <div className="flex w-full flex-wrap items-center justify-end gap-3">
+                <ActionError message={saveError} />
+                {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+                {!resetError && reset.isSuccess ? (
+                  <ActionNote message="Back to the defaults." />
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setResetting(true)}
+                >
+                  Reset to defaults
+                </Button>
+                <Button type="submit" disabled={busy}>
+                  {update.isPending ? 'Saving…' : 'Save changes'}
+                </Button>
+              </div>
+            }
           >
             {currencies.length === 0 ? (
               <EmptyState
@@ -495,24 +515,7 @@ function CurrencyForm({
               </div>
               <ActionError message={codeIssue} />
             </div>
-          </Section>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" disabled={busy}>
-              {update.isPending ? 'Saving…' : 'Save changes'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={() => setResetting(true)}
-            >
-              Reset to defaults
-            </Button>
-            <ActionError message={saveError} />
-            {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-            {!resetError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
-          </div>
+          </SettingsBlock>
         </Panel>
       </form>
 

@@ -1,7 +1,7 @@
 import type { TenantFeatureUsage, TenantPlan } from '@fp/domain'
 import { isOverLimit } from '@fp/domain'
 import { useTenantBillingUsage } from '@fp/query'
-import { EmptyState, LoadingRows, Section } from '@fp/ui/compositions'
+import { EmptyState, LoadingRows } from '@fp/ui/compositions'
 import {
   Badge,
   Table,
@@ -12,7 +12,7 @@ import {
   TableRow,
 } from '@fp/ui/primitives'
 import { RouteOffIcon } from 'lucide-react'
-import { Fact, Panel, PanelError, formatDate, toFailure } from './panelKit'
+import { Fact, Panel, PanelError, formatDate, toFailure, SettingsBlock } from './panelKit'
 
 /**
  * What Flexprice is billing *this* tenant — its own plan, and its own usage
@@ -77,7 +77,7 @@ export function PlanUsagePanel() {
 
   return (
     <Panel>
-      <Section title="Plan" description={planDescription}>
+      <SettingsBlock title="Plan" description={planDescription}>
         {plans.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No subscription is attached to this organisation.
@@ -89,9 +89,9 @@ export function PlanUsagePanel() {
             ))}
           </div>
         )}
-      </Section>
+      </SettingsBlock>
 
-      <Section title="Usage" description="Where this organisation stands against its entitlements.">
+      <SettingsBlock title="Usage" description="Where this organisation stands against its entitlements.">
         {features.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No metered entitlements are attached to this plan.
@@ -113,7 +113,7 @@ export function PlanUsagePanel() {
             </TableBody>
           </Table>
         )}
-      </Section>
+      </SettingsBlock>
     </Panel>
   )
 }

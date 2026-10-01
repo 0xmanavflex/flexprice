@@ -13,7 +13,7 @@ import {
   isExpired,
 } from '@fp/domain'
 import { DEFAULT_API_KEY_QUERY, useApiKeys, useCreateApiKey, useDeleteApiKey } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import {
   Badge,
   Button,
@@ -39,8 +39,7 @@ import {
   WidePanel,
   formatDate,
   mutationMessage,
-  toFailure,
-} from './panelKit'
+  toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -85,7 +84,7 @@ export function ApiKeysPanel() {
     <WidePanel>
       {issued ? <IssuedSecret issued={issued} onDismiss={() => setIssued(null)} /> : null}
 
-      <Section
+      <SettingsBlock
         title="API keys"
         description="What your systems authenticate with when they send usage or read billing data."
         actions={
@@ -112,13 +111,13 @@ export function ApiKeysPanel() {
                 <TableHead>Created</TableHead>
                 <TableHead>Last used</TableHead>
                 <TableHead>Expires</TableHead>
-                <TableHead className="w-0 text-right">Actions</TableHead>
+                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.map((key) => (
                 <TableRow key={key.id}>
-                  <TableCell>
+                  <TableCell className="whitespace-normal">
                     <span className="flex flex-col">
                       <span className="font-medium">{key.name || key.displayId || key.id}</span>
                       {key.serviceAccountName ? (
@@ -128,8 +127,8 @@ export function ApiKeysPanel() {
                       ) : null}
                     </span>
                   </TableCell>
-                  <TableCell>
-                    <span className="flex items-center gap-1.5">
+                  <TableCell className="whitespace-normal">
+                    <span className="flex flex-wrap items-center gap-1.5">
                       <Badge variant="secondary">{API_KEY_TYPE_LABEL[key.type]}</Badge>
                       {key.status === ApiKeyStatus.Published ? null : (
                         <Badge variant="destructive-light">
@@ -149,7 +148,7 @@ export function ApiKeysPanel() {
                   <TableCell className="text-muted-foreground">
                     {key.expiresAt ? formatDate(key.expiresAt) : 'Never'}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="w-px text-right whitespace-nowrap">
                     <Button size="sm" variant="ghost" onClick={() => setRevoking(key)}>
                       Revoke
                     </Button>
@@ -159,7 +158,7 @@ export function ApiKeysPanel() {
             </TableBody>
           </Table>
         )}
-      </Section>
+      </SettingsBlock>
 
       <CreateKeyDialog
         open={isCreating}
@@ -221,7 +220,7 @@ function IssuedSecret({ issued, onDismiss }: { issued: CreatedApiKey; onDismiss:
   const [copied, setCopied] = useState(false)
 
   return (
-    <Section
+    <SettingsBlock
       title="Copy this key now"
       description="This is the only time Flexprice will show it. Closing this panel does not revoke the key — it just means the secret is gone from this screen for good, and a lost key has to be revoked and replaced."
     >
@@ -256,7 +255,7 @@ function IssuedSecret({ issued, onDismiss }: { issued: CreatedApiKey; onDismiss:
           I have saved it
         </Button>
       </div>
-    </Section>
+    </SettingsBlock>
   )
 }
 

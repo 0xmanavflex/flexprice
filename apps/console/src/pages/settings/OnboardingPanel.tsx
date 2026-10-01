@@ -25,7 +25,7 @@ import {
   useResetCustomerOnboarding,
   useUpdateCustomerOnboarding,
 } from '@fp/query'
-import { EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { WorkflowIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -36,8 +36,7 @@ import {
   Panel,
   PanelError,
   mutationMessage,
-  toFailure,
-} from './panelKit'
+  toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -172,7 +171,7 @@ function OnboardingForm({
       })}
     >
       <Panel>
-        <Section
+        <SettingsBlock
           title="Customer onboarding"
           description="Steps Flexprice runs, in order, the first time it sees a new customer. Leave it empty and nothing happens automatically."
           actions={
@@ -196,20 +195,20 @@ function OnboardingForm({
             </Fact>
             <Fact label="Steps">{actions.length === 0 ? 'None' : String(actions.length)}</Fact>
           </dl>
-        </Section>
+        </SettingsBlock>
 
         {actions.length === 0 ? (
-          <Section title="Steps" description="Nothing runs automatically in this environment.">
+          <SettingsBlock title="Steps" description="Nothing runs automatically in this environment.">
             <EmptyState
               size="inline"
               icon={<WorkflowIcon aria-hidden />}
               title="No onboarding steps"
               description="Add a step below to have Flexprice open a wallet, start a subscription or roll out a price whenever a customer is created."
             />
-          </Section>
+          </SettingsBlock>
         ) : (
           actions.map((action, index) => (
-            <Section
+            <SettingsBlock
               key={`${action.action}-${String(index)}`}
               title={`${String(index + 1)}. ${ONBOARDING_ACTION_LABEL[action.action]}`}
               description={STEP_DESCRIPTION[action.action]}
@@ -253,13 +252,23 @@ function OnboardingForm({
                 error={(field) => draft.error(`actions.${String(index)}.${field}`)}
                 onChange={(next) => setAction(index, next)}
               />
-            </Section>
+            </SettingsBlock>
           ))
         )}
 
-        <Section
+        <SettingsBlock
           title="Add a step"
           description="Only these five exist. The backend rejects the whole workflow if it is handed anything else, so there is no free-form option."
+          actions={
+            <div className="flex w-full flex-wrap items-center justify-end gap-3">
+              <ActionError message={saveError} />
+              {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+              {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
+              <Button type="submit" disabled={busy}>
+                {update.isPending ? 'Saving…' : 'Save changes'}
+              </Button>
+            </div>
+          }
         >
           <div role="group" aria-label="Add a step" className="flex flex-wrap gap-1.5">
             {ADDABLE.map((type) => (
@@ -275,16 +284,7 @@ function OnboardingForm({
               </Button>
             ))}
           </div>
-        </Section>
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={busy}>
-            {update.isPending ? 'Saving…' : 'Save changes'}
-          </Button>
-          <ActionError message={saveError} />
-          {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-          {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
-        </div>
+        </SettingsBlock>
       </Panel>
     </form>
   )

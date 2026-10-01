@@ -17,7 +17,7 @@ import {
   toAlertSettingConfig,
 } from '@fp/domain'
 import { useAlertSettings, useDeleteAlertSetting, useUpdateAlertSetting } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import {
   Badge,
   Button,
@@ -30,7 +30,7 @@ import {
   TableRow,
 } from '@fp/ui/primitives'
 import { BellIcon } from 'lucide-react'
-import { ActionError, PanelError, WidePanel, mutationMessage, toFailure } from './panelKit'
+import { ActionError, PanelError, WidePanel, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 
 /**
  * Alert rules — thresholds that watch one thing each.
@@ -82,7 +82,7 @@ export function AlertRulesPanel() {
 
   return (
     <WidePanel>
-      <Section
+      <SettingsBlock
         title="Alert rules"
         description="Each rule watches one thing — a wallet, a feature, a subscription — and fires when it crosses a threshold."
       >
@@ -103,7 +103,7 @@ export function AlertRulesPanel() {
                 <TableHead>Measured in</TableHead>
                 <TableHead>Thresholds</TableHead>
                 <TableHead>State</TableHead>
-                <TableHead className="w-0 text-right">Actions</TableHead>
+                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -132,7 +132,7 @@ export function AlertRulesPanel() {
                       <Badge variant="secondary">Off</Badge>
                     )}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="w-px text-right whitespace-nowrap">
                     <span className="flex justify-end gap-1">
                       <Button size="sm" variant="ghost" onClick={() => setEditing(setting)}>
                         Edit
@@ -147,7 +147,7 @@ export function AlertRulesPanel() {
             </TableBody>
           </Table>
         )}
-      </Section>
+      </SettingsBlock>
 
       {editing ? (
         <EditAlertSection key={editing.id} setting={editing} onDone={() => setEditing(null)} />
@@ -255,7 +255,7 @@ function EditAlertSection({ setting, onDone }: { setting: AlertSetting; onDone: 
   }
 
   return (
-    <Section
+    <SettingsBlock
       title="Edit alert rule"
       description={`Watching ${
         ALERT_ENTITY_TYPE_LABEL[setting.entityType]?.toLowerCase() ?? setting.entityType
@@ -386,6 +386,6 @@ function EditAlertSection({ setting, onDone }: { setting: AlertSetting; onDone: 
           Cancel
         </Button>
       </div>
-    </Section>
+    </SettingsBlock>
   )
 }

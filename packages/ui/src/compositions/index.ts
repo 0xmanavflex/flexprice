@@ -16,6 +16,7 @@ export type { FormCardProps, FormRowProps } from './FormCard'
 
 export { Section, SectionProvenance } from './Section'
 export type { SectionProps } from './Section'
+export { SettingsCard, SettingRow, SettingsFieldGroup } from './settingsSurface'
 
 export { ResourceNavigation, ResourceNavigationProvenance } from './ResourceNavigation'
 export type { ResourceNavItem, ResourceNavigationProps } from './ResourceNavigation'

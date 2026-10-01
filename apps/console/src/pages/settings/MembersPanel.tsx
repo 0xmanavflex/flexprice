@@ -18,7 +18,7 @@ import {
   useUpdateMemberRoles,
   useUserInfo,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import {
   Badge,
   Button,
@@ -38,7 +38,7 @@ import {
 } from '@fp/ui/primitives'
 import { UsersIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
-import { ActionError, PanelError, WidePanel, mutationMessage, toFailure } from './panelKit'
+import { ActionError, PanelError, WidePanel, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -89,7 +89,7 @@ export function MembersPanel() {
 
   return (
     <WidePanel>
-      <Section
+      <SettingsBlock
         title="Members"
         description="Everyone who can sign in to this organisation."
         actions={
@@ -147,7 +147,7 @@ export function MembersPanel() {
                 <TableHead>Name</TableHead>
                 <TableHead>Email</TableHead>
                 <TableHead>Roles</TableHead>
-                <TableHead className="w-0 text-right">Actions</TableHead>
+                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -159,11 +159,11 @@ export function MembersPanel() {
                       {member.id === me.data?.id ? <Badge variant="secondary">You</Badge> : null}
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground">{member.email || '—'}</TableCell>
+                  <TableCell className="text-muted-foreground max-w-40 truncate">{member.email || '—'}</TableCell>
                   <TableCell>
                     <RoleList roles={member.roles} catalogue={roles.data ?? []} />
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="w-px text-right whitespace-nowrap">
                     <span className="flex justify-end gap-1">
                       <Button size="sm" variant="ghost" onClick={() => setEditing(member)}>
                         Edit roles
@@ -191,7 +191,7 @@ export function MembersPanel() {
             Showing {fetched.length} of {members.data.total}.
           </p>
         ) : null}
-      </Section>
+      </SettingsBlock>
 
       <InviteDialog
         open={isInviting}
@@ -360,7 +360,7 @@ function EditRolesSection({
   const error = mutationMessage(update.error, 'The roles could not be saved.')
 
   return (
-    <Section
+    <SettingsBlock
       title={`Roles for ${memberDisplayName(member)}`}
       description="The whole set is replaced, so what is highlighted here is what they will hold."
     >
@@ -385,6 +385,6 @@ function EditRolesSection({
           Cancel
         </Button>
       </div>
-    </Section>
+    </SettingsBlock>
   )
 }

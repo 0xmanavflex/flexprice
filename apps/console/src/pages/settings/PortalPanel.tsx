@@ -20,7 +20,7 @@ import {
   useResetCustomerPortalConfig,
   useUpdateCustomerPortalConfig,
 } from '@fp/query'
-import { EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { LayoutPanelLeftIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
@@ -31,8 +31,7 @@ import {
   Panel,
   PanelError,
   mutationMessage,
-  toFailure,
-} from './panelKit'
+  toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -143,7 +142,7 @@ function PortalForm({
       })}
     >
       <Panel>
-        <Section
+        <SettingsBlock
           title="Customer portal"
           description="The sections and tabs a customer sees when they sign in to their own portal. A tab is only reachable if its section is switched on too."
           actions={
@@ -169,17 +168,17 @@ function PortalForm({
               {visible.length === 0 ? 'Nothing — the portal is empty' : visible.join(', ')}
             </Fact>
           </dl>
-        </Section>
+        </SettingsBlock>
 
         {sections.length === 0 ? (
-          <Section title="Sections" description="Nothing is configured for this environment yet.">
+          <SettingsBlock title="Sections" description="Nothing is configured for this environment yet.">
             <EmptyState
               size="inline"
               icon={<LayoutPanelLeftIcon aria-hidden />}
               title="This portal has no sections"
               description="Resetting to defaults asks the server for its standard layout, which is the only place a starting tree can honestly come from."
             />
-          </Section>
+          </SettingsBlock>
         ) : (
           sections.map((section, index) => (
             <SectionCard
@@ -231,25 +230,26 @@ function PortalForm({
           ))
         )}
 
-        <Section
+        <SettingsBlock
           title="Theme"
           description="The three colours the backend stores. Anything else V1's theme editor offered was never saved, so it is not offered here."
+          actions={
+            <div className="flex w-full flex-wrap items-center justify-end gap-3">
+              <ActionError message={saveError} />
+              {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+              {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
+              <Button type="submit" disabled={busy}>
+                {update.isPending ? 'Saving…' : 'Save changes'}
+              </Button>
+            </div>
+          }
         >
           <div className="grid gap-4 sm:grid-cols-3">
             <ColorField label="Primary" path="theme.primaryColor" draft={draft} busy={busy} />
             <ColorField label="Secondary" path="theme.secondaryColor" draft={draft} busy={busy} />
             <ColorField label="Tertiary" path="theme.tertiaryColor" draft={draft} busy={busy} />
           </div>
-        </Section>
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={busy}>
-            {update.isPending ? 'Saving…' : 'Save changes'}
-          </Button>
-          <ActionError message={saveError} />
-          {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-          {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
-        </div>
+        </SettingsBlock>
       </Panel>
     </form>
   )
@@ -312,7 +312,7 @@ function SectionCard({
   const tabs = orderedTabs(section)
 
   return (
-    <Section
+    <SettingsBlock
       title={section.label || `Section ${section.id}`}
       description={
         section.enabled
@@ -455,7 +455,7 @@ function SectionCard({
           ))}
         </ul>
       )}
-    </Section>
+    </SettingsBlock>
   )
 }
 

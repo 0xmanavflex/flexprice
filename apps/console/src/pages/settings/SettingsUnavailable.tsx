@@ -1,5 +1,6 @@
 import { EmptyState } from '@fp/ui/compositions'
 import { PlugZapIcon } from 'lucide-react'
+import { SettingsBlock } from './panelKit'
 import type { SettingsTabSpec } from './sections'
 
 /**
@@ -46,16 +47,18 @@ export interface SettingsUnavailableProps {
 
 export function SettingsUnavailable({ tab, what, workaround }: SettingsUnavailableProps) {
   return (
-    <EmptyState
-      size="page"
-      icon={<PlugZapIcon aria-hidden />}
-      title={`${tab.label} is not enabled on this deployment`}
-      description={
-        `${what} This Flexprice deployment reports it as switched off, so there is ` +
-        `nothing here to read or change. Turning it on is a server-side change, not ` +
-        `something this console can do.` + (workaround ? ` ${workaround}` : '')
-      }
-    />
+    <SettingsBlock title={tab.label} description="Not enabled on this deployment.">
+      <EmptyState
+        size="inline"
+        icon={<PlugZapIcon aria-hidden />}
+        title={`${tab.label} is not enabled on this deployment`}
+        description={
+          `${what} This Flexprice deployment reports it as switched off, so there is ` +
+          `nothing here to read or change. Turning it on is a server-side change, not ` +
+          `something this console can do.` + (workaround ? ` ${workaround}` : '')
+        }
+      />
+    </SettingsBlock>
   )
 }
 

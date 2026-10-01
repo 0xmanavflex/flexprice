@@ -1,9 +1,9 @@
 import { useWebhookDashboard } from '@fp/query'
-import { EmptyState, LoadingRows, Section } from '@fp/ui/compositions'
+import { EmptyState, LoadingRows } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { WebhookIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
-import { Fact, Panel, PanelError, toFailure } from './panelKit'
+import { Fact, Panel, PanelError, toFailure, SettingsBlock } from './panelKit'
 
 /**
  * The way in to this tenant's Svix webhook portal.
@@ -66,7 +66,7 @@ export function WebhooksPanel() {
   if (!svixEnabled) {
     return (
       <Panel>
-        <Section
+        <SettingsBlock
           title="Webhooks"
           description="Flexprice delivers webhooks through Svix, which this deployment does not have switched on."
         >
@@ -76,14 +76,14 @@ export function WebhooksPanel() {
             title="Webhooks are not enabled here"
             description="This deployment has no Svix integration configured, so there is no portal to open and no endpoints to manage. Ask whoever runs it to enable webhooks."
           />
-        </Section>
+        </SettingsBlock>
       </Panel>
     )
   }
 
   return (
     <Panel>
-      <Section
+      <SettingsBlock
         title="Webhooks"
         description="Endpoints, signing secrets, retries and delivery logs are configured in Svix. This opens that portal, signed in as this environment."
       >
@@ -117,7 +117,7 @@ export function WebhooksPanel() {
             each time — use the button rather than bookmarking what it opens.
           </p>
         </div>
-      </Section>
+      </SettingsBlock>
     </Panel>
   )
 }

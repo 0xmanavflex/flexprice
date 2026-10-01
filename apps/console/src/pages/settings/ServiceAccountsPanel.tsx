@@ -19,7 +19,7 @@ import {
   useRoles,
   useServiceAccounts,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import {
   Button,
   Dialog,
@@ -38,7 +38,7 @@ import {
 } from '@fp/ui/primitives'
 import { BotIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
-import { ActionError, PanelError, WidePanel, mutationMessage, toFailure } from './panelKit'
+import { ActionError, PanelError, WidePanel, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -83,7 +83,7 @@ export function ServiceAccountsPanel() {
 
   return (
     <WidePanel>
-      <Section
+      <SettingsBlock
         title="Service accounts"
         description="Identities for your systems rather than your people. An API key is issued against one."
         actions={
@@ -141,7 +141,7 @@ export function ServiceAccountsPanel() {
                 <TableHead>Name</TableHead>
                 <TableHead>Roles</TableHead>
                 <TableHead>Identifier</TableHead>
-                <TableHead className="w-0 text-right">Actions</TableHead>
+                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -154,7 +154,7 @@ export function ServiceAccountsPanel() {
                   <TableCell className="text-muted-foreground font-mono text-xs">
                     {account.id}
                   </TableCell>
-                  <TableCell className="text-right">
+                  <TableCell className="w-px text-right whitespace-nowrap">
                     <span className="flex justify-end gap-1">
                       <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
                         Rename
@@ -169,7 +169,7 @@ export function ServiceAccountsPanel() {
             </TableBody>
           </Table>
         )}
-      </Section>
+      </SettingsBlock>
 
       <CreateAccountDialog
         open={isCreating}
@@ -311,7 +311,7 @@ function RenameSection({ account, onDone }: { account: Member; onDone: () => voi
   const busy = rename.isPending
 
   return (
-    <Section
+    <SettingsBlock
       title={`Rename ${memberDisplayName(account)}`}
       description="Its roles and its keys are untouched."
     >
@@ -350,6 +350,6 @@ function RenameSection({ account, onDone }: { account: Member; onDone: () => voi
           </Button>
         </div>
       </form>
-    </Section>
+    </SettingsBlock>
   )
 }

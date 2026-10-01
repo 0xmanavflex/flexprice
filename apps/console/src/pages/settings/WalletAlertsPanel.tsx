@@ -15,10 +15,10 @@ import {
   useUpdateWalletAlertConfig,
   useWalletAlertConfig,
 } from '@fp/query'
-import { Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { Field, LoadingRows } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
+import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -116,7 +116,7 @@ function WalletAlertsForm({
       })}
     >
       <Panel>
-        <Section
+        <SettingsBlock
           title="Wallet balance alerts"
           description="One setting for every wallet in this environment. These are not the per-wallet rules on the Alert rules tab — changing this does not change those."
           actions={
@@ -187,11 +187,21 @@ function WalletAlertsForm({
                 : 'A raw balance. No currency is shown because this setting covers wallets in every currency you hold — 100 means a hundred of whatever that wallet is counted in.'}
             </p>
           </div>
-        </Section>
+        </SettingsBlock>
 
-        <Section
+        <SettingsBlock
           title="Thresholds"
           description="Up to three, escalating. Each is independent — set only the ones you want to hear about."
+          actions={
+            <div className="flex w-full flex-wrap items-center justify-end gap-3">
+              <ActionError message={saveError} />
+              {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+              {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
+              <Button type="submit" disabled={busy}>
+                {update.isPending ? 'Saving…' : 'Save changes'}
+              </Button>
+            </div>
+          }
         >
           <div className="grid gap-4 sm:grid-cols-3">
             {ALERT_SEVERITY_ORDER.map((severity) => {
@@ -266,16 +276,7 @@ function WalletAlertsForm({
               )
             })}
           </div>
-        </Section>
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={busy}>
-            {update.isPending ? 'Saving…' : 'Save changes'}
-          </Button>
-          <ActionError message={saveError} />
-          {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-          {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
-        </div>
+        </SettingsBlock>
       </Panel>
     </form>
   )

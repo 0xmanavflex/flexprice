@@ -1,5 +1,4 @@
-import { Section } from '@fp/ui/compositions'
-import { ThemeToggle } from '@fp/ui/compositions'
+import { SettingRow, SettingsCard, SettingsFieldGroup, ThemeToggle } from '@fp/ui/compositions'
 import { Panel } from './panelKit'
 
 /**
@@ -19,15 +18,23 @@ import { Panel } from './panelKit'
 export function AppearancePanel() {
   return (
     <Panel>
-      <Section
+      <SettingsCard
         title="Theme"
         description="Light or dark, remembered on this device. The same control sits in the header."
       >
-        <div className="flex items-center gap-3">
-          <ThemeToggle />
-          <span className="text-muted-foreground text-sm">Switch between light and dark.</span>
-        </div>
-      </Section>
+        <SettingsFieldGroup
+          legend="Theme"
+          description="Light or dark, remembered on this device."
+        >
+          <SettingRow
+            title="Appearance"
+            description="Switch between light and dark."
+            last
+          >
+            <ThemeToggle />
+          </SettingRow>
+        </SettingsFieldGroup>
+      </SettingsCard>
     </Panel>
   )
 }

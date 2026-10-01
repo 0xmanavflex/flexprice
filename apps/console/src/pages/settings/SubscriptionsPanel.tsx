@@ -5,10 +5,17 @@ import {
   useSubscriptionConfig,
   useUpdateSubscriptionConfig,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
-import { Button, Input } from '@fp/ui/primitives'
+import {
+  ConfirmDialog,
+  EmptyState,
+  LoadingRows,
+  SettingRow,
+  SettingsCard,
+  SettingsFieldGroup,
+} from '@fp/ui/compositions'
+import { Button, Input, Switch } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
+import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -45,7 +52,7 @@ export function SubscriptionsPanel() {
   if (!environmentId) {
     return (
       <Panel>
-        <Section
+        <SettingsBlock
           title="Unpaid subscriptions"
           description="Stored per environment, so a sandbox experiment cannot cancel a real customer."
         >
@@ -54,7 +61,7 @@ export function SubscriptionsPanel() {
             title="No environment selected"
             description="Choose an environment from the switcher to see what happens to its unpaid subscriptions."
           />
-        </Section>
+        </SettingsBlock>
       </Panel>
     )
   }
@@ -159,84 +166,77 @@ function SubscriptionForm({
         })}
       >
         <Panel>
-          <Section
+          <SettingsCard
             title="Unpaid subscriptions"
             description="Whether Flexprice cancels a subscription on your behalf when its invoices go unpaid, and how long it waits first."
-          >
-            <div className="flex flex-col gap-1.5">
-              <span className="text-sm font-medium">Cancel unpaid subscriptions automatically</span>
-              <div
-                role="group"
-                aria-label="Cancel unpaid subscriptions automatically"
-                className="flex gap-1.5"
-              >
+            footer={
+              <div className="flex w-full flex-wrap items-center justify-end gap-3">
+                <ActionError message={saveError} />
+                {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+                {!resetError && reset.isSuccess ? (
+                  <ActionNote message="Back to the defaults." />
+                ) : null}
                 <Button
                   type="button"
-                  size="sm"
+                  variant="outline"
                   disabled={busy}
-                  variant={enabled ? 'default' : 'outline'}
-                  aria-pressed={enabled}
-                  onClick={() => setEnabled(true)}
+                  onClick={() => setResetting(true)}
                 >
-                  On
+                  Reset to defaults
                 </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  disabled={busy}
-                  variant={enabled ? 'outline' : 'default'}
-                  aria-pressed={!enabled}
-                  onClick={() => setEnabled(false)}
-                >
-                  Off
+                <Button type="submit" disabled={busy}>
+                  {update.isPending ? 'Saving…' : 'Save changes'}
                 </Button>
               </div>
-              <p className="text-muted-foreground text-xs">
-                Off by default — cancelling a paying customer is something you opt into.
-              </p>
-            </div>
-
-            {enabled ? (
-              <div className="max-w-xs">
-                <Field
-                  label="Grace period (days)"
-                  required
-                  hint="How long non-payment is tolerated before the subscription is cancelled."
-                  {...(graceError ? { error: graceError } : {})}
+            }
+          >
+            <SettingsFieldGroup
+              legend="Unpaid subscriptions"
+              description="Whether Flexprice cancels a subscription on your behalf when its invoices go unpaid."
+            >
+              <SettingRow
+                title="Cancel automatically"
+                description="Off by default — cancelling a paying customer is something you opt into."
+                labelFor="subscription-auto-cancel"
+                last={!enabled}
+              >
+                <Switch
+                  id="subscription-auto-cancel"
+                  checked={enabled}
+                  disabled={busy}
+                  onCheckedChange={(checked) => setEnabled(checked)}
+                />
+              </SettingRow>
+              {enabled ? (
+                <SettingRow
+                  title="Grace period"
+                  description="How long non-payment is tolerated before the subscription is cancelled. At least one day."
+                  labelFor="subscription-grace-days"
+                  last
+                  titleAddon={<span className="text-destructive" aria-hidden="true">*</span>}
                 >
-                  {({ id, ...field }) => (
+                  <div className="flex w-full flex-col gap-1">
                     <Input
-                      id={id}
+                      id="subscription-grace-days"
                       disabled={busy}
                       inputMode="numeric"
+                      aria-invalid={graceError ? true : undefined}
                       value={daysText}
                       onChange={(event) => setDays(event.target.value)}
-                      {...field}
                     />
-                  )}
-                </Field>
-              </div>
-            ) : null}
-
-            <CancellationPreview enabled={enabled} days={days} />
-          </Section>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" disabled={busy}>
-              {update.isPending ? 'Saving…' : 'Save changes'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={() => setResetting(true)}
-            >
-              Reset to defaults
-            </Button>
-            <ActionError message={saveError} />
-            {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-            {!resetError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
-          </div>
+                    {graceError ? (
+                      <p role="alert" className="text-destructive text-xs">
+                        {graceError}
+                      </p>
+                    ) : null}
+                  </div>
+                </SettingRow>
+              ) : null}
+            </SettingsFieldGroup>
+            <div className="px-5 pb-4">
+              <CancellationPreview enabled={enabled} days={days} />
+            </div>
+          </SettingsCard>
         </Panel>
       </form>
 

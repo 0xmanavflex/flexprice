@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { ApiError } from '@fp/query'
-import { ErrorState } from '@fp/ui/compositions'
+import { ErrorState, SettingsCard } from '@fp/ui/compositions'
 
 /**
  * The few things every settings panel needs, in one place.
@@ -91,6 +91,37 @@ export function ActionNote({ message }: { message: string | null }) {
     <p role="status" className="text-muted-foreground text-sm">
       {message}
     </p>
+  )
+}
+
+/**
+ * One settings region, as ReUI's settings card.
+ *
+ * The same shape as the old section — title, description, an action slot, and
+ * the body — drawn with `settings-7`'s card: a bordered header and, when there
+ * are actions, the footer bar. Callers keep passing `actions`; they land in
+ * that footer.
+ */
+export function SettingsBlock({
+  title,
+  description,
+  actions,
+  children,
+}: {
+  title: string
+  description?: string
+  actions?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <SettingsCard
+      title={title}
+      {...(description ? { description } : {})}
+      contentClassName="flex min-w-0 flex-col gap-4 overflow-x-auto px-5 py-4"
+      {...(actions ? { footer: actions } : {})}
+    >
+      {children}
+    </SettingsCard>
   )
 }
 

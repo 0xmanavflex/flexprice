@@ -1,9 +1,8 @@
 import { Link } from '@tanstack/react-router'
 import { DEFAULT_TAX_RATE_QUERY } from '@fp/domain'
 import { useTaxRates } from '@fp/query'
-import { Section } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { PanelError, Panel, toFailure } from './panelKit'
+import { PanelError, Panel, toFailure, SettingsBlock } from './panelKit'
 
 /**
  * Taxes: a signpost, not a second tax screen.
@@ -25,7 +24,7 @@ export function TaxesPanel() {
 
   return (
     <Panel>
-      <Section
+      <SettingsBlock
         title="Taxes"
         description="Which tax is added to an invoice, and where each rate applies."
         actions={
@@ -59,7 +58,7 @@ export function TaxesPanel() {
             </span>
           </p>
         )}
-      </Section>
+      </SettingsBlock>
     </Panel>
   )
 }

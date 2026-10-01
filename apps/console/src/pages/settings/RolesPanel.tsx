@@ -1,9 +1,9 @@
 import type { Role } from '@fp/domain'
 import { grantsEverything } from '@fp/domain'
 import { useRoles } from '@fp/query'
-import { LoadingRows, Section } from '@fp/ui/compositions'
+import { LoadingRows } from '@fp/ui/compositions'
 import { Badge } from '@fp/ui/primitives'
-import { PanelError, WidePanel, toFailure } from './panelKit'
+import { PanelError, WidePanel, toFailure, SettingsBlock } from './panelKit'
 
 /**
  * The role catalogue, and what each role can actually do.
@@ -60,7 +60,7 @@ export function RolesPanel() {
 
   return (
     <WidePanel>
-      <Section
+      <SettingsBlock
         title="Roles"
         description="Defined by Flexprice, not editable here. Assign them to a person under Members, or to a machine under Service accounts."
       >
@@ -79,10 +79,10 @@ export function RolesPanel() {
             ))}
           </div>
         )}
-      </Section>
+      </SettingsBlock>
 
       {machineOnly.length > 0 ? (
-        <Section
+        <SettingsBlock
           title="Service-account roles"
           description="Roles a machine identity may hold but a person may not."
         >
@@ -91,7 +91,7 @@ export function RolesPanel() {
               <RoleCard key={role.id} role={role} forMachines />
             ))}
           </div>
-        </Section>
+        </SettingsBlock>
       ) : null}
     </WidePanel>
   )

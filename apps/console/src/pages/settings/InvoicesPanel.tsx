@@ -8,10 +8,10 @@ import {
   splitDelay,
 } from '@fp/domain'
 import { useInvoiceConfig, useResetInvoiceConfig, useUpdateInvoiceConfig } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
+import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -53,7 +53,7 @@ export function InvoicesPanel() {
   if (!environmentId) {
     return (
       <Panel>
-        <Section
+        <SettingsBlock
           title="Invoice numbering"
           description="Stored per environment, so production and sandbox never share a sequence."
         >
@@ -62,7 +62,7 @@ export function InvoicesPanel() {
             title="No environment selected"
             description="Choose an environment from the switcher to see how its invoices are numbered."
           />
-        </Section>
+        </SettingsBlock>
       </Panel>
     )
   }
@@ -200,7 +200,7 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
         })}
       >
         <Panel>
-          <Section
+          <SettingsBlock
             title="Invoice numbering"
             description="The parts an invoice number is built from. Stored per environment, so production and sandbox never share a sequence."
           >
@@ -331,9 +331,9 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 )}
               </Field>
             </div>
-          </Section>
+          </SettingsBlock>
 
-          <Section
+          <SettingsBlock
             title="Dates and delivery"
             description="When an invoice falls due, and how long it waits before your customer sees it."
           >
@@ -392,11 +392,31 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 </div>
               </div>
             </div>
-          </Section>
+          </SettingsBlock>
 
-          <Section
+          <SettingsBlock
             title="Purchased credits"
             description="What happens when a customer buys wallet credits."
+            actions={
+              <div className="flex w-full flex-wrap items-center justify-end gap-3">
+                <ActionError message={saveError} />
+                {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+                {!resetError && reset.isSuccess ? (
+                  <ActionNote message="Back to the defaults." />
+                ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={busy}
+                  onClick={() => setResetting(true)}
+                >
+                  Reset to defaults
+                </Button>
+                <Button type="submit" disabled={busy}>
+                  {update.isPending ? 'Saving…' : 'Save changes'}
+                </Button>
+              </div>
+            }
           >
             <div className="flex flex-col gap-1.5">
               <span className="text-sm font-medium">
@@ -447,24 +467,7 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 completed.
               </p>
             </div>
-          </Section>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <Button type="submit" disabled={busy}>
-              {update.isPending ? 'Saving…' : 'Save changes'}
-            </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={busy}
-              onClick={() => setResetting(true)}
-            >
-              Reset to defaults
-            </Button>
-            <ActionError message={saveError} />
-            {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-            {!resetError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
-          </div>
+          </SettingsBlock>
         </Panel>
       </form>
 

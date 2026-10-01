@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ENVIRONMENT_TYPE_DESCRIPTION, ENVIRONMENT_TYPE_LABEL, EnvironmentType } from '@fp/domain'
 import { useEnvironmentList } from '@fp/query'
-import { LoadingRows, Section } from '@fp/ui/compositions'
+import { LoadingRows } from '@fp/ui/compositions'
 import {
   Badge,
   Button,
@@ -15,7 +15,7 @@ import {
 import { env } from '@/env'
 import { useSession } from '@/app/session'
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
-import { PanelError, WidePanel, toFailure } from './panelKit'
+import { PanelError, WidePanel, toFailure, SettingsBlock } from './panelKit'
 
 /** The token the mocked build signs every request with — the same one `useEnvironments` uses. */
 const MOCK_TOKEN = 'mock-session-token'
@@ -39,14 +39,14 @@ export function EnvironmentsPanel() {
   if (!token) {
     return (
       <WidePanel>
-        <Section
+        <SettingsBlock
           title="Environments"
           description="Sign in to see the environments you can work in."
         >
           <p className="text-muted-foreground text-sm">
             Environments belong to a session — there is nothing to list until one exists.
           </p>
-        </Section>
+        </SettingsBlock>
       </WidePanel>
     )
   }
@@ -61,7 +61,7 @@ export function EnvironmentsPanel() {
 
   return (
     <WidePanel>
-      <Section
+      <SettingsBlock
         title="Environments"
         description="Separate places to work. Production bills real customers; a sandbox charges nobody."
         actions={
@@ -114,7 +114,7 @@ export function EnvironmentsPanel() {
             </TableBody>
           </Table>
         )}
-      </Section>
+      </SettingsBlock>
       <EnvironmentFormPage open={creating} onOpenChange={setCreating} />
     </WidePanel>
   )

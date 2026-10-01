@@ -1,6 +1,7 @@
+import { useId } from 'react'
 import { type Tenant, type UpdateTenant, toUpdateTenantDraft, updateTenantSchema } from '@fp/domain'
 import { useTenant, useUpdateTenant, useUserInfo } from '@fp/query'
-import { Field, LoadingRows, Section } from '@fp/ui/compositions'
+import { LoadingRows, SettingRow, SettingsCard, SettingsFieldGroup } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
 import { useDraft } from './useDraft'
@@ -23,6 +24,9 @@ import { useDraft } from './useDraft'
  * empty string is a valid value meaning "not set", and `updateTenantSchema`
  * accepts it rather than demanding an address from a tenant that has none to
  * give. Only the name is required, which is why only the name is starred.
+ *
+ * Laid out as ReUI's settings card: the label sits on the left, the control
+ * on the right, and Save lives in the card footer.
  */
 export function ProfilePanel() {
   const me = useUserInfo()
@@ -82,22 +86,22 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
       })}
     >
       <Panel>
-        <Section
+        <SettingsCard
           title="Organisation"
           description="The name on your invoices, and where Flexprice reaches you."
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <TextField
-                label="Name"
-                path="name"
-                draft={draft}
-                busy={busy}
-                required
-                placeholder="Northwind Systems"
-              />
-            </div>
-
+          <SettingsFieldGroup
+            legend="Organisation"
+            description="The name on your invoices, and where Flexprice reaches you."
+          >
+            <TextField
+              label="Name"
+              path="name"
+              draft={draft}
+              busy={busy}
+              required
+              placeholder="Northwind Systems"
+            />
             <TextField
               label="Billing email"
               path="billingEmail"
@@ -107,7 +111,6 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               hint="Where invoices from Flexprice are sent."
               placeholder="billing@northwind.example"
             />
-
             <TextField
               label="Support email"
               path="helpEmail"
@@ -117,7 +120,6 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               hint="Shown to your customers when they need help with a bill."
               placeholder="support@northwind.example"
             />
-
             <TextField
               label="Phone"
               path="phone"
@@ -125,33 +127,42 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               busy={busy}
               type="tel"
               placeholder="+1 555 0142"
+              last
             />
-          </div>
-        </Section>
+          </SettingsFieldGroup>
+        </SettingsCard>
 
-        <Section
+        <SettingsCard
           title="Billing address"
           description="Printed on the invoices Flexprice issues to you. Leave it blank if you have none to give."
+          footer={
+            <div className="flex w-full flex-wrap items-center justify-end gap-3">
+              <ActionError message={saveError} />
+              {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+              <Button type="submit" disabled={busy}>
+                {busy ? 'Saving…' : 'Save changes'}
+              </Button>
+            </div>
+          }
         >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="sm:col-span-2">
-              <TextField
-                label="Address line 1"
-                path="address.line1"
-                draft={draft}
-                busy={busy}
-                autoComplete="address-line1"
-              />
-            </div>
-            <div className="sm:col-span-2">
-              <TextField
-                label="Address line 2"
-                path="address.line2"
-                draft={draft}
-                busy={busy}
-                autoComplete="address-line2"
-              />
-            </div>
+          <SettingsFieldGroup
+            legend="Billing address"
+            description="Printed on the invoices Flexprice issues to you."
+          >
+            <TextField
+              label="Address line 1"
+              path="address.line1"
+              draft={draft}
+              busy={busy}
+              autoComplete="address-line1"
+            />
+            <TextField
+              label="Address line 2"
+              path="address.line2"
+              draft={draft}
+              busy={busy}
+              autoComplete="address-line2"
+            />
             <TextField
               label="City"
               path="address.city"
@@ -181,23 +192,16 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               autoComplete="country"
               hint="Two-letter code, for example US or IN."
               placeholder="US"
+              last
             />
-          </div>
-        </Section>
-
-        <div className="flex items-center gap-3">
-          <Button type="submit" disabled={busy}>
-            {busy ? 'Saving…' : 'Save changes'}
-          </Button>
-          <ActionError message={saveError} />
-          {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-        </div>
+          </SettingsFieldGroup>
+        </SettingsCard>
       </Panel>
     </form>
   )
 }
 
-/** One labelled text input bound to a path in the draft. */
+/** One labelled text input bound to a path in the draft, as a settings row. */
 function TextField({
   label,
   path,
@@ -208,6 +212,7 @@ function TextField({
   placeholder,
   type,
   autoComplete,
+  last,
 }: {
   label: string
   path: string
@@ -218,26 +223,40 @@ function TextField({
   placeholder?: string
   type?: string
   autoComplete?: string
+  last?: boolean
 }) {
+  const id = useId()
+  const error = draft.error(path)
+
   return (
-    <Field
-      label={label}
-      {...(required ? { required: true } : {})}
-      {...(hint ? { hint } : {})}
-      {...(draft.error(path) ? { error: draft.error(path) } : {})}
+    <SettingRow
+      title={label}
+      labelFor={id}
+      {...(hint ? { description: hint } : {})}
+      {...(last ? { last: true } : {})}
+      {...(required
+        ? { titleAddon: <span className="text-destructive" aria-hidden="true">*</span> }
+        : {})}
     >
-      {({ id, ...field }) => (
+      <div className="flex w-full flex-col gap-1">
         <Input
           id={id}
           disabled={busy}
+          required={required}
+          aria-invalid={error ? true : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
           value={draft.text(path)}
           onChange={(event) => draft.setText(path, event.target.value)}
           {...(type ? { type } : {})}
           {...(placeholder ? { placeholder } : {})}
           {...(autoComplete ? { autoComplete } : {})}
-          {...field}
         />
-      )}
-    </Field>
+        {error ? (
+          <p id={`${id}-error`} role="alert" className="text-destructive text-xs">
+            {error}
+          </p>
+        ) : null}
+      </div>
+    </SettingRow>
   )
 }
