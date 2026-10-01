@@ -16,7 +16,11 @@ const meta = {
     a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
   },
   args: {
-    onSearch: fn(),
+    items: [
+      { id: 'page:customers', label: 'Customers', group: 'Pages' },
+      { id: 'page:plans', label: 'Plans', group: 'Pages' },
+    ],
+    onSelect: fn(),
     placeholder: 'Search…',
   },
 } satisfies Meta<typeof ShellSearch>
@@ -30,19 +34,21 @@ export const Default: Story = {
   },
 }
 
-/** The button opens the dialog, and submitting reports the term. */
+/** The button opens the dialog, and choosing a result reports it. */
 export const OpensADialogAndReports: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
 
     const dialog = within(await screen.findByRole('dialog'))
-    await userEvent.type(dialog.getByRole('searchbox', { name: 'Search' }), 'acme{Enter}')
-    await expect(args.onSearch).toHaveBeenCalledWith('acme')
+    await userEvent.type(dialog.getByRole('combobox', { name: 'Search' }), 'cust{Enter}')
+    await expect(args.onSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'page:customers' }),
+    )
   },
 }
 
 /**
- * Without `onSearch` there is no field.
+ * Without `onSelect` there is no field.
  *
  * An input that takes a query, closes the dialog and drops it teaches that
  * search is broken rather than absent — and it was doing exactly that in the
@@ -61,6 +67,6 @@ export const NotAvailableYet: Story = {
     // `waitFor`, so the check retries while the dialog animates open.
     await waitFor(() => expect(dialog.getByText(/available yet/)).toBeVisible())
     // Nothing that could swallow a query.
-    await expect(dialog.queryByRole('searchbox')).not.toBeInTheDocument()
+    await expect(dialog.queryByRole('combobox')).not.toBeInTheDocument()
   },
 }

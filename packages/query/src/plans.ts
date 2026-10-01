@@ -114,7 +114,7 @@ export async function fetchPlans(client: Flexprice, query: PlanQuery): Promise<P
   }
 }
 
-export function usePlans(query: PlanQuery) {
+export function usePlans(query: PlanQuery, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
   // `view` is a layout, not a filter: it must not miss the cache on a toggle.
@@ -123,6 +123,7 @@ export function usePlans(query: PlanQuery) {
   return useQuery({
     queryKey: queryKeys.plans.list({ ...key, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchPlans(client, query),
+    enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
 }

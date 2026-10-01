@@ -110,12 +110,13 @@ export async function fetchCustomers(
   }
 }
 
-export function useCustomers(query: CustomerQuery) {
+export function useCustomers(query: CustomerQuery, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
   return useQuery({
     queryKey: queryKeys.customers.list({ ...query, statuses: [...query.statuses].sort() }),
     queryFn: () => fetchCustomers(client, query),
+    enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
 }

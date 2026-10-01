@@ -1,5 +1,4 @@
 import { BookOpenIcon, LogOutIcon, SettingsIcon, UserIcon } from 'lucide-react'
-import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,7 +36,13 @@ export interface ShellAccountProps {
   onSignOut?: () => void
 }
 
-export function ShellAccount({ user, onProfile, onSettings, onDocs, onSignOut }: ShellAccountProps) {
+export function ShellAccount({
+  user,
+  onProfile,
+  onSettings,
+  onDocs,
+  onSignOut,
+}: ShellAccountProps) {
   /*
    * A display name that fell back to the email address is not a second fact.
    *
@@ -52,15 +57,22 @@ export function ShellAccount({ user, onProfile, onSettings, onDocs, onSignOut }:
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            className="opacity-70 hover:opacity-100"
+          <button
+            type="button"
             aria-label={`Account: ${user.name}. Open account menu`}
+            className="hover:bg-sidebar-accent/80 focus-visible:ring-sidebar-ring flex w-full min-w-0 items-center gap-2.5 rounded-xl p-1 text-left transition-colors focus-visible:ring-2 focus-visible:outline-none in-data-[state=collapsed]:justify-center"
           />
         }
       >
-        <UserIcon aria-hidden />
+        <span
+          aria-hidden
+          className="bg-muted text-foreground/80 flex size-10 shrink-0 items-center justify-center rounded-full border"
+        >
+          <UserIcon className="size-5" />
+        </span>
+        <span className="bg-muted text-foreground/80 min-w-0 flex-1 truncate rounded-md px-2 py-1 text-xs in-data-[state=collapsed]:hidden">
+          {user.name}
+        </span>
       </DropdownMenuTrigger>
 
       <DropdownMenuContent side="top" align="start" sideOffset={8} className={MENU_CONTENT}>
@@ -73,7 +85,9 @@ export function ShellAccount({ user, onProfile, onSettings, onDocs, onSignOut }:
           <DropdownMenuLabel className="flex min-w-0 flex-col px-2.5 py-1.5">
             <span className="truncate text-sm font-medium">{user.name}</span>
             {secondary ? (
-              <span className="text-muted-foreground truncate text-xs font-normal">{secondary}</span>
+              <span className="text-muted-foreground truncate text-xs font-normal">
+                {secondary}
+              </span>
             ) : null}
           </DropdownMenuLabel>
         </DropdownMenuGroup>

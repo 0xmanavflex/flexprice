@@ -114,12 +114,12 @@ describe('the secondary destinations', () => {
     expect(SECONDARY.map((entry) => entry.id)).toEqual(['settings', 'docs'])
   })
 
-  it('keeps the primary tree at twenty-four destinations', () => {
+  it('keeps the primary tree at twenty-three destinations', () => {
     const count = NAV.reduce(
       (total, entry) => total + (entry.path ? 1 : 0) + (entry.children?.length ?? 0),
       0,
     )
-    expect(count).toBe(24)
+    expect(count).toBe(23)
   })
 })
 
@@ -174,7 +174,6 @@ describe('every destination resolves', () => {
     '/workflows',
     '/exports',
     '/pricing-widget',
-    '/integrations',
     '/usage-syncs',
     '/settings',
     '/api-keys',

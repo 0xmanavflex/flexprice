@@ -127,13 +127,8 @@ export interface InvoicePage {
   total: number
 }
 
-export async function fetchInvoices(
-  client: Flexprice,
-  query: InvoiceQuery,
-): Promise<InvoicePage> {
-  const response = await call(() =>
-    client.invoices.queryInvoice(toInvoiceFilter(query) as never),
-  )
+export async function fetchInvoices(client: Flexprice, query: InvoiceQuery): Promise<InvoicePage> {
+  const response = await call(() => client.invoices.queryInvoice(toInvoiceFilter(query) as never))
   return {
     invoices: (response.items ?? []).map((item) => toInvoice(item as InvoiceWire)),
     total: response.pagination?.total ?? 0,
@@ -148,7 +143,7 @@ export async function fetchInvoices(
  * offset — which is what lets the page hand its state to a URL instead of to a
  * component.
  */
-export function useInvoices(query: InvoiceQuery) {
+export function useInvoices(query: InvoiceQuery, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
   return useQuery({
@@ -156,6 +151,7 @@ export function useInvoices(query: InvoiceQuery) {
     queryFn: () => fetchInvoices(client, query),
     // Keeps the previous page on screen while the next one loads, so sorting a
     // grid does not blank it. TanStack's replacement for keepPreviousData.
+    enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
 }

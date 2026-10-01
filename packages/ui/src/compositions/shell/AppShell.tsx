@@ -15,8 +15,8 @@ import { ShellAccount } from './ShellAccount'
 import { ShellNav } from './ShellNav'
 import { ShellNotifications } from './ShellNotifications'
 import { ShellRailHandle } from './ShellRailHandle'
-import { ShellSearch } from './ShellSearch'
-import { ThemeToggle } from './ThemeToggle'
+import { ShellSearch, type ShellSearchProps } from './ShellSearch'
+import { ThemeShortcut } from './ThemeShortcut'
 import type { ShellNavGroup, ShellNotification, ShellUser } from './types'
 
 /**
@@ -41,13 +41,7 @@ import type { ShellNavGroup, ShellNotification, ShellUser } from './types'
  */
 export const AppShellProvenance = provenance({
   source: 'composition',
-  composes: [
-    '@reui/app-shell-3',
-    'ui/sidebar',
-    'ui/breadcrumb',
-    'ui/dropdown-menu',
-    '@reui/badge',
-  ],
+  composes: ['@reui/app-shell-3', 'ui/sidebar', 'ui/breadcrumb', 'ui/dropdown-menu', '@reui/badge'],
   note: "app-shell-3's layout with the Flux template's surface treatment, and our controlled contract.",
 })
 
@@ -65,7 +59,8 @@ export interface AppShellProps {
 
   productName?: string
   logo?: ReactNode
-  onSearch?: (term: string) => void
+  /** Global search: static items, async results and the select handler. */
+  search?: ShellSearchProps
 
   notifications?: ShellNotification[]
   notificationsLoading?: boolean
@@ -163,7 +158,7 @@ export function AppShell({
   onSignOut,
   productName = 'Flexprice',
   logo,
-  onSearch,
+  search,
   notifications = [],
   notificationsLoading = false,
   notificationsError = null,
@@ -192,59 +187,45 @@ export function AppShell({
       */}
 
       <TooltipProvider delay={300}>
-      <ShellRailHandle />
-      <Sidebar collapsible="icon" variant="inset" aria-label="Main">
-        <SidebarHeader className="gap-2">
-          {/*
+        <ThemeShortcut />
+        <ShellRailHandle />
+        <Sidebar collapsible="icon" variant="inset" aria-label="Main">
+          <SidebarHeader className="gap-2">
+            {/*
             The tenant this console is signed in to — its name from `/users/me`
             (falling back to the product name until that resolves), with the
             brand mark beside it — so the top of the rail answers "whose data is
-            this". Bell, Theme and the account live in the footer now; the
-            environment switcher leads the breadcrumb.
+            this". The bell sits in the header; the account
+            is in the footer; the environment switcher leads the breadcrumb.
           */}
-          <div className="flex min-h-9 items-center gap-2 px-0.5">
-            {logo ?? (
-              <span
-                aria-hidden
-                className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold"
-              >
-                F
+            <div className="flex min-h-9 items-center gap-2 px-0.5">
+              {logo ?? (
+                <span
+                  aria-hidden
+                  className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold"
+                >
+                  F
+                </span>
+              )}
+              <span className="truncate text-sm font-medium in-data-[state=collapsed]:hidden">
+                {user.organization ?? productName}
               </span>
-            )}
-            <span className="truncate text-sm font-medium in-data-[state=collapsed]:hidden">
-              {user.organization ?? productName}
-            </span>
-          </div>
-        </SidebarHeader>
+            </div>
+          </SidebarHeader>
 
-        <SidebarContent>
-          <ShellNav
-            groups={navGroups}
-            {...(activeItemId === undefined ? {} : { activeItemId })}
-            onNavigate={onNavigate}
-          />
-
-          {pinned ? (
-            <div className="mt-auto px-2 pb-2 in-data-[state=collapsed]:hidden">{pinned}</div>
-          ) : null}
-        </SidebarContent>
-
-        <SidebarFooter>
-          {/*
-            Utilities and the account, back in the rail. Bell and Theme sit
-            beside the profile icon, which opens the account menu (profile,
-            settings, docs, sign out). Expanded, a row along the footer;
-            collapsed, they stack down the 64px column.
-          */}
-          <div className="flex items-center gap-0.5 px-1 in-data-[state=collapsed]:flex-col in-data-[state=collapsed]:px-0">
-            <ShellNotifications
-              notifications={notifications}
-              isLoading={notificationsLoading}
-              error={notificationsError}
-              {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
-              {...(onOpenNotification ? { onOpenNotification } : {})}
+          <SidebarContent>
+            <ShellNav
+              groups={navGroups}
+              {...(activeItemId === undefined ? {} : { activeItemId })}
+              onNavigate={onNavigate}
             />
-            <ThemeToggle />
+
+            {pinned ? (
+              <div className="mt-auto px-2 pb-2 in-data-[state=collapsed]:hidden">{pinned}</div>
+            ) : null}
+          </SidebarContent>
+
+          <SidebarFooter>
             <ShellAccount
               user={user}
               {...(onProfile ? { onProfile } : {})}
@@ -252,43 +233,49 @@ export function AppShell({
               {...(onDocs ? { onDocs } : {})}
               {...(onSignOut ? { onSignOut } : {})}
             />
-          </div>
-        </SidebarFooter>
-      </Sidebar>
+          </SidebarFooter>
+        </Sidebar>
 
-      {/*
+        {/*
         The content plane is lifted off the sidebar: a border, a rounded corner,
         and a layered shadow (in `styles.css`, so it can differ by theme) that
         reads as the panel floating a little in front of the rail — a light 3D
         depth in both modes rather than a flat seam.
       */}
-      <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border lg:peer-data-[variant=inset]:rounded-2xl">
-        {/* A rule under the header, so the breadcrumb is not floating over
+        <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border lg:peer-data-[variant=inset]:rounded-2xl">
+          {/* A rule under the header, so the breadcrumb is not floating over
             whatever the page happens to start with. The header spans the full
             width now: the breadcrumb leads at the left edge and Search/Create
             close it at the right, so on a wide screen the chrome reaches the
             ends even though the content below caps and centres at `--shell-max`. */}
-        <header className="flex h-12 shrink-0 items-center gap-2 border-b px-6">
-          {/* The edge handle is desktop-only — below `lg` the sidebar is a
+          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-6">
+            {/* The edge handle is desktop-only — below `lg` the sidebar is a
               sheet, and this is the only thing that opens it. `lg`, not `md`: at
               exactly 768 `md:hidden` had already taken the trigger away while the
               sidebar was still a 260px push panel, so a third of the viewport
               went to navigation with nothing offering to close it. */}
-          <SidebarTrigger className="-ml-1 shrink-0 lg:hidden" />
-          {breadcrumb}
-          {/*
+            <SidebarTrigger className="-ml-1 shrink-0 lg:hidden" />
+            {breadcrumb}
+            {/*
             Search and Create close the header at the right edge. `shrink-0` so
             the cluster is never squeezed off by a long breadcrumb; the crumbs
             truncate instead, keeping Create reachable at 390. Bell and Theme
             used to sit here — they have moved back into the sidebar footer.
           */}
-          <div className="ml-auto flex shrink-0 items-center gap-1.5">
-            <ShellSearch {...(onSearch ? { onSearch } : {})} />
-            {headerActions}
-          </div>
-        </header>
+            <div className="ml-auto flex shrink-0 items-center gap-1.5">
+              <ShellNotifications
+                notifications={notifications}
+                isLoading={notificationsLoading}
+                error={notificationsError}
+                {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
+                {...(onOpenNotification ? { onOpenNotification } : {})}
+              />
+              <ShellSearch {...(search ?? {})} />
+              {headerActions}
+            </div>
+          </header>
 
-        {/*
+          {/*
           A div, not a `main`. `SidebarInset` is already the `main` landmark —
           nesting another inside it produces two, and a document may have one.
 
@@ -297,8 +284,8 @@ export function AppShell({
           fit-to-window has a bounded height to measure. Pages that read top to
           bottom (forms) own their scroll with `h-full overflow-y-auto`.
         */}
-        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
-      </SidebarInset>
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+        </SidebarInset>
       </TooltipProvider>
     </SidebarProvider>
   )

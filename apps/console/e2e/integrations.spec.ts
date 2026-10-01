@@ -13,7 +13,8 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test.describe('integrations', () => {
+// The /integrations route is removed for now; the page code is kept.
+test.describe.skip('integrations', () => {
   test('shows the catalogue with connection status', async ({ page }) => {
     await page.goto('/integrations')
 

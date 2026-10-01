@@ -276,7 +276,7 @@ export async function fetchFeatures(client: Flexprice, query: FeatureQuery): Pro
   }
 }
 
-export function useFeatures(query: FeatureQuery) {
+export function useFeatures(query: FeatureQuery, options: { enabled?: boolean } = {}) {
   const client = useFlexprice()
 
   // `view` is a layout, not a filter: it changes nothing about what is fetched,
@@ -290,6 +290,7 @@ export function useFeatures(query: FeatureQuery) {
       statuses: [...query.statuses].sort(),
     }),
     queryFn: () => fetchFeatures(client, query),
+    enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
 }

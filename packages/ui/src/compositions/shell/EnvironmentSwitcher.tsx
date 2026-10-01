@@ -108,7 +108,7 @@ export function EnvironmentSwitcher({
         }
       >
         <Mark kind={current.kind} />
-        <span className="min-w-0 truncate font-medium">{current.name}</span>
+        <span className="min-w-0 truncate text-sm font-normal">{current.name}</span>
         {isProduction ? (
           <Badge variant="destructive-light" size="sm" className="shrink-0">
             Live
@@ -123,7 +123,7 @@ export function EnvironmentSwitcher({
             type="button"
             aria-label={`Environment: ${current.name}, ${current.kind}. Change environment`}
             className={cn(
-              'hover:bg-sidebar-accent/80 focus-visible:ring-sidebar-ring flex h-9 w-full items-center gap-2 rounded-xl border border-transparent px-3 text-sm transition-colors hover:border-border/60 focus-visible:ring-2 focus-visible:outline-none',
+              'hover:bg-sidebar-accent/80 focus-visible:ring-sidebar-ring hover:border-border/60 flex h-9 w-full items-center gap-2 rounded-xl border border-transparent px-3 text-sm transition-colors focus-visible:ring-2 focus-visible:outline-none',
               // The whole row takes the warning, not just a badge inside it — a
               // tint across the control is harder to look past than a chip.
               isProduction && 'bg-destructive/8 hover:bg-destructive/12',
@@ -134,7 +134,7 @@ export function EnvironmentSwitcher({
               // The border is what makes it read as a control rather than a
               // stray dot; the mark is what keeps the environment legible at
               // 48px, which is the width people work at once they collapse it.
-              isRail && 'mx-auto size-8 w-8 justify-center border-border/60 px-0',
+              isRail && 'border-border/60 mx-auto size-8 w-8 justify-center px-0',
             )}
           />
         }
@@ -226,13 +226,7 @@ export function EnvironmentSwitcher({
  * is the "test mode" convention a billing operator already knows, and it pairs
  * with production's red as a two-state signal rather than colour-versus-absence.
  */
-export function Mark({
-  kind,
-  className,
-}: {
-  kind: ShellEnvironment['kind']
-  className?: string
-}) {
+export function Mark({ kind, className }: { kind: ShellEnvironment['kind']; className?: string }) {
   return (
     <span
       aria-hidden
@@ -262,9 +256,7 @@ function Option({
       aria-current={isCurrent ? 'true' : undefined}
     >
       <Mark kind={environment.kind} />
-      <span className={cn('min-w-0 truncate', isCurrent && 'font-medium')}>
-        {environment.name}
-      </span>
+      <span className={cn('min-w-0 truncate', isCurrent && 'font-medium')}>{environment.name}</span>
       {isCurrent ? <CheckIcon aria-hidden className="ml-auto size-4 shrink-0" /> : null}
     </DropdownMenuItem>
   )

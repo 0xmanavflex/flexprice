@@ -18,7 +18,7 @@ export { ShellRailHandle, ShellRailHandleProvenance } from './ShellRailHandle'
 export { ShellSearch, ShellSearchProvenance } from './ShellSearch'
 export { ThemeProvider, ThemeProviderProvenance } from './ThemeProvider'
 export { ThemeToggle, ThemeToggleProvenance } from './ThemeToggle'
-export type { ShellSearchProps } from './ShellSearch'
+export type { ShellSearchItem, ShellSearchProps } from './ShellSearch'
 export type {
   ShellEnvironment,
   ShellNavGroup,

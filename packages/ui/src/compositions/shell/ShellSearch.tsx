@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { Fragment, useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
 import { SearchIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -9,6 +9,7 @@ import {
   DialogTitle,
 } from '@ui/components/primitives/dialog'
 import { Input } from '@ui/components/primitives/input'
+import { cn } from '@ui/lib/cn'
 import { Kbd } from '@ui/components/primitives/kbd'
 import { provenance } from '@ui/provenance'
 
@@ -31,7 +32,7 @@ import { provenance } from '@ui/provenance'
  * one worth learning; ⌘K is bound as well because it is what everyone reaches
  * for first and failing silently would teach the wrong thing.
  *
- * Without `onSearch` there is no field at all.
+ * Without `onSelect` there is no field at all.
  *
  * The console has no global search endpoint yet, and the shell was rendering
  * the full control anyway: a `/` hint, two bound shortcuts, and an input that
@@ -48,34 +49,70 @@ export const ShellSearchProvenance = provenance({
   note: "The block's search-form, with the submit wired to a callback instead of a mock.",
 })
 
+export interface ShellSearchItem {
+  id: string
+  label: string
+  /** The heading the row sits under: Pages, Actions, Customers… */
+  group: string
+  /** A quiet second line or trailing hint — an email, a status. */
+  hint?: string
+  icon?: ReactNode
+  /** Extra words that should match without being shown. */
+  keywords?: string
+}
+
 export interface ShellSearchProps {
-  /** Called on submit. Absent means search is not available yet. */
-  onSearch?: (term: string) => void
+  /** Always-available destinations and actions, filtered on the client. */
+  items?: ShellSearchItem[]
+  /** Records found on the server for the current term, shown beneath `items`. */
+  results?: ShellSearchItem[]
+  isSearching?: boolean
+  /** Reports the typed term (empty when the dialog closes) so the app can query. */
+  onTermChange?: (term: string) => void
+  onSelect?: (item: ShellSearchItem) => void
   placeholder?: string
 }
 
+const MAX_STATIC = 8
+
 // The default names the *scope*, not just "Search": the list toolbars each say
-// "Search plans…"/"Search features…", so the header's own search has to say it
-// reaches wider, or the two read as the same box twice.
-export function ShellSearch({ onSearch, placeholder = 'Search everything' }: ShellSearchProps) {
+// "Search plans…", so the header's own search has to say it reaches wider.
+export function ShellSearch({
+  items = [],
+  results = [],
+  isSearching = false,
+  onTermChange,
+  onSelect,
+  placeholder = 'Search everything',
+}: ShellSearchProps) {
   const [open, setOpen] = useState(false)
-  const available = onSearch !== undefined
+  const [term, setTerm] = useState('')
+  const [active, setActive] = useState(0)
+  const available = onSelect !== undefined
+
+  const changeTerm = (next: string) => {
+    setTerm(next)
+    setActive(0)
+    onTermChange?.(next)
+  }
+
+  const changeOpen = (next: boolean) => {
+    setOpen(next)
+    if (!next) changeTerm('')
+  }
 
   useEffect(() => {
-    // Nothing to reach, so nothing is bound: a shortcut that opens an
-    // apology is still a shortcut that interrupted what you were typing.
+    // Nothing to reach, so nothing is bound.
     if (!available) return
 
-    function onKeyDown(event: KeyboardEvent) {
+    function onKeyDown(event: globalThis.KeyboardEvent) {
       if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
         event.preventDefault()
         setOpen(true)
         return
       }
 
-      // `/` is the hint Flux shows, and it is the faster of the two — but a
-      // bare character cannot be claimed globally, or typing a path into any
-      // field on the page opens a dialog on top of it.
+      // A bare `/` cannot be claimed while someone is typing in a field.
       if (event.key === '/' && !event.metaKey && !event.ctrlKey && !event.altKey) {
         const target = event.target as HTMLElement | null
         const typing =
@@ -93,14 +130,54 @@ export function ShellSearch({ onSearch, placeholder = 'Search everything' }: She
     return () => window.removeEventListener('keydown', onKeyDown)
   }, [available])
 
+  const needle = term.trim().toLowerCase()
+  const visible = useMemo(() => {
+    const matched = needle
+      ? items.filter((item) =>
+          `${item.label} ${item.group} ${item.keywords ?? ''}`.toLowerCase().includes(needle),
+        )
+      : items.slice(0, MAX_STATIC)
+    return [...matched, ...(needle ? results : [])]
+  }, [items, results, needle])
+
+  const groups = useMemo(() => {
+    const order: string[] = []
+    const byGroup = new Map<string, ShellSearchItem[]>()
+    for (const item of visible) {
+      if (!byGroup.has(item.group)) {
+        byGroup.set(item.group, [])
+        order.push(item.group)
+      }
+      byGroup.get(item.group)!.push(item)
+    }
+    return order.map((group) => ({ group, rows: byGroup.get(group)! }))
+  }, [visible])
+
+  const choose = (item: ShellSearchItem) => {
+    onSelect?.(item)
+    changeOpen(false)
+  }
+
+  const onInputKeyDown = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setActive((index) => (visible.length === 0 ? 0 : (index + 1) % visible.length))
+    } else if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setActive((index) =>
+        visible.length === 0 ? 0 : (index - 1 + visible.length) % visible.length,
+      )
+    } else if (event.key === 'Enter') {
+      const item = visible[active]
+      if (item) {
+        event.preventDefault()
+        choose(item)
+      }
+    }
+  }
+
   return (
     <>
-      {/*
-        A compact control for the header, sized to sit beside the Create button.
-        The hint and label fold away first as the bar narrows, leaving the icon
-        alone on a phone where the breadcrumb and Create need the room; the
-        button keeps its name for anything reading the tree.
-      */}
       <Button
         type="button"
         variant="outline"
@@ -115,47 +192,96 @@ export function ShellSearch({ onSearch, placeholder = 'Search everything' }: She
           className="pointer-events-none size-4 shrink-0 opacity-60 select-none"
         />
         <span className="hidden sm:inline">{placeholder}</span>
-        {available ? <Kbd className="ml-1 hidden sm:inline-flex">/</Kbd> : null}
+        {available ? <Kbd className="ml-1 hidden sm:inline-flex">⌘K</Kbd> : null}
       </Button>
 
-      <Dialog open={open} onOpenChange={setOpen}>
-        {/*
-          `w-[calc(100%-2rem)]`, because `max-w-md` alone never engages below
-          448px: on a 390px phone the dialog was exactly 390 wide at x=0, its
-          rounded corners flush against both edges of the screen.
-        */}
-        <DialogContent className="w-[calc(100%-2rem)] max-w-md px-4 py-2 **:data-[slot=dialog-close]:top-1/2 **:data-[slot=dialog-close]:right-3 **:data-[slot=dialog-close]:-translate-y-1/2 **:data-[slot=dialog-close]:opacity-60">
+      <Dialog open={open} onOpenChange={changeOpen}>
+        <DialogContent className="w-[calc(100%-2rem)] max-w-xl gap-0 p-0 **:data-[slot=dialog-close]:hidden">
           {available ? (
             <>
               <DialogHeader className="sr-only">
                 <DialogTitle>Search</DialogTitle>
                 <DialogDescription>
-                  Search customers, invoices, plans and features.
+                  Search pages, customers, plans, features and invoices.
                 </DialogDescription>
               </DialogHeader>
-              <form
-                role="search"
-                className="relative flex items-center gap-3"
-                onSubmit={(event) => {
-                  event.preventDefault()
-                  const term = new FormData(event.currentTarget).get('q')?.toString() ?? ''
-                  onSearch(term)
-                  setOpen(false)
-                }}
-              >
+              <div role="search" className="flex items-center gap-3 border-b px-4">
                 <SearchIcon aria-hidden className="pointer-events-none size-4 opacity-60" />
                 <Input
-                  type="search"
+                  type="text"
                   name="q"
                   autoFocus
+                  autoComplete="off"
+                  role="combobox"
+                  aria-expanded
+                  aria-controls="shell-search-list"
+                  aria-activedescendant={
+                    visible[active] ? `shell-search-${visible[active].id}` : undefined
+                  }
                   aria-label="Search"
-                  placeholder="Type to search…"
-                  className="h-10 border-none p-0 shadow-none outline-none focus-visible:ring-0"
+                  placeholder="Search pages, customers, plans, invoices…"
+                  value={term}
+                  onChange={(event) => changeTerm(event.target.value)}
+                  onKeyDown={onInputKeyDown}
+                  className="h-12 border-none p-0 shadow-none outline-none focus-visible:ring-0"
                 />
-              </form>
+                <Kbd className="shrink-0">Esc</Kbd>
+              </div>
+              <div
+                id="shell-search-list"
+                role="listbox"
+                aria-label="Results"
+                className="max-h-80 overflow-y-auto p-2"
+              >
+                {visible.length === 0 ? (
+                  <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+                    {isSearching ? 'Searching…' : `No results for “${term.trim()}”.`}
+                  </p>
+                ) : (
+                  groups.map(({ group, rows }) => (
+                    <Fragment key={group}>
+                      <div className="text-muted-foreground px-3 pt-2 pb-1 text-xs font-medium">
+                        {group}
+                      </div>
+                      {rows.map((item) => {
+                        const index = visible.indexOf(item)
+                        return (
+                          <div
+                            key={`${group}-${item.id}`}
+                            id={`shell-search-${item.id}`}
+                            role="option"
+                            aria-selected={index === active}
+                            onMouseMove={() => setActive(index)}
+                            onClick={() => choose(item)}
+                            className={cn(
+                              'flex h-9 cursor-pointer items-center gap-2.5 rounded-lg px-3 text-sm',
+                              index === active && 'bg-muted',
+                            )}
+                          >
+                            {item.icon ? (
+                              <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
+                                {item.icon}
+                              </span>
+                            ) : null}
+                            <span className="min-w-0 flex-1 truncate">{item.label}</span>
+                            {item.hint ? (
+                              <span className="text-muted-foreground max-w-[45%] truncate text-xs">
+                                {item.hint}
+                              </span>
+                            ) : null}
+                          </div>
+                        )
+                      })}
+                    </Fragment>
+                  ))
+                )}
+                {isSearching && visible.length > 0 ? (
+                  <p className="text-muted-foreground px-3 py-2 text-xs">Searching…</p>
+                ) : null}
+              </div>
             </>
           ) : (
-            <div className="flex items-start gap-3 py-2 pr-6">
+            <div className="flex items-start gap-3 p-4">
               <SearchIcon
                 aria-hidden
                 className="text-muted-foreground pointer-events-none mt-0.5 size-4 shrink-0 opacity-60"
@@ -165,8 +291,7 @@ export function ShellSearch({ onSearch, placeholder = 'Search everything' }: She
                   Search isn&rsquo;t available yet
                 </DialogTitle>
                 <DialogDescription className="text-muted-foreground text-sm">
-                  There is nothing to search across the whole console for now. Each list —
-                  customers, invoices, plans, features — has its own search box in its toolbar.
+                  Each list has its own search box in its toolbar.
                 </DialogDescription>
               </DialogHeader>
             </div>

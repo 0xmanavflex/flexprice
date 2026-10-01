@@ -119,8 +119,11 @@ const meta = {
     onSettings: fn(),
     onDocs: fn(),
     onSignOut: fn(),
-    onSearch: fn(),
-    children: <div className="p-6 text-sm text-muted-foreground">Page content.</div>,
+    search: {
+      items: [{ id: 'page:customers', label: 'Customers', group: 'Pages' }],
+      onSelect: fn(),
+    },
+    children: <div className="text-muted-foreground p-6 text-sm">Page content.</div>,
   },
 } satisfies Meta<typeof AppShell>
 
@@ -255,8 +258,8 @@ export const SearchOpensADialog: Story = {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
 
     const dialog = within(await screen.findByRole('dialog'))
-    await userEvent.type(dialog.getByRole('searchbox', { name: 'Search' }), 'acme{Enter}')
-    await expect(args.onSearch).toHaveBeenCalledWith('acme')
+    await userEvent.type(dialog.getByRole('combobox', { name: 'Search' }), 'cust{Enter}')
+    await expect(args.search?.onSelect).toHaveBeenCalled()
   },
 }
 
@@ -300,9 +303,7 @@ export const NotificationsFailed: Story = {
   args: { notificationsError: { message: 'The service did not respond.' } },
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Notifications' }))
-    await expect(await screen.findByRole('alert')).toHaveTextContent(
-      /could not be loaded/i,
-    )
+    await expect(await screen.findByRole('alert')).toHaveTextContent(/could not be loaded/i)
   },
 }
 
@@ -321,9 +322,7 @@ export const NotificationsLoading: Story = {
  */
 export const AccountMenu: Story = {
   play: async ({ canvasElement, args }) => {
-    await userEvent.click(
-      within(canvasElement).getByRole('button', { name: /account: dinesh k/i }),
-    )
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /account: dinesh k/i }))
     // `waitFor` so the visibility checks retry while the menu animates open.
     await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeVisible())
     await waitFor(() =>
