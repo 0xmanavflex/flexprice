@@ -46,7 +46,7 @@ import {
   AddChargeDialog,
   CreditGrantCreateForm,
   CreditGrantEditForm,
-  CreditGrantTable,
+  PlanCreditGrantsView,
   EntitlementCreateForm,
   EntitlementEditForm,
   EntityHeader,
@@ -233,7 +233,7 @@ export function PlanDetailPage({
         }
       />
 
-      <div className="grid grid-cols-1 gap-6 px-6 pb-10 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="px-6 pb-10">
         <div className="min-w-0">
           <DetailTabs
             value={tab}
@@ -243,7 +243,7 @@ export function PlanDetailPage({
                 value: 'overview',
                 label: 'Charges',
                 ...count(charges.data),
-                content: <ChargesTab planId={planId} />,
+                content: <ChargesTab planId={planId} planName={record.name} readOnly={isArchived} />,
               },
               {
                 value: 'entitlements',
@@ -288,14 +288,6 @@ export function PlanDetailPage({
           />
         </div>
 
-        <aside className="lg:sticky lg:top-4 lg:self-start">
-          <PlanCustomerPreview
-            name={record.name}
-            charges={charges.data ?? []}
-            entitlements={entitlements.data ?? []}
-            grants={grants.data ?? []}
-          />
-        </aside>
       </div>
 
       <ConfirmDialog
@@ -325,8 +317,18 @@ export function PlanDetailPage({
  * dialog that asks Fixed or Usage first; a row's Edit opens the form directly.
  * An edit is saved as a new price version; terminate ends a charge behind a confirm.
  */
-function ChargesTab({ planId }: { planId: string }) {
+function ChargesTab({
+  planId,
+  planName,
+  readOnly,
+}: {
+  planId: string
+  planName: string
+  readOnly: boolean
+}) {
   const charges = usePrices(PriceEntityType.Plan, planId)
+  const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
+  const grants = useCreditGrants(CreditGrantScope.Plan, planId)
   const { meters, units } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
@@ -361,12 +363,23 @@ function ChargesTab({ planId }: { planId: string }) {
 
   return (
     <>
-      <PlanChargesView
-        charges={rows}
-        onAdd={() => setForm('add')}
-        onEdit={(charge) => setForm(charge)}
-        onTerminate={(charge) => setTerminating(charge)}
-      />
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+        <PlanChargesView
+          charges={rows}
+          readOnly={readOnly}
+          onAdd={() => setForm('add')}
+          onEdit={(charge) => setForm(charge)}
+          onTerminate={(charge) => setTerminating(charge)}
+        />
+        <aside aria-label="Plan preview" className="lg:sticky lg:top-4">
+          <PlanCustomerPreview
+            name={planName}
+            charges={rows}
+            entitlements={entitlements.data ?? []}
+            grants={grants.data ?? []}
+          />
+        </aside>
+      </div>
 
       <AddChargeDialog
         open={form !== null}
@@ -566,7 +579,7 @@ function CreditGrantsTab({ planId }: { planId: string }) {
 
   return (
     <>
-      <CreditGrantTable
+      <PlanCreditGrantsView
         grants={grants.data ?? []}
         onAdd={() => setForm('add')}
         onEdit={(grant) => setForm(grant)}

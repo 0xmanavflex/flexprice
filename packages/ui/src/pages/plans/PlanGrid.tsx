@@ -287,9 +287,7 @@ export function PlanGrid({
       searchPlaceholder="Search plans…"
       status={{
         value: statusValue,
-        ...(query.statuses.length > 1
-          ? { valueLabel: `${query.statuses.length} selected` }
-          : {}),
+        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
         label: 'Status',
         onChange: (value) =>
           onQueryChange({

@@ -2,7 +2,6 @@ import { useRef, useState, type ReactNode } from 'react'
 import { BracesIcon, PencilIcon, GaugeIcon, HashIcon, ToggleRightIcon } from 'lucide-react'
 import type { CircleIcon } from 'lucide-react'
 import { type Money as MoneyValue, formatMoney } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { Input } from '@ui/components/primitives/input'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { cn } from '@ui/lib/cn'
@@ -37,7 +36,7 @@ import { Money } from './Money'
  */
 export const CellsProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/badge'],
+  composes: [],
   note: 'Column helpers and pills for EntityList. Left-aligned, truncating, medium at most.',
 })
 
@@ -112,13 +111,23 @@ export interface EntityColumn<T> {
  */
 export type PillTone = 'neutral' | 'success' | 'info' | 'warning' | 'danger'
 
-/** The dot only. Tone is carried by a 6px dot, never by the pill's fill. */
+/** The dot: tone is carried by a 6px dot. */
 const DOT_TONE: Record<PillTone, string> = {
   neutral: 'bg-muted-foreground',
   success: 'bg-success',
   info: 'bg-info',
   warning: 'bg-warning',
   danger: 'bg-destructive',
+}
+
+/** A barely-there tint behind the label. Text stays `foreground`, so contrast
+ *  never depends on the tone colour. */
+const TINT_TONE: Record<PillTone, string> = {
+  neutral: 'bg-muted',
+  success: 'bg-success/10',
+  info: 'bg-info/10',
+  warning: 'bg-warning/10',
+  danger: 'bg-destructive/10',
 }
 
 export interface PillProps {
@@ -130,7 +139,7 @@ export interface PillProps {
 }
 
 /**
- * A status, as a 24px pill with a dot.
+ * A status, as a small flat chip: a dot and a faint tint.
  *
  * The dot rather than a tinted fill: at eighteen rows a column of coloured
  * fills is a traffic light with every bulb lit, which carries exactly as much
@@ -142,20 +151,16 @@ export interface PillProps {
  */
 export function Pill({ tone = 'neutral', icon, children, className }: PillProps) {
   return (
-    <Badge
-      variant="outline"
-      radius="full"
-      // `xl` is the 24px step. The type is stepped back down to the table's
-      // own size — the badge's own `text-sm` reads as a heading in a 13px row.
-      size="xl"
+    <span
       className={cn(
-        'border-border/60 gap-1.5 bg-transparent px-2.5 text-xs font-medium whitespace-nowrap text-foreground dark:bg-transparent',
+        'text-foreground inline-flex h-5 items-center gap-1.5 rounded-md px-1.5 text-xs font-medium whitespace-nowrap',
+        TINT_TONE[tone],
         className,
       )}
     >
       {icon ?? <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', DOT_TONE[tone])} />}
       {children}
-    </Badge>
+    </span>
   )
 }
 

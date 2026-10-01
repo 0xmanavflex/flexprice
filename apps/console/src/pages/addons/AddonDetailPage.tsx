@@ -9,18 +9,13 @@ import {
   type EditCreditGrant,
   type EditEntitlement,
   type Entitlement,
-  type Money,
-  BILLING_PERIOD_LABEL,
   CreditGrantScope,
   DEFAULT_FEATURE_QUERY,
   EntitlementEntityType,
   FeatureType,
   PriceEntityType,
-  compareMoney,
   creditGrantToEdit,
   entitlementToEdit,
-  formatMoney,
-  moneyOr,
 } from '@fp/domain'
 import {
   ApiError,
@@ -55,11 +50,9 @@ import {
   AppFailure,
   ConfirmDialog,
   ContextualSection,
-  type DetailMetric,
   EditableCard,
   LoadingRows,
   PageBody,
-  Properties,
 } from '@fp/ui/compositions'
 import { PuzzleIcon } from 'lucide-react'
 
@@ -143,23 +136,6 @@ export function AddonDetailPage({
   }
 
   const data = addon.data
-  const metricItems = buildMetrics({
-    charges: prices.data ?? [],
-    chargesPending: prices.isPending,
-    entitlementCount: (entitlements.data ?? []).length,
-    entitlementsPending: entitlements.isPending,
-  }).map((metric) => ({
-    label: metric.label,
-    value: (
-      <span className="tabular-nums">
-        {metric.value}
-        {metric.hint ? (
-          <span className="text-muted-foreground font-normal"> / {metric.hint}</span>
-        ) : null}
-      </span>
-    ),
-  }))
-
   const chargeCount = (prices.data ?? []).length
   const entitlementCount = (entitlements.data ?? []).length
   const subtitle =
@@ -193,7 +169,6 @@ export function AddonDetailPage({
           ...(prices.isPending ? {} : { count: chargeCount }),
           content: (
             <div className="flex flex-col gap-6">
-              {metricItems.length > 0 ? <Properties columns={4} items={metricItems} /> : null}
               <PricesTab addonId={addonId} />
             </div>
           ),
@@ -527,98 +502,6 @@ function InformationTab({
       onSave={(changes) => onSave(changes)}
     />
   )
-}
-
-/**
- * The rail, with every tile that has no number in it left out.
- *
- * An add-on with no prices used to open on "Charges 0 · Starts at — ·
- * Currency — · Entitlements 0": four tiles carrying nothing, which on a 390px
- * phone ate roughly 310px of the first screen before any real content. The
- * house rule is that a rail tile is a number the add-on *has*, not a field it
- * is missing — so an unpriced add-on simply has fewer tiles, and one with
- * neither charges nor entitlements has no rail at all, the way feature detail
- * already omits it. `MetricRail` drops a rail whose every tile is blank, so
- * the loading '—' row does not flash an empty instrument panel either.
- */
-function buildMetrics({
-  charges,
-  chargesPending,
-  entitlementCount,
-  entitlementsPending,
-}: {
-  charges: Charge[]
-  chargesPending: boolean
-  entitlementCount: number
-  entitlementsPending: boolean
-}): DetailMetric[] {
-  const start = startingCharge(charges)
-  const currency = charges.find((charge) => charge.currency)?.currency?.toUpperCase() ?? null
-
-  const chargesMetric: DetailMetric | null = chargesPending
-    ? { label: 'Charges', value: '—' }
-    : charges.length > 0
-      ? { label: 'Charges', value: charges.length.toLocaleString() }
-      : null
-
-  const startsAtMetric: DetailMetric | null = chargesPending
-    ? { label: 'Starts at', value: '—' }
-    : start
-      ? {
-          label: 'Starts at',
-          value: formatMoney(start.money),
-          hint: BILLING_PERIOD_LABEL[start.charge.billingPeriod],
-        }
-      : charges.length > 0
-        ? { label: 'Starts at', value: 'Usage-based', sentiment: 'muted' }
-        : null
-
-  const currencyMetric: DetailMetric | null = chargesPending
-    ? { label: 'Currency', value: '—' }
-    : currency
-      ? { label: 'Currency', value: currency }
-      : null
-
-  const entitlementsMetric: DetailMetric | null = entitlementsPending
-    ? { label: 'Entitlements', value: '—' }
-    : entitlementCount > 0
-      ? { label: 'Entitlements', value: entitlementCount.toLocaleString() }
-      : null
-
-  return [chargesMetric, startsAtMetric, currencyMetric, entitlementsMetric].filter(
-    (metric): metric is DetailMetric => metric !== null,
-  )
-}
-
-/** The lowest-priced charge and its amount, for the "Starts at" metric. */
-function startingCharge(charges: Charge[]): { charge: Charge; money: Money } | null {
-  const priced = charges
-    .map((charge) => {
-      const money = amountMoney(charge)
-      return money ? { charge, money } : null
-    })
-    .filter((entry): entry is { charge: Charge; money: Money } => entry !== null)
-
-  const [first] = priced
-  if (!first) return null
-
-  // Compare within one currency — `compareMoney` refuses to compare across them.
-  const currency = first.money.currency
-  const sameCurrency = priced.filter((entry) => entry.money.currency === currency)
-  return sameCurrency.reduce((min, entry) =>
-    compareMoney(entry.money, min.money) < 0 ? entry : min,
-  )
-}
-
-/** A charge's flat amount as `Money`, or null when it prices by tiers/usage alone. */
-function amountMoney(charge: Charge): Money | null {
-  const raw = charge.amount || charge.displayAmount
-  if (!raw) return null
-  try {
-    return moneyOr(raw, charge.currency || null)
-  } catch {
-    return null
-  }
 }
 
 function formatDate(value: Date | null): string {

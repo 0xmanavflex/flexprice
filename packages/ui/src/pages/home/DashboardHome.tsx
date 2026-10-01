@@ -12,6 +12,7 @@ import {
 } from '@ui/components/primitives/select'
 import { Separator } from '@ui/components/primitives/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
+import { ChartBox } from '@ui/compositions/ChartBox'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -239,17 +240,14 @@ function Panel({
   const id = `panel-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
 
   return (
-    <section
-      aria-labelledby={id}
-      className={cn('bg-card flex min-w-0 flex-col gap-4 rounded-xl border p-5', className)}
-    >
-      <header className="flex items-start justify-between gap-3">
-        <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex items-center gap-1.5">
-            <h2 id={id} className="text-sm font-medium">
-              {title}
-            </h2>
-            {info ? (
+    <ChartBox
+      title={title}
+      titleId={id}
+      {...(description ? { description } : {})}
+      {...(action ? { actions: action } : {})}
+      {...(info
+        ? {
+            titleAdornment: (
               <Tooltip>
                 <TooltipTrigger
                   render={
@@ -265,14 +263,13 @@ function Panel({
                 </TooltipTrigger>
                 <TooltipContent className="max-w-64">{info}</TooltipContent>
               </Tooltip>
-            ) : null}
-          </div>
-          {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
-        </div>
-        {action ? <div className="flex shrink-0 gap-2">{action}</div> : null}
-      </header>
+            ),
+          }
+        : {})}
+      className={cn('min-w-0', className)}
+    >
       {children}
-    </section>
+    </ChartBox>
   )
 }
 

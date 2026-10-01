@@ -19,6 +19,7 @@ import {
 } from '@ui/components/primitives/dropdown-menu'
 import { Badge } from '@ui/components/reui/badge'
 import { Switch } from '@ui/components/primitives/switch'
+import { ChartBox } from '../../compositions/ChartBox'
 import { EditableCard } from '../../compositions/EditableCard'
 import { Section } from '../../compositions/Section'
 import { DetailTabs, Properties, SimpleTable } from '../../compositions/DetailKit'
@@ -338,12 +339,19 @@ function OverviewTab({
   return (
     <div className="flex flex-col gap-6">
       {isMetered ? (
-        <MetricChart
-          tabs={chartTabs}
-          activeTab={metric}
-          onTabChange={setMetric}
-          caption="Demo data: real usage is not wired yet"
-        />
+        <ChartBox
+          title="Usage"
+          description="How this feature is used across your customers."
+          innerClassName="overflow-hidden p-0"
+        >
+          <MetricChart
+            tabs={chartTabs}
+            activeTab={metric}
+            onTabChange={setMetric}
+            caption="Demo data: real usage is not wired yet"
+            className="rounded-none border-0 bg-transparent"
+          />
+        </ChartBox>
       ) : (
         <BlurredEmpty
           title="Nothing to chart"

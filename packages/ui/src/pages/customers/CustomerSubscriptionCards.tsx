@@ -40,49 +40,62 @@ function SubscriptionCard({
     .filter((part) => part && part !== '—')
     .join(' · ')
 
+  const range =
+    subscription.currentPeriodStart && subscription.currentPeriodEnd
+      ? `${formatDate(subscription.currentPeriodStart)} – ${formatDate(subscription.currentPeriodEnd)}`
+      : null
+
   return (
-    <article className={cn('bg-card flex flex-col gap-4 rounded-xl border p-5', className)}>
-      <div className="flex flex-col gap-1">
-        <h3 className="truncate text-sm font-medium">
-          {onOpenPlan ? (
-            <EntityLink
-              label={subscription.planName}
-              onOpen={() => onOpenPlan(subscription.planId)}
+    <article className={cn('bg-card flex flex-col overflow-hidden rounded-xl border', className)}>
+      <div className="flex flex-col gap-4 p-5">
+        <div className="flex flex-col gap-1.5">
+          <h3 className="truncate text-sm font-medium">
+            {onOpenPlan ? (
+              <EntityLink
+                label={subscription.planName}
+                onOpen={() => onOpenPlan(subscription.planId)}
+              />
+            ) : (
+              subscription.planName
+            )}
+          </h3>
+          <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+            <span
+              aria-hidden
+              className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[subscription.status])}
             />
-          ) : (
-            subscription.planName
-          )}
-        </h3>
-        <p className="text-muted-foreground flex items-center gap-2 text-xs">
-          <span
-            aria-hidden
-            className={cn('size-1.5 shrink-0 rounded-full', STATUS_DOT[subscription.status])}
-          />
-          {SUBSCRIPTION_STATUS_LABEL[subscription.status]}
-          {cadence ? <span aria-hidden>·</span> : null}
-          {cadence}
-        </p>
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <div
-          role="progressbar"
-          aria-label="Billing period progress"
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-valuenow={progress?.percent ?? 0}
-          className="bg-muted h-1 overflow-hidden rounded-full"
-        >
-          <div className="bg-primary h-full rounded-full" style={{ width: `${progress?.percent ?? 0}%` }} />
+            {SUBSCRIPTION_STATUS_LABEL[subscription.status]}
+            {cadence ? <span aria-hidden>·</span> : null}
+            {cadence}
+          </p>
         </div>
-        <p className="text-muted-foreground text-xs tabular-nums">
-          {progress ? `Day ${progress.day} of ${progress.total}` : 'Billing period not available'}
-        </p>
+
+        <div className="flex flex-col gap-1.5">
+          <div
+            role="progressbar"
+            aria-label="Billing period progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={progress?.percent ?? 0}
+            className="bg-muted h-1 overflow-hidden rounded-full"
+          >
+            <div
+              className="bg-primary h-full rounded-full"
+              style={{ width: `${progress?.percent ?? 0}%` }}
+            />
+          </div>
+          <p className="text-muted-foreground flex justify-between text-[11px] tabular-nums">
+            <span>{range ?? 'Billing period not available'}</span>
+            {progress ? <span>{`Day ${progress.day} of ${progress.total}`}</span> : null}
+          </p>
+        </div>
       </div>
 
-      <dl className="flex items-center justify-between gap-3 text-xs">
-        <dt className="text-muted-foreground">Next invoice</dt>
-        <dd className="font-medium tabular-nums">{formatDate(subscription.currentPeriodEnd)}</dd>
+      <dl className="text-muted-foreground flex items-center gap-1.5 border-t px-5 py-3 text-xs">
+        <dt>Next invoice</dt>
+        <dd className="text-foreground font-medium tabular-nums">
+          {formatDate(subscription.currentPeriodEnd)}
+        </dd>
       </dl>
     </article>
   )
@@ -108,8 +121,8 @@ export function CustomerSubscriptionCards({
   const collapsed = subscriptions.length >= 5 && onViewAll !== undefined
   const shown = collapsed ? subscriptions.slice(0, 4) : subscriptions
   return (
-    <div className="flex flex-col gap-3">
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         {shown.map((subscription, index) => (
           <SubscriptionCard
             key={subscription.id}

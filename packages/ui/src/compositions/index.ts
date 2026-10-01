@@ -111,3 +111,6 @@ export { GuidedEmptyState } from './GuidedEmptyState'
 export type { GuideCard, GuidedEmptyStateProps } from './GuidedEmptyState'
 export { ConnectorCard } from './ConnectorCard'
 export type { ConnectorCardProps } from './ConnectorCard'
+
+export { ChartBox, ChartBoxProvenance } from './ChartBox'
+export type { ChartBoxProps } from './ChartBox'

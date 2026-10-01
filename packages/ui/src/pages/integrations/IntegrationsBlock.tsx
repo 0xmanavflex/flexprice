@@ -1,7 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
+import { SearchIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Integration } from '@fp/domain'
 import { ConnectorCard } from '@ui/compositions/ConnectorCard'
+import { Input } from '@ui/components/primitives/input'
+import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { Stripe } from '@ui/components/primitives/svgs/stripe'
 
 /**
@@ -12,6 +15,8 @@ import { Stripe } from '@ui/components/primitives/svgs/stripe'
  * Connection state is real (`connections > 0`). Connect, Disconnect, Configure
  * and the on/off switch have no API yet: they update local state and toast.
  */
+const ALL = 'All'
+
 export interface IntegrationsBlockProps {
   integrations: Integration[]
 }
@@ -29,45 +34,95 @@ function Logo({ integration }: { integration: Integration }) {
 export function IntegrationsBlock({ integrations }: IntegrationsBlockProps) {
   const [connectedOverride, setConnected] = useState<Record<string, boolean>>({})
   const [disabled, setDisabled] = useState<Record<string, boolean>>({})
+  const [query, setQuery] = useState('')
+  const [category, setCategory] = useState(ALL)
+
+  const categories = useMemo(
+    () => [...new Set(integrations.flatMap((i) => i.categories))].sort(),
+    [integrations],
+  )
+  const options = useMemo(
+    () => [ALL, ...categories].map((value) => ({ value, label: value })),
+    [categories],
+  )
+
+  const visible = integrations.filter((i) => {
+    if (i.premium) return false
+    if (category !== ALL && !i.categories.includes(category)) return false
+    const needle = query.trim().toLowerCase()
+    return needle === '' || `${i.name} ${i.description}`.toLowerCase().includes(needle)
+  })
+  const isConnected = (i: Integration) => connectedOverride[i.id] ?? i.connections > 0
+  const connected = visible.filter(isConnected)
+  const available = visible.filter((i) => !isConnected(i))
+
+  const renderCard = (integration: Integration) => (
+    <ConnectorCard
+      key={integration.id}
+      testId={`integration-${integration.id}`}
+      name={integration.name}
+      description={integration.description}
+      docsUrl={integration.docsUrl}
+      logo={<Logo integration={integration} />}
+      connected={isConnected(integration)}
+      enabled={!disabled[integration.id]}
+      onConnect={() => {
+        setConnected((s) => ({ ...s, [integration.id]: true }))
+        toast(`${integration.name} connect is a demo action — no request was sent.`)
+      }}
+      onDisconnect={() => {
+        setConnected((s) => ({ ...s, [integration.id]: false }))
+        toast(`${integration.name} disconnect is a demo action — no request was sent.`)
+      }}
+      onConfigure={() => toast(`Configure ${integration.name} is not available yet.`)}
+      onEnabledChange={(on) => setDisabled((s) => ({ ...s, [integration.id]: !on }))}
+    />
+  )
+
+  const grid = 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'
 
   return (
-    <div className="w-full space-y-4">
-      <div className="space-y-0.5">
-        <h1 className="text-xl font-medium">Integrations</h1>
-        <p className="text-muted-foreground text-sm">
-          Enhance your workspace by linking external tools for communication, payments, and
-          automation.
-        </p>
+    <div className="flex w-full flex-col gap-6">
+      <div className="flex flex-wrap items-center gap-3">
+        <div className="relative w-full max-w-72">
+          <SearchIcon
+            aria-hidden
+            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
+          />
+          <Input
+            type="search"
+            aria-label="Search integrations"
+            placeholder="Search integrations…"
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <div className="flex w-56 items-center gap-2">
+          <span className="text-muted-foreground text-sm">Category</span>
+          <OptionSelect value={category} onValueChange={setCategory} options={options} />
+        </div>
       </div>
-      <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-        {integrations
-          .filter((i) => !i.premium)
-          .map((integration) => {
-            const connected = connectedOverride[integration.id] ?? integration.connections > 0
-            return (
-              <ConnectorCard
-                key={integration.id}
-                testId={`integration-${integration.id}`}
-                name={integration.name}
-                description={integration.description}
-                docsUrl={integration.docsUrl}
-                logo={<Logo integration={integration} />}
-                connected={connected}
-                enabled={!disabled[integration.id]}
-                onConnect={() => {
-                  setConnected((s) => ({ ...s, [integration.id]: true }))
-                  toast(`${integration.name} connect is a demo action — no request was sent.`)
-                }}
-                onDisconnect={() => {
-                  setConnected((s) => ({ ...s, [integration.id]: false }))
-                  toast(`${integration.name} disconnect is a demo action — no request was sent.`)
-                }}
-                onConfigure={() => toast(`Configure ${integration.name} is not available yet.`)}
-                onEnabledChange={(on) => setDisabled((s) => ({ ...s, [integration.id]: !on }))}
-              />
-            )
-          })}
-      </div>
+
+      {connected.length > 0 ? (
+        <section aria-labelledby="integrations-connected" className="flex flex-col gap-3">
+          <h2 id="integrations-connected" className="text-sm font-medium">
+            Connected
+          </h2>
+          <div className={grid}>{connected.map(renderCard)}</div>
+        </section>
+      ) : null}
+
+      <section aria-labelledby="integrations-available" className="flex flex-col gap-3">
+        <h2 id="integrations-available" className="text-sm font-medium">
+          Available
+        </h2>
+        {available.length > 0 ? (
+          <div className={grid}>{available.map(renderCard)}</div>
+        ) : (
+          <p className="text-muted-foreground text-sm">No integrations match your search.</p>
+        )}
+      </section>
     </div>
   )
 }

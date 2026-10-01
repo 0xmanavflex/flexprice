@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ExternalLinkIcon, PlugZapIcon, Settings2Icon } from 'lucide-react'
+import { ArrowUpRightIcon, PlugZapIcon, Settings2Icon } from 'lucide-react'
 import { Button, buttonVariants } from '@ui/components/primitives/button'
 import { Switch } from '@ui/components/primitives/switch'
 import { cn } from '@ui/lib/cn'
@@ -57,7 +57,7 @@ export function ConnectorCard({
               aria-label={`Setup guide for ${name}`}
               className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
             >
-              <ExternalLinkIcon className="opacity-60" aria-hidden="true" />
+              <ArrowUpRightIcon className="opacity-60" aria-hidden="true" />
             </a>
           ) : null}
         </div>
@@ -65,7 +65,6 @@ export function ConnectorCard({
           <h3 className="text-sm font-medium">{name}</h3>
           <p className="text-muted-foreground text-sm">{description}</p>
         </div>
-        <p className="text-muted-foreground text-xs">{connected ? 'Connected' : 'Not connected'}</p>
       </div>
 
       <div className="flex items-center justify-between gap-2 p-1.5">

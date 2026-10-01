@@ -65,6 +65,7 @@ export const NAV: NavEntry[] = [
       { id: 'workflows', label: 'Workflows', path: '/workflows' },
     ],
   },
+  { id: 'integrations', label: 'Integrations', path: '/integrations' },
   { id: 'pricing-widget', label: 'Pricing Widget', path: '/pricing-widget' },
 ]
 

@@ -15,7 +15,6 @@ import {
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
-import { Card, CardContent, CardHeader, CardTitle } from '@ui/components/primitives/card'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
@@ -24,7 +23,7 @@ import { provenance } from '@ui/provenance'
 import { ChargeForm, type MeterOption, type PriceUnitOption } from '../charges/ChargeForm'
 import { CreditGrantCreateForm } from '../credit-grants/CreditGrantForm'
 import { EntitlementCreateForm, type FeatureOption } from '../entitlements/EntitlementForm'
-import { PlanPreviewCard } from './PlanPreviewCard'
+import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
 
 /**
  * Create or edit a plan, on a full page.
@@ -324,24 +323,18 @@ export function PlanForm({
               name={planDraftName}
               charges={charges}
               meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}
+              included={entitlements.map((e, i) =>
+                includedLine({
+                  key: `${e.featureId}-${i}`,
+                  name: featureName(e.featureId),
+                  featureType: e.featureType,
+                  usageLimit: 'usageLimit' in e ? e.usageLimit : undefined,
+                  staticValue: 'staticValue' in e ? e.staticValue : undefined,
+                  isEnabled: 'isEnabled' in e ? e.isEnabled : undefined,
+                }),
+              )}
+              credits={grants.map((g, i) => creditLine({ ...g, key: `${i}` }))}
             />
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm">Includes</CardTitle>
-              </CardHeader>
-              <CardContent className="flex flex-col gap-3 text-sm">
-                <PreviewList
-                  title="Entitlements"
-                  empty="None yet"
-                  rows={entitlements.map((e) => featureName(e.featureId))}
-                />
-                <PreviewList
-                  title="Credit grants"
-                  empty="None yet"
-                  rows={grants.map((g) => `${g.name} · ${g.credits} credits`)}
-                />
-              </CardContent>
-            </Card>
           </aside>
         )}
       </div>
@@ -414,24 +407,5 @@ function StagedStep({
         </Button>
       )}
     </section>
-  )
-}
-
-function PreviewList({ title, rows, empty }: { title: string; rows: string[]; empty: string }) {
-  return (
-    <div className="flex flex-col gap-1">
-      <span className="text-muted-foreground text-xs font-medium">{title}</span>
-      {rows.length === 0 ? (
-        <span className="text-muted-foreground">{empty}</span>
-      ) : (
-        <ul className="flex flex-col gap-0.5">
-          {rows.map((row, index) => (
-            <li key={`${row}-${index}`} className="truncate">
-              {row}
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
   )
 }

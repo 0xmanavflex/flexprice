@@ -1,6 +1,15 @@
 import type { ReactNode } from 'react'
 import type { Money as MoneyValue } from '@fp/domain'
+import { ChartBox } from '@ui/compositions/ChartBox'
 import { Section } from '@ui/compositions/Section'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@ui/components/primitives/table'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ArcGauge } from '../shared/ArcGauge'
@@ -54,6 +63,8 @@ export const RevenueDashboardProvenance = provenance({
     'pages/shared/ArcGauge',
     'pages/shared/Money',
     'compositions/Section',
+    'compositions/ChartBox',
+    'ui/table',
   ],
   note: 'Revenue: metered volume over time, the usage mix by feature, collections by invoice state, and gross margin shown as unavailable. Every figure is API-sourced or explicitly absent.',
 })
@@ -151,6 +162,8 @@ export interface RevenueDashboardProps {
     reason: string
     /** One entry per column the table would have, and what it waits on. */
     columns: RevenueByCustomerGap[]
+    /** Real rows, when an endpoint supplies them. Formatted by the page. */
+    rows?: RevenueByCustomerRow[] | undefined
   }
   onNavigate?: (path: string) => void
 }
@@ -163,6 +176,18 @@ export interface RevenueDashboardProps {
  * reader — or whoever picks up the backend ticket — can tell from the screen
  * exactly what would have to exist.
  */
+/** One drawn row of the revenue-by-customer table; every cell arrives formatted. */
+export interface RevenueByCustomerRow {
+  id: string
+  customer: string
+  plan: string
+  netRevenue: string
+  contract: string
+  usage: string
+  cost: string
+  margin: string
+}
+
 export interface RevenueByCustomerGap {
   column: string
   blocker: string
@@ -346,10 +371,11 @@ function MixPanel({
   className?: string | undefined
 }) {
   return (
-    <Section
+    <ChartBox
       title="Revenue mix"
-      description={`Metered events by feature, ${rangeLabel}. Per-feature revenue is not returned — only one subtotal for the window — so the mix is shown by volume.`}
+      description={`Metered events by feature, ${rangeLabel}`}
       {...(className !== undefined ? { className } : {})}
+      innerClassName="flex flex-1 flex-col gap-4"
     >
       {mix.status === 'ready' && mix.slices.length > 0 ? (
         <HalfDonut
@@ -380,7 +406,7 @@ function MixPanel({
       >
         All features
       </button>
-    </Section>
+    </ChartBox>
   )
 }
 
@@ -408,9 +434,10 @@ function MarginPanel({
   onCostSheets: () => void
 }) {
   return (
-    <Section
+    <ChartBox
       title="Gross margin"
-      description="Revenue after what it costs to serve the usage behind it."
+      description="Revenue after cost sheets"
+      innerClassName="flex flex-1 flex-col gap-4"
     >
       {margin.status === 'ready' && margin.percent !== null ? (
         <ArcGauge
@@ -431,7 +458,7 @@ function MarginPanel({
       >
         Cost sheets
       </button>
-    </Section>
+    </ChartBox>
   )
 }
 
@@ -478,32 +505,65 @@ function RevenueByCustomerPanel({
   byCustomer: RevenueDashboardProps['byCustomer']
   onViewCustomers: () => void
 }) {
+  const rows = byCustomer.rows ?? []
+  const headers = ['Customer', 'Plan', 'Net revenue', 'Contract', 'Usage', 'Cost', 'Margin']
+
   return (
     <Section
       title="Revenue by customer"
       description="What each customer is worth, and what it costs to serve them."
     >
-      {byCustomer.status === 'unavailable' ? (
-        <div className="flex flex-col gap-4">
-          <Unavailable what={byCustomer.reason} className="max-w-[80ch] text-balance" />
-          {/*
-            A description list, not a table: a table here would be a table of
-            em dashes, which reads as "these customers earned nothing" rather
-            than "this cannot be asked". Each row names the column and the
-            capability it waits on.
-          */}
-          <dl className="divide-border/60 divide-y text-xs">
-            {byCustomer.columns.map((gap) => (
-              <div key={gap.column} className="grid gap-1 py-2 sm:grid-cols-[10rem_1fr] sm:gap-4">
-                <dt className="text-foreground font-medium">{gap.column}</dt>
-                <dd className="text-muted-foreground text-balance">{gap.blocker}</dd>
-              </div>
-            ))}
-          </dl>
-        </div>
-      ) : (
-        <AbsentFigure caption={byCustomer.reason} />
-      )}
+      <div className="overflow-hidden rounded-lg border">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {headers.map((header, index) => (
+                <TableHead key={header} className={index > 1 ? 'text-right' : undefined}>
+                  {header}
+                </TableHead>
+              ))}
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {rows.length > 0 ? (
+              rows.map((row) => (
+                <TableRow key={row.id}>
+                  <TableCell className="font-medium">{row.customer}</TableCell>
+                  <TableCell>{row.plan}</TableCell>
+                  {[row.netRevenue, row.contract, row.usage, row.cost, row.margin].map(
+                    (cell, index) => (
+                      <TableCell key={index} className="text-right tabular-nums">
+                        {cell}
+                      </TableCell>
+                    ),
+                  )}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={headers.length} className="py-6">
+                  <Unavailable what={byCustomer.reason} className="max-w-[80ch] text-balance" />
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
+      {rows.length === 0 && byCustomer.status === 'unavailable' ? (
+        /*
+          What each column waits on. The table above is drawn so the page has
+          its shape, but a body of em dashes would read as "these customers
+          earned nothing" rather than "this cannot be asked".
+        */
+        <dl className="divide-border/60 divide-y text-xs">
+          {byCustomer.columns.map((gap) => (
+            <div key={gap.column} className="grid gap-1 py-2 sm:grid-cols-[10rem_1fr] sm:gap-4">
+              <dt className="text-foreground font-medium">{gap.column}</dt>
+              <dd className="text-muted-foreground text-balance">{gap.blocker}</dd>
+            </div>
+          ))}
+        </dl>
+      ) : null}
       <button
         type="button"
         onClick={onViewCustomers}
@@ -545,10 +605,11 @@ function CollectionsPanel({
   const total = collections.paid + collections.open + collections.overdue
 
   return (
-    <Section
+    <ChartBox
       title="Collections"
-      description={`Invoices finalised ${rangeLabel}, by state.`}
+      description={`Invoiced ${rangeLabel}, by payment state`}
       {...(className !== undefined ? { className } : {})}
+      innerClassName="flex flex-1 flex-col gap-4"
     >
       {collections.status === 'ready' && total > 0 ? (
         <SplitMeter
@@ -574,7 +635,7 @@ function CollectionsPanel({
       >
         View invoices
       </button>
-    </Section>
+    </ChartBox>
   )
 }
 
@@ -602,17 +663,9 @@ export function RevenueDashboard({
         onSeePlans={() => go('/plans')}
       />
 
-      {/*
-       * Two panels abreast rather than three, and the reason is the legends.
-       * Both of these charts read their parts out in words beneath the mark,
-       * and a legend is the one part of a chart that cannot be made narrower —
-       * it is the text. At a third of the row the donut's five feature names
-       * run into each other; at a half they fit. Gross margin takes the full
-       * width below instead, which costs nothing, because an em-dash and one
-       * sentence are all it has to lay out.
-       */}
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
         <MixPanel mix={mix} rangeLabel={rangeLabel} onViewFeatures={() => go('/features')} />
+        <MarginPanel margin={margin} onCostSheets={() => go('/cost-sheets')} />
         <CollectionsPanel
           collections={collections}
           rangeLabel={rangeLabel}
@@ -620,11 +673,7 @@ export function RevenueDashboard({
         />
       </div>
 
-      <MarginPanel margin={margin} onCostSheets={() => go('/cost-sheets')} />
-      <RevenueByCustomerPanel
-        byCustomer={byCustomer}
-        onViewCustomers={() => go('/customers')}
-      />
+      <RevenueByCustomerPanel byCustomer={byCustomer} onViewCustomers={() => go('/customers')} />
     </div>
   )
 }

@@ -1,7 +1,6 @@
-import { PlusIcon } from 'lucide-react'
+import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from 'lucide-react'
 import { EntityLink } from '../shared/cells'
 import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import {
   Table,
@@ -11,8 +10,8 @@ import {
   TableHeader,
   TableRow,
 } from '@ui/components/primitives/table'
-import { EmptyState } from '../../compositions/EmptyState'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
+import { PlanTabCard } from './PlanTabCard'
 
 export interface PlanEntitlementsViewProps {
   entitlements: Entitlement[]
@@ -44,7 +43,23 @@ function valueOf(e: Entitlement): string {
   }
 }
 
-/** Entitlements table; the last column shows what happens past the value. */
+const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
+
+const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
+  [FeatureType.Metered]: GaugeIcon,
+  [FeatureType.Boolean]: ToggleRightIcon,
+  [FeatureType.Static]: TypeIcon,
+  [FeatureType.Config]: SlidersHorizontalIcon,
+}
+
+function includedOf(e: Entitlement): string {
+  if (e.featureType === FeatureType.Metered && e.usageLimit != null) {
+    return compact.format(e.usageLimit)
+  }
+  return valueOf(e)
+}
+
+/** Entitlements card; the last column shows what happens past the value. */
 export function PlanEntitlementsView({
   entitlements,
   usagePrice,
@@ -53,73 +68,82 @@ export function PlanEntitlementsView({
   onDelete,
   onOpenFeature,
 }: PlanEntitlementsViewProps) {
-  if (entitlements.length === 0) {
-    return (
-      <EmptyState
-        title="No entitlements yet"
-        description="Entitlements decide what a plan includes of each feature — an allowance, a flag, or a value. Add one to define what subscribers get."
-        action={
-          <Button type="button" onClick={onAdd}>
-            Add entitlement
-          </Button>
-        }
-      />
-    )
-  }
+  const add = (
+    <Button type="button" size="sm" onClick={onAdd}>
+      <PlusIcon aria-hidden className="size-4" />
+      Add entitlement
+    </Button>
+  )
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex justify-end">
-        <Button type="button" onClick={onAdd}>
-          <PlusIcon aria-hidden className="size-4" />
-          Add entitlement
-        </Button>
-      </div>
-      <div className="overflow-hidden rounded-lg border">
+    <PlanTabCard
+      title="Entitlements"
+      description="What subscribers get: feature access and included allowances"
+      action={entitlements.length > 0 ? add : undefined}
+    >
+      {entitlements.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 border-t px-6 py-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            No entitlements yet. Add the features this plan includes.
+          </p>
+          {add}
+        </div>
+      ) : (
         <Table>
-          <TableHeader>
+          <TableHeader className="bg-muted/40">
             <TableRow>
-              <TableHead>Feature</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Usage reset</TableHead>
-              <TableHead>Value</TableHead>
-              <TableHead>Usage beyond the value</TableHead>
-              <TableHead className="w-10">
+              <TableHead className="px-6 text-xs tracking-wide uppercase">Feature</TableHead>
+              <TableHead className="text-xs tracking-wide uppercase">Type</TableHead>
+              <TableHead className="text-xs tracking-wide uppercase">Included</TableHead>
+              <TableHead className="text-xs tracking-wide uppercase">Usage resets</TableHead>
+              <TableHead className="text-xs tracking-wide uppercase">
+                Usage beyond the value
+              </TableHead>
+              <TableHead className="w-12 pr-6">
                 <span className="sr-only">Actions</span>
               </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {entitlements.map((e) => {
-              const price = e.featureType === FeatureType.Metered ? usagePrice(e) : null
+              const price =
+                e.featureType === FeatureType.Metered && e.usageLimit != null ? usagePrice(e) : null
+              const Icon = TYPE_ICON[e.featureType]
+              const label = e.featureName ?? e.featureId
               return (
-                <TableRow key={e.id}>
-                  <TableCell>
-                    {onOpenFeature ? (
-                      <EntityLink
-                        label={e.featureName ?? e.featureId}
-                        onOpen={() => onOpenFeature(e.featureId)}
-                      />
-                    ) : (
-                      (e.featureName ?? e.featureId)
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <Badge variant="secondary">{TYPE_LABEL[e.featureType]}</Badge>
+                <TableRow key={e.id} className="h-14">
+                  <TableCell className="px-6">
+                    <span className="flex items-center gap-2.5">
+                      <Icon aria-hidden className="text-muted-foreground size-4" />
+                      {onOpenFeature ? (
+                        <EntityLink label={label} onOpen={() => onOpenFeature(e.featureId)} />
+                      ) : (
+                        label
+                      )}
+                    </span>
                   </TableCell>
                   <TableCell className="text-muted-foreground">
-                    {e.usageResetPeriod ? USAGE_RESET_PERIOD_LABEL[e.usageResetPeriod] : '—'}
+                    {TYPE_LABEL[e.featureType]}
                   </TableCell>
-                  <TableCell className="text-left tabular-nums">{valueOf(e)}</TableCell>
-                  <TableCell className="text-left tabular-nums">
-                    {e.featureType !== FeatureType.Metered ? (
+                  <TableCell className="tabular-nums">{includedOf(e)}</TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {e.featureType !== FeatureType.Metered
+                      ? '—'
+                      : e.usageResetPeriod
+                        ? USAGE_RESET_PERIOD_LABEL[e.usageResetPeriod]
+                        : 'Every billing period'}
+                  </TableCell>
+                  <TableCell className="text-[13px]">
+                    {e.featureType !== FeatureType.Metered || e.usageLimit == null ? (
                       <span className="text-muted-foreground">—</span>
                     ) : price ? (
-                      price
+                      <>
+                        Billed <span className="text-muted-foreground">{price}</span>
+                      </>
                     ) : (
                       <span className="text-muted-foreground">No usage price on this plan</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="pr-6">
                     <RowActionsMenu
                       label={e.featureName ?? 'entitlement'}
                       onEdit={() => onEdit(e)}
@@ -131,7 +155,7 @@ export function PlanEntitlementsView({
             })}
           </TableBody>
         </Table>
-      </div>
-    </div>
+      )}
+    </PlanTabCard>
   )
 }

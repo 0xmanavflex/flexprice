@@ -306,7 +306,8 @@ export const RevenueByCustomerIsNotDerivable: Story = {
 
     // Every column of the asked-for table is accounted for by name.
     for (const gap of BY_CUSTOMER_GAPS) {
-      await expect(canvas.getByText(gap.column)).toBeInTheDocument()
+      // Once as the table's header, once as the gap it waits on.
+      await expect(canvas.getAllByText(gap.column).length).toBeGreaterThan(0)
     }
 
     // The blockers name real routes, so the screen doubles as the backend spec.
@@ -317,5 +318,33 @@ export const RevenueByCustomerIsNotDerivable: Story = {
     const panel = canvas.getByText('Revenue by customer').closest('section')
     await expect(panel).not.toBeNull()
     await expect((panel as HTMLElement).textContent ?? '').not.toMatch(/[$£€]\s?\d/)
+  },
+}
+
+/** When an endpoint supplies rows, the table draws them and the gap list goes. */
+export const RevenueByCustomerRows: Story = {
+  args: {
+    ...ready,
+    byCustomer: {
+      ...ready.byCustomer,
+      status: 'ready' as const,
+      rows: [
+        {
+          id: 'c1',
+          customer: 'Acme Inc',
+          plan: 'Scale',
+          netRevenue: '$48,200.00',
+          contract: '$12,000.00',
+          usage: '$36,200.00',
+          cost: '$14,100.00',
+          margin: '70.7%',
+        },
+      ],
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Acme Inc')).toBeInTheDocument()
+    await expect(canvas.queryByText(/POST \/costs\/analytics/)).not.toBeInTheDocument()
   },
 }

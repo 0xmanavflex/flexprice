@@ -8,11 +8,12 @@ import {
   PriceType,
   TierMode,
 } from '@fp/domain'
-import { PlanPreviewCard } from './PlanPreviewCard'
+import { FeatureType } from '@fp/domain'
+import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
 
 /**
  * The live pricing preview. Fixtures in, a customer's-eye pricing card out —
- * headline, what the plan carries, and an example bill computed from the drafts.
+ * headline price, usage, included entitlements and credits, all from staged data.
  * No provider, no network.
  */
 const meta = {
@@ -67,7 +68,7 @@ export const Empty: Story = {
 export const FixedOnly: Story = {
   args: { name: 'Starter', charges: [base] },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('Example bill')).toBeInTheDocument()
+    await expect(within(canvasElement).getByText('What customers see')).toBeInTheDocument()
   },
 }
 
@@ -76,5 +77,50 @@ export const FixedAndUsage: Story = {
     name: 'Growth',
     charges: [base, tieredUsage, packageUsage],
     meterLabel: (id) => (id === 'meter_api' ? 'API calls' : 'Tokens'),
+  },
+}
+
+export const FullPlan: Story = {
+  args: {
+    name: 'Starter',
+    trialDays: 14,
+    charges: [base, tieredUsage, packageUsage],
+    meterLabel: (id) => (id === 'meter_api' ? 'API calls' : 'Tokens'),
+    included: [
+      includedLine({
+        key: 'a',
+        name: 'AI Tokens',
+        featureType: FeatureType.Metered,
+        usageLimit: 10_000,
+      }),
+      includedLine({
+        key: 'b',
+        name: 'Video Minutes',
+        featureType: FeatureType.Metered,
+        usageLimit: 50_000,
+      }),
+      includedLine({
+        key: 'c',
+        name: 'Compute Minutes',
+        featureType: FeatureType.Metered,
+        usageLimit: null,
+      }),
+      includedLine({ key: 'd', name: 'SSO', featureType: FeatureType.Boolean, isEnabled: true }),
+    ],
+    credits: [
+      creditLine({ key: 'g1', name: 'Welcome credits', credits: 5000, cadence: 'ONETIME' }),
+      creditLine({
+        key: 'g2',
+        name: 'Monthly included credits',
+        credits: 2000,
+        cadence: 'RECURRING',
+        period: 'MONTHLY',
+      }),
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const c = within(canvasElement)
+    await expect(c.getByText('14-day free trial · plus usage')).toBeInTheDocument()
+    await expect(c.getByText('and 1 more')).toBeInTheDocument()
   },
 }

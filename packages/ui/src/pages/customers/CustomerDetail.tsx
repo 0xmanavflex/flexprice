@@ -5,9 +5,12 @@ import {
   CUSTOMER_TAX_TREATMENT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
   type Invoice,
+  InvoiceStatus,
+  PaymentStatus,
+  compareMoney,
+  isZeroMoney,
   type Subscription,
 } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -25,11 +28,12 @@ import { EditableCard } from '@ui/compositions/EditableCard'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { LoadingRows } from '@ui/compositions/States'
 import { Money } from '../shared/Money'
-import { CatalogStatusBadge, InvoiceStatusBadge } from '../shared/StatusBadge'
 import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
 import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
-import { EntityLink } from '../shared/cells'
+import { EntityLink, Pill, type PillTone } from '../shared/cells'
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/components/primitives/table'
+import { cn } from '@ui/lib/cn'
 import { CustomerSubscriptionCards } from './CustomerSubscriptionCards'
 
 /**
@@ -152,7 +156,6 @@ export function CustomerDetail({
         trail={[{ label: 'Customers', onClick: onBack }, { label: customer.name }]}
         icon={<span className="text-xs font-medium">{initials}</span>}
         title={customer.name}
-        badge={<CatalogStatusBadge status={customer.status} />}
         {...(subtitle ? { subtitle } : {})}
         id={customer.externalId || customer.id}
         actions={
@@ -218,22 +221,18 @@ export function CustomerDetail({
               label: 'Invoices',
               count: invoices.length,
               content: (
-                <Section
+                <InvoicesCard
                   title="Invoices"
-                  description="Every invoice raised for this customer"
                   actions={
-                    <Button variant="outline" size="sm">
+                    <Button size="sm">
                       <PlusIcon aria-hidden /> New invoice
                     </Button>
                   }
-                >
-                  <InvoicesGrid
-                    invoices={invoices}
-                    isLoading={invoicesLoading}
-                    formatDate={formatDate}
-                    onOpenInvoice={onOpenInvoice}
-                  />
-                </Section>
+                  invoices={invoices}
+                  isLoading={invoicesLoading}
+                  formatDate={formatDate}
+                  onOpenInvoice={onOpenInvoice}
+                />
               ),
             },
             {
@@ -360,15 +359,18 @@ function OverviewTab({
     <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
         <div className="flex flex-col gap-6">
-          <Section
-            title="Subscriptions"
-            description="The plans this customer is billed on"
-            actions={
-              <Button variant="outline" size="sm" onClick={onCreateSubscription}>
+          <section aria-labelledby="customer-subscriptions" className="flex flex-col gap-4">
+            <header className="flex items-center justify-between gap-4">
+              <h2 id="customer-subscriptions" className="flex items-baseline gap-2 text-sm font-medium">
+                Active subscriptions
+                <span className="text-muted-foreground text-xs font-normal tabular-nums">
+                  {subscriptions.length}
+                </span>
+              </h2>
+              <Button size="sm" onClick={onCreateSubscription}>
                 <PlusIcon aria-hidden /> Create subscription
               </Button>
-            }
-          >
+            </header>
             {subscriptions.length > 0 ? (
               <CustomerSubscriptionCards
                 subscriptions={subscriptions}
@@ -383,29 +385,25 @@ function OverviewTab({
                 description="Subscribe this customer to a plan to start billing."
               />
             )}
-          </Section>
+          </section>
 
-          <Section
+          <InvoicesCard
             title="Recent invoices"
-            description="History and current collection state"
             actions={
               recent.length > 0 ? (
-                <Button variant="ghost" size="sm" onClick={onViewInvoices}>
+                <Button variant="outline" size="sm" onClick={onViewInvoices}>
                   View all
                 </Button>
               ) : null
             }
-          >
-            <InvoicesGrid
-              invoices={recent}
-              isLoading={invoicesLoading}
-              formatDate={formatDate}
-              onOpenInvoice={onOpenInvoice}
-            />
-          </Section>
+            invoices={recent}
+            isLoading={invoicesLoading}
+            formatDate={formatDate}
+            onOpenInvoice={onOpenInvoice}
+          />
         </div>
 
-        <Section title="Recent activity" description="Demo data">
+        <Section title="Activity">
           <ScrollArea className="h-[560px]">
             <div className="pr-3">
               <AccountActivityRail
@@ -463,9 +461,9 @@ function SubscriptionsTab({
               key: 'status',
               header: 'Status',
               cell: (s) => (
-                <Badge variant="outline" className="font-normal">
+                <Pill tone={s.status === 'active' ? 'success' : 'neutral'}>
                   {SUBSCRIPTION_STATUS_LABEL[s.status]}
-                </Badge>
+                </Pill>
               ),
             },
             { key: 'billing', header: 'Billing', cell: (s) => s.billingPeriodLabel },
@@ -505,61 +503,104 @@ function SubscriptionsTab({
   )
 }
 
-function InvoicesGrid({
+/** The collection state of an invoice as a simple chip. */
+function invoicePayment(invoice: Invoice): { label: string; tone: PillTone } {
+  if (invoice.status === InvoiceStatus.Paid) return { label: 'Paid', tone: 'success' }
+  if (invoice.status === InvoiceStatus.Void) return { label: 'Void', tone: 'neutral' }
+  if (invoice.status === InvoiceStatus.Skipped) return { label: 'Skipped', tone: 'neutral' }
+  if (invoice.status === InvoiceStatus.Overdue) return { label: 'Overdue', tone: 'danger' }
+  const partial =
+    !isZeroMoney(invoice.amountRemaining) &&
+    compareMoney(invoice.amountRemaining, invoice.amountDue) < 0
+  if (partial) return { label: 'Partially Paid', tone: 'warning' }
+  if (invoice.paymentStatus === PaymentStatus.Failed) return { label: 'Failed', tone: 'danger' }
+  if (invoice.paymentStatus === PaymentStatus.Succeeded) return { label: 'Paid', tone: 'success' }
+  return { label: 'Pending', tone: 'warning' }
+}
+
+/** A card holding a header and a full-bleed invoices table. */
+function InvoicesCard({
+  title,
+  actions,
   invoices,
   isLoading,
   formatDate,
   onOpenInvoice,
 }: {
+  title: string
+  actions: ReactNode
   invoices: Invoice[]
   isLoading: boolean
   formatDate: (date: Date | null) => string
   onOpenInvoice: ((invoiceId: string) => void) | undefined
 }) {
-  if (isLoading) return <LoadingRows />
+  const id = `invoices-${title.toLowerCase().replace(/\s+/g, '-')}`
+  const head = 'text-muted-foreground h-10 text-[11px] font-medium tracking-[0.08em] uppercase'
   return (
-    <SimpleTable
-      rows={invoices}
-      getRowId={(invoice) => invoice.id}
-      {...(onOpenInvoice ? { onRowClick: (invoice: Invoice) => onOpenInvoice(invoice.id) } : {})}
-      columns={[
-        {
-          key: 'number',
-          header: 'Invoice',
-          cell: (i) => <span className="font-medium">{i.number}</span>,
-        },
-        {
-          key: 'period',
-          header: 'Period',
-          cell: (i) => (
-            <span className="text-muted-foreground">
-              {i.periodStart && i.periodEnd
-                ? `${formatDate(i.periodStart)} – ${formatDate(i.periodEnd)}`
-                : '—'}
-            </span>
-          ),
-        },
-        { key: 'status', header: 'Payment', cell: (i) => <InvoiceStatusBadge status={i.status} /> },
-        {
-          key: 'due',
-          header: 'Due',
-          cell: (i) => <span className="text-muted-foreground">{formatDate(i.dueDate)}</span>,
-        },
-        {
-          key: 'total',
-          header: 'Total',
-          className: 'text-right',
-          cell: (i) => <Money value={i.total} />,
-        },
-      ]}
-      empty={
-        <EmptyState
-          size="inline"
-          title="No invoices yet"
-          description="Invoices are created automatically from subscriptions, or raised by hand."
-        />
-      }
-    />
+    <section aria-labelledby={id} className="bg-card overflow-hidden rounded-xl border">
+      <header className="flex items-start justify-between gap-4 p-6">
+        <h2 id={id} className="text-sm font-medium">
+          {title}
+        </h2>
+        {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
+      </header>
+      {isLoading ? (
+        <div className="border-t p-4">
+          <LoadingRows />
+        </div>
+      ) : invoices.length === 0 ? (
+        <div className="border-t p-6">
+          <EmptyState
+            size="inline"
+            title="No invoices yet"
+            description="Invoices are created automatically from subscriptions, or raised by hand."
+          />
+        </div>
+      ) : (
+        <Table>
+          <TableHeader>
+            <TableRow className="bg-muted/50 hover:bg-muted/50">
+              <TableHead className={cn(head, 'pl-6')}>Invoice</TableHead>
+              <TableHead className={head}>Period</TableHead>
+              <TableHead className={head}>Payment</TableHead>
+              <TableHead className={head}>Due</TableHead>
+              <TableHead className={cn(head, 'pr-6 text-right')}>Total</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {invoices.map((invoice) => {
+              const payment = invoicePayment(invoice)
+              const draft = invoice.status === InvoiceStatus.Draft
+              return (
+                <TableRow
+                  key={invoice.id}
+                  className={cn('h-14 tabular-nums', onOpenInvoice && 'cursor-pointer')}
+                  {...(onOpenInvoice ? { onClick: () => onOpenInvoice(invoice.id) } : {})}
+                >
+                  <TableCell className={cn('pl-6', draft ? 'text-muted-foreground' : 'font-medium')}>
+                    {draft ? 'Draft' : invoice.number}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {invoice.periodStart && invoice.periodEnd
+                      ? `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
+                      : '—'}
+                  </TableCell>
+                  <TableCell>
+                    <Pill tone={payment.tone}>{payment.label}</Pill>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {formatDate(invoice.dueDate)}
+                  </TableCell>
+                  <TableCell className="pr-6 text-right">
+                    <Money value={invoice.total} />
+                  </TableCell>
+                </TableRow>
+              )
+            })}
+          </TableBody>
+        </Table>
+      )}
+    </section>
   )
 }
 
