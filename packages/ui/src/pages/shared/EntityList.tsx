@@ -734,16 +734,21 @@ export function EntityList<T extends object>({
             if (value !== null) status.onChange(value)
           }}
         >
-          <SelectTrigger className="h-8 w-40" aria-label={status.label ?? 'Status'}>
+          <SelectTrigger className="h-8 w-48" aria-label={status.label ?? 'Status'}>
             {/* Base UI's SelectValue renders the raw value, so a select left
                 to itself reads "all" and "published" rather than the labels
                 in the list below it. */}
             <SelectValue>
-              {(value) =>
-                status.valueLabel ??
-                status.options.find((option) => option.value === value)?.label ??
-                value
-              }
+              {(value) => (
+                <>
+                  <span className="text-muted-foreground">{status.label ?? 'Status'}</span>
+                  <span>
+                    {status.valueLabel ??
+                      status.options.find((option) => option.value === value)?.label ??
+                      value}
+                  </span>
+                </>
+              )}
             </SelectValue>
           </SelectTrigger>
           <SelectContent>

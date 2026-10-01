@@ -95,24 +95,19 @@ export function CreditNoteGrid({
         width: 180,
         hideable: false,
       }),
+      textColumn<CreditNote>('customer', 'Customer', (row) => row.customerName, { width: 180 }),
+      textColumn<CreditNote>('invoice', 'Invoice', (row) => row.invoiceNumber, { width: 150 }),
       moneyColumn<CreditNote>('amount', 'Amount', (row) => row.amount, {
         width: 140,
         ...(locale ? { locale } : {}),
       }),
+      pillColumn<CreditNote>('type', 'Type', (row) =>
+        row.type ? { label: CREDIT_NOTE_TYPE_LABEL[row.type] } : null,
+      ),
       pillColumn<CreditNote>('status', 'Status', (row) => ({
         label: CREDIT_NOTE_STATUS_LABEL[row.status],
         tone: STATUS_TONE[row.status],
       })),
-      textColumn<CreditNote>(
-        'type',
-        'Type',
-        (row) => (row.type ? CREDIT_NOTE_TYPE_LABEL[row.type] : null),
-        {
-          width: 120,
-        },
-      ),
-      textColumn<CreditNote>('invoice', 'Invoice', (row) => row.invoiceNumber, { width: 150 }),
-      textColumn<CreditNote>('customer', 'Customer', (row) => row.customerName, { width: 180 }),
       dateColumn<CreditNote>('createdAt', 'Created', (row) => row.createdAt, {
         width: 140,
         ...(locale ? { locale } : {}),

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon } from 'lucide-react'
+import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from 'lucide-react'
 import {
   DEFAULT_INVOICE_QUERY,
   type Invoice,
@@ -305,9 +305,7 @@ export function InvoiceGrid({
          */
         status={{
           value: statusValue,
-          ...(query.statuses.length > 1
-            ? { valueLabel: `${query.statuses.length} selected` }
-            : {}),
+          ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
           label: 'Status',
           onChange: (value) =>
             onQueryChange({
@@ -338,10 +336,16 @@ export function InvoiceGrid({
               page: 1,
             }),
         }}
-        selectable
         rowActions={rowActions}
         exportFileName="invoices"
-        primaryAction={onCreate ? <Button onClick={onCreate}>New invoice</Button> : undefined}
+        primaryAction={
+          onCreate ? (
+            <Button onClick={onCreate}>
+              <PlusIcon aria-hidden className="size-4" />
+              New invoice
+            </Button>
+          ) : undefined
+        }
         {...(onInvoiceClick ? { onRowClick: onInvoiceClick } : {})}
         isLoading={isLoading}
         error={error}

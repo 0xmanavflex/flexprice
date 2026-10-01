@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge } from '@fp/ui/pages'
@@ -35,6 +36,7 @@ export function PriceUnitDetailPage({
 }: PriceUnitDetailPageProps) {
   const priceUnit = usePriceUnit(priceUnitId)
   const update = useUpdatePriceUnit()
+  const [tab, setTab] = useState(startEditing ? 'information' : 'overview')
 
   if (priceUnit.isPending) {
     return (
@@ -85,8 +87,10 @@ export function PriceUnitDetailPage({
           : 'Custom pricing unit'
       }
       id={data.code || data.id}
+      onEdit={() => setTab('information')}
       menuLabel="Price unit actions"
-      {...(startEditing ? { tab: 'information' } : {})}
+      tab={tab}
+      onTabChange={setTab}
       tabs={[
         {
           value: 'overview',

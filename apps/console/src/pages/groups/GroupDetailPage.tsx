@@ -74,6 +74,7 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
       title={data.name}
       subtitle={`${new Intl.NumberFormat().format(data.entityCount)} ${kind}`}
       id={data.lookupKey || data.id}
+      onEdit={() => setTab('information')}
       menuLabel="Group actions"
       tab={tab}
       onTabChange={setTab}

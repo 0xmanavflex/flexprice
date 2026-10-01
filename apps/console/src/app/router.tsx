@@ -1907,27 +1907,32 @@ function SettingsRouteComponent() {
 }
 
 /**
- * Developer destinations that already have a home in Settings.
+ * Developer destinations: API keys, service accounts and webhooks.
  *
- * API keys, service accounts and webhooks are built as Settings → Developers
- * panels; the sidebar links them at their own paths, so each lands on its
- * panel rather than duplicating it as a second page.
+ * Their panels live in Settings → Developers and are the same components the
+ * sidebar's own paths render here, on a plain page under the Developers
+ * breadcrumb (the redesign has them as flat lists, not as settings tabs).
+ * Settings keeps its copy, so a link to either place works.
  */
-const developerRedirects = [
-  ['/api-keys', 'api-keys'],
-  ['/service-accounts', 'service-accounts'],
-  ['/webhooks', 'webhooks'],
-].map(([path, tab]) =>
+const DeveloperPanels = lazy(() =>
+  import('@/pages/settings/DeveloperPanels').then((m) => ({ default: m.DeveloperPanels })),
+)
+
+const developerRedirects = (
+  [
+    ['/api-keys', 'api-keys'],
+    ['/service-accounts', 'service-accounts'],
+    ['/webhooks', 'webhooks'],
+  ] as const
+).map(([path, panel]) =>
   createRoute({
     getParentRoute: () => shellRoute,
-    path: path as string,
-    beforeLoad: () => {
-      throw redirect({
-        to: '/settings',
-        search: { section: 'developers', tab } as never,
-        replace: true,
-      })
-    },
+    path,
+    component: () => (
+      <Suspense fallback={null}>
+        <DeveloperPanels panel={panel} />
+      </Suspense>
+    ),
   }),
 )
 

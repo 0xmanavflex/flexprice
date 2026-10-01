@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { ArchiveIcon, BookOpenIcon, CopyIcon, PencilIcon, TicketPercentIcon } from 'lucide-react'
+import { ArchiveIcon, BookOpenIcon, CopyIcon, PencilIcon, TicketPercentIcon, PlusIcon } from 'lucide-react'
 import {
   COUPON_CADENCE_LABEL,
   COUPON_SORT_LABEL,
@@ -296,10 +296,16 @@ export function CouponGrid({
         onChange: (sortBy, sortDirection) =>
           onQueryChange({ ...query, sortBy: sortBy as CouponSortField, sortDirection, page: 1 }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="coupons"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New coupon</Button> : undefined}
+      primaryAction={
+        onCreate ? (
+          <Button onClick={onCreate}>
+            <PlusIcon aria-hidden />
+            New coupon
+          </Button>
+        ) : undefined
+      }
       {...(onCouponClick ? { onRowClick: onCouponClick } : {})}
       isLoading={isLoading}
       error={error}

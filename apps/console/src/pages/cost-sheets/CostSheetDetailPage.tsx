@@ -99,6 +99,7 @@ export function CostSheetDetailPage({
         data.description || `${count} ${count === 1 ? 'price' : 'prices'} grouped to measure cost`
       }
       id={data.lookupKey || data.id}
+      onEdit={() => setTab('information')}
       menuLabel="Cost sheet actions"
       menu={[
         ...(onEdit ? [{ id: 'edit', label: 'Edit cost sheet', onSelect: onEdit }] : []),

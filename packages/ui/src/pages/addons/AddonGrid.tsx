@@ -245,10 +245,16 @@ export function AddonGrid({
         onChange: (sortBy, sortDirection) =>
           onQueryChange({ ...query, sortBy: sortBy as AddonSortField, sortDirection, page: 1 }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="add-ons"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New add-on</Button> : undefined}
+      primaryAction={
+        onCreate ? (
+          <Button onClick={onCreate}>
+            <PlusIcon aria-hidden />
+            New add-on
+          </Button>
+        ) : undefined
+      }
       {...(onAddonClick ? { onRowClick: onAddonClick } : {})}
       isLoading={isLoading}
       error={error}

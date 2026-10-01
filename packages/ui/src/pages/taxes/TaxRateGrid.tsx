@@ -247,7 +247,6 @@ export function TaxRateGrid({
             page: 1,
           }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="tax-rates"
       primaryAction={

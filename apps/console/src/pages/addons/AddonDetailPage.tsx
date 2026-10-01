@@ -150,6 +150,7 @@ export function AddonDetailPage({
       title={data.name}
       subtitle={subtitle}
       id={data.lookupKey || data.id}
+      onEdit={() => setTab('information')}
       menuLabel="Add-on actions"
       menu={[
         ...(onEdit ? [{ id: 'edit', label: 'Edit add-on', onSelect: onEdit }] : []),

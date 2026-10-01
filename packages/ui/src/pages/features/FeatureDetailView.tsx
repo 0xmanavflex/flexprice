@@ -7,7 +7,7 @@ import {
   needsAggregationTarget,
   type Feature,
 } from '@fp/domain'
-import { CheckIcon, CopyIcon, MoreHorizontalIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react'
 import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -166,6 +166,10 @@ export function FeatureDetailView({
         id={feature.lookupKey || feature.id}
         actions={
           <>
+            <Button variant="outline" onClick={onEditConfiguration}>
+              <PencilIcon aria-hidden />
+              Edit
+            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={<Button variant="outline" size="icon" aria-label="More actions" />}
@@ -340,8 +344,6 @@ function OverviewTab({
     <div className="flex flex-col gap-6">
       {isMetered ? (
         <ChartBox
-          title="Usage"
-          description="How this feature is used across your customers."
           innerClassName="overflow-hidden p-0"
         >
           <MetricChart
@@ -413,7 +415,11 @@ function TestEventPanel({ feature, isMetered }: { feature: Feature; isMetered: b
           : 'Boolean features do not ingest events; this shows the shape for a metered one.'
       }
       className="h-full"
-      actions={
+    >
+      <pre className="min-h-40 flex-1 overflow-x-auto rounded-lg bg-neutral-950 p-4 font-mono text-xs leading-relaxed text-neutral-100">
+        <code>{command}</code>
+      </pre>
+      <div>
         <Button
           variant="outline"
           onClick={() => {
@@ -431,13 +437,9 @@ function TestEventPanel({ feature, isMetered }: { feature: Feature; isMetered: b
           ) : (
             <CopyIcon aria-hidden className="size-4" />
           )}
-          {copied ? 'Copied' : 'Copy'}
+          {copied ? 'Copied' : 'Copy cURL'}
         </Button>
-      }
-    >
-      <pre className="min-h-40 flex-1 overflow-x-auto rounded-lg bg-neutral-950 p-4 font-mono text-xs leading-relaxed text-neutral-100">
-        <code>{command}</code>
-      </pre>
+      </div>
     </Section>
   )
 }

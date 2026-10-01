@@ -1,5 +1,13 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, PencilIcon, ReceiptIcon, Trash2Icon, UserIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  CopyIcon,
+  PencilIcon,
+  ReceiptIcon,
+  Trash2Icon,
+  UserIcon,
+  PlusIcon,
+} from 'lucide-react'
 import {
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,
@@ -278,10 +286,16 @@ export function CustomerGrid({
             page: 1,
           }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="customers"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New customer</Button> : undefined}
+      primaryAction={
+        onCreate ? (
+          <Button onClick={onCreate}>
+            <PlusIcon aria-hidden className="size-4" />
+            New customer
+          </Button>
+        ) : undefined
+      }
       {...(onCustomerClick ? { onRowClick: onCustomerClick } : {})}
       isLoading={isLoading}
       error={error}

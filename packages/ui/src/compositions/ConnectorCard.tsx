@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowUpRightIcon, PlugZapIcon, Settings2Icon } from 'lucide-react'
+import { ArrowUpRightIcon, PlugZapIcon, SettingsIcon } from 'lucide-react'
 import { Button, buttonVariants } from '@ui/components/primitives/button'
 import { Switch } from '@ui/components/primitives/switch'
 import { cn } from '@ui/lib/cn'
@@ -77,16 +77,17 @@ export function ConnectorCard({
             {connected ? null : <PlugZapIcon aria-hidden="true" />}
             {connected ? 'Disconnect' : 'Connect'}
           </Button>
-          <Button
-            type="button"
-            variant="ghost"
-            disabled={!connected}
-            aria-label={`Configure ${name}`}
-            onClick={onConfigure}
-          >
-            <Settings2Icon aria-hidden="true" />
-            Configure
-          </Button>
+          {connected ? (
+            <Button
+              type="button"
+              variant="ghost"
+              aria-label={`Configure ${name}`}
+              onClick={onConfigure}
+            >
+              <SettingsIcon aria-hidden="true" />
+              Configure
+            </Button>
+          ) : null}
         </div>
         <Switch
           checked={connected && enabled}

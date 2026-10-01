@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import {
   COUPON_CADENCE_LABEL,
-  COUPON_TYPE_LABEL,
   type Coupon,
   CouponCadence,
   CouponStatus,
   CouponType,
+  formatMoney,
 } from '@fp/domain'
 import { ApiError, useArchiveCoupon, useCoupon, useUpdateCoupon } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, CouponRedemptionsView, Money } from '@fp/ui/pages'
@@ -93,8 +93,9 @@ export function CouponDetailPage({
       onBack={onBack}
       icon={<TicketPercentIcon />}
       title={record.name}
-      subtitle={`${COUPON_TYPE_LABEL[record.type]} · ${cadenceText(record)}`}
+      subtitle={`${discountText(record)} · ${cadenceText(record)}`}
       id={record.code || record.id}
+      onEdit={() => setTab('information')}
       menuLabel="Coupon actions"
       menu={
         isArchived
@@ -262,6 +263,12 @@ function OverviewTab({ coupon }: { coupon: Coupon }) {
       </Section>
     </div>
   )
+}
+
+/** "30% off" or "$50.00 off". */
+function discountText(coupon: Coupon): string {
+  if (coupon.type === CouponType.Percentage) return `${coupon.percentageOff ?? '0'}% off`
+  return coupon.amountOff ? `${formatMoney(coupon.amountOff)} off` : 'Discount'
 }
 
 /** "One-time", "Forever", or "Repeating · 3 periods". */

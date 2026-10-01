@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { MoreHorizontalIcon } from 'lucide-react'
+import { MoreHorizontalIcon, PencilIcon } from 'lucide-react'
 import { MENU_CONTENT, MENU_ITEM } from '../../compositions/shell/menuSurface'
 import { DetailTabs, type DetailTabSpec } from '../../compositions/DetailKit'
 import { EntityHeader } from '../shared/EntityHeader'
@@ -31,6 +31,8 @@ export interface CatalogDetailFrameProps {
   /** Copyable identifier. */
   id: string
   primary?: { label: string; onClick: () => void; disabled?: boolean }
+  /** Shows the header's Edit button (pencil, outline). */
+  onEdit?: () => void
   menuLabel: string
   menu?: CatalogMenuItem[]
   tabs: DetailTabSpec[]
@@ -52,6 +54,7 @@ export function CatalogDetailFrame({
   subtitle,
   id,
   primary,
+  onEdit,
   menuLabel,
   menu = [],
   tabs,
@@ -64,6 +67,12 @@ export function CatalogDetailFrame({
       {primary ? (
         <Button variant="outline" disabled={primary.disabled ?? false} onClick={primary.onClick}>
           {primary.label}
+        </Button>
+      ) : null}
+      {onEdit ? (
+        <Button variant="outline" onClick={onEdit}>
+          <PencilIcon aria-hidden />
+          Edit
         </Button>
       ) : null}
       {menu.length > 0 ? (

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CoinsIcon, CopyIcon, PencilIcon, ScaleIcon } from 'lucide-react'
+import { BookOpenIcon, CoinsIcon, CopyIcon, PencilIcon, ScaleIcon, PlusIcon } from 'lucide-react'
 import {
   DEFAULT_PRICE_UNIT_QUERY,
   PRICE_UNIT_SORT_LABEL,
@@ -47,7 +47,7 @@ const SORT_OPTIONS = Object.values(PriceUnitSortField).map((value) => ({
  */
 function conversionLabel(unit: PriceUnit): string | null {
   if (!unit.code || !unit.conversionRate || !unit.baseCurrency) return null
-  return `1 ${unit.code} = ${unit.conversionRate} ${unit.baseCurrency}`
+  return `1 ${unit.code} = ${unit.conversionRate} ${unit.baseCurrency.toUpperCase()}`
 }
 
 /** Every URL requested and returned 200; all three are in the docs sitemap. */
@@ -208,10 +208,16 @@ export function PriceUnitGrid({
         onChange: (sortBy, sortDirection) =>
           onQueryChange({ ...query, sortBy: sortBy as PriceUnitSortField, sortDirection, page: 1 }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="price-units"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New price unit</Button> : undefined}
+      primaryAction={
+        onCreate ? (
+          <Button onClick={onCreate}>
+            <PlusIcon aria-hidden />
+            New price unit
+          </Button>
+        ) : undefined
+      }
       {...(onPriceUnitClick ? { onRowClick: onPriceUnitClick } : {})}
       isLoading={isLoading}
       error={error}

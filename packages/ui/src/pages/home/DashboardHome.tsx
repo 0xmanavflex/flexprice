@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowUpRightIcon, InfoIcon, KeyRoundIcon, SlidersHorizontalIcon } from 'lucide-react'
+import { ArrowUpRightIcon, CalendarIcon, InfoIcon, KeyRoundIcon, SlidersHorizontalIcon } from 'lucide-react'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -219,7 +219,7 @@ const NOTHING = '—'
  * Card is the project's surface (`provenance`, `SURFACE`), so every panel is one
  * — including the ones whose chart draws its own card. The charts in the shared
  * library are card-shaped so they can stand alone on a page; here they are
- * panel *contents*, and `CHART_IN_PANEL` is what gives that chrome back.
+ * panel *contents*; the events chart stands alone as its own card.
  */
 function Panel({
   title,
@@ -359,7 +359,8 @@ function FilterRow({
             if (value !== null) filter.onChange(value)
           }}
         >
-          <SelectTrigger aria-label={filter.label} className={cn('h-8', filter.width)}>
+          <SelectTrigger aria-label={filter.label} className={cn('h-8 text-[13px]', filter.width)}>
+            {filter.label === 'Range' ? <CalendarIcon aria-hidden className="size-3.5" /> : null}
             <SelectValue />
           </SelectTrigger>
           <SelectContent align="start">
@@ -388,16 +389,6 @@ function FilterRow({
 }
 
 /* ---- 2. Events monitoring ----------------------------------------------- */
-
-/**
- * The chart library's cards, given up so they can be panel contents.
- *
- * `MetricChart` draws `bg-card rounded-xl border` so it can stand alone. Inside
- * a `Panel` that would be a card in a card — two borders, two backgrounds. This
- * strips all of it except the rule under the tab strip, and bleeds the strip to
- * the panel's edges so it reads as one divided header rather than an inset box.
- */
-const CHART_IN_PANEL = '-mx-5 rounded-none border-x-0 border-t-0 bg-transparent'
 
 const METRIC_EVENTS = 'events'
 const METRIC_REVENUE = 'revenue'
@@ -491,16 +482,11 @@ function EventsSection({
       onTabChange={setMetric}
       caption={caption}
       height={240}
-      className={CHART_IN_PANEL}
     />
   )
 
   return (
-    <Panel
-      title="Events monitoring"
-      description={`Ingestion, revenue and processing lag, ${rangeLabel}.`}
-      info="Every metered event Flexprice accepted in this window, bucketed by the granularity above."
-    >
+    <div className="flex min-w-0 flex-col gap-3">
       {ready ? (
         chart
       ) : (
@@ -539,7 +525,6 @@ function EventsSection({
             activeTab={METRIC_EVENTS}
             onTabChange={() => {}}
             height={240}
-            className={CHART_IN_PANEL}
           />
         </BlurredEmpty>
       )}
@@ -547,8 +532,10 @@ function EventsSection({
       {ready && events.revenue === null ? (
         <Unavailable what="The usage API returned no priced subtotal for this window." />
       ) : null}
-      <Unavailable what="Flexprice does not expose an ingestion-lag metric." />
-    </Panel>
+      {metric === METRIC_LAG ? (
+        <Unavailable what="Flexprice does not expose an ingestion-lag metric." />
+      ) : null}
+    </div>
   )
 }
 
@@ -577,7 +564,7 @@ function SubscriptionsCard({
       description={`New in the ${rangeLabel}.`}
       info="Subscriptions whose start date falls inside this window, counted by the plan they were created on."
       action={
-        <Button variant="ghost" size="sm" onClick={onViewAll}>
+        <Button variant="outline" size="sm" onClick={onViewAll}>
           View all
         </Button>
       }
@@ -671,7 +658,7 @@ function InvoicesCard({
       description={`Finalized in the ${rangeLabel}.`}
       info="Invoices issued inside this window, grouped by whether they are settled, still open, or past their due date."
       action={
-        <Button variant="ghost" size="sm" onClick={onViewInvoices}>
+        <Button variant="outline" size="sm" onClick={onViewInvoices}>
           View invoices
         </Button>
       }
@@ -723,7 +710,7 @@ function UsageCard({
       description={`Top metered features, ${rangeLabel}.`}
       info="Metered quantity per feature over this window, with the change against the window before it."
       action={
-        <Button variant="ghost" size="sm" onClick={onViewFeatures}>
+        <Button variant="outline" size="sm" onClick={onViewFeatures}>
           All features
         </Button>
       }
@@ -773,7 +760,7 @@ function ApiCard({
       description={rangeLabel.charAt(0).toUpperCase() + rangeLabel.slice(1)}
       info="Key health for this environment. Request volume, latency and error counts are not exposed by the Flexprice API."
       action={
-        <Button variant="ghost" size="sm" onClick={onApiKeys}>
+        <Button variant="outline" size="sm" onClick={onApiKeys}>
           API keys
           <ArrowUpRightIcon aria-hidden />
         </Button>

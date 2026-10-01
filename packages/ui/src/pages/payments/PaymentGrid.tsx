@@ -262,7 +262,6 @@ export function PaymentGrid({
             page: 1,
           }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="payments"
       {...(onCreate ? { primaryAction: <Button onClick={onCreate}>Record payment</Button> } : {})}

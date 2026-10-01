@@ -1,5 +1,12 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CalendarClockIcon, CopyIcon, LayersIcon, RepeatIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  CalendarClockIcon,
+  CopyIcon,
+  LayersIcon,
+  RepeatIcon,
+  PlusIcon,
+} from 'lucide-react'
 import {
   DEFAULT_SUBSCRIPTION_QUERY,
   SUBSCRIPTION_SORT_LABEL,
@@ -13,7 +20,13 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { statusFilter } from '@ui/compositions/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import { type EntityColumn, type PillTone, dateColumn, pillColumn, textColumn } from '../shared/cells'
+import {
+  type EntityColumn,
+  type PillTone,
+  dateColumn,
+  pillColumn,
+  textColumn,
+} from '../shared/cells'
 
 /**
  * The subscription list, on the shared `EntityList`.
@@ -273,10 +286,16 @@ export function SubscriptionGrid({
             page: 1,
           }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="subscriptions"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New subscription</Button> : undefined}
+      primaryAction={
+        onCreate ? (
+          <Button onClick={onCreate}>
+            <PlusIcon aria-hidden className="size-4" />
+            New subscription
+          </Button>
+        ) : undefined
+      }
       {...(onSubscriptionClick ? { onRowClick: onSubscriptionClick } : {})}
       isLoading={isLoading}
       error={error}

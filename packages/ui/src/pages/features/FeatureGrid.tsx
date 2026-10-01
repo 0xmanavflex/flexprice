@@ -5,6 +5,7 @@ import {
   CopyPlusIcon,
   GaugeIcon,
   PencilIcon,
+  PlusIcon,
   ScrollTextIcon,
   SquareStackIcon,
   Trash2Icon,
@@ -30,7 +31,7 @@ import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/En
 import {
   FeatureTypePill,
   type EntityColumn,
-  dateColumn,
+  idColumn,
   pillColumn,
   textColumn,
 } from '../shared/cells'
@@ -177,7 +178,6 @@ export function FeatureGrid({
   onDelete,
   onClearFilters,
   statusCounts,
-  locale,
 }: FeatureGridProps) {
   const columns = useMemo<EntityColumn<Feature>[]>(
     () => [
@@ -189,34 +189,24 @@ export function FeatureGrid({
         // attributes belonging to nothing.
         hideable: false,
       }),
+      textColumn<Feature>('lookupKey', 'Key', (row) => row.lookupKey, { width: 180, muted: true }),
       pillColumn<Feature>('type', 'Type', (row) => ({ label: FEATURE_TYPE_LABEL[row.type] }), {
         width: 150,
       }),
-      pillColumn<Feature>('status', 'Status', (row) => ({
-        label: FEATURE_STATUS_LABEL[row.status],
-        tone: row.status === FeatureStatus.Published ? 'success' : 'neutral',
-      })),
+      idColumn<Feature>('eventName', 'Event', (row) => row.eventName, { width: 190 }),
       textColumn<Feature>(
         'measurement',
-        'Measured by',
+        'Aggregation',
         (row) => (row.aggregationType ? AGGREGATION_LABEL[row.aggregationType] : null),
         { width: 200 },
       ),
       textColumn<Feature>('unit', 'Unit', (row) => row.unitSingular, { width: 110 }),
-      dateColumn<Feature>('createdAt', 'Created', (row) => row.createdAt, {
-        width: 140,
-        sortable: true,
-        sortValue: FeatureSortField.CreatedAt,
-        ...(locale ? { locale } : {}),
-      }),
-      dateColumn<Feature>('updatedAt', 'Updated', (row) => row.updatedAt, {
-        width: 140,
-        sortable: true,
-        sortValue: FeatureSortField.UpdatedAt,
-        ...(locale ? { locale } : {}),
-      }),
+      pillColumn<Feature>('status', 'Status', (row) => ({
+        label: FEATURE_STATUS_LABEL[row.status],
+        tone: row.status === FeatureStatus.Published ? 'success' : 'neutral',
+      })),
     ],
-    [locale],
+    [],
   )
 
   /*
@@ -359,10 +349,9 @@ export function FeatureGrid({
             page: 1,
           }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="features"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New feature</Button> : undefined}
+      primaryAction={onCreate ? <Button onClick={onCreate}><PlusIcon aria-hidden />New feature</Button> : undefined}
       {...(onFeatureClick ? { onRowClick: onFeatureClick } : {})}
       isLoading={isLoading}
       error={error}
@@ -374,7 +363,7 @@ export function FeatureGrid({
         title: 'Nothing is being measured yet',
         description:
           'A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New feature</Button> } : {}),
+        ...(onCreate ? { actions: <Button onClick={onCreate}><PlusIcon aria-hidden />New feature</Button> } : {}),
         guides: GUIDES,
       }}
     />

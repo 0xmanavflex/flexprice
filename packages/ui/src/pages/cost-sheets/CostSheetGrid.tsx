@@ -6,8 +6,7 @@ import {
   ScrollTextIcon,
   SheetIcon,
   Trash2Icon,
-  TrendingUpIcon,
-} from 'lucide-react'
+  TrendingUpIcon, PlusIcon } from 'lucide-react'
 import {
   COST_SHEET_SORT_LABEL,
   COST_SHEET_STATUS_LABEL,
@@ -268,10 +267,16 @@ export function CostSheetGrid({
         onChange: (sortBy, sortDirection) =>
           onQueryChange({ ...query, sortBy: sortBy as CostSheetSortField, sortDirection, page: 1 }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="cost-sheets"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New cost sheet</Button> : undefined}
+      primaryAction={
+        onCreate ? (
+          <Button onClick={onCreate}>
+            <PlusIcon aria-hidden />
+            New cost sheet
+          </Button>
+        ) : undefined
+      }
       {...(onCostSheetClick ? { onRowClick: onCostSheetClick } : {})}
       isLoading={isLoading}
       error={error}

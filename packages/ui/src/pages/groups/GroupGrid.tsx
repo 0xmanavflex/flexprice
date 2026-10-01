@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, GaugeIcon, LayersIcon, TagIcon, Trash2Icon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, GaugeIcon, LayersIcon, TagIcon, Trash2Icon, PlusIcon } from 'lucide-react'
 import {
   DEFAULT_GROUP_QUERY,
   GROUP_ENTITY_TYPE_LABEL,
@@ -172,7 +172,6 @@ export function GroupGrid({
     [locale],
   )
 
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
   const isDefaultSort =
     query.sortBy === DEFAULT_GROUP_QUERY.sortBy &&
@@ -249,10 +248,16 @@ export function GroupGrid({
         onChange: (sortBy, sortDirection) =>
           onQueryChange({ ...query, sortBy: sortBy as GroupSortField, sortDirection, page: 1 }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="groups"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New group</Button> : undefined}
+      primaryAction={
+        onCreate ? (
+          <Button onClick={onCreate}>
+            <PlusIcon aria-hidden />
+            New group
+          </Button>
+        ) : undefined
+      }
       {...(onGroupClick ? { onRowClick: onGroupClick } : {})}
       isLoading={isLoading}
       error={error}
