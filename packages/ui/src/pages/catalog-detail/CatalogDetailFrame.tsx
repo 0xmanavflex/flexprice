@@ -93,11 +93,9 @@ export function CatalogDetailFrame({
   )
 
   return (
-    <div className="flex flex-col">
-      <div className="px-6 pt-5">
-        <DetailBreadcrumb trail={[{ label: listLabel, onClick: onBack }, { label: title }]} />
-      </div>
-      <div className="flex items-start gap-3 px-6 pt-3">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
+      <DetailBreadcrumb trail={[{ label: listLabel, onClick: onBack }, { label: title }]} />
+      <div className="flex items-start gap-3 px-6 pt-6">
         <div
           aria-hidden
           className="bg-muted text-muted-foreground mt-1 flex size-10 shrink-0 items-center justify-center rounded-lg border [&_svg]:size-5"

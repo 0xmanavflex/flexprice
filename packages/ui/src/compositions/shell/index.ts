@@ -26,3 +26,5 @@ export type {
   ShellNotification,
   ShellUser,
 } from './types'
+export { ShellDetailTrailProvider, useShellDetailTrail } from './ShellDetailTrail'
+export type { ShellDetailCrumb } from './ShellDetailTrail'

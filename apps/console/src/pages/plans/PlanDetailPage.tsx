@@ -169,7 +169,7 @@ export function PlanDetailPage({
   const isArchived = record.status === PlanStatus.Archived
 
   return (
-    <>
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <EntityHeader
         trail={[{ label: 'Plans', onClick: onNavigateToList }, { label: record.name }]}
         icon={<LayersIcon aria-hidden className="size-5" />}
@@ -308,7 +308,7 @@ export function PlanDetailPage({
           })
         }
       />
-    </>
+    </div>
   )
 }
 

@@ -7,7 +7,7 @@ import {
   needsAggregationTarget,
   type Feature,
 } from '@fp/domain'
-import { CheckIcon, CopyIcon, GaugeIcon, MoreHorizontalIcon, ReceiptIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, MoreHorizontalIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -16,11 +16,11 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
+import { Badge } from '@ui/components/reui/badge'
 import { Switch } from '@ui/components/primitives/switch'
 import { EditableFields } from '../../compositions/EditableFields'
-import { EmptyState } from '../../compositions/EmptyState'
 import { Section } from '../../compositions/Section'
-import { DetailTabs, Properties } from '../../compositions/DetailKit'
+import { DetailTabs, Properties, SimpleTable } from '../../compositions/DetailKit'
 import { BlurredEmpty, MetricChart, type MetricPoint } from '../shared/charts'
 import { EntityHeader } from '../shared/EntityHeader'
 import { FEATURE_TYPE_GLYPH } from '../shared/cells'
@@ -50,16 +50,69 @@ export function demoUsagePoints(): MetricPoint[] {
   }))
 }
 
-const DEMO_PLANS = [
-  { id: 'starter', name: 'Starter', included: '1,000 included', beyond: '$0.002 / unit beyond' },
-  { id: 'growth', name: 'Growth', included: '50,000 included', beyond: '$0.001 / unit beyond' },
-  { id: 'scale', name: 'Scale', included: 'Unlimited', beyond: 'No usage price' },
+interface DemoCharge {
+  id: string
+  plan: string
+  model: string
+  billed: string
+  price: string
+  allowance: string
+  resets: string
+  active: boolean
+}
+
+/** Demo only: no read exists yet for the charges and entitlements that reference a feature. */
+const DEMO_CHARGES: DemoCharge[] = [
+  {
+    id: 'starter',
+    plan: 'Starter',
+    model: 'Volume tiered',
+    billed: 'Monthly, in arrears',
+    price: '2 tiers, from $0.01 per unit',
+    allowance: '1,000 units',
+    resets: 'Every billing period',
+    active: true,
+  },
+  {
+    id: 'studio',
+    plan: 'Studio',
+    model: 'Package',
+    billed: 'Monthly, in arrears',
+    price: '$250 per 1,000 units',
+    allowance: '25,000 units',
+    resets: 'Every billing period',
+    active: true,
+  },
+  {
+    id: 'pro',
+    plan: 'Pro',
+    model: 'Volume tiered',
+    billed: 'Monthly, in arrears',
+    price: '3 tiers, from $0.0008 per unit',
+    allowance: '1M units',
+    resets: 'Every billing period',
+    active: true,
+  },
+  {
+    id: 'platform',
+    plan: 'Platform',
+    model: 'Package',
+    billed: 'Monthly, in arrears',
+    price: '$2 per 1,000 units',
+    allowance: '10K units',
+    resets: 'Every billing period',
+    active: false,
+  },
 ]
 
+const PlanStatus = ({ active }: { active: boolean }) => (
+  <Badge variant="outline">{active ? 'Active' : 'Archived'}</Badge>
+)
+
 const ALERTS = [
-  { id: 'critical', label: 'Critical', hint: 'Notify when usage reaches 100% of the entitlement.' },
-  { id: 'warning', label: 'Warning', hint: 'Notify when usage reaches 80% of the entitlement.' },
-  { id: 'info', label: 'Info', hint: 'Notify when usage reaches 50% of the entitlement.' },
+  { id: 'critical', label: 'Critical', hint: 'Above 100% of allowance', dot: 'bg-destructive' },
+  { id: 'warning', label: 'Warning', hint: 'Above 80% of allowance', dot: 'bg-warning' },
+  { id: 'info', label: 'Info', hint: 'Above 50% of allowance', dot: 'bg-sky-500' },
 ] as const
 
 /** Builds the ingest cURL from the feature's event name and aggregation. */
@@ -106,9 +159,12 @@ export function FeatureDetailView({
   const [copied, setCopied] = useState(false)
 
   return (
-    <div className="flex flex-col">
+    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <EntityHeader
-        trail={[{ label: 'Features', ...(onBack ? { onClick: onBack } : {}) }, { label: feature.name }]}
+        trail={[
+          { label: 'Features', ...(onBack ? { onClick: onBack } : {}) },
+          { label: feature.name },
+        ]}
         icon={<Glyph className="size-5" />}
         title={feature.name}
         subtitle={FEATURE_TYPE_LABEL[feature.type]}
@@ -126,7 +182,9 @@ export function FeatureDetailView({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="min-w-48">
                 <DropdownMenuGroup>
-                  <DropdownMenuItem onClick={onEditConfiguration}>Edit configuration</DropdownMenuItem>
+                  <DropdownMenuItem onClick={onEditConfiguration}>
+                    Edit configuration
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => {
                       void navigator.clipboard?.writeText(feature.id)
@@ -150,18 +208,42 @@ export function FeatureDetailView({
             {
               value: 'overview',
               label: 'Overview',
-              content: <OverviewTab feature={feature} isMetered={isMetered} />,
+              content: (
+                <OverviewTab
+                  feature={feature}
+                  isMetered={isMetered}
+                  onSeeCharges={() => onTabChange('charges')}
+                />
+              ),
             },
             {
               value: 'charges',
               label: 'Charges',
+              count: DEMO_CHARGES.length,
               content: (
-                <Section title="Charges" description="Prices across the catalogue that meter this feature.">
-                  <EmptyState
-                    size="inline"
-                    icon={<ReceiptIcon aria-hidden />}
-                    title="No linked charges to show yet"
-                    description="Plans and add-ons that price this feature will appear here once the linked-price view is wired up."
+                <Section
+                  title="Charges"
+                  description="Every plan and add-on that bills for this feature. Demo data until the linked-price view is wired."
+                  className="gap-0 p-0 [&>header]:p-5"
+                >
+                  <SimpleTable
+                    rows={DEMO_CHARGES}
+                    getRowId={(row) => row.id}
+                    columns={[
+                      {
+                        key: 'plan',
+                        header: 'Plan / add-on',
+                        cell: (row) => <span className="font-medium">{row.plan}</span>,
+                      },
+                      { key: 'model', header: 'Billing model', cell: (row) => row.model },
+                      { key: 'billed', header: 'Billed', cell: (row) => row.billed },
+                      { key: 'price', header: 'Price', cell: (row) => row.price },
+                      {
+                        key: 'status',
+                        header: 'Plan status',
+                        cell: (row) => <PlanStatus active={row.active} />,
+                      },
+                    ]}
                   />
                 </Section>
               ),
@@ -169,13 +251,30 @@ export function FeatureDetailView({
             {
               value: 'entitlements',
               label: 'Entitlements',
+              count: 2,
               content: (
-                <Section title="Entitlements" description="Plans and add-ons that grant this feature.">
-                  <EmptyState
-                    size="inline"
-                    icon={<GaugeIcon aria-hidden />}
-                    title="No entitlements to show yet"
-                    description="Plans and add-ons that grant this feature will appear here once the entitlement view is wired up."
+                <Section
+                  title="Entitlements"
+                  description="What each plan includes before charges apply. Demo data until the entitlement view is wired."
+                  className="gap-0 p-0 [&>header]:p-5"
+                >
+                  <SimpleTable
+                    rows={[DEMO_CHARGES[2]!, DEMO_CHARGES[3]!]}
+                    getRowId={(row) => row.id}
+                    columns={[
+                      {
+                        key: 'plan',
+                        header: 'Plan',
+                        cell: (row) => <span className="font-medium">{row.plan}</span>,
+                      },
+                      { key: 'allowance', header: 'Allowance', cell: (row) => row.allowance },
+                      { key: 'resets', header: 'Usage resets', cell: (row) => row.resets },
+                      {
+                        key: 'status',
+                        header: 'Plan status',
+                        cell: (row) => <PlanStatus active={row.active} />,
+                      },
+                    ]}
                   />
                 </Section>
               ),
@@ -201,16 +300,40 @@ export function FeatureDetailView({
   )
 }
 
-function OverviewTab({ feature, isMetered }: { feature: Feature; isMetered: boolean }) {
+function OverviewTab({
+  feature,
+  isMetered,
+  onSeeCharges,
+}: {
+  feature: Feature
+  isMetered: boolean
+  onSeeCharges: () => void
+}) {
   const [metric, setMetric] = useState('usage')
-  const points = isMetered ? demoUsagePoints() : []
-  const total = points.reduce((sum, point) => sum + point.value, 0)
+  const usage = isMetered ? demoUsagePoints() : []
+  const total = usage.reduce((sum, point) => sum + point.value, 0)
+  const unit = feature.unitPlural || 'units'
   const chartTabs = [
     {
       id: 'usage',
-      label: feature.unitPlural ? `Usage (${feature.unitPlural})` : 'Usage',
-      value: isMetered ? total.toLocaleString('en-US') : '—',
-      points,
+      label: 'Usage, last 30 days',
+      value: isMetered ? `${total.toLocaleString('en-US')} ${unit}` : '—',
+      points: usage,
+    },
+    {
+      id: 'customers',
+      label: 'Customers reporting',
+      value: isMetered ? '212' : '—',
+      points: usage.map((point, index) => ({
+        ...point,
+        value: 150 + Math.round(point.value / 160) + (index % 5),
+      })),
+    },
+    {
+      id: 'billed',
+      label: 'Billed from this feature',
+      value: isMetered ? '$18,420' : '—',
+      points: usage.map((point) => ({ ...point, value: Math.round(point.value / 6) })),
     },
   ]
 
@@ -221,7 +344,7 @@ function OverviewTab({ feature, isMetered }: { feature: Feature; isMetered: bool
           tabs={chartTabs}
           activeTab={metric}
           onTabChange={setMetric}
-          caption="Last 30 days · demo data, real usage is not wired yet"
+          caption="Demo data: real usage is not wired yet"
         />
       ) : (
         <BlurredEmpty
@@ -240,18 +363,30 @@ function OverviewTab({ feature, isMetered }: { feature: Feature; isMetered: bool
         <Section
           title="Plans attached"
           description="Demo data: the plans-using-a-feature view is not wired yet."
-          className="h-full"
+          className="h-full gap-0 p-0 [&>header]:p-5"
+          actions={
+            <Button variant="outline" onClick={onSeeCharges}>
+              All charges
+            </Button>
+          }
         >
-          <ul className="flex flex-1 flex-col divide-y">
-            {DEMO_PLANS.map((plan) => (
-              <li key={plan.id} className="flex flex-1 items-center justify-between gap-4 py-3 text-sm">
-                <span className="font-medium">{plan.name}</span>
-                <span className="text-right text-muted-foreground tabular-nums">
-                  {plan.included} · {plan.beyond}
-                </span>
-              </li>
-            ))}
-          </ul>
+          <SimpleTable
+            rows={DEMO_CHARGES.slice(0, 3)}
+            getRowId={(row) => row.id}
+            columns={[
+              {
+                key: 'plan',
+                header: 'Plan',
+                cell: (row) => <span className="font-medium">{row.plan}</span>,
+              },
+              {
+                key: 'model',
+                header: 'Model',
+                cell: (row) => <span className="text-muted-foreground">{row.model}</span>,
+              },
+              { key: 'price', header: 'Price', cell: (row) => row.price },
+            ]}
+          />
         </Section>
 
         <TestEventPanel feature={feature} isMetered={isMetered} />
@@ -285,7 +420,11 @@ function TestEventPanel({ feature, isMetered }: { feature: Feature; isMetered: b
             }
           }}
         >
-          {copied ? <CheckIcon aria-hidden className="size-4" /> : <CopyIcon aria-hidden className="size-4" />}
+          {copied ? (
+            <CheckIcon aria-hidden className="size-4" />
+          ) : (
+            <CopyIcon aria-hidden className="size-4" />
+          )}
           {copied ? 'Copied' : 'Copy'}
         </Button>
       }
@@ -312,92 +451,140 @@ function InformationTab({
   onEditingChange: (editing: boolean) => void
   onSave: (changes: Record<string, string>) => Promise<unknown>
 }) {
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({ critical: true, warning: true, info: false })
+  const [enabled, setEnabled] = useState<Record<string, boolean>>({
+    critical: true,
+    warning: true,
+    info: false,
+  })
 
   return (
-    <div className="flex max-w-3xl flex-col gap-6">
-      <Section title="General" description="Use the pencil on a value, or Edit above to change them together.">
-        <div className="flex flex-col gap-5">
-          <EditableFields
-            editing={editing}
-            onEditingChange={onEditingChange}
-            fields={[
-              { key: 'name', label: 'Name', value: feature.name, required: true, readOnly: archived },
-              {
-                key: 'description',
-                label: 'Description',
-                value: feature.description,
-                placeholder: 'No description',
-                multiline: true,
-                readOnly: archived,
-              },
-            ]}
-            onSave={onSave}
-          />
-          <Properties
-            items={[
-              { label: 'Type', value: FEATURE_TYPE_LABEL[feature.type] },
-              { label: 'Lookup key', value: mono(feature.lookupKey) },
-            ]}
-          />
-        </div>
-      </Section>
+    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="flex min-w-0 flex-col gap-6">
+        <Section
+          title="General"
+          description="Use the pencil on a value, or Edit above to change them together."
+        >
+          <div className="flex flex-col gap-5">
+            <EditableFields
+              editing={editing}
+              onEditingChange={onEditingChange}
+              fields={[
+                {
+                  key: 'name',
+                  label: 'Name',
+                  value: feature.name,
+                  required: true,
+                  readOnly: archived,
+                },
+                {
+                  key: 'description',
+                  label: 'Description',
+                  value: feature.description,
+                  placeholder: 'No description',
+                  multiline: true,
+                  readOnly: archived,
+                },
+              ]}
+              onSave={onSave}
+            />
+            <Properties
+              columns={3}
+              items={[
+                { label: 'Type', value: FEATURE_TYPE_LABEL[feature.type] },
+                { label: 'Lookup key', value: mono(feature.lookupKey) },
+                { label: 'Status', value: FEATURE_STATUS_LABEL[feature.status] },
+                { label: 'Created', value: formatDate(feature.createdAt) },
+                { label: 'Updated', value: formatDate(feature.updatedAt) },
+              ]}
+            />
+          </div>
+        </Section>
 
-      <Section title="Event and aggregation" description="What this feature meters, and how usage is measured.">
-        {isMetered ? (
+        <Section
+          title="Event and aggregation"
+          description="What this feature meters, and how usage is measured."
+        >
+          {isMetered ? (
+            <div className="flex flex-col gap-5">
+              <Properties
+                columns={3}
+                items={[
+                  { label: 'Event name', value: mono(feature.eventName) },
+                  {
+                    label: 'Aggregation',
+                    value: feature.aggregationType
+                      ? AGGREGATION_LABEL[feature.aggregationType]
+                      : '—',
+                  },
+                  ...(feature.aggregationField
+                    ? [{ label: 'Aggregated field', value: mono(feature.aggregationField) }]
+                    : []),
+                  { label: 'Unit (singular)', value: feature.unitSingular || '—' },
+                  { label: 'Unit (plural)', value: feature.unitPlural || '—' },
+                  { label: 'Meter ID', value: mono(feature.meterId) },
+                ]}
+              />
+              {feature.meterFilters && feature.meterFilters.length > 0 ? (
+                <div className="flex flex-col gap-2 border-t pt-4">
+                  <span className="text-muted-foreground text-xs">Event filters</span>
+                  <div className="flex flex-wrap gap-2">
+                    {feature.meterFilters.flatMap((filter) =>
+                      filter.values.map((value) => (
+                        <code
+                          key={`${filter.key}-${value}`}
+                          className="bg-muted rounded-md px-2 py-1 font-mono text-xs"
+                        >
+                          {filter.key} = {value}
+                        </code>
+                      )),
+                    )}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-muted-foreground text-sm">
+              This feature is not metered, so it has no event name or aggregation.
+            </p>
+          )}
+        </Section>
+      </div>
+      <div className="flex min-w-0 flex-col gap-6">
+        <Section
+          title="Usage alerts"
+          description="Demo: alert thresholds are not saved yet. Toggles only change this view."
+        >
+          <ul className="flex flex-col divide-y">
+            {ALERTS.map((alert) => (
+              <li key={alert.id} className="flex items-center justify-between gap-4 py-3 text-sm">
+                <div className="flex items-center gap-3">
+                  <span aria-hidden className={`size-2 rounded-full ${alert.dot}`} />
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-medium">{alert.label}</span>
+                    <span className="text-muted-foreground text-xs">{alert.hint}</span>
+                  </div>
+                </div>
+                <Switch
+                  checked={enabled[alert.id] ?? false}
+                  onCheckedChange={(next) =>
+                    setEnabled((current) => ({ ...current, [alert.id]: next }))
+                  }
+                  aria-label={`${alert.label} alert`}
+                />
+              </li>
+            ))}
+          </ul>
+        </Section>
+
+        <Section title="Metadata">
           <Properties
             items={[
-              { label: 'Event name', value: mono(feature.eventName) },
-              {
-                label: 'Aggregation',
-                value: feature.aggregationType ? AGGREGATION_LABEL[feature.aggregationType] : '—',
-              },
-              ...(feature.aggregationField
-                ? [{ label: 'Aggregated field', value: mono(feature.aggregationField) }]
-                : []),
-              { label: 'Unit (singular)', value: feature.unitSingular || '—' },
-              { label: 'Unit (plural)', value: feature.unitPlural || '—' },
+              { label: 'Feature ID', value: mono(feature.id) },
               { label: 'Meter ID', value: mono(feature.meterId) },
             ]}
           />
-        ) : (
-          <p className="text-sm text-muted-foreground">
-            This feature is not metered, so it has no event name or aggregation.
-          </p>
-        )}
-      </Section>
-
-      <Section
-        title="Usage alerts"
-        description="Demo: alert thresholds are not saved yet. Toggles only change this view."
-      >
-        <ul className="flex flex-col divide-y">
-          {ALERTS.map((alert) => (
-            <li key={alert.id} className="flex items-center justify-between gap-4 py-3 text-sm">
-              <div className="flex flex-col gap-0.5">
-                <span className="font-medium">{alert.label}</span>
-                <span className="text-xs text-muted-foreground">{alert.hint}</span>
-              </div>
-              <Switch
-                checked={enabled[alert.id] ?? false}
-                onCheckedChange={(next) => setEnabled((current) => ({ ...current, [alert.id]: next }))}
-                aria-label={`${alert.label} alert`}
-              />
-            </li>
-          ))}
-        </ul>
-      </Section>
-
-      <Section title="Metadata">
-        <Properties
-          items={[
-            { label: 'Feature ID', value: mono(feature.id) },
-            { label: 'Status', value: FEATURE_STATUS_LABEL[feature.status] },
-            { label: 'Created', value: formatDate(feature.createdAt) },
-            { label: 'Updated', value: formatDate(feature.updatedAt) },
-          ]}
-        />
-      </Section>
+        </Section>
+      </div>
     </div>
   )
 }

@@ -16,34 +16,37 @@ export interface EntityHeaderProps {
 }
 
 /**
- * The detail-page header for catalogue records: breadcrumb, an icon tile, the
- * name, a one-line subtitle with a copyable id, and the actions on the right.
+ * The detail-page header for catalogue records: an icon tile, the name, a
+ * one-line subtitle, and on the right a copyable id chip and the actions. The
+ * trail is published to the shell's header breadcrumb, not drawn here.
  * Built here (not in `DetailHeader`) because the tile needs a slot that shared
  * header does not have.
  */
 export function EntityHeader({ trail, icon, title, subtitle, id, actions }: EntityHeaderProps) {
   return (
-    <header className="flex flex-col gap-4 px-6 pt-5 pb-4">
+    <header className="flex flex-col gap-4 px-6 pt-6 pb-4">
       <DetailBreadcrumb trail={trail} />
       <div className="flex items-start justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden
-            className="flex size-10 shrink-0 items-center justify-center rounded-lg border bg-muted text-muted-foreground"
+            className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-lg border"
           >
             {icon}
           </span>
           <div className="flex min-w-0 flex-col gap-0.5">
             <h1 className="truncate text-lg leading-tight font-medium">{title}</h1>
-            {subtitle || id ? (
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
-                {subtitle ? <span>{subtitle}</span> : null}
-                {id ? <CopyId value={id} /> : null}
-              </div>
-            ) : null}
+            {subtitle ? <span className="text-muted-foreground text-sm">{subtitle}</span> : null}
           </div>
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        <div className="flex shrink-0 items-center gap-2">
+          {id ? (
+            <span className="rounded-md border px-2.5 py-1.5">
+              <CopyId value={id} />
+            </span>
+          ) : null}
+          {actions}
+        </div>
       </div>
     </header>
   )

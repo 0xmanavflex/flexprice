@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import {
   BarChart3Icon,
   BookOpenIcon,
@@ -24,7 +24,10 @@ import {
   EnvironmentSwitcher,
   ShellBreadcrumb,
   ShellCreateMenu,
+  ShellDetailTrailProvider,
   ShellPromoCard,
+  type ShellCrumb,
+  type ShellDetailCrumb,
   type ShellEnvironment,
   type ShellUser,
 } from '@fp/ui/compositions'
@@ -107,6 +110,7 @@ export function ConsoleShell({
 }: ConsoleShellProps) {
   const activeItemId = navEntryForPath(pathname)
   const openGroup = groupForNavId(activeItemId)
+  const [detailTrail, setDetailTrail] = useState<ShellDetailCrumb[] | null>(null)
   const counts = useNavCounts(openGroup ? (GROUP_COUNTS[openGroup] ?? []) : [])
 
   const goTo = (id: string) => {
@@ -121,7 +125,23 @@ export function ConsoleShell({
     if (childPath) onNavigate(childPath)
   }
 
+  // A detail page hands up "list, record": the list crumb becomes a link back
+  // and the record's name is appended, so the header carries the one trail.
+  const navTrail: ShellCrumb[] = breadcrumbForPath(pathname)
+  const trail: ShellCrumb[] =
+    detailTrail && detailTrail.length >= 2 && navTrail.length > 0
+      ? [
+          ...navTrail.slice(0, -1),
+          {
+            ...navTrail[navTrail.length - 1]!,
+            ...(detailTrail[0]!.hasClick ? { onClick: detailTrail[0]!.onClick } : {}),
+          },
+          { label: detailTrail[detailTrail.length - 1]!.label },
+        ]
+      : navTrail
+
   return (
+    <ShellDetailTrailProvider value={setDetailTrail}>
     <AppShell
       navGroups={toNavGroups(ICONS, counts)}
       {...(activeItemId === undefined ? {} : { activeItemId })}
@@ -166,7 +186,7 @@ export function ConsoleShell({
                 />
               ),
             },
-            ...breadcrumbForPath(pathname),
+            ...trail,
           ]}
         />
       }
@@ -200,5 +220,6 @@ export function ConsoleShell({
     >
       {children}
     </AppShell>
+    </ShellDetailTrailProvider>
   )
 }

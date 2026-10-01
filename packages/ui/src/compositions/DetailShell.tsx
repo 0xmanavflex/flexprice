@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { useEffect, useRef, type ReactNode } from 'react'
+import { useShellDetailTrail } from './shell/ShellDetailTrail'
 import { ChevronRightIcon } from 'lucide-react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -37,6 +38,26 @@ export interface DetailCrumb {
  * grow its own.
  */
 export function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
+  const publish = useShellDetailTrail()
+  const latest = useRef(trail)
+  latest.current = trail
+  const key = trail.map((crumb) => crumb.label).join('\u0000')
+
+  // Inside the console shell the header already shows the trail, so the page
+  // hands its trail up and renders nothing; bare (stories, tests) it renders.
+  useEffect(() => {
+    if (!publish) return
+    publish(
+      latest.current.map((crumb, index) => ({
+        label: crumb.label,
+        onClick: () => latest.current[index]?.onClick?.(),
+        hasClick: Boolean(crumb.onClick),
+      })),
+    )
+    return () => publish(null)
+  }, [publish, key])
+
+  if (publish) return null
   return (
     <nav aria-label="Breadcrumb">
       <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
