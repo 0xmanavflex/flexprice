@@ -173,7 +173,7 @@ const search = (path: string, key: string) =>
 
 /** Finds one row in a corpus by id — the by-id GET endpoints read it. */
 function byId(key: string, id: string): Record<string, unknown> | null {
-  return (corpus[key] as Corpus).items.find((row) => readString(row, 'id') === id) ?? null
+  return sourceFor(key).items.find((row) => readString(row, 'id') === id) ?? null
 }
 
 /**
@@ -2711,10 +2711,9 @@ export const handlers = [
       { status: 201 },
     )
   }),
-  http.put(`${BASE}/addons/:id`, async ({ request, params }) => {
-    const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
-  }),
+  http.put(`${BASE}/addons/:id`, async ({ request, params }) =>
+    patchRow((corpus['addons'] as Corpus).items, String(params['id']), await readBody(request)),
+  ),
   // One add-on, by id — the detail page on a direct navigation, from the same
   // corpus the list reads.
   http.get(`${BASE}/addons/:id`, ({ params }) => {
@@ -2750,11 +2749,9 @@ export const handlers = [
     const coupon = byId('coupons', String(params['id']))
     return coupon ? HttpResponse.json(coupon) : new HttpResponse(null, { status: 404 })
   }),
-  http.put(`${BASE}/coupons/:id`, async ({ request, params }) => {
-    const body = (await request.json()) as Record<string, unknown>
-    const existing = byId('coupons', String(params['id'])) ?? {}
-    return HttpResponse.json({ ...existing, ...body, id: params['id'] })
-  }),
+  http.put(`${BASE}/coupons/:id`, async ({ request, params }) =>
+    patchRow((corpus['coupons'] as Corpus).items, String(params['id']), await readBody(request)),
+  ),
   http.delete(`${BASE}/coupons/:id`, ({ params }) =>
     HttpResponse.json({ id: String(params['id']) }),
   ),
@@ -2824,14 +2821,14 @@ export const handlers = [
     })
   }),
   http.post(`${BASE}/invoices/:id/finalize`, ({ params }) => {
-    patchRow((corpus['invoices'] as Corpus).items, String(params['id']), {
+    patchRow(sourceFor('invoices').items, String(params['id']), {
       invoice_status: 'FINALIZED',
       finalized_at: new Date().toISOString(),
     })
     return HttpResponse.json({ message: 'ok' })
   }),
   http.post(`${BASE}/invoices/:id/void`, ({ params }) => {
-    patchRow((corpus['invoices'] as Corpus).items, String(params['id']), {
+    patchRow(sourceFor('invoices').items, String(params['id']), {
       invoice_status: 'VOIDED',
       voided_at: new Date().toISOString(),
     })
@@ -2840,8 +2837,17 @@ export const handlers = [
   http.post(`${BASE}/invoices/:id/payment/attempt`, () => HttpResponse.json({ message: 'ok' })),
   http.post(`${BASE}/invoices`, async ({ request }) => {
     const body = await readBody(request)
-    const row = { ...body, id: `inv_new_${Date.now()}`, status: 'published' }
-    ;(corpus['invoices'] as Corpus).items.unshift(row)
+    const total = String(body['total'] ?? '0')
+    const row = {
+      payment_status: 'PENDING',
+      amount_paid: '0',
+      amount_remaining: total,
+      issue_date: new Date().toISOString(),
+      ...body,
+      id: `inv_new_${Date.now()}`,
+      status: 'published',
+    }
+    sourceFor('invoices').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
   http.get(`${BASE}/subscriptions/:id/entitlements`, () =>
@@ -2899,12 +2905,12 @@ export const handlers = [
     const patch = immediate
       ? { subscription_status: 'cancelled', cancelled_at: new Date().toISOString() }
       : { cancel_at_period_end: true }
-    patchRow((corpus['subscriptions'] as Corpus).items, String(params['id']), patch)
+    patchRow(sourceFor('subscriptions').items, String(params['id']), patch)
     return HttpResponse.json({ subscription_id: params['id'], ...patch })
   }),
   http.post(`${BASE}/subscriptions/:id/activate`, async ({ request, params }) => {
     const body = await readBody(request)
-    return patchRow((corpus['subscriptions'] as Corpus).items, String(params['id']), {
+    return patchRow(sourceFor('subscriptions').items, String(params['id']), {
       subscription_status: 'active',
       start_date: body['start_date'],
     })
@@ -2999,10 +3005,9 @@ export const handlers = [
       { status: 201 },
     )
   }),
-  http.put(`${BASE}/prices/units/:id`, async ({ request, params }) => {
-    const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
-  }),
+  http.put(`${BASE}/prices/units/:id`, async ({ request, params }) =>
+    patchRow((corpus['priceUnits'] as Corpus).items, String(params['id']), await readBody(request)),
+  ),
   // One price unit, by id — the detail page on a direct navigation.
   http.get(`${BASE}/prices/units/:id`, ({ params }) => {
     const unit = byId('priceUnits', String(params['id']))
