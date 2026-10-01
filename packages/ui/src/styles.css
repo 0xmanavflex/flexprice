@@ -139,14 +139,15 @@
        centres in a readable column instead of a table sprawling to 2270px with
        its values scattered across the screen. Tune here, once. */
     --shell-max: 1600px;
-    /* A quiet neutral rail, so the content stays the focus: a white ground,
-       zinc text, and teal reserved for the selected row alone. Deliberately
-       cooler and calmer than the warm content area. Hex as specified, so the
-       tokens match the design exactly. Row text is #52525b; icons sit a step
-       lighter (#71717a) and hover/active recolour them — see @layer components.
-       Contrast checks (all clear 4.5:1): #52525b on #fff 7.7:1, #0f4c4a on
-       #e6f3f2 8.8:1, #27272a on #f4f7f7 14:1. */
-    --sidebar: #ffffff;
+    /* A quiet neutral rail, so the content stays the focus: an off-white
+       ground (#fafafa, sampled from the redesign), zinc text, and teal
+       reserved for the selected row alone. Deliberately cooler and calmer
+       than the warm content area. Hex as specified, so the tokens match the
+       design exactly. Row text is #52525b; icons sit a step lighter (#71717a)
+       and hover/active recolour them — see @layer components.
+       Contrast checks (all clear 4.5:1): #52525b on #fafafa 7.4:1, #71717a on
+       #fafafa 4.6:1, #0f4c4a on #e6f3f2 8.8:1, #27272a on #f4f7f7 13.8:1. */
+    --sidebar: #fafafa;
     --sidebar-foreground: #52525b;
     --sidebar-primary: var(--brand);
     --sidebar-primary-foreground: #ffffff;

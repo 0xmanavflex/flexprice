@@ -136,7 +136,7 @@ const GROUPS: Group[] = [
     description:
       'A shade darker than the page, with a faint brand wash on the active row — so the current page is found by colour before it is read.',
     tokens: [
-      { name: '--sidebar', light: 'oklch(0.945 0 0)', dark: 'oklch(0.175 0 0)' },
+      { name: '--sidebar', light: '#fafafa', dark: 'oklch(0.185 0.003 75)' },
       { name: '--sidebar-foreground', light: 'oklch(0.145 0 0)', dark: 'oklch(0.985 0 0)' },
       { name: '--sidebar-primary', light: 'var(--brand)', dark: 'var(--brand)' },
       {
