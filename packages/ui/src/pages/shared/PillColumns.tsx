@@ -50,49 +50,28 @@ export interface PillColumn {
 /**
  * Slabs for one column, top to bottom.
  *
- * `lit` of them are coloured, the rest stay on the muted track above so the
- * run stands on the axis. The coloured ones are shared across the series in
- * proportion to their values (largest remainder, so they add up to `lit`),
- * and the first series sits at the foot.
+ * `lit` of them are coloured and they sit at the *foot*, so the bar stands on
+ * the axis with the muted track above it. The ramp is indexed by position
+ * within the lit run, counted from its head — so the top slab of every bar is
+ * the full tone no matter how tall the bar is, and the shade fades downward.
+ *
+ * That is the design's mark, and it is not the same as colouring by series.
+ * Keying the ramp to the series index makes a short column uniformly dark and
+ * a tall one uniformly spread, so height and colour say the same thing twice
+ * and the heads of two bars no longer match. `BarsStandAndTheRampRestarts`
+ * pins both halves; it failed when this was keyed to the series.
+ *
+ * Colour therefore carries magnitude, not identity. Which series contributed
+ * what is in the tooltip and in the footer totals, where it can be read
+ * instead of decoded.
  */
-function columnSlabs(
-  series: PillSeries[],
-  values: Record<string, number>,
-  lit: number,
-  rows: number,
-  colorAt: (index: number) => string | undefined,
-): Array<string | null> {
-  const amounts = series.map((item) => Math.max(values[item.id] ?? 0, 0))
-  const total = amounts.reduce((sum, value) => sum + value, 0)
-  const counts = amounts.map(() => 0)
-
-  if (lit > 0 && total > 0) {
-    const exact = amounts.map((value) => (value / total) * lit)
-    const floors = exact.map((value) => Math.floor(value))
-    let left = lit - floors.reduce((sum, value) => sum + value, 0)
-    const order = exact
-      .map((value, index) => ({ index, fraction: value - (floors[index] ?? 0) }))
-      .sort((a, b) => b.fraction - a.fraction || a.index - b.index)
-    for (const entry of order) {
-      if (left <= 0) break
-      floors[entry.index] = (floors[entry.index] ?? 0) + 1
-      left -= 1
-    }
-    floors.forEach((count, index) => {
-      counts[index] = count
-    })
-  }
-
-  // Bottom-up: series 0 on the axis, then the next. Reverse into DOM order.
-  const litColors: string[] = []
-  counts.forEach((count, index) => {
-    const color = colorAt(index)
-    if (!color) return
-    for (let step = 0; step < count; step += 1) litColors.push(color)
-  })
-
-  const muted = Math.max(rows - litColors.length, 0)
-  return [...Array.from({ length: muted }, () => null), ...litColors.reverse()]
+function columnSlabs(lit: number, rows: number, ramp: string[]): Array<string | null> {
+  const run = Math.min(Math.max(lit, 0), rows)
+  const muted = rows - run
+  return [
+    ...Array.from({ length: muted }, () => null),
+    ...Array.from({ length: run }, (_, index) => ramp[index] ?? ramp[ramp.length - 1] ?? null),
+  ]
 }
 
 export interface PillColumnsProps {
@@ -116,10 +95,10 @@ export function PillColumns({
   label,
   className,
 }: PillColumnsProps) {
-  // One step per series, darkest first — the block's indigo-600 … indigo-100,
-  // mixed from the lead tone so a page can still recolour the whole matrix.
-  const ramp = toneRamp(series[0]?.tone ?? seriesTone(0), Math.max(series.length, 1))
-  const seriesColor = (index: number) => ramp[Math.min(index, ramp.length - 1)] ?? ramp[0]
+  // One step per row — the block's indigo-600 … indigo-100, mixed from the
+  // lead tone so a page can still recolour the whole matrix. Sized to `rows`,
+  // not to the series count, because the ramp is read down a bar.
+  const ramp = toneRamp(series[0]?.tone ?? seriesTone(0), rows)
 
   const totals = columns.map((column) =>
     series.reduce((sum, item) => sum + Math.max(column.values[item.id] ?? 0, 0), 0),
@@ -139,7 +118,7 @@ export function PillColumns({
            */
           const share = peak > 0 ? total / peak : 0
           const lit = share > 0 ? Math.max(1, Math.round(share * rows)) : 0
-          const slabs = columnSlabs(series, column.values, lit, rows, seriesColor)
+          const slabs = columnSlabs(lit, rows, ramp)
 
           const reading = `${column.label}: ${format(total)} total, ${series
             .map((item) => `${item.label} ${format(column.values[item.id] ?? 0)}`)
@@ -195,18 +174,17 @@ export function PillColumns({
         <>
           <Separator />
           <ul className="flex flex-wrap items-center gap-x-6 gap-y-1.5">
-            {series.map((item, index) => {
+            {series.map((item) => {
               const total = columns.reduce(
                 (sum, column) => sum + Math.max(column.values[item.id] ?? 0, 0),
                 0,
               )
               return (
-                <li key={item.id} className="flex items-center gap-2 text-sm">
-                  <span
-                    aria-hidden="true"
-                    className="size-2 shrink-0 rounded-full"
-                    style={{ backgroundColor: seriesColor(index) }}
-                  />
+                /* No swatch. Every column runs the same ramp, so a dot here
+                   would key a colour that does not distinguish anything in the
+                   plot — it would read as "Studio is the dark blue one" when
+                   the dark blue is simply the top of each bar. */
+                <li key={item.id} className="flex items-baseline gap-2 text-sm">
                   <span className="text-muted-foreground">{item.label}</span>
                   <span className="font-medium tabular-nums">{format(total)}</span>
                 </li>
