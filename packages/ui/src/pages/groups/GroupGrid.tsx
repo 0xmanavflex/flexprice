@@ -173,6 +173,8 @@ export function GroupGrid({
   )
 
 
+  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
+
   const isDefaultSort =
     query.sortBy === DEFAULT_GROUP_QUERY.sortBy &&
     query.sortDirection === DEFAULT_GROUP_QUERY.sortDirection
@@ -249,6 +251,7 @@ export function GroupGrid({
           onQueryChange({ ...query, sortBy: sortBy as GroupSortField, sortDirection, page: 1 }),
       }}
       rowActions={rowActions}
+      selectable
       exportFileName="groups"
       primaryAction={
         onCreate ? (
