@@ -1,21 +1,19 @@
 /*
  * The Flexprice design system.
  *
- * The base theme is the shadcn `nova` preset on the Base UI library, which is
- * what `base-nova` in components.json refers to. ReUI's registry items carry
- * only their *extended* tokens (success, info, warning, invert); they layer on
- * top of this base.
+ * This is the redesign's theme, verbatim: the shadcn `base-nova` preset on the
+ * Base UI library, a navy primary (#0f2a3d light, #1a70a2 dark), the Geist
+ * typeface, a 0.625rem radius, and ReUI's extended status tokens. Nothing here
+ * restyles a component. A page that looks different from the redesign is a page
+ * that composed the wrong parts, not a theme that needs another override.
  *
- * The palette is Ferry's: a deep-teal brand on a warm-neutral field, not the
- * indigo-on-cool-grey it started as. Blue is gone — the primary action, active
- * navigation, focus rings and links are all the one teal accent, and hover is
- * that same tone a shade lighter, never a second colour.
+ * Weight: medium is the heaviest anywhere. No `font-semibold` or `font-bold`.
  */
 
 @import 'tailwindcss';
 @import 'tw-animate-css';
 @import 'shadcn/tailwind.css';
-@import '@fontsource-variable/inter';
+@import '@fontsource-variable/geist';
 
 /*
  * Tell Tailwind where this package's markup lives. v4 auto-detects sources from
@@ -32,7 +30,7 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+    --font-sans: 'Geist Variable', ui-sans-serif, system-ui, sans-serif;
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -83,157 +81,109 @@
 }
 
 :root {
-    /*
-     * The brand. Not blue — a deep teal (#07383e), from Ferry, on a warm
-     * neutral field. It carries the primary action, active navigation, focus
-     * rings and links; everything else stays neutral so the accent means
-     * something. Swap these three lines to rebrand; nothing else names a colour.
-     */
-    --brand: #07383e;
-    --brand-foreground: #ffffff;
-    --brand-muted: #eaf5f1;
-
-    /* Warm off-white, not pure #fff — a bright white read as harsh. Cards sit a
-       shade brighter (pure white), so the content plane lifts off the page. */
-    --background: oklch(0.995 0.001 85);
-    --foreground: oklch(0.25 0.004 75);
+    --background: oklch(1 0 0);
+    --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
-    --card-foreground: var(--foreground);
+    --card-foreground: oklch(0.145 0 0);
     --popover: oklch(1 0 0);
-    --popover-foreground: var(--foreground);
-    --primary: var(--brand);
-    --primary-foreground: var(--brand-foreground);
-    /* Secondary is the brand's pale wash — a mint, not a grey. */
-    --secondary: var(--brand-muted);
-    --secondary-foreground: var(--brand);
-    --muted: oklch(0.963 0.002 85);
-    /* 0.52, not lighter: secondary text must clear 4.5:1 on the brightest
-       surface it lands on (the near-white background and the muted fills). */
-    --muted-foreground: oklch(0.52 0.006 75);
-    --accent: oklch(0.949 0.003 85);
-    --accent-foreground: var(--foreground);
+    --popover-foreground: oklch(0.145 0 0);
+    --primary: #0f2a3d;
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.97 0 0);
+    --secondary-foreground: oklch(0.205 0 0);
+    --muted: oklch(0.97 0 0);
+    --muted-foreground: oklch(0.556 0 0);
+    --accent: oklch(0.97 0 0);
+    --accent-foreground: oklch(0.205 0 0);
     --destructive: oklch(0.577 0.245 27.325);
-    /* Hairlines, not boxes: a light edge (13%) and a slightly firmer input
-       rule (22%), so borders read as edges rather than as drawn boxes. */
-    --border: oklch(0.3 0.005 75 / 13%);
-    --input: oklch(0.3 0.005 75 / 22%);
-    /* Focus ring is the brand teal, never blue. */
-    --ring: var(--brand);
-    /* Series colours, blue-led, in a fixed order that is never cycled.
-       These are VALIDATED values, not picks — the ordering clears every hard
-       gate in both modes (worst adjacent CVD ΔE 9.1 light / 8.4 dark, worst
-       adjacent normal-vision ΔE 22.9 / 19.8). Re-deriving them by eye breaks
-       that, so they stay verbatim and in hex rather than being converted.
-       Re-check with the dataviz validator before changing any of them.
-       Slot 1 is the primary series: the events area chart, the usage bars and
-       the first plan all read from it. */
-    --chart-1: #155dfb;
-    --chart-2: #eb6834;
-    --chart-3: #1baf7a;
-    --chart-4: #eda100;
-    --chart-5: #e87ba4;
+    --border: oklch(0.922 0 0);
+    --input: oklch(0.922 0 0);
+    --ring: oklch(0.708 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
     --radius: 0.625rem;
-    /* The one content measure the shell, the list bodies and the detail pages
-       all cap to and centre within. Below it every surface fills the width
-       (a 1440 screen is edge-to-edge); above it — 1920, 2560 — the content
-       centres in a readable column instead of a table sprawling to 2270px with
-       its values scattered across the screen. Tune here, once. */
-    --shell-max: 1600px;
-    /* A quiet neutral rail, so the content stays the focus: an off-white
-       ground (#fafafa, sampled from the redesign), zinc text, and teal
-       reserved for the selected row alone. Deliberately cooler and calmer
-       than the warm content area. Hex as specified, so the tokens match the
-       design exactly. Row text is #52525b; icons sit a step lighter (#71717a)
-       and hover/active recolour them — see @layer components.
-       Contrast checks (all clear 4.5:1): #52525b on #fafafa 7.4:1, #71717a on
-       #fafafa 4.6:1, #0f4c4a on #e6f3f2 8.8:1, #27272a on #f4f7f7 13.8:1. */
-    --sidebar: #fafafa;
-    --sidebar-foreground: #52525b;
-    --sidebar-primary: var(--brand);
-    --sidebar-primary-foreground: #ffffff;
-    /* Selected: a light teal wash with dark-teal text, plus a teal indicator
-       bar (the @layer rule). The one place the rail carries brand colour. */
-    --sidebar-accent: #e6f3f2;
-    --sidebar-accent-foreground: #0f4c4a;
-    /* The teal of the active indicator bar. */
-    --sidebar-indicator: #0f766e;
-    /* Hover — a neutral wash, never teal, so pointing at a row never reads as
-       selecting it. */
-    --sidebar-hover: #f4f7f7;
-    --sidebar-hover-foreground: #27272a;
-    /* Icons a step lighter than the row text; the count quieter still. */
-    --sidebar-icon: #71717a;
-    --sidebar-count: #71717a;
-    --sidebar-border: #e4e4e7;
-    --sidebar-ring: var(--brand);
+    --sidebar: oklch(0.985 0 0);
+    --sidebar-foreground: oklch(0.145 0 0);
+    --sidebar-primary: #0f2a3d;
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.97 0 0);
+    --sidebar-accent-foreground: oklch(0.205 0 0);
+    --sidebar-border: oklch(0.922 0 0);
+    --sidebar-ring: oklch(0.708 0 0);
+    --destructive-foreground: var(--color-red-800);
+    --success: var(--color-emerald-500);
+    --success-foreground: var(--color-emerald-900);
+    --info: var(--color-violet-500);
+    --info-foreground: var(--color-violet-900);
+    --warning: var(--color-yellow-500);
+    --warning-foreground: var(--color-yellow-900);
+    --invert: var(--color-zinc-900);
+    --invert-foreground: var(--color-zinc-50);
 }
 
 .dark {
-    /* Teal lightens on dark so the accent reads without glowing. */
-    --brand: #81cec4;
-    --brand-foreground: #07383e;
-    --brand-muted: #173b3b;
-
-    --background: oklch(0.205 0.003 75);
-    --foreground: oklch(0.925 0.003 85);
-    --card: oklch(0.25 0.004 75);
-    --card-foreground: var(--foreground);
-    --popover: oklch(0.265 0.004 75);
-    --popover-foreground: var(--foreground);
-    --primary: var(--brand);
-    --primary-foreground: var(--brand-foreground);
-    --secondary: var(--brand-muted);
-    --secondary-foreground: var(--brand);
-    --muted: oklch(0.27 0.004 75);
-    --muted-foreground: oklch(0.7 0.005 85);
-    --accent: oklch(0.3 0.004 75);
-    --accent-foreground: var(--foreground);
+    --background: oklch(0.145 0 0);
+    --foreground: oklch(0.985 0 0);
+    --card: oklch(0.205 0 0);
+    --card-foreground: oklch(0.985 0 0);
+    --popover: oklch(0.205 0 0);
+    --popover-foreground: oklch(0.985 0 0);
+    --primary: #1a70a2;
+    --primary-foreground: oklch(0.985 0 0);
+    --secondary: oklch(0.269 0 0);
+    --secondary-foreground: oklch(0.985 0 0);
+    --muted: oklch(0.269 0 0);
+    --muted-foreground: oklch(0.708 0 0);
+    --accent: oklch(0.269 0 0);
+    --accent-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 22%);
-    --ring: var(--brand);
-    /* The same eight hues re-stepped for the dark surface — a selected
-       palette, never an automatic flip of the light one. */
-    --chart-1: #4d84fb;
-    --chart-2: #d95926;
-    --chart-3: #199e70;
-    --chart-4: #c98500;
-    --chart-5: #d55181;
-    /* The same quiet-rail idea in the dark: a near-black ground, zinc text,
-       teal only on the selected row. Derived to hold the light-mode contrasts. */
-    --sidebar: oklch(0.185 0.003 75);
-    --sidebar-foreground: oklch(0.72 0.004 285);
-    --sidebar-primary: var(--brand);
-    --sidebar-primary-foreground: #07383e;
-    --sidebar-accent: oklch(0.34 0.03 190);
-    --sidebar-accent-foreground: oklch(0.9 0.06 185);
-    --sidebar-indicator: oklch(0.7 0.1 185);
-    --sidebar-hover: oklch(0.26 0.004 285);
-    --sidebar-hover-foreground: oklch(0.96 0.003 285);
-    --sidebar-icon: oklch(0.62 0.004 285);
-    --sidebar-count: oklch(0.6 0.004 285);
-    --sidebar-border: oklch(1 0 0 / 6%);
-    --sidebar-ring: var(--brand);
+    --input: oklch(1 0 0 / 15%);
+    --ring: oklch(0.556 0 0);
+    --chart-1: oklch(0.87 0 0);
+    --chart-2: oklch(0.556 0 0);
+    --chart-3: oklch(0.439 0 0);
+    --chart-4: oklch(0.371 0 0);
+    --chart-5: oklch(0.269 0 0);
+    --sidebar: oklch(0.205 0 0);
+    --sidebar-foreground: oklch(0.985 0 0);
+    --sidebar-primary: #1a70a2;
+    --sidebar-primary-foreground: oklch(0.985 0 0);
+    --sidebar-accent: oklch(0.269 0 0);
+    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --sidebar-border: oklch(1 0 0 / 10%);
+    --sidebar-ring: oklch(0.556 0 0);
+    --destructive-foreground: var(--color-red-600);
+    --success: var(--color-emerald-500);
+    --success-foreground: var(--color-emerald-600);
+    --info: var(--color-violet-500);
+    --info-foreground: var(--color-violet-600);
+    --warning: var(--color-yellow-500);
+    --warning-foreground: var(--color-yellow-600);
+    --invert: var(--color-zinc-700);
+    --invert-foreground: var(--color-zinc-50);
 }
 
-/*
- * Buttons and badges are fully curved, as ReUI's Flux template has them. A
- * theme decision, so it lives here rather than being spelled onto every call
- * site. Registry components stay untouched and upgradeable.
- */
-@layer components {
-  [data-slot='button'],
-  [data-slot='badge'],
-  [data-slot='kbd'] {
-    border-radius: calc(infinity * 1px);
-  }
 
-  /* Icon buttons in a menu or a table row: a circle in a dense row reads as a
-     status dot, not a control. */
-  [data-slot='dropdown-menu-item'] [data-slot='button'],
-  [data-slot='table'] [data-slot='button'] {
-    border-radius: var(--radius-md);
-  }
+/*
+ * Aliases for call sites that still say `brand`. They resolve to the redesign's
+ * primary/secondary and exist only until those call sites are gone.
+ */
+:root, .dark {
+    --brand: var(--primary);
+    --brand-foreground: var(--primary-foreground);
+    --brand-muted: var(--secondary);
+    --shell-max: 1600px;
+    --sidebar-count: var(--muted-foreground);
+}
+
+@theme inline {
+    --color-brand: var(--brand);
+    --color-brand-foreground: var(--brand-foreground);
+    --color-brand-muted: var(--brand-muted);
 }
 
 @layer base {
@@ -248,245 +198,18 @@
     @apply bg-background text-foreground;
     min-height: 100dvh;
     }
-  /*
-   * The app fills the window. A root that is only as tall as its content leaves
-   * the webview's own background — black — showing as a bar under the shell.
-   */
+  button:not(:disabled), [role="button"]:not(:disabled) {
+    cursor: pointer;
+    }
   #root {
     min-height: 100dvh;
     }
 }
 
 /*
- * ReUI extended tokens — the status set. Ferry's values: a calmer green, a
- * warmer/brighter yellow than nova's dull one, a teal-leaning info that does
- * not clash with the brand.
- */
-:root {
-    /* Dark foreground, not white: the console's status badges are the light
-       variants (a tinted fill with coloured text), so the text has to be dark
-       enough to read on that light fill — white failed on the light-red one. */
-    --destructive-foreground: oklch(0.44 0.17 27);
-    --success: oklch(0.6 0.13 155);
-    --success-foreground: oklch(0.28 0.06 155);
-    --info: oklch(0.54 0.14 255);
-    --info-foreground: oklch(0.34 0.1 255);
-    --warning: oklch(0.75 0.15 75);
-    --warning-foreground: oklch(0.36 0.09 75);
-    --invert: oklch(0.21 0.005 264);
-    --invert-foreground: oklch(0.98 0 0);
-}
-
-.dark {
-    --destructive-foreground: oklch(0.85 0.09 27);
-    --success: oklch(0.72 0.13 155);
-    --success-foreground: oklch(0.9 0.08 155);
-    --info: oklch(0.68 0.14 255);
-    --info-foreground: oklch(0.9 0.08 255);
-    --warning: oklch(0.8 0.14 75);
-    --warning-foreground: oklch(0.92 0.08 75);
-    --invert: oklch(0.92 0.004 85);
-    --invert-foreground: oklch(0.21 0.005 264);
-}
-
-@theme inline {
-    --color-destructive-foreground: var(--destructive-foreground);
-    --color-success: var(--success);
-    --color-success-foreground: var(--success-foreground);
-    --color-info: var(--info);
-    --color-info-foreground: var(--info-foreground);
-    --color-warning: var(--warning);
-    --color-warning-foreground: var(--warning-foreground);
-    --color-invert: var(--invert);
-    --color-invert-foreground: var(--invert-foreground);
-    /* So `text-brand`, `bg-brand`, `bg-brand-muted` are available to compose with. */
-    --color-brand: var(--brand);
-    --color-brand-foreground: var(--brand-foreground);
-    --color-brand-muted: var(--brand-muted);
-}
-
-/*
- * Depth and interaction. Written as `data-slot` selectors (the vendor's public
- * targeting contract) and declared after Tailwind's utilities, so a `className`
- * at the call site still wins and no vendored component is forked to get them.
- */
-@layer components {
-  /* Lift the surfaces that float above the page — drawer, menus, popovers,
-     cards — with one soft, low shadow. Restrained: a surface should read as
-     slightly in front, not as a card thrown onto the page. */
-  [data-slot='sheet-content'],
-  [data-slot='popover-content'],
-  [data-slot='dropdown-menu-content'],
-  [data-slot='select-content'],
-  [data-slot='card'] {
-    box-shadow:
-      0 1px 2px -1px oklch(0 0 0 / 0.08),
-      0 8px 24px -12px oklch(0 0 0 / 0.14);
-  }
-  .dark [data-slot='sheet-content'],
-  .dark [data-slot='popover-content'],
-  .dark [data-slot='dropdown-menu-content'],
-  .dark [data-slot='select-content'],
-  .dark [data-slot='card'] {
-    box-shadow:
-      0 1px 2px -1px oklch(0 0 0 / 0.4),
-      0 8px 24px -12px oklch(0 0 0 / 0.5);
-  }
-
-  /* The content plane floats a little in front of the rail — a layered shadow
-     (a tight contact shadow plus a wide soft one) that reads as light 3D depth.
-     In the dark the shadow alone barely shows against the near-black, so a faint
-     top-edge highlight (an inset light hairline) does the lifting instead. */
-  [data-slot='sidebar-inset'] {
-    box-shadow:
-      0 1px 3px -1px oklch(0 0 0 / 0.08),
-      0 16px 44px -14px oklch(0 0 0 / 0.22);
-  }
-  .dark [data-slot='sidebar-inset'] {
-    box-shadow:
-      inset 0 1px 0 0 oklch(1 0 0 / 0.05),
-      0 2px 6px -2px oklch(0 0 0 / 0.55),
-      0 20px 52px -16px oklch(0 0 0 / 0.8);
-  }
-
-  /*
-   * One menu surface, wherever it opens.
-   *
-   * Every floating menu, select and popover shares the same corner and the same
-   * inset, so a dropdown does not change shape between the shell menus, the sort
-   * menu and the filter popover — the "dropdowns look different all over"
-   * symptom. The radius is `--radius-xl` (14px): the shell menus were `rounded-3xl`
-   * (bubbly at this size), the sort menu `rounded-2xl`, the vendored default
-   * `rounded-lg` — three sizes for one control. `!important` because those
-   * radii/insets are set both by the vendored defaults and by a few call sites;
-   * this is the single source, the same way the sidebar-hover rule below is.
-   *
-   * A popover gets the corner but not the inset — its contents (a filter builder,
-   * a calendar) own their own padding and several are deliberately `p-0`.
-   */
-  [data-slot='popover-content'],
-  [data-slot='dropdown-menu-content'],
-  [data-slot='select-content'] {
-    border-radius: var(--radius-xl) !important;
-  }
-  [data-slot='dropdown-menu-content'],
-  [data-slot='select-content'] {
-    padding: 0.375rem !important;
-  }
-  /* Rows sit a step tighter than the surface, so a selected row is a pill inset
-     within the menu rather than one reaching into its corners. */
-  [data-slot='dropdown-menu-item'],
-  [data-slot='dropdown-menu-radio-item'],
-  [data-slot='dropdown-menu-checkbox-item'],
-  [data-slot='select-item'] {
-    border-radius: var(--radius-md) !important;
-  }
-
-  /* A table row answers the cursor — a long list reads as something you act on
-     rather than a static dump. `color-mix` keeps it a wash of the theme's own
-     muted tone in either mode, never a second colour. */
-  [data-slot='table-row']:hover {
-    background-color: color-mix(in oklch, var(--muted) 60%, transparent);
-  }
-
-  /*
-   * The sidebar's nav buttons come in two shapes. A leaf row is a
-   * `sidebar-menu-button`; in the collapsed rail a *parent* becomes a
-   * `dropdown-menu-trigger` — Base UI renames the slot when a button is a
-   * dropdown trigger — but it is the same button and still carries `data-active`.
-   * Both are styled together below, the trigger scoped to the sidebar so no
-   * other dropdown trigger (the environment switcher, a menu elsewhere) is
-   * caught. Without the trigger variant the collapsed rail's active parent kept
-   * the vendored teal fill, which is the fill that was showing there.
-   */
-
-  /* Hover has no fill — a thin outline that follows the button's own shape (a
-     ring in the icon rail, a rounded rectangle expanded) via an inset shadow so
-     it never shifts layout, plus darker text and icon. Selected carries the
-     teal bar and ink and NO outline, so the two use different marks and never
-     blur: an outline means "pointing", a bar and teal ink mean "here". */
-  [data-slot='sidebar-menu-button']:not([data-active]):hover,
-  [data-slot='sidebar-menu-sub-button']:not([data-active]):hover,
-  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger']:not([data-active]):hover {
-    background-color: transparent !important;
-    color: var(--sidebar-hover-foreground) !important;
-    box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--sidebar-foreground) 24%, transparent);
-  }
-  [data-slot='sidebar-menu-button']:not([data-active]):hover svg,
-  [data-slot='sidebar-menu-sub-button']:not([data-active]):hover svg,
-  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger']:not([data-active]):hover svg {
-    color: var(--sidebar-hover-foreground);
-  }
-
-  /* Icons rest a step lighter than the row text; the selected row's icon takes
-     the dark-teal accent. */
-  [data-slot='sidebar-menu-button'] svg,
-  [data-slot='sidebar-menu-sub-button'] svg,
-  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'] svg {
-    color: var(--sidebar-icon);
-  }
-  [data-slot='sidebar-menu-button'][data-active] svg,
-  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'][data-active] svg {
-    color: var(--sidebar-accent-foreground);
-  }
-
-  /* Selected is carried by the dark-teal text and icon alone — no fill, no
-     outline, no bar. The quietest possible "you are here": the row simply goes
-     teal. (The indicator bar was removed on request.) */
-  [data-slot='sidebar-menu-button'][data-active],
-  [data-slot='sidebar'] [data-slot='dropdown-menu-trigger'][data-active] {
-    background-color: transparent !important;
-    box-shadow: none !important;
-  }
-
-  /* Dropdowns answer the cursor and read as a control, not flat text — a light
-     hover wash in both modes (the vendored select only had one in dark), so a
-     row of selects invites a click. */
-  [data-slot='select-trigger']:hover:not(:disabled) {
-    background-color: color-mix(in oklch, var(--muted) 55%, transparent);
-  }
-
-  /*
-   * The sidebar is a quiet index, so it reads narrower, smaller and lighter.
-   *
-   * The width overrides AppShell's inline `--sidebar-width` (hence `!important`);
-   * the rows drop from 14px to 13px and shed the medium weight the vendored
-   * button puts on its active row — the selected pill already marks the current
-   * page, and a second signal in the weight only made the whole column look
-   * heavy. All `!important` because each overrides a vendored utility class.
-   */
-  [data-slot='sidebar-wrapper'] {
-    --sidebar-width: 232px !important;
-    --sidebar-width-icon: 4rem !important; /* 64px rail, from 48px */
-  }
-  [data-slot='sidebar-menu-button'],
-  [data-slot='sidebar-menu-sub-button'] {
-    font-size: 0.8125rem !important; /* 13px, from 14px */
-  }
-  [data-slot='sidebar-menu-button'][data-active] {
-    font-weight: 400 !important;
-  }
-  /* The section heading ('Workspace'): the vendored `/70` wash of the new,
-     lighter row text computed to ~3.6:1, under the 4.5:1 floor. A solid muted
-     colour restores it as a quiet-but-legible heading (≈4.8:1 on white). */
-  [data-slot='sidebar-group-label'] {
-    color: var(--sidebar-icon) !important;
-  }
-
-  /* The grid is a dense list of records, not a document: its cells read a size
-     down to 13px — the column-header labels already do — which aligns the two
-     and tightens the rows. */
-  [data-slot='data-grid-table'] {
-    font-size: 0.8125rem !important; /* 13px, from 14px */
-  }
-}
-
-/*
- * Semantic text green. The ReUI blocks colour small delta text with
- * text-emerald-500/600, which fails WCAG AA on a light card. Only the light
- * theme's text is darkened here; bg-emerald-* fills (chart, meter, donut
- * encodings) and the dark theme's lighter text are left as designed, and the
- * blocks stay unmodified.
+ * The ReUI blocks colour small delta text with text-emerald-500/600, which fails
+ * WCAG AA on a white surface. Only the light theme's text is darkened; fills and
+ * the dark theme are as designed, and the blocks stay unmodified.
  */
 :root:not(.dark) .text-emerald-500,
 :root:not(.dark) .text-emerald-600,

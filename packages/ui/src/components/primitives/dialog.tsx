@@ -1,8 +1,10 @@
 // @ts-nocheck — vendored from the ReUI registry; do not hand-edit.
 // Regenerate with: pnpm ui:add <item>   (see scripts/vendor-suppress.mjs)
+//
+// ADAPTED — registry source plus the redesign's density edits (see COMPONENT_MAP §5).
 import * as React from "react"
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
-import { cn } from "cn"
+import { cn } from "@ui/lib/cn"
 
 import { Button } from "@ui/components/primitives/button"
 import { XIcon } from "lucide-react"
@@ -122,7 +124,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
     <DialogPrimitive.Title
       data-slot="dialog-title"
       className={cn(
-        "text-base leading-none font-medium",
+        "font-heading text-base leading-none font-medium",
         className
       )}
       {...props}
