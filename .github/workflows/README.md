@@ -1,6 +1,6 @@
 # CI
 
-Six workflows, each answering one question, so a red check names the problem
+Eight workflows, each answering one question, so a red check names the problem
 before you open it.
 
 | Workflow | Gates | Roughly |
@@ -9,6 +9,7 @@ before you open it.
 | `test.yml` | Unit tests — domain, query, URL codecs, fixtures | 2–3 min |
 | `storybook.yml` | Every story as a browser test, **plus accessibility**; and the static workbench build | 8–12 min |
 | `e2e.yml` | Playwright journeys against a mock-backed console | 5–10 min |
+| `visual.yml` | Screenshot regression: every route against its committed baseline | 5–10 min |
 | `build.yml` | The production bundle, and its size in the summary | 2–4 min |
 | `sast.yml` | Semgrep. Soft-fail in phase 1 | 2–5 min |
 | `deploy.yml` | Vercel. **Skips until its secrets exist** | — |

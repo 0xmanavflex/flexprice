@@ -5,8 +5,7 @@ it is no longer stock should *say so*, the customization should be visible from
 the first commit, and future components should ship with their change scope known
 upfront. This is how we keep drift visible instead of discovering it at the end.
 
-Modelled on Ferry's discipline (a vendor baseline + a CI gate + `data-slot`-only
-house rules), adapted to what this repo already has.
+Visual decisions live in `UI_SOURCE_OF_TRUTH.md`; this file covers how components are labelled and protected.
 
 ## 1. Provenance — every product component declares where it came from
 
@@ -33,17 +32,20 @@ semantic tokens only.
 ## 2. Vendored code is not hand-edited
 
 ReUI primitives and premium blocks are copied source under
-`packages/ui/src/components/reui/**`, `packages/ui/src/primitives/**`, and
-`packages/ui/src/components/blocks/**`. They carry a `// @ts-nocheck — vendored`
-header (see `scripts/vendor-suppress.mjs`), and the rule is: **an upstream fix
-stays a re-install.** Do not hand-patch a vendored file — that silently loses the
-upgrade path. To differ, compose over it (a `flexprice/` or `compositions/`
-component) or use the theme (`styles.css` `data-slot` house rules), never a fork.
+`packages/ui/src/components/{primitives,reui,blocks,examples,ui}/**`. They carry a
+`// @ts-nocheck — vendored` header (see `scripts/vendor-suppress.mjs`), and the rule is:
+**an upstream fix stays a re-install.** Do not hand-patch a vendored file; that silently loses
+the upgrade path.
 
-House-style that must reach every instance of a vendored primitive (radius,
-row borders, shadows) lives in `styles.css` as `data-slot` rules declared after
-Tailwind's utilities — the vendor's public targeting contract — so no component
-is forked to restyle it.
+`scripts/check-vendor.mjs` enforces this. It hashes every vendored file against
+`packages/ui/vendor.lock.json` and fails CI (the Lint workflow) on any edit, addition or removal.
+If a change is intended, run `node scripts/check-vendor.mjs --update` and explain it in the PR; the
+lock file is owned by the design-system reviewer (`.github/CODEOWNERS`).
+
+To differ from a vendored item, compose over it with a `compositions/` or `pages/` component. Do
+**not** restyle vendored components from the theme: no `[data-slot=...]` overrides in `styles.css`.
+That approach was tried and removed (48 rules, see the divergence report); it silently changed every
+instance of a primitive, so no component looked stock.
 
 ## 3. Changelogs from the start
 
@@ -70,11 +72,3 @@ and names what it composes, so the deviation is declared, not discovered.
 Decided in the review. v1 ships one view per surface (tables, not a card/table
 toggle), one filter model, no per-user layout knobs. Customization surface is
 where drift and support cost hide; we add it deliberately later, not by default.
-
-## Next (CI enforcement)
-
-A `check-vendor` step (Ferry's `make check-vendor`) that diffs
-`packages/ui/src/components/reui/**` + `primitives/**` against a committed
-baseline and fails CI on an undocumented edit is the mechanical backstop for §2.
-It lands with the CI finish-up (see the roadmap) so the guardrail is enforced,
-not just written down.

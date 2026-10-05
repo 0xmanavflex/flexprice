@@ -1,5 +1,7 @@
 # The V2 interface — research and plan
 
+> **Superseded for visual decisions.** What the console looks like is defined by `UI_SOURCE_OF_TRUTH.md` (the reference app, Geist, navy primary). This document is kept as history; where it disagrees, that file wins.
+
 A clean-sheet design. **Nothing here is carried over from the current
 dashboard**, including its navigation, its page structures and its form
 patterns. Where V1 is mentioned it is as evidence of what to avoid.

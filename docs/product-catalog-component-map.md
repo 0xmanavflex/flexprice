@@ -1,5 +1,7 @@
 # Product Catalog — page-by-page component map (ReUI)
 
+> **Superseded for visual decisions.** What the console looks like is defined by `UI_SOURCE_OF_TRUTH.md` (the reference app, Geist, navy primary). This document is kept as history; where it disagrees, that file wins.
+
 A build list for the V2 product catalog: every catalog page, broken down into the
 small reusable pieces it is made of, each mapped to a **ReUI** item with a link and
 an install status. Checked field-by-field against

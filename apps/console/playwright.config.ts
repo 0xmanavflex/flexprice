@@ -26,6 +26,11 @@ const baseURL = process.env.E2E_BASE_URL ?? 'http://localhost:3000'
 
 export default defineConfig({
   testDir: './e2e',
+  // Screenshot regression has its own config and its own CI job
+  // (`playwright.visual.config.ts`, `e2e/visual/README.md`): it needs a pinned
+  // viewport, a frozen clock and committed baselines, none of which the journeys
+  // want. Kept out of this run so the journeys are unchanged.
+  testIgnore: ['**/visual/**'],
 
   // A flaky test is a broken test (`e2e/AGENTS.md`), so a retry is not allowed
   // to turn one green. If a test needs a retry to pass, that is the finding.

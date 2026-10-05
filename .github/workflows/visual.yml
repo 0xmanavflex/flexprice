@@ -1,0 +1,64 @@
+name: Visual
+
+# Screenshot regression: one viewport capture per route against a mock-backed
+# console, compared with the baselines in `apps/console/e2e/visual/__screenshots__`.
+#
+# Baselines are generated on Linux chromium, which is what `ubuntu-latest` runs,
+# so a diff here is a real pixel change and not an OS font difference. To accept
+# one, update the baselines in the PR and say why (`e2e/visual/README.md`).
+#
+# The Playwright config starts the app itself (`VITE_USE_MOCKS=true`).
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+      - 'ci/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: visual-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: Screenshots
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        env:
+          HUSKY: 0
+
+      - name: Install the Playwright browser
+        run: pnpm --filter console exec playwright install --with-deps chromium
+
+      - name: Compare every route with its baseline
+        run: pnpm test:visual
+
+      # `always() && failure()` so the report and the actual/expected/diff
+      # images survive the failure they document.
+      - name: Keep the diff images and report
+        if: always() && failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: visual-${{ github.run_id }}
+          path: |
+            apps/console/playwright-report
+            apps/console/test-results
+          retention-days: 7

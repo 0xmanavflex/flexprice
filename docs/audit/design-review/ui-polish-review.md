@@ -1,5 +1,7 @@
 # UI polish review — verification of commit `63a9ae2`
 
+> **Superseded for visual decisions.** What the console looks like is defined by `UI_SOURCE_OF_TRUTH.md` (the reference app, Geist, navy primary). This document is kept as history; where it disagrees, that file wins.
+
 Read-only visual QA of the deployed-build "design polish" fixes, against the three
 complaints the user raised: **dropdowns**, **page alignment**, **search bar**.
 Captured at 1440×900 (desktop), mocks on, light + dark. Screenshots in this folder

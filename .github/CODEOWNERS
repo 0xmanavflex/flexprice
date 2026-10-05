@@ -1,0 +1,14 @@
+# Files that change the look of many pages at once. A change here needs the
+# design-system owner's review. Replace @dskhairnar with a team handle once one exists.
+
+/UI_SOURCE_OF_TRUTH.md                       @dskhairnar
+/DESIGN_CHANGE.md                            @dskhairnar
+/packages/ui/src/styles.css                  @dskhairnar
+/packages/ui/vendor.lock.json                @dskhairnar
+/packages/ui/src/components/                 @dskhairnar
+/packages/ui/src/compositions/               @dskhairnar
+/packages/ui/src/pages/shared/               @dskhairnar
+/packages/eslint-config/                     @dskhairnar
+/scripts/check-vendor.mjs                    @dskhairnar
+/apps/console/e2e/visual/                    @dskhairnar
+/.github/workflows/                          @dskhairnar

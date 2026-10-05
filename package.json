@@ -12,6 +12,10 @@
     "typecheck": "nx run-many -t typecheck",
     "lint": "nx run-many -t lint",
     "test": "nx run-many -t test",
+    "check:vendor": "node scripts/check-vendor.mjs",
+    "ui:matrix": "node scripts/ui-page-matrix.mjs",
+    "test:visual": "pnpm --filter console test:visual",
+    "test:visual:update": "pnpm --filter console test:visual:update",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "verify": "nx run-many -t typecheck lint test build"

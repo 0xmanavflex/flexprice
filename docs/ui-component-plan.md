@@ -1,5 +1,7 @@
 # UI component plan
 
+> **Superseded for visual decisions.** What the console looks like is defined by `UI_SOURCE_OF_TRUTH.md` (the reference app, Geist, navy primary). This document is kept as history; where it disagrees, that file wins.
+
 What the Flexprice console is built from, surface by surface, with at least three
 options for every element we do not already have.
 

@@ -1,5 +1,7 @@
 # Flexprice Console — UI Revamp
 
+> **Partly superseded.** The architecture rules here (no data fetching in UI, URL-addressable tabs, loading/empty/error states) still apply. Its visual rules and the "exists, extend these" composition table do not: see `UI_SOURCE_OF_TRUTH.md` for the current vocabulary and `docs/ui-page-matrix.md` for what each page uses.
+
 The V2 console is a **UI systemization** effort, not a component swap. ReUI (Base
 UI / `base-nova`) supplies the primitives and proven interaction patterns; the
 Flexprice **composition layer** (`@fp/ui`) owns the resulting design system, and

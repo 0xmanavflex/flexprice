@@ -1,5 +1,7 @@
 # ReUI suggestions, surface by surface
 
+> **Superseded for visual decisions.** What the console looks like is defined by `UI_SOURCE_OF_TRUTH.md` (the reference app, Geist, navy primary). This document is kept as history; where it disagrees, that file wins.
+
 For every Flexprice screen: 2–3 candidates, with links, and why one wins.
 
 **Licence:** `pro` — every block below is installable. All 22 components and all

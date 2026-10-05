@@ -48,6 +48,12 @@ jobs:
       - name: Typecheck and lint
         run: pnpm nx run-many -t typecheck lint
 
+      - name: Vendored UI is unmodified
+        run: node scripts/check-vendor.mjs
+
+      - name: UI page matrix is current
+        run: node scripts/ui-page-matrix.mjs --check
+
       # Reported, not enforced. 367 files are unformatted and there is no
       # .prettierignore, so a repo-wide gate fails on vendored primitives and
       # generated fixtures — reasons unrelated to any change under review.

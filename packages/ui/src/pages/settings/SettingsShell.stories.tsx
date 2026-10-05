@@ -145,9 +145,9 @@ function Controlled({
 }
 
 /**
- * Two-level settings navigation: line tabs for sections (the reference
- * settings header), pill tabs for the active section's own tabs, then the
- * active tab's content in a `max-w-4xl` column.
+ * Two-level settings navigation, laid out as the `settings-7` block: a heading,
+ * a vertical rail of sections, then a column holding pill tabs for the active
+ * section's own tabs and the active tab's content.
  *
  * Fully controlled. The stories own both ids the way a page owns them, because
  * on a real screen they live in the URL.
@@ -178,7 +178,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The active section's tabs sit under the strip; picking a tab or another section is reported. */
+/** The active section's tabs sit above the content; picking a tab or another section is reported. */
 export const Default: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)

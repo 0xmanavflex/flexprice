@@ -1,24 +1,29 @@
 import { type ReactNode } from 'react'
 import { Tabs, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
+import { useIsMobile } from '@ui/hooks/use-mobile'
+import { cn } from '@ui/lib/cn'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { Source, provenance } from '@ui/provenance'
 
 /**
- * Settings: a line-tab strip over a `max-w-4xl` column of panels, as the
- * reference settings page has it.
+ * Settings, laid out as the ReUI `settings-7` block lays out its account
+ * settings: a heading, a vertical rail of sections on the left, and the active
+ * section's content in a column on the right.
  *
- * Sections are the strip; a section with more than one tab shows those beneath
- * it as a second, quieter row. The content below is whatever the page renders
- * — Frame-style panels, stacked with `gap-4`.
+ * The block itself keeps hard-coded tabs and its own state, so it cannot take
+ * Flexprice's sections; this composition reproduces its layout over the same
+ * `Tabs` primitive and leaves `components/blocks/settings-7` untouched. Its
+ * cards and rows (`settingsSurface`) are what the panels are drawn with.
  *
- * Presentation only and fully controlled: the page owns `sectionId`/`tabId`
- * (both URL-backed). Choosing a section reports `onSectionChange` only; the
- * page decides which tab that section opens on.
+ * A section with more than one tab shows those as a second, quieter row above
+ * the content. Presentation only and fully controlled: the page owns
+ * `sectionId`/`tabId` (both URL-backed). Choosing a section reports
+ * `onSectionChange` only; the page decides which tab that section opens on.
  */
 export const SettingsShellProvenance = provenance({
   source: Source.COMPOSITION,
   composes: ['ui/tabs'],
-  note: "Line tabs for sections (the reference settings header), pill tabs for a section's own tabs, then a max-w-4xl panel column.",
+  note: "Layout of the settings-7 block (heading, vertical section rail, content column) over the Tabs primitive; pill tabs for a section's own tabs.",
 })
 
 export interface SettingsTab {
@@ -36,7 +41,7 @@ export interface SettingsTab {
 export interface SettingsSection {
   id: string
   label: string
-  /** Kept for callers that pass one; the reference's section tabs are text only. */
+  /** Shown beside the label in the section rail. */
   icon?: ReactNode
   tabs: SettingsTab[]
 }
@@ -67,50 +72,82 @@ export function SettingsShell({
   const sectionUnavailable = tabs.length > 0 && tabs.every((tab) => tab.unavailable)
   const tabUnavailable = activeTab?.unavailable ?? false
 
+  const isMobile = useIsMobile()
+
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
-      <Tabs value={section?.id ?? ''} onValueChange={(next) => onSectionChange(String(next))}>
-        <TabsList
-          variant="line"
-          aria-label="Settings"
-          className="w-full justify-start gap-6 overflow-x-auto border-b"
-        >
-          {sections.map((entry) => (
-            <TabsTrigger key={entry.id} value={entry.id} className="flex-none px-0 pb-2.5">
-              {entry.label}
-            </TabsTrigger>
-          ))}
-        </TabsList>
-      </Tabs>
+    <div className="flex min-w-0 flex-1 items-start justify-center px-4 py-8 sm:px-6 md:px-10 md:pb-16">
+      <div className="w-full max-w-5xl space-y-8">
+        <header className="px-1">
+          <h1 className="text-xl font-medium tracking-tight">Settings</h1>
+          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
+            Manage your organization, team, billing, developer tools, and preferences.
+          </p>
+        </header>
 
-      {tabs.length > 1 ? (
-        <Tabs value={activeTab?.id ?? ''} onValueChange={(next) => onTabChange(String(next))}>
-          <TabsList
-            aria-label={`${section?.label ?? 'Settings'} tabs`}
-            className="max-w-full overflow-x-auto"
+        <div className="flex w-full flex-col gap-4 lg:flex-row lg:gap-8">
+          <Tabs
+            value={section?.id ?? ''}
+            onValueChange={(next) => onSectionChange(String(next))}
+            orientation={isMobile ? 'horizontal' : 'vertical'}
+            className={cn('min-w-0', isMobile ? 'w-full' : 'w-44 shrink-0')}
           >
-            {tabs.map((tab) => (
-              <TabsTrigger key={tab.id} value={tab.id}>
-                {tab.label}
-              </TabsTrigger>
-            ))}
-          </TabsList>
-        </Tabs>
-      ) : null}
+            <div className={cn(isMobile && '-mx-1 overflow-x-auto px-1 pb-1')}>
+              <TabsList
+                aria-label="Settings"
+                className={cn(
+                  'h-auto items-stretch gap-1 bg-transparent p-0',
+                  isMobile ? 'w-max min-w-max justify-start' : 'w-full flex-col',
+                )}
+              >
+                {sections.map((entry) => (
+                  <TabsTrigger
+                    key={entry.id}
+                    value={entry.id}
+                    className={cn(
+                      'w-full justify-start gap-3 px-3 py-1.5 shadow-none',
+                      entry.id === section?.id ? 'bg-muted!' : 'bg-transparent',
+                    )}
+                  >
+                    {entry.icon}
+                    <span className="truncate">{entry.label}</span>
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </div>
+          </Tabs>
 
-      <div className="grid max-w-4xl min-w-0 gap-4">
-        {sectionUnavailable || tabUnavailable ? (
-          <Unavailable
-            title={
-              sectionUnavailable && section
-                ? `${section.label} is unavailable`
-                : `${activeTab?.label ?? 'This tab'} is unavailable`
-            }
-            {...(activeTab?.unavailableReason ? { reason: activeTab.unavailableReason } : {})}
-          />
-        ) : (
-          children
-        )}
+          <div className="flex min-w-0 flex-1 flex-col gap-5">
+            {tabs.length > 1 ? (
+              <Tabs value={activeTab?.id ?? ''} onValueChange={(next) => onTabChange(String(next))}>
+                <TabsList
+                  aria-label={`${section?.label ?? 'Settings'} tabs`}
+                  className="max-w-full overflow-x-auto"
+                >
+                  {tabs.map((tab) => (
+                    <TabsTrigger key={tab.id} value={tab.id}>
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            ) : null}
+
+            <div className="grid min-w-0 gap-4">
+              {sectionUnavailable || tabUnavailable ? (
+                <Unavailable
+                  title={
+                    sectionUnavailable && section
+                      ? `${section.label} is unavailable`
+                      : `${activeTab?.label ?? 'This tab'} is unavailable`
+                  }
+                  {...(activeTab?.unavailableReason ? { reason: activeTab.unavailableReason } : {})}
+                />
+              ) : (
+                children
+              )}
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )

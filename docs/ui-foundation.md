@@ -1,5 +1,7 @@
 # The V2 UI foundation
 
+> **Superseded for visual decisions.** What the console looks like is defined by `UI_SOURCE_OF_TRUTH.md` (the reference app, Geist, navy primary). This document is kept as history; where it disagrees, that file wins.
+
 The architecture proofs answered "does the data flow hold?". This answers a
 different question, and one they did not touch: **what does a Flexprice V2
 interface actually look like?**
