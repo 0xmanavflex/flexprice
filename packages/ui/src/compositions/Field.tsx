@@ -56,7 +56,7 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
             </span>
           ) : null}
         </FieldLabel>
-        {hint ? <InfoHint label={label}>{hint}</InfoHint> : null}
+        {hint ? <InfoHint>{hint}</InfoHint> : null}
       </div>
 
       {children({

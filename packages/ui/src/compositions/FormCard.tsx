@@ -131,7 +131,7 @@ export function FormRow({
               {asterisk}
             </FieldTitle>
           )}
-          {hint ? <InfoHint label={label}>{hint}</InfoHint> : null}
+          {hint ? <InfoHint>{hint}</InfoHint> : null}
         </div>
         {hint ? (
           <FieldDescription id={hintId} className="sr-only">

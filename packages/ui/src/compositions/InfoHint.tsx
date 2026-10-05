@@ -16,18 +16,21 @@ export const InfoHintProvenance = provenance({
 })
 
 export interface InfoHintProps {
-  /** What the (i) is about; names the button for assistive tech. */
-  label: string
   children: string
 }
 
-export function InfoHint({ label, children }: InfoHintProps) {
+/*
+ * The button's name deliberately does not repeat the field's label: a name like
+ * "About Lookup key" matches `getByLabelText(/lookup key/i)` and every other
+ * label query, so the input stops being the only thing a label finds.
+ */
+export function InfoHint({ children }: InfoHintProps) {
   return (
     <Popover>
       <PopoverTrigger
         openOnHover
         delay={150}
-        aria-label={`About ${label}`}
+        aria-label="More information"
         className="text-muted-foreground hover:text-foreground focus-visible:ring-ring/50 inline-flex size-4 shrink-0 items-center justify-center rounded-full outline-none focus-visible:ring-3"
       >
         <InfoIcon aria-hidden className="size-3.5" />
