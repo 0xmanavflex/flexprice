@@ -1,10 +1,8 @@
-import { useId, type CSSProperties, type ReactNode } from 'react'
-import { Badge } from '@ui/components/reui/badge'
+import { useId, type ReactNode } from 'react'
 import { Button } from '@ui/components/primitives/button'
 import { Progress } from '@ui/components/primitives/progress'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { toneColor } from './charts'
 
 /**
  * One entitled feature's quota, as a card.
@@ -27,9 +25,9 @@ import { toneColor } from './charts'
  *   something with no cap at all. With no denominator there is no percentage
  *   and no bar, so neither is drawn — a full bar and an empty bar are both
  *   lies about an uncapped feature.
- * - **The block's green "3000 free calls left" is a `success-light` Badge.**
- *   `text-success` as small foreground text measures 2.95:1, which fails; the
- *   light badge variants put the tint behind dark text and pass.
+ * - **The block's green "3000 free calls left" is coloured text.** It uses the
+ *   `-foreground` token in light mode and the base token in dark, the pairing
+ *   the light badge variants use, because bare `text-success` fails contrast.
  * - **The cost slot is labelled "Overage" and renders `—`.** Nothing in the API
  *   prices a per-feature overage, and `money.ts` forbids computing one here. A
  *   card that filled that slot with a plausible figure would be the exact
@@ -42,8 +40,8 @@ import { toneColor } from './charts'
  */
 export const QuotaCardProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/stats-11', 'ui/progress', 'ui/badge', 'pages/shared/charts'],
-  note: "stats-11's quota-card arrangement over a real entitlement: used / included / percent / remaining / reset, with unlimited and over-quota states the block does not model and an unpriced overage slot that stays a dash.",
+  composes: ['ui/progress', 'ui/button'],
+  note: "stats-11's quota-card arrangement over a real entitlement: used / included / percent / remaining / reset, with unlimited and over-quota states the block does not model and an unpriced overage slot that stays a dash. Lineage: @reui/stats-11.",
 })
 
 /** The dash a reading takes when there is nothing true to put there. */
@@ -148,9 +146,13 @@ export function QuotaCard({
   const remaining = measurable ? Math.max(0, (included as number) - (used as number)) : undefined
   const overBy = over ? (used as number) - (included as number) : undefined
 
-  // The bar signals state, so it takes a status token when it is over quota and
-  // a categorical one otherwise. Never a colour from the call site.
-  const tone = over ? 'critical' : 'series-1'
+  // The bar signals state: the reference's amber past 85%, and the destructive
+  // token once over. Never a colour from the call site.
+  const barClass = over
+    ? '**:data-[slot=progress-indicator]:bg-destructive'
+    : percent !== undefined && percent > 85
+      ? '**:data-[slot=progress-indicator]:bg-warning'
+      : null
 
   // The whole reading, as one sentence fragment — the meter's accessible name.
   const meterName = `${label}: ${
@@ -162,11 +164,11 @@ export function QuotaCard({
   return (
     <section
       aria-labelledby={headingId}
-      className={cn('bg-card flex min-w-0 flex-col gap-3 rounded-xl border p-4', className)}
+      className={cn('bg-background flex min-w-0 flex-col gap-5 rounded-xl border p-5', className)}
     >
       {/* Header: the feature, and the way out to its detail. */}
-      <div className="flex items-start justify-between gap-3">
-        <h3 id={headingId} className="min-w-0 truncate text-sm font-semibold">
+      <div className="flex items-center justify-between gap-3">
+        <h3 id={headingId} className="min-w-0 truncate text-sm font-medium">
           {feature}
         </h3>
         {action ? (
@@ -176,82 +178,79 @@ export function QuotaCard({
         ) : null}
       </div>
 
-      {/* stats-11's first row: the used figure left, the charged amount right. */}
-      <div className="flex items-baseline justify-between gap-3">
-        <p className="text-muted-foreground min-w-0 truncate text-xs">
-          Used{' '}
-          <span className="text-foreground text-sm font-semibold tabular-nums">
-            {typeof used === 'number' ? withUnit(used) : NOTHING}
-          </span>
-        </p>
+      <div className="space-y-2.5">
+        {/* The used figure left, the charged amount right. */}
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-muted-foreground min-w-0 truncate text-[13px]">
+            Used{' '}
+            <span className="text-foreground font-medium tabular-nums">
+              {typeof used === 'number' ? withUnit(used) : NOTHING}
+            </span>
+          </p>
+          {/*
+            The slot is named even when it is empty. A bare dash on a real card
+            just reads as a glitch, and "Overage —" reads as the answer it is.
+          */}
+          <p className="text-muted-foreground shrink-0 text-[13px]">
+            Overage{' '}
+            <span className="text-foreground text-[15px] font-medium tabular-nums">
+              {overage ?? <span className="text-muted-foreground font-normal">{NOTHING}</span>}
+            </span>
+          </p>
+        </div>
+
         {/*
-          The slot is named even when it is empty. stats-11 leaves its "$4.00"
-          unlabelled because a demo knows what its own number is; a bare dash
-          on a real card just reads as a glitch, and "Overage —" reads as the
-          answer it is.
+          No denominator, no bar. An unlimited entitlement drawn as a full bar
+          reads as "exhausted" and as an empty one reads as "unused"; both are
+          claims the data does not make.
         */}
-        <p className="text-muted-foreground shrink-0 text-xs">
-          Overage{' '}
-          <span className="text-foreground text-sm font-semibold tabular-nums">
-            {overage ?? <span className="text-muted-foreground font-normal">{NOTHING}</span>}
-          </span>
-        </p>
-      </div>
-
-      {/*
-        No denominator, no bar. An unlimited entitlement drawn as a full bar
-        reads as "exhausted" and as an empty one reads as "unused"; both are
-        claims the data does not make.
-      */}
-      {percent === undefined ? null : (
-        <Progress
-          value={barValue}
-          aria-label={meterName}
-          style={{ '--quota-tone': toneColor(tone) } as CSSProperties}
-          className="block gap-0 [&_[data-slot=progress-indicator]]:bg-[var(--quota-tone)] [&_[data-slot=progress-track]]:h-2"
-        />
-      )}
-
-      {/* stats-11's second row: what is left, against what is included. */}
-      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5">
-        {unlimited ? (
-          <Badge variant="info-light" size="sm" className="border-0">
-            Unlimited
-          </Badge>
-        ) : over ? (
-          <Badge variant="destructive-light" size="sm" className="border-0">
-            Over by {withUnit(overBy as number)}
-          </Badge>
-        ) : remaining !== undefined ? (
-          <Badge variant="success-light" size="sm" className="border-0">
-            {withUnit(remaining)} left
-          </Badge>
-        ) : (
-          <span className="text-muted-foreground text-xs">{NOTHING} remaining</span>
+        {percent === undefined ? null : (
+          <Progress
+            value={barValue}
+            aria-label={meterName}
+            className={cn('block gap-0 **:data-[slot=progress-track]:h-2', barClass)}
+          />
         )}
 
-        <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-          {included === undefined
-            ? `${NOTHING} included`
-            : unlimited
-              ? 'no included limit'
-              : `of ${format(included)}${
-                  resetPeriodLabel ? ` ${resetPeriodLabel.toLowerCase()}` : ''
-                } quota`}
-        </span>
+        {/* What is left, against what is included. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1.5 text-xs">
+          {unlimited ? (
+            <span className="text-info-foreground dark:text-info font-medium">Unlimited</span>
+          ) : over ? (
+            <span className="text-destructive-foreground dark:text-destructive font-medium">
+              Over by {withUnit(overBy as number)}
+            </span>
+          ) : remaining !== undefined ? (
+            <span
+              className={cn(
+                'font-medium',
+                percent !== undefined && percent > 85
+                  ? 'text-warning-foreground dark:text-warning'
+                  : 'text-success-foreground dark:text-success',
+              )}
+            >
+              {withUnit(remaining)} left
+            </span>
+          ) : (
+            <span className="text-muted-foreground">{NOTHING} remaining</span>
+          )}
+
+          <span className="text-muted-foreground shrink-0 tabular-nums">
+            {included === undefined
+              ? `${NOTHING} included`
+              : unlimited
+                ? 'no included limit'
+                : `of ${format(included)}${
+                    resetPeriodLabel ? ` ${resetPeriodLabel.toLowerCase()}` : ''
+                  } quota`}
+          </span>
+        </div>
       </div>
 
-      {/*
-        stats-11's footer, which is a dashed box rather than a ruled-off row.
-        This was a `Separator` and a plain line until the block was actually
-        vendored and could be read — the comment above it claimed a "divided
-        footer" the block does not have. Worth the correction: the dashed
-        outline is what marks the renewal date as a standing fact about the
-        quota rather than one more reading taken this period.
-      */}
-      <div className="border-input text-muted-foreground flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1 rounded-md border border-dashed p-2">
-        <span className="text-xs">Quota renews on</span>
-        <span className="text-foreground text-sm font-medium tabular-nums">
+      {/* The renewal date: a dashed box, a standing fact about the quota. */}
+      <div className="text-muted-foreground flex items-center justify-between rounded-md border border-dashed px-3 py-2 text-[13px]">
+        <span>Quota renews on</span>
+        <span className="text-foreground font-medium tabular-nums">
           {resetsOn
             ? new Intl.DateTimeFormat(locale, {
                 day: 'numeric',
@@ -264,8 +263,7 @@ export function QuotaCard({
 
       {/*
         The reason a dash is a dash, stated rather than left to be guessed.
-        `role="status"` so it is announced, following `Unavailable` on the Home
-        dashboard and `SettingsUnavailable`.
+        `role="status"` so it is announced.
       */}
       {overage || overageNote === undefined ? null : (
         <p role="status" className="text-muted-foreground text-xs">

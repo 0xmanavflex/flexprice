@@ -150,6 +150,10 @@ const GUIDES: EntityGuide[] = [
   },
 ]
 
+function formatDate(value: Date, locale?: string): string {
+  return new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(value)
+}
+
 /** True when the current selection is one the API cannot be asked for. */
 function hasDerivedStatus(statuses: InvoiceStatus[]): boolean {
   return statuses.some((status) => !isStoredInvoiceStatus(status))
@@ -224,6 +228,16 @@ export function InvoiceGrid({
               tone: PAYMENT_TONE[row.paymentStatus],
             }
           : null,
+      ),
+      // Off by default and switched on from the `⋯` menu, as in the reference.
+      textColumn<Invoice>(
+        'period',
+        'Period',
+        (row) =>
+          row.periodStart && row.periodEnd
+            ? `${formatDate(row.periodStart, locale)} – ${formatDate(row.periodEnd, locale)}`
+            : null,
+        { width: 220, muted: true, hiddenByDefault: true },
       ),
       dateColumn<Invoice>('dueDate', 'Due', (row) => row.dueDate, {
         width: 130,
@@ -357,6 +371,7 @@ export function InvoiceGrid({
           title: 'No invoices yet',
           description:
             'Invoices are produced when a subscription’s billing period closes. Put a customer on a plan and the first one will appear here on its own.',
+          ...(onCreate ? { actions: <Button onClick={onCreate}>New invoice</Button> } : {}),
           guides: GUIDES,
         }}
       />

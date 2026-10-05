@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
 import { ApiError, useGroup } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView } from '@fp/ui/pages'
-import { AppFailure, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { AppFailure, Dot, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { LayersIcon } from 'lucide-react'
 
 export interface GroupDetailPageProps {
@@ -72,7 +72,15 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
       onBack={onNavigateToList}
       icon={<LayersIcon />}
       title={data.name}
-      subtitle={`${new Intl.NumberFormat().format(data.entityCount)} ${kind}`}
+      subtitle={
+        <>
+          <span>{noun} group</span>
+          <Dot />
+          <span>
+            {new Intl.NumberFormat().format(data.entityCount)} {kind}
+          </span>
+        </>
+      }
       id={data.lookupKey || data.id}
       onEdit={() => setTab('information')}
       menuLabel="Group actions"
@@ -90,7 +98,8 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           label: 'Information',
           content: (
             <EditableCard
-              title="General"
+              className="max-w-3xl"
+              title="Group details"
               locked
               fields={[
                 { key: 'name', label: 'Name', value: data.name, readOnly: true },
@@ -98,7 +107,7 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
                   key: 'lookupKey',
                   label: 'Lookup key',
                   value: data.lookupKey || '',
-                  display: <span className="font-mono text-xs">{data.lookupKey || '—'}</span>,
+                  display: <span className="font-mono text-[13px]">{data.lookupKey || '—'}</span>,
                   readOnly: true,
                 },
                 { key: 'holds', label: 'Holds', value: noun, readOnly: true },
@@ -113,7 +122,7 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
                   key: 'id',
                   label: 'Group ID',
                   value: data.id,
-                  display: <span className="font-mono text-xs">{data.id}</span>,
+                  display: <span className="font-mono text-[13px]">{data.id}</span>,
                   readOnly: true,
                 },
                 {

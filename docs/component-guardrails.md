@@ -20,6 +20,16 @@ exports a `provenance({...})` (see `packages/ui/src/provenance/`):
 A component that started as a registry item but has been changed is a
 **composition**, not a `reui`. Re-labelling it is the signal that it deviated.
 
+## 1b. Pages compose Section / DetailKit parts
+
+Pages compose `Section` and the DetailKit parts (`DetailHeader`, `DetailTabs`,
+`Properties`, `SummaryRow`, `SimpleTable`, `ChoiceCards`, `FormDialog`,
+`Composer`); they never import the `Card` primitive and never use raw table
+primitives. `Section` is the one contained surface (`bg-background flex flex-col
+rounded-xl border`, header `border-b px-6 py-4`), and `Card` stays a primitive
+for compositions only. Weights top out at `font-medium`, and colours are
+semantic tokens only.
+
 ## 2. Vendored code is not hand-edited
 
 ReUI primitives and premium blocks are copied source under

@@ -1,6 +1,5 @@
 import { useState } from 'react'
-import type { ReactNode } from 'react'
-import { ArrowUpRightIcon, CalendarIcon, InfoIcon, KeyRoundIcon, SlidersHorizontalIcon } from 'lucide-react'
+import { ArrowUpRightIcon, CalendarIcon, Settings2Icon } from 'lucide-react'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -10,10 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
-import { Separator } from '@ui/components/primitives/separator'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
-import { ChartBox } from '@ui/compositions/ChartBox'
-import { EmptyState } from '@ui/compositions/EmptyState'
+import { Panel } from '@ui/compositions/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ArcGauge } from '../shared/ArcGauge'
@@ -24,7 +20,7 @@ import type { DonutSlice } from '../shared/HalfDonut'
 import { Money } from '../shared/Money'
 import { PillColumns } from '../shared/PillColumns'
 import type { PillColumn, PillSeries } from '../shared/PillColumns'
-import { SegmentMeter } from '../shared/SegmentMeter'
+import { MeterTrack, SegmentMeter } from '../shared/SegmentMeter'
 import type { SegmentMeterRow } from '../shared/SegmentMeter'
 
 /**
@@ -67,16 +63,14 @@ import type { SegmentMeterRow } from '../shared/SegmentMeter'
 export const DashboardHomeProvenance = provenance({
   source: 'composition',
   composes: [
-    'pages/shared/MetricChart',
-    'pages/shared/BlurredEmpty',
     'pages/shared/PillColumns',
     'pages/shared/HalfDonut',
     'pages/shared/SegmentMeter',
     'pages/shared/ArcGauge',
     'ui/select',
-    'compositions/EmptyState',
+    'compositions/Section',
   ],
-  note: 'Billing overview: event series, revenue, subscriptions, invoice payment status, metered usage and API keys, drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable.',
+  note: 'Billing overview: event series, revenue, subscriptions, invoice payment status, metered usage and API keys, drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
 })
 
 /* ---- What the page is told ---------------------------------------------- */
@@ -214,66 +208,6 @@ const NOTHING = '—'
 /* ---- Shared parts ------------------------------------------------------- */
 
 /**
- * A panel of the overview.
- *
- * Card is the project's surface (`provenance`, `SURFACE`), so every panel is one
- * — including the ones whose chart draws its own card. The charts in the shared
- * library are card-shaped so they can stand alone on a page; here they are
- * panel *contents*; the events chart stands alone as its own card.
- */
-function Panel({
-  title,
-  description,
-  action,
-  info,
-  children,
-  className,
-}: {
-  title: string
-  description?: string
-  action?: ReactNode
-  /** An explanation of the panel, behind the info icon the design puts beside the title. */
-  info?: string
-  children: ReactNode
-  className?: string
-}) {
-  const id = `panel-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
-
-  return (
-    <ChartBox
-      title={title}
-      titleId={id}
-      {...(description ? { description } : {})}
-      {...(action ? { actions: action } : {})}
-      {...(info
-        ? {
-            titleAdornment: (
-              <Tooltip>
-                <TooltipTrigger
-                  render={
-                    <Button
-                      variant="ghost"
-                      size="icon-sm"
-                      className="text-muted-foreground size-5"
-                      aria-label={`About ${title}`}
-                    />
-                  }
-                >
-                  <InfoIcon aria-hidden className="size-3.5" />
-                </TooltipTrigger>
-                <TooltipContent className="max-w-64">{info}</TooltipContent>
-              </Tooltip>
-            ),
-          }
-        : {})}
-      className={cn('min-w-0', className)}
-    >
-      {children}
-    </ChartBox>
-  )
-}
-
-/**
  * What a panel says when Flexprice cannot answer the question.
  *
  * Not "coming soon" and not a zero — the metric is named, and the reason it is
@@ -317,61 +251,59 @@ function FilterRow({
     value: string
     options: FilterOption[]
     onChange: (value: string) => void
-    width: string
   }[] = [
     {
       label: 'Range',
       value: range,
       options: rangeOptions,
       onChange: onRangeChange,
-      width: 'w-[8.5rem]',
     },
     {
       label: 'Granularity',
       value: granularity,
       options: granularityOptions,
       onChange: onGranularityChange,
-      width: 'w-[7rem]',
     },
     {
       label: 'Customer',
       value: customer,
       options: customerOptions,
       onChange: onCustomerChange,
-      width: 'w-[11rem]',
     },
   ]
 
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      {filters.map((filter) => (
-        <Select
-          key={filter.label}
-          value={filter.value}
-          // Base UI's `Select.Value` renders the raw value unless the root can
-          // map it to a label — without this the filters read "7d", "daily",
-          // "all". `chart-16` passes `items` for the same reason.
-          items={filter.options.map((option) => ({ value: option.id, label: option.label }))}
-          // Base UI's Select can clear to `null`; these three always have a
-          // selection, so a clear is simply ignored rather than widening every
-          // handler in the page to accept an absent filter.
-          onValueChange={(value) => {
-            if (value !== null) filter.onChange(value)
-          }}
-        >
-          <SelectTrigger aria-label={filter.label} className={cn('h-8 text-[13px]', filter.width)}>
-            {filter.label === 'Range' ? <CalendarIcon aria-hidden className="size-3.5" /> : null}
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent align="start">
-            {filter.options.map((option) => (
-              <SelectItem key={option.id} value={option.id}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ))}
+    <div className="flex flex-wrap items-center justify-between gap-2">
+      <div className="flex flex-wrap items-center gap-2">
+        {filters.map((filter) => (
+          <Select
+            key={filter.label}
+            value={filter.value}
+            // Base UI's `Select.Value` renders the raw value unless the root can
+            // map it to a label — without this the filters read "7d", "daily",
+            // "all". `chart-16` passes `items` for the same reason.
+            items={filter.options.map((option) => ({ value: option.id, label: option.label }))}
+            // Base UI's Select can clear to `null`; these three always have a
+            // selection, so a clear is simply ignored rather than widening every
+            // handler in the page to accept an absent filter.
+            onValueChange={(value) => {
+              if (value !== null) filter.onChange(value)
+            }}
+          >
+            <SelectTrigger aria-label={filter.label}>
+              {filter.label === 'Range' ? <CalendarIcon aria-hidden className="size-3.5" /> : null}
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start" aria-label={filter.label}>
+              {filter.options.map((option) => (
+                <SelectItem key={option.id} value={option.id}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ))}
+      </div>
 
       {/*
        * The design also drew an "+ Add filter" control. It is left out rather
@@ -380,8 +312,8 @@ function FilterRow({
        * does nothing is worse than a control that is not there. "Configure"
        * stays because it has somewhere real to go.
        */}
-      <Button variant="outline" size="sm" className="ms-auto h-8" onClick={onConfigure}>
-        <SlidersHorizontalIcon aria-hidden />
+      <Button variant="outline" size="sm" className="h-8 px-3" onClick={onConfigure}>
+        <Settings2Icon aria-hidden />
         Configure
       </Button>
     </div>
@@ -486,7 +418,8 @@ function EventsSection({
   )
 
   return (
-    <div className="flex min-w-0 flex-col gap-3">
+    <section aria-label="Events monitoring" className="flex min-w-0 flex-col gap-3">
+      <h2 className="sr-only">Events monitoring</h2>
       {ready ? (
         chart
       ) : (
@@ -535,7 +468,7 @@ function EventsSection({
       {metric === METRIC_LAG ? (
         <Unavailable what="Flexprice does not expose an ingestion-lag metric." />
       ) : null}
-    </div>
+    </section>
   )
 }
 
@@ -562,61 +495,65 @@ function SubscriptionsCard({
     <Panel
       title="Recent subscriptions"
       description={`New in the ${rangeLabel}.`}
-      info="Subscriptions whose start date falls inside this window, counted by the plan they were created on."
+      hint="Subscriptions whose start date falls inside this window, counted by the plan they were created on."
       action={
         <Button variant="outline" size="sm" onClick={onViewAll}>
           View all
         </Button>
       }
     >
-      <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-        <span className="text-4xl font-semibold tabular-nums tracking-tight">
-          {ready ? total : 0}
-        </span>
-        <span className="text-muted-foreground text-sm">new subscriptions</span>
-        {ready && changePercent !== null ? (
+      <div className="flex flex-1 flex-col gap-6 p-6">
+        <div className="flex items-baseline gap-2">
           <span
-            className={cn(
-              'text-sm font-medium tabular-nums',
-              changePercent >= 0 ? 'text-success' : 'text-destructive',
-            )}
+            className={cn('text-4xl font-medium tabular-nums', !ready && 'text-muted-foreground')}
           >
-            {changePercent >= 0 ? '+' : ''}
-            {new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(changePercent)}%
-            {' vs prior period'}
+            {ready ? total : 0}
           </span>
-        ) : null}
-      </div>
+          <span className="text-muted-foreground text-xs">new subscriptions</span>
+          {ready && changePercent !== null ? (
+            <span
+              className={cn(
+                'ml-auto text-xs font-medium',
+                changePercent >= 0 ? 'text-success' : 'text-destructive',
+              )}
+            >
+              {changePercent >= 0 ? '+' : ''}
+              {new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(changePercent)}
+              %{' vs prior period'}
+            </span>
+          ) : null}
+        </div>
 
-      {ready ? (
-        <PillColumns
-          columns={columns}
-          series={series}
-          label={`New subscriptions by plan, ${rangeLabel}`}
-        />
-      ) : (
-        <>
-          {/* The same matrix with nothing lit — which is what the chart draws
-              for an all-zero window anyway, so the shape never jumps as the
-              data arrives. */}
-          <div className="flex w-full items-end gap-2" aria-hidden>
-            {Array.from({ length: 7 }, (_, column) => (
-              <div key={column} className="flex min-w-0 flex-1 flex-col justify-end">
-                {Array.from({ length: 7 }, (_, row) => (
-                  <span key={row} className="bg-muted my-0.5 h-3 rounded" />
-                ))}
-              </div>
-            ))}
-          </div>
-          {status === 'unavailable' ? (
-            <Unavailable what="Subscriptions could not be loaded." />
-          ) : (
-            <p className="text-muted-foreground text-xs">
-              Subscriptions created in this period appear here, by plan.
-            </p>
-          )}
-        </>
-      )}
+        {ready ? (
+          <PillColumns
+            columns={columns}
+            series={series}
+            label={`New subscriptions by plan, ${rangeLabel}`}
+          />
+        ) : (
+          <>
+            {/* The same matrix with nothing lit — which is what the chart draws
+                for an all-zero window anyway, so the shape never jumps as the
+                data arrives. */}
+            <div className="flex min-h-32 w-full items-end gap-2" aria-hidden>
+              {Array.from({ length: 7 }, (_, column) => (
+                <div key={column} className="flex min-w-0 flex-1 flex-col justify-end gap-1">
+                  {Array.from({ length: 7 }, (_, row) => (
+                    <span key={row} className="bg-muted/70 h-3 rounded" />
+                  ))}
+                </div>
+              ))}
+            </div>
+            {status === 'unavailable' ? (
+              <Unavailable what="Subscriptions could not be loaded." />
+            ) : (
+              <p className="text-muted-foreground border-t pt-4 text-xs">
+                Subscriptions created in this period appear here, by plan.
+              </p>
+            )}
+          </>
+        )}
+      </div>
     </Panel>
   )
 }
@@ -656,7 +593,7 @@ function InvoicesCard({
     <Panel
       title="Invoice payment status"
       description={`Finalized in the ${rangeLabel}.`}
-      info="Invoices issued inside this window, grouped by whether they are settled, still open, or past their due date."
+      hint="Invoices issued inside this window, grouped by whether they are settled, still open, or past their due date."
       action={
         <Button variant="outline" size="sm" onClick={onViewInvoices}>
           View invoices
@@ -666,14 +603,18 @@ function InvoicesCard({
       {invoices.status === 'unavailable' ? (
         // Zeroes would be a claim. A window that could not be read gets the
         // reason instead of a ring and three noughts.
-        <Unavailable what="Invoices could not be loaded." />
+        <div className="flex flex-1 flex-col justify-center p-6">
+          <Unavailable what="Invoices could not be loaded." />
+        </div>
       ) : (
-        <HalfDonut
-          slices={slices}
-          centerLabel="Invoices"
-          centerValue={ready ? invoices.total : 0}
-          label="Invoice payment status"
-        />
+        <div className="flex flex-1 flex-col justify-center p-6">
+          <HalfDonut
+            slices={slices}
+            centerLabel="Invoices"
+            centerValue={ready ? invoices.total : 0}
+            label="Invoice payment status"
+          />
+        </div>
       )}
     </Panel>
   )
@@ -708,7 +649,7 @@ function UsageCard({
     <Panel
       title="Usage by feature"
       description={`Top metered features, ${rangeLabel}.`}
-      info="Metered quantity per feature over this window, with the change against the window before it."
+      hint="Metered quantity per feature over this window, with the change against the window before it."
       action={
         <Button variant="outline" size="sm" onClick={onViewFeatures}>
           All features
@@ -717,13 +658,16 @@ function UsageCard({
       {...(className !== undefined ? { className } : {})}
     >
       {usage.status === 'unavailable' ? (
-        <Unavailable what="Usage analytics could not be loaded." />
+        <div className="flex flex-1 flex-col justify-center px-6 py-5">
+          <Unavailable what="Usage analytics could not be loaded." />
+        </div>
+      ) : usage.status === 'ready' && rows.length > 0 ? (
+        <SegmentMeter rows={rows} label="Usage by feature" className="px-6 py-1" />
       ) : (
-        <SegmentMeter
-          rows={usage.status === 'ready' ? rows : []}
-          label="Usage by feature"
-          emptyMessage="No usage recorded yet"
-        />
+        <div className="grid flex-1 grid-cols-[minmax(0,11rem)_minmax(0,1fr)] content-center items-center gap-6 px-6 py-5">
+          <span className="text-muted-foreground text-[13px]">No usage recorded yet</span>
+          <MeterTrack filled={0} segments={40} />
+        </div>
       )}
     </Panel>
   )
@@ -758,7 +702,7 @@ function ApiCard({
     <Panel
       title="API"
       description={rangeLabel.charAt(0).toUpperCase() + rangeLabel.slice(1)}
-      info="Key health for this environment. Request volume, latency and error counts are not exposed by the Flexprice API."
+      hint="Key health for this environment. Request volume, latency and error counts are not exposed by the Flexprice API."
       action={
         <Button variant="outline" size="sm" onClick={onApiKeys}>
           API keys
@@ -766,47 +710,49 @@ function ApiCard({
         </Button>
       }
     >
-      {ready ? (
-        <ArcGauge
-          value={api.activeKeys}
-          max={api.totalKeys}
-          display={healthy ? 'Healthy' : 'Attention'}
-          caption={`${whole.format(api.activeKeys)} of ${whole.format(api.totalKeys)} keys active`}
-          tone={healthy ? 'good' : 'warning'}
-          label="API keys active"
-        />
-      ) : api.status === 'unavailable' ? (
-        <Unavailable what="API keys could not be loaded." />
-      ) : (
-        <EmptyState
-          size="inline"
-          icon={<KeyRoundIcon aria-hidden />}
-          title="Waiting for first request"
-          description="Create an API key to start sending events."
-          action={<Button onClick={onApiKeys}>Create API key</Button>}
-        />
-      )}
+      <div className="flex flex-1 flex-col justify-between gap-6 p-6">
+        <div className="flex flex-1 flex-col items-center justify-center gap-3">
+          {api.status === 'unavailable' ? (
+            <Unavailable what="API keys could not be loaded." />
+          ) : ready ? (
+            <ArcGauge
+              value={api.activeKeys}
+              max={api.totalKeys}
+              display={healthy ? 'Healthy' : 'Attention'}
+              caption={`${whole.format(api.activeKeys)} of ${whole.format(api.totalKeys)} keys active`}
+              tone={healthy ? 'good' : 'warning'}
+              label="API keys active"
+            />
+          ) : (
+            <ArcGauge
+              value={0}
+              max={1}
+              display="Waiting for first request"
+              caption="Create an API key to start sending events"
+              label="No API keys yet"
+            />
+          )}
+        </div>
 
-      <Separator />
-
-      {/*
-       * Requests, p95 and errors are the three numbers the design asked for and
-       * the three this console cannot get. There is no observability surface in
-       * the API or the SDK — only per-event debugging — so they are shown as
-       * absent with the reason, in the same shape they would take if they
-       * arrived.
-       */}
-      <div className="grid grid-cols-3 gap-2 text-center">
-        {[
-          { label: 'Requests', value: NOTHING },
-          { label: 'p95 latency', value: NOTHING },
-          { label: 'Errors', value: NOTHING },
-        ].map((stat) => (
-          <div key={stat.label} className="flex flex-col items-center gap-1">
-            <span className="text-muted-foreground text-xs">{stat.label}</span>
-            <span className="text-base font-medium tabular-nums">{stat.value}</span>
-          </div>
-        ))}
+        {/*
+         * Requests, p95 and errors are the three numbers the design asked for and
+         * the three this console cannot get. There is no observability surface in
+         * the API or the SDK — only per-event debugging — so they are shown as
+         * absent with the reason, in the same shape they would take if they
+         * arrived.
+         */}
+        <dl className="grid grid-cols-3 divide-x border-t pt-4 text-center">
+          {[
+            { label: 'Requests', value: NOTHING },
+            { label: 'p95 latency', value: NOTHING },
+            { label: 'Errors', value: NOTHING },
+          ].map((stat) => (
+            <div key={stat.label} className="space-y-1 px-2">
+              <dt className="text-muted-foreground text-xs">{stat.label}</dt>
+              <dd className="text-[15px] font-medium tabular-nums">{stat.value}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </Panel>
   )
@@ -835,7 +781,7 @@ export function DashboardHome({
   const go = (path: string) => onNavigate?.(path)
 
   return (
-    <div className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-5 p-6">
+    <div className="flex flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
       {/* The visible title lives in the shell's breadcrumb; the outline still needs one. */}
       <h1 className="sr-only">Overview</h1>
 
@@ -867,12 +813,12 @@ export function DashboardHome({
         />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
         <UsageCard
           usage={usage}
           rangeLabel={rangeLabel}
           onViewFeatures={() => go('/features')}
-          className="lg:col-span-2"
+          className="xl:col-span-2"
         />
         <ApiCard api={api} rangeLabel={rangeLabel} onApiKeys={() => go('/settings')} />
       </div>

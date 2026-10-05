@@ -29,7 +29,7 @@ pages consume compositions rather than assembling raw primitives.
 1. **No new one-off primitives.** Reach for a ReUI primitive or an existing `@fp/ui` composition first.
 2. **Base UI / ReUI for V2 components.** New surfaces use `base-nova`.
 3. **V1 Radix components stay stable.** Don't churn a page that isn't being migrated.
-4. **No Card unless the content needs containment.** A "section" is a heading + a rule, not another elevated card. Use `Section` only for a distinct contained object; use a plain heading + `Separator` for successive sections of one page.
+4. **Pages compose `Section` / DetailKit parts, never the `Card` primitive, never raw table primitives.** A page section is the reference `Section` (`bg-background flex flex-col rounded-xl border`, header `border-b px-6 py-4`); tables are `SimpleTable` or the shared grid. `Card` is a primitive for compositions only.
 5. **Detail pages use `DetailHeader` + `ResourceNavigation`.** Every entity opens the same way.
 6. **Tables use the shared grid parts** (`GridToolbar`, `GridFooter`, `FilterBar`, `SortMenu`, the ReUI Data Grid). No bespoke `<table>` per resource.
 7. **Creation flows use the shared form primitives** (`Field` + RHF + Zod).
@@ -94,7 +94,7 @@ surface hierarchy, and responsive behavior.
 **Phase 2 — Detail system** *(mostly exists; finishing)*
 `DetailHeader`, `ResourceNavigation` (new), `Section`, `DetailList`, stats,
 `EmptyState`, the shared grid. Next: adopt `ResourceNavigation` on the detail
-pages and settle "section = heading + rule, not a card."
+pages and settle "section = the reference `Section`, never the Card primitive."
 
 **Phase 3 — Product Catalog** — Features, Plans, Coupons, Add-ons, Price Units, Groups, Cost Sheets.
 

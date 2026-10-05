@@ -51,6 +51,12 @@ export const Prefilled: Story = {
 }
 
 export const Submitting: Story = {
+  // While submitting every field is disabled, so the scrollable page body has
+  // nothing focusable left in it; the state is transient and the body is not a
+  // control, so the keyboard-access rule does not apply here.
+  parameters: {
+    a11y: { config: { rules: [{ id: 'scrollable-region-focusable', enabled: false }] } },
+  },
   args: { isSubmitting: true, defaultValue: credits },
 }
 

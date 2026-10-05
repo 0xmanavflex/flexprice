@@ -1,4 +1,3 @@
-import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -35,24 +34,30 @@ export function RowActionsMenu({
   removeLabel = 'Remove',
 }: RowActionsMenuProps) {
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={<Button type="button" variant="ghost" size="icon" aria-label={`Actions for ${label}`} />}
-      >
-        <MoreHorizontalIcon aria-hidden className="size-4" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
-        {onEdit ? (
-          <DropdownMenuItem className={MENU_ITEM} onClick={onEdit}>
-            Edit
-          </DropdownMenuItem>
-        ) : null}
-        {onRemove ? (
-          <DropdownMenuItem className={MENU_ITEM} variant="destructive" onClick={onRemove}>
-            {removeLabel}
-          </DropdownMenuItem>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label={`Actions for ${label}`}
+            />
+          }
+        >
+          <MoreHorizontalIcon aria-hidden className="size-4" />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-40">
+          {onEdit ? <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem> : null}
+          {onRemove ? (
+            <DropdownMenuItem variant="destructive" onClick={onRemove}>
+              {removeLabel}
+            </DropdownMenuItem>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }

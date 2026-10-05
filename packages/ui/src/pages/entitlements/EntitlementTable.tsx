@@ -1,34 +1,23 @@
-import {
-  USAGE_RESET_PERIOD_LABEL,
-  type Entitlement,
-  FeatureType,
-} from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
+import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from 'lucide-react'
+import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/primitives/table'
-import { EmptyState } from '@ui/compositions/EmptyState'
+import { Section } from '@ui/compositions/Section'
+import { SimpleTable } from '@ui/compositions/DetailKit'
 import { provenance } from '@ui/provenance'
-import { EntityLink } from '../shared/cells'
+import { EmDash, EntityLink } from '../shared/cells'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 
 /**
- * A plan's entitlements, as a read table.
+ * An entitlements section: a flush `Section` with a `SimpleTable`.
  *
- * The "Value" column reads per feature type — a metered allowance as a number or
- * "Unlimited", a boolean as Yes/No, a static value as itself — because "what does
- * this plan include of this feature" is answered differently for each.
+ * The "Included" column reads per feature type — a metered allowance as a number
+ * or "Unlimited", a boolean as Yes/No, a static value as itself — because "what
+ * does this include of this feature" is answered differently for each.
  */
 export const EntitlementTableProvenance = provenance({
   source: 'composition',
-  composes: ['ui/table', '@reui/badge', 'ui/button'],
-  note: 'Read-only entitlements table for the plan Entitlements tab.',
+  composes: ['compositions/section', 'compositions/detail-kit', 'ui/button'],
+  note: 'Flush entitlements section for add-on and plan-like detail pages.',
 })
 
 export interface EntitlementTableProps {
@@ -37,6 +26,17 @@ export interface EntitlementTableProps {
   onEdit?: (entitlement: Entitlement) => void
   onDelete?: (entitlement: Entitlement) => void
   onOpenFeature?: (featureId: string) => void
+  /** Section heading; defaults to "Entitlements". */
+  title?: string
+  /** Section sub-heading under the title. */
+  description?: string
+}
+
+const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
+  [FeatureType.Metered]: GaugeIcon,
+  [FeatureType.Boolean]: ToggleRightIcon,
+  [FeatureType.Static]: TypeIcon,
+  [FeatureType.Config]: SlidersHorizontalIcon,
 }
 
 const TYPE_LABEL: Record<FeatureType, string> = {
@@ -68,86 +68,107 @@ export function EntitlementTable({
   onEdit,
   onDelete,
   onOpenFeature,
+  title = 'Entitlements',
+  description = 'What subscribers get: feature access and included allowances',
 }: EntitlementTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
+  const addButton = onAdd ? (
+    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+      <PlusIcon aria-hidden />
+      Add entitlement
+    </Button>
+  ) : null
+
   if (entitlements.length === 0) {
     return (
-      <EmptyState
-        title="No entitlements yet"
-        description="Entitlements decide what a plan includes of each feature — an allowance, a flag, or a value. Add one to define what subscribers get."
-        {...(onAdd
-          ? {
-              action: (
-                <Button type="button" onClick={onAdd}>
-                  Add entitlement
-                </Button>
-              ),
-            }
-          : {})}
-      />
+      <Section title={title} description={description} flush>
+        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+          <p className="text-sm font-medium">No entitlements yet</p>
+          <p className="text-muted-foreground max-w-md text-[13px]">
+            Entitlements decide what is included of each feature: an allowance, a flag, or a value.
+            {onAdd ? ' Add one to define what subscribers get.' : ''}
+          </p>
+          {addButton}
+        </div>
+      </Section>
     )
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {onAdd ? (
-        <div className="flex justify-end">
-          <Button type="button" size="sm" onClick={onAdd}>
-            Add entitlement
-          </Button>
-        </div>
-      ) : null}
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Feature</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Usage reset</TableHead>
-              <TableHead>Value</TableHead>
-              {hasActions ? (
-                <TableHead className="w-10">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              ) : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entitlements.map((entitlement) => (
-              <TableRow key={entitlement.id}>
-                <TableCell>
+    <Section
+      title={title}
+      description={description}
+      flush
+      {...(addButton ? { action: addButton } : {})}
+    >
+      <SimpleTable
+        rows={entitlements}
+        columns={[
+          {
+            key: 'feature',
+            header: 'Feature',
+            cell: (entitlement) => {
+              const Icon = TYPE_ICON[entitlement.featureType]
+              const label = entitlement.featureName ?? entitlement.featureId
+              return (
+                <span className="flex items-center gap-2.5">
+                  <Icon aria-hidden className="text-muted-foreground size-4" />
                   {onOpenFeature ? (
-                    <EntityLink
-                      label={entitlement.featureName ?? entitlement.featureId}
-                      onOpen={() => onOpenFeature(entitlement.featureId)}
-                    />
+                    <span className="min-w-0 font-medium">
+                      <EntityLink
+                        label={label}
+                        onOpen={() => onOpenFeature(entitlement.featureId)}
+                      />
+                    </span>
                   ) : (
-                    (entitlement.featureName ?? entitlement.featureId)
+                    <span className="font-medium">{label}</span>
                   )}
-                </TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{TYPE_LABEL[entitlement.featureType]}</Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {entitlement.usageResetPeriod
-                    ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod]
-                    : '—'}
-                </TableCell>
-                <TableCell className="tabular-nums">{valueOf(entitlement)}</TableCell>
-                {hasActions ? (
-                  <TableCell>
+                </span>
+              )
+            },
+          },
+          {
+            key: 'type',
+            header: 'Type',
+            cell: (entitlement) => (
+              <span className="text-muted-foreground">{TYPE_LABEL[entitlement.featureType]}</span>
+            ),
+          },
+          {
+            key: 'included',
+            header: 'Included',
+            cell: (entitlement) => <span className="tabular-nums">{valueOf(entitlement)}</span>,
+          },
+          {
+            key: 'reset',
+            header: 'Usage resets',
+            cell: (entitlement) =>
+              entitlement.usageResetPeriod ? (
+                <span className="text-muted-foreground">
+                  {USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod]}
+                </span>
+              ) : (
+                <EmDash />
+              ),
+          },
+          ...(hasActions
+            ? [
+                {
+                  key: 'actions',
+                  header: '',
+                  className: 'w-12',
+                  cell: (entitlement: Entitlement) => (
                     <RowActionsMenu
                       label={entitlement.featureName ?? 'entitlement'}
                       onEdit={onEdit ? () => onEdit(entitlement) : undefined}
                       onRemove={onDelete ? () => onDelete(entitlement) : undefined}
                     />
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
+    </Section>
   )
 }

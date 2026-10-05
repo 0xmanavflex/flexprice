@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CopyIcon, FileMinusIcon, ReceiptIcon } from 'lucide-react'
+import { BanIcon, CopyIcon, FileMinusIcon, ReceiptIcon } from 'lucide-react'
 import {
   CREDIT_NOTE_STATUS_LABEL,
   CREDIT_NOTE_TYPE_LABEL,
@@ -58,6 +58,12 @@ const GUIDES: EntityGuide[] = [
     description: 'Processing a draft so the refund or adjustment takes effect.',
     href: 'https://docs.flexprice.io/api-reference/credit-notes/process-a-draft-credit-note',
     icon: <ReceiptIcon aria-hidden className="size-4" />,
+  },
+  {
+    title: 'Voiding a credit note',
+    description: 'Cancelling one that was raised in error, before it takes effect.',
+    href: 'https://docs.flexprice.io/api-reference/credit-notes/void-a-credit-note',
+    icon: <BanIcon aria-hidden className="size-4" />,
   },
 ]
 

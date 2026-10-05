@@ -1,6 +1,5 @@
 import { CUSTOMER_TAX_TREATMENT_LABEL, CustomerTaxTreatment } from '@fp/domain'
 import { Avatar, AvatarFallback } from '@ui/components/primitives/avatar'
-import { Card, CardContent } from '@ui/components/primitives/card'
 import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
 
@@ -11,7 +10,7 @@ import { provenance } from '@ui/provenance'
  */
 export const CustomerPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/card', 'ui/avatar', '@reui/badge'],
+  composes: ['ui/avatar', '@reui/badge'],
   note: 'Live customer profile summary of the draft; fetches nothing.',
 })
 
@@ -53,8 +52,8 @@ export function CustomerPreviewCard(props: CustomerPreviewCardProps) {
   const tax = props.taxTreatment ?? CustomerTaxTreatment.Taxable
 
   return (
-    <Card className="gap-0 p-0 shadow-xs">
-      <CardContent className="flex flex-col gap-3 p-4">
+    <aside aria-label="Customer preview" className="bg-background rounded-xl border">
+      <div className="flex flex-col gap-3 p-4">
         <p className="text-muted-foreground text-xs">Customer profile</p>
         <div className="flex items-center gap-3">
           <Avatar>
@@ -87,7 +86,7 @@ export function CustomerPreviewCard(props: CustomerPreviewCardProps) {
             <span className="text-muted-foreground text-xs">{props.phone.trim()}</span>
           ) : null}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </aside>
   )
 }

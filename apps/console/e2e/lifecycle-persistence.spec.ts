@@ -30,10 +30,11 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
   await expect(page.getByRole('heading', { name: 'Draft invoice', level: 1 })).toBeVisible()
 
   await page.getByRole('button', { name: 'Finalize', exact: true }).click()
-  await expect(page.getByRole('button', { name: 'Void invoice' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Draft invoice', level: 1 })).toBeHidden()
+  await expect(page.getByRole('button', { name: 'Finalize', exact: true })).toBeHidden()
 
   await page.getByRole('button', { name: 'More actions' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Void invoice' })).toBeVisible()
   await page.getByRole('menuitem', { name: 'Back to invoices' }).click()
   await expect(page).toHaveURL(/\/invoices$/)
   await expect(page.getByText(id).first()).toBeVisible()
@@ -100,7 +101,7 @@ async function createInvoice(page: Page, finalizeNow: boolean) {
   await page.getByRole('option', { name: 'USD' }).click()
   await page.getByLabel('Line 1 description').fill('Setup')
   await page.getByLabel('Line 1 amount').fill('20.00')
-  await page.getByRole('button', { name: finalizeNow ? 'Send invoice' : 'Save draft' }).click()
+  await page.getByRole('button', { name: finalizeNow ? 'Finalize invoice' : 'Save draft' }).click()
   await expect(page).toHaveURL(/\/invoices\/inv_new_/)
 }
 
@@ -111,10 +112,12 @@ test('finalize now creates an open invoice that can be voided from the detail', 
   await expect(page.getByRole('heading', { name: 'Draft invoice', level: 1 })).toBeHidden()
   await expect(page.getByRole('button', { name: 'Finalize', exact: true })).toBeHidden()
 
-  await page.getByRole('button', { name: 'Void invoice' }).click()
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await page.getByRole('menuitem', { name: 'Void invoice' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Void invoice' }).click()
   await expect(page.getByText('The invoice was voided.')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Void invoice' })).toBeHidden()
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Void invoice' })).toBeHidden()
 })
 
 test('cancelling a subscription immediately marks it cancelled', async ({ page }) => {

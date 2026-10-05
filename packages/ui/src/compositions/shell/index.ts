@@ -14,7 +14,6 @@ export { ShellNotifications, ShellNotificationsProvenance } from './ShellNotific
 export type { ShellNotificationsProps } from './ShellNotifications'
 export { ShellPromoCard, ShellPromoCardProvenance } from './ShellPromoCard'
 export type { ShellPromoCardProps } from './ShellPromoCard'
-export { ShellRailHandle, ShellRailHandleProvenance } from './ShellRailHandle'
 export { ShellSearch, ShellSearchProvenance } from './ShellSearch'
 export { ThemeProvider, ThemeProviderProvenance } from './ThemeProvider'
 export { ThemeToggle, ThemeToggleProvenance } from './ThemeToggle'

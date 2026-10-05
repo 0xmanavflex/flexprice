@@ -2,13 +2,13 @@ import { useRef, useState, type FormEvent } from 'react'
 import {
   Building2Icon,
   CalendarIcon,
+  CheckIcon,
+  ReceiptIcon,
   HashIcon,
   InfoIcon,
   PlusIcon,
   SaveIcon,
-  SendIcon,
   Trash2Icon,
-  XIcon,
 } from 'lucide-react'
 import { z } from 'zod'
 import {
@@ -19,6 +19,7 @@ import {
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
+// eslint-disable-next-line no-restricted-imports -- the redesign's form-3 InvoiceCreator block is built on Card, kept as in the reference
 import {
   Card,
   CardAction,
@@ -59,6 +60,7 @@ import {
   SelectValue,
 } from '@ui/components/primitives/select'
 import { Separator } from '@ui/components/primitives/separator'
+// eslint-disable-next-line no-restricted-imports -- the redesign's form-3 line-items table uses the table primitive, kept as in the reference
 import {
   Table,
   TableBody,
@@ -300,29 +302,25 @@ export function InvoiceForm({
   return (
     <TooltipProvider delay={200}>
       <div className="bg-background flex min-h-0 w-full flex-1 flex-col">
-        <header className="border-border bg-background sticky top-0 z-20 flex min-h-14 w-full shrink-0 items-center justify-between gap-3 border-b px-4">
-          <div className="flex min-w-0 items-center">
+        <header className="border-border bg-background/95 sticky top-0 z-20 flex min-h-14 w-full shrink-0 items-center justify-between gap-3 border-b px-10 backdrop-blur 2xl:px-14">
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="text-foreground truncate text-base leading-5 font-medium">
+              {mode === 'edit' ? 'Edit invoice' : 'New one-off invoice'}
+            </h1>
+            <Badge variant="warning-light" className="hidden translate-y-px self-center sm:inline-flex">
+              Draft
+            </Badge>
+          </div>
+          <div className="flex shrink-0 items-center gap-2">
             <Button
               type="button"
               variant="ghost"
-              size="icon-sm"
-              className="-ms-2 size-8 shrink-0"
-              aria-label="Close invoice editor"
+              className="h-8"
+              disabled={isSubmitting}
               onClick={onCancel}
             >
-              <XIcon aria-hidden />
+              Cancel
             </Button>
-            <Separator orientation="vertical" className="my-auto mr-4 ml-2 h-4 shrink-0" />
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="text-foreground truncate text-base leading-5 font-medium">
-                {mode === 'edit' ? 'Edit invoice' : 'Create invoice'}
-              </h1>
-              <Badge variant="warning-light" className="hidden translate-y-px self-center sm:inline-flex">
-                Draft
-              </Badge>
-            </div>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
             <Button
               type="button"
               variant="outline"
@@ -344,8 +342,8 @@ export function InvoiceForm({
                 finalizeRef.current = true
               }}
             >
-              <SendIcon data-icon="inline-start" aria-hidden />
-              Send invoice
+              <CheckIcon data-icon="inline-start" aria-hidden />
+              Finalize invoice
             </Button>
           </div>
         </header>
@@ -364,6 +362,7 @@ export function InvoiceForm({
                 <CardDescription>Customer, terms, items, and payment notes.</CardDescription>
                 <CardAction className="flex items-center gap-1.5 self-center">
                   <Badge variant="warning-light">
+                    <ReceiptIcon aria-hidden />
                     <span className="sr-only">Status</span>
                     Draft
                   </Badge>

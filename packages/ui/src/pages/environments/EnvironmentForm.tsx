@@ -9,15 +9,8 @@ import {
   createEnvironmentSchema,
   emptyEnvironment,
 } from '@fp/domain'
-import { Button } from '@ui/components/primitives/button'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@ui/components/primitives/dialog'
+import { Composer } from '@ui/compositions/DetailKit'
+import { FormDialog } from '@ui/compositions/FormDialog'
 import { Field, FieldError, FieldGroup, FieldLabel } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
@@ -34,13 +27,13 @@ import { provenance } from '@ui/provenance'
  * arrange it rather than self-serving it. When it is, the option stays visible
  * and disabled with the reason attached.
  *
- * The chrome is the ReUI dialog: title, description, fields, and the muted
- * footer bar. It opens over the page the person is already on.
+ * The chrome is the shared `FormDialog` with a `Composer` footer. It opens over
+ * the page the person is already on.
  */
 export const EnvironmentFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/dialog', 'ui/input', 'ui/radio-group', 'ui/field', '@reui/alert'],
-  note: 'ReUI dialog. The type is a pair of one-line cards, not a select. Sandbox is the default.',
+  composes: ['compositions/form-dialog', 'compositions/detail-kit', 'ui/input', 'ui/radio-group', 'ui/field', '@reui/alert'],
+  note: 'Reference FormDialog and Composer. The type is a pair of one-line cards, not a select. Sandbox is the default.',
 })
 
 export interface EnvironmentFormProps {
@@ -57,8 +50,6 @@ export interface EnvironmentFormProps {
   canCreateProduction?: boolean
   productionUnavailableReason?: string
 }
-
-const FORM_ID = 'environment-form'
 
 const TYPES = [EnvironmentType.Sandbox, EnvironmentType.Production] as const
 
@@ -87,123 +78,107 @@ export function EnvironmentForm({
   const type = form.watch('type')
   const typeError = form.formState.errors.type?.message
 
+  const submit = form.handleSubmit((value) => {
+    if (value.type === EnvironmentType.Production && !canCreateProduction) {
+      form.setError('type', {
+        message: productionUnavailableReason ?? 'Production cannot be created here.',
+      })
+      return
+    }
+    onSubmit(value)
+  })
+
   return (
-    <Dialog
+    <FormDialog
       open={open}
       onOpenChange={(next) => {
         if (!next && isSubmitting) return
         onOpenChange(next)
       }}
+      size="sm"
+      title="Create environment"
+      description="Data does not cross between environments. A sandbox is the safe default; production is real customers and real money."
     >
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Create environment</DialogTitle>
-          <DialogDescription>
-            Data does not cross between environments. A sandbox is the safe default; production is
-            real customers and real money.
-          </DialogDescription>
-        </DialogHeader>
+      <Composer
+        submitLabel={isSubmitting ? 'Creating…' : 'Create environment'}
+        submitting={isSubmitting}
+        onCancel={() => onOpenChange(false)}
+        onSubmit={() => void submit()}
+      >
+        <FieldGroup className="gap-4">
+          <Field className="gap-2">
+            <FieldLabel htmlFor="environment-name">
+              Name
+              <span aria-hidden className="text-destructive">
+                *
+              </span>
+            </FieldLabel>
+            <Input
+              id="environment-name"
+              autoFocus
+              placeholder="EU staging"
+              disabled={isSubmitting}
+              aria-invalid={form.formState.errors.name ? true : undefined}
+              {...form.register('name')}
+            />
+            {form.formState.errors.name?.message ? (
+              <FieldError>{form.formState.errors.name.message}</FieldError>
+            ) : null}
+          </Field>
 
-        <form
-          id={FORM_ID}
-          onSubmit={form.handleSubmit((value) => {
-            if (value.type === EnvironmentType.Production && !canCreateProduction) {
-              form.setError('type', {
-                message: productionUnavailableReason ?? 'Production cannot be created here.',
-              })
-              return
-            }
-            onSubmit(value)
-          })}
-          noValidate
-        >
-          <FieldGroup className="gap-4">
-            <Field className="gap-2">
-              <FieldLabel htmlFor="environment-name">
-                Name
-                <span aria-hidden className="text-destructive">
-                  *
-                </span>
-              </FieldLabel>
-              <Input
-                id="environment-name"
-                autoFocus
-                placeholder="EU staging"
-                disabled={isSubmitting}
-                aria-invalid={form.formState.errors.name ? true : undefined}
-                {...form.register('name')}
-              />
-              {form.formState.errors.name?.message ? (
-                <FieldError>{form.formState.errors.name.message}</FieldError>
-              ) : null}
-            </Field>
+          <Field className="gap-2">
+            <FieldLabel>
+              Type
+              <span aria-hidden className="text-destructive">
+                *
+              </span>
+            </FieldLabel>
+            <fieldset className="flex flex-col gap-1.5" disabled={isSubmitting}>
+              <legend className="sr-only">Type</legend>
+              <RadioGroup
+                value={type}
+                onValueChange={(value) => form.setValue('type', value as CreateEnvironment['type'])}
+                className="grid gap-3"
+              >
+                {TYPES.map((option) => {
+                  const isProduction = option === EnvironmentType.Production
+                  const disabled = isProduction && !canCreateProduction
 
-            <Field className="gap-2">
-              <FieldLabel>
-                Type
-                <span aria-hidden className="text-destructive">
-                  *
-                </span>
-              </FieldLabel>
-              <fieldset className="flex flex-col gap-1.5" disabled={isSubmitting}>
-                <legend className="sr-only">Type</legend>
-                <RadioGroup
-                  value={type}
-                  onValueChange={(value) => form.setValue('type', value as CreateEnvironment['type'])}
-                  className="grid gap-1.5"
-                >
-                  {TYPES.map((option) => {
-                    const isProduction = option === EnvironmentType.Production
-                    const disabled = isProduction && !canCreateProduction
-
-                    return (
-                      <label
-                        key={option}
-                        className={cn(
-                          'flex cursor-pointer items-center gap-2.5 rounded-lg border p-2.5 transition-colors',
-                          type === option && 'border-primary/40 bg-accent/50',
-                          disabled && 'cursor-not-allowed opacity-60',
-                        )}
-                      >
-                        <RadioGroupItem value={option} disabled={disabled} />
-                        <span className="flex min-w-0 flex-col">
-                          <span className="text-sm font-medium">{ENVIRONMENT_TYPE_LABEL[option]}</span>
-                          <span className="text-muted-foreground text-xs">
-                            {disabled && productionUnavailableReason
-                              ? productionUnavailableReason
-                              : ENVIRONMENT_TYPE_DESCRIPTION[option]}
-                          </span>
+                  return (
+                    <label
+                      key={option}
+                      className={cn(
+                        'flex cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-colors',
+                        type === option
+                          ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
+                          : 'hover:bg-muted/40',
+                        disabled && 'cursor-not-allowed opacity-60',
+                      )}
+                    >
+                      <RadioGroupItem value={option} disabled={disabled} className="mt-0.5" />
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="text-sm font-medium">{ENVIRONMENT_TYPE_LABEL[option]}</span>
+                        <span className="text-muted-foreground text-[13px]/relaxed">
+                          {disabled && productionUnavailableReason
+                            ? productionUnavailableReason
+                            : ENVIRONMENT_TYPE_DESCRIPTION[option]}
                         </span>
-                      </label>
-                    )
-                  })}
-                </RadioGroup>
-              </fieldset>
-              {typeError ? <FieldError>{typeError}</FieldError> : null}
-            </Field>
-          </FieldGroup>
-        </form>
+                      </span>
+                    </label>
+                  )
+                })}
+              </RadioGroup>
+            </fieldset>
+            {typeError ? <FieldError>{typeError}</FieldError> : null}
+          </Field>
+        </FieldGroup>
 
         {submitError ? (
           <Alert variant="destructive">
             <AlertDescription>{submitError}</AlertDescription>
           </Alert>
         ) : null}
-
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => onOpenChange(false)}
-            disabled={isSubmitting}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" form={FORM_ID} disabled={isSubmitting}>
-            {isSubmitting ? 'Creating…' : 'Create environment'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      </Composer>
+    </FormDialog>
   )
 }

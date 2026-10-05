@@ -140,9 +140,9 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
     // Overview is the opening section.
-    await expect(canvas.getByRole('heading', { name: 'Subscriptions' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: /Active subscriptions/ })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Recent activity' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
   },
 }
 
@@ -155,7 +155,7 @@ export const NavigatesSections: Story = {
     await expect(canvas.getByText('INV-2026-01450')).toBeInTheDocument()
 
     await userEvent.click(canvas.getByRole('tab', { name: 'Information' }))
-    await expect(canvas.getByRole('heading', { name: 'Billing' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Billing address' })).toBeVisible()
     await expect(canvas.getByText('America/Los_Angeles')).toBeInTheDocument()
   },
 }
@@ -176,7 +176,7 @@ export const EditsInline: Story = {
   args: { initialTab: 'information', onUpdateField: fn(async () => undefined), onEdit: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer details' }))
     await userEvent.type(canvas.getByRole('textbox', { name: 'Phone' }), '+1 555 0100{Enter}')
     await expect(args.onUpdateField).toHaveBeenCalledWith({ phone: '+1 555 0100' })
     await expect(args.onEdit).not.toHaveBeenCalled()
@@ -192,7 +192,7 @@ export const HeaderEditInPlace: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Edit customer details' }))
     await userEvent.type(canvas.getByRole('textbox', { name: 'Phone' }), '1')
     await userEvent.click(canvas.getByRole('button', { name: 'Save' }))
     await expect(args.onUpdateField).toHaveBeenCalledOnce()
@@ -207,6 +207,6 @@ export const Empty: Story = {
   args: { subscriptions: [], invoices: [] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('No active subscription')).toBeVisible()
+    await expect(canvas.getByText(/No active subscriptions/)).toBeVisible()
   },
 }

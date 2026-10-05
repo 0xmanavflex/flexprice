@@ -45,8 +45,8 @@ import { provenance } from '@ui/provenance'
  */
 export const ShellSearchProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/app-shell-3', 'ui/button', 'ui/dialog', 'ui/kbd', 'ui/input'],
-  note: "The block's search-form, with the submit wired to a callback instead of a mock.",
+  composes: ['ui/button', 'ui/dialog', 'ui/kbd', 'ui/input'],
+  note: "The block's search-form, with the submit wired to a callback instead of a mock. Lineage: @reui/app-shell-3.",
 })
 
 export interface ShellSearchItem {
@@ -185,14 +185,11 @@ export function ShellSearch({
         onClick={() => setOpen(true)}
         aria-label="Search"
         {...(available ? { 'aria-keyshortcuts': '/ Meta+K Control+K' } : {})}
-        className="text-muted-foreground gap-1.5 font-normal"
+        className="text-muted-foreground h-8 font-normal sm:w-56 sm:justify-start"
       >
-        <SearchIcon
-          aria-hidden
-          className="pointer-events-none size-4 shrink-0 opacity-60 select-none"
-        />
+        <SearchIcon aria-hidden />
         <span className="hidden sm:inline">{placeholder}</span>
-        {available ? <Kbd className="ml-1 hidden sm:inline-flex">⌘K</Kbd> : null}
+        {available ? <Kbd className="ml-auto hidden sm:inline-flex">⌘K</Kbd> : null}
       </Button>
 
       <Dialog open={open} onOpenChange={changeOpen}>

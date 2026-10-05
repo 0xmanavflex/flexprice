@@ -49,23 +49,23 @@ import {
   PlanCreditGrantsView,
   EntitlementCreateForm,
   EntitlementEditForm,
-  EntityHeader,
   type FeatureOption,
   PlanChargesView,
   PlanCustomerPreview,
   PlanEntitlementsView,
+  Status,
   pricingSummary,
 } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
-  DetailList,
+  DetailHeader,
   DetailTabs,
+  Dot,
   EditableCard,
   FormDialog,
   LoadingRows,
-  MENU_CONTENT,
-  MENU_ITEM,
+  Properties,
   Section,
 } from '@fp/ui/compositions'
 import {
@@ -77,8 +77,8 @@ import {
   DropdownMenuTrigger,
 } from '@fp/ui/primitives'
 import {
+  ArchiveIcon,
   CopyIcon,
-  EyeOffIcon,
   LayersIcon,
   MoreHorizontalIcon,
   PencilIcon,
@@ -136,7 +136,6 @@ export function PlanDetailPage({
   onArchived,
   onDuplicated,
   onEdit,
-  onNavigateToList,
 }: PlanDetailPageProps) {
   const plan = usePlan(planId)
   const update = useUpdatePlan()
@@ -153,7 +152,7 @@ export function PlanDetailPage({
 
   if (plan.isPending) {
     return (
-      <div className="p-6">
+      <div className="px-10 pt-8 pb-16 2xl:px-14">
         <LoadingRows />
       </div>
     )
@@ -172,37 +171,56 @@ export function PlanDetailPage({
   const record = plan.data
   const isArchived = record.status === PlanStatus.Archived
 
+  const charged = charges.data ?? []
+
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <EntityHeader
-        trail={[{ label: 'Plans', onClick: onNavigateToList }, { label: record.name }]}
-        icon={<LayersIcon aria-hidden className="size-5" />}
+    <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
+      <DetailHeader
+        icon={<LayersIcon />}
         title={record.name}
-        subtitle={planSubtitle(record.status, charges.data ?? [])}
         id={record.lookupKey || record.id}
+        subtitle={
+          <>
+            <span>{planKind(charged)}</span>
+            {billedLabel(charged) ? (
+              <>
+                <Dot />
+                <span>{billedLabel(charged)}</span>
+              </>
+            ) : null}
+            {isArchived ? (
+              <>
+                <Dot />
+                <Status value={PLAN_STATUS_LABEL[record.status]} />
+              </>
+            ) : null}
+          </>
+        }
         actions={
           <>
             <Button
               variant="outline"
+              className="h-8 px-3"
               disabled={sync.isPending || isArchived}
               onClick={() => sync.mutate(planId)}
             >
-              <RefreshCwIcon aria-hidden className="size-4" />
+              <RefreshCwIcon aria-hidden />
               {sync.isPending ? 'Syncing…' : 'Sync to subscriptions'}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={<Button variant="outline" size="icon" aria-label="More actions" />}
+                render={
+                  <Button variant="outline" size="icon" className="size-8" aria-label="More actions" />
+                }
               >
-                <MoreHorizontalIcon aria-hidden className="size-4" />
+                <MoreHorizontalIcon aria-hidden />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
-                <DropdownMenuItem className={MENU_ITEM} onClick={() => onEdit(planId)}>
-                  <PencilIcon aria-hidden className="size-4" />
-                  Edit configuration
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem onClick={() => onEdit(planId)}>
+                  <PencilIcon className="text-muted-foreground" aria-hidden />
+                  Edit details
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  className={MENU_ITEM}
                   onClick={() =>
                     clone.mutate(
                       { id: planId, name: `${record.name} (copy)` },
@@ -215,17 +233,17 @@ export function PlanDetailPage({
                     )
                   }
                 >
-                  <CopyIcon aria-hidden className="size-4" />
-                  Duplicate
+                  <CopyIcon className="text-muted-foreground" aria-hidden />
+                  Duplicate plan
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  className={MENU_ITEM}
+                  variant="destructive"
                   disabled={isArchived}
                   onClick={() => setArchiving(true)}
                 >
-                  <EyeOffIcon aria-hidden className="size-4" />
-                  Archive
+                  <ArchiveIcon aria-hidden />
+                  Archive plan
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -233,63 +251,45 @@ export function PlanDetailPage({
         }
       />
 
-      <div className="px-6 pb-10">
-        <div className="min-w-0">
-          <DetailTabs
-            value={tab}
-            onValueChange={(next) => onTabChange(parsePlanTab(next))}
-            tabs={[
-              {
-                value: 'overview',
-                label: 'Charges',
-                ...count(charges.data),
-                content: (
-                  <ChargesTab planId={planId} planName={record.name} readOnly={isArchived} />
-                ),
+      <DetailTabs
+        value={tab}
+        onChange={(next) => onTabChange(parsePlanTab(next))}
+        tabs={[
+          { value: 'overview', label: 'Charges', ...count(charges.data) },
+          { value: 'entitlements', label: 'Entitlements', ...count(entitlements.data) },
+          { value: 'credit-grants', label: 'Credit grants', ...count(grants.data) },
+          { value: 'information', label: 'Information' },
+        ]}
+      />
+
+      {tab === 'overview' ? (
+        <ChargesTab planId={planId} planName={record.name} readOnly={isArchived} />
+      ) : null}
+      {tab === 'entitlements' ? <EntitlementsTab planId={planId} /> : null}
+      {tab === 'credit-grants' ? <CreditGrantsTab planId={planId} /> : null}
+      {tab === 'information' ? (
+        <InformationTab
+          name={record.name}
+          lookupKey={record.lookupKey}
+          planId={record.id}
+          description={record.description}
+          status={PLAN_STATUS_LABEL[record.status]}
+          createdAt={record.createdAt}
+          updatedAt={record.updatedAt}
+          readOnly={isArchived}
+          onSave={(patch) =>
+            update.mutateAsync({
+              id: planId,
+              draft: {
+                name: record.name,
+                lookupKey: record.lookupKey,
+                description: record.description,
+                ...patch,
               },
-              {
-                value: 'entitlements',
-                label: 'Entitlements',
-                ...count(entitlements.data),
-                content: <EntitlementsTab planId={planId} />,
-              },
-              {
-                value: 'credit-grants',
-                label: 'Credit grants',
-                ...count(grants.data),
-                content: <CreditGrantsTab planId={planId} />,
-              },
-              {
-                value: 'information',
-                label: 'Information',
-                content: (
-                  <InformationTab
-                    name={record.name}
-                    lookupKey={record.lookupKey}
-                    planId={record.id}
-                    description={record.description}
-                    status={PLAN_STATUS_LABEL[record.status]}
-                    createdAt={record.createdAt}
-                    updatedAt={record.updatedAt}
-                    readOnly={isArchived}
-                    onSave={(patch) =>
-                      update.mutateAsync({
-                        id: planId,
-                        draft: {
-                          name: record.name,
-                          lookupKey: record.lookupKey,
-                          description: record.description,
-                          ...patch,
-                        },
-                      })
-                    }
-                  />
-                ),
-              },
-            ]}
-          />
-        </div>
-      </div>
+            })
+          }
+        />
+      ) : null}
 
       <ConfirmDialog
         open={archiving}
@@ -364,7 +364,7 @@ function ChargesTab({
 
   return (
     <>
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
         <PlanChargesView
           charges={rows}
           readOnly={readOnly}
@@ -373,16 +373,14 @@ function ChargesTab({
           onEdit={(charge) => setForm(charge)}
           onTerminate={(charge) => setTerminating(charge)}
         />
-        <aside aria-label="Plan preview" className="lg:sticky lg:top-4">
-          <PlanCustomerPreview
-            name={planName}
-            charges={rows}
-            entitlements={entitlements.data ?? []}
-            grants={grants.data ?? []}
-            meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-            featureUnit={(id) => featureOptions.find((f) => f.id === id)?.unit}
-          />
-        </aside>
+        <PlanCustomerPreview
+          name={planName}
+          charges={rows}
+          entitlements={entitlements.data ?? []}
+          grants={grants.data ?? []}
+          meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+          featureUnit={(id) => featureOptions.find((f) => f.id === id)?.unit}
+        />
       </div>
 
       <AddChargeDialog
@@ -675,8 +673,9 @@ function InformationTab({
   onSave: (patch: { name?: string; lookupKey?: string; description?: string }) => Promise<unknown>
 }) {
   return (
-    <div className="flex flex-col gap-6">
+    <div className="grid gap-5 xl:grid-cols-3">
       <EditableCard
+        className="xl:col-span-2"
         title="Plan details"
         locked={readOnly}
         fields={[
@@ -686,7 +685,7 @@ function InformationTab({
             label: 'Lookup key',
             value: lookupKey,
             placeholder: 'No lookup key',
-            display: <span className="font-mono text-xs">{lookupKey || '—'}</span>,
+            display: <span className="font-mono text-[13px]">{lookupKey || '—'}</span>,
             validate: (next) =>
               next === '' || /^[a-z0-9_]+$/.test(next)
                 ? null
@@ -705,11 +704,16 @@ function InformationTab({
         ]}
         onSave={(changes) => onSave(changes)}
       />
-      <Section title="Metadata">
-        <DetailList
-          items={[{ label: 'Plan ID', value: <span className="font-mono text-xs">{planId}</span> }]}
-        />
-      </Section>
+      <div className="flex flex-col gap-5">
+        <Section title="Metadata">
+          <Properties
+            columns={2}
+            items={[
+              { label: 'Plan ID', value: <span className="font-mono text-[13px]">{planId}</span> },
+            ]}
+          />
+        </Section>
+      </div>
     </div>
   )
 }
@@ -718,18 +722,16 @@ function count(rows: readonly unknown[] | undefined): { count?: number } {
   return rows ? { count: rows.length } : {}
 }
 
-function planSubtitle(status: PlanStatus, charges: Charge[]): string {
+function planKind(charges: Charge[]): string {
   const hasFixed = charges.some((c) => c.type === PriceType.Fixed)
   const hasUsage = charges.some((c) => c.type === PriceType.Usage)
-  const kind =
-    hasFixed && hasUsage
-      ? 'Hybrid plan'
-      : hasUsage
-        ? 'Usage plan'
-        : hasFixed
-          ? 'Fixed plan'
-          : 'Plan'
+  if (charges.length === 0) return 'No charges yet'
+  if (hasFixed && hasUsage) return 'Hybrid plan'
+  return hasUsage ? 'Usage-based plan' : 'Flat-rate plan'
+}
+
+function billedLabel(charges: Charge[]): string | null {
   const period = charges.find((c) => c.type === PriceType.Fixed)?.billingPeriod
   const label = period ? BILLING_PERIOD_LABEL[period as BillingPeriod] : undefined
-  return [kind, label ? `Billed ${label.toLowerCase()}` : PLAN_STATUS_LABEL[status]].join(' · ')
+  return label ? `Billed ${label.toLowerCase()}` : null
 }

@@ -34,13 +34,12 @@ export const EntitlementFormProvenance = provenance({
   composes: [
     'compositions/field',
     'compositions/form-actions',
-    'compositions/option-select',
     'compositions/option-combobox',
     'ui/input',
     'ui/switch',
     'ui/textarea',
   ],
-  note: 'RHF + domain entitlement schemas; fields follow the chosen feature’s type.',
+  note: 'RHF + domain entitlement schemas; fields follow the chosen feature’s type. Lineage: compositions/option-select.',
 })
 
 /** A feature an entitlement can be granted on. */
@@ -152,7 +151,9 @@ export function EntitlementCreateForm({
             else if (form.getValues('usageResetPeriod' as never) == null)
               form.setValue('usageResetPeriod' as never, UsageResetPeriod.Monthly as never)
           }}
-          resetPeriod={form.watch('usageResetPeriod' as never) as unknown as UsageResetPeriod | null}
+          resetPeriod={
+            form.watch('usageResetPeriod' as never) as unknown as UsageResetPeriod | null
+          }
           onResetPeriodChange={(period) =>
             form.setValue('usageResetPeriod' as never, period as never)
           }

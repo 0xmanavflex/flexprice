@@ -13,7 +13,7 @@ import {
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
-import { PlanTabCard } from './PlanTabCard'
+import { Section } from '@ui/compositions/Section'
 import { chargeLabel, pricingSummary } from './PlanPreviewCard'
 
 export interface PlanChargesViewProps {
@@ -26,24 +26,25 @@ export interface PlanChargesViewProps {
   meterUnit?: (meterId: string) => string | undefined
 }
 
+/** Fixed and usage charges each get one quiet treatment: a tinted header band and a thin rail on their rows. */
 const GROUPS = [
   {
     type: PriceType.Fixed,
     title: 'Fixed charges',
     note: 'Billed at the start of each period',
     icon: RepeatIcon,
-    band: 'bg-sky-50 dark:bg-sky-950/30',
-    iconTile: 'bg-sky-100 text-sky-600 dark:bg-sky-900/50 dark:text-sky-300',
-    rail: 'border-l-sky-300 dark:border-l-sky-700',
+    band: 'bg-muted/60',
+    tile: 'bg-foreground/8 text-foreground/70',
+    rail: 'border-l-foreground/40',
   },
   {
     type: PriceType.Usage,
     title: 'Usage charges',
     note: 'Billed at the end of the period the usage happened in',
     icon: GaugeIcon,
-    band: 'bg-violet-50 dark:bg-violet-950/30',
-    iconTile: 'bg-violet-100 text-violet-600 dark:bg-violet-900/50 dark:text-violet-300',
-    rail: 'border-l-violet-300 dark:border-l-violet-700',
+    band: 'bg-muted/60',
+    tile: 'bg-foreground/8 text-foreground/70',
+    rail: 'border-l-muted-foreground/40',
   },
 ] as const
 
@@ -61,7 +62,7 @@ function cadenceLabel(charge: Charge): string {
   return `${period}, ${charge.invoiceCadence === InvoiceCadence.Advance ? 'in advance' : 'in arrears'}`
 }
 
-/** A plan's charges, grouped and colour-coded by when they bill. */
+/** A plan's charges, grouped by when they bill. */
 export function PlanChargesView({
   charges,
   onAdd,
@@ -73,28 +74,28 @@ export function PlanChargesView({
   const meterName = (id: string) => charges.find((c) => c.meterId === id)?.meterName ?? id
 
   return (
-    <PlanTabCard
+    <Section
       title="Charges"
       description="What this plan bills, and when"
+      flush
       action={
         readOnly || charges.length === 0 ? undefined : (
-          <Button type="button" size="sm" onClick={onAdd}>
-            <PlusIcon aria-hidden className="size-4" />
+          <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+            <PlusIcon aria-hidden />
             Add charge
           </Button>
         )
       }
     >
       {charges.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 border-t px-6 py-12 text-center">
-          <p className="text-muted-foreground max-w-sm text-sm">
-            Nothing is billed until there is a charge. Add a fixed fee or a usage charge to price
-            this plan.
+        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+          <p className="text-muted-foreground text-[13px]">
+            Nothing is billed yet. Add a fixed fee, a usage charge, or both.
           </p>
           {readOnly ? null : (
-            <Button type="button" size="sm" onClick={onAdd}>
-              <PlusIcon aria-hidden className="size-4" />
-              Add charge
+            <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+              <PlusIcon aria-hidden />
+              Add the first charge
             </Button>
           )}
         </div>
@@ -105,23 +106,25 @@ export function PlanChargesView({
           const Icon = group.icon
           return (
             <div key={group.type} role="group" aria-label={group.title}>
-              <header
-                className={cn('flex items-center gap-3 border-t px-6 py-2.5 text-sm', group.band)}
+              <div
+                className={cn('flex items-center gap-3 border-y px-6 py-2.5 first:border-t-0', group.band)}
               >
                 <span
                   aria-hidden
                   className={cn(
-                    'flex size-6 items-center justify-center rounded-md',
-                    group.iconTile,
+                    'flex size-6 items-center justify-center rounded-md [&_svg]:size-3.5',
+                    group.tile,
                   )}
                 >
-                  <Icon className="size-3.5" />
+                  <Icon />
                 </span>
-                <span className="font-medium">{group.title}</span>
-                <span className="text-muted-foreground">{rows.length}</span>
-                <span className="text-muted-foreground ml-auto text-xs">{group.note}</span>
-              </header>
-              <ul className="divide-y border-t">
+                <span className="text-[13px] font-medium">{group.title}</span>
+                <span className="text-muted-foreground text-xs tabular-nums">{rows.length}</span>
+                <span className="text-muted-foreground ml-auto hidden text-xs sm:block">
+                  {group.note}
+                </span>
+              </div>
+              <ul className="divide-border/50 divide-y">
                 {rows.map((charge) => {
                   const draft = chargeToDraft(charge)
                   const currency = (charge.currency || 'usd').toUpperCase()
@@ -129,20 +132,18 @@ export function PlanChargesView({
                     <li
                       key={charge.id}
                       className={cn(
-                        'flex items-center gap-4 border-l-2 px-6 py-4 text-sm',
+                        'grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_minmax(0,1.5fr)_32px] items-center gap-4 border-l-2 py-4 pr-6 pl-[22px]',
                         group.rail,
                       )}
                     >
-                      <span className="min-w-0 flex-1 basis-1/4 truncate">
-                        {chargeLabel(draft, meterName)}
-                      </span>
-                      <span className="text-muted-foreground hidden flex-1 basis-1/5 sm:block">
+                      <p className="truncate text-sm font-medium">{chargeLabel(draft, meterName)}</p>
+                      <span className="text-muted-foreground truncate text-[13px]">
                         {modelLabel(charge)}
                       </span>
-                      <span className="text-muted-foreground hidden flex-1 basis-1/5 md:block">
+                      <span className="text-muted-foreground truncate text-[13px]">
                         {cadenceLabel(charge)}
                       </span>
-                      <span className="flex-1 basis-1/4 text-left tabular-nums">
+                      <span className="truncate text-[13px] tabular-nums">
                         {charge.displayAmount && charge.billingModel === BillingModel.FlatFee
                           ? charge.displayAmount
                           : pricingSummary(
@@ -153,7 +154,7 @@ export function PlanChargesView({
                             )}
                       </span>
                       {readOnly ? (
-                        <span className="w-9" />
+                        <span />
                       ) : (
                         <RowActionsMenu
                           label={charge.displayName || charge.meterName || 'charge'}
@@ -170,6 +171,6 @@ export function PlanChargesView({
           )
         })
       )}
-    </PlanTabCard>
+    </Section>
   )
 }

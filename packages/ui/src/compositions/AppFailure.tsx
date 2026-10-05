@@ -32,24 +32,21 @@ export interface AppFailureProps {
 
 export function AppFailure({ title, detail, fix, onRetry, technical, children }: AppFailureProps) {
   return (
-    <div
-      role="alert"
-      className="flex min-h-[60vh] w-full items-center justify-center p-6"
-    >
+    <div role="alert" className="flex min-h-[60vh] w-full items-center justify-center p-6">
       <div className="flex w-full max-w-lg flex-col gap-4 rounded-xl border p-6">
         <div className="flex flex-col gap-1.5">
-          <h1 className="text-base font-semibold">{title}</h1>
-          {detail ? <p className="text-sm text-muted-foreground">{detail}</p> : null}
+          <h1 className="text-base font-medium">{title}</h1>
+          {detail ? <p className="text-muted-foreground text-sm">{detail}</p> : null}
         </div>
 
         {fix ? (
-          <p className="rounded-lg border bg-muted/40 px-3 py-2 font-mono text-xs">{fix}</p>
+          <p className="bg-muted/40 rounded-lg border px-3 py-2 font-mono text-xs">{fix}</p>
         ) : null}
 
         {technical ? (
-          <details className="text-xs text-muted-foreground">
+          <details className="text-muted-foreground text-xs">
             <summary className="cursor-pointer">Technical detail</summary>
-            <pre className="mt-2 overflow-auto rounded bg-muted/40 p-2">{technical}</pre>
+            <pre className="bg-muted/40 mt-2 overflow-auto rounded p-2">{technical}</pre>
           </details>
         ) : null}
 

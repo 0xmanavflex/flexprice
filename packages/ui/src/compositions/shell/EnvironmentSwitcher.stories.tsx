@@ -76,7 +76,7 @@ export const Production: Story = {
   args: { current: two[0]! },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Live')).toBeVisible()
+    await expect(canvas.getByText('Production')).toBeVisible()
     await expect(
       canvas.getByRole('button', { name: /environment: production, production/i }),
     ).toBeInTheDocument()
@@ -84,18 +84,14 @@ export const Production: Story = {
 }
 
 /**
- * The breadcrumb variant: the compact trigger that leads the header's trail.
- *
- * Same menu and the same marks as the sidebar row — production keeps its dot
- * and its "Live" badge — but sized to sit inline beside a chevron rather than
- * to fill a sidebar row. This is the switcher's home now that it has left the
- * sidebar.
+ * The switcher is the first crumb of the header's trail: the environment's
+ * name beside its mark, opening a menu with the create and manage actions.
  */
 export const InBreadcrumb: Story = {
-  args: { current: two[0]!, variant: 'breadcrumb', onCreate: fn() },
+  args: { current: two[0]!, onCreate: fn() },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Live')).toBeVisible()
+    await expect(canvas.getByText('Production')).toBeVisible()
 
     await userEvent.click(
       canvas.getByRole('button', { name: /environment: production, production/i }),

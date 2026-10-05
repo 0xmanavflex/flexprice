@@ -1,7 +1,6 @@
 import { AGGREGATION_LABEL, FEATURE_TYPE_LABEL, FeatureType, ResetUsage } from '@fp/domain'
 import type { AggregationType } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
-import { Card, CardContent } from '@ui/components/primitives/card'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -11,7 +10,7 @@ import { provenance } from '@ui/provenance'
  */
 export const FeaturePreviewCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/card', '@reui/badge'],
+  composes: ['@reui/badge'],
   note: 'Live summary of the feature being drafted; fetches nothing.',
 })
 
@@ -53,8 +52,8 @@ export function FeaturePreviewCard({
       : null
 
   return (
-    <Card className="gap-0 p-0 shadow-xs">
-      <CardContent className="flex flex-col gap-3 p-4">
+    <aside aria-label="Feature preview" className="bg-background space-y-4 rounded-xl border p-6">
+      <div className="flex flex-col gap-3">
         <p className="text-muted-foreground text-xs">How it will look</p>
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium">{title}</p>
@@ -76,7 +75,7 @@ export function FeaturePreviewCard({
             <p className="text-muted-foreground text-xs">{TYPE_LINE[type]}</p>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </aside>
   )
 }

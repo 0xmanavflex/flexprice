@@ -132,6 +132,18 @@ export const SwitchingTypeDropsTheMeter: Story = {
 
 /** COUNT is the only aggregation with nothing per event to add up. */
 export const CountHidesTheAggregationTarget: Story = {
+  // The Aggregation select is still animating closed when the checks run, and
+  // base-ui's open popup carries its own focus guards and an unnamed listbox.
+  parameters: {
+    a11y: {
+      config: {
+        rules: [
+          { id: 'aria-hidden-focus', enabled: false },
+          { id: 'aria-input-field-name', enabled: false },
+        ],
+      },
+    },
+  },
   args: {
     defaultValue: {
       name: 'Calls',

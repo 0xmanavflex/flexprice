@@ -14,8 +14,8 @@ export type { FieldProps } from './Field'
 export { FormCard, FormRow, FormCardProvenance } from './FormCard'
 export type { FormCardProps, FormRowProps } from './FormCard'
 
-export { Section, SectionProvenance } from './Section'
-export type { SectionProps } from './Section'
+export { Section, SectionProvenance, Panel, PanelProvenance } from './Section'
+export type { SectionProps, PanelProps } from './Section'
 export { SettingsCard, SettingRow, SettingsFieldGroup } from './settingsSurface'
 
 export { ResourceNavigation, ResourceNavigationProvenance } from './ResourceNavigation'
@@ -101,10 +101,12 @@ export {
   CopyId,
   DetailKitProvenance,
   DetailTabs,
+  Dot,
   Properties,
   SegmentMeter,
   SimpleTable,
   SplitMeter,
+  SummaryRow,
 } from './DetailKit'
 export type { Choice, DetailTabSpec, SimpleColumn } from './DetailKit'
 export { GuidedEmptyState } from './GuidedEmptyState'

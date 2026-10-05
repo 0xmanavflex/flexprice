@@ -62,7 +62,7 @@ export function AcceptInvitationForm({
       className="flex w-full max-w-sm flex-col gap-5"
     >
       <div className="flex flex-col gap-2">
-        <h1 id="invite-heading" className="text-xl font-semibold">
+        <h1 id="invite-heading" className="text-2xl font-medium tracking-tight">
           Join {organisation}
         </h1>
         <div className="flex flex-wrap items-center gap-2 text-sm">

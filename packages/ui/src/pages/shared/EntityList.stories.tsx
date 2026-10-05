@@ -258,6 +258,9 @@ export const StatusCounts: Story = {
     await expect(listbox.getByText('51')).toBeInTheDocument()
     await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
     await waitFor(() => expect(args.status!.onChange).toHaveBeenCalledWith('archived'))
+    // Wait for the popup to unmount: its focus guards are aria-hidden *and*
+    // focusable while it is open, which axe rejects if scanned mid-close.
+    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
   },
 }
 
@@ -421,6 +424,10 @@ export const Selection: Story = {
     await waitFor(async () => {
       await expect(canvas.getByTestId('selected')).toHaveTextContent('wid_001')
     })
-    await expect(canvas.getByText('1 selected')).toBeInTheDocument()
+    // The count sits in its own emphasised span, so match the whole live region.
+    await expect(
+      canvas.getByText((_, element) => element?.getAttribute('aria-live') === 'polite' &&
+        element.textContent === '1 selected'),
+    ).toBeInTheDocument()
   },
 }

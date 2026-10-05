@@ -76,9 +76,9 @@ export function ContextualSection({
   return (
     <section
       aria-label={formTitle ?? title}
-      className={cn('bg-card flex flex-col gap-5 rounded-xl border p-5', className)}
+      className={cn('bg-background flex flex-col rounded-xl border', className)}
     >
-      <header className="flex flex-col gap-2">
+      <header className="flex flex-col gap-2 border-b px-6 py-4">
         {onBack ? (
           <Button type="button" variant="ghost" size="sm" className="-ml-2 w-fit" onClick={onBack}>
             <ArrowLeftIcon aria-hidden className="size-4" />
@@ -86,13 +86,13 @@ export function ContextualSection({
           </Button>
         ) : null}
         <div ref={headingRef} tabIndex={-1} className="flex flex-col gap-1 outline-none">
-          <h2 className="text-base font-semibold">{formTitle ?? title}</h2>
+          <h2 className="text-sm font-medium">{formTitle ?? title}</h2>
           {formDescription ? (
-            <p className="text-muted-foreground text-sm">{formDescription}</p>
+            <p className="text-muted-foreground text-[13px]">{formDescription}</p>
           ) : null}
         </div>
       </header>
-      {form}
+      <div className="p-6">{form}</div>
     </section>
   )
 }

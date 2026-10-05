@@ -6,7 +6,6 @@ import { DEFAULT_INVOICE_QUERY, InvoiceStatus } from '@fp/domain'
 import type { Invoice } from '@fp/domain'
 import { RevenueDashboard } from '@fp/ui/pages'
 import type { MetricTab, RevenueDashboardProps } from '@fp/ui/pages'
-import { PageBody, PageHeader } from '@fp/ui/compositions'
 
 /**
  * Revenue — wired to what the API can actually answer, and explicit about the
@@ -238,34 +237,26 @@ export function RevenuePage() {
   )
 
   return (
-    <>
-      <PageHeader
-        title="Revenue"
-        description="What the platform metered, what it was priced at, and how much of it has been collected."
-      />
-      <PageBody>
-        <RevenueDashboard
-          rangeLabel={RANGE_LABEL}
-          chart={chart}
-          meteredRevenue={analytics.data?.revenue ?? null}
-          mix={mix}
-          /*
-           * Always unavailable, and it is not a stub: there is no margin
-           * anywhere in `@fp/query`, `@fp/api` or the SDK, and the one thing
-           * that could stand in for it — subtracting cost-sheet totals from
-           * revenue — is money arithmetic in a browser.
-           */
-          margin={{ status: 'unavailable', percent: null, reason: MARGIN_UNAVAILABLE }}
-          collections={collections}
-          byCustomer={{
-            status: 'unavailable',
-            reason: REVENUE_BY_CUSTOMER_UNAVAILABLE,
-            columns: REVENUE_BY_CUSTOMER_GAPS,
-          }}
-          onNavigate={(path) => void navigate({ to: path, search: {} as never })}
-        />
-      </PageBody>
-    </>
+    <RevenueDashboard
+      rangeLabel={RANGE_LABEL}
+      chart={chart}
+      meteredRevenue={analytics.data?.revenue ?? null}
+      mix={mix}
+      /*
+       * Always unavailable, and it is not a stub: there is no margin
+       * anywhere in `@fp/query`, `@fp/api` or the SDK, and the one thing
+       * that could stand in for it — subtracting cost-sheet totals from
+       * revenue — is money arithmetic in a browser.
+       */
+      margin={{ status: 'unavailable', percent: null, reason: MARGIN_UNAVAILABLE }}
+      collections={collections}
+      byCustomer={{
+        status: 'unavailable',
+        reason: REVENUE_BY_CUSTOMER_UNAVAILABLE,
+        columns: REVENUE_BY_CUSTOMER_GAPS,
+      }}
+      onNavigate={(path) => void navigate({ to: path, search: {} as never })}
+    />
   )
 }
 

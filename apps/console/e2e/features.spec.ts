@@ -30,7 +30,7 @@ test.describe('the features list', () => {
     await page.getByRole('menuitem', { name: item }).click()
   }
 
-  test('creates a metered feature on a full page, step by step', async ({ page }) => {
+  test('creates a metered feature on a single full page', async ({ page }) => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
@@ -38,22 +38,22 @@ test.describe('the features list', () => {
     await expect(page).toHaveURL(/\/features\/new/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
-    const next = page.getByRole('button', { name: 'Next' })
-    await next.click()
+    // Type comes first (Metered preselected); the whole form is one page, no Next step.
+    await expect(page.getByRole('radio', { name: /Metered/ })).toBeChecked()
+    await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0)
+
+    const create = page.getByRole('button', { name: 'Create feature' })
+    await create.click()
     await expect(page.getByText('Enter a name')).toBeVisible()
 
     await page.getByLabel('Name', { exact: false }).first().fill('Image renders')
     await expect(page.getByLabel('Lookup key')).toHaveValue('feat-image-renders')
-    await next.click()
-    await next.click()
     await page.getByLabel('Event name').fill('image_render')
-    await next.click()
-    await next.click()
 
     const request = page.waitForRequest(
       (r) => r.method() === 'POST' && new URL(r.url()).pathname.endsWith('/v1/features'),
     )
-    await page.getByRole('button', { name: 'Create feature' }).click()
+    await create.click()
     await request
     await expect(page).toHaveURL(/\/features\/(?!new)[^/]+$/)
   })
@@ -125,9 +125,8 @@ test.describe('the features list', () => {
     await expect(page).toHaveURL(url)
     await page.getByRole('button', { name: 'Cancel' }).click()
 
-    // The multi-step configuration is the dedicated flow.
-    await page.getByRole('button', { name: 'More actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit configuration' }).click()
+    // The header's Edit button opens the dedicated edit page.
+    await page.getByRole('button', { name: 'Edit', exact: true }).click()
     await expect(page).toHaveURL(/\/edit$/)
   })
 })

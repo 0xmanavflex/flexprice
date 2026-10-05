@@ -134,13 +134,13 @@ export function CostSheetForm({
       ) : (
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
           <div className="min-w-0">{formEl}</div>
-          <aside aria-label="Cost sheet summary" className="flex flex-col gap-4 lg:sticky lg:top-4">
+          <div className="flex flex-col gap-4 lg:sticky lg:top-4">
             <CostSheetSummaryCard
               name={form.watch('name') ?? ''}
               lookupKey={form.watch('lookupKey') ?? ''}
               description={form.watch('description') ?? ''}
             />
-          </aside>
+          </div>
         </div>
       )}
     </FormPage>

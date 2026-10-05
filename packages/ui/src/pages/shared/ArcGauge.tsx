@@ -30,8 +30,8 @@ import type { ChartTone } from './charts'
  */
 export const ArcGaugeProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/chart-7', 'ui/tooltip'],
-  note: 'chart-7 segmented tick arc and bloom over a real reading, status tones, with a tooltip and a text readout.',
+  composes: ['ui/tooltip'],
+  note: 'chart-7 segmented tick arc and bloom over a real reading, status tones, with a tooltip and a text readout. Lineage: @reui/chart-7.',
 })
 
 /* The block's geometry, kept as-is so the arc sits the way it was drawn. */
@@ -91,29 +91,27 @@ export function ArcGauge({
 
   const style = {
     '--gauge-lit': toneColor(tone),
-    '--gauge-track': 'color-mix(in oklch, var(--muted-foreground) 14%, transparent)',
+    '--gauge-track': 'color-mix(in oklch, var(--muted-foreground) 14%, var(--background))',
   } as CSSProperties
 
   const reading = `${label}: ${percent}% (${value} of ${max})`
 
   return (
-    <div className={cn('flex flex-col items-center gap-2', className)} style={style}>
+    <div className={cn('flex flex-col items-center gap-3', className)} style={style}>
       <Tooltip>
         <TooltipTrigger
           render={
             <button
               type="button"
               aria-label={reading}
-              className="focus-visible:ring-ring relative block cursor-default overflow-hidden rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+              className="focus-visible:ring-ring relative block h-[113px] w-[216px] shrink-0 cursor-default rounded-md focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
             />
           }
         >
           <svg
             aria-hidden="true"
-            className="block"
+            className="h-full w-full"
             fill="none"
-            width={ARC_VIEWBOX.width}
-            height={ARC_VIEWBOX.height}
             viewBox={`${ARC_VIEWBOX.minX} ${ARC_VIEWBOX.minY} ${ARC_VIEWBOX.width} ${ARC_VIEWBOX.height}`}
             preserveAspectRatio="xMidYMid meet"
           >
@@ -164,11 +162,9 @@ export function ArcGauge({
         Sitting it just under the arc keeps that: a real line of type, not a
         label drawn over the ticks.
       */}
-      <div aria-hidden="true" className="flex flex-col items-center gap-1 text-center">
-        <span className="text-sm font-medium">{display ?? `${percent}%`}</span>
-        {caption === undefined ? null : (
-          <span className="text-muted-foreground text-xs">{caption}</span>
-        )}
+      <div aria-hidden="true" className="space-y-0.5 text-center">
+        <p className="text-sm font-medium">{display ?? `${percent}%`}</p>
+        {caption === undefined ? null : <p className="text-muted-foreground text-xs">{caption}</p>}
       </div>
     </div>
   )

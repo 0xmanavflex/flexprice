@@ -26,13 +26,15 @@ import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters
 import type { FilterField, FilterNode } from '@ui/components/reui/filters/filters-types'
 import type { FlatFilter } from '@ui/compositions/FilterBar'
 import { Button } from '@ui/components/primitives/button'
+import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import {
+  EntityCell,
   FeatureTypePill,
+  Status,
   type EntityColumn,
   idColumn,
-  pillColumn,
   textColumn,
 } from '../shared/cells'
 
@@ -181,53 +183,46 @@ export function FeatureGrid({
 }: FeatureGridProps) {
   const columns = useMemo<EntityColumn<Feature>[]>(
     () => [
-      textColumn<Feature>('name', 'Feature', (row) => row.name, {
-        width: 240,
-        sortable: true,
-        sortValue: FeatureSortField.Name,
-        // The column the list is *for*. Hiding it leaves a table of
-        // attributes belonging to nothing.
-        hideable: false,
-      }),
+      {
+        ...textColumn<Feature>('name', 'Name', (row) => row.name, {
+          width: 240,
+          sortable: true,
+          sortValue: FeatureSortField.Name,
+          // The column the list is *for*. Hiding it leaves a table of
+          // attributes belonging to nothing.
+          hideable: false,
+        }),
+        cell: (row) => <EntityCell name={row.name} />,
+      },
       textColumn<Feature>('lookupKey', 'Key', (row) => row.lookupKey, { width: 180, muted: true }),
-      pillColumn<Feature>('type', 'Type', (row) => ({ label: FEATURE_TYPE_LABEL[row.type] }), {
+      {
+        // The glyph depends on the row, so the cell is written here rather
+        // than through `pillColumn`, which takes one spec per row.
+        id: 'type',
+        header: 'Type',
         width: 150,
-      }),
+        text: (row) => FEATURE_TYPE_LABEL[row.type],
+        cell: (row) => <FeatureTypePill type={row.type} label={FEATURE_TYPE_LABEL[row.type]} />,
+        skeleton: <Skeleton className="h-6 w-24 rounded-full" />,
+      },
       idColumn<Feature>('eventName', 'Event', (row) => row.eventName, { width: 190 }),
       textColumn<Feature>(
         'measurement',
         'Aggregation',
         (row) => (row.aggregationType ? AGGREGATION_LABEL[row.aggregationType] : null),
-        { width: 200 },
+        { width: 200, muted: true },
       ),
-      textColumn<Feature>('unit', 'Unit', (row) => row.unitSingular, { width: 110 }),
-      pillColumn<Feature>('status', 'Status', (row) => ({
-        label: FEATURE_STATUS_LABEL[row.status],
-        tone: row.status === FeatureStatus.Published ? 'success' : 'neutral',
-      })),
+      textColumn<Feature>('unit', 'Unit', (row) => row.unitSingular, { width: 110, muted: true }),
+      {
+        id: 'status',
+        header: 'Status',
+        width: 150,
+        text: (row) => FEATURE_STATUS_LABEL[row.status],
+        cell: (row) => <Status value={FEATURE_STATUS_LABEL[row.status]} />,
+        skeleton: <Skeleton className="h-6 w-24 rounded-full" />,
+      },
     ],
     [],
-  )
-
-  /*
-   * The type pill carries its glyph rather than a dot, so the type is
-   * recognisable before it is read. Patched over the helper's output because
-   * the glyph depends on the row and `pillColumn` takes a spec per row —
-   * which is exactly what this is.
-   */
-  const withGlyphs = useMemo<EntityColumn<Feature>[]>(
-    () =>
-      columns.map((column) =>
-        column.id === 'type'
-          ? {
-              ...column,
-              cell: (row: Feature) => (
-                <FeatureTypePill type={row.type} label={FEATURE_TYPE_LABEL[row.type]} />
-              ),
-            }
-          : column,
-      ),
-    [columns],
   )
 
   /* --- the filter builder's tree, rebuilt from the query every render, so
@@ -290,7 +285,7 @@ export function FeatureGrid({
       noun="features"
       rows={features}
       total={total}
-      columns={withGlyphs}
+      columns={columns}
       getRowId={(feature) => feature.id}
       page={query.page}
       pageSize={query.pageSize}

@@ -2,7 +2,7 @@ import { Separator } from '@ui/components/primitives/separator'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { formatWhole, seriesTone, toneRamp } from './charts'
+import { formatWhole, toneColor } from './charts'
 import type { ChartTone } from './charts'
 
 /**
@@ -22,8 +22,8 @@ import type { ChartTone } from './charts'
  */
 export const PillColumnsProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/stats-14', 'ui/tooltip', 'ui/separator'],
-  note: 'stats-14 slab grid over real columns. Each series takes one step of the block’s ramp and stacks from the foot; the footer is that ramp, labelled.',
+  composes: ['ui/tooltip', 'ui/separator'],
+  note: 'stats-14 slab grid over real columns. Each series takes one step of the block’s ramp and stacks from the foot; the footer is that ramp, labelled. Lineage: @reui/stats-14.',
 })
 
 /** One series across every column. Contributes to the totals and the footer. */
@@ -74,6 +74,26 @@ function columnSlabs(lit: number, rows: number, ramp: string[]): Array<string | 
   ]
 }
 
+/** The reference's seven opacity steps, full tone down to 16%. */
+const RAMP_OPACITY = [100, 85, 70, 55, 40, 28, 16]
+
+/**
+ * One tone stepped down by opacity — the reference's `bg-blue-600` to
+ * `bg-blue-600/16`. Seven rows use its exact steps; any other row count
+ * interpolates between the same ends.
+ */
+function opacityRamp(base: string, steps: number): string[] {
+  return Array.from({ length: steps }, (_, index) => {
+    const weight =
+      steps === RAMP_OPACITY.length
+        ? (RAMP_OPACITY[index] ?? 16)
+        : steps <= 1
+          ? 100
+          : Math.round(100 - (84 * index) / (steps - 1))
+    return weight >= 100 ? base : `color-mix(in oklab, ${base} ${weight}%, transparent)`
+  })
+}
+
 export interface PillColumnsProps {
   columns: PillColumn[]
   /** The series making up each column, and the footer's order. */
@@ -95,10 +115,11 @@ export function PillColumns({
   label,
   className,
 }: PillColumnsProps) {
-  // One step per row — the block's indigo-600 … indigo-100, mixed from the
-  // lead tone so a page can still recolour the whole matrix. Sized to `rows`,
-  // not to the series count, because the ramp is read down a bar.
-  const ramp = toneRamp(series[0]?.tone ?? seriesTone(0), rows)
+  // One step per row, from the lead tone, so a page can still recolour the
+  // whole matrix. Sized to `rows`, not to the series count, because the ramp is
+  // read down a bar. Defaults to the reference's blue.
+  const lead = series[0]?.tone
+  const ramp = opacityRamp(lead ? toneColor(lead) : 'var(--color-blue-600)', rows)
 
   const totals = columns.map((column) =>
     series.reduce((sum, item) => sum + Math.max(column.values[item.id] ?? 0, 0), 0),
@@ -107,7 +128,7 @@ export function PillColumns({
 
   return (
     <div className={cn('flex flex-col gap-4', className)}>
-      <div className="flex w-full items-end gap-2" role="group" aria-label={label}>
+      <div className="flex min-h-32 w-full items-end gap-2" role="group" aria-label={label}>
         {columns.map((column, columnIndex) => {
           const total = totals[columnIndex] ?? 0
           /*
@@ -132,7 +153,7 @@ export function PillColumns({
                     <button
                       type="button"
                       aria-label={reading}
-                      className="focus-visible:ring-ring flex w-full cursor-default flex-col justify-end rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+                      className="focus-visible:ring-ring flex w-full cursor-default flex-col justify-end gap-1 rounded-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
                     />
                   }
                 >
@@ -140,9 +161,9 @@ export function PillColumns({
                     <span
                       key={rowIndex}
                       aria-hidden="true"
-                      /* The block's slab, to the pixel: 12px tall, 4px radius,
-                         2px margin top and bottom for a 4px gutter. */
-                      className={cn('my-0.5 h-3 rounded', color ? null : 'bg-muted')}
+                      /* The reference's slab: 12px tall, 4px radius, a 4px gutter
+                         from the column's `gap-1`. */
+                      className={cn('h-3 rounded', color ? null : 'bg-muted/70')}
                       {...(color ? { style: { backgroundColor: color } } : {})}
                     />
                   ))}
@@ -162,7 +183,7 @@ export function PillColumns({
                 </TooltipContent>
               </Tooltip>
 
-              <span className="text-muted-foreground w-full truncate text-center text-xs">
+              <span className="text-muted-foreground w-full truncate text-center text-[11px]">
                 {column.label}
               </span>
             </div>

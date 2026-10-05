@@ -220,6 +220,8 @@ export const UnavailableMetricsStayAbsent: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
+    // The reason is shown on the tab that has no series, not before it is chosen.
+    await userEvent.click(canvas.getByRole('tab', { name: /Processing lag/ }))
     await expect(
       canvas.getByText('Flexprice does not expose an ingestion-lag metric.'),
     ).toBeInTheDocument()
@@ -231,6 +233,11 @@ export const UnavailableMetricsStayAbsent: Story = {
 
 /** Changing the range is a real interaction: the page is told, and re-fetches. */
 export const ChangesRange: Story = {
+  parameters: {
+    // Base UI's open select renders aria-hidden focus guards; the repo disables
+    // this rule on every story that opens a popup.
+    a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
+  },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('combobox', { name: 'Range' }))

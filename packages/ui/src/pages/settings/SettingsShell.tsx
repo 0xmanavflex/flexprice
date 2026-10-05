@@ -1,15 +1,15 @@
 import { type ReactNode } from 'react'
-import { ChevronRightIcon } from 'lucide-react'
+import { Tabs, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
 import { EmptyState } from '@ui/compositions/EmptyState'
-import { cn } from '@ui/lib/cn'
 import { Source, provenance } from '@ui/provenance'
 
 /**
- * Settings: one vertical, nested navigation beside the content.
+ * Settings: a line-tab strip over a `max-w-4xl` column of panels, as the
+ * reference settings page has it.
  *
- * Sections are the top level; the active section opens to show its tabs beneath
- * it. There is no horizontal strip — every destination lives in the one rail,
- * so where you are and what else is nearby read from a single place.
+ * Sections are the strip; a section with more than one tab shows those beneath
+ * it as a second, quieter row. The content below is whatever the page renders
+ * — Frame-style panels, stacked with `gap-4`.
  *
  * Presentation only and fully controlled: the page owns `sectionId`/`tabId`
  * (both URL-backed). Choosing a section reports `onSectionChange` only; the
@@ -17,8 +17,8 @@ import { Source, provenance } from '@ui/provenance'
  */
 export const SettingsShellProvenance = provenance({
   source: Source.COMPOSITION,
-  composes: ['@reui/settings-7'],
-  note: "settings-7's vertical section rail, nested: the active section expands its tabs in place. The horizontal tab strip is gone.",
+  composes: ['ui/tabs'],
+  note: "Line tabs for sections (the reference settings header), pill tabs for a section's own tabs, then a max-w-4xl panel column.",
 })
 
 export interface SettingsTab {
@@ -36,6 +36,7 @@ export interface SettingsTab {
 export interface SettingsSection {
   id: string
   label: string
+  /** Kept for callers that pass one; the reference's section tabs are text only. */
   icon?: ReactNode
   tabs: SettingsTab[]
 }
@@ -49,8 +50,6 @@ export interface SettingsShellProps {
   /** The active tab's content, chosen by the caller. */
   children: ReactNode
 }
-
-const FOCUS_RING = 'focus-visible:ring-ring focus-visible:ring-2 focus-visible:outline-none'
 
 export function SettingsShell({
   sections,
@@ -69,68 +68,37 @@ export function SettingsShell({
   const tabUnavailable = activeTab?.unavailable ?? false
 
   return (
-    <div className="flex min-h-full w-full min-w-0 flex-1 flex-col gap-6 lg:flex-row lg:gap-8">
-      <nav aria-label="Settings" className="w-full shrink-0 lg:sticky lg:top-0 lg:w-56 lg:self-start">
-        <ul className="flex flex-col gap-0.5">
-          {sections.map((entry) => {
-            const isOpen = entry.id === section?.id
-            return (
-              <li key={entry.id}>
-                <button
-                  type="button"
-                  aria-expanded={isOpen}
-                  onClick={() => onSectionChange(entry.id)}
-                  className={cn(
-                    'flex h-9 w-full items-center gap-2.5 rounded-lg px-3 text-left text-sm transition-colors',
-                    FOCUS_RING,
-                    isOpen
-                      ? 'text-foreground font-medium'
-                      : 'text-foreground/70 hover:bg-muted/60 hover:text-foreground',
-                  )}
-                >
-                  {entry.icon}
-                  <span className="min-w-0 flex-1 truncate">{entry.label}</span>
-                  <ChevronRightIcon
-                    aria-hidden
-                    className={cn(
-                      'size-3.5 shrink-0 opacity-50 transition-transform',
-                      isOpen && 'rotate-90',
-                    )}
-                  />
-                </button>
+    <div className="flex min-w-0 flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
+      <Tabs value={section?.id ?? ''} onValueChange={(next) => onSectionChange(String(next))}>
+        <TabsList
+          variant="line"
+          aria-label="Settings"
+          className="w-full justify-start gap-6 overflow-x-auto border-b"
+        >
+          {sections.map((entry) => (
+            <TabsTrigger key={entry.id} value={entry.id} className="flex-none px-0 pb-2.5">
+              {entry.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
 
-                {isOpen && entry.tabs.length > 0 ? (
-                  <ul className="border-border/60 mt-0.5 mb-1 ml-5 flex flex-col gap-0.5 border-l pl-2">
-                    {entry.tabs.map((tab) => {
-                      const isActive = tab.id === tabId
-                      return (
-                        <li key={tab.id}>
-                          <button
-                            type="button"
-                            aria-current={isActive ? 'page' : undefined}
-                            onClick={() => onTabChange(tab.id)}
-                            className={cn(
-                              'flex h-8 w-full items-center rounded-lg px-3 text-left text-sm transition-colors',
-                              FOCUS_RING,
-                              isActive
-                                ? 'bg-muted text-foreground font-medium'
-                                : 'text-foreground/70 hover:bg-muted/60 hover:text-foreground',
-                            )}
-                          >
-                            <span className="truncate whitespace-nowrap">{tab.label}</span>
-                          </button>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                ) : null}
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
+      {tabs.length > 1 ? (
+        <Tabs value={activeTab?.id ?? ''} onValueChange={(next) => onTabChange(String(next))}>
+          <TabsList
+            aria-label={`${section?.label ?? 'Settings'} tabs`}
+            className="max-w-full overflow-x-auto"
+          >
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.id} value={tab.id}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+      ) : null}
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="grid max-w-4xl min-w-0 gap-4">
         {sectionUnavailable || tabUnavailable ? (
           <Unavailable
             title={

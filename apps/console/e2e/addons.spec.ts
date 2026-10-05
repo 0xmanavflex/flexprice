@@ -57,7 +57,7 @@ test.describe('the add-ons list', () => {
     await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
     await page.getByRole('menuitem', { name: 'Edit add-on' }).click()
     await expect(page).toHaveURL(/\/addons\/(?!new)[^/?]+\?edit=true/)
-    await page.getByRole('button', { name: 'Edit general' }).click()
+    await page.getByRole('button', { name: 'Edit add-on details' }).click()
     await expect(page.getByLabel('Name', { exact: true })).toBeVisible()
     await expect(page.getByLabel('Lookup key')).toHaveCount(0)
 
@@ -77,7 +77,7 @@ test.describe('the add-ons list', () => {
 
     const url = page.url()
     await page.getByRole('tab', { name: /Information/ }).click()
-    await page.getByRole('button', { name: 'Edit general' }).click()
+    await page.getByRole('button', { name: 'Edit add-on details' }).click()
     await expect(page.getByLabel('Name', { exact: true })).toBeVisible()
     await expect(page).toHaveURL(url)
     await page.getByRole('button', { name: 'Cancel' }).click()

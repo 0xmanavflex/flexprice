@@ -111,23 +111,13 @@ export interface EntityColumn<T> {
  */
 export type PillTone = 'neutral' | 'success' | 'info' | 'warning' | 'danger'
 
-/** The dot: tone is carried by a 6px dot. */
+/** The dot: tone is carried by a 6px dot, in semantic tokens. */
 const DOT_TONE: Record<PillTone, string> = {
   neutral: 'bg-muted-foreground',
   success: 'bg-success',
   info: 'bg-info',
   warning: 'bg-warning',
   danger: 'bg-destructive',
-}
-
-/** A barely-there tint behind the label. Text stays `foreground`, so contrast
- *  never depends on the tone colour. */
-const TINT_TONE: Record<PillTone, string> = {
-  neutral: 'bg-muted',
-  success: 'bg-success/10',
-  info: 'bg-info/10',
-  warning: 'bg-warning/10',
-  danger: 'bg-destructive/10',
 }
 
 export interface PillProps {
@@ -139,28 +129,90 @@ export interface PillProps {
 }
 
 /**
- * A status, as a small flat chip: a dot and a faint tint.
+ * A status, as a bordered pill with a coloured dot: the one status language for
+ * the whole product.
  *
  * The dot rather than a tinted fill: at eighteen rows a column of coloured
- * fills is a traffic light with every bulb lit, which carries exactly as much
- * information as none of them being lit. A neutral pill with one amber dot in
- * it can be found without reading.
- *
- * The label is always spelled out beside the dot, so the tone is never the
- * only thing saying what the status is.
+ * fills is a traffic light with every bulb lit. A neutral pill with one amber
+ * dot in it can be found without reading. The label is always spelled out beside
+ * the dot, so the tone is never the only thing saying what the status is.
  */
 export function Pill({ tone = 'neutral', icon, children, className }: PillProps) {
   return (
     <span
       className={cn(
-        'text-foreground inline-flex h-5 items-center gap-1.5 rounded-md px-1.5 text-xs font-medium whitespace-nowrap',
-        TINT_TONE[tone],
+        'border-border bg-background text-foreground inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium whitespace-nowrap shadow-[0_1px_1px_rgba(0,0,0,0.03)] [&_svg]:size-3 [&_svg]:opacity-60',
         className,
       )}
     >
-      {icon ?? <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', DOT_TONE[tone])} />}
+      {icon ?? (
+        <span aria-hidden className={cn('size-1.5 shrink-0 rounded-full', DOT_TONE[tone])} />
+      )}
       {children}
     </span>
+  )
+}
+
+/** Status words and the tone each one carries. */
+const STATUS_TONE: Record<string, PillTone> = {
+  active: 'success',
+  paid: 'success',
+  succeeded: 'success',
+  published: 'success',
+  enabled: 'success',
+  healthy: 'success',
+  completed: 'success',
+  processed: 'success',
+  issued: 'success',
+  finalized: 'info',
+  open: 'info',
+  trialing: 'info',
+  scheduled: 'info',
+  running: 'info',
+  draft: 'neutral',
+  archived: 'neutral',
+  inactive: 'neutral',
+  disabled: 'neutral',
+  voided: 'neutral',
+  void: 'neutral',
+  expired: 'neutral',
+  refunded: 'neutral',
+  skipped: 'neutral',
+  paused: 'warning',
+  pending: 'warning',
+  processing: 'warning',
+  past_due: 'warning',
+  'past due': 'warning',
+  partial: 'warning',
+  'partially paid': 'warning',
+  overdue: 'danger',
+  failed: 'danger',
+  cancelled: 'danger',
+  canceled: 'danger',
+}
+
+/** A status word as a dot pill; the tone is looked up from the word. */
+export function Status({ value }: { value: string }) {
+  const tone = STATUS_TONE[value.toLowerCase()] ?? 'neutral'
+  return (
+    <Pill tone={tone}>
+      <span className="capitalize">{value.replace(/_/g, ' ')}</span>
+    </Pill>
+  )
+}
+
+/** Neutral pill for categories such as a feature type or gateway. */
+export function Tag({ children, icon }: { children: ReactNode; icon?: ReactNode }) {
+  return <Pill {...(icon ? { icon } : {})}>{children}</Pill>
+}
+
+/** The name cell: medium weight, truncating, with an optional muted sub-label. */
+export function EntityCell({ name, sub }: { name: string; sub?: ReactNode }) {
+  return (
+    <div className="flex min-w-0 items-center gap-2.5">
+      <span className="text-foreground truncate font-medium">{name}</span>
+      {sub ? <span className="text-muted-foreground truncate">{sub}</span> : null}
+    </div>
   )
 }
 
@@ -187,11 +239,7 @@ export interface FeatureTypePillProps {
 /** A feature type: its glyph, and the type spelled out. */
 export function FeatureTypePill({ type, label }: FeatureTypePillProps) {
   const Icon = FEATURE_TYPE_GLYPH[type]
-  return (
-    <Pill icon={<Icon aria-hidden className="text-muted-foreground size-3.5 shrink-0" />}>
-      {label}
-    </Pill>
-  )
+  return <Pill icon={<Icon aria-hidden />}>{label}</Pill>
 }
 
 /** Nothing here — said out loud, rather than left blank. A blank cell reads as
@@ -225,12 +273,9 @@ function spreadOptions(options: ColumnOptions | undefined): ColumnOptions {
     ...(options.sortable === undefined ? {} : { sortable: options.sortable }),
     ...(options.sortValue === undefined ? {} : { sortValue: options.sortValue }),
     ...(options.hideable === undefined ? {} : { hideable: options.hideable }),
-    ...(options.hiddenByDefault === undefined
-      ? {}
-      : { hiddenByDefault: options.hiddenByDefault }),
+    ...(options.hiddenByDefault === undefined ? {} : { hiddenByDefault: options.hiddenByDefault }),
   }
 }
-
 
 /**
  * A table cell that edits in place.
@@ -297,7 +342,7 @@ function InlineTextCell({
       aria-label={`${label}: ${value || 'not set'}. Edit`}
       disabled={pending}
       title="Click to edit"
-      className="group/inline flex w-full min-w-0 items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:opacity-60"
+      className="group/inline focus-visible:ring-ring/50 flex w-full min-w-0 items-center gap-2 rounded-sm text-left outline-none focus-visible:ring-2 disabled:opacity-60"
       onClick={(event) => {
         event.stopPropagation()
         cancelled.current = false
@@ -305,7 +350,9 @@ function InlineTextCell({
         setEditing(true)
       }}
     >
-      <span className={cn('truncate', muted && 'text-muted-foreground')}>{value || <EmDash />}</span>
+      <span className={cn('truncate', muted && 'text-muted-foreground')}>
+        {value || <EmDash />}
+      </span>
       <PencilIcon
         aria-hidden
         className="text-muted-foreground size-3 shrink-0 opacity-0 group-hover/inline:opacity-100 group-focus-visible/inline:opacity-100"
@@ -381,13 +428,7 @@ export function textColumn<T>(
       }
       if (!value) return <EmDash />
       if (onOpen) {
-        return (
-          <EntityLink
-            label={value}
-            muted={options?.muted}
-            onOpen={() => onOpen(row)}
-          />
-        )
+        return <EntityLink label={value} muted={options?.muted} onOpen={() => onOpen(row)} />
       }
       return (
         <span
@@ -453,7 +494,9 @@ export function dateColumn<T>(
     cell: (row) => {
       const value = get(row)
       if (!value) return <EmDash />
-      return <span className="text-muted-foreground block truncate tabular-nums">{format(value)}</span>
+      return (
+        <span className="text-muted-foreground block truncate tabular-nums">{format(value)}</span>
+      )
     },
     text: (row) => {
       const value = get(row)

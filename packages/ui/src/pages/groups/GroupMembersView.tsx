@@ -27,15 +27,16 @@ export function GroupMembersView({
   return (
     <Section
       title="Members"
-      description={`${count.toLocaleString()} ${kind} in this group. Rows below are sample data until the members read view is wired.`}
+      description={`${count.toLocaleString()} ${kind} in this group`}
+      flush
     >
       <SimpleTable
         rows={members}
         getRowId={(m) => m.id}
         empty={`This group holds no ${kind} yet.`}
         columns={[
-          { key: 'n', header: 'Name', cell: (m) => m.name },
-          { key: 'd', header: 'Type', cell: (m) => m.detail },
+          { key: 'n', header: 'Name', cell: (m) => <span className="font-medium">{m.name}</span> },
+          { key: 'd', header: 'Type', cell: (m) => <span className="text-muted-foreground">{m.detail}</span> },
         ]}
       />
     </Section>

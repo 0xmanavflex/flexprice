@@ -36,16 +36,13 @@ test.describe('the customers list', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Create customer' })).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
-    // Step 1 is gated on its own fields.
-    await page.getByRole('button', { name: 'Next' }).click()
+    // Submit is gated on the required fields.
+    await page.getByRole('button', { name: 'Create customer' }).click()
     await expect(page.getByText('Enter a name')).toBeVisible()
+    await expect(page).toHaveURL(/\/customers\/new/)
 
     await page.getByLabel('Name', { exact: false }).first().fill('Acme Robotics')
     await page.getByLabel('External ID').fill('acme_robotics')
-    await page.getByRole('button', { name: 'Next' }).click()
-    await expect(page).toHaveURL(/step=address/)
-    await page.getByRole('button', { name: 'Next' }).click()
-    await expect(page).toHaveURL(/step=additional/)
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/customers$/))
     await page.getByRole('button', { name: 'Create customer' }).click()

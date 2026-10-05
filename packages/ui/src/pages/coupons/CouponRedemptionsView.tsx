@@ -34,20 +34,20 @@ export function CouponRedemptionsView({
   redemptions?: CouponRedemption[]
 }) {
   return (
-    <Section
-      className="gap-0 p-0 [&>header]:p-5"
-      title="Redemptions"
-      description="Subscriptions this coupon is applied to. Sample data: redemption history is not yet available from the API."
-    >
+    <Section title="Redemptions" description="Subscriptions this coupon is applied to" flush>
       <SimpleTable
         rows={redemptions}
         getRowId={(r) => r.id}
         empty="This coupon has not been redeemed yet."
         columns={[
-          { key: 'c', header: 'Customer', cell: (r) => r.customer },
-          { key: 's', header: 'Plan', cell: (r) => r.plan },
-          { key: 'd', header: 'Applied', cell: (r) => r.appliedAt },
-          { key: 'a', header: 'Discounted so far', cell: (r) => r.discount },
+          { key: 'c', header: 'Customer', cell: (r) => <span className="font-medium">{r.customer}</span> },
+          { key: 's', header: 'Plan', cell: (r) => <span className="text-muted-foreground">{r.plan}</span> },
+          {
+            key: 'd',
+            header: 'Applied',
+            cell: (r) => <span className="text-muted-foreground">{r.appliedAt}</span>,
+          },
+          { key: 'a', header: 'Discounted so far', cell: (r) => <span className="tabular-nums">{r.discount}</span> },
         ]}
       />
     </Section>

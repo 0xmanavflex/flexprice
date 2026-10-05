@@ -244,26 +244,24 @@ export function HomePage() {
   ]
 
   return (
-    <div className="h-full overflow-y-auto">
-      <DashboardHome
-        rangeOptions={RANGES.map(({ id, label }) => ({ id, label }))}
-        range={rangeId}
-        onRangeChange={setRangeId}
-        granularityOptions={GRANULARITIES.map(({ id, label }) => ({ id, label }))}
-        granularity={granularityId}
-        onGranularityChange={setGranularityId}
-        customerOptions={customerOptions}
-        customer={customerId}
-        onCustomerChange={setCustomerId}
-        rangeLabel={range.label.toLowerCase()}
-        events={eventsPanel}
-        subscriptions={subscriptionsPanel}
-        invoices={invoicesPanel}
-        usage={usagePanel}
-        api={apiPanel}
-        onNavigate={(path) => void navigate({ to: path, search: {} as never })}
-      />
-    </div>
+    <DashboardHome
+      rangeOptions={RANGES.map(({ id, label }) => ({ id, label }))}
+      range={rangeId}
+      onRangeChange={setRangeId}
+      granularityOptions={GRANULARITIES.map(({ id, label }) => ({ id, label }))}
+      granularity={granularityId}
+      onGranularityChange={setGranularityId}
+      customerOptions={customerOptions}
+      customer={customerId}
+      onCustomerChange={setCustomerId}
+      rangeLabel={range.label.toLowerCase()}
+      events={eventsPanel}
+      subscriptions={subscriptionsPanel}
+      invoices={invoicesPanel}
+      usage={usagePanel}
+      api={apiPanel}
+      onNavigate={(path) => void navigate({ to: path, search: {} as never })}
+    />
   )
 }
 

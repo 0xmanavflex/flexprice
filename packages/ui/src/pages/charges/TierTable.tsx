@@ -1,15 +1,8 @@
 import { type Tier } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/primitives/table'
 import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { SimpleTable } from '../../compositions/DetailKit'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -28,7 +21,7 @@ import { provenance } from '@ui/provenance'
  */
 export const TierTableProvenance = provenance({
   source: 'composition',
-  composes: ['ui/table', 'ui/input', 'ui/button'],
+  composes: ['composition/DetailKit', 'ui/input', 'ui/button'],
   note: 'Controlled tier editor: derived From, unbounded last band, add/remove.',
 })
 
@@ -93,34 +86,34 @@ export function TierTable({
   return (
     <div className="flex flex-col gap-2">
       <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-[22%]">From</TableHead>
-              <TableHead className="w-[22%]">Up to</TableHead>
-              <TableHead className="w-[26%]">Per unit</TableHead>
-              <TableHead className="w-[26%]">Flat fee</TableHead>
-              <TableHead className="w-10">
-                <span className="sr-only">Remove</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {tiers.map((tier, index) => {
-              const isLast = index === tiers.length - 1
-              const error = rowErrors?.[index]
-              return (
-                <TableRow key={index}>
-                  {/* Derived and read-only: the floor is the band below's ceiling. */}
-                  <TableCell className="text-muted-foreground tabular-nums">
-                    {fromOf(tiers, index).toLocaleString()}
-                  </TableCell>
-                  <TableCell>
+        <SimpleTable
+          rows={tiers.map((tier, index) => ({ tier, index }))}
+          getRowId={(row) => String(row.index)}
+          columns={[
+            {
+              key: 'from',
+              header: 'From',
+              className: 'w-[22%]',
+              cell: ({ index }) => (
+                // Derived and read-only: the floor is the band below's ceiling.
+                <span className="text-muted-foreground tabular-nums">
+                  {fromOf(tiers, index).toLocaleString()}
+                </span>
+              ),
+            },
+            {
+              key: 'upTo',
+              header: 'Up to',
+              className: 'w-[22%] whitespace-normal py-2 align-top',
+              cell: ({ tier, index }) => {
+                const error = rowErrors?.[index]
+                return (
+                  <>
                     <Input
                       inputMode="numeric"
                       aria-label={`Tier ${index + 1} up to`}
                       aria-invalid={error?.upTo ? true : undefined}
-                      placeholder={isLast ? '∞' : '0'}
+                      placeholder={index === tiers.length - 1 ? '∞' : '0'}
                       disabled={disabled}
                       value={tier.upTo == null ? '' : String(tier.upTo)}
                       onChange={(event) => {
@@ -133,8 +126,18 @@ export function TierTable({
                         {error.upTo}
                       </p>
                     ) : null}
-                  </TableCell>
-                  <TableCell>
+                  </>
+                )
+              },
+            },
+            {
+              key: 'unit',
+              header: 'Per unit',
+              className: 'w-[26%] whitespace-normal py-2 align-top',
+              cell: ({ tier, index }) => {
+                const error = rowErrors?.[index]
+                return (
+                  <>
                     <div className="flex items-center gap-1">
                       <span className="text-xs text-muted-foreground">{currencySymbol}</span>
                       <Input
@@ -152,38 +155,51 @@ export function TierTable({
                         {error.unitAmount}
                       </p>
                     ) : null}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">{currencySymbol}</span>
-                      <Input
-                        inputMode="decimal"
-                        aria-label={`Tier ${index + 1} flat fee`}
-                        aria-invalid={error?.flatAmount ? true : undefined}
-                        placeholder="0.00"
-                        disabled={disabled}
-                        value={tier.flatAmount ?? ''}
-                        onChange={(event) => setTier(index, { flatAmount: event.target.value })}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      aria-label={`Remove tier ${index + 1}`}
-                      disabled={disabled || tiers.length === 1}
-                      onClick={() => removeTier(index)}
-                    >
-                      <Trash2Icon aria-hidden className="size-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+                  </>
+                )
+              },
+            },
+            {
+              key: 'flat',
+              header: 'Flat fee',
+              className: 'w-[26%] whitespace-normal py-2 align-top',
+              cell: ({ tier, index }) => {
+                const error = rowErrors?.[index]
+                return (
+                  <div className="flex items-center gap-1">
+                    <span className="text-xs text-muted-foreground">{currencySymbol}</span>
+                    <Input
+                      inputMode="decimal"
+                      aria-label={`Tier ${index + 1} flat fee`}
+                      aria-invalid={error?.flatAmount ? true : undefined}
+                      placeholder="0.00"
+                      disabled={disabled}
+                      value={tier.flatAmount ?? ''}
+                      onChange={(event) => setTier(index, { flatAmount: event.target.value })}
+                    />
+                  </div>
+                )
+              },
+            },
+            {
+              key: 'remove',
+              header: <span className="sr-only">Remove</span>,
+              className: 'w-10 py-2 align-top',
+              cell: ({ index }) => (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  aria-label={`Remove tier ${index + 1}`}
+                  disabled={disabled || tiers.length === 1}
+                  onClick={() => removeTier(index)}
+                >
+                  <Trash2Icon aria-hidden className="size-4" />
+                </Button>
+              ),
+            },
+          ]}
+        />
       </div>
 
       <div>

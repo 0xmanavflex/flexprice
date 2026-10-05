@@ -63,7 +63,7 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await plan.section('Credit grants')
 
     await page
-      .getByRole('button', { name: /^Add credit grant$/ })
+      .getByRole('button', { name: /^Add grant$/ })
       .first()
       .click()
     await expect(plan.main.getByRole('heading', { name: 'Add credit grant' })).toBeVisible()
@@ -118,11 +118,11 @@ test.describe('plan charges, entitlements and credit grants', () => {
     expect(page.url()).toContain(new URL(url).pathname)
   })
 
-  test('opens the stepped edit page from Edit configuration', async ({ page }) => {
+  test('opens the stepped edit page from the Edit details menu item', async ({ page }) => {
     const plan = new PlanDetailPage(page)
     await plan.open()
     await page.getByRole('button', { name: 'More actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit configuration' }).click()
+    await page.getByRole('menuitem', { name: 'Edit details' }).click()
     await expect(page).toHaveURL(/\/plans\/plan_synth_0000\/edit$/)
   })
 

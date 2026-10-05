@@ -49,8 +49,9 @@ import {
 import {
   AppFailure,
   ConfirmDialog,
-  ContextualSection,
+  Dot,
   EditableCard,
+  FormDialog,
   LoadingRows,
   PageBody,
 } from '@fp/ui/compositions'
@@ -79,8 +80,8 @@ type AddonTab = 'charges' | 'entitlements' | 'subscriptions' | 'information'
  * it reuses the exact same read tables and editors rather than restating them.
  *
  * Name and description edit in place on the Information tab (`EditableFields`):
- * the header Edit turns them all into inputs at once, with no edit page. Adding or editing an entitlement or credit grant swaps that tab's
- * table for its form in place (`ContextualSection`) rather than opening a dialog.
+ * the header Edit turns them all into inputs at once, with no edit page. Adding or editing an entitlement or credit grant opens its
+ * form in a `FormDialog`.
  *
  * The page fetches and composes; every relational section is a presentational
  * component from `@fp/ui`, and every destructive action passes through a
@@ -138,9 +139,23 @@ export function AddonDetailPage({
   const data = addon.data
   const chargeCount = (prices.data ?? []).length
   const entitlementCount = (entitlements.data ?? []).length
-  const subtitle =
-    data.description ||
-    `${chargeCount} ${chargeCount === 1 ? 'charge' : 'charges'} · ${entitlementCount} ${entitlementCount === 1 ? 'entitlement' : 'entitlements'}`
+  const subtitle = (
+    <>
+      <span>
+        {chargeCount} {chargeCount === 1 ? 'charge' : 'charges'}
+      </span>
+      <Dot />
+      <span>
+        {entitlementCount} {entitlementCount === 1 ? 'entitlement' : 'entitlements'}
+      </span>
+      {data.status === 'archived' ? (
+        <>
+          <Dot />
+          <CatalogStatusBadge status={data.status} />
+        </>
+      ) : null}
+    </>
+  )
 
   return (
     <CatalogDetailFrame
@@ -168,18 +183,14 @@ export function AddonDetailPage({
           value: 'charges',
           label: 'Charges',
           ...(prices.isPending ? {} : { count: chargeCount }),
-          content: (
-            <div className="flex flex-col gap-6">
-              <PricesTab addonId={addonId} />
-            </div>
-          ),
+          content: <PricesTab addonId={addonId} />,
         },
         {
           value: 'entitlements',
           label: 'Entitlements',
           ...(entitlements.isPending ? {} : { count: entitlementCount }),
           content: (
-            <div className="flex flex-col gap-6">
+            <div className="flex flex-col gap-5">
               <EntitlementsTab addonId={addonId} />
               <CreditGrantsTab addonId={addonId} />
             </div>
@@ -331,26 +342,27 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
 
   return (
     <>
-      <ContextualSection
-        title="Entitlements"
-        formTitle={editing ? 'Edit entitlement' : 'Add entitlement'}
-        backLabel="Entitlements"
-        form={form}
-        onBack={() => {
-          setAdding(false)
-          setEditing(null)
-        }}
-      >
-        <EntitlementTable
-          entitlements={entitlements.data ?? []}
-          onAdd={() => setAdding(true)}
-          onEdit={(entitlement) => setEditing(entitlement)}
-          onDelete={(entitlement) => setTarget(entitlement)}
-          onOpenFeature={(featureId) =>
-            void navigate({ to: '/features/$featureId', params: { featureId } })
+      <EntitlementTable
+        entitlements={entitlements.data ?? []}
+        onAdd={() => setAdding(true)}
+        onEdit={(entitlement) => setEditing(entitlement)}
+        onDelete={(entitlement) => setTarget(entitlement)}
+        onOpenFeature={(featureId) =>
+          void navigate({ to: '/features/$featureId', params: { featureId } })
+        }
+      />
+      <FormDialog
+        open={adding || editing !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAdding(false)
+            setEditing(null)
           }
-        />
-      </ContextualSection>
+        }}
+        title={editing ? 'Edit entitlement' : 'Add entitlement'}
+      >
+        {form}
+      </FormDialog>
       <ConfirmDialog
         open={target !== null}
         onOpenChange={(open) => {
@@ -418,23 +430,24 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
 
   return (
     <>
-      <ContextualSection
-        title="Credit grants"
-        formTitle={editing ? 'Edit credit grant' : 'Add credit grant'}
-        backLabel="Credit grants"
-        form={form}
-        onBack={() => {
-          setAdding(false)
-          setEditing(null)
+      <CreditGrantTable
+        grants={grants.data ?? []}
+        onAdd={() => setAdding(true)}
+        onEdit={(grant) => setEditing(grant)}
+        onDelete={(grant) => setTarget(grant)}
+      />
+      <FormDialog
+        open={adding || editing !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setAdding(false)
+            setEditing(null)
+          }
         }}
+        title={editing ? 'Edit credit grant' : 'Add credit grant'}
       >
-        <CreditGrantTable
-          grants={grants.data ?? []}
-          onAdd={() => setAdding(true)}
-          onEdit={(grant) => setEditing(grant)}
-          onDelete={(grant) => setTarget(grant)}
-        />
-      </ContextualSection>
+        {form}
+      </FormDialog>
       <ConfirmDialog
         open={target !== null}
         onOpenChange={(open) => {
@@ -464,7 +477,8 @@ function InformationTab({
 }) {
   return (
     <EditableCard
-      title="General"
+      className="max-w-3xl"
+      title="Add-on details"
       locked={addon.status === 'archived'}
       fields={[
         { key: 'name', label: 'Name', value: addon.name, required: true },
@@ -473,7 +487,7 @@ function InformationTab({
           key: 'lookupKey',
           label: 'Lookup key',
           value: addon.lookupKey,
-          display: <span className="font-mono text-xs">{addon.lookupKey}</span>,
+          display: <span className="font-mono text-[13px]">{addon.lookupKey}</span>,
           readOnly: true,
         },
         {
@@ -487,7 +501,7 @@ function InformationTab({
           key: 'id',
           label: 'Add-on ID',
           value: addon.id,
-          display: <span className="font-mono text-xs">{addon.id}</span>,
+          display: <span className="font-mono text-[13px]">{addon.id}</span>,
           readOnly: true,
         },
         { key: 'created', label: 'Created', value: formatDate(addon.createdAt), readOnly: true },

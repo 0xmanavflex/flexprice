@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { PageBody, PageHeader } from '@fp/ui/compositions'
 import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BellIcon,
@@ -112,28 +111,20 @@ export function SettingsPage({ sectionId, tabId, onNavigate }: SettingsPageProps
   const tab = findSettingsTab(section, tabId) ?? firstTabOf(section)
 
   return (
-    <>
-      <PageHeader
-        title="Settings"
-        description="Your organisation, who can reach it, and how billing behaves by default."
-      />
-      <PageBody>
-        <SettingsShell
-          sections={toShellSections()}
-          sectionId={section.id}
-          tabId={tab.id}
-          // Both ids, one navigation. See the note above.
-          onSectionChange={(next) => {
-            const target = findSettingsSection(next)
-            if (!target) return
-            onNavigate(target.id, firstTabOf(target).id)
-          }}
-          onTabChange={(next) => onNavigate(section.id, next)}
-        >
-          <SettingsPanel section={section} tabId={tab.id} />
-        </SettingsShell>
-      </PageBody>
-    </>
+    <SettingsShell
+      sections={toShellSections()}
+      sectionId={section.id}
+      tabId={tab.id}
+      // Both ids, one navigation. See the note above.
+      onSectionChange={(next) => {
+        const target = findSettingsSection(next)
+        if (!target) return
+        onNavigate(target.id, firstTabOf(target).id)
+      }}
+      onTabChange={(next) => onNavigate(section.id, next)}
+    >
+      <SettingsPanel section={section} tabId={tab.id} />
+    </SettingsShell>
   )
 }
 

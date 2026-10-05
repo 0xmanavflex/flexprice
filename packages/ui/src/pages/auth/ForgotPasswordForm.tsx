@@ -50,7 +50,7 @@ export function ForgotPasswordForm({
   if (sentTo) {
     return (
       <div className="flex w-full max-w-sm flex-col gap-4" role="status">
-        <h1 className="text-xl font-semibold">Check your email</h1>
+        <h1 className="text-2xl font-medium tracking-tight">Check your email</h1>
         <p className="text-muted-foreground text-sm">
           If <span className="text-foreground font-medium">{sentTo}</span> has an account, we have
           sent a link to reset the password. It expires in an hour.
@@ -72,7 +72,7 @@ export function ForgotPasswordForm({
       className="flex w-full max-w-sm flex-col gap-5"
     >
       <div className="flex flex-col gap-1">
-        <h1 id="forgot-heading" className="text-xl font-semibold">
+        <h1 id="forgot-heading" className="text-2xl font-medium tracking-tight">
           Reset your password
         </h1>
         <p className="text-muted-foreground text-sm">

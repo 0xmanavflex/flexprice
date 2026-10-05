@@ -111,7 +111,7 @@ export const NoColumns: Story = {
  * unchecked claim drifts.
  *
  * So these assertions are deliberately about geometry: the slab's height and
- * radius, the 2px margin that sets the gutter, and the fixed row count. If a
+ * radius, the 4px gap that sets the gutter, and the fixed row count. If a
  * redesign genuinely moves off the block, delete this story along with the
  * provenance entry — do not loosen it until it passes.
  */
@@ -125,6 +125,10 @@ export const MatchesTheBlocksMark: Story = {
     // A fixed grid: seven slabs, present whether lit or not.
     await expect(slabs.length).toBe(7)
 
+    // `gap-1` on the column, the reference's 4px gutter between slabs.
+    const column = canvas.getByRole('button', { name: /^Mon:/ })
+    await expect(getComputedStyle(column).rowGap).toBe('4px')
+
     for (const slab of Array.from(slabs)) {
       const box = slab.getBoundingClientRect()
       // `h-3` — 12px, not an elastic share of the column.
@@ -136,10 +140,6 @@ export const MatchesTheBlocksMark: Story = {
       const radius = Number.parseFloat(style.borderTopLeftRadius)
       await expect(radius).toBeGreaterThan(0)
       await expect(radius).toBeLessThan(box.height / 2)
-
-      // `my-0.5`, the block's 2px, giving a 4px gutter between slabs.
-      await expect(style.marginTop).toBe('2px')
-      await expect(style.marginBottom).toBe('2px')
     }
   },
 }
@@ -156,9 +156,7 @@ export const BarsStandAndTheRampRestarts: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const slabsOf = (name: RegExp) =>
-      Array.from(
-        canvas.getByRole('button', { name }).querySelectorAll('span[aria-hidden="true"]'),
-      )
+      Array.from(canvas.getByRole('button', { name }).querySelectorAll('span[aria-hidden="true"]'))
 
     // Fri is the tallest column, Sun the shortest.
     const tall = slabsOf(/^Fri:/)
@@ -174,8 +172,7 @@ export const BarsStandAndTheRampRestarts: Story = {
     )
 
     // The head of a short bar is the same full tone as the head of a tall one.
-    const headOf = (slabs: Element[]) =>
-      (slabs.find(isLit) as HTMLElement).style.backgroundColor
+    const headOf = (slabs: Element[]) => (slabs.find(isLit) as HTMLElement).style.backgroundColor
     await expect(headOf(short)).toBe(headOf(tall))
   },
 }

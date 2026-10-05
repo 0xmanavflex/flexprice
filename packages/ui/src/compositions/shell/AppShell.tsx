@@ -1,4 +1,4 @@
-import { type CSSProperties, type ReactNode } from 'react'
+import { type ReactNode } from 'react'
 import { TooltipProvider } from '@ui/components/primitives/tooltip'
 import {
   Sidebar,
@@ -7,6 +7,7 @@ import {
   SidebarHeader,
   SidebarInset,
   SidebarProvider,
+  SidebarRail,
   SidebarTrigger,
 } from '@ui/components/primitives/sidebar'
 import { cn } from '@ui/lib/cn'
@@ -14,17 +15,16 @@ import { provenance } from '@ui/provenance'
 import { ShellAccount } from './ShellAccount'
 import { ShellNav } from './ShellNav'
 import { ShellNotifications } from './ShellNotifications'
-import { ShellRailHandle } from './ShellRailHandle'
 import { ShellSearch, type ShellSearchProps } from './ShellSearch'
 import { ThemeShortcut } from './ThemeShortcut'
+import { ThemeToggle } from './ThemeToggle'
 import type { ShellNavGroup, ShellNotification, ShellUser } from './types'
 
 /**
- * The application shell: `@reui/app-shell-3`'s layout, ReUI's Flux template's
- * surface treatment.
+ * The application shell, as the reference app draws it.
  *
- * One inset sidebar that collapses to icons, with nested navigation and
- * notifications *inside* the sidebar, a pinned slot above the footer, and the
+ * One inset sidebar that collapses to icons, with the tenant's name and the
+ * notifications and theme controls at the top, nested navigation below, and the
  * account menu at the bottom. The header carries the breadcrumb — which leads
  * with the environment switcher — and, top-right, search beside whatever one
  * control belongs to the whole page rather than to its content.
@@ -41,8 +41,8 @@ import type { ShellNavGroup, ShellNotification, ShellUser } from './types'
  */
 export const AppShellProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/app-shell-3', 'ui/sidebar', 'ui/breadcrumb', 'ui/dropdown-menu', '@reui/badge'],
-  note: "app-shell-3's layout with the Flux template's surface treatment, and our controlled contract.",
+  composes: ['ui/sidebar'],
+  note: "The reference shell's layout and surface, with our controlled contract. Lineage: @reui/app-shell-3, ui/breadcrumb, ui/dropdown-menu.",
 })
 
 export interface AppShellProps {
@@ -77,75 +77,23 @@ export interface AppShellProps {
 }
 
 /**
- * The sidebar's surface, taken from ReUI's Flux template as written.
+ * The sidebar's surface, as the reference shell writes it.
  *
- * Two ideas carry it. Every row owns a *transparent* border at rest, so hover
- * and selection can add a visible one without the row changing size — the
- * usual cause of a list that twitches under the cursor. And the selected row
- * is a tinted, bordered surface rather than a raised white card: on a sidebar
- * that is itself tinted, the card floats; the tint belongs.
- *
- * Icons sit at 60% until hovered and take the primary colour when active, so
- * the eye finds the current row before it reads a word. Labels sit slightly
- * under full strength for the same reason — the active one is the only one at
- * full contrast.
- *
- * The geometry is Flux's too: h-9 rows, `rounded-xl`, horizontal padding, and
- * a gap small enough that a group reads as one object rather than a stack of
- * chips.
- *
- * Written as data-slot selectors because they reach inside the Sidebar
+ * Rows sit at stock density with their label at 75% until hovered; the active
+ * row is a plain background-coloured pill with a hairline border, no accent
+ * colour. Written as data-slot selectors because they reach inside the Sidebar
  * primitive's own markup, which is vendored and must not be forked to restyle.
  */
-const FLUX = [
-  '[--sidebar-border:transparent]',
-
-  // A border always present, only sometimes visible — so nothing resizes.
-  '[&_[data-sidebar=menu-button]]:border!',
-  '[&_[data-sidebar=menu-button]]:border-transparent!',
-  '[&_[data-sidebar=menu-button]:hover]:border-border/60!',
-  '[&_[data-sidebar=menu-button]:hover]:bg-sidebar-accent/80!',
-  '[&_[data-sidebar=menu-button]:hover]:text-foreground!',
-  '[&_[data-sidebar=menu-button][data-active]]:border-border/60!',
-  '[&_[data-sidebar=menu-button][data-active]]:bg-sidebar-accent!',
-  '[&_[data-sidebar=menu-button][data-active]]:hover:bg-sidebar-accent!',
-  '[&_[data-sidebar=menu-button][data-active]]:text-foreground',
-  '[&_[data-sidebar=menu-button][data-active]>svg]:text-primary',
-  '[&_[data-sidebar=menu-button][data-active]>svg]:opacity-100',
-  '**:data-[sidebar=menu-button]:text-accent-foreground/80',
-  '**:data-[sidebar=menu-button]:hover:text-foreground',
-  '[&_[data-sidebar=menu-button]:hover>svg]:opacity-100',
-  '[&_[data-sidebar=menu-button]>svg]:opacity-60',
-
-  // Rows: h-9, rounded-xl, px-3 — against the primitive's h-8/rounded-md/p-2.
-  '**:data-[slot=sidebar-menu-button]:h-9',
-  '**:data-[slot=sidebar-menu-button]:rounded-xl',
-  '**:data-[slot=sidebar-menu-button]:px-3',
-  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]]:px-0!',
-  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]]:justify-center',
-  /*
-   * In the rail, the label is hidden rather than merely clipped. The primitive
-   * truncates it, but a truncated span still claims the width left over beside
-   * the icon in a 32px row — which showed up as the first letter of every
-   * destination bleeding out past the rail, once, next to its own icon.
-   */
-  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]>span]:hidden',
-  /*
-   * In the rail a row is a circle, not a rounded square. At 32px the two are
-   * nearly the same shape, and Flux takes the circle — which is what makes the
-   * active icon read as a chip on a column of bare glyphs rather than as a
-   * slightly darker patch.
-   */
-  '[&_[data-collapsible=icon]_[data-slot=sidebar-menu-button]]:rounded-full!',
-
-  // Nearly touching, so a group reads as one object rather than a list of chips.
-  '**:data-[slot=sidebar-menu]:gap-0.25',
-
-  // Headings recede; they are labels, not destinations.
-  '**:data-[slot=sidebar-group-label]:rounded-xl',
-  '**:data-[slot=sidebar-group-label]:px-3',
-  '**:data-[slot=sidebar-group-label]:text-sidebar-foreground/70',
-].join(' ')
+const SHELL_CLASSES = cn(
+  '[--sidebar-border:transparent] h-dvh',
+  '**:data-[slot=sidebar-menu-button]:text-foreground/75 **:data-[slot=sidebar-menu-button]:hover:text-foreground',
+  '**:data-[slot=sidebar-menu-sub-button]:text-foreground/75 **:data-[slot=sidebar-menu-sub-button]:hover:text-foreground',
+  '[&_[data-slot=sidebar-menu-button]>svg]:opacity-60 [&_[data-slot=sidebar-menu-button]:hover>svg]:opacity-100',
+  '[&_[data-slot=sidebar-menu-button][data-active]]:bg-background! [&_[data-slot=sidebar-menu-button][data-active]]:text-foreground! [&_[data-slot=sidebar-menu-button][data-active]]:font-normal',
+  '[&_[data-slot=sidebar-menu-button][data-active]]:shadow-[0_0_0_1px_var(--border),0_1px_2px_rgba(0,0,0,0.04)] [&_[data-slot=sidebar-menu-button][data-active]>svg]:opacity-100',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:bg-background! [&_[data-slot=sidebar-menu-sub-button][data-active]]:text-foreground!',
+  '[&_[data-slot=sidebar-menu-sub-button][data-active]]:shadow-[0_0_0_1px_var(--border),0_1px_2px_rgba(0,0,0,0.04)]',
+)
 
 export function AppShell({
   navGroups,
@@ -170,56 +118,49 @@ export function AppShell({
   children,
 }: AppShellProps) {
   return (
-    <SidebarProvider
-      // The sidebar remembers whether it is expanded or the compact 64px icon
-      // rail (the provider persists the choice), and both are polished — the
-      // rail is a quiet column of icons with flyouts. Width lives in styles.css;
-      // colours too. (To make the rail the first-load default for everyone, pass
-      // `defaultOpen={false}` here.)
-      className={cn(
-        'bg-sidebar h-dvh min-h-dvh',
-        // The inset frame keeps its top and side margin. The bottom is flush,
-        // so the window's own background cannot show as a bar under the shell.
-        '[&_[data-slot=sidebar-container]]:pb-0',
-        FLUX,
-      )}
-      style={{ '--sidebar-width': '260px' } as CSSProperties}
-    >
+    <SidebarProvider className={SHELL_CLASSES}>
       {/*
         Collapsed, a tooltip is the only thing naming a row. ~300ms is the
         hover-intent delay: prompt enough that the rail never feels broken, long
         enough that sweeping the cursor down the column does not flash a tooltip
         on every icon it passes.
       */}
-
       <TooltipProvider delay={300}>
         <ThemeShortcut />
-        <ShellRailHandle />
         <Sidebar collapsible="icon" variant="inset" aria-label="Main">
-          <SidebarHeader className="gap-2">
+          <SidebarHeader className="px-3 pt-3">
             {/*
-            The tenant this console is signed in to — its name from `/users/me`
-            (falling back to the product name until that resolves), with the
-            brand mark beside it — so the top of the rail answers "whose data is
-            this". The bell sits in the header; the account
-            is in the footer; the environment switcher leads the breadcrumb.
-          */}
-            <div className="flex min-h-9 items-center gap-2 px-0.5">
+              The tenant this console is signed in to — its name from `/users/me`
+              (falling back to the product name until that resolves), with the
+              brand mark beside it. Notifications and the theme toggle sit at the
+              right of the same row, and drop out in the icon rail.
+            */}
+            <div className="flex h-8 items-center gap-2">
               {logo ?? (
                 <span
                   aria-hidden
-                  className="bg-primary text-primary-foreground flex size-6 shrink-0 items-center justify-center rounded-md text-xs font-semibold"
+                  className="bg-primary text-primary-foreground flex size-6.5 shrink-0 items-center justify-center rounded-md text-[13px] font-medium"
                 >
                   F
                 </span>
               )}
-              <span className="truncate text-sm font-medium in-data-[state=collapsed]:hidden">
+              <span className="truncate text-[15px] font-medium tracking-tight in-data-[state=collapsed]:hidden">
                 {user.organization ?? productName}
               </span>
+              <div className="ml-auto flex items-center gap-0.5 in-data-[state=collapsed]:hidden">
+                <ShellNotifications
+                  notifications={notifications}
+                  isLoading={notificationsLoading}
+                  error={notificationsError}
+                  {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
+                  {...(onOpenNotification ? { onOpenNotification } : {})}
+                />
+                <ThemeToggle />
+              </div>
             </div>
           </SidebarHeader>
 
-          <SidebarContent>
+          <SidebarContent className="pt-3">
             <ShellNav
               groups={navGroups}
               {...(activeItemId === undefined ? {} : { activeItemId })}
@@ -240,57 +181,34 @@ export function AppShell({
               {...(onSignOut ? { onSignOut } : {})}
             />
           </SidebarFooter>
+
+          {/* Collapse handle: a short grip on the sidebar's edge. */}
+          <SidebarRail className="after:bg-border hover:after:bg-foreground/30 after:inset-y-auto after:top-1/2 after:h-6 after:-translate-y-1/2 after:rounded-full" />
         </Sidebar>
 
-        {/*
-        The content plane is lifted off the sidebar: a border, a rounded corner,
-        and a layered shadow (in `styles.css`, so it can differ by theme) that
-        reads as the panel floating a little in front of the rail — a light 3D
-        depth in both modes rather than a flat seam.
-      */}
-        <SidebarInset className="ml-0! flex min-h-0 flex-col overflow-hidden border lg:peer-data-[variant=inset]:mb-0! lg:peer-data-[variant=inset]:rounded-b-none lg:peer-data-[variant=inset]:rounded-t-2xl">
-          {/* A rule under the header, so the breadcrumb is not floating over
-            whatever the page happens to start with. The header spans the full
-            width now: the breadcrumb leads at the left edge and Search/Create
-            close it at the right, so on a wide screen the chrome reaches the
-            ends even though the content below caps and centres at `--shell-max`. */}
-          <header className="flex h-12 shrink-0 items-center gap-2 border-b px-6">
-            {/* The edge handle is desktop-only — below `lg` the sidebar is a
-              sheet, and this is the only thing that opens it. `lg`, not `md`: at
-              exactly 768 `md:hidden` had already taken the trigger away while the
-              sidebar was still a 260px push panel, so a third of the viewport
-              went to navigation with nothing offering to close it. */}
-            <SidebarTrigger className="-ml-1 shrink-0 lg:hidden" />
-            {breadcrumb}
-            {/*
-            Search and Create close the header at the right edge. `shrink-0` so
-            the cluster is never squeezed off by a long breadcrumb; the crumbs
-            truncate instead, keeping Create reachable at 390. Bell and Theme
-            used to sit here — they have moved back into the sidebar footer.
-          */}
-            <div className="ml-auto flex shrink-0 items-center gap-1.5">
-              <ShellNotifications
-                notifications={notifications}
-                isLoading={notificationsLoading}
-                error={notificationsError}
-                {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
-                {...(onOpenNotification ? { onOpenNotification } : {})}
-              />
+        <SidebarInset className="border-border/80 ml-0! min-h-0 overflow-hidden border shadow-none!">
+          <header className="flex h-12 shrink-0 items-center justify-between gap-3 border-b px-4 sm:px-10 2xl:px-14">
+            {/* The trigger is the only thing that opens the sheet below `lg`,
+              where the sidebar is a sheet rather than a push panel. */}
+            <div className="flex min-w-0 items-center gap-1.5 text-sm">
+              <SidebarTrigger className="-ml-2 lg:hidden" />
+              {breadcrumb}
+            </div>
+            {/* `shrink-0` so the cluster is never squeezed off by a long
+              breadcrumb; the crumbs truncate instead, keeping Create reachable
+              at 390. */}
+            <div className="flex shrink-0 items-center gap-1.5">
               <ShellSearch {...(search ?? {})} />
               {headerActions}
             </div>
           </header>
 
           {/*
-          A div, not a `main`. `SidebarInset` is already the `main` landmark —
-          nesting another inside it produces two, and a document may have one.
-
-          `overflow-hidden`, not `auto`: a list page fills this region and scrolls
-          its own grid, so the pagination footer stays pinned to the bottom and
-          fit-to-window has a bounded height to measure. Pages that read top to
-          bottom (forms) own their scroll with `h-full overflow-y-auto`.
-        */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-hidden">{children}</div>
+            A div, not a `main`: `SidebarInset` is already the `main` landmark,
+            and a document may have one. Pages own their padding; a list page
+            fills this region and scrolls its own grid.
+          */}
+          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
         </SidebarInset>
       </TooltipProvider>
     </SidebarProvider>

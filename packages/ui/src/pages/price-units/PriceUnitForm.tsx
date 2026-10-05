@@ -224,7 +224,7 @@ export function PriceUnitForm({
             </FormRow>
           </FormCard>
         </form>
-        <aside aria-label="Price unit preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+        <div className="flex flex-col gap-4 lg:sticky lg:top-4">
           <PriceUnitPreviewCard
             name={name}
             code={code}
@@ -232,7 +232,7 @@ export function PriceUnitForm({
             baseCurrency={baseCurrency}
             conversionRate={typeof conversionRate === 'number' ? conversionRate : null}
           />
-        </aside>
+        </div>
       </div>
     </FormPage>
   )

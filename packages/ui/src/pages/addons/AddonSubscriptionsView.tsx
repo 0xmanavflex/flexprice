@@ -1,5 +1,6 @@
 import { Section } from '../../compositions'
 import { SimpleTable } from '../../compositions/DetailKit'
+import { Status } from '../shared/cells'
 
 export interface AddonSubscriber {
   id: string
@@ -22,16 +23,16 @@ export function AddonSubscriptionsView({
   subscriptions?: AddonSubscriber[]
 }) {
   return (
-    <Section title="Subscriptions" description="Sample data: add-on subscriptions are not yet available from the API.">
+    <Section title="Subscriptions" description="Where this add-on is attached" flush>
       <SimpleTable
         rows={subscriptions}
         getRowId={(s) => s.id}
         empty="No subscription uses this add-on yet."
         columns={[
-          { key: 'c', header: 'Customer', cell: (s) => s.customer },
-          { key: 'p', header: 'Plan', cell: (s) => s.plan },
-          { key: 'd', header: 'Since', cell: (s) => s.since },
-          { key: 's', header: 'Status', cell: (s) => s.status },
+          { key: 'c', header: 'Customer', cell: (s) => <span className="font-medium">{s.customer}</span> },
+          { key: 'p', header: 'Plan', cell: (s) => <span className="text-muted-foreground">{s.plan}</span> },
+          { key: 's', header: 'Status', cell: (s) => <Status value={s.status} /> },
+          { key: 'd', header: 'Added', cell: (s) => <span className="text-muted-foreground">{s.since}</span> },
         ]}
       />
     </Section>

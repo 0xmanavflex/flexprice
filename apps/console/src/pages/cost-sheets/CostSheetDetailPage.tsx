@@ -4,6 +4,7 @@ import { ApiError, useCostSheet, usePrices, useUpdateCostSheet } from '@fp/query
 import { CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CostMarginCard } from '@fp/ui/pages'
 import {
   AppFailure,
+  Dot,
   EditableCard,
   EmptyState,
   LoadingRows,
@@ -96,7 +97,17 @@ export function CostSheetDetailPage({
       icon={<CalculatorIcon />}
       title={data.name}
       subtitle={
-        data.description || `${count} ${count === 1 ? 'price' : 'prices'} grouped to measure cost`
+        <>
+          <span>
+            {count} {count === 1 ? 'price' : 'prices'}
+          </span>
+          {data.status === 'archived' ? (
+            <>
+              <Dot />
+              <CatalogStatusBadge status={data.status} />
+            </>
+          ) : null}
+        </>
       }
       id={data.lookupKey || data.id}
       onEdit={() => setTab('information')}
@@ -113,26 +124,31 @@ export function CostSheetDetailPage({
           label: 'Costs',
           count,
           content: (
-            <div className="flex flex-col gap-6">
-              {/* Margin numbers are DEMO_COST_MARGIN: the API carries no revenue/cost totals. */}
-              <CostMarginCard />
-              <Section
-                title="Prices"
-                description="The prices this cost sheet groups to measure cost."
-              >
-                {prices.isPending ? (
-                  <LoadingRows />
-                ) : charges && charges.length > 0 ? (
-                  <ChargeTable charges={charges} />
-                ) : (
+            <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+              {prices.isPending ? (
+                <Section title="Costs" description="The prices this cost sheet groups to measure cost" flush>
+                  <div className="p-6">
+                    <LoadingRows />
+                  </div>
+                </Section>
+              ) : charges && charges.length > 0 ? (
+                <ChargeTable
+                  charges={charges}
+                  title="Costs"
+                  description="The prices this cost sheet groups to measure cost"
+                />
+              ) : (
+                <Section title="Costs" description="The prices this cost sheet groups to measure cost" flush>
                   <EmptyState
                     size="inline"
                     icon={<ReceiptIcon aria-hidden />}
                     title="No prices yet"
                     description="Prices tagged to this cost sheet will appear here. None have been added to it yet."
                   />
-                )}
-              </Section>
+                </Section>
+              )}
+              {/* Margin numbers are DEMO_COST_MARGIN: the API carries no revenue/cost totals. */}
+              <CostMarginCard />
             </div>
           ),
         },
@@ -141,7 +157,8 @@ export function CostSheetDetailPage({
           label: 'Information',
           content: (
             <EditableCard
-              title="General"
+              className="max-w-3xl"
+              title="Cost sheet details"
               locked={data.status === 'archived'}
               fields={[
                 { key: 'name', label: 'Name', value: data.name, required: true },
@@ -155,7 +172,7 @@ export function CostSheetDetailPage({
                   key: 'id',
                   label: 'Cost sheet ID',
                   value: data.id,
-                  display: <span className="font-mono text-xs">{data.id}</span>,
+                  display: <span className="font-mono text-[13px]">{data.id}</span>,
                   readOnly: true,
                 },
                 {

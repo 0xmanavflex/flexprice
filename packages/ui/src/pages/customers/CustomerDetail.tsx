@@ -1,9 +1,10 @@
 import { type ReactNode } from 'react'
-import { MoreHorizontalIcon, PlusIcon } from 'lucide-react'
+import { CopyIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, WalletIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
+  SubscriptionStatus,
   type Invoice,
   InvoiceStatus,
   PaymentStatus,
@@ -21,8 +22,8 @@ import {
 } from '@ui/components/primitives/dropdown-menu'
 import { ScrollArea } from '@ui/components/primitives/scroll-area'
 import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
-import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
-import { DetailTabs, SimpleTable } from '@ui/compositions/DetailKit'
+import type { ActivityEvent } from '@ui/components/blocks/solution-billing-4/components/data'
+import { DetailTabs, Properties, SimpleTable } from '@ui/compositions/DetailKit'
 import { Section } from '@ui/compositions/Section'
 import { EditableCard } from '@ui/compositions/EditableCard'
 import { EmptyState } from '@ui/compositions/EmptyState'
@@ -31,15 +32,13 @@ import { Money } from '../shared/Money'
 import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
 import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
-import { EntityLink, Pill, type PillTone } from '../shared/cells'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/components/primitives/table'
+import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { cn } from '@ui/lib/cn'
 import { CustomerSubscriptionCards } from './CustomerSubscriptionCards'
 
 /**
- * A customer's detail page: an avatar-tile `EntityHeader` (name, status badge,
- * id chip, ⋯ menu) over `DetailTabs`, each tab built from ReUI blocks and shared
- * compositions. It is presentational: the page fetches and hands data in.
+ * A customer's detail page: an avatar-tile `EntityHeader` (name, id chip, ⋯ menu)
+ * over line `DetailTabs`; the active tab renders as reference-style sections. It is presentational: the page fetches and hands data in.
  *
  * It shows only what the API has. A customer record carries no plan, currency or
  * payment method, so the header does not invent them; sections with no read model
@@ -47,15 +46,8 @@ import { CustomerSubscriptionCards } from './CustomerSubscriptionCards'
  */
 export const CustomerDetailProvenance = provenance({
   source: 'composition',
-  composes: [
-    'pages/shared/EntityHeader',
-    'ui/detail-kit',
-    'ui/section',
-    'ui/editable-card',
-    'blocks/solution-billing-4',
-    'pages/shared/Money',
-  ],
-  note: 'Customer detail: EntityHeader + DetailTabs; Overview from solution-billing-4, Information as single-pencil EditableCards.',
+  composes: ['pages/shared/EntityHeader', 'blocks/solution-billing-4', 'pages/shared/Money'],
+  note: 'Customer detail: EntityHeader + DetailTabs; Overview from solution-billing-4, Information as single-pencil EditableCards. Lineage: ui/detail-kit, ui/section, ui/editable-card.',
 })
 
 export type CustomerTab =
@@ -120,6 +112,12 @@ function useDateFormat(locale?: string) {
   return (date: Date | null) => (date ? formatter.format(date) : '—')
 }
 
+type FormatDate = (date: Date | null) => string
+
+const Muted = ({ children }: { children: ReactNode }) => (
+  <span className="text-muted-foreground">{children}</span>
+)
+
 export function CustomerDetail({
   customer,
   subscriptions,
@@ -150,6 +148,13 @@ export function CustomerDetail({
       .map((part) => part[0]!.toUpperCase())
       .join('') || '?'
 
+  const addButton = (
+    <Button size="sm" className="h-8 px-3" onClick={onCreateSubscription}>
+      <PlusIcon aria-hidden="true" />
+      Create subscription
+    </Button>
+  )
+
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <EntityHeader
@@ -161,134 +166,149 @@ export function CustomerDetail({
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger
-              render={<Button variant="outline" size="icon" aria-label="Customer actions" />}
+              render={
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  aria-label="Customer actions"
+                />
+              }
             >
-              <MoreHorizontalIcon aria-hidden />
+              <MoreHorizontalIcon aria-hidden="true" />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
+            <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuGroup>
+                <DropdownMenuItem onClick={onCreateSubscription}>
+                  <PlusIcon className="text-muted-foreground" aria-hidden="true" />
+                  Create subscription
+                </DropdownMenuItem>
                 {onEdit ? (
-                  <DropdownMenuItem className={MENU_ITEM} onClick={onEdit}>
+                  <DropdownMenuItem onClick={onEdit}>
+                    <PencilIcon className="text-muted-foreground" aria-hidden="true" />
                     {onUpdateField ? 'Edit billing details' : 'Edit customer'}
                   </DropdownMenuItem>
                 ) : null}
-                <DropdownMenuItem className={MENU_ITEM} onClick={onCreateSubscription}>
-                  Create subscription
+                <DropdownMenuItem onClick={() => onTabChange('wallet')}>
+                  <WalletIcon className="text-muted-foreground" aria-hidden="true" />
+                  Top up wallet
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() =>
+                    void navigator.clipboard?.writeText(customer.externalId || customer.id)
+                  }
+                >
+                  <CopyIcon className="text-muted-foreground" aria-hidden="true" />
+                  Copy customer ID
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
           </DropdownMenu>
         }
       />
-      <div className="px-6 pb-10">
+      <div className="flex flex-col gap-6 px-6 pb-10">
         <DetailTabs
           value={tab}
           onValueChange={(next) => onTabChange(next as CustomerTab)}
           tabs={[
-            {
-              value: 'overview',
-              label: 'Overview',
-              content: (
-                <OverviewTab
-                  subscriptions={subscriptions}
-                  invoices={invoices}
-                  invoicesLoading={invoicesLoading}
-                  onViewInvoices={() => onTabChange('invoices')}
-                  onViewSubscriptions={() => onTabChange('subscriptions')}
-                  onCreateSubscription={onCreateSubscription}
-                  formatDate={formatDate}
-                  onOpenInvoice={onOpenInvoice}
-                  onOpenPlan={onOpenPlan}
-                />
-              ),
-            },
-            {
-              value: 'subscriptions',
-              label: 'Subscriptions',
-              count: subscriptions.length,
-              content: (
-                <SubscriptionsTab
-                  subscriptions={subscriptions}
-                  isLoading={subscriptionsLoading}
-                  onCreateSubscription={onCreateSubscription}
-                  formatDate={formatDate}
-                  onOpenPlan={onOpenPlan}
-                />
-              ),
-            },
-            {
-              value: 'invoices',
-              label: 'Invoices',
-              count: invoices.length,
-              content: (
-                <InvoicesCard
-                  title="Invoices"
-                  actions={
-                    <Button size="sm">
-                      <PlusIcon aria-hidden /> New invoice
-                    </Button>
-                  }
-                  invoices={invoices}
-                  isLoading={invoicesLoading}
-                  formatDate={formatDate}
-                  onOpenInvoice={onOpenInvoice}
-                />
-              ),
-            },
-            {
-              value: 'wallet',
-              label: 'Wallet',
-              content: wallet ?? (
-                <EmptyState
-                  title="No wallet connected"
-                  description="A customer's credit balance, top-ups and transactions will appear here once a wallet is set up."
-                />
-              ),
-            },
-            {
-              value: 'usage',
-              label: 'Analytics',
-              content: usage ?? (
-                <EmptyState
-                  title="No usage to show yet"
-                  description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
-                />
-              ),
-            },
-            {
-              value: 'events',
-              label: 'Events',
-              content: <CustomerEventsGrid events={DEMO_CUSTOMER_EVENTS} />,
-            },
-            {
-              value: 'information',
-              label: 'Information',
-              content: (
-                <InformationTab
-                  customer={customer}
-                  formatDate={formatDate}
-                  onUpdateField={onUpdateField}
-                  onEdit={onEdit}
-                  taxes={taxes}
-                />
-              ),
-            },
+            { value: 'overview', label: 'Overview' },
+            { value: 'subscriptions', label: 'Subscriptions', count: subscriptions.length },
+            { value: 'invoices', label: 'Invoices', count: invoices.length },
+            { value: 'wallet', label: 'Wallet' },
+            { value: 'usage', label: 'Analytics' },
+            { value: 'events', label: 'Events' },
+            { value: 'information', label: 'Information' },
           ]}
         />
+
+        {tab === 'overview' ? (
+          <OverviewTab
+            subscriptions={subscriptions}
+            subscriptionsLoading={subscriptionsLoading}
+            invoices={invoices}
+            invoicesLoading={invoicesLoading}
+            addButton={addButton}
+            onViewInvoices={() => onTabChange('invoices')}
+            onViewSubscriptions={() => onTabChange('subscriptions')}
+            formatDate={formatDate}
+            onOpenInvoice={onOpenInvoice}
+            onOpenPlan={onOpenPlan}
+          />
+        ) : null}
+
+        {tab === 'subscriptions' ? (
+          <SubscriptionsTab
+            subscriptions={subscriptions}
+            isLoading={subscriptionsLoading}
+            addButton={addButton}
+            formatDate={formatDate}
+            onOpenPlan={onOpenPlan}
+          />
+        ) : null}
+
+        {tab === 'invoices' ? (
+          <Section
+            title="Invoices"
+            flush
+            action={
+              <Button size="sm" className="h-8 px-3">
+                <PlusIcon aria-hidden="true" />
+                New invoice
+              </Button>
+            }
+          >
+            <InvoiceTable
+              invoices={invoices}
+              isLoading={invoicesLoading}
+              formatDate={formatDate}
+              onOpenInvoice={onOpenInvoice}
+            />
+          </Section>
+        ) : null}
+
+        {tab === 'wallet'
+          ? (wallet ?? (
+              <EmptyState
+                title="No wallet connected"
+                description="A customer's credit balance, top-ups and transactions will appear here once a wallet is set up."
+              />
+            ))
+          : null}
+
+        {tab === 'usage'
+          ? (usage ?? (
+              <EmptyState
+                title="No usage to show yet"
+                description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
+              />
+            ))
+          : null}
+
+        {tab === 'events' ? <CustomerEventsGrid events={DEMO_CUSTOMER_EVENTS} /> : null}
+
+        {tab === 'information' ? (
+          <InformationTab
+            customer={customer}
+            formatDate={formatDate}
+            onUpdateField={onUpdateField}
+            onEdit={onEdit}
+            taxes={taxes}
+          />
+        ) : null}
       </div>
     </div>
   )
 }
 
 /** Demo activity feed for the Overview timeline. */
-const DEMO_ACTIVITY = [
+const DEMO_ACTIVITY: ActivityEvent[] = [
   {
     id: 6,
     title: 'Usage threshold reached',
     at: 'Today, 09:14',
     status: 'issue',
     summary: '80% of the monthly API calls allowance used.',
-    source: 'api_call',
+    labels: [{ id: 'a', label: 'Feature', hint: 'api_call', variant: 'secondary' }],
   },
   {
     id: 5,
@@ -296,7 +316,7 @@ const DEMO_ACTIVITY = [
     at: 'Yesterday',
     status: 'completed',
     summary: 'Invoice sent to the billing contact.',
-    source: 'billing',
+    labels: [],
   },
   {
     id: 4,
@@ -304,7 +324,7 @@ const DEMO_ACTIVITY = [
     at: 'Sep 28',
     status: 'completed',
     summary: 'Card payment settled.',
-    source: 'payments',
+    labels: [],
   },
   {
     id: 3,
@@ -312,7 +332,7 @@ const DEMO_ACTIVITY = [
     at: 'Sep 20',
     status: 'completed',
     summary: 'Credits added to the prepaid wallet.',
-    source: 'wallet',
+    labels: [],
   },
   {
     id: 2,
@@ -320,7 +340,7 @@ const DEMO_ACTIVITY = [
     at: 'Sep 1',
     status: 'completed',
     summary: 'Billing period rolled over.',
-    source: 'subscription',
+    labels: [],
   },
   {
     id: 1,
@@ -328,91 +348,86 @@ const DEMO_ACTIVITY = [
     at: 'Aug 12',
     status: 'completed',
     summary: 'Record created in Flexprice.',
-    source: 'customer',
+    labels: [],
   },
 ]
 
 function OverviewTab({
   subscriptions,
+  subscriptionsLoading,
   invoices,
   invoicesLoading,
+  addButton,
   onViewInvoices,
   onViewSubscriptions,
-  onCreateSubscription,
   formatDate,
   onOpenInvoice,
   onOpenPlan,
 }: {
   subscriptions: Subscription[]
+  subscriptionsLoading: boolean
   invoices: Invoice[]
   invoicesLoading: boolean
+  addButton: ReactNode
   onViewInvoices: () => void
   onViewSubscriptions: () => void
-  onCreateSubscription: () => void
-  formatDate: (date: Date | null) => string
+  formatDate: FormatDate
   onOpenInvoice: ((invoiceId: string) => void) | undefined
   onOpenPlan: ((planId: string) => void) | undefined
 }) {
-  const recent = invoices.slice(0, 5)
+  const running = subscriptions.filter((s) => s.status !== SubscriptionStatus.Cancelled)
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <div className="flex flex-col gap-6">
-          <section aria-labelledby="customer-subscriptions" className="flex flex-col gap-4">
-            <header className="flex items-center justify-between gap-4">
-              <h2 id="customer-subscriptions" className="flex items-baseline gap-2 text-sm font-medium">
-                Active subscriptions
-                <span className="text-muted-foreground text-xs font-normal tabular-nums">
-                  {subscriptions.length}
-                </span>
-              </h2>
-              <Button size="sm" onClick={onCreateSubscription}>
-                <PlusIcon aria-hidden /> Create subscription
-              </Button>
-            </header>
-            {subscriptions.length > 0 ? (
-              <CustomerSubscriptionCards
-                subscriptions={subscriptions}
-                formatDate={formatDate}
-                onViewAll={onViewSubscriptions}
-                onOpenPlan={onOpenPlan}
-              />
-            ) : (
-              <EmptyState
-                size="inline"
-                title="No active subscription"
-                description="Subscribe this customer to a plan to start billing."
-              />
-            )}
-          </section>
+    <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
+      <div className="flex min-w-0 flex-col gap-8">
+        <section aria-labelledby="customer-subscriptions" className="space-y-4">
+          <div className="flex items-center justify-between gap-3">
+            <h2 id="customer-subscriptions" className="text-sm font-medium">
+              Active subscriptions{' '}
+              <span className="text-muted-foreground ml-1 tabular-nums">{running.length}</span>
+            </h2>
+            {addButton}
+          </div>
+          {subscriptionsLoading ? (
+            <LoadingRows rows={2} columns={3} />
+          ) : running.length > 0 ? (
+            <CustomerSubscriptionCards
+              subscriptions={running}
+              formatDate={formatDate}
+              onViewAll={onViewSubscriptions}
+              onOpenPlan={onOpenPlan}
+            />
+          ) : (
+            <p className="text-muted-foreground rounded-xl border border-dashed px-6 py-10 text-center text-[13px]">
+              No active subscriptions. Create one to start billing this customer.
+            </p>
+          )}
+        </section>
 
-          <InvoicesCard
-            title="Recent invoices"
-            actions={
-              recent.length > 0 ? (
-                <Button variant="outline" size="sm" onClick={onViewInvoices}>
-                  View all
-                </Button>
-              ) : null
-            }
-            invoices={recent}
+        <Section
+          title="Recent invoices"
+          flush
+          action={
+            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onViewInvoices}>
+              View all
+            </Button>
+          }
+        >
+          <InvoiceTable
+            invoices={invoices.slice(0, 5)}
             isLoading={invoicesLoading}
             formatDate={formatDate}
             onOpenInvoice={onOpenInvoice}
           />
-        </div>
-
-        <Section title="Activity">
-          <ScrollArea className="h-[560px]">
-            <div className="pr-3">
-              <AccountActivityRail
-                events={DEMO_ACTIVITY.map((e) => ({ ...e, labels: [] })) as never}
-              />
-            </div>
-          </ScrollArea>
         </Section>
       </div>
+      <Section title="Activity" flush className="xl:sticky xl:top-6">
+        <ScrollArea className="h-[560px]">
+          <div className="p-5">
+            <AccountActivityRail events={DEMO_ACTIVITY} />
+          </div>
+        </ScrollArea>
+      </Section>
     </div>
   )
 }
@@ -420,28 +435,27 @@ function OverviewTab({
 function SubscriptionsTab({
   subscriptions,
   isLoading,
-  onCreateSubscription,
+  addButton,
   formatDate,
   onOpenPlan,
 }: {
   subscriptions: Subscription[]
   isLoading: boolean
-  onCreateSubscription: () => void
-  formatDate: (date: Date | null) => string
+  addButton: ReactNode
+  formatDate: FormatDate
   onOpenPlan: ((planId: string) => void) | undefined
 }) {
   return (
     <Section
       title="Subscriptions"
       description="Every subscription this customer has had"
-      actions={
-        <Button variant="outline" size="sm" onClick={onCreateSubscription}>
-          <PlusIcon aria-hidden /> Create subscription
-        </Button>
-      }
+      flush
+      action={addButton}
     >
       {isLoading ? (
-        <LoadingRows />
+        <div className="p-4">
+          <LoadingRows />
+        </div>
       ) : (
         <SimpleTable
           rows={subscriptions}
@@ -452,7 +466,9 @@ function SubscriptionsTab({
               header: 'Plan',
               cell: (s) =>
                 onOpenPlan ? (
-                  <EntityLink label={s.planName} onOpen={() => onOpenPlan(s.planId)} />
+                  <span className="font-medium">
+                    <EntityLink label={s.planName} onOpen={() => onOpenPlan(s.planId)} />
+                  </span>
                 ) : (
                   <span className="font-medium">{s.planName}</span>
                 ),
@@ -460,28 +476,28 @@ function SubscriptionsTab({
             {
               key: 'status',
               header: 'Status',
-              cell: (s) => (
-                <Pill tone={s.status === 'active' ? 'success' : 'neutral'}>
-                  {SUBSCRIPTION_STATUS_LABEL[s.status]}
-                </Pill>
-              ),
+              cell: (s) => <Status value={SUBSCRIPTION_STATUS_LABEL[s.status]} />,
             },
-            { key: 'billing', header: 'Billing', cell: (s) => s.billingPeriodLabel },
+            {
+              key: 'billing',
+              header: 'Billing',
+              cell: (s) => <Muted>{s.billingPeriodLabel}</Muted>,
+            },
             {
               key: 'period',
               header: 'Current period',
               cell: (s) => (
-                <span className="text-muted-foreground">
+                <Muted>
                   {s.currentPeriodStart && s.currentPeriodEnd
                     ? `${formatDate(s.currentPeriodStart)} – ${formatDate(s.currentPeriodEnd)}`
                     : '—'}
-                </span>
+                </Muted>
               ),
             },
             {
               key: 'fixed',
               header: 'Fixed amount',
-              cell: () => <span className="text-muted-foreground">—</span>,
+              cell: () => <Muted>—</Muted>,
             },
             {
               key: 'id',
@@ -489,14 +505,7 @@ function SubscriptionsTab({
               cell: (s) => <span className="text-muted-foreground font-mono text-xs">{s.id}</span>,
             },
           ]}
-          empty={
-            <EmptyState
-              size="inline"
-              title="No subscriptions yet"
-              description="Subscribe this customer to a plan to start billing."
-              action={<Button onClick={onCreateSubscription}>Create subscription</Button>}
-            />
-          }
+          empty="No subscriptions yet. Subscribe this customer to a plan to start billing."
         />
       )}
     </Section>
@@ -518,89 +527,67 @@ function invoicePayment(invoice: Invoice): { label: string; tone: PillTone } {
   return { label: 'Pending', tone: 'warning' }
 }
 
-/** A card holding a header and a full-bleed invoices table. */
-function InvoicesCard({
-  title,
-  actions,
+/** The invoices table, edge to edge inside a flush section. */
+function InvoiceTable({
   invoices,
   isLoading,
   formatDate,
   onOpenInvoice,
 }: {
-  title: string
-  actions: ReactNode
   invoices: Invoice[]
   isLoading: boolean
-  formatDate: (date: Date | null) => string
+  formatDate: FormatDate
   onOpenInvoice: ((invoiceId: string) => void) | undefined
 }) {
-  const id = `invoices-${title.toLowerCase().replace(/\s+/g, '-')}`
-  const head = 'text-muted-foreground h-10 text-[11px] font-medium tracking-[0.08em] uppercase'
+  if (isLoading) {
+    return (
+      <div className="p-4">
+        <LoadingRows />
+      </div>
+    )
+  }
   return (
-    <section aria-labelledby={id} className="bg-card overflow-hidden rounded-xl border">
-      <header className="flex items-start justify-between gap-4 p-6">
-        <h2 id={id} className="text-sm font-medium">
-          {title}
-        </h2>
-        {actions ? <div className="flex shrink-0 gap-2">{actions}</div> : null}
-      </header>
-      {isLoading ? (
-        <div className="border-t p-4">
-          <LoadingRows />
-        </div>
-      ) : invoices.length === 0 ? (
-        <div className="border-t p-6">
-          <EmptyState
-            size="inline"
-            title="No invoices yet"
-            description="Invoices are created automatically from subscriptions, or raised by hand."
-          />
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
-              <TableHead className={cn(head, 'pl-6')}>Invoice</TableHead>
-              <TableHead className={head}>Period</TableHead>
-              <TableHead className={head}>Payment</TableHead>
-              <TableHead className={head}>Due</TableHead>
-              <TableHead className={cn(head, 'pr-6 text-right')}>Total</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {invoices.map((invoice) => {
-              const payment = invoicePayment(invoice)
-              const draft = invoice.status === InvoiceStatus.Draft
-              return (
-                <TableRow
-                  key={invoice.id}
-                  className={cn('h-14 tabular-nums', onOpenInvoice && 'cursor-pointer')}
-                  {...(onOpenInvoice ? { onClick: () => onOpenInvoice(invoice.id) } : {})}
-                >
-                  <TableCell className={cn('pl-6', draft ? 'text-muted-foreground' : 'font-medium')}>
-                    {draft ? 'Draft' : invoice.number}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {invoice.periodStart && invoice.periodEnd
-                      ? `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
-                      : '—'}
-                  </TableCell>
-                  <TableCell>
-                    <Pill tone={payment.tone}>{payment.label}</Pill>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(invoice.dueDate)}
-                  </TableCell>
-                  <TableCell className="pr-6 text-right">
-                    <Money value={invoice.total} />
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      )}
-    </section>
+    <SimpleTable
+      rows={invoices}
+      {...(onOpenInvoice ? { onRowClick: (invoice: Invoice) => onOpenInvoice(invoice.id) } : {})}
+      empty="No invoices yet. Invoices are created automatically from subscriptions, or raised by hand."
+      columns={[
+        {
+          key: 'number',
+          header: 'Invoice',
+          cell: (invoice) => (
+            <span className={cn(invoice.status === InvoiceStatus.Draft && 'text-muted-foreground')}>
+              {invoice.status === InvoiceStatus.Draft ? 'Draft' : invoice.number}
+            </span>
+          ),
+        },
+        {
+          key: 'period',
+          header: 'Period',
+          cell: (invoice) => (
+            <Muted>
+              {invoice.periodStart && invoice.periodEnd
+                ? `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
+                : '—'}
+            </Muted>
+          ),
+        },
+        {
+          key: 'payment',
+          header: 'Payment',
+          cell: (invoice) => {
+            const payment = invoicePayment(invoice)
+            return <Pill tone={payment.tone}>{payment.label}</Pill>
+          },
+        },
+        {
+          key: 'due',
+          header: 'Due',
+          cell: (invoice) => <Muted>{formatDate(invoice.dueDate)}</Muted>,
+        },
+        { key: 'total', header: 'Total', cell: (invoice) => <Money value={invoice.total} /> },
+      ]}
+    />
   )
 }
 
@@ -616,7 +603,7 @@ function InformationTab({
   taxes,
 }: {
   customer: CustomerDetailModel
-  formatDate: (date: Date | null) => string
+  formatDate: FormatDate
   onUpdateField: CustomerDetailProps['onUpdateField']
   onEdit: (() => void) | undefined
   taxes: ReactNode
@@ -635,96 +622,91 @@ function InformationTab({
   const metadata = Object.entries(customer.metadata)
 
   return (
-    <div className="flex flex-col gap-5">
-      <EditableCard
-        title="Customer"
-        description="Who this customer is and how to reach them"
-        locked={!onUpdateField}
-        fields={[
-          { key: 'name', label: 'Name', value: customer.name, required: true },
-          {
-            key: 'email',
-            label: 'Email',
-            value: customer.email,
-            placeholder: 'No email',
-            validate: (next) =>
-              next === ''
-                ? customer.email
-                  ? CLEAR_UNSUPPORTED
-                  : null
-                : EMAIL_PATTERN.test(next)
-                  ? null
-                  : 'Enter a valid email address.',
-          },
-          {
-            key: 'phone',
-            label: 'Phone',
-            value: customer.phone,
-            placeholder: 'No phone',
-            validate: (next) => (next === '' && customer.phone ? CLEAR_UNSUPPORTED : null),
-          },
-          { key: 'externalId', label: 'External ID', value: customer.externalId, readOnly: true },
-        ]}
-        onSave={(changes) => onUpdateField?.(changes)}
-      />
+    <div className="grid gap-5 xl:grid-cols-3">
+      <div className="flex flex-col gap-5 xl:col-span-2">
+        <EditableCard
+          title="Customer details"
+          locked={!onUpdateField}
+          fields={[
+            { key: 'name', label: 'Name', value: customer.name, required: true },
+            { key: 'externalId', label: 'External ID', value: customer.externalId, readOnly: true },
+            {
+              key: 'email',
+              label: 'Email',
+              value: customer.email,
+              placeholder: 'No email',
+              validate: (next) =>
+                next === ''
+                  ? customer.email
+                    ? CLEAR_UNSUPPORTED
+                    : null
+                  : EMAIL_PATTERN.test(next)
+                    ? null
+                    : 'Enter a valid email address.',
+            },
+            {
+              key: 'phone',
+              label: 'Phone',
+              value: customer.phone,
+              placeholder: 'No phone',
+              validate: (next) => (next === '' && customer.phone ? CLEAR_UNSUPPORTED : null),
+            },
+            {
+              key: 'created',
+              label: 'Created',
+              value: formatDate(customer.createdAt),
+              readOnly: true,
+            },
+            { key: 'id', label: 'Customer ID', value: customer.id, readOnly: true },
+          ]}
+          onSave={(changes) => onUpdateField?.(changes)}
+        />
 
-      <EditableCard
-        title="Billing"
-        description="Tax, timezone and address. Edited on its own page."
-        locked
-        fields={[
-          { key: 'timezone', label: 'Timezone', value: customer.timezone || '', readOnly: true },
-          {
-            key: 'tax',
-            label: 'Tax treatment',
-            value: customer.taxTreatment ? CUSTOMER_TAX_TREATMENT_LABEL[customer.taxTreatment] : '',
-            readOnly: true,
-          },
-          {
-            key: 'created',
-            label: 'Created',
-            value: formatDate(customer.createdAt),
-            readOnly: true,
-          },
-          {
-            key: 'updated',
-            label: 'Updated',
-            value: formatDate(customer.updatedAt),
-            readOnly: true,
-          },
-          { key: 'address', label: 'Address', value: address, multiline: true, readOnly: true },
-        ]}
-        onSave={() => undefined}
-      >
-        {onEdit ? (
-          <Button variant="outline" size="sm" className="self-start" onClick={onEdit}>
-            Edit billing details
-          </Button>
-        ) : null}
-      </EditableCard>
+        <EditableCard
+          title="Billing address"
+          locked
+          fields={[
+            { key: 'address', label: 'Address', value: address, multiline: true, readOnly: true },
+            { key: 'timezone', label: 'Timezone', value: customer.timezone || '', readOnly: true },
+            {
+              key: 'tax',
+              label: 'Tax treatment',
+              value: customer.taxTreatment
+                ? CUSTOMER_TAX_TREATMENT_LABEL[customer.taxTreatment]
+                : '',
+              readOnly: true,
+            },
+            {
+              key: 'updated',
+              label: 'Updated',
+              value: formatDate(customer.updatedAt),
+              readOnly: true,
+            },
+          ]}
+          onSave={() => undefined}
+        >
+          {onEdit ? (
+            <Button variant="outline" size="sm" className="h-8 self-start px-3" onClick={onEdit}>
+              Edit billing details
+            </Button>
+          ) : null}
+        </EditableCard>
 
-      {taxes}
+        {taxes}
+      </div>
 
-      {metadata.length > 0 ? (
+      <div className="flex flex-col gap-5">
         <Section title="Metadata" description="Keys your own system attached to this customer">
-          <SimpleTable
-            rows={metadata}
-            getRowId={([key]) => key}
-            columns={[
-              {
-                key: 'key',
-                header: 'Key',
-                cell: ([key]) => <span className="font-mono text-xs">{key}</span>,
-              },
-              {
-                key: 'value',
-                header: 'Value',
-                cell: ([, value]) => <span className="font-mono text-xs">{value}</span>,
-              },
-            ]}
-          />
+          {metadata.length > 0 ? (
+            <Properties
+              columns={2}
+              items={metadata.map(([key, value]) => ({ label: key, value }))}
+            />
+          ) : (
+            <p className="text-muted-foreground text-[13px]">No metadata on this customer.</p>
+          )}
         </Section>
-      ) : null}
+      </div>
     </div>
   )
 }

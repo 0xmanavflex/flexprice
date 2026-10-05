@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge } from '@fp/ui/pages'
-import { AppFailure, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
+import { AppFailure, Dot, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
 import { CoinsIcon } from 'lucide-react'
 
 export interface PriceUnitDetailPageProps {
@@ -82,9 +82,19 @@ export function PriceUnitDetailPage({
       icon={<CoinsIcon />}
       title={data.name}
       subtitle={
-        baseCurrency && data.conversionRate
-          ? `1 ${codeLabel} = ${data.conversionRate} ${baseCurrency}`
-          : 'Custom pricing unit'
+        <>
+          <span>
+            {baseCurrency && data.conversionRate
+              ? `1 ${codeLabel} = ${data.conversionRate} ${baseCurrency}`
+              : 'Custom pricing unit'}
+          </span>
+          {data.status === 'archived' ? (
+            <>
+              <Dot />
+              <CatalogStatusBadge status={data.status} />
+            </>
+          ) : null}
+        </>
       }
       id={data.code || data.id}
       onEdit={() => setTab('information')}
@@ -106,15 +116,15 @@ export function PriceUnitDetailPage({
             >
               {conversion ? (
                 <div className="bg-muted/40 rounded-lg border p-4">
-                  <p className="text-muted-foreground text-xs font-medium">Worked example</p>
+                  <p className="text-muted-foreground text-xs">Worked example</p>
                   <p className="mt-2 flex flex-wrap items-baseline gap-x-2 gap-y-1 text-lg tabular-nums">
-                    <span className="font-semibold">1 {codeLabel}</span>
+                    <span className="font-medium">1 {codeLabel}</span>
                     <span className="text-muted-foreground">=</span>
                     <span>{conversion.unit}</span>
                     <span aria-hidden className="text-muted-foreground px-1">
                       →
                     </span>
-                    <span className="font-semibold">
+                    <span className="font-medium">
                       {SAMPLE_QUANTITY.toLocaleString()} {codeLabel}
                     </span>
                     <span className="text-muted-foreground">=</span>
@@ -144,7 +154,7 @@ export function PriceUnitDetailPage({
                   key: 'code',
                   label: 'Code',
                   value: data.code,
-                  display: data.code ? <span className="font-mono">{data.code}</span> : '—',
+                  display: data.code ? <span className="font-mono text-[13px]">{data.code}</span> : '—',
                   readOnly: true,
                 },
                 { key: 'symbol', label: 'Symbol', value: symbolDisplay, readOnly: true },
@@ -166,7 +176,7 @@ export function PriceUnitDetailPage({
                   key: 'id',
                   label: 'Price unit ID',
                   value: data.id,
-                  display: <span className="font-mono text-xs">{data.id}</span>,
+                  display: <span className="font-mono text-[13px]">{data.id}</span>,
                   readOnly: true,
                 },
                 {

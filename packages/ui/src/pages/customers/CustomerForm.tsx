@@ -25,13 +25,8 @@ import { CustomerPreviewCard } from './CustomerPreviewCard'
  */
 export const CustomerFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'ui/input',
-    'compositions/form-page',
-    'compositions/field',
-    'compositions/option-select',
-  ],
-  note: 'RHF + the domain schema, one page: details, billing address, additional, with a live profile rail on create. Create and edit share it.',
+  composes: ['ui/input', 'compositions/form-page', 'compositions/option-select'],
+  note: 'RHF + the domain schema, one page: details, billing address, additional, with a live profile rail on create. Create and edit share it. Lineage: compositions/field.',
 })
 
 export interface CustomerFormProps {
@@ -212,7 +207,7 @@ export function CustomerForm({
   )
 
   const preview = isEdit ? null : (
-    <aside aria-label="Customer preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+    <div className="flex flex-col gap-4 lg:sticky lg:top-4">
       <CustomerPreviewCard
         name={form.watch('name')}
         externalId={form.watch('externalId')}
@@ -227,7 +222,7 @@ export function CustomerForm({
         timezone={form.watch('timezone')}
         taxTreatment={form.watch('taxTreatment')}
       />
-    </aside>
+    </div>
   )
 
   return (

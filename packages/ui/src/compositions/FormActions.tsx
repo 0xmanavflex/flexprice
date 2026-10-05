@@ -12,7 +12,7 @@ import { provenance } from '@ui/provenance'
 export const FormActionsProvenance = provenance({
   source: 'composition',
   composes: ['ui/button', '@reui/alert'],
-  note: 'Uniform form footer: submit-error alert, outline Cancel, primary submit.',
+  note: 'Uniform form footer: submit-error alert, ghost Cancel, primary submit (the reference Composer footer).',
 })
 
 export interface FormActionsProps {
@@ -52,7 +52,7 @@ export function FormActions({
       ) : null}
       <div className="flex justify-end gap-2">
         {onCancel ? (
-          <Button type="button" variant="outline" onClick={onCancel} disabled={isSubmitting}>
+          <Button type="button" variant="ghost" onClick={onCancel} disabled={isSubmitting}>
             Cancel
           </Button>
         ) : null}

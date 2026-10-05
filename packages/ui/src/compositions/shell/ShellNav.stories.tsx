@@ -42,7 +42,6 @@ const navGroups: ShellNavGroup[] = [
   {
     id: 'secondary',
     title: 'Quick links',
-    collapsible: true,
     items: [{ id: 'settings', label: 'Settings', icon: <SettingsIcon className="size-4" /> }],
   },
 ]

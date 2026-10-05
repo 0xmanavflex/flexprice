@@ -45,8 +45,7 @@ export const SignsOut: Story = {
 }
 
 /**
- * Documentation now lives here, beside Settings — it left the sidebar's "Quick
- * links" group when that group was removed.
+ * Documentation lives here, beside Settings.
  */
 export const OffersDocumentation: Story = {
   play: async ({ canvasElement, args }) => {
@@ -59,10 +58,9 @@ export const OffersDocumentation: Story = {
 }
 
 /**
- * Without an organization the second line falls back to the email.
+ * Without an organization the menu has no organisation heading.
  *
- * The two lines answer different questions — who am I, and whose data am I
- * looking at — and the org line is the one people forget.
+ * The trigger's two lines are the name and the email either way.
  */
 export const WithoutOrganization: Story = {
   args: { user: { name: 'Dinesh K', email: 'dinesh@flexprice.io' } },
@@ -71,16 +69,13 @@ export const WithoutOrganization: Story = {
 /**
  * No name on file, so the display name *is* the email.
  *
- * The trigger is a plain person icon now, so identity lives only in the menu —
- * and when the name is the email, the menu prints it once, not twice (which had
+ * When the name is the email, the trigger prints it once, not twice (which had
  * read as a bug in the account rather than a gap in the profile).
  */
 export const NameIsTheEmail: Story = {
   args: { user: { name: 'dkinsh123@gmail.com', email: 'dkinsh123@gmail.com' } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /account: dkinsh123/i }))
-    const menu = within(await screen.findByRole('menu'))
-    await waitFor(() => expect(menu.getAllByText('dkinsh123@gmail.com')).toHaveLength(1))
+    await expect(canvas.getAllByText('dkinsh123@gmail.com')).toHaveLength(1)
   },
 }

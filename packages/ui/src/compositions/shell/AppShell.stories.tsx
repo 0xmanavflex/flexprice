@@ -45,7 +45,6 @@ const navGroups: ShellNavGroup[] = [
   {
     id: 'secondary',
     title: 'Quick links',
-    collapsible: true,
     items: [{ id: 'settings', label: 'Settings', icon: <SettingsIcon className="size-4" /> }],
   },
 ]
@@ -80,7 +79,6 @@ const environmentTrail = (current: ShellEnvironment) => (
         label: current.name,
         content: (
           <EnvironmentSwitcher
-            variant="breadcrumb"
             current={current}
             environments={[sandbox, production]}
             onChange={fn()}
@@ -210,33 +208,26 @@ export const CountsAreVisible: Story = {
 /**
  * Production is marked, and not only by colour.
  *
- * The switcher now leads the breadcrumb, carrying the marks: the red dot and
- * the "Live" badge, in the one place people look while they work. There was
- * also a red bar across the top of the window; it was removed — a mark where
- * people already look beats one where they do not.
+ * The switcher leads the breadcrumb, carrying the mark: the environment's
+ * name beside a red dot, in the one place people look while they work.
  */
 export const Production: Story = {
   args: { breadcrumb: environmentTrail(production) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Live')).toBeInTheDocument()
+    await expect(canvas.getByText('Production')).toBeInTheDocument()
     await expect(
       canvas.getByRole('button', { name: /environment: production, production/i }),
     ).toBeInTheDocument()
   },
 }
 
-/**
- * Sandbox carries no badge.
- *
- * An environment named "Sandbox" next to a badge reading "Sandbox" says one
- * thing twice, and repetition is how a marker becomes invisible.
- */
-export const SandboxIsNotBadged: Story = {
+/** Sandbox is named the same way, with an amber dot rather than a red one. */
+export const Sandbox: Story = {
   args: { breadcrumb: environmentTrail(sandbox) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.queryByText('Live')).not.toBeInTheDocument()
+    await expect(canvas.getByText('Sandbox')).toBeInTheDocument()
     await expect(
       canvas.getByRole('button', { name: /environment: sandbox, sandbox/i }),
     ).toBeInTheDocument()
@@ -317,8 +308,7 @@ export const NotificationsLoading: Story = {
 
 /**
  * The account menu is how someone leaves, so it is reachable in one click — and
- * it is where Documentation now lives, beside Settings, since "Quick links" left
- * the sidebar.
+ * it is where Documentation lives, beside Settings.
  */
 export const AccountMenu: Story = {
   play: async ({ canvasElement, args }) => {
@@ -371,18 +361,15 @@ export const WithBreadcrumb: Story = {
 /**
  * Collapsing must not hide the way back out.
  *
- * An earlier version put the trigger in a cluster that was hidden when
- * collapsed, so on a desktop — where the page header's own trigger is
- * `md:hidden` — the rail was a one-way door. That trigger has since been
- * removed entirely in favour of the edge handle, which makes this the test
- * that the replacement actually replaced it.
+ * On a desktop the header's own trigger is hidden, so the edge rail is the only
+ * way to toggle the sidebar and it must still be there once collapsed.
  */
 export const RailCanBeReopened: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Collapse sidebar' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Toggle Sidebar' }))
 
-    await expect(await canvas.findByRole('button', { name: 'Expand sidebar' })).toBeVisible()
+    await expect(await canvas.findByRole('button', { name: 'Toggle Sidebar' })).toBeVisible()
 
     // And the groups are still reachable, as a menu rather than inline.
     await userEvent.click(canvas.getByRole('button', { name: 'Billing' }))
@@ -397,25 +384,6 @@ export const WithHeaderActions: Story = {
         All systems normal
       </span>
     ),
-  },
-}
-
-/**
- * The secondary group collapses; the primary one does not.
- *
- * Hiding the product's own map costs more than the space it saves.
- */
-export const QuickLinksCollapse: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const heading = canvas.getByRole('button', { name: /quick links/i })
-
-    await expect(canvas.getByRole('button', { name: /^settings/i })).toBeVisible()
-    await userEvent.click(heading)
-    await expect(canvas.queryByRole('button', { name: /^settings/i })).not.toBeInTheDocument()
-
-    // The primary group has no such control.
-    await expect(canvas.queryByRole('button', { name: /^workspace$/i })).not.toBeInTheDocument()
   },
 }
 

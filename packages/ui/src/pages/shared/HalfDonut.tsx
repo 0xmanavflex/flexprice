@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { Cell, Pie, PieChart } from 'recharts'
-import { ChartContainer, ChartTooltip } from '@ui/components/primitives/chart'
-import { Separator } from '@ui/components/primitives/separator'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@ui/components/primitives/chart'
+import type { ChartConfig } from '@ui/components/primitives/chart'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { formatWhole, toneColor } from './charts'
@@ -28,8 +28,8 @@ import type { ChartTone } from './charts'
  */
 export const HalfDonutProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/chart-12', 'ui/chart', 'ui/separator'],
-  note: 'chart-12 half-donut geometry over real slices, tones from the validated palette, centre total and footer legend.',
+  composes: ['ui/chart'],
+  note: 'chart-12 half-donut geometry over real slices, tones from the validated palette, centre total and footer legend. Lineage: @reui/chart-12.',
 })
 
 /** One slice of the ring. */
@@ -80,18 +80,17 @@ export function HalfDonut({
     ? [{ id: '__track__', label: centerLabel, value: 1, tone: 'neutral' as ChartTone }]
     : slices.filter((slice) => slice.value > 0)
 
+  const config = Object.fromEntries(
+    slices.map((slice) => [slice.id, { label: slice.label, color: toneColor(slice.tone) }]),
+  ) satisfies ChartConfig
+
   return (
-    <div className={cn('flex flex-col', className)}>
-      <div className="relative mx-auto h-[158px] w-full max-w-[300px]">
-        {/* chart-12's faded square grid behind the arc. */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 top-0 h-28 overflow-hidden [mask-image:linear-gradient(to_bottom,black_0%,black_42%,transparent_100%)] opacity-35 [background-image:linear-gradient(to_right,var(--border)_1px,transparent_1px),linear-gradient(to_bottom,var(--border)_1px,transparent_1px)] [background-size:8px_8px]"
-        />
+    <div className={cn('flex flex-col gap-6', className)}>
+      <div className="relative mx-auto h-[150px] w-full max-w-[290px]">
         <ChartContainer
-          config={{}}
+          config={config}
           className="aspect-auto h-full w-full overflow-visible"
-          initialDimension={{ width: 300, height: 158 }}
+          initialDimension={{ width: 290, height: 150 }}
           role="img"
           aria-label={
             empty
@@ -105,85 +104,73 @@ export function HalfDonut({
             {empty ? null : (
               <ChartTooltip
                 cursor={false}
-                content={({ active, payload }) => {
-                  const slice = payload?.[0]?.payload as DonutSlice | undefined
-                  if (!active || !slice) return null
-                  const share = total > 0 ? Math.round((slice.value / total) * 100) : 0
-                  return (
-                    <div className="bg-popover rounded-lg border px-2.5 py-2 shadow-lg">
-                      <div className="flex items-center gap-2">
-                        <span
-                          aria-hidden="true"
-                          className="size-2 rounded-full"
-                          style={{ backgroundColor: toneColor(slice.tone) }}
-                        />
-                        <span className="text-popover-foreground text-xs font-medium">
-                          {slice.label}
+                content={
+                  <ChartTooltipContent
+                    hideLabel
+                    nameKey="id"
+                    formatter={(value, _name, item) => (
+                      <span className="flex w-full items-center justify-between gap-3">
+                        <span className="text-muted-foreground">
+                          {(item.payload as DonutSlice | undefined)?.label}
                         </span>
-                        <span className="text-popover-foreground ms-2 text-xs font-medium tabular-nums">
-                          {format(slice.value)}
+                        <span className="text-foreground font-medium tabular-nums">
+                          {format(Number(value))}
                         </span>
-                        <span className="text-muted-foreground text-xs tabular-nums">{share}%</span>
-                      </div>
-                    </div>
-                  )
-                }}
+                      </span>
+                    )}
+                  />
+                }
               />
             )}
             <Pie
               data={data}
               dataKey="value"
-              nameKey="label"
+              nameKey="id"
               startAngle={180}
               endAngle={0}
               cx="50%"
-              cy="93%"
-              innerRadius={84}
-              outerRadius={116}
-              paddingAngle={1}
+              cy="96%"
+              innerRadius={88}
+              outerRadius={118}
+              paddingAngle={1.2}
               cornerRadius={3}
-              stroke="var(--card)"
+              stroke="var(--background)"
               strokeWidth={1.5}
+              isAnimationActive={false}
             >
               {data.map((slice) => (
-                <Cell key={slice.id} fill={toneColor(slice.tone)} />
+                <Cell key={slice.id} fill={empty ? 'var(--muted)' : toneColor(slice.tone)} />
               ))}
             </Pie>
           </PieChart>
         </ChartContainer>
 
-        <div className="pointer-events-none absolute inset-x-0 top-[82px] flex flex-col items-center">
+        <div className="pointer-events-none absolute inset-x-0 top-[78px] flex flex-col items-center">
           <span className="text-muted-foreground text-xs">{centerLabel}</span>
           <span className="text-2xl font-medium tabular-nums">{centerValue}</span>
         </div>
       </div>
 
-      <Separator className="my-5" />
-
       {/* The legend, and the numeric readout, in one row. */}
-      <ul className="flex items-stretch">
-        {slices.map((slice, index) => (
-          <li key={slice.id} className="flex min-w-0 flex-1 items-stretch">
-            {index > 0 ? <Separator orientation="vertical" className="mx-2" /> : null}
-            <div className="flex min-w-0 flex-1 flex-col items-center gap-1.5 px-2 text-center">
-              {/*
-                `min-w-0 max-w-full` is load-bearing, not tidying. Without it
-                this flex row sizes to its content, so the `truncate` on the
-                label below never engages and a long label overflows its column
-                into the next one instead of ellipsing. Every story here fed it
-                short words ("Paid", "Recurring"), so it took real feature names
-                on the revenue mix to surface it — see `LongLabelsTruncate`.
-              */}
-              <span className="text-muted-foreground flex min-w-0 max-w-full items-center gap-1.5 text-xs">
-                <span
-                  aria-hidden="true"
-                  className="size-2 shrink-0 rounded-full"
-                  style={{ backgroundColor: toneColor(slice.tone) }}
-                />
-                <span className="truncate">{slice.label}</span>
-              </span>
-              <span className="text-base font-medium tabular-nums">{format(slice.value)}</span>
-            </div>
+      <ul
+        className="grid divide-x border-t pt-4"
+        style={{ gridTemplateColumns: `repeat(${Math.max(slices.length, 1)}, minmax(0, 1fr))` }}
+      >
+        {slices.map((slice) => (
+          <li key={slice.id} className="flex min-w-0 flex-col items-center gap-1 px-2 text-center">
+            {/* `min-w-0 max-w-full` so a long label ellipses instead of spilling into the next column. */}
+            <span className="text-muted-foreground inline-flex max-w-full min-w-0 items-center gap-1.5 text-xs">
+              <span
+                aria-hidden="true"
+                className="size-2 shrink-0 rounded-full"
+                style={{
+                  backgroundColor: empty ? 'var(--muted-foreground)' : toneColor(slice.tone),
+                  opacity: empty ? 0.35 : 1,
+                }}
+              />
+              <span className="truncate">{slice.label}</span>
+            </span>
+            <span className="text-[15px] font-medium tabular-nums">{format(slice.value)}</span>
           </li>
         ))}
       </ul>

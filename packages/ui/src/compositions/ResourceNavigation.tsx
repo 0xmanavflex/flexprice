@@ -59,13 +59,13 @@ export function ResourceNavigation({
     <nav
       aria-label={label}
       className={cn(
-        // The rule runs the full width; each active item's own underline sits on
+        // The rule runs the full width; the active item's underline sits on
         // top of it, so switching sections slides the mark along one line.
         'border-b',
         className,
       )}
     >
-      <ul className="-mb-px flex items-center gap-5 overflow-x-auto">
+      <ul className="-mb-px flex items-center gap-7 overflow-x-auto">
         {items.map((item) => {
           const active = item.id === value
           return (
@@ -76,20 +76,19 @@ export function ResourceNavigation({
                 disabled={item.disabled}
                 aria-current={active ? 'page' : undefined}
                 className={cn(
-                  // `text-muted-foreground` for the inactive label rather than a
-                  // `text-foreground/60` blend: the blend computes to 4.27:1 on
-                  // white and fails the contrast check, where the muted token is
-                  // validated for exactly this small-secondary use across the app.
-                  'relative inline-flex items-center gap-1.5 whitespace-nowrap border-b-2 border-transparent px-0.5 pt-1 pb-2.5 text-sm font-normal text-muted-foreground transition-colors',
-                  'hover:text-foreground focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                  active && 'border-foreground text-foreground',
+                  // Same strip as the reference `DetailTabs` (line variant):
+                  // text-sm medium, 60% foreground until active, 2px underline.
+                  'text-foreground/60 hover:text-foreground relative inline-flex items-center gap-1.5 pb-3 text-sm font-medium whitespace-nowrap transition-colors',
+                  'focus-visible:outline-ring focus-visible:rounded-sm focus-visible:outline-2 focus-visible:outline-offset-2',
+                  'after:bg-foreground after:absolute after:inset-x-0 after:bottom-0 after:h-0.5 after:opacity-0 after:transition-opacity',
+                  active && 'text-foreground after:opacity-100',
                   item.disabled && 'pointer-events-none opacity-50',
                 )}
               >
                 {item.icon}
                 {item.label}
                 {item.count !== undefined ? (
-                  <span className="text-xs tabular-nums text-muted-foreground">{item.count}</span>
+                  <span className="text-muted-foreground text-xs tabular-nums">{item.count}</span>
                 ) : null}
               </button>
             </li>

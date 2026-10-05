@@ -1,4 +1,3 @@
-import { Card, CardContent } from '@ui/components/primitives/card'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -7,7 +6,7 @@ import { provenance } from '@ui/provenance'
  */
 export const CostSheetSummaryCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/card'],
+  composes: [],
   note: 'Small draft summary; fetches nothing.',
 })
 
@@ -19,8 +18,8 @@ export interface CostSheetSummaryCardProps {
 
 export function CostSheetSummaryCard({ name, lookupKey, description }: CostSheetSummaryCardProps) {
   return (
-    <Card className="gap-0 p-0 shadow-xs">
-      <CardContent className="flex flex-col gap-3 p-4">
+    <aside aria-label="Cost sheet summary" className="bg-background rounded-xl border p-6">
+      <div className="flex flex-col gap-3">
         <p className="text-muted-foreground text-xs">Summary</p>
         <p className="text-sm font-medium">{name.trim() || 'Untitled cost sheet'}</p>
         <p className="text-muted-foreground font-mono text-xs break-all">
@@ -32,7 +31,7 @@ export function CostSheetSummaryCard({ name, lookupKey, description }: CostSheet
         <p className="text-muted-foreground border-t pt-3 text-xs">
           After you create it, add the cost of each unit of usage on the cost sheet’s page.
         </p>
-      </CardContent>
-    </Card>
+      </div>
+    </aside>
   )
 }

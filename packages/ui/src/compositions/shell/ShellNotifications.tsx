@@ -22,8 +22,8 @@ import type { ShellNotification } from './types'
  */
 export const ShellNotificationsProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/app-shell-3', 'ui/popover', 'ui/button', '@reui/badge', 'ui/scroll-area'],
-  note: "The block's notifications-popover, with its item reduced to text and time, and its states real.",
+  composes: ['ui/popover', 'ui/button', '@reui/badge', 'ui/scroll-area'],
+  note: "The block's notifications-popover, with its item reduced to text and time, and its states real. Lineage: @reui/app-shell-3.",
 })
 
 export interface ShellNotificationsProps {
@@ -50,7 +50,7 @@ function Panel({
     <>
       <div className="border-border/40 flex items-center justify-between border-b px-4 py-3">
         <div className="flex min-w-0 items-center gap-2">
-          <span className="truncate text-sm font-semibold">Notifications</span>
+          <span className="truncate text-sm font-medium">Notifications</span>
           {unread > 0 ? (
             <Badge size="sm" className="rounded-full!">
               {unread}
@@ -61,7 +61,7 @@ function Panel({
           <Button
             variant="ghost"
             size="icon-sm"
-            className="opacity-60 hover:opacity-100"
+            className="text-muted-foreground hover:text-foreground"
             aria-label="Mark all as read"
             onClick={onMarkAllRead}
           >
@@ -123,9 +123,7 @@ function Panel({
                     ) : null}
                     <span className="text-muted-foreground text-xs">{notification.timestamp}</span>
                   </button>
-                  {index < notifications.length - 1 ? (
-                    <Separator className="opacity-60" />
-                  ) : null}
+                  {index < notifications.length - 1 ? <Separator className="opacity-60" /> : null}
                 </li>
               ))}
             </ul>
@@ -158,10 +156,8 @@ export function ShellNotifications(props: ShellNotificationsProps) {
           <Button
             variant="ghost"
             size="icon-sm"
-            className="relative [&_svg]:opacity-60 [&_svg]:hover:opacity-100"
-            aria-label={
-              showsDot ? `Notifications, ${unread} unread` : 'Notifications'
-            }
+            className="text-muted-foreground hover:text-foreground relative"
+            aria-label={showsDot ? `Notifications, ${unread} unread` : 'Notifications'}
           />
         }
       >
@@ -175,8 +171,8 @@ export function ShellNotifications(props: ShellNotificationsProps) {
       <PopoverContent
         aria-label="Notifications"
         side="bottom"
-        align="end"
-        sideOffset={8}
+        align="start"
+        sideOffset={6}
         className="w-80 gap-0 p-0"
       >
         <Panel {...props} />

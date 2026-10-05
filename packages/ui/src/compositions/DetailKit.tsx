@@ -1,49 +1,89 @@
 import { useState, type ReactNode } from 'react'
 import { CheckIcon, CopyIcon } from 'lucide-react'
+import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Button } from '@ui/components/primitives/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
+import { useInFormDialog } from './formDialogContext'
 
+/*
+ * Shared grammar for every detail page, ported 1:1 from the reference kit
+ * (`detail.tsx`):
+ *   header  -> what this thing is, in one line, plus its actions
+ *   tabs    -> one job per tab; "Information" holds every raw property
+ *   section -> a titled surface; tables inside it use the list-page style
+ * Status and type live in the subtitle and the Information tab, not as badges
+ * beside the name.
+ */
 export const DetailKitProvenance = provenance({
   source: 'composition',
   composes: ['ui/tabs', 'ui/button'],
-  note: 'Detail-page pieces: line tabs with counts, light table, property grid, choice cards, form footer, copyable id, meters.',
+  note: 'Detail-page pieces (reference detail.tsx): line tabs with counts, light table, property grid, summary row, choice cards, form footer, copyable id, meters.',
 })
+
+/** Muted separator dot for subtitles. */
+export const Dot = () => <span aria-hidden="true">·</span>
+
+export function CopyId({ value }: { value: string }) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        void navigator.clipboard?.writeText(value)
+        setCopied(true)
+        toast.success('ID copied')
+        setTimeout(() => setCopied(false), 1200)
+      }}
+      className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 font-mono text-xs transition-colors"
+      aria-label={`Copy ID ${value}`}
+    >
+      {value}
+      {copied ? (
+        <CheckIcon className="size-3.5" aria-hidden="true" />
+      ) : (
+        <CopyIcon className="size-3.5" aria-hidden="true" />
+      )}
+    </button>
+  )
+}
 
 export interface DetailTabSpec {
   value: string
   label: string
   count?: number
-  content: ReactNode
+  /** Optional panel. Omit it when the page renders the active tab's body itself (reference style). */
+  content?: ReactNode
 }
 
 export function DetailTabs({
   tabs,
   value,
   onValueChange,
+  onChange,
   defaultValue,
 }: {
   tabs: DetailTabSpec[]
   value?: string
   onValueChange?: (value: string) => void
+  /** Reference name for `onValueChange`; either works. */
+  onChange?: (value: string) => void
   defaultValue?: string
 }) {
   const controlled =
     value !== undefined ? { value } : { defaultValue: defaultValue ?? tabs[0]?.value }
+  const handle = onValueChange ?? onChange
+  const hasPanels = tabs.some((tab) => tab.content !== undefined)
   return (
     <Tabs
       {...controlled}
-      {...(onValueChange ? { onValueChange: (next: unknown) => onValueChange(String(next)) } : {})}
-      className="gap-6"
+      {...(handle ? { onValueChange: (next: unknown) => handle(String(next)) } : {})}
+      className={cn(hasPanels && 'gap-6')}
     >
-      <TabsList variant="line" className="w-full justify-start border-b">
+      <TabsList variant="line" className="w-full justify-start gap-7 border-b">
         {tabs.map((tab) => (
-          <TabsTrigger
-            key={tab.value}
-            value={tab.value}
-            className="text-foreground/70 flex-none px-3 font-normal"
-          >
+          <TabsTrigger key={tab.value} value={tab.value} className="flex-none px-0 pb-3">
             {tab.label}
             {tab.count !== undefined ? (
               <span className="text-muted-foreground text-xs tabular-nums">{tab.count}</span>
@@ -51,104 +91,159 @@ export function DetailTabs({
           </TabsTrigger>
         ))}
       </TabsList>
-      {tabs.map((tab) => (
-        <TabsContent key={tab.value} value={tab.value}>
-          {tab.content}
-        </TabsContent>
-      ))}
+      {tabs.map((tab) =>
+        tab.content !== undefined ? (
+          <TabsContent key={tab.value} value={tab.value}>
+            {tab.content}
+          </TabsContent>
+        ) : null,
+      )}
     </Tabs>
+  )
+}
+
+/** Label/value pairs in a responsive grid. */
+export function Properties({
+  items,
+  columns = 3,
+}: {
+  items: { label: string; value: ReactNode }[]
+  columns?: 2 | 3 | 4
+}) {
+  return (
+    <dl
+      className={cn(
+        'grid gap-x-8 gap-y-5',
+        columns === 2 && 'sm:grid-cols-2',
+        columns === 3 && 'sm:grid-cols-2 lg:grid-cols-3',
+        columns === 4 && 'sm:grid-cols-2 lg:grid-cols-4',
+      )}
+    >
+      {items.map((item) => (
+        <div key={item.label} className="min-w-0 space-y-1">
+          <dt className="text-muted-foreground text-xs">{item.label}</dt>
+          <dd className="truncate text-sm">{item.value}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
+/** Inline figures under the header: numbers only, no cards. */
+export function SummaryRow({
+  items,
+  className,
+}: {
+  items: { label: string; value: ReactNode; hint?: ReactNode }[]
+  className?: string
+}) {
+  return (
+    <dl
+      className={cn(
+        'grid grid-cols-2 gap-y-4 border-y py-5 md:divide-x',
+        items.length === 3 ? 'md:grid-cols-3' : items.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-4',
+        className,
+      )}
+    >
+      {items.map((item, index) => (
+        <div key={item.label} className={cn('space-y-1', index > 0 && 'md:pl-6')}>
+          <dt className="text-muted-foreground text-xs">{item.label}</dt>
+          <dd className="text-lg font-medium tabular-nums">{item.value}</dd>
+          {item.hint ? <dd className="text-muted-foreground text-xs">{item.hint}</dd> : null}
+        </div>
+      ))}
+    </dl>
   )
 }
 
 export interface SimpleColumn<T> {
   key: string
-  header: string
+  header: ReactNode
   cell: (row: T) => ReactNode
   className?: string
 }
 
+/** Same look as the list-page tables (grey header band, faint rows), sized for a section. */
 export function SimpleTable<T>({
   columns,
   rows,
   getRowId,
   onRowClick,
   highlightId,
+  highlight,
   empty,
 }: {
   columns: SimpleColumn<T>[]
   rows: T[]
-  getRowId: (row: T) => string
+  /** Defaults to `row.id`. */
+  getRowId?: (row: T) => string
   onRowClick?: (row: T) => void
-  highlightId?: string
+  highlightId?: string | null
+  /** Reference name for `highlightId`; either works. */
+  highlight?: string | null
   empty?: ReactNode
 }) {
   if (rows.length === 0 && empty)
     return <div className="text-muted-foreground p-6 text-sm">{empty}</div>
+  const highlighted = highlightId ?? highlight
+  const idOf = (row: T, index: number) =>
+    getRowId ? getRowId(row) : String((row as { id?: string }).id ?? index)
   return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="bg-muted/50 text-left">
-            {columns.map((column) => (
-              <th
-                key={column.key}
-                scope="col"
-                className={cn(
-                  'text-muted-foreground px-4 py-2.5 text-[11px] font-medium tracking-[0.08em] uppercase',
-                  column.className,
-                )}
-              >
-                {column.header}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rows.map((row) => {
-            const id = getRowId(row)
-            return (
-              <tr
-                key={id}
-                onClick={onRowClick ? () => onRowClick(row) : undefined}
-                className={cn(
-                  'border-border/50 h-14 border-t tabular-nums',
-                  onRowClick && 'hover:bg-muted/40 cursor-pointer',
-                  highlightId === id && 'bg-primary/5',
-                )}
-              >
-                {columns.map((column) => (
-                  <td key={column.key} className={cn('px-4 align-middle', column.className)}>
-                    {column.cell(row)}
-                  </td>
-                ))}
-              </tr>
-            )
-          })}
-        </tbody>
-      </table>
+    <div>
+      <div className="overflow-x-auto">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-muted/60">
+              {columns.map((column, index) => (
+                <th
+                  key={column.key}
+                  scope="col"
+                  className={cn(
+                    'text-muted-foreground h-10 px-4 text-left text-[11px] font-normal tracking-wider whitespace-nowrap uppercase',
+                    index === 0 && 'pl-6',
+                    index === columns.length - 1 && 'pr-6',
+                    column.className,
+                  )}
+                >
+                  {/* A column with no title is a row-actions column; a header cell still needs a name. */}
+                  {column.header || <span className="sr-only">Actions</span>}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, rowIndex) => {
+              const id = idOf(row, rowIndex)
+              return (
+                <tr
+                  key={id}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  className={cn(
+                    'border-border/40 h-14 border-b transition-colors last:border-b-0',
+                    onRowClick && 'hover:bg-muted/30 cursor-pointer',
+                    highlighted === id && 'bg-success/6',
+                  )}
+                >
+                  {columns.map((column, index) => (
+                    <td
+                      key={column.key}
+                      className={cn(
+                        'px-4 whitespace-nowrap',
+                        index === 0 && 'pl-6',
+                        index === columns.length - 1 && 'pr-6',
+                        column.className,
+                      )}
+                    >
+                      {column.cell(row)}
+                    </td>
+                  ))}
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
+      </div>
     </div>
-  )
-}
-
-export function Properties({
-  items,
-  columns = 2,
-}: {
-  items: { label: string; value: ReactNode }[]
-  columns?: 2 | 3 | 4
-}) {
-  const cols = { 2: 'sm:grid-cols-2', 3: 'sm:grid-cols-3', 4: 'sm:grid-cols-2 lg:grid-cols-4' }[
-    columns
-  ]
-  return (
-    <dl className={cn('grid grid-cols-1 gap-x-10 gap-y-5 text-sm', cols)}>
-      {items.map((item) => (
-        <div key={item.label} className="flex min-w-0 flex-col gap-1">
-          <dt className="text-muted-foreground text-xs">{item.label}</dt>
-          <dd className="min-w-0 font-normal break-words">{item.value}</dd>
-        </div>
-      ))}
-    </dl>
   )
 }
 
@@ -159,50 +254,66 @@ export interface Choice<V extends string> {
   icon?: ReactNode
 }
 
+/** Two- or three-option choice rendered as cards (fixed vs usage, one-time vs recurring). */
 export function ChoiceCards<V extends string>({
   choices,
+  options,
   value,
   onChange,
   label,
 }: {
-  choices: Choice<V>[]
+  /** Reference name is `options`; either works. */
+  choices?: Choice<V>[]
+  options?: Choice<V>[]
   value: V
   onChange: (value: V) => void
-  label: string
+  /** Accessible name for the radio group. */
+  label?: string
 }) {
+  const items = choices ?? options ?? []
   return (
     <div
+      className={cn('grid gap-3', items.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}
       role="radiogroup"
       aria-label={label}
-      className={cn('grid gap-3', choices.length === 3 ? 'sm:grid-cols-3' : 'sm:grid-cols-2')}
     >
-      {choices.map((choice) => {
-        const selected = choice.value === value
-        return (
-          <button
-            key={choice.value}
-            type="button"
-            role="radio"
-            aria-checked={selected}
-            onClick={() => onChange(choice.value)}
-            className={cn(
-              'hover:bg-muted/40 focus-visible:outline-ring flex flex-col gap-1.5 rounded-lg border p-4 text-left transition-colors focus-visible:outline-2',
-              selected && 'border-primary bg-primary/5',
-            )}
-          >
-            <span className="flex items-center gap-2 text-sm font-medium">
-              {choice.icon}
-              {choice.title}
+      {items.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          role="radio"
+          aria-checked={value === item.value}
+          onClick={() => onChange(item.value)}
+          className={cn(
+            'flex items-start gap-3 rounded-lg border p-4 text-left transition-colors',
+            value === item.value
+              ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
+              : 'hover:bg-muted/40',
+          )}
+        >
+          {item.icon ? (
+            <span className="text-foreground/70 bg-muted/60 flex size-8 shrink-0 items-center justify-center rounded-md border [&_svg]:size-4">
+              {item.icon}
             </span>
-            <span className="text-muted-foreground text-xs">{choice.description}</span>
-          </button>
-        )
-      })}
+          ) : null}
+          <span className="space-y-0.5">
+            <span className="block text-sm font-medium">{item.title}</span>
+            <span className="text-muted-foreground block text-[13px]/relaxed">
+              {item.description}
+            </span>
+          </span>
+        </button>
+      ))}
     </div>
   )
 }
 
+/**
+ * Wrapper for a create form: lives in a `FormDialog` (which pads the body) or
+ * inline in a section (where it pads itself).
+ */
 export function Composer({
+  title,
   children,
   submitLabel,
   onSubmit,
@@ -210,27 +321,33 @@ export function Composer({
   submitting,
   disabled,
 }: {
+  title?: string
   children: ReactNode
   submitLabel: string
   onSubmit: () => void
-  onCancel: () => void
+  /** Hides Cancel when omitted. */
+  onCancel?: () => void
   submitting?: boolean
   disabled?: boolean
 }) {
+  const inDialog = useInFormDialog()
   return (
     <form
-      className="flex flex-col gap-5"
+      className={cn('flex flex-col gap-6', !inDialog && 'p-6')}
       onSubmit={(event) => {
         event.preventDefault()
         onSubmit()
       }}
     >
+      {title ? <p className="text-sm font-medium">{title}</p> : null}
       {children}
-      <div className="flex justify-end gap-2 border-t pt-4">
-        <Button type="button" variant="outline" onClick={onCancel}>
-          Cancel
-        </Button>
-        <Button type="submit" disabled={disabled || submitting}>
+      <div className="flex items-center justify-end gap-2 border-t pt-5">
+        {onCancel ? (
+          <Button type="button" variant="ghost" className="h-8" onClick={onCancel}>
+            Cancel
+          </Button>
+        ) : null}
+        <Button type="submit" className="h-8 px-3.5" disabled={disabled || submitting}>
           {submitLabel}
         </Button>
       </div>
@@ -238,59 +355,113 @@ export function Composer({
   )
 }
 
-export function CopyId({ value }: { value: string }) {
-  const [copied, setCopied] = useState(false)
+/** Row of thin pills (reference chart-14): each entry of `colors` paints one pill. */
+function Pills({ colors, label }: { colors: string[]; label: string }) {
   return (
-    <button
-      type="button"
-      aria-label={`Copy ${value}`}
-      onClick={() => {
-        void navigator.clipboard?.writeText(value)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 1500)
-      }}
-      className="text-muted-foreground hover:text-foreground focus-visible:outline-ring inline-flex items-center gap-1.5 rounded-sm font-mono text-xs focus-visible:outline-2"
+    <div
+      role="img"
+      aria-label={label}
+      className="flex h-6 w-full min-w-0 items-stretch justify-between gap-0.5"
     >
-      {value}
-      {copied ? (
-        <CheckIcon aria-hidden className="size-3" />
-      ) : (
-        <CopyIcon aria-hidden className="size-3" />
-      )}
-    </button>
+      {colors.map((color, index) => (
+        <span
+          key={index}
+          aria-hidden="true"
+          className={cn('h-full max-w-1 min-w-0.5 flex-1 rounded-full', color)}
+        />
+      ))}
+    </div>
   )
 }
 
-export function SplitMeter({
-  used,
-  total,
-  usedLabel,
-  availableLabel,
-}: {
-  used: number
-  total: number
-  usedLabel: string
-  availableLabel: string
-}) {
-  const pct = total > 0 ? Math.min(100, Math.max(0, (used / total) * 100)) : 0
+interface SplitPart {
+  value: number
+  /** Tailwind background class, e.g. `bg-success`. */
+  color: string
+  label: string
+}
+
+/**
+ * A meter split into parts: each part fills its share of the pills in its own
+ * colour. Pass `parts` (reference API), or `used`/`total` with labels for the
+ * common used-versus-available case.
+ */
+export function SplitMeter(
+  props:
+    | { parts: SplitPart[]; segments?: number }
+    | {
+        used: number
+        total: number
+        usedLabel: string
+        availableLabel: string
+        segments?: number
+      },
+) {
+  const segments = props.segments ?? 48
+  const legend = 'parts' in props ? null : props
+  const parts: SplitPart[] =
+    'parts' in props
+      ? props.parts
+      : [
+          {
+            value: Math.min(props.total, Math.max(0, props.used)),
+            color: 'bg-success',
+            label: props.usedLabel,
+          },
+          {
+            value: Math.max(0, props.total - Math.max(0, props.used)),
+            color: 'bg-muted',
+            label: props.availableLabel,
+          },
+        ]
+  const total = parts.reduce((sum, part) => sum + part.value, 0) || 1
+  const colors: string[] = []
+  for (const part of parts) {
+    const count = Math.round((part.value / total) * segments)
+    for (let i = 0; i < count && colors.length < segments; i++) colors.push(part.color)
+  }
+  while (colors.length < segments) colors.push('bg-muted')
+  const meter = (
+    <Pills
+      colors={colors}
+      label={parts.map((part) => `${part.label} ${Math.round((part.value / total) * 100)}%`).join(', ')}
+    />
+  )
+  if (!legend) return meter
   return (
     <div className="flex flex-col gap-2">
-      <div className="bg-muted flex h-2 overflow-hidden rounded-full">
-        <div className="bg-emerald-500" style={{ width: `${pct}%` }} />
-      </div>
+      {meter}
       <div className="text-muted-foreground flex justify-between text-xs tabular-nums">
-        <span>{usedLabel}</span>
-        <span>{availableLabel}</span>
+        <span>{legend.usedLabel}</span>
+        <span>{legend.availableLabel}</span>
       </div>
     </div>
   )
 }
 
-export function SegmentMeter({
-  segments,
-}: {
-  segments: { id: string; label: string; share: number }[]
-}) {
+/**
+ * Pill meter filled up to `value` (0..1), reference API. The older
+ * `segments` list (a share per labelled row, with a legend) still works.
+ */
+export function SegmentMeter(
+  props:
+    | { value: number; color?: string; segments?: number; className?: string }
+    | { segments: { id: string; label: string; share: number }[] },
+) {
+  if ('value' in props) {
+    const count = props.segments ?? 48
+    const filled = Math.round(props.value * count)
+    const color = props.color ?? 'bg-primary'
+    return (
+      <div className={props.className}>
+        <Pills
+          colors={Array.from({ length: count }, (_, index) => (index < filled ? color : 'bg-muted'))}
+          label={`${Math.round(props.value * 100)}%`}
+        />
+      </div>
+    )
+  }
+  const { segments } = props
   const shades = ['bg-primary', 'bg-primary/70', 'bg-primary/50', 'bg-primary/30']
   return (
     <div className="flex flex-col gap-3">

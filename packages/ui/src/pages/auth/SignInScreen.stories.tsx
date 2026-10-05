@@ -23,7 +23,13 @@ export const Default: Story = {}
 
 /** With everything a deployment can light up: providers, sign-up, legal. */
 export const FullyConfigured: Story = {
-  args: { onProvider: fn(), onSignUp: fn(), onTerms: fn(), onPrivacy: fn(), onForgotPassword: fn() },
+  args: {
+    onProvider: fn(),
+    onSignUp: fn(),
+    onTerms: fn(),
+    onPrivacy: fn(),
+    onForgotPassword: fn(),
+  },
 }
 
 /**

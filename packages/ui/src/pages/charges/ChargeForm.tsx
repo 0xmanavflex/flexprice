@@ -48,7 +48,6 @@ import { TierTable, type TierRowError } from './TierTable'
 export const ChargeFormProvenance = provenance({
   source: 'composition',
   composes: [
-    'compositions/choice-cards',
     'compositions/field',
     'compositions/form-actions',
     'compositions/option-select',
@@ -57,7 +56,7 @@ export const ChargeFormProvenance = provenance({
     '@reui/alert',
     'ui/input',
   ],
-  note: 'RHF + the domain charge schema; charge type and billing model as choice cards, tier table for banded pricing.',
+  note: 'RHF + the domain charge schema; charge type and billing model as choice cards, tier table for banded pricing. Lineage: compositions/choice-cards.',
 })
 
 /** A metered feature the usage variant can charge against. */

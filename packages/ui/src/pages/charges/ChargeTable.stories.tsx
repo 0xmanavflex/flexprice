@@ -13,9 +13,9 @@ import {
 import { ChargeTable } from './ChargeTable'
 
 /**
- * A plan's charges, as a read table. Charge type and timing read together —
- * "Recurring · Advance/Arrears" for a fixed charge, "Usage-based" for a metered
- * one. Presentational: `Charge[]` in, intent reported out. No network.
+ * A charges section: a flush `Section` with the charge (fixed or usage dot),
+ * billing model, how it is billed and its price. Presentational: `Charge[]` in,
+ * intent reported out. No network.
  */
 const meta = {
   title: 'Surfaces/ChargeTable',
@@ -102,15 +102,16 @@ const chargeFixtures: Charge[] = [
   },
 ]
 
-/** The read-only table the Overview tab shows. */
+/** The charges section an add-on shows. */
 export const Default: Story = {
   args: { charges: chargeFixtures },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Platform base')).toBeInTheDocument()
-    await expect(canvas.getByText('Usage-based')).toBeInTheDocument()
+    await expect(canvas.getByText('API calls')).toBeInTheDocument()
     await expect(canvas.getByText('2 tiers · Volume')).toBeInTheDocument()
-    await expect(canvas.getAllByText('Recurring').length).toBeGreaterThan(0)
+    await expect(canvas.getByText('Monthly, in advance')).toBeInTheDocument()
+    await expect(canvas.getByText('Volume tiered')).toBeInTheDocument()
   },
 }
 

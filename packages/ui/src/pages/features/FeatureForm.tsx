@@ -778,7 +778,7 @@ export function FeatureForm(props: FeatureFormProps) {
   )
 
   const preview = isEdit ? null : (
-    <aside aria-label="Feature preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+    <div className="flex flex-col gap-4 lg:sticky lg:top-4">
       <FeaturePreviewCard
         name={form.watch('name')}
         lookupKey={form.watch('lookupKey')}
@@ -787,7 +787,7 @@ export function FeatureForm(props: FeatureFormProps) {
         aggregationType={aggregationType}
         resetUsage={form.watch('meter.resetUsage')}
       />
-    </aside>
+    </div>
   )
 
   return (

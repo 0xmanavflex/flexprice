@@ -1,10 +1,17 @@
 import { useMemo, useState } from 'react'
-import { SearchIcon } from 'lucide-react'
+import { BoxIcon, SearchIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Integration } from '@fp/domain'
 import { ConnectorCard } from '@ui/compositions/ConnectorCard'
-import { Input } from '@ui/components/primitives/input'
-import { OptionSelect } from '@ui/compositions/OptionSelect'
+import { Button } from '@ui/components/primitives/button'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@ui/components/primitives/select'
 import { Stripe } from '@ui/components/primitives/svgs/stripe'
 
 /**
@@ -37,13 +44,16 @@ export function IntegrationsBlock({ integrations }: IntegrationsBlockProps) {
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState(ALL)
 
-  const categories = useMemo(
-    () => [...new Set(integrations.flatMap((i) => i.categories))].sort(),
-    [integrations],
-  )
+  const listed = useMemo(() => integrations.filter((i) => !i.premium), [integrations])
   const options = useMemo(
-    () => [ALL, ...categories].map((value) => ({ value, label: value })),
-    [categories],
+    () =>
+      [ALL, ...[...new Set(listed.flatMap((i) => i.categories))].sort()].map((value) => ({
+        value,
+        label: value,
+        count:
+          value === ALL ? listed.length : listed.filter((i) => i.categories.includes(value)).length,
+      })),
+    [listed],
   )
 
   const visible = integrations.filter((i) => {
@@ -79,33 +89,63 @@ export function IntegrationsBlock({ integrations }: IntegrationsBlockProps) {
     />
   )
 
-  const grid = 'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3'
+  const grid = 'grid gap-4 md:grid-cols-2 xl:grid-cols-3'
+  const filtered = category !== ALL || query !== ''
 
   return (
-    <div className="flex w-full flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <div className="relative w-full max-w-72">
-          <SearchIcon
-            aria-hidden
-            className="text-muted-foreground pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2"
-          />
-          <Input
-            type="search"
-            aria-label="Search integrations"
-            placeholder="Search integrations…"
+    <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
+      <div className="flex flex-wrap items-center gap-2">
+        <InputGroup className="h-9 w-72">
+          <InputGroupAddon align="inline-start">
+            <SearchIcon className="text-muted-foreground size-4" aria-hidden="true" />
+          </InputGroupAddon>
+          <InputGroupInput
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            className="pl-9"
+            placeholder="Search integrations…"
+            aria-label="Search integrations"
           />
-        </div>
-        <div className="flex w-56 items-center gap-2">
-          <span className="text-muted-foreground text-sm">Category</span>
-          <OptionSelect value={category} onValueChange={setCategory} options={options} />
-        </div>
+        </InputGroup>
+        <Select
+          items={options}
+          value={category}
+          onValueChange={(next) => setCategory((next as string | null) ?? ALL)}
+        >
+          <SelectTrigger
+            className="h-9! w-52 justify-start gap-2 pl-3 [&>svg]:ml-auto"
+            aria-label="Category"
+          >
+            <span className="text-muted-foreground">Category</span>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent align="start">
+            {options.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+                <span className="text-muted-foreground ml-auto pl-4 tabular-nums">
+                  {option.count}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        {filtered ? (
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-muted-foreground h-9"
+            onClick={() => {
+              setCategory(ALL)
+              setQuery('')
+            }}
+          >
+            Clear
+          </Button>
+        ) : null}
       </div>
 
       {connected.length > 0 ? (
-        <section aria-labelledby="integrations-connected" className="flex flex-col gap-3">
+        <section aria-labelledby="integrations-connected" className="space-y-3">
           <h2 id="integrations-connected" className="text-sm font-medium">
             Connected
           </h2>
@@ -113,14 +153,17 @@ export function IntegrationsBlock({ integrations }: IntegrationsBlockProps) {
         </section>
       ) : null}
 
-      <section aria-labelledby="integrations-available" className="flex flex-col gap-3">
+      <section aria-labelledby="integrations-available" className="space-y-3">
         <h2 id="integrations-available" className="text-sm font-medium">
           Available
         </h2>
         {available.length > 0 ? (
           <div className={grid}>{available.map(renderCard)}</div>
         ) : (
-          <p className="text-muted-foreground text-sm">No integrations match your search.</p>
+          <p className="text-muted-foreground flex items-center gap-2 text-sm">
+            <BoxIcon className="size-4" aria-hidden="true" />
+            No integrations match these filters.
+          </p>
         )}
       </section>
     </div>

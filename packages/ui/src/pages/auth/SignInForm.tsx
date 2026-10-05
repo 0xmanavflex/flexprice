@@ -1,11 +1,23 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
 import { useState } from 'react'
 import { type SignInCredentials, signInSchema } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
+import {
+  Field as FieldRoot,
+  FieldError,
+  FieldGroup,
+  FieldLabel,
+} from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@ui/components/primitives/input-group'
 import { Field } from '@ui/compositions/Field'
 import { provenance } from '@ui/provenance'
 
@@ -26,7 +38,7 @@ import { provenance } from '@ui/provenance'
  */
 export const SignInFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'compositions/Field'],
+  composes: ['ui/button', 'ui/input', 'ui/input-group', 'ui/field', 'compositions/Field'],
   note: 'Presentational sign-in; the app owns the session.',
 })
 
@@ -86,102 +98,108 @@ export function SignInForm({
 
   const { ref: registerPasswordRef, ...password } = form.register('password')
   const errors = form.formState.errors
+  const passwordId = useId()
+  const passwordErrorId = errors.password ? `${passwordId}-error` : undefined
 
   return (
     <form
       onSubmit={form.handleSubmit((values) => onSubmit(values))}
       noValidate
       aria-labelledby="sign-in-heading"
-      className="flex w-full flex-col gap-4"
+      className="flex w-full max-w-sm flex-col gap-7"
     >
-      <div className="flex flex-col items-center gap-1 text-center">
-        <h1 id="sign-in-heading" className="text-xl font-semibold tracking-tight">
+      <div className="space-y-1.5">
+        <h1 id="sign-in-heading" className="text-2xl font-medium tracking-tight">
           Sign in to Flexprice
         </h1>
-        <p className="text-sm text-muted-foreground">Billing and usage for your product.</p>
+        <p className="text-muted-foreground text-sm">Billing and usage for your product.</p>
       </div>
 
       {error ? (
         <p
           role="alert"
-          className="rounded-lg border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground dark:text-destructive"
+          className="border-destructive/20 bg-destructive/10 text-destructive-foreground dark:text-destructive rounded-lg border px-3 py-2 text-sm"
         >
           {error}
         </p>
       ) : null}
 
-      <Field label="Email" error={errors.email?.message}>
-        {({ id, ...field }) => (
-          <Input
-            id={id}
-            type="email"
-            autoComplete="email"
-            // Not autofocused when an attempt has failed: the cursor belongs in
-            // the password. Focusing here and then moving away blurs an empty
-            // email, and `onTouched` validation raises "Enter your email" on a
-            // field the user never touched.
-            autoFocus={!error}
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('email')}
-          />
-        )}
-      </Field>
-
-      <Field label="Password" error={errors.password?.message}>
-        {({ id, ...field }) => (
-          <div className="relative">
+      <FieldGroup className="gap-4">
+        <Field label="Email" error={errors.email?.message}>
+          {({ id, ...field }) => (
             <Input
               id={id}
+              type="email"
+              autoComplete="email"
+              // Not autofocused when an attempt has failed: the cursor belongs in
+              // the password. Focusing here and then moving away blurs an empty
+              // email, and `onTouched` validation raises "Enter your email" on a
+              // field the user never touched.
+              autoFocus={!error}
+              disabled={isSubmitting}
+              className="h-9"
+              {...field}
+              {...form.register('email')}
+            />
+          )}
+        </Field>
+
+        <FieldRoot data-invalid={errors.password ? true : undefined}>
+          <div className="flex items-center justify-between">
+            <FieldLabel htmlFor={passwordId}>Password</FieldLabel>
+            {onForgotPassword ? (
+              <button
+                type="button"
+                onClick={onForgotPassword}
+                className="text-muted-foreground hover:text-foreground text-xs"
+              >
+                Forgot password?
+              </button>
+            ) : null}
+          </div>
+          <InputGroup className="h-9">
+            <InputGroupInput
+              id={passwordId}
               type={revealed ? 'text' : 'password'}
               autoComplete="current-password"
               disabled={isSubmitting}
-              className="pr-10"
-              {...field}
+              aria-invalid={errors.password ? true : undefined}
+              aria-describedby={passwordErrorId}
               {...password}
               ref={(node) => {
                 registerPasswordRef(node)
                 passwordRef.current = node
               }}
             />
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setRevealed((value) => !value)}
-              aria-label={revealed ? 'Hide password' : 'Show password'}
-              aria-pressed={revealed}
-              className="absolute inset-y-0 right-0 h-full w-10 p-0 text-muted-foreground"
-            >
-              {revealed ? <EyeOffIcon className="size-4" /> : <EyeIcon className="size-4" />}
-            </Button>
-          </div>
-        )}
-      </Field>
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                size="icon-xs"
+                aria-label={revealed ? 'Hide password' : 'Show password'}
+                aria-pressed={revealed}
+                onClick={() => setRevealed((value) => !value)}
+              >
+                {revealed ? <EyeOffIcon aria-hidden="true" /> : <EyeIcon aria-hidden="true" />}
+              </InputGroupButton>
+            </InputGroupAddon>
+          </InputGroup>
+          {errors.password?.message ? (
+            <FieldError id={passwordErrorId} className="text-xs">
+              {errors.password.message}
+            </FieldError>
+          ) : null}
+        </FieldRoot>
+      </FieldGroup>
 
-      {onForgotPassword ? (
-        <div className="-mt-1 flex justify-end">
-          <Button
-            type="button"
-            variant="link"
-            onClick={onForgotPassword}
-            className="text-muted-foreground h-auto p-0 text-xs font-normal"
-          >
-            Forgot password?
-          </Button>
-        </div>
-      ) : null}
-
-      <Button type="submit" disabled={isSubmitting} className="w-full">
+      <Button type="submit" disabled={isSubmitting} className="h-9">
         {isSubmitting ? 'Signing in…' : 'Sign in'}
       </Button>
 
       {alternatives ? (
         <>
-          <div className="flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="h-px flex-1 bg-border" />
+          <div className="text-muted-foreground flex items-center gap-3 text-xs">
+            <span className="bg-border h-px flex-1" />
             or
-            <span className="h-px flex-1 bg-border" />
+            <span className="bg-border h-px flex-1" />
           </div>
           {alternatives}
         </>

@@ -207,6 +207,95 @@ export const uiSeamRules = {
   },
 }
 
+/**
+ * The redesign is the source of truth for how a page looks, and the rules that
+ * say so are errors rather than prose. They exist because "use the shared kit"
+ * written in a doc did not stop pages growing their own Card, their own table
+ * and their own palette: nothing checked, so nothing held.
+ *
+ * Two separate rule names on purpose — `no-restricted-imports` (below, pages
+ * only) and `no-restricted-syntax` (class-string checks, all authored UI) —
+ * because a config object that sets a rule replaces any earlier setting of the
+ * same rule for the files it matches.
+ */
+const PAGE_SURFACES = [
+  {
+    group: ['@ui/components/primitives/card'],
+    message:
+      'Pages do not use the Card primitive. A titled surface is Section (or Panel) from compositions/DetailKit, exactly as in the redesign.',
+  },
+  {
+    group: ['@ui/components/primitives/table'],
+    message:
+      'Pages do not compose the raw table primitive. Use SimpleTable (detail pages) or EntityList (lists), as the redesign does.',
+  },
+]
+
+export const uiPagesRules = {
+  files: ['packages/ui/src/pages/**/*.{ts,tsx}'],
+  ignores: ['**/*.stories.tsx', '**/*.test.tsx'],
+  rules: {
+    'no-restricted-imports': [
+      'error',
+      {
+        patterns: [
+          ...uiForbidden,
+          ...PAGE_SURFACES,
+          // The grid/filter seam may import blocks; every other page may not.
+        ],
+      },
+    ],
+  },
+}
+
+const WEIGHT = '\\bfont-(?:semibold|bold|extrabold|black)\\b'
+const PALETTE =
+  '\\b(?:text|bg|border|ring|from|via|to|fill|stroke|divide|outline)-(?:red|orange|amber|yellow|lime|green|emerald|teal|cyan|sky|blue|indigo|violet|purple|fuchsia|pink|rose|slate|gray|zinc|neutral|stone)-\\d{2,3}\\b'
+
+function classRule(re, message) {
+  return [
+    { selector: `Literal[value=/${re}/]`, message },
+    { selector: `TemplateElement[value.raw=/${re}/]`, message },
+  ]
+}
+
+/** Authored UI: never heavier than medium, and colour comes from tokens. */
+export const uiStyleRules = {
+  files: ['packages/ui/src/pages/**/*.{ts,tsx}', 'packages/ui/src/compositions/**/*.{ts,tsx}'],
+  ignores: ['**/*.stories.tsx', '**/*.test.tsx'],
+  rules: {
+    'no-restricted-syntax': [
+      'error',
+      ...classRule(
+        WEIGHT,
+        'Medium is the heaviest weight in the redesign. Use font-medium, never font-semibold or font-bold.',
+      ),
+      ...classRule(
+        PALETTE,
+        'Use a semantic token (text-muted-foreground, bg-muted, text-success, text-destructive, border…), not a raw palette colour. Chart and meter fills belong in pages/shared/charts or viz.',
+      ),
+    ],
+  },
+}
+
+/** Chart/meter encodings are the one place a raw hue is legitimate. */
+export const uiStyleExemptions = {
+  files: [
+    'packages/ui/src/pages/shared/charts*.{ts,tsx}',
+    'packages/ui/src/pages/shared/viz*.{ts,tsx}',
+    'packages/ui/src/pages/shared/{ArcGauge,HalfDonut,PillColumns,QuotaCard,SegmentMeter,Metric}*.{ts,tsx}',
+  ],
+  rules: {
+    'no-restricted-syntax': [
+      'error',
+      ...classRule(
+        WEIGHT,
+        'Medium is the heaviest weight in the redesign. Use font-medium, never font-semibold or font-bold.',
+      ),
+    ],
+  },
+}
+
 /** The adapter sits beside query, below everything else. */
 export const adapterRules = layer(
   ['packages/sdk-adapter/**/*.{ts,tsx}'],
@@ -244,6 +333,9 @@ export const architecture = [
   uiRules,
   // After uiRules, so it wins for the non-seam files it matches.
   uiSeamRules,
+  uiPagesRules,
+  uiStyleRules,
+  uiStyleExemptions,
   appRules,
 ]
 

@@ -4,7 +4,7 @@ import { type Entitlement, EntitlementEntityType, FeatureType, UsageResetPeriod 
 import { EntitlementTable } from './EntitlementTable'
 
 /**
- * A plan's entitlements, as a read table. The "Value" column reads per feature
+ * An entitlements section. The "Included" column reads per feature
  * type — a metered allowance as a number or "Unlimited", a boolean as Yes/No, a
  * static value as itself, a config one as "Configured". No network.
  */
@@ -65,7 +65,7 @@ const entitlementFixtures: Entitlement[] = [
   },
 ]
 
-/** The read-only table the Entitlements tab shows. */
+/** The entitlements section. */
 export const Default: Story = {
   args: { entitlements: entitlementFixtures },
   play: async ({ canvasElement }) => {

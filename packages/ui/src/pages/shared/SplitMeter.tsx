@@ -28,8 +28,8 @@ import type { ChartTone } from './charts'
  */
 export const SplitMeterProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/chart-14', 'ui/tooltip'],
-  note: 'chart-14 segmented meter extended to several tones in one track, with a legend and a per-part tooltip.',
+  composes: ['ui/tooltip'],
+  note: 'chart-14 segmented meter extended to several tones in one track, with a legend and a per-part tooltip. Lineage: @reui/chart-14.',
 })
 
 /** One coloured part of the track. */
@@ -58,7 +58,7 @@ export interface SplitMeterProps {
    * of a ceiling, and the gap is the point.
    */
   total?: number | undefined
-  /** Segments in a full track. Default 56, the block's. */
+  /** Segments in a full track. Default 48, the reference's. */
   segments?: number | undefined
   /** Heading above the track. */
   title?: ReactNode | undefined
@@ -117,7 +117,7 @@ function allocate(values: number[], slots: number): number[] {
 export function SplitMeter({
   parts,
   total,
-  segments = 56,
+  segments = 48,
   title,
   value,
   format = formatWhole,
@@ -153,12 +153,14 @@ export function SplitMeter({
     .join(', ')}${total === undefined ? '' : ` of ${format(ceiling)}`}`
 
   return (
-    <div className={cn('flex flex-col gap-3', className)}>
+    <div className={cn('flex flex-col gap-6', className)}>
       {title === undefined && value === undefined ? null : (
-        <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
-          {title === undefined ? null : <span className="text-sm font-medium">{title}</span>}
+        <div className="flex items-baseline gap-2">
           {value === undefined ? null : (
-            <span className="text-2xl leading-none font-medium tabular-nums">{value}</span>
+            <span className="text-4xl font-medium tabular-nums">{value}</span>
+          )}
+          {title === undefined ? null : (
+            <span className="text-muted-foreground text-xs">{title}</span>
           )}
         </div>
       )}
@@ -173,13 +175,13 @@ export function SplitMeter({
             />
           }
         >
-          <span className="flex h-7 w-full items-stretch justify-between">
+          <span className="flex h-6 w-full min-w-0 items-stretch justify-between gap-0.5">
             {track.map((partIndex, index) => (
               <span
                 key={index}
                 aria-hidden="true"
                 className={cn(
-                  'h-full w-1 shrink-0 rounded-full',
+                  'h-full max-w-1 min-w-0.5 flex-1 rounded-full',
                   partIndex === null ? 'bg-muted' : null,
                 )}
                 {...(partIndex === null
@@ -216,15 +218,20 @@ export function SplitMeter({
 
       {/* Always present: several tones in one track is exactly the case where
           colour would otherwise be the only thing carrying identity. */}
-      <ul className="flex flex-wrap items-center gap-x-4 gap-y-1.5">
+      <ul className="divide-border/60 flex flex-col divide-y border-t">
         {parts.map((part, partIndex) => (
-          <li key={part.id} className="flex items-center gap-1.5 text-xs">
+          <li key={part.id} className="flex items-center gap-3 py-3.5 text-[13px]">
             <span
               aria-hidden="true"
               className="size-2 rounded-full"
               style={{ backgroundColor: toneColor(toneFor(partIndex)) }}
             />
-            <span className="text-muted-foreground">{part.label}</span>
+            <span className="flex-1">{part.label}</span>
+            {ceiling > 0 ? (
+              <span className="text-muted-foreground w-12 text-xs tabular-nums">
+                {Math.round((Math.max(part.value, 0) / ceiling) * 100)}%
+              </span>
+            ) : null}
             <span className="font-medium tabular-nums">{format(part.value)}</span>
           </li>
         ))}

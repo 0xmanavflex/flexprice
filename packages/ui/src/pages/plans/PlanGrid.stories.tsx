@@ -43,8 +43,9 @@ export const Populated: Story = {
 
     // The headline price carries its period the way a pricing page writes it,
     // from BILLING_PERIOD_SHORT — never a string this side invents.
-    await expect(canvas.getByText('$29 /mo')).toBeInTheDocument()
-    await expect(canvas.getByText('$499 /yr')).toBeInTheDocument()
+    // The amount and the muted period are separate spans, as in the redesign.
+    await expect(canvas.getByText('$29').textContent).toBe('$29 / mo')
+    await expect(canvas.getByText('$499').textContent).toBe('$499 / yr')
     // An unrecognised period falls back to the bare amount rather than
     // printing the raw enum at someone.
     await expect(canvas.getByText('Custom')).toBeInTheDocument()

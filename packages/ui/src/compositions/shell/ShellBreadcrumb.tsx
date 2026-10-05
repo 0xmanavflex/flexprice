@@ -13,7 +13,9 @@ import { provenance } from '@ui/provenance'
 import type { ReactNode } from 'react'
 
 /**
- * Where am I, in the Flux template's treatment.
+ * Where am I, as the reference shell's top bar draws it: the environment
+ * switcher first, then the trail, earlier crumbs at 80% foreground and the
+ * current page at full strength, with muted chevrons between.
  *
  * Three things distinguish it from the plain breadcrumb, and each earns its
  * place:
@@ -22,8 +24,8 @@ import type { ReactNode } from 'react'
  * a person. The mark is what makes the trail scannable without reading it,
  * which matters most for the crumb people most need to not misread.
  *
- * The separator is a chevron rather than app-shell-3's bullet. A bullet reads
- * as a list of peers; a chevron reads as descent, which is what a trail is.
+ * The separator is a chevron. A bullet reads as a list of peers; a chevron
+ * reads as descent, which is what a trail is.
  *
  * Labels drop out as the window narrows, oldest first, leaving their marks
  * behind. The alternative is a trail that truncates the *current page* — the
@@ -38,7 +40,7 @@ import type { ReactNode } from 'react'
 export const ShellBreadcrumbProvenance = provenance({
   source: 'composition',
   composes: ['ui/breadcrumb'],
-  note: "Flux's header breadcrumb: a mark per crumb, chevron separators, labels that drop out by width.",
+  note: "The reference shell's header trail: a mark per crumb, chevron separators, labels that drop out by width.",
 })
 
 export interface ShellCrumb {
@@ -133,7 +135,10 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
                   <BreadcrumbLink
                     render={<button type="button" onClick={crumb.onClick} />}
                     aria-label={crumb.label}
-                    className="flex min-w-0 items-center gap-1.5"
+                    className={cn(
+                      'flex min-w-0 items-center gap-1.5',
+                      !isLast && 'text-foreground/80',
+                    )}
                   >
                     {content}
                   </BreadcrumbLink>
@@ -142,7 +147,10 @@ export function ShellBreadcrumb({ trail }: ShellBreadcrumbProps) {
                   // carries its own name for anything reading the tree.
                   <BreadcrumbPage
                     aria-label={crumb.label}
-                    className="flex min-w-0 items-center gap-1.5"
+                    className={cn(
+                      'flex min-w-0 items-center gap-1.5',
+                      !isLast && 'text-foreground/80',
+                    )}
                   >
                     {content}
                   </BreadcrumbPage>

@@ -5,22 +5,16 @@ import {
   type CreditGrant,
   CreditGrantCadence,
 } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/primitives/table'
+import { PlusIcon } from 'lucide-react'
+import { SimpleTable } from '@ui/compositions/DetailKit'
 import { EmptyState } from '@ui/compositions/EmptyState'
+import { Section } from '@ui/compositions/Section'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 
 /**
- * A plan's credit grants, as a read table.
+ * A plan's or add-on's credit grants: a titled, flush section holding the full table.
  *
  * Cadence carries the period where there is one — "Recurring · Monthly" — because
  * a recurring grant only means something with the period it refreshes on beside
@@ -28,7 +22,7 @@ import { RowActionsMenu } from '../shared/RowActionsMenu'
  */
 export const CreditGrantTableProvenance = provenance({
   source: 'composition',
-  composes: ['ui/table', '@reui/badge', 'ui/button'],
+  composes: ['compositions/Section', 'compositions/DetailKit', 'ui/button'],
   note: 'Read-only credit-grants table for the plan Credit Grants tab.',
 })
 
@@ -48,75 +42,67 @@ function cadenceLabel(grant: CreditGrant): string {
 
 export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGrantTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
-  if (grants.length === 0) {
-    return (
-      <EmptyState
-        title="No credit grants yet"
-        description="Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period. Add one to include credits in the plan."
-        {...(onAdd
-          ? {
-              action: (
-                <Button type="button" onClick={onAdd}>
-                  Add credit grant
-                </Button>
-              ),
-            }
-          : {})}
-      />
-    )
-  }
-
   return (
-    <div className="flex flex-col gap-3">
-      {onAdd ? (
-        <div className="flex justify-end">
-          <Button type="button" size="sm" onClick={onAdd}>
-            Add credit grant
-          </Button>
+    <Section
+      title="Credit grants"
+      description="Balances handed to subscribers"
+      flush
+      {...(onAdd
+        ? {
+            action: (
+              <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+                <PlusIcon aria-hidden="true" />
+                Add credit grant
+              </Button>
+            ),
+          }
+        : {})}
+    >
+      {grants.length === 0 ? (
+        <div className="p-6">
+          <EmptyState
+            size="inline"
+            title="No credit grants yet"
+            description="Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period. Add one to include credits in the plan."
+          />
         </div>
-      ) : null}
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Credits</TableHead>
-              <TableHead>Cadence</TableHead>
-              <TableHead>Expiry</TableHead>
-              <TableHead>Priority</TableHead>
-              {hasActions ? (
-                <TableHead className="w-10">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              ) : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {grants.map((grant) => (
-              <TableRow key={grant.id}>
-                <TableCell>{grant.name}</TableCell>
-                <TableCell className="tabular-nums">{grant.credits}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{cadenceLabel(grant)}</Badge>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
+      ) : (
+        <SimpleTable
+          rows={grants}
+          getRowId={(grant) => grant.id}
+          columns={[
+            { key: 'name', header: 'Name', cell: (grant) => <span className="font-medium">{grant.name}</span> },
+            { key: 'credits', header: 'Credits', cell: (grant) => <span className="tabular-nums">{grant.credits}</span> },
+            { key: 'cadence', header: 'Cadence', cell: (grant) => cadenceLabel(grant) },
+            {
+              key: 'expiry',
+              header: 'Expiry',
+              cell: (grant) => (
+                <span className="text-muted-foreground">
                   {CREDIT_GRANT_EXPIRY_TYPE_LABEL[grant.expirationType]}
-                </TableCell>
-                <TableCell className="tabular-nums">{grant.priority}</TableCell>
-                {hasActions ? (
-                  <TableCell>
-                    <RowActionsMenu
-                      label={grant.name}
-                      onEdit={onEdit ? () => onEdit(grant) : undefined}
-                      onRemove={onDelete ? () => onDelete(grant) : undefined}
-                    />
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                </span>
+              ),
+            },
+            { key: 'priority', header: 'Priority', cell: (grant) => <span className="tabular-nums">{grant.priority}</span> },
+            ...(hasActions
+              ? [
+                  {
+                    key: 'actions',
+                    header: '',
+                    className: 'w-10',
+                    cell: (grant: CreditGrant) => (
+                      <RowActionsMenu
+                        label={grant.name}
+                        onEdit={onEdit ? () => onEdit(grant) : undefined}
+                        onRemove={onDelete ? () => onDelete(grant) : undefined}
+                      />
+                    ),
+                  },
+                ]
+              : []),
+          ]}
+        />
+      )}
+    </Section>
   )
 }

@@ -42,7 +42,7 @@ export function ThemeToggle() {
       aria-label="Dark mode"
       aria-pressed={mounted ? isDark : undefined}
       onClick={() => setTheme(isDark ? 'light' : 'dark')}
-      className="opacity-60 hover:opacity-100"
+      className="text-muted-foreground hover:text-foreground"
     >
       {mounted ? (
         isDark ? <SunIcon aria-hidden /> : <MoonIcon aria-hidden />

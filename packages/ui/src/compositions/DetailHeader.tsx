@@ -1,31 +1,36 @@
 import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
+import { CopyId } from './DetailKit'
 
 /**
- * A detail page's header: where you are, what this is, and what you can do to it.
+ * A detail page's header (reference `DetailHeader`): icon tile, record name,
+ * one-line subtitle, copyable id, and the actions (one primary plus a menu).
  *
- * The same shape as `PageHeader`, with the two things a detail page needs that a
- * list page does not: a row of status/type badges under the title, and a
- * monospaced identifier (the lookup key or id) so the record is quotable. Shared
- * so every entity's detail page opens the same way rather than each arranging a
- * title, a chip and a button row of its own.
- *
- * `actions` is the one primary control plus its overflow, kept to the right of
- * the title where a detail page's actions belong.
+ * Status and type belong in the subtitle (use `badges` for pills that sit on
+ * the subtitle line) and the Information tab, not beside the name.
+ * `subtitle` is the reference prop; `description` and `identifier` remain as
+ * aliases of `subtitle` and `id`.
  */
 export const DetailHeaderProvenance = provenance({
   source: 'composition',
-  composes: [],
-  note: 'Shared detail-page header: breadcrumb, title, badges, identifier, actions.',
+  composes: ['compositions/detail-kit'],
+  note: 'Reference detail header: icon tile, title, subtitle line, copyable id, actions.',
 })
 
 export interface DetailHeaderProps {
   title: string
-  /** Status and type chips, rendered in a row under the title. */
-  badges?: ReactNode
-  /** The lookup key or id, shown monospaced beside the badges. */
-  identifier?: string
+  /** Icon shown in the tile left of the title. */
+  icon?: ReactNode
+  /** One line under the title; use `Dot` between facts. */
+  subtitle?: ReactNode
+  /** Alias of `subtitle`. */
   description?: string
+  /** Status and type pills, leading the subtitle line. */
+  badges?: ReactNode
+  /** The record id, rendered as a copy button. */
+  id?: string
+  /** Alias of `id`. */
+  identifier?: string
   /** The primary action and any overflow menu. */
   actions?: ReactNode
   breadcrumb?: ReactNode
@@ -33,27 +38,43 @@ export interface DetailHeaderProps {
 
 export function DetailHeader({
   title,
-  badges,
-  identifier,
+  icon,
+  subtitle,
   description,
+  badges,
+  id,
+  identifier,
   actions,
   breadcrumb,
 }: DetailHeaderProps) {
+  const copyId = id ?? identifier
+  const line = subtitle ?? description
   return (
-    <header className="flex flex-col gap-3 px-6 pt-5 pb-4">
+    <header className="flex flex-col gap-3">
       {breadcrumb}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex min-w-0 flex-col gap-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-4">
+          {icon ? (
+            <span className="bg-muted/60 text-foreground/70 flex size-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-5">
+              {icon}
+            </span>
+          ) : null}
+          <div className="min-w-0 space-y-1">
             <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-            {badges}
-            {identifier ? (
-              <span className="truncate font-mono text-xs text-muted-foreground">{identifier}</span>
+            {line || badges ? (
+              <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-[13px]">
+                {badges}
+                {line}
+              </div>
             ) : null}
           </div>
-          {description ? <p className="text-xs font-normal text-muted-foreground">{description}</p> : null}
         </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+        {copyId || actions ? (
+          <div className="flex items-center gap-2">
+            {copyId ? <CopyId value={copyId} /> : null}
+            {actions}
+          </div>
+        ) : null}
       </div>
     </header>
   )

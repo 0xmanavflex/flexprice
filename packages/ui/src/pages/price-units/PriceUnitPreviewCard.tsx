@@ -1,4 +1,3 @@
-import { Card, CardContent } from '@ui/components/primitives/card'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -8,7 +7,7 @@ import { provenance } from '@ui/provenance'
  */
 export const PriceUnitPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/card'],
+  composes: [],
   note: 'Live summary of the price unit being drafted; fetches nothing.',
 })
 
@@ -35,8 +34,8 @@ export function PriceUnitPreviewCard({
       : null
 
   return (
-    <Card className="gap-0 p-0 shadow-xs">
-      <CardContent className="flex flex-col gap-3 p-4">
+    <aside aria-label="Price unit preview" className="bg-background rounded-xl border p-6">
+      <div className="flex flex-col gap-3">
         <p className="text-muted-foreground text-xs">How it will look</p>
         <div className="flex items-center gap-3">
           <span
@@ -59,7 +58,7 @@ export function PriceUnitPreviewCard({
             </p>
           )}
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </aside>
   )
 }

@@ -318,7 +318,7 @@ export function PlanForm({
           </FormSteps>
         </div>
         {isEdit ? null : (
-          <aside aria-label="Plan preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+          <div className="flex flex-col gap-4 lg:sticky lg:top-4">
             <PlanPreviewCard
               name={planDraftName}
               charges={charges}
@@ -337,7 +337,7 @@ export function PlanForm({
               )}
               credits={grants.map((g, i) => creditLine({ ...g, key: `${i}` }))}
             />
-          </aside>
+          </div>
         )}
       </div>
     </FormPage>
@@ -374,7 +374,7 @@ function StagedStep({
   return (
     <section aria-label={title} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h3 className="text-base font-semibold">{title}</h3>
+        <h3 className="text-sm font-medium">{title}</h3>
         <p className="text-muted-foreground text-sm">{description}</p>
       </div>
       {items.length === 0 ? (

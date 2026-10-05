@@ -89,13 +89,13 @@ export function AddChargeDialog({
                 value: PriceType.Fixed,
                 title: 'Fixed',
                 description: 'A flat fee billed at the start of each period.',
-                icon: <RepeatIcon aria-hidden className="size-4 text-sky-600" />,
+                icon: <RepeatIcon aria-hidden className="size-4 text-muted-foreground" />,
               },
               {
                 value: PriceType.Usage,
                 title: 'Usage',
                 description: 'Billed at the end of the period for what was used.',
-                icon: <GaugeIcon aria-hidden className="size-4 text-violet-600" />,
+                icon: <GaugeIcon aria-hidden className="size-4 text-muted-foreground" />,
               },
             ]}
           />

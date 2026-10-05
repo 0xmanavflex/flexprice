@@ -24,8 +24,8 @@ import { formatWhole } from './charts'
  */
 export const SegmentMeterProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/chart-14', 'ui/tooltip'],
-  note: 'chart-14 segmented meter, one per row: label, track, figure, and the block’s coloured delta.',
+  composes: ['ui/tooltip'],
+  note: 'chart-14 segmented meter, one per row: label, track, figure, and the block’s coloured delta. Lineage: @reui/chart-14.',
 })
 
 /** One row of the meter list. */
@@ -54,7 +54,7 @@ export interface SegmentMeterRow {
 
 export interface SegmentMeterProps {
   rows: SegmentMeterRow[]
-  /** Segments in a full track. Default 56, the block's. */
+  /** Segments in a full track. Default 48, the reference's. */
   segments?: number | undefined
   /** Formats values for the tooltip and the right-hand figure. */
   format?: ((value: number) => string) | undefined
@@ -73,12 +73,7 @@ function MeterDelta({ percent }: { percent: number }) {
   }).format(percent)}%`
 
   return (
-    <span
-      className={cn(
-        'text-xs font-medium tabular-nums',
-        positive ? 'text-success' : 'text-destructive',
-      )}
-    >
+    <span className={cn('text-xs tabular-nums', positive ? 'text-success' : 'text-destructive')}>
       {formatted}
     </span>
   )
@@ -104,14 +99,16 @@ export function MeterTrack({
   className?: string | undefined
 }) {
   return (
-    <span className={cn('flex h-7 w-full items-stretch justify-between', className)}>
+    <span
+      className={cn('flex h-6 w-full min-w-0 items-stretch justify-between gap-0.5', className)}
+    >
       {Array.from({ length: segments }, (_, index) => (
         <span
           key={index}
           aria-hidden="true"
           className={cn(
-            'h-full w-1 shrink-0 rounded-full',
-            index < filled ? 'bg-chart-1' : 'bg-muted',
+            'h-full max-w-1 min-w-0.5 flex-1 rounded-full',
+            index < filled ? 'bg-blue-600 dark:bg-blue-500' : 'bg-muted',
           )}
         />
       ))}
@@ -121,7 +118,7 @@ export function MeterTrack({
 
 export function SegmentMeter({
   rows,
-  segments = 56,
+  segments = 48,
   format = formatWhole,
   label,
   emptyMessage = 'Nothing to show for this period',
@@ -144,7 +141,7 @@ export function SegmentMeter({
   const peak = Math.max(...rows.map((row) => Math.max(row.value, 0)), 0)
 
   return (
-    <ul className={cn('flex flex-col gap-5', className)} aria-label={label}>
+    <ul className={cn('divide-border/50 flex flex-col divide-y', className)} aria-label={label}>
       {rows.map((row) => {
         const max = row.max ?? peak
         const filled = filledSegments(row.value, max, segments)
@@ -154,12 +151,14 @@ export function SegmentMeter({
         return (
           <li
             key={row.id}
-            className="grid grid-cols-[minmax(7rem,11rem)_minmax(0,1fr)_auto] items-center gap-x-4"
+            className="grid grid-cols-[minmax(0,11rem)_minmax(0,1fr)_auto] items-center gap-x-6 py-4"
           >
-            <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="truncate text-sm font-medium">{row.label}</span>
+            <div className="min-w-0">
+              <div className="truncate text-[13px] font-medium">{row.label}</div>
               {row.caption ? (
-                <span className="text-muted-foreground truncate font-mono text-xs">{row.caption}</span>
+                <div className="text-muted-foreground truncate font-mono text-[11px]">
+                  {row.caption}
+                </div>
               ) : null}
             </div>
 
@@ -181,7 +180,7 @@ export function SegmentMeter({
             </Tooltip>
 
             <div className="flex shrink-0 items-baseline gap-3">
-              <span className="text-sm font-medium tabular-nums">
+              <span className="text-[13px] whitespace-nowrap tabular-nums">
                 {row.display ?? format(row.value)}
               </span>
               {row.changePercent === undefined ? null : <MeterDelta percent={row.changePercent} />}

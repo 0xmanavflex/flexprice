@@ -45,14 +45,14 @@ export function Toolbar({
   actions,
 }: ToolbarProps) {
   return (
-    <div role="search" className="flex flex-wrap items-center gap-2">
+    <div role="search" className="flex flex-wrap items-center justify-between gap-3">
       <Input
         type="search"
         aria-label={searchLabel}
         placeholder={searchPlaceholder}
         value={search}
         onChange={(event) => onSearchChange(event.target.value)}
-        className="w-64"
+        className="h-9 w-72 max-w-full"
       />
 
       {filters}
@@ -61,17 +61,14 @@ export function Toolbar({
         <Button type="button" variant="ghost" size="sm" onClick={onClear}>
           Clear filters
           {/* The count is in the label, not only in a badge, so it is spoken. */}
-          <span className="sr-only">
-            {' '}
-            — {activeFilterCount} active
-          </span>
-          <span aria-hidden className="ml-1 text-muted-foreground">
+          <span className="sr-only"> — {activeFilterCount} active</span>
+          <span aria-hidden className="text-muted-foreground ml-1">
             ({activeFilterCount})
           </span>
         </Button>
       ) : null}
 
-      {actions ? <div className="ml-auto flex gap-2">{actions}</div> : null}
+      {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
     </div>
   )
 }

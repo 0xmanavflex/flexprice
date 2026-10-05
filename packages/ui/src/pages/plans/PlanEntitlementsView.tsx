@@ -1,17 +1,10 @@
 import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from 'lucide-react'
-import { EntityLink } from '../shared/cells'
+import { EmDash } from '../shared/cells'
 import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/primitives/table'
+import { Section } from '@ui/compositions/Section'
+import { SimpleTable } from '@ui/compositions/DetailKit'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
-import { PlanTabCard } from './PlanTabCard'
 
 export interface PlanEntitlementsViewProps {
   entitlements: Entitlement[]
@@ -59,7 +52,7 @@ function includedOf(e: Entitlement): string {
   return valueOf(e)
 }
 
-/** Entitlements card; the last column shows what happens past the value. */
+/** Entitlements section; the last column shows what happens past the value. */
 export function PlanEntitlementsView({
   entitlements,
   usagePrice,
@@ -68,94 +61,101 @@ export function PlanEntitlementsView({
   onDelete,
   onOpenFeature,
 }: PlanEntitlementsViewProps) {
-  const add = (
-    <Button type="button" size="sm" onClick={onAdd}>
-      <PlusIcon aria-hidden className="size-4" />
-      Add entitlement
-    </Button>
-  )
   return (
-    <PlanTabCard
+    <Section
       title="Entitlements"
       description="What subscribers get: feature access and included allowances"
-      action={entitlements.length > 0 ? add : undefined}
+      flush
+      action={
+        entitlements.length > 0 ? (
+          <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+            <PlusIcon aria-hidden />
+            Add entitlement
+          </Button>
+        ) : undefined
+      }
     >
       {entitlements.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 border-t px-6 py-12 text-center">
-          <p className="text-muted-foreground text-sm">
+        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+          <p className="text-muted-foreground text-[13px]">
             No entitlements yet. Add the features this plan includes.
           </p>
-          {add}
+          <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+            <PlusIcon aria-hidden />
+            Add entitlement
+          </Button>
         </div>
       ) : (
-        <Table>
-          <TableHeader className="bg-muted/40">
-            <TableRow>
-              <TableHead className="px-6 text-xs tracking-wide uppercase">Feature</TableHead>
-              <TableHead className="text-xs tracking-wide uppercase">Type</TableHead>
-              <TableHead className="text-xs tracking-wide uppercase">Included</TableHead>
-              <TableHead className="text-xs tracking-wide uppercase">Usage resets</TableHead>
-              <TableHead className="text-xs tracking-wide uppercase">
-                Usage beyond the value
-              </TableHead>
-              <TableHead className="w-12 pr-6">
-                <span className="sr-only">Actions</span>
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entitlements.map((e) => {
-              const price =
-                e.featureType === FeatureType.Metered && e.usageLimit != null ? usagePrice(e) : null
-              const Icon = TYPE_ICON[e.featureType]
-              const label = e.featureName ?? e.featureId
-              return (
-                <TableRow key={e.id} className="h-14">
-                  <TableCell className="px-6">
-                    <span className="flex items-center gap-2.5">
-                      <Icon aria-hidden className="text-muted-foreground size-4" />
-                      {onOpenFeature ? (
-                        <EntityLink label={label} onOpen={() => onOpenFeature(e.featureId)} />
-                      ) : (
-                        label
-                      )}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {TYPE_LABEL[e.featureType]}
-                  </TableCell>
-                  <TableCell className="tabular-nums">{includedOf(e)}</TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {e.featureType !== FeatureType.Metered
-                      ? '—'
-                      : e.usageResetPeriod
-                        ? USAGE_RESET_PERIOD_LABEL[e.usageResetPeriod]
-                        : 'Every billing period'}
-                  </TableCell>
-                  <TableCell className="text-[13px]">
-                    {e.featureType !== FeatureType.Metered || e.usageLimit == null ? (
-                      <span className="text-muted-foreground">—</span>
-                    ) : price ? (
-                      <>
-                        Billed <span className="text-muted-foreground">{price}</span>
-                      </>
-                    ) : (
-                      <span className="text-muted-foreground">No usage price on this plan</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="pr-6">
-                    <RowActionsMenu
-                      label={e.featureName ?? 'entitlement'}
-                      onEdit={() => onEdit(e)}
-                      onRemove={() => onDelete(e)}
-                    />
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
+        <SimpleTable
+          rows={entitlements}
+          {...(onOpenFeature ? { onRowClick: (e: Entitlement) => onOpenFeature(e.featureId) } : {})}
+          columns={[
+            {
+              key: 'feature',
+              header: 'Feature',
+              cell: (e) => {
+                const Icon = TYPE_ICON[e.featureType]
+                return (
+                  <span className="flex items-center gap-2.5">
+                    <Icon aria-hidden className="text-muted-foreground size-4" />
+                    <span className="font-medium">{e.featureName ?? e.featureId}</span>
+                  </span>
+                )
+              },
+            },
+            {
+              key: 'type',
+              header: 'Type',
+              cell: (e) => <span className="text-muted-foreground">{TYPE_LABEL[e.featureType]}</span>,
+            },
+            { key: 'included', header: 'Included', cell: (e) => includedOf(e) },
+            {
+              key: 'reset',
+              header: 'Usage resets',
+              cell: (e) => (
+                <span className="text-muted-foreground">
+                  {e.featureType !== FeatureType.Metered
+                    ? '—'
+                    : e.usageResetPeriod
+                      ? USAGE_RESET_PERIOD_LABEL[e.usageResetPeriod]
+                      : 'Every billing period'}
+                </span>
+              ),
+            },
+            {
+              key: 'beyond',
+              header: 'Usage beyond the value',
+              cell: (e) => {
+                if (e.featureType !== FeatureType.Metered || e.usageLimit == null) return <EmDash />
+                const price = usagePrice(e)
+                return price ? (
+                  <span className="text-[13px]">
+                    Billed <span className="text-muted-foreground">{price}</span>
+                  </span>
+                ) : (
+                  <span className="text-muted-foreground text-[13px]">
+                    No usage price on this plan
+                  </span>
+                )
+              },
+            },
+            {
+              key: 'actions',
+              header: '',
+              className: 'w-12',
+              cell: (e) => (
+                <div onClick={(event) => event.stopPropagation()}>
+                  <RowActionsMenu
+                    label={e.featureName ?? 'entitlement'}
+                    onEdit={() => onEdit(e)}
+                    onRemove={() => onDelete(e)}
+                  />
+                </div>
+              ),
+            },
+          ]}
+        />
       )}
-    </PlanTabCard>
+    </Section>
   )
 }

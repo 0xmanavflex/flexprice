@@ -1,34 +1,34 @@
 import {
+  BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
   BillingModel,
   type BillingPeriod,
   type Charge,
   InvoiceCadence,
   PriceType,
+  TierMode,
 } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
+import { PlusIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/components/primitives/table'
-import { GaugeIcon, RepeatIcon } from 'lucide-react'
-import { EmptyState } from '@ui/compositions/EmptyState'
+import { Section } from '@ui/compositions/Section'
+import { SimpleTable } from '@ui/compositions/DetailKit'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 
 /**
- * A plan's charges, as a read table.
+ * A charges section: what an add-on or cost sheet bills, at a glance.
  *
- * The Overview tab's list: what the plan bills, at a glance. Charge type and
- * timing read together the way V1's price table shows them — a fixed charge as
- * "Recurring · Advance/Arrears", a usage charge as "Usage-based" — because the
- * two facts a person scans for are *is it recurring* and *when is it billed*.
+ * The reference add-on "Charges" section: a flush `Section` holding a
+ * `SimpleTable` of charge (with a fixed/usage dot), billing model, how it is
+ * billed (period, timing) and price.
  *
  * Presentational: it takes `Charge[]` and reports intent. Adding and terminating
  * are the page's to wire, so this can render in a story without a network.
  */
 export const ChargeTableProvenance = provenance({
   source: 'composition',
-  composes: ['ui/table', '@reui/badge', 'ui/button'],
-  note: 'Read-only charges table for the plan Overview tab.',
+  composes: ['compositions/section', 'compositions/detail-kit', 'ui/button'],
+  note: 'Flush charges section for add-on and cost-sheet detail pages.',
 })
 
 export interface ChargeTableProps {
@@ -37,6 +37,10 @@ export interface ChargeTableProps {
   onEdit?: (charge: Charge) => void
   onTerminate?: (charge: Charge) => void
   locale?: string
+  /** Section heading; defaults to "Charges". */
+  title?: string
+  /** Section sub-heading under the title. */
+  description?: string
   /**
    * The sentence shown when there are no charges, in the caller's own noun.
    *
@@ -65,110 +69,118 @@ function valueOf(charge: Charge): string {
   }
 }
 
+/** "Flat fee", "Volume tiered", "Slab tiered", "Package". */
+function modelLabel(charge: Charge): string {
+  if (charge.billingModel === BillingModel.Tiered) {
+    return charge.tierMode === TierMode.Slab ? 'Slab tiered' : 'Volume tiered'
+  }
+  return BILLING_MODEL_LABEL[charge.billingModel]
+}
+
+/** "Monthly, in advance" / "Monthly, in arrears". */
+function billedLabel(charge: Charge): string {
+  const period = BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? charge.billingPeriod
+  return `${period}, ${charge.invoiceCadence === InvoiceCadence.Advance ? 'in advance' : 'in arrears'}`
+}
+
+/** Fixed and usage charges, told apart by a small neutral dot. */
+function KindDot({ usage }: { usage: boolean }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={usage ? 'bg-muted-foreground/50 size-1.5 rounded-full' : 'bg-foreground/60 size-1.5 rounded-full'}
+    />
+  )
+}
+
 export function ChargeTable({
   charges,
   onAdd,
   onEdit,
   onTerminate,
   emptyDescription,
+  title = 'Charges',
+  description = 'What it bills, and when',
 }: ChargeTableProps) {
   const hasActions = Boolean(onEdit || onTerminate)
+  const addButton = onAdd ? (
+    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+      <PlusIcon aria-hidden />
+      Add charges
+    </Button>
+  ) : null
+
   if (charges.length === 0) {
     // The instruction is only honest where the action exists: a surface with no
     // add flow is told what the state means, not what to do about it.
-    const description =
+    const emptyText =
       emptyDescription ??
       (onAdd
         ? 'Nothing is billed until there is a charge. Add a fixed base or a usage charge to price it.'
         : 'Nothing is billed until there is a charge.')
 
     return (
-      <EmptyState
-        title="No charges yet"
-        description={description}
-        {...(onAdd
-          ? {
-              action: (
-                <Button type="button" onClick={onAdd}>
-                  Add charges
-                </Button>
-              ),
-            }
-          : {})}
-      />
+      <Section title={title} description={description} flush>
+        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+          <p className="text-sm font-medium">No charges yet</p>
+          <p className="text-muted-foreground max-w-md text-[13px]">{emptyText}</p>
+          {addButton}
+        </div>
+      </Section>
     )
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      {onAdd ? (
-        <div className="flex justify-end">
-          <Button type="button" size="sm" onClick={onAdd}>
-            Add charges
-          </Button>
-        </div>
-      ) : null}
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Charge</TableHead>
-              <TableHead>Type &amp; timing</TableHead>
-              <TableHead>Billing period</TableHead>
-              <TableHead>Value</TableHead>
-              {hasActions ? (
-                <TableHead className="w-10">
-                  <span className="sr-only">Actions</span>
-                </TableHead>
-              ) : null}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {charges.map((charge) => (
-              <TableRow key={charge.id}>
-                <TableCell>
+    <Section title={title} description={description} flush {...(addButton ? { action: addButton } : {})}>
+      <SimpleTable
+        rows={charges}
+        columns={[
+          {
+            key: 'name',
+            header: 'Charge',
+            cell: (charge) => (
+              <span className="flex items-center gap-2.5">
+                <KindDot usage={charge.type === PriceType.Usage} />
+                <span className="font-medium">
                   {charge.displayName || charge.meterName || 'Charge'}
-                </TableCell>
-                <TableCell>
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {charge.type === PriceType.Usage ? (
-                      <Badge variant="secondary">
-                        <GaugeIcon aria-hidden className="size-3" />
-                        Usage-based
-                      </Badge>
-                    ) : (
-                      <>
-                        <Badge variant="secondary">
-                          <RepeatIcon aria-hidden className="size-3" />
-                          Recurring
-                        </Badge>
-                        <Badge variant="outline">
-                          {charge.invoiceCadence === InvoiceCadence.Advance ? 'Advance' : 'Arrears'}
-                        </Badge>
-                      </>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell className="text-muted-foreground">
-                  {BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ??
-                    charge.billingPeriod}
-                </TableCell>
-                <TableCell className="tabular-nums">{valueOf(charge)}</TableCell>
-                {hasActions ? (
-                  <TableCell>
+                </span>
+              </span>
+            ),
+          },
+          {
+            key: 'model',
+            header: 'Billing model',
+            cell: (charge) => <span className="text-muted-foreground">{modelLabel(charge)}</span>,
+          },
+          {
+            key: 'billed',
+            header: 'Billed',
+            cell: (charge) => <span className="text-muted-foreground">{billedLabel(charge)}</span>,
+          },
+          {
+            key: 'price',
+            header: 'Price',
+            cell: (charge) => <span className="tabular-nums">{valueOf(charge)}</span>,
+          },
+          ...(hasActions
+            ? [
+                {
+                  key: 'actions',
+                  header: '',
+                  className: 'w-12',
+                  cell: (charge: Charge) => (
                     <RowActionsMenu
                       label={charge.displayName || 'charge'}
                       onEdit={onEdit ? () => onEdit(charge) : undefined}
                       onRemove={onTerminate ? () => onTerminate(charge) : undefined}
                       removeLabel="Terminate"
                     />
-                  </TableCell>
-                ) : null}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-    </div>
+                  ),
+                },
+              ]
+            : []),
+        ]}
+      />
+    </Section>
   )
 }

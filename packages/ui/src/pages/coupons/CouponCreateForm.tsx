@@ -298,7 +298,7 @@ export function CouponCreateForm({
     >
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
         <div className="min-w-0">{formEl}</div>
-        <aside aria-label="Coupon preview" className="flex flex-col gap-4 lg:sticky lg:top-4">
+        <div className="flex flex-col gap-4 lg:sticky lg:top-4">
           <CouponPreviewCard
             name={form.watch('name')}
             code={form.watch('couponCode') ?? ''}
@@ -312,7 +312,7 @@ export function CouponCreateForm({
             redeemAfter={form.watch('redeemAfter')}
             redeemBefore={form.watch('redeemBefore')}
           />
-        </aside>
+        </div>
       </div>
     </FormPage>
   )

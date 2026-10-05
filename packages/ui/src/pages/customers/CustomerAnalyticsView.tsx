@@ -1,23 +1,20 @@
 import { useState } from 'react'
+import { CalendarIcon, ChevronDownIcon, LayersIcon } from 'lucide-react'
+import { Button } from '@ui/components/primitives/button'
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@ui/components/primitives/dropdown-menu'
 import { Input } from '@ui/components/primitives/input'
+import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { Switch } from '@ui/components/primitives/switch'
-import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
-import {
-  ChartContainer,
-  ChartTooltip,
-  ChartTooltipContent,
-  type ChartConfig,
-} from '@ui/components/primitives/chart'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@ui/components/primitives/select'
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@ui/components/primitives/table'
-import { cn } from '@ui/lib/cn'
-import { ChartBox } from '../../compositions/ChartBox'
+import { SegmentMeter, SimpleTable } from '@ui/compositions/DetailKit'
+import { Section } from '@ui/compositions/Section'
+import { MetricChart } from '../shared/charts'
 
 export interface FeatureAnalytics {
   id: string
@@ -46,6 +43,51 @@ export interface CustomerAnalyticsViewProps {
 const usd = (n: number) =>
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
 
+const Muted = ({ children }: { children: React.ReactNode }) => (
+  <span className="text-muted-foreground">{children}</span>
+)
+
+/** Demo daily series, shaped from the feature's id so each tab differs. */
+function seriesFor(feature: FeatureAnalytics) {
+  const seed = feature.id.charCodeAt(feature.id.length - 1)
+  return Array.from({ length: 14 }, (_, i) => ({
+    label: `Sep ${i + 1}`,
+    value: Math.round(40 + 30 * Math.sin((i + seed) / 2) + i * 4),
+  }))
+}
+
+/** A date range end: shows the date, edits it in a popover. */
+function DateButton({
+  label,
+  value,
+  onChange,
+  icon,
+}: {
+  label: string
+  value: string
+  onChange: (value: string) => void
+  icon?: boolean
+}) {
+  return (
+    <Popover>
+      <PopoverTrigger render={<Button variant="outline" size="sm" className="h-8 px-3" />}>
+        {icon ? <CalendarIcon aria-hidden="true" /> : null}
+        {label} {value}
+        <ChevronDownIcon className="opacity-50" aria-hidden="true" />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-48 p-2">
+        <Input
+          type="date"
+          aria-label={label}
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="h-8"
+        />
+      </PopoverContent>
+    </Popover>
+  )
+}
+
 export function CustomerAnalyticsView({
   features,
   query,
@@ -58,210 +100,142 @@ export function CustomerAnalyticsView({
   })
   const current = query ?? local
   const change = (next: AnalyticsQuery) => (onQueryChange ? onQueryChange(next) : setLocal(next))
-  const [featureId, setFeatureId] = useState('all')
-  const visible = featureId === 'all' ? features : features.filter((f) => f.id === featureId)
+
+  const [selected, setSelected] = useState<string[] | null>(null)
+  const chosen = selected ?? features.map((f) => f.id)
+  const visible = features.filter((f) => chosen.includes(f.id))
   const revenue = visible.reduce((s, f) => s + f.revenue, 0)
   const cost = visible.reduce((s, f) => s + f.cost, 0)
   const margin = revenue - cost
   const pct = revenue > 0 ? (margin / revenue) * 100 : 0
-  const [chartFeature, setChartFeature] = useState(features[0]?.id ?? '')
-  const series = seriesFor(features.find((f) => f.id === chartFeature) ?? features[0])
+  const [activeTab, setActiveTab] = useState('')
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center gap-3">
-        <Select value={featureId} onValueChange={(value) => value !== null && setFeatureId(value)}>
-          <SelectTrigger className="h-9 w-44" aria-label="Features">
-            <SelectValue>
-              {(value) =>
-                value === 'all'
-                  ? `${features.length} features`
-                  : (features.find((f) => f.id === value)?.name ?? value)
-              }
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent align="start">
-            <SelectItem value="all">{features.length} features</SelectItem>
-            {features.map((f) => (
-              <SelectItem key={f.id} value={f.id}>
-                {f.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          From
-          <Input
-            type="date"
-            value={current.from}
-            onChange={(e) => change({ ...current, from: e.target.value })}
-            className="h-9 w-40"
-          />
-        </label>
-        <label className="text-muted-foreground flex items-center gap-2 text-xs">
-          To
-          <Input
-            type="date"
-            value={current.to}
-            onChange={(e) => change({ ...current, to: e.target.value })}
-            className="h-9 w-40"
-          />
-        </label>
-        <label className="ml-auto flex items-center gap-2 text-sm">
+    <div className="flex flex-col gap-5">
+      <div className="flex flex-wrap items-center gap-2">
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            render={<Button variant="outline" size="sm" className="h-8 px-3" aria-label="Features" />}
+          >
+            <LayersIcon aria-hidden="true" />
+            {chosen.length === features.length ? 'All features' : `${chosen.length} features`}
+            <ChevronDownIcon className="opacity-50" aria-hidden="true" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="w-56">
+            <DropdownMenuGroup>
+              <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
+                Metered features
+              </DropdownMenuLabel>
+              {features.map((f) => (
+                <DropdownMenuCheckboxItem
+                  key={f.id}
+                  closeOnClick={false}
+                  checked={chosen.includes(f.id)}
+                  onCheckedChange={(on) =>
+                    setSelected(
+                      on
+                        ? [...chosen, f.id]
+                        : chosen.length > 1
+                          ? chosen.filter((id) => id !== f.id)
+                          : chosen,
+                    )
+                  }
+                >
+                  {f.name}
+                </DropdownMenuCheckboxItem>
+              ))}
+            </DropdownMenuGroup>
+          </DropdownMenuContent>
+        </DropdownMenu>
+        <DateButton
+          icon
+          label="From"
+          value={current.from}
+          onChange={(from) => change({ ...current, from })}
+        />
+        <DateButton label="To" value={current.to} onChange={(to) => change({ ...current, to })} />
+        <label className="text-muted-foreground ml-auto flex items-center gap-2 text-[13px]">
+          Include children
           <Switch
             checked={current.includeChildren}
             onCheckedChange={(includeChildren) => change({ ...current, includeChildren })}
             aria-label="Include children"
           />
-          Include children
         </label>
       </div>
 
-      <div className="bg-card overflow-hidden rounded-xl border">
-        <dl className="grid grid-cols-2 divide-x lg:grid-cols-4">
-          {[
-            ['Revenue', usd(revenue)],
-            ['Cost', usd(cost)],
-            ['Margin', usd(margin)],
-            ['Margin %', `${pct.toFixed(0)}%`],
-          ].map(([label, value]) => (
-            <div key={label} className="flex flex-col gap-1.5 p-6">
-              <dt className="text-muted-foreground text-xs">{label}</dt>
-              <dd className="text-xl font-medium tabular-nums">{value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
+      <dl className="bg-background grid grid-cols-2 divide-x rounded-xl border sm:grid-cols-4">
+        {[
+          ['Revenue', usd(revenue)],
+          ['Cost', usd(cost)],
+          ['Margin', usd(margin)],
+          ['Margin %', `${pct.toFixed(0)}%`],
+        ].map(([label, value]) => (
+          <div key={label} className="px-6 py-4">
+            <dt className="text-muted-foreground text-xs">{label}</dt>
+            <dd className="mt-1 text-lg font-medium tabular-nums">{value}</dd>
+          </div>
+        ))}
+      </dl>
 
-      <ChartBox innerClassName="p-0 overflow-hidden">
-        <div role="tablist" aria-label="Feature" className="flex divide-x border-b">
-          {features.map((f) => {
-            const active = f.id === chartFeature
-            return (
-              <button
-                key={f.id}
-                type="button"
-                role="tab"
-                aria-selected={active}
-                onClick={() => setChartFeature(f.id)}
-                className={cn(
-                  'flex flex-1 flex-col gap-1 border-b-2 px-5 py-4 text-left text-xs',
-                  active ? 'border-foreground' : 'text-muted-foreground border-transparent',
-                )}
-              >
-                <span>{f.name}</span>
-                <span className="text-foreground text-base font-medium tabular-nums">
-                  {f.short ?? f.usage}{' '}
-                  {f.unit ? (
-                    <span className="text-muted-foreground text-xs font-normal">{f.unit}</span>
-                  ) : null}
+      {visible.length > 0 ? (
+        <MetricChart
+          tabs={visible.map((f) => ({
+            id: f.id,
+            label: f.name,
+            value: (
+              <>
+                {f.short ?? f.usage}
+                {f.unit ? <span className="text-muted-foreground text-xs"> {f.unit}</span> : null}
+              </>
+            ),
+            points: seriesFor(f),
+          }))}
+          activeTab={visible.some((f) => f.id === activeTab) ? activeTab : (visible[0]?.id ?? '')}
+          onTabChange={setActiveTab}
+          caption={`${current.from} to ${current.to}`}
+        />
+      ) : null}
+
+      <Section
+        title="Usage breakdown"
+        description={`${current.from} to ${current.to}${current.includeChildren ? ', including child customers' : ''}`}
+        flush
+      >
+        <SimpleTable
+          rows={visible}
+          getRowId={(f) => f.id}
+          columns={[
+            { key: 'name', header: 'Feature', cell: (f) => <span className="font-medium">{f.name}</span> },
+            {
+              key: 'usage',
+              header: 'Usage',
+              cell: (f) => (
+                <span className="tabular-nums">
+                  {f.usage} {f.unit ? <Muted>{f.unit}</Muted> : null}
                 </span>
-              </button>
-            )
-          })}
-        </div>
-        <div className="p-5">
-          <p className="text-muted-foreground mb-2 flex justify-end gap-3 text-xs tabular-nums">
-            <span>
-              Min <span className="text-foreground">{fmtK(Math.min(...series.map((d) => d.usage)))}</span>
-            </span>
-            <span>
-              Max <span className="text-foreground">{fmtK(Math.max(...series.map((d) => d.usage)))}</span>
-            </span>
-          </p>
-          <ChartContainer config={CHART_CONFIG} className="h-64 w-full">
-            <AreaChart data={series} margin={{ left: 0, right: 8 }}>
-              <CartesianGrid vertical={false} strokeDasharray="3 3" />
-              <XAxis dataKey="day" tickLine={false} axisLine={false} tickMargin={8} />
-              <YAxis hide />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Area
-                dataKey="usage"
-                type="monotone"
-                stroke="var(--color-usage)"
-                fill="var(--color-usage)"
-                fillOpacity={0.08}
-                strokeWidth={1.5}
-              />
-            </AreaChart>
-          </ChartContainer>
-        </div>
-      </ChartBox>
-
-      <section aria-labelledby="usage-breakdown" className="bg-card overflow-hidden rounded-xl border">
-        <header className="flex flex-col gap-1 p-6">
-          <h2 id="usage-breakdown" className="text-sm font-medium">
-            Usage breakdown
-          </h2>
-          <p className="text-muted-foreground text-xs">
-            {current.from} to {current.to}
-          </p>
-        </header>
-        <Table>
-          <TableHeader>
-            <TableRow className="bg-muted/50 hover:bg-muted/50">
-              {['Feature', 'Usage', 'Revenue', 'Cost', 'Share of revenue'].map((h, i) => (
-                <TableHead
-                  key={h}
-                  className={cn(
-                    'text-muted-foreground h-10 text-[11px] font-medium tracking-[0.08em] uppercase',
-                    i === 0 && 'pl-6',
-                  )}
-                >
-                  {h}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visible.map((f) => {
-              const share = revenue > 0 ? (f.revenue / revenue) * 100 : 0
-              const ticks = Math.round((share / 100) * 24)
-              return (
-                <TableRow key={f.id} className="h-14 tabular-nums">
-                  <TableCell className="pl-6 font-medium">{f.name}</TableCell>
-                  <TableCell>
-                    {f.usage} <span className="text-muted-foreground">{f.unit}</span>
-                  </TableCell>
-                  <TableCell>{usd(f.revenue)}</TableCell>
-                  <TableCell className="text-muted-foreground">{usd(f.cost)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-3">
-                      <span aria-hidden className="flex h-4 w-40 items-stretch gap-[2px]">
-                        {Array.from({ length: 24 }, (_, i) => (
-                          <span
-                            key={i}
-                            className={cn(
-                              'flex-1 rounded-full',
-                              i < ticks ? 'bg-primary' : 'bg-muted-foreground/15',
-                            )}
-                          />
-                        ))}
-                      </span>
-                      <span className="text-muted-foreground text-xs">{share.toFixed(0)}%</span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )
-            })}
-          </TableBody>
-        </Table>
-      </section>
+              ),
+            },
+            { key: 'revenue', header: 'Revenue', cell: (f) => <span className="tabular-nums">{usd(f.revenue)}</span> },
+            { key: 'cost', header: 'Cost', cell: (f) => <Muted>{usd(f.cost)}</Muted> },
+            {
+              key: 'share',
+              header: 'Share of revenue',
+              cell: (f) => {
+                const share = revenue > 0 ? f.revenue / revenue : 0
+                return (
+                  <span className="flex items-center gap-3">
+                    <SegmentMeter value={share} segments={24} className="h-4 w-40" />
+                    <Muted>{Math.round(share * 100)}%</Muted>
+                  </span>
+                )
+              },
+            },
+          ]}
+        />
+      </Section>
     </div>
   )
-}
-
-const fmtK = (n: number) => (n >= 1000 ? `${(n / 1000).toFixed(1)}K` : String(n))
-
-const CHART_CONFIG = { usage: { label: 'Usage', color: 'var(--chart-1)' } } satisfies ChartConfig
-
-/** Demo daily series, shaped from the feature's id so each tab differs. */
-function seriesFor(feature: FeatureAnalytics | undefined) {
-  const seed = (feature?.id ?? 'x').charCodeAt(feature ? feature.id.length - 1 : 0)
-  return Array.from({ length: 14 }, (_, i) => ({
-    day: `Sep ${i + 1}`,
-    usage: Math.round(40 + 30 * Math.sin((i + seed) / 2) + i * 4),
-  }))
 }
 
 export const DEMO_FEATURE_ANALYTICS: FeatureAnalytics[] = [

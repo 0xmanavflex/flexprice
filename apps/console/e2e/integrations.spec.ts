@@ -18,9 +18,9 @@ test.describe.skip('integrations', () => {
   test('shows the catalogue with connection status', async ({ page }) => {
     await page.goto('/integrations')
 
-    await expect(page.getByRole('heading', { name: 'Integrations', level: 1 })).toBeVisible()
-    await expect(page.getByTestId('integration-stripe')).toContainText('Connected')
-    await expect(page.getByTestId('integration-razorpay')).toContainText('Not connected')
+    await expect(page.getByRole('heading', { name: 'Available', level: 2 })).toBeVisible()
+    await expect(page.getByTestId('integration-stripe')).toContainText('Disconnect')
+    await expect(page.getByTestId('integration-razorpay')).toContainText('Connect')
   })
 
   test('links a provider to its setup guide', async ({ page }) => {

@@ -75,7 +75,8 @@ export function SortMenu<T extends string>({
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="icon"
+              className="size-9"
               // The current sort is in the name, so it does not need to be read
               // off the screen to be known.
               aria-label={`Sort by ${current?.label ?? field}, ${
@@ -85,13 +86,12 @@ export function SortMenu<T extends string>({
           }
         >
           <ArrowUpDownIcon aria-hidden className="size-4" />
-          Sort
         </DropdownMenuTrigger>
       )}
 
-      <DropdownMenuContent align={align} sideOffset={8} className="min-w-52">
+      <DropdownMenuContent align={align} className="w-52">
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="px-2.5 py-1.5 text-xs font-normal text-muted-foreground">
+          <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
             Sort by
           </DropdownMenuLabel>
           <DropdownMenuRadioGroup
@@ -99,11 +99,7 @@ export function SortMenu<T extends string>({
             onValueChange={(value) => onChange(value as T, direction)}
           >
             {options.map((option) => (
-              <DropdownMenuRadioItem
-                key={option.value}
-                value={option.value}
-                className="gap-2 px-2.5 py-2"
-              >
+              <DropdownMenuRadioItem key={option.value} value={option.value}>
                 {option.label}
               </DropdownMenuRadioItem>
             ))}
@@ -117,11 +113,11 @@ export function SortMenu<T extends string>({
             value={direction}
             onValueChange={(value) => onChange(field, value as 'asc' | 'desc')}
           >
-            <DropdownMenuRadioItem value="asc" className="gap-2 px-2.5 py-2">
+            <DropdownMenuRadioItem value="asc">
               <ArrowUpIcon aria-hidden className="size-4" />
               Ascending
             </DropdownMenuRadioItem>
-            <DropdownMenuRadioItem value="desc" className="gap-2 px-2.5 py-2">
+            <DropdownMenuRadioItem value="desc">
               <ArrowDownIcon aria-hidden className="size-4" />
               Descending
             </DropdownMenuRadioItem>

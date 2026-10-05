@@ -1,15 +1,10 @@
 import type { ReactNode } from 'react'
+import { CalendarIcon } from 'lucide-react'
 import type { Money as MoneyValue } from '@fp/domain'
-import { ChartBox } from '@ui/compositions/ChartBox'
-import { Section } from '@ui/compositions/Section'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/primitives/table'
+import { Button } from '@ui/components/primitives/button'
+import { SimpleTable } from '@ui/compositions/DetailKit'
+import type { SimpleColumn } from '@ui/compositions/DetailKit'
+import { Panel } from '@ui/compositions/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ArcGauge } from '../shared/ArcGauge'
@@ -63,8 +58,7 @@ export const RevenueDashboardProvenance = provenance({
     'pages/shared/ArcGauge',
     'pages/shared/Money',
     'compositions/Section',
-    'compositions/ChartBox',
-    'ui/table',
+    'compositions/DetailKit',
   ],
   note: 'Revenue: metered volume over time, the usage mix by feature, collections by invoice state, and gross margin shown as unavailable. Every figure is API-sourced or explicitly absent.',
 })
@@ -220,16 +214,50 @@ function Unavailable({ what, className }: { what: string; className?: string }) 
 /**
  * A panel's figure when the panel has nothing to show.
  *
- * The em-dash is deliberately the same size the real figure would be, so an
- * absent number reads as absent rather than as a layout that collapsed.
+ * The em-dash is the size the real figure would be (`text-4xl`), so an absent
+ * number reads as absent rather than as a layout that collapsed.
  */
 function AbsentFigure({ caption }: { caption: string }) {
   return (
     <div className="flex flex-col items-center gap-1 py-8 text-center">
-      <span aria-hidden className="text-muted-foreground text-4xl leading-none font-semibold">
+      <span aria-hidden className="text-muted-foreground text-4xl leading-none font-medium">
         {NOTHING}
       </span>
       <Unavailable what={caption} className="max-w-[34ch] text-balance" />
+    </div>
+  )
+}
+
+/** A header action on a panel: the reference's outline `sm` button. */
+function PanelButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+  return (
+    <Button size="sm" variant="outline" onClick={onClick}>
+      {children}
+    </Button>
+  )
+}
+
+/* ---- 0. The range -------------------------------------------------------- */
+
+/**
+ * The reference's header row. Its "This quarter" and "USD" buttons open menus;
+ * here the window and currency are fixed by the page, so the range is shown in
+ * the same outline button but is not interactive. A control that opens nothing
+ * would be a dead one.
+ */
+function RangeRow({ rangeLabel }: { rangeLabel: string }) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="pointer-events-none h-8 px-3"
+        tabIndex={-1}
+        aria-label={`Range: ${rangeLabel}`}
+      >
+        <CalendarIcon aria-hidden="true" />
+        {rangeLabel.charAt(0).toUpperCase() + rangeLabel.slice(1)}
+      </Button>
     </div>
   )
 }
@@ -297,29 +325,35 @@ function MetricPanel({
   onGetStarted: () => void
   onSeePlans: () => void
 }) {
-  if (chart.status === 'unavailable') {
-    return (
-      <Section
-        title="Metered volume"
-        description={`Usage and billing activity, ${rangeLabel}.`}
-        className="min-h-[19rem] justify-center"
-      >
-        <AbsentFigure caption="Usage analytics could not be loaded for this window." />
-      </Section>
-    )
-  }
-
-  if (chart.status === 'empty' || chart.status === 'loading') {
+  if (chart.status !== 'ready') {
     const placeholder: MetricTab[] = [
       { id: 'placeholder', label: 'Metered usage', value: NOTHING, points: PLACEHOLDER_POINTS },
     ]
+    const unavailable = chart.status === 'unavailable'
+    const loading = chart.status === 'loading'
 
     return (
       <BlurredEmpty
-        title="No revenue yet"
-        description="Price a plan and send your first usage events — this chart then plots the volume behind every invoice."
-        action={{ label: 'Create a plan', onClick: onSeePlans }}
-        secondaryAction={{ label: 'Add a feature', onClick: onGetStarted }}
+        title={
+          unavailable
+            ? 'Usage analytics unavailable'
+            : loading
+              ? 'Loading revenue'
+              : 'No revenue yet'
+        }
+        description={
+          unavailable
+            ? 'Usage analytics could not be loaded for this window. Try again in a moment.'
+            : loading
+              ? 'Fetching usage analytics for this window.'
+              : 'Price a plan and send your first usage events — this chart then plots the volume behind every invoice.'
+        }
+        action={
+          chart.status === 'empty' ? { label: 'Create a plan', onClick: onSeePlans } : undefined
+        }
+        secondaryAction={
+          chart.status === 'empty' ? { label: 'Add a feature', onClick: onGetStarted } : undefined
+        }
       >
         <MetricChart
           tabs={placeholder}
@@ -363,50 +397,42 @@ function MixPanel({
   mix,
   rangeLabel,
   onViewFeatures,
-  className,
 }: {
   mix: RevenueDashboardProps['mix']
   rangeLabel: string
   onViewFeatures: () => void
-  className?: string | undefined
 }) {
   return (
-    <ChartBox
+    <Panel
       title="Revenue mix"
       description={`Metered events by feature, ${rangeLabel}`}
-      {...(className !== undefined ? { className } : {})}
-      innerClassName="flex flex-1 flex-col gap-4"
+      action={<PanelButton onClick={onViewFeatures}>All features</PanelButton>}
     >
-      {mix.status === 'ready' && mix.slices.length > 0 ? (
-        <HalfDonut
-          /*
-           * Categorical tones in fixed order, except the folded tail: a
-           * remainder is not a category, so it takes `neutral` — the tone
-           * `charts.tsx` reserves for exactly that — rather than borrowing a
-           * series slot and reading as one more feature.
-           */
-          slices={mix.slices.map((slice, index) => ({
-            ...slice,
-            tone: slice.id === 'other' ? ('neutral' as const) : seriesTone(index),
-          }))}
-          centerLabel="Events"
-          centerValue={compact.format(mix.total)}
-          format={(value) => compact.format(value)}
-          label={`Metered events by feature, ${rangeLabel}`}
-        />
-      ) : mix.status === 'unavailable' ? (
-        <AbsentFigure caption="Usage analytics could not be loaded for this window." />
-      ) : (
-        <AbsentFigure caption={`No metered events were ingested in the ${rangeLabel}.`} />
-      )}
-      <button
-        type="button"
-        onClick={onViewFeatures}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded-sm text-xs underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
-      >
-        All features
-      </button>
-    </ChartBox>
+      <div className="flex flex-1 flex-col justify-center p-6">
+        {mix.status === 'ready' && mix.slices.length > 0 ? (
+          <HalfDonut
+            /*
+             * Categorical tones in fixed order, except the folded tail: a
+             * remainder is not a category, so it takes `neutral` — the tone
+             * `charts.tsx` reserves for exactly that — rather than borrowing a
+             * series slot and reading as one more feature.
+             */
+            slices={mix.slices.map((slice, index) => ({
+              ...slice,
+              tone: slice.id === 'other' ? ('neutral' as const) : seriesTone(index),
+            }))}
+            centerLabel="Events"
+            centerValue={compact.format(mix.total)}
+            format={(value) => compact.format(value)}
+            label={`Metered events by feature, ${rangeLabel}`}
+          />
+        ) : mix.status === 'unavailable' ? (
+          <AbsentFigure caption="Usage analytics could not be loaded for this window." />
+        ) : (
+          <AbsentFigure caption={`No metered events were ingested in the ${rangeLabel}.`} />
+        )}
+      </div>
+    </Panel>
   )
 }
 
@@ -434,40 +460,58 @@ function MarginPanel({
   onCostSheets: () => void
 }) {
   return (
-    <ChartBox
+    <Panel
       title="Gross margin"
       description="Revenue after cost sheets"
-      innerClassName="flex flex-1 flex-col gap-4"
+      action={<PanelButton onClick={onCostSheets}>Cost sheets</PanelButton>}
     >
-      {margin.status === 'ready' && margin.percent !== null ? (
-        <ArcGauge
-          value={margin.percent}
-          max={100}
-          display={`${Math.round(margin.percent)}%`}
-          caption="of metered revenue kept"
-          tone={marginTone(margin.percent)}
-          label="Gross margin on metered revenue"
-        />
-      ) : (
-        <AbsentFigure caption={margin.reason} />
-      )}
-      <button
-        type="button"
-        onClick={onCostSheets}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded-sm text-xs underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
-      >
-        Cost sheets
-      </button>
-    </ChartBox>
+      <div className="flex flex-1 flex-col gap-5 p-6">
+        <div className="flex flex-1 flex-col items-center justify-center gap-2">
+          {margin.status === 'ready' && margin.percent !== null ? (
+            <>
+              <ArcGauge
+                value={margin.percent}
+                max={100}
+                display=""
+                tone={marginTone(margin.percent)}
+                label="Gross margin on metered revenue"
+              />
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-medium tabular-nums">
+                  {Math.round(margin.percent)}%
+                </span>
+                <span className="text-muted-foreground text-xs">gross margin</span>
+              </div>
+            </>
+          ) : (
+            <AbsentFigure caption={margin.reason} />
+          )}
+        </div>
+
+        {/*
+         * Revenue, cost and profit are the three figures the design draws and
+         * the three that cannot be summed here (`Money` has no `add`), so they
+         * keep their place as dashes rather than vanishing.
+         */}
+        <dl className="grid grid-cols-3 divide-x border-t pt-4 text-center">
+          {['Revenue', 'Cost', 'Gross profit'].map((label) => (
+            <div key={label} className="space-y-1 px-2">
+              <dt className="text-muted-foreground text-xs">{label}</dt>
+              <dd className="text-[15px] font-medium tabular-nums">{NOTHING}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </Panel>
   )
 }
 
 /* ---- 3b. Revenue by customer -------------------------------------------- */
 
 /**
- * The table that is not here, and precisely why.
+ * The table that is only partly here, and precisely why.
  *
- * The redesign asks for a per-customer grid: Customer, Plan, Net revenue,
+ * The redesign asks for a per-customer list: Customer, Plan, Net revenue,
  * Contract, Usage, Cost, Margin %. Five of those seven are money, and the
  * audit behind this panel found that **no endpoint returns revenue grouped by
  * customer**. Three separate findings, and they are not the same kind of gap:
@@ -492,12 +536,50 @@ function MarginPanel({
  * `money.ts` refuses outright, on the grounds that a UI which recomputes a
  * total will eventually disagree with the invoice the customer was charged.
  *
- * Rather than a grid of plausible numbers, the panel renders the columns as
- * what they are: a list of named gaps. That is the version a reader can act
- * on. The alternative — the version this dashboard replaced — was five named
- * customers with their spend, and not one of those figures came from
- * anywhere.
+ * With rows, the reference's list. Without them, the reference's dashed empty
+ * box carrying the reason, and the columns as what they are: named gaps a
+ * reader — or whoever picks up the backend ticket — can act on. The version
+ * this dashboard replaced was five named customers with their spend, and not
+ * one of those figures came from anywhere.
  */
+const BY_CUSTOMER_COLUMNS: SimpleColumn<RevenueByCustomerRow>[] = [
+  {
+    key: 'customer',
+    header: 'Customer',
+    cell: (row) => <span className="text-[13px] font-medium">{row.customer}</span>,
+  },
+  {
+    key: 'plan',
+    header: 'Plan',
+    cell: (row) => <span className="text-muted-foreground text-[13px]">{row.plan}</span>,
+  },
+  {
+    key: 'net',
+    header: 'Net revenue',
+    cell: (row) => <span className="tabular-nums">{row.netRevenue}</span>,
+  },
+  {
+    key: 'contract',
+    header: 'Contract',
+    cell: (row) => <span className="text-muted-foreground tabular-nums">{row.contract}</span>,
+  },
+  {
+    key: 'usage',
+    header: 'Usage',
+    cell: (row) => <span className="text-muted-foreground tabular-nums">{row.usage}</span>,
+  },
+  {
+    key: 'cost',
+    header: 'Cost',
+    cell: (row) => <span className="text-muted-foreground tabular-nums">{row.cost}</span>,
+  },
+  {
+    key: 'margin',
+    header: 'Margin',
+    cell: (row) => <span className="tabular-nums">{row.margin}</span>,
+  },
+]
+
 function RevenueByCustomerPanel({
   byCustomer,
   onViewCustomers,
@@ -506,72 +588,44 @@ function RevenueByCustomerPanel({
   onViewCustomers: () => void
 }) {
   const rows = byCustomer.rows ?? []
-  const headers = ['Customer', 'Plan', 'Net revenue', 'Contract', 'Usage', 'Cost', 'Margin']
 
   return (
-    <Section
-      title="Revenue by customer"
-      description="What each customer is worth, and what it costs to serve them."
-    >
-      <div className="overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {headers.map((header, index) => (
-                <TableHead key={header} className={index > 1 ? 'text-right' : undefined}>
-                  {header}
-                </TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length > 0 ? (
-              rows.map((row) => (
-                <TableRow key={row.id}>
-                  <TableCell className="font-medium">{row.customer}</TableCell>
-                  <TableCell>{row.plan}</TableCell>
-                  {[row.netRevenue, row.contract, row.usage, row.cost, row.margin].map(
-                    (cell, index) => (
-                      <TableCell key={index} className="text-right tabular-nums">
-                        {cell}
-                      </TableCell>
-                    ),
-                  )}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell colSpan={headers.length} className="py-6">
-                  <Unavailable what={byCustomer.reason} className="max-w-[80ch] text-balance" />
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
+    <section aria-labelledby="revenue-by-customer" className="flex flex-col gap-4">
+      <div className="flex items-center justify-between gap-3 pt-4">
+        <h2 id="revenue-by-customer" className="text-sm font-medium">
+          Revenue by customer
+        </h2>
+        <PanelButton onClick={onViewCustomers}>All customers</PanelButton>
       </div>
-      {rows.length === 0 && byCustomer.status === 'unavailable' ? (
-        /*
-          What each column waits on. The table above is drawn so the page has
-          its shape, but a body of em dashes would read as "these customers
-          earned nothing" rather than "this cannot be asked".
-        */
-        <dl className="divide-border/60 divide-y text-xs">
-          {byCustomer.columns.map((gap) => (
-            <div key={gap.column} className="grid gap-1 py-2 sm:grid-cols-[10rem_1fr] sm:gap-4">
-              <dt className="text-foreground font-medium">{gap.column}</dt>
-              <dd className="text-muted-foreground text-balance">{gap.blocker}</dd>
-            </div>
-          ))}
-        </dl>
-      ) : null}
-      <button
-        type="button"
-        onClick={onViewCustomers}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded-sm text-xs underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
-      >
-        All customers
-      </button>
-    </Section>
+
+      {rows.length > 0 ? (
+        <div className="bg-background overflow-hidden rounded-xl border">
+          <SimpleTable columns={BY_CUSTOMER_COLUMNS} rows={rows} getRowId={(row) => row.id} />
+        </div>
+      ) : (
+        <div className="text-muted-foreground rounded-xl border border-dashed px-5 py-10 text-center text-[13px]">
+          <Unavailable
+            what={byCustomer.reason}
+            className="mx-auto max-w-[80ch] text-[13px] text-balance"
+          />
+          {byCustomer.status === 'unavailable' ? (
+            /*
+             * What each column waits on. A body of em dashes would read as
+             * "these customers earned nothing" rather than "this cannot be
+             * asked".
+             */
+            <dl className="divide-border/60 mx-auto mt-6 max-w-3xl divide-y text-left text-xs">
+              {byCustomer.columns.map((gap) => (
+                <div key={gap.column} className="grid gap-1 py-2 sm:grid-cols-[10rem_1fr] sm:gap-4">
+                  <dt className="text-foreground font-medium">{gap.column}</dt>
+                  <dd className="text-muted-foreground text-balance">{gap.blocker}</dd>
+                </div>
+              ))}
+            </dl>
+          ) : null}
+        </div>
+      )}
+    </section>
   )
 }
 
@@ -586,7 +640,8 @@ function RevenueByCustomerPanel({
  * derives, and every finalised invoice is in exactly one of them, so they are
  * exhaustive: a ceiling would draw a gap that can never open. The honest
  * drawdown — amount collected against amount billed — would need the two money
- * totals summed across invoices, which is precisely what `Money` refuses.
+ * totals summed across invoices, which is precisely what `Money` refuses. The
+ * headline is therefore the share of invoices that are paid, a count.
  *
  * Status tones rather than categorical ones, because paid, open and overdue are
  * states and not merely three different things.
@@ -595,47 +650,40 @@ function CollectionsPanel({
   collections,
   rangeLabel,
   onViewInvoices,
-  className,
 }: {
   collections: RevenueDashboardProps['collections']
   rangeLabel: string
   onViewInvoices: () => void
-  className?: string | undefined
 }) {
   const total = collections.paid + collections.open + collections.overdue
+  const paidShare = total > 0 ? Math.round((collections.paid / total) * 100) : 0
 
   return (
-    <ChartBox
+    <Panel
       title="Collections"
       description={`Invoiced ${rangeLabel}, by payment state`}
-      {...(className !== undefined ? { className } : {})}
-      innerClassName="flex flex-1 flex-col gap-4"
+      action={<PanelButton onClick={onViewInvoices}>View invoices</PanelButton>}
     >
-      {collections.status === 'ready' && total > 0 ? (
-        <SplitMeter
-          parts={[
-            { id: 'paid', label: 'Paid', value: collections.paid, tone: 'good' },
-            { id: 'open', label: 'Open', value: collections.open, tone: 'warning' },
-            { id: 'overdue', label: 'Overdue', value: collections.overdue, tone: 'critical' },
-          ]}
-          title="Finalised invoices"
-          value={whole.format(total)}
-          format={(value) => whole.format(value)}
-          label={`Collections: ${total} invoices finalised ${rangeLabel}, by state`}
-        />
-      ) : collections.status === 'unavailable' ? (
-        <AbsentFigure caption="Invoices could not be loaded." />
-      ) : (
-        <AbsentFigure caption={`No invoices were finalised in the ${rangeLabel}.`} />
-      )}
-      <button
-        type="button"
-        onClick={onViewInvoices}
-        className="text-muted-foreground hover:text-foreground focus-visible:ring-ring self-start rounded-sm text-xs underline underline-offset-4 focus-visible:ring-2 focus-visible:outline-none"
-      >
-        View invoices
-      </button>
-    </ChartBox>
+      <div className="flex flex-1 flex-col gap-6 p-6">
+        {collections.status === 'ready' && total > 0 ? (
+          <SplitMeter
+            parts={[
+              { id: 'paid', label: 'Paid', value: collections.paid, tone: 'good' },
+              { id: 'open', label: 'Open', value: collections.open, tone: 'warning' },
+              { id: 'overdue', label: 'Overdue', value: collections.overdue, tone: 'critical' },
+            ]}
+            value={`${paidShare}%`}
+            title="of invoices paid"
+            format={(value) => whole.format(value)}
+            label={`Collections: ${total} invoices finalised ${rangeLabel}, by state`}
+          />
+        ) : collections.status === 'unavailable' ? (
+          <AbsentFigure caption="Invoices could not be loaded." />
+        ) : (
+          <AbsentFigure caption={`No invoices were finalised in the ${rangeLabel}.`} />
+        )}
+      </div>
+    </Panel>
   )
 }
 
@@ -653,8 +701,17 @@ export function RevenueDashboard({
 }: RevenueDashboardProps): ReactNode {
   const go = (path: string) => onNavigate?.(path)
 
+  // The reference hides the three panels until there is revenue to report.
+  const firstRun =
+    chart.status === 'empty' && mix.status === 'empty' && collections.status === 'empty'
+
   return (
-    <div className="flex flex-col gap-5">
+    <div className="flex flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
+      {/* The visible title lives in the shell's breadcrumb; the outline still needs one. */}
+      <h1 className="sr-only">Revenue</h1>
+
+      <RangeRow rangeLabel={rangeLabel} />
+
       <MetricPanel
         chart={chart}
         meteredRevenue={meteredRevenue}
@@ -663,15 +720,17 @@ export function RevenueDashboard({
         onSeePlans={() => go('/plans')}
       />
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
-        <MixPanel mix={mix} rangeLabel={rangeLabel} onViewFeatures={() => go('/features')} />
-        <MarginPanel margin={margin} onCostSheets={() => go('/cost-sheets')} />
-        <CollectionsPanel
-          collections={collections}
-          rangeLabel={rangeLabel}
-          onViewInvoices={() => go('/invoices')}
-        />
-      </div>
+      {firstRun ? null : (
+        <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+          <MixPanel mix={mix} rangeLabel={rangeLabel} onViewFeatures={() => go('/features')} />
+          <MarginPanel margin={margin} onCostSheets={() => go('/cost-sheets')} />
+          <CollectionsPanel
+            collections={collections}
+            rangeLabel={rangeLabel}
+            onViewInvoices={() => go('/invoices')}
+          />
+        </div>
+      )}
 
       <RevenueByCustomerPanel byCustomer={byCustomer} onViewCustomers={() => go('/customers')} />
     </div>

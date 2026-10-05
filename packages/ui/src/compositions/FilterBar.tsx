@@ -223,9 +223,8 @@ export function FilterBar({
         // same as Sort beside it. Only the chip row draws a trigger — the
         // inline builder ignores this, which is why it used to vanish.
         trigger ?? (
-          <Button variant="outline" size="sm">
+          <Button variant="outline" size="icon" className="size-9" aria-label="Filter">
             <FilterIcon aria-hidden className="size-4" />
-            Filter
           </Button>
         )
       }
@@ -285,7 +284,13 @@ export function statusFilter<S extends string>({
 }) {
   const allowed = new Set<string>(choices.map((choice) => choice.value))
   return {
-    fields: [selectFilterField('status', label, choices.map((choice) => ({ ...choice })))],
+    fields: [
+      selectFilterField(
+        'status',
+        label,
+        choices.map((choice) => ({ ...choice })),
+      ),
+    ],
     query: selectFilterQuery('status', values),
     activeCount: values.length > 0 ? 1 : 0,
     onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {

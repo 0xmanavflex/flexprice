@@ -143,3 +143,35 @@ describe('the temporary adapter cannot spread', () => {
     expect(messages.join(' ')).toMatch(/temporary|api-contract-gap/i)
   })
 })
+
+describe('pages follow the redesign', () => {
+  const page = 'packages/ui/src/pages/Thing.tsx'
+
+  it.each([
+    ['the Card primitive', "import { Card } from '@ui/components/primitives/card'"],
+    ['the raw table primitive', "import { Table } from '@ui/components/primitives/table'"],
+  ])('refuses %s', async (_label, code) => {
+    expect(await lintAt(page, code)).toHaveLength(1)
+  })
+
+  it('still refuses the layer violations on pages', async () => {
+    expect(await lintAt(page, IMPORTS.query)).toHaveLength(1)
+  })
+
+  it('refuses bold weights in a class string, even in a template', async () => {
+    expect(await lintAt(page, 'const a = "text-sm font-semibold"')).toHaveLength(1)
+    expect(await lintAt(page, 'const a = `text-sm ${x} font-bold`')).toHaveLength(1)
+    expect(await lintAt(page, 'const a = "text-sm font-medium"')).toEqual([])
+  })
+
+  it('refuses raw palette colours but allows semantic tokens', async () => {
+    expect(await lintAt(page, 'const a = "bg-sky-50 text-violet-600"')).toHaveLength(1)
+    expect(await lintAt(page, 'const a = "bg-muted text-success border-destructive/40"')).toEqual([])
+  })
+
+  it('lets chart and meter files use a hue, but not a bold weight', async () => {
+    const viz = 'packages/ui/src/pages/shared/viz.tsx'
+    expect(await lintAt(viz, 'const a = "bg-emerald-500"')).toEqual([])
+    expect(await lintAt(viz, 'const a = "font-bold"')).toHaveLength(1)
+  })
+})

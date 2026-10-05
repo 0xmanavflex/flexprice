@@ -4,6 +4,7 @@ import { ChevronRightIcon } from 'lucide-react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { MetricRail, type DetailMetric } from './MetricRail'
+import { CopyId } from './DetailKit'
 
 /**
  * The one shell every detail page opens with.
@@ -82,10 +83,17 @@ export interface DetailShellProps {
   /** A freeform breadcrumb node, for anything the `trail` shape does not fit. */
   breadcrumb?: ReactNode
   title: string
-  /** Status and type chips, in a row beside the title. */
+  /** Icon shown in the tile left of the title (reference DetailHeader). */
+  icon?: ReactNode
+  /** One line under the title; use `Dot` between facts. */
+  subtitle?: ReactNode
+  /** Status and type chips, leading the subtitle line. */
   badges?: ReactNode
-  /** The lookup key or id, shown monospaced under the title. */
+  /** The record id, rendered as a copy button on the right. */
+  id?: string
+  /** Alias of `id` for strings; a non-string node renders as monospaced text. */
   identifier?: ReactNode
+  /** Alias of `subtitle`. */
   description?: ReactNode
   /** The primary action and any overflow menu, kept to the right of the title. */
   actions?: ReactNode
@@ -114,12 +122,6 @@ export interface DetailShellProps {
  * scrollbar (an 8px-tall bar inside a 32px pill reads as damage). Below `sm`,
  * where it always overflows, the edges fade so there is a visible signal that
  * the strip continues; above `sm` it usually fits, so no fade is drawn.
- *
- * The second rule is contrast. Stock paints an inactive tab `text-foreground/60`,
- * which over the muted pill is 4.14:1 — under the 4.5:1 floor, on the only
- * control that says what else is on the page. Raised to /70 (5.65:1) in light;
- * dark keeps the vendor's `muted-foreground`, and hover still resolves to full
- * foreground, so only the failing state moves.
  */
 const TAB_STRIP = [
   '[&_[data-slot=tabs-list]]:max-w-full',
@@ -129,17 +131,16 @@ const TAB_STRIP = [
   '[&_[data-slot=tabs-list]]:[&::-webkit-scrollbar]:hidden',
   '[&_[data-slot=tabs-list]>*]:snap-start',
   'max-sm:[&_[data-slot=tabs-list]]:[mask-image:linear-gradient(to_right,transparent,#000_10px,#000_calc(100%-10px),transparent)]',
-  '[&_[data-slot=tabs-trigger]:not([data-active])]:text-foreground/70',
-  '[&_[data-slot=tabs-trigger]:not([data-active]):hover]:text-foreground',
-  'dark:[&_[data-slot=tabs-trigger]:not([data-active])]:text-muted-foreground',
-  'dark:[&_[data-slot=tabs-trigger]:not([data-active]):hover]:text-foreground',
 ].join(' ')
 
 export function DetailShell({
   trail,
   breadcrumb,
   title,
+  icon,
+  subtitle,
   badges,
+  id,
   identifier,
   description,
   actions,
@@ -147,6 +148,8 @@ export function DetailShell({
   children,
   className,
 }: DetailShellProps) {
+  const copyId = id ?? (typeof identifier === 'string' ? identifier : undefined)
+  const line = subtitle ?? description
   return (
     // `overflow-y-auto` so the whole detail page scrolls within the shell's
     // content region (which is `overflow-hidden`): header + body together, so a
@@ -154,34 +157,31 @@ export function DetailShell({
     <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
       <header className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-5 px-6 pt-5 pb-5">
         {trail && trail.length > 0 ? <DetailBreadcrumb trail={trail} /> : breadcrumb}
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 flex-col gap-2">
-            {/*
-             * Title and badges on one row, anchored: `leading-tight` pulls the
-             * title's line box in so the small chips centre on the letters rather
-             * than floating in the slack above and below a full-height line — the
-             * "hanging pill" look. The badges are their own group so they keep an
-             * even gap among themselves and wrap together under a long title.
-             */}
-            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-              <h1 className="min-w-0 truncate text-xl leading-tight font-medium tracking-tight">
-                {title}
-              </h1>
-              {badges ? (
-                <div className="flex flex-wrap items-center gap-1.5">{badges}</div>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-center gap-4">
+            {icon ? (
+              <span className="bg-muted/60 text-foreground/70 flex size-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-5">
+                {icon}
+              </span>
+            ) : null}
+            <div className="min-w-0 space-y-1">
+              <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
+              {line || badges ? (
+                <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-[13px]">
+                  {badges}
+                  {line}
+                </div>
+              ) : null}
+              {!copyId && identifier ? (
+                <span className="text-muted-foreground font-mono text-xs">{identifier}</span>
               ) : null}
             </div>
-            {identifier ? (
-              <span className="font-mono text-xs text-muted-foreground">{identifier}</span>
-            ) : null}
-            {description ? (
-              <p className="max-w-3xl text-xs leading-relaxed font-normal text-muted-foreground">
-                {description}
-              </p>
-            ) : null}
           </div>
-          {actions ? (
-            <div className="flex shrink-0 items-center gap-2 sm:pt-0.5">{actions}</div>
+          {copyId || actions ? (
+            <div className="flex items-center gap-2">
+              {copyId ? <CopyId value={copyId} /> : null}
+              {actions}
+            </div>
           ) : null}
         </div>
         {metrics && metrics.length > 0 ? <MetricRail metrics={metrics} /> : null}

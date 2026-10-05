@@ -174,16 +174,16 @@ export function EmptyState({
 
         <div className="flex flex-col items-center gap-1.5">
           <EmptyTitle
-            className={cn(
-              'tracking-tight',
-              isPage ? 'text-lg font-semibold' : 'text-sm font-medium',
-            )}
+            className={cn('tracking-tight', isPage ? 'text-lg font-medium' : 'text-sm font-medium')}
           >
             {shown.title}
           </EmptyTitle>
           {shown.description ? (
             <EmptyDescription
-              className={cn('max-w-[24rem]', isPage || firstRun ? 'text-sm/relaxed' : 'text-xs')}
+              className={cn(
+                'max-w-[24rem]',
+                isPage || firstRun ? 'text-sm/relaxed text-balance' : 'text-xs',
+              )}
             >
               {shown.description}
             </EmptyDescription>

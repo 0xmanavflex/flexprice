@@ -15,16 +15,18 @@ import {
   SearchIcon,
   XIcon,
 } from 'lucide-react'
-import { DataGrid, dataGridFeatures } from '@ui/components/reui/data-grid/data-grid'
+import {
+  DataGrid,
+  DataGridContainer,
+  dataGridFeatures,
+} from '@ui/components/reui/data-grid/data-grid'
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
-import { DataGridScrollArea } from '@ui/components/reui/data-grid/data-grid-scroll-area'
 import {
   DataGridTable,
   DataGridTableRowSelect,
   DataGridTableRowSelectAll,
 } from '@ui/components/reui/data-grid/data-grid-table'
 import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
-import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -36,7 +38,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { MENU_CONTENT, MENU_ITEM, MENU_LABEL } from '@ui/compositions/shell/menuSurface'
 import {
   InputGroup,
   InputGroupAddon,
@@ -104,8 +105,8 @@ import type { EntityColumn } from './cells'
  */
 export const EntityListProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/filters', '@reui/empty-state-3', 'ui/select'],
-  note: 'The one list table: borderless, 44px header, 60px rows, auto-width columns, pin-on-overflow.',
+  composes: ['@reui/data-grid', '@reui/filters', 'ui/select'],
+  note: 'The one list table: borderless, 44px header, 60px rows, auto-width columns, pin-on-overflow. Lineage: @reui/empty-state-3.',
 })
 
 /* ------------------------------------------------------------------ *
@@ -292,7 +293,7 @@ export interface EntityListProps<T> {
  */
 function HeaderLabel({ title }: { title: string }) {
   return (
-    <span className="text-muted-foreground text-[11px] font-medium tracking-[0.08em] uppercase">
+    <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
       {title}
     </span>
   )
@@ -325,30 +326,24 @@ function SortableHeader({
           ? `${title}, sorted ${direction === 'asc' ? 'ascending' : 'descending'}. Sort ${next}`
           : `Sort by ${title}`
       }
-      className="hover:text-foreground focus-visible:ring-ring -mx-1 flex max-w-full items-center gap-1 rounded-sm px-1 focus-visible:ring-2 focus-visible:outline-none"
+      className="hover:[&>span]:text-foreground focus-visible:ring-ring inline-flex items-center gap-1 rounded-sm focus-visible:ring-2 focus-visible:outline-none"
     >
       <HeaderLabel title={title} />
       {direction === 'asc' ? (
-        <ArrowUpIcon aria-hidden className="text-muted-foreground size-3 shrink-0" />
+        <ArrowUpIcon aria-hidden className="text-foreground size-3 shrink-0" />
       ) : direction === 'desc' ? (
-        <ArrowDownIcon aria-hidden className="text-muted-foreground size-3 shrink-0" />
+        <ArrowDownIcon aria-hidden className="text-foreground size-3 shrink-0" />
       ) : null}
     </button>
   )
 }
 
-/** The navy count on the filter and sort buttons. */
+/** The count on the filter and sort buttons. */
 function CountBadge({ count }: { count: number }) {
   return (
-    <Badge
-      size="xs"
-      radius="full"
-      // `default` is the brand token — the deep teal the design calls navy.
-      // Nothing here reaches for a colour that is not already in the palette.
-      className="pointer-events-none absolute -top-1 -right-1 px-1 tabular-nums"
-    >
+    <span className="bg-primary text-primary-foreground pointer-events-none absolute -top-1.5 -right-1.5 flex size-4 items-center justify-center rounded-full text-[10px] font-medium tabular-nums">
       {count}
-    </Badge>
+    </span>
   )
 }
 
@@ -536,6 +531,7 @@ export function EntityList<T extends object>({
     // one of them up must not be read as "this table scrolls".
     return { sizing: result, overflows: fixedWidth + used > frameWidth + 1 }
   }, [visibleColumns, frameWidth, selectable, rowActions])
+  const tableMin = Object.values(sizing).reduce((sum, width) => sum + width, 0)
 
   /* --- build the TanStack columns --- */
   const sortField = sort?.field
@@ -694,82 +690,79 @@ export function EntityList<T extends object>({
     <div
       role="search"
       aria-label={`Search and filter ${noun}`}
-      className="flex flex-wrap items-center gap-2"
+      className="flex flex-wrap items-center justify-between gap-3"
     >
-      {/* 288px, at every width. Wide enough for a realistic query, narrow
-          enough that it does not read as the page's main field. `max-w-full`
-          rather than a breakpoint: on the narrowest phone the row wraps and
-          the field takes its own line, but it never grows past 288 and starts
-          reading as the page's one big input. */}
-      <InputGroup className="w-72 max-w-full">
-        <InputGroupAddon align="inline-start">
-          <SearchIcon aria-hidden />
-        </InputGroupAddon>
-        <InputGroupInput
-          aria-label={`Search ${noun}`}
-          placeholder={searchPlaceholder ?? `Search ${noun}…`}
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
-        />
-        {search.length > 0 ? (
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton
-              type="button"
-              size="icon-xs"
-              aria-label="Clear search"
-              onClick={() => onSearchChange('')}
-            >
-              <XIcon aria-hidden />
-            </InputGroupButton>
+      <div className="flex flex-wrap items-center gap-2">
+        <InputGroup className="h-9 w-72 max-w-full">
+          <InputGroupAddon align="inline-start">
+            <SearchIcon className="text-muted-foreground size-4" aria-hidden />
           </InputGroupAddon>
-        ) : null}
-      </InputGroup>
+          <InputGroupInput
+            aria-label={`Search ${noun}`}
+            placeholder={searchPlaceholder ?? `Search ${noun}…`}
+            value={search}
+            onChange={(event) => onSearchChange(event.target.value)}
+          />
+          {search.length > 0 ? (
+            <InputGroupAddon align="inline-end">
+              <InputGroupButton
+                type="button"
+                size="icon-xs"
+                aria-label="Clear search"
+                onClick={() => onSearchChange('')}
+              >
+                <XIcon className="size-4" aria-hidden />
+              </InputGroupButton>
+            </InputGroupAddon>
+          ) : null}
+        </InputGroup>
 
-      {status ? (
-        <Select
-          value={status.value}
-          onValueChange={(value: string | null) => {
-            // Base UI can clear a select; this one always has a value, and
-            // "no status" is the `all` option rather than the absence of one.
-            if (value !== null) status.onChange(value)
-          }}
-        >
-          <SelectTrigger className="h-8 w-48" aria-label={status.label ?? 'Status'}>
-            {/* Base UI's SelectValue renders the raw value, so a select left
-                to itself reads "all" and "published" rather than the labels
-                in the list below it. */}
-            <SelectValue>
-              {(value) => (
-                <>
-                  <span className="text-muted-foreground">{status.label ?? 'Status'}</span>
-                  <span>
-                    {status.valueLabel ??
-                      status.options.find((option) => option.value === value)?.label ??
-                      value}
-                  </span>
-                </>
-              )}
-            </SelectValue>
-          </SelectTrigger>
-          <SelectContent>
-            {status.options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                <span className="flex w-full items-center gap-2">
+        {status ? (
+          <Select
+            value={status.value}
+            onValueChange={(value: string | null) => {
+              // Base UI can clear a select; this one always has a value, and
+              // "no status" is the `all` option rather than the absence of one.
+              if (value !== null) status.onChange(value)
+            }}
+          >
+            <SelectTrigger
+              className="h-9! w-48 justify-start gap-2 pl-3 [&>svg]:ml-auto"
+              aria-label={status.label ?? 'Status'}
+            >
+              <span className="text-muted-foreground">{status.label ?? 'Status'}</span>
+              {/* Base UI's SelectValue renders the raw value, so a select left
+                  to itself reads "all" and "published" rather than the labels
+                  in the list below it. */}
+              <SelectValue>
+                {(value: string) =>
+                  status.valueLabel ??
+                  status.options.find((option) => option.value === value)?.label ??
+                  value
+                }
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent align="start">
+              {status.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
                   {option.label}
                   {option.count === undefined ? null : (
-                    <span className="text-muted-foreground tabular-nums">{option.count}</span>
+                    <span className="text-muted-foreground ml-auto pl-4 tabular-nums">
+                      {option.count}
+                    </span>
                   )}
-                </span>
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      ) : null}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
+      </div>
 
-      <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
+      <div className="flex items-center gap-2">
         {selectedCount > 0 ? (
-          <span aria-live="polite" className="text-muted-foreground text-xs tabular-nums">
-            {selectedCount} selected
+          <span aria-live="polite" className="text-muted-foreground mr-1 text-xs">
+            <span className="text-foreground font-medium tabular-nums">{selectedCount}</span>{' '}
+            selected
           </span>
         ) : null}
 
@@ -786,9 +779,9 @@ export function EntityList<T extends object>({
                 variant="outline"
                 size="icon"
                 aria-label={filter.activeCount ? `Filter. ${filter.activeCount} active` : 'Filter'}
-                className="relative"
+                className="relative size-9"
               >
-                <FilterIcon aria-hidden className="size-4" />
+                <FilterIcon aria-hidden />
                 {filter.activeCount ? <CountBadge count={filter.activeCount} /> : null}
               </Button>
             }
@@ -810,9 +803,9 @@ export function EntityList<T extends object>({
                 aria-label={`Sort by ${
                   sort.options.find((option) => option.value === sort.field)?.label ?? sort.field
                 }, ${sort.direction === 'asc' ? 'ascending' : 'descending'}. Change sorting`}
-                className="relative"
+                className="relative size-9"
               >
-                <ArrowUpDownIcon aria-hidden className="size-4" />
+                <ArrowUpDownIcon aria-hidden />
                 {sort.activeCount ? <CountBadge count={sort.activeCount} /> : null}
               </Button>
             }
@@ -823,25 +816,31 @@ export function EntityList<T extends object>({
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button type="button" variant="outline" size="icon" aria-label="Table options" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="icon"
+                  className="size-9"
+                  aria-label="Table options"
+                />
               }
             >
-              <MoreHorizontalIcon aria-hidden className="size-4" />
+              <MoreHorizontalIcon aria-hidden />
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
+            <DropdownMenuContent align="end" className="w-52">
               {/* Every part inside a group: Base UI reads its label, its
                   checkbox items and their roles off a group context, and a
                   bare item throws rather than degrading. */}
               {hideableColumns.length > 0 ? (
                 <DropdownMenuGroup>
-                  <DropdownMenuLabel className={MENU_LABEL}>
+                  <DropdownMenuLabel className="text-muted-foreground text-xs font-normal">
                     Columns
                   </DropdownMenuLabel>
                   {hideableColumns.map((column) => (
                     <DropdownMenuCheckboxItem
                       key={column.id}
-                      className="py-2.5 pl-3"
                       checked={columnVisibility[column.id] !== false}
+                      closeOnClick={false}
                       onCheckedChange={(checked: boolean) =>
                         setColumnVisibility((previous) => ({ ...previous, [column.id]: checked }))
                       }
@@ -854,8 +853,8 @@ export function EntityList<T extends object>({
               {hideableColumns.length > 0 && exportFileName ? <DropdownMenuSeparator /> : null}
               {exportFileName ? (
                 <DropdownMenuGroup>
-                  <DropdownMenuItem className={MENU_ITEM} onClick={handleExport}>
-                    <DownloadIcon aria-hidden className="size-4" />
+                  <DropdownMenuItem onClick={handleExport}>
+                    <DownloadIcon aria-hidden />
                     Export CSV
                   </DropdownMenuItem>
                 </DropdownMenuGroup>
@@ -873,7 +872,7 @@ export function EntityList<T extends object>({
     <div
       role="region"
       aria-label={label}
-      className={cn('flex w-full min-w-0 flex-col gap-4', className)}
+      className={cn('flex w-full min-w-0 flex-col gap-5', className)}
     >
       <h1 className="sr-only">{label}</h1>
       {toolbar}
@@ -892,7 +891,6 @@ export function EntityList<T extends object>({
         ) : (
           <DataGrid
             table={table as never}
-            className="[&_tbody_tr:hover]:bg-muted/20"
             recordCount={total}
             isLoading={isLoading}
             loadingMode="skeleton"
@@ -918,65 +916,47 @@ export function EntityList<T extends object>({
               />
             }
             tableLayout={{
-              // Fixed, so the measured widths are the widths. `auto` lets the
-              // browser renegotiate them from cell content, which undoes the
-              // whole point of measuring.
-              width: 'fixed',
+              headerSticky: false,
+              headerBackground: false,
               rowBorder: true,
               columnsVisibility: true,
               columnsPinnable: true,
-              // Off: the page scrolls. A sticky header inside a page that also
-              // scrolls needs the table to own a height, and then the table
-              // has a scrollbar of its own next to the page's.
-              headerSticky: false,
-              // The band is drawn here, at 60%, rather than the registry's
-              // opaque `bg-muted`.
-              headerBackground: false,
-              headerBorder: false,
-              cellBorder: false,
-              dense: false,
+              width: 'fixed',
             }}
             tableClassNames={{
-              headerRow: cn(
-                // 44px band, rounded at both ends, no rule beneath it.
-                '[&>th]:bg-muted/60 [&>th]:h-11 [&>th]:px-4 [&>th]:align-middle',
-                '[&>th:first-child]:rounded-l-md [&>th:last-child]:rounded-r-md',
-              ),
+              base: 'min-w-(--table-min)',
+              edgeCell: 'first:ps-4 last:pe-2',
+              headerRow:
+                'bg-muted/60 [&>th]:h-11 [&>th]:px-4 [&>th]:border-0 [&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
+              /*
+               * Every cell clips (`overflow-hidden`): `table-fixed` fixes the
+               * cell box, not its contents, so a pill or any other
+               * non-truncating child would paint past its column and inflate
+               * the scroll container. The cell helpers truncate their text;
+               * this is the backstop for the ones that cannot.
+               */
               bodyRow: cn(
-                // 60px rows, 16px of padding a side, one line of text, a
-                // separator faint enough to group rather than divide.
-                '[&>td]:h-15 [&>td]:px-4 [&>td]:py-0 [&>td]:whitespace-nowrap',
-                '[&>td]:border-border/40',
-                /*
-                 * Every cell clips.
-                 *
-                 * `table-fixed` fixes the cell *box*, not its contents: a pill
-                 * or any other non-truncating child still paints past its
-                 * column and — more visibly — inflates the scroll container's
-                 * `scrollWidth`. That was worth four pixels on the features
-                 * list, which is not four pixels of anything you can read, but
-                 * it is a full horizontal scrollbar under a table that fits.
-                 * The per-cell helpers truncate their text; this is the
-                 * backstop for the ones that cannot, and it is what lets
-                 * "the table fits" and "the table does not scroll" stay the
-                 * same statement.
-                 */
-                '[&>td]:overflow-hidden',
+                'h-[60px] hover:bg-muted/30 [&>td]:px-4 [&>td]:whitespace-nowrap [&>td]:border-border/40 [&>td]:overflow-hidden last:[&>td]:border-b-0',
+                onRowClick && 'cursor-pointer',
               ),
             }}
           >
-            <DataGridScrollArea orientation="horizontal">
-              <DataGridTable />
-            </DataGridScrollArea>
-            {total > 0 ? (
-              <div className="pt-1">
-                <DataGridPagination
-                  className="w-full"
-                  sizes={PAGE_SIZES}
-                  info={`{from} - {to} of {count} ${noun}`}
-                />
+            <DataGridContainer className="flex flex-col border-0 bg-transparent">
+              <div
+                className="w-full overflow-x-auto"
+                style={{ '--table-min': `${tableMin}px` } as React.CSSProperties}
+              >
+                <DataGridTable />
               </div>
-            ) : null}
+              {total > 0 ? (
+                <div className="border-border/60 border-t px-4 pt-4">
+                  <DataGridPagination
+                    sizes={PAGE_SIZES}
+                    info={`{from} - {to} of {count} ${noun}`}
+                  />
+                </div>
+              ) : null}
+            </DataGridContainer>
           </DataGrid>
         )}
       </div>
@@ -991,46 +971,28 @@ function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
   const destructive = actions.filter((action) => action.destructive)
 
   return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Row actions"
-            // The row is often clickable; opening its menu is not opening it.
-            onClick={(event: React.MouseEvent) => event.stopPropagation()}
-          />
-        }
-      >
-        <MoreHorizontalIcon aria-hidden className="size-4" />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
-        <DropdownMenuGroup>
-          {ordinary.map((action) => (
-            <DropdownMenuItem
-              key={action.label}
-              className={MENU_ITEM}
-              disabled={action.disabled ?? false}
-              onClick={(event: React.MouseEvent) => {
-                event.stopPropagation()
-                action.onSelect()
-              }}
-            >
-              {action.icon}
-              {action.label}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuGroup>
-        {destructive.length > 0 && ordinary.length > 0 ? <DropdownMenuSeparator /> : null}
-        {destructive.length > 0 ? (
+    <div className="flex justify-end">
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              aria-label="Row actions"
+              // The row is often clickable; opening its menu is not opening it.
+              onClick={(event: React.MouseEvent) => event.stopPropagation()}
+            />
+          }
+        >
+          <MoreHorizontalIcon aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-40">
           <DropdownMenuGroup>
-            {destructive.map((action) => (
+            {ordinary.map((action) => (
               <DropdownMenuItem
                 key={action.label}
-                variant="destructive"
-                className={MENU_ITEM}
                 disabled={action.disabled ?? false}
                 onClick={(event: React.MouseEvent) => {
                   event.stopPropagation()
@@ -1042,8 +1004,27 @@ function RowActionsMenu({ actions }: { actions: EntityRowAction[] }) {
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
-        ) : null}
-      </DropdownMenuContent>
-    </DropdownMenu>
+          {destructive.length > 0 && ordinary.length > 0 ? <DropdownMenuSeparator /> : null}
+          {destructive.length > 0 ? (
+            <DropdownMenuGroup>
+              {destructive.map((action) => (
+                <DropdownMenuItem
+                  key={action.label}
+                  variant="destructive"
+                  disabled={action.disabled ?? false}
+                  onClick={(event: React.MouseEvent) => {
+                    event.stopPropagation()
+                    action.onSelect()
+                  }}
+                >
+                  {action.icon}
+                  {action.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuGroup>
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
   )
 }

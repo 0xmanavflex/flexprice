@@ -13,17 +13,8 @@ import {
 import { Button } from '@ui/components/primitives/button'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
 import { Label } from '@ui/components/primitives/label'
-import {
-  Table,
-  TableBody,
-  TableCaption,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@ui/components/primitives/table'
 import { Input } from '@ui/components/primitives/input'
-import { ChoiceCards } from '@ui/compositions/DetailKit'
+import { ChoiceCards, SimpleTable } from '@ui/compositions/DetailKit'
 import { Field } from '@ui/compositions/Field'
 import { provenance } from '@ui/provenance'
 
@@ -46,7 +37,7 @@ import { provenance } from '@ui/provenance'
  */
 export const PriceOverrideFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/input', 'ui/label'],
+  composes: ['ui/button', 'ui/input', 'ui/label', 'composition/DetailKit'],
   note: 'RHF + the domain Zod schema; holds no state of its own.',
 })
 
@@ -138,6 +129,10 @@ export function PriceOverrideForm({
 
   const errors = form.formState.errors
   const tierErrors = (errors as { tiers?: { message?: string } }).tiers
+  const tierRowErrors = (index: number) =>
+    (errors as { tiers?: { message?: string }[] }).tiers?.[index] as
+      | { upTo?: { message?: string }; unitAmount?: { message?: string } }
+      | undefined
 
   return (
     <form
@@ -256,87 +251,97 @@ export function PriceOverrideForm({
               </Button>
             </div>
 
-            <Table>
-              <TableCaption className="sr-only">
-                Price tiers, from the lowest band to the unbounded final band
-              </TableCaption>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Up to</TableHead>
-                  <TableHead>Per unit</TableHead>
-                  <TableHead>Flat fee</TableHead>
-                  <TableHead className="sr-only">Actions</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {fields.map((field, index) => {
-                  const rowErrors = (
-                    errors as { tiers?: { message?: string }[] }
-                  ).tiers?.[index] as
-                    | { upTo?: { message?: string }; unitAmount?: { message?: string } }
-                    | undefined
-                  const isLast = index === fields.length - 1
-
-                  return (
-                    <TableRow key={field.id}>
-                      <TableCell className="align-top">
-                        <Input
-                          type="number"
-                          disabled={isSubmitting || isLast}
-                          placeholder={isLast ? '∞' : ''}
-                          aria-label={`Tier ${index + 1} upper limit`}
-                          aria-invalid={rowErrors?.upTo ? true : undefined}
-                          {...form.register(`tiers.${index}.upTo` as never, {
-                            setValueAs: (v) => (v === '' || v == null ? null : Number(v)),
-                          })}
-                        />
-                        {rowErrors?.upTo ? (
-                          <p role="alert" className="mt-1 text-xs text-destructive">
-                            {rowErrors.upTo.message}
-                          </p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Input
-                          inputMode="decimal"
-                          disabled={isSubmitting}
-                          aria-label={`Tier ${index + 1} unit price`}
-                          aria-invalid={rowErrors?.unitAmount ? true : undefined}
-                          {...form.register(`tiers.${index}.unitAmount` as never)}
-                        />
-                        {rowErrors?.unitAmount ? (
-                          <p role="alert" className="mt-1 text-xs text-destructive">
-                            {rowErrors.unitAmount.message}
-                          </p>
-                        ) : null}
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Input
-                          inputMode="decimal"
-                          disabled={isSubmitting}
-                          aria-label={`Tier ${index + 1} flat fee`}
-                          {...form.register(`tiers.${index}.flatAmount` as never)}
-                        />
-                      </TableCell>
-                      <TableCell className="align-top">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          // The unbounded band cannot be removed: without it,
-                          // usage above the last ceiling is not billed at all.
-                          disabled={isSubmitting || isLast || fields.length === 1}
-                          aria-label={`Remove tier ${index + 1}`}
-                          onClick={() => remove(index)}
-                        >
-                          Remove
-                        </Button>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+            <div className="overflow-hidden rounded-lg border">
+              <SimpleTable
+                rows={fields.map((field, index) => ({ field, index }))}
+                getRowId={(row) => row.field.id}
+                columns={[
+                  {
+                    key: 'upTo',
+                    header: 'Up to',
+                    className: 'whitespace-normal py-2 align-top',
+                    cell: ({ index }) => {
+                      const rowErrors = tierRowErrors(index)
+                      return (
+                        <>
+                          <Input
+                            type="number"
+                            disabled={isSubmitting || index === fields.length - 1}
+                            placeholder={index === fields.length - 1 ? '∞' : ''}
+                            aria-label={`Tier ${index + 1} upper limit`}
+                            aria-invalid={rowErrors?.upTo ? true : undefined}
+                            {...form.register(`tiers.${index}.upTo` as never, {
+                              setValueAs: (v) => (v === '' || v == null ? null : Number(v)),
+                            })}
+                          />
+                          {rowErrors?.upTo ? (
+                            <p role="alert" className="mt-1 text-xs text-destructive">
+                              {rowErrors.upTo.message}
+                            </p>
+                          ) : null}
+                        </>
+                      )
+                    },
+                  },
+                  {
+                    key: 'unit',
+                    header: 'Per unit',
+                    className: 'whitespace-normal py-2 align-top',
+                    cell: ({ index }) => {
+                      const rowErrors = tierRowErrors(index)
+                      return (
+                        <>
+                          <Input
+                            inputMode="decimal"
+                            disabled={isSubmitting}
+                            aria-label={`Tier ${index + 1} unit price`}
+                            aria-invalid={rowErrors?.unitAmount ? true : undefined}
+                            {...form.register(`tiers.${index}.unitAmount` as never)}
+                          />
+                          {rowErrors?.unitAmount ? (
+                            <p role="alert" className="mt-1 text-xs text-destructive">
+                              {rowErrors.unitAmount.message}
+                            </p>
+                          ) : null}
+                        </>
+                      )
+                    },
+                  },
+                  {
+                    key: 'flat',
+                    header: 'Flat fee',
+                    className: 'whitespace-normal py-2 align-top',
+                    cell: ({ index }) => (
+                      <Input
+                        inputMode="decimal"
+                        disabled={isSubmitting}
+                        aria-label={`Tier ${index + 1} flat fee`}
+                        {...form.register(`tiers.${index}.flatAmount` as never)}
+                      />
+                    ),
+                  },
+                  {
+                    key: 'actions',
+                    header: '',
+                    className: 'py-2 align-top',
+                    cell: ({ index }) => (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        // The unbounded band cannot be removed: without it,
+                        // usage above the last ceiling is not billed at all.
+                        disabled={isSubmitting || index === fields.length - 1 || fields.length === 1}
+                        aria-label={`Remove tier ${index + 1}`}
+                        onClick={() => remove(index)}
+                      >
+                        Remove
+                      </Button>
+                    ),
+                  },
+                ]}
+              />
+            </div>
 
             {tierErrors?.message ? (
               <p role="alert" className="text-xs text-destructive">

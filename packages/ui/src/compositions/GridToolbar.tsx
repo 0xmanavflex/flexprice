@@ -90,7 +90,7 @@ export function GridToolbar({
      * line and the controls drop under it, right-aligned, rather than the
      * field being squeezed to nothing.
      */
-    <div role="search" className="flex flex-wrap items-center gap-2">
+    <div role="search" className="flex flex-wrap items-center justify-between gap-3">
       {/*
         The page's one `<h1>` — the entity's name — but styled as a compact
         label rather than a hero, because the breadcrumb already carries the
@@ -103,9 +103,9 @@ export function GridToolbar({
       {/* Constrained, not full-width: a search that stretches the whole bar
           reads as one big empty field. Capped at a comfortable width, with the
           controls pinned to the right by `ml-auto`. */}
-      <InputGroup className="w-full min-w-[11.25rem] sm:w-auto sm:max-w-xs sm:grow sm:basis-[11.25rem]">
+      <InputGroup className="h-9 w-72 max-w-full">
         <InputGroupAddon align="inline-start">
-          <SearchIcon aria-hidden />
+          <SearchIcon aria-hidden className="text-muted-foreground size-4" />
         </InputGroupAddon>
         <InputGroupInput
           aria-label={label}
@@ -128,8 +128,8 @@ export function GridToolbar({
       </InputGroup>
 
       {children || createAction ? (
-        <div className="ml-auto flex max-w-full shrink-0 flex-wrap items-center justify-end gap-2">
-          {children ? <div className="flex items-center gap-1.5">{children}</div> : null}
+        <div className="flex items-center gap-2">
+          {children ? <div className="flex items-center gap-2">{children}</div> : null}
           {createAction}
         </div>
       ) : null}

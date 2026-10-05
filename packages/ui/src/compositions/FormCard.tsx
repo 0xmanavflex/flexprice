@@ -1,12 +1,5 @@
 import { Children, useId, type ReactNode } from 'react'
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@ui/components/primitives/card'
-import {
   Field as FieldRoot,
   FieldContent,
   FieldDescription,
@@ -20,19 +13,20 @@ import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
 /**
- * The single-page form layout from ReUI's `form-12`: one Card, and inside it
+ * The single-page form layout from ReUI's `form-12`: one Section-style surface
+ * (`bg-background rounded-xl border`, never the Card primitive), and inside it
  * label-and-hint on the left of each row, the control on the right, rows split
  * by inset dashed rules.
  *
  * `form-12` is an ecommerce block, so only its structure is taken, not its
- * fields. The stock Card / Field / Separator primitives do the work; this adds
+ * fields. The stock Field / Separator primitives do the work; this adds
  * the row grid, the separators between rows, and the same id and aria wiring
  * as `Field` so labels, hints and errors stay connected to the control.
  */
 export const FormCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/card', 'ui/field', 'ui/separator'],
-  note: 'form-12 layout: Card, label/control rows, dashed inset separators.',
+  composes: ['ui/field', 'ui/separator'],
+  note: 'form-12 layout: Section surface, label/control rows, dashed inset separators. Lineage: compositions/section.',
 })
 
 const dashedRule =
@@ -48,14 +42,14 @@ export interface FormCardProps {
 export function FormCard({ title, description, children, className }: FormCardProps) {
   const rows = Children.toArray(children)
   return (
-    <Card className={cn('w-full gap-0 p-0', className)}>
+    <section className={cn('bg-background flex w-full flex-col rounded-xl border', className)}>
       {title ? (
-        <CardHeader className="gap-1 border-b px-5 py-4 sm:px-6">
-          <CardTitle>{title}</CardTitle>
-          {description ? <CardDescription>{description}</CardDescription> : null}
-        </CardHeader>
+        <div className="space-y-0.5 border-b px-6 py-4">
+          <h2 className="text-sm font-medium">{title}</h2>
+          {description ? <p className="text-muted-foreground text-[13px]">{description}</p> : null}
+        </div>
       ) : null}
-      <CardContent className="p-0">
+      <div>
         <FieldGroup className="gap-0">
           {rows.map((row, index) => (
             <div key={index}>
@@ -68,8 +62,8 @@ export function FormCard({ title, description, children, className }: FormCardPr
             </div>
           ))}
         </FieldGroup>
-      </CardContent>
-    </Card>
+      </div>
+    </section>
   )
 }
 

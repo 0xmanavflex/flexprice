@@ -24,12 +24,24 @@ export interface PageHeaderProps {
   description?: string
   /** The one thing this page is for. A single button, not a row of them. */
   action?: ReactNode
+  /** Reference name for `action`; both render in the same right-hand cluster. */
+  actions?: ReactNode
   /** Everything else, behind an overflow menu. */
   menu?: ReactNode
+  /** Small inline meta under the description (counts, status, last sync). */
+  meta?: ReactNode
   breadcrumb?: ReactNode
 }
 
-export function PageHeader({ title, description, action, menu, breadcrumb }: PageHeaderProps) {
+export function PageHeader({
+  title,
+  description,
+  action,
+  actions,
+  menu,
+  meta,
+  breadcrumb,
+}: PageHeaderProps) {
   /*
    * No rule under it. The shell's own header already draws one a few pixels
    * above, and two stacked hairlines read as a seam rather than a boundary.
@@ -38,16 +50,16 @@ export function PageHeader({ title, description, action, menu, breadcrumb }: Pag
   return (
     <header className="flex flex-col gap-3 px-6 pt-5 pb-4">
       {breadcrumb}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-          {description ? (
-            <p className="text-sm text-muted-foreground">{description}</p>
-          ) : null}
+          {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
+          {meta ? <div className="text-muted-foreground text-[13px]">{meta}</div> : null}
         </div>
-        {action || menu ? (
+        {action || actions || menu ? (
           <div className="flex shrink-0 items-center gap-2">
             {action}
+            {actions}
             {menu}
           </div>
         ) : null}

@@ -4,10 +4,8 @@ import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
 import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
-import { ChartContainer, ChartTooltip } from '@ui/components/primitives/chart'
+import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@ui/components/primitives/chart'
 import type { ChartConfig } from '@ui/components/primitives/chart'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
-import { EmptyState } from '@ui/compositions/EmptyState'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -34,8 +32,8 @@ import { provenance } from '@ui/provenance'
  */
 export const ChartsProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/chart-6', '@reui/chart-18', 'ui/chart', 'ui/tabs', 'compositions/EmptyState'],
-  note: 'MetricChart (chart-6 metric tabs over chart-18’s gradient area) and BlurredEmpty. Also the ChartTone vocabulary the rest of the chart library paints with.',
+  composes: ['ui/chart', 'ui/button'],
+  note: 'MetricChart (chart-6 metric tabs over chart-18’s gradient area) and BlurredEmpty. Also the ChartTone vocabulary the rest of the chart library paints with. Lineage: @reui/chart-6, @reui/chart-18.',
 })
 
 /* ---- Tones -------------------------------------------------------------- */
@@ -59,15 +57,20 @@ export type ChartTone =
   | 'critical'
   | 'neutral'
 
+/*
+ * The reference's chart palette: a blue family for categories, and one green,
+ * amber and coral for status. Literal oklch because these are chart fills, the
+ * one place a colour is allowed to sit outside the semantic tokens.
+ */
 const TONE_TOKENS: Record<ChartTone, string> = {
-  'series-1': 'var(--chart-1)',
-  'series-2': 'var(--chart-2)',
-  'series-3': 'var(--chart-3)',
-  'series-4': 'var(--chart-4)',
-  'series-5': 'var(--chart-5)',
-  good: 'var(--success)',
-  warning: 'var(--warning)',
-  critical: 'var(--destructive)',
+  'series-1': 'oklch(0.52 0.12 250)',
+  'series-2': 'oklch(0.68 0.12 235)',
+  'series-3': 'oklch(0.84 0.06 225)',
+  'series-4': 'oklch(0.72 0.1 190)',
+  'series-5': 'oklch(0.6 0.12 300)',
+  good: 'oklch(0.6 0.13 165)',
+  warning: 'oklch(0.8 0.14 80)',
+  critical: 'oklch(0.66 0.19 35)',
   neutral: 'var(--muted-foreground)',
 }
 
@@ -207,20 +210,16 @@ export interface MetricChartProps {
   onTabChange: (id: string) => void
   /** Sub-label under the plot, e.g. "Last 30 days". */
   caption?: string | undefined
-  /** Plot height in px, excluding the tab strip. Default 240. */
+  /** Plot height in px, excluding the tab strip. Default 260. */
   height?: number | undefined
   className?: string | undefined
 }
 
 /**
- * KPI tabs over one series — ReUI `chart-6`, drawn as `chart-18`'s area.
- *
- * `chart-6` is the metric switcher: a row of stat cells, and clicking one
- * swaps the series underneath. `chart-18` is the plot: a monotone area, a
- * gradient that is visible at the line and nearly gone at the axis, and an
- * ease-out reveal. The active cell keeps the line-tab underline (a foreground
- * rule on the cell's bottom edge) rather than a tinted fill, which is the
- * mark in the console's reference for this panel.
+ * KPI tabs over one series, in the console's panel: a soft tray, a row of
+ * metric tabs, and the selected series drawn as a single line with a light fill.
+ * One colour, min and max as the only annotation. The active tab keeps the
+ * foreground underline on its bottom edge rather than a tinted fill.
  *
  * Fully controlled, and that is load-bearing rather than stylistic. Which
  * metric you are looking at is the kind of thing a page wants to put in the
@@ -235,9 +234,10 @@ export function MetricChart({
   activeTab,
   onTabChange,
   caption,
-  height = 240,
+  height = 260,
   className,
 }: MetricChartProps) {
+  const uid = useId().replace(/:/g, '')
   // Falling back to the first tab rather than rendering blank: an `activeTab`
   // that matches nothing is a page bug, and a panel that silently shows nothing
   // is the hardest version of it to notice.
@@ -245,56 +245,55 @@ export function MetricChart({
 
   if (!active) return null
 
+  const wide = tabs.length > 3
+
   return (
-    <Tabs
-      value={active.id}
-      onValueChange={(value) => onTabChange(String(value))}
-      className={cn('bg-card gap-0 overflow-hidden rounded-xl border', className)}
-    >
-      <TabsList
-        variant="line"
-        className="divide-border w-full flex-none gap-0 divide-x rounded-none border-b p-0 group-data-horizontal/tabs:h-auto"
+    <div className={cn('bg-muted/40 rounded-xl border p-1', className)}>
+      <div
+        className={cn('grid grid-cols-2 md:grid-cols-3', wide && 'xl:grid-cols-6')}
+        role="tablist"
+        aria-label="Metrics"
       >
-        {tabs.map((tab) => (
-          <TabsTrigger
+        {tabs.map((tab, index) => (
+          <button
             key={tab.id}
-            value={tab.id}
+            id={`${uid}-tab-${tab.id}`}
+            type="button"
+            role="tab"
+            aria-selected={tab.id === active.id}
+            aria-controls={`${uid}-panel`}
+            onClick={() => onTabChange(tab.id)}
             className={cn(
-              'h-auto flex-1 flex-col items-start justify-start gap-1.5 rounded-none px-4 py-3.5 text-left shadow-none',
-              // The rule is the cell's own bottom edge, not a blue border or a
-              // tinted fill. `after:bottom-0` pulls the line-tab mark up onto
-              // that edge; the default sits 5px below it and gets clipped.
-              'border-0 bg-transparent data-active:bg-transparent data-active:shadow-none',
-              // The line-tab mark ships at `bottom: -5px`, which tailwind-merge
-              // does not treat as the same class as `bottom-0`. The important
-              // flag is what actually seats it on the cell edge.
-              'after:bottom-0! after:h-0.5',
+              'relative flex flex-col items-start gap-1 px-4 py-3 text-left transition-colors',
+              index > 0 && (wide ? 'xl:border-l' : 'md:border-l'),
+              tab.id === active.id
+                ? 'text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
             )}
           >
-            <span className="text-muted-foreground text-xs font-normal">{tab.label}</span>
-            <span className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="text-foreground text-2xl leading-none font-semibold tabular-nums">
-                {tab.value}
-              </span>
+            <span className="text-xs">{tab.label}</span>
+            <span className="text-foreground flex flex-wrap items-baseline gap-x-2 gap-y-1 text-base font-medium tabular-nums">
+              {tab.value}
               {tab.changePercent === undefined ? null : <TrendBadge percent={tab.changePercent} />}
             </span>
-          </TabsTrigger>
+            {tab.id === active.id ? (
+              <span
+                className="bg-foreground absolute inset-x-4 bottom-0 h-0.5 rounded-full"
+                aria-hidden="true"
+              />
+            ) : null}
+          </button>
         ))}
-      </TabsList>
-
-      {tabs.map((tab) => (
-        <TabsContent key={tab.id} value={tab.id} className="px-4 pt-5 pb-4">
-          {/*
-           * Only the selected panel builds a chart. The others still render, so
-           * the tab/panel relationship stays intact for a screen reader, but a
-           * four-tab panel does not mount four recharts trees to show one.
-           */}
-          {tab.id === active.id ? (
-            <MetricSeries tab={tab} height={height} {...(caption ? { caption } : {})} />
-          ) : null}
-        </TabsContent>
-      ))}
-    </Tabs>
+      </div>
+      <div
+        id={`${uid}-panel`}
+        role="tabpanel"
+        aria-labelledby={`${uid}-tab-${active.id}`}
+        className="bg-background rounded-lg border p-4"
+      >
+        <MetricSeries tab={active} height={height} {...(caption ? { caption } : {})} />
+      </div>
+    </div>
   )
 }
 
@@ -311,8 +310,12 @@ function MetricSeries({
   // Namespaces the gradient: two MetricCharts on one page would otherwise
   // define the same SVG id, and the second silently repaints the first.
   const chartId = useId().replace(/:/g, '')
+  // Chart fill: the reference's one blue, light and dark.
   const config = {
-    value: { label: tab.label, color: 'var(--chart-1)' },
+    value: {
+      label: tab.label,
+      theme: { light: 'var(--color-blue-600)', dark: 'var(--color-blue-400)' },
+    },
   } satisfies ChartConfig
 
   if (tab.points.length === 0) {
@@ -334,16 +337,16 @@ function MetricSeries({
   const values = tab.points.map((point) => point.value)
   const min = Math.min(...values)
   const max = Math.max(...values)
-  const compact = new Intl.NumberFormat(undefined, {
-    notation: 'compact',
-    maximumFractionDigits: 1,
-  })
 
   return (
-    <div className="flex flex-col gap-2">
-      <div className="text-muted-foreground flex justify-end gap-3 text-[11px] tabular-nums">
-        <span>Min {compact.format(min)}</span>
-        <span>Max {compact.format(max)}</span>
+    <div className="flex flex-col">
+      <div className="text-muted-foreground mb-2 flex justify-end gap-3 text-xs">
+        <span>
+          Min <span className="text-foreground font-medium tabular-nums">{format(min)}</span>
+        </span>
+        <span>
+          Max <span className="text-foreground font-medium tabular-nums">{format(max)}</span>
+        </span>
       </div>
       <ChartContainer
         config={config}
@@ -355,69 +358,41 @@ function MetricSeries({
         <AreaChart
           accessibilityLayer
           data={tab.points}
-          margin={{ top: 12, right: 12, bottom: 4, left: 12 }}
+          margin={{ top: 8, right: 8, left: 8, bottom: 0 }}
         >
-          {/*
-            chart-18's wash: strong enough at the stroke to read as an area,
-            gone by the axis so the grid still shows through.
-          */}
           <defs>
-            <linearGradient id={`${chartId}-wash`} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.3} />
-              <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0.05} />
+            <linearGradient id={`${chartId}-fill`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--color-value)" stopOpacity={0.12} />
+              <stop offset="100%" stopColor="var(--color-value)" stopOpacity={0.01} />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="var(--border)" />
+          <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="label"
-            tickLine={false}
             axisLine={false}
+            tickLine={false}
             tickMargin={10}
-            tick={{ fontSize: 11 }}
+            tick={{ fontSize: 12 }}
             minTickGap={24}
           />
-          {/* No pinned zero. A series that only moves a little then sits as a
-              flat stripe at the top; chart-18 lets the axis fit the data so
-              the shape fills the plot. */}
-          <YAxis hide />
-          {/* The crosshair: a dashed vertical rule following the pointer. */}
+          <YAxis hide domain={[(low: number) => low * 0.85, (high: number) => high * 1.05]} />
           <ChartTooltip
-            cursor={{ stroke: 'var(--border)', strokeWidth: 1, strokeDasharray: '4 4' }}
-            content={({ active: hovered, payload, label }) =>
-              hovered && payload?.length ? (
-                <div className="bg-popover min-w-[11rem] rounded-lg border p-3 shadow-lg">
-                  <div className="border-border text-popover-foreground mb-2 border-b pb-1.5 text-sm font-medium">
-                    {String(label)}
-                  </div>
-                  <div className="flex items-center justify-between gap-3">
-                    <span className="text-muted-foreground flex items-center gap-2 text-xs font-medium">
-                      <span aria-hidden className="bg-chart-1 size-2.5 rounded-sm" />
-                      {tab.label}
-                    </span>
-                    <span className="text-popover-foreground text-sm font-medium tabular-nums">
-                      {format(Number(payload[0]?.value ?? 0))}
-                    </span>
-                  </div>
-                </div>
-              ) : null
+            content={
+              <ChartTooltipContent
+                formatter={(value) => `${tab.label}: ${format(Number(value))}`}
+              />
             }
           />
           <Area
-            dataKey="value"
             type="monotone"
+            dataKey="value"
             stroke="var(--color-value)"
-            strokeWidth={2}
-            fill={`url(#${chartId}-wash)`}
-            dot={false}
-            activeDot={{ r: 4, fill: 'var(--color-value)', stroke: 'var(--card)', strokeWidth: 2 }}
-            isAnimationActive
-            animationBegin={0}
-            animationDuration={850}
-            animationEasing="ease-out"
+            strokeWidth={1.5}
+            fill={`url(#${chartId}-fill)`}
           />
         </AreaChart>
       </ChartContainer>
-      {caption ? <p className="text-muted-foreground text-xs">{caption}</p> : null}
+      {caption ? <p className="text-muted-foreground mt-2 text-xs">{caption}</p> : null}
     </div>
   )
 }
@@ -473,34 +448,35 @@ export function BlurredEmpty({
   className,
 }: BlurredEmptyProps) {
   return (
-    <div className={cn('relative isolate', className)}>
+    <div className={cn('relative', className)}>
       <div
         aria-hidden="true"
         inert
-        className="pointer-events-none opacity-40 blur-[3px] select-none"
+        className="pointer-events-none opacity-70 blur-[3px] select-none"
       >
         {children}
       </div>
 
-      <div className="absolute inset-0 z-10 flex items-center justify-center p-4">
-        <div className="bg-card w-full max-w-md rounded-xl border p-1 shadow-lg">
-          <EmptyState
-            size="inline"
-            title={title}
-            description={description}
-            {...(action
-              ? { action: <Button onClick={action.onClick}>{action.label}</Button> }
-              : {})}
-            {...(secondaryAction
-              ? {
-                  secondaryAction: (
-                    <Button variant="outline" onClick={secondaryAction.onClick}>
-                      {secondaryAction.label}
-                    </Button>
-                  ),
-                }
-              : {})}
-          />
+      <div className="absolute inset-0 flex items-center justify-center p-6">
+        <div className="bg-background/95 flex max-w-sm flex-col items-center gap-4 rounded-xl border px-7 py-6 text-center shadow-[0_8px_24px_-12px_rgba(15,42,61,0.18)]">
+          <div className="space-y-1">
+            <p className="text-sm font-medium">{title}</p>
+            <p className="text-muted-foreground text-[13px]/relaxed">{description}</p>
+          </div>
+          {action || secondaryAction ? (
+            <div className="flex items-center gap-2">
+              {secondaryAction ? (
+                <Button variant="outline" className="h-8 px-3.5" onClick={secondaryAction.onClick}>
+                  {secondaryAction.label}
+                </Button>
+              ) : null}
+              {action ? (
+                <Button className="h-8 px-3.5" onClick={action.onClick}>
+                  {action.label}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>

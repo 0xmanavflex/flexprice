@@ -6,7 +6,7 @@ import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters
 import type { FilterField, FilterNode } from '@ui/components/reui/filters/filters-types'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import { type EntityColumn, idColumn, textColumn } from '../shared/cells'
+import { type EntityColumn, EmDash, Tag, idColumn } from '../shared/cells'
 
 /**
  * The Events Debugger list, on the shared `EntityList`.
@@ -73,6 +73,11 @@ function formatTimestamp(value: Date, locale?: string): string {
   return new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'medium' }).format(value)
 }
 
+/** The properties as compact JSON, for the one-line cell and the CSV. */
+function propertiesText(row: RawEvent): string {
+  return Object.keys(row.properties).length > 0 ? JSON.stringify(row.properties) : ''
+}
+
 export interface EventGridProps {
   events: RawEvent[]
   /** Server-side total. Drives the record count and page count. */
@@ -103,18 +108,61 @@ export function EventGrid({
 }: EventGridProps) {
   const columns = useMemo<EntityColumn<RawEvent>[]>(
     () => [
-      textColumn<RawEvent>(
-        'timestamp',
-        'Time',
-        (row) => (row.timestamp ? formatTimestamp(row.timestamp, locale) : null),
-        { width: 200, sortable: true, sortValue: 'timestamp', muted: true },
-      ),
-      textColumn<RawEvent>('eventName', 'Event', (row) => row.eventName, {
+      {
+        id: 'timestamp',
+        header: 'Timestamp',
+        cell: (row) =>
+          row.timestamp ? (
+            <span className="block truncate font-mono text-xs">
+              {formatTimestamp(row.timestamp, locale)}
+            </span>
+          ) : (
+            <EmDash />
+          ),
+        text: (row) => (row.timestamp ? formatTimestamp(row.timestamp, locale) : ''),
+        width: 200,
+        sortable: true,
+        sortValue: 'timestamp',
+      },
+      {
+        id: 'eventName',
+        header: 'Event',
+        cell: (row) =>
+          row.eventName ? (
+            <code className="text-foreground/80 block truncate font-mono text-xs">{row.eventName}</code>
+          ) : (
+            <EmDash />
+          ),
+        text: (row) => row.eventName,
         width: 220,
         hideable: false,
+      },
+      idColumn<RawEvent>('customer', 'Customer ID', (row) => row.externalCustomerId, {
+        width: 180,
       }),
-      idColumn<RawEvent>('customer', 'Customer', (row) => row.externalCustomerId, { width: 180 }),
-      textColumn<RawEvent>('source', 'Source', (row) => row.source, { width: 120, muted: true }),
+      {
+        id: 'properties',
+        header: 'Properties',
+        cell: (row) => {
+          const text = propertiesText(row)
+          return text ? (
+            <span title={text} className="text-muted-foreground block truncate font-mono text-xs">
+              {text}
+            </span>
+          ) : (
+            <EmDash />
+          )
+        },
+        text: propertiesText,
+        width: 320,
+      },
+      {
+        id: 'source',
+        header: 'Source',
+        cell: (row) => (row.source ? <Tag>{row.source}</Tag> : <EmDash />),
+        text: (row) => row.source,
+        width: 120,
+      },
       idColumn<RawEvent>('id', 'Event ID', (row) => row.id, { width: 200 }),
     ],
     [locale],

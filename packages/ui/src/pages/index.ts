@@ -62,6 +62,8 @@ export {
   FEATURE_TYPE_GLYPH,
   FeatureTypePill,
   Pill,
+  Status,
+  Tag,
   dateColumn,
   idColumn,
   moneyColumn,
@@ -283,6 +285,8 @@ export type {
 export { CatalogDetailFrame } from './catalog-detail/CatalogDetailFrame'
 export type { CatalogDetailFrameProps, CatalogMenuItem } from './catalog-detail/CatalogDetailFrame'
 export { CouponRedemptionsView, DEMO_COUPON_REDEMPTIONS } from './coupons/CouponRedemptionsView'
+export { CouponRedemptionMeter } from './coupons/CouponRedemptionMeter'
+export type { CouponRedemptionMeterProps } from './coupons/CouponRedemptionMeter'
 export { AddonSubscriptionsView, DEMO_ADDON_SUBSCRIPTIONS } from './addons/AddonSubscriptionsView'
 export { CostMarginCard, DEMO_COST_MARGIN } from './cost-sheets/CostMarginCard'
 export { GroupMembersView, DEMO_GROUP_MEMBERS } from './groups/GroupMembersView'

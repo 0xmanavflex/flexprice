@@ -66,6 +66,7 @@ function SelectContent({
   align = "center",
   alignOffset = 0,
   alignItemWithTrigger = false,
+  "aria-label": ariaLabel,
   ...props
 }: SelectPrimitive.Popup.Props &
   Pick<
@@ -89,7 +90,8 @@ function SelectContent({
           {...props}
         >
           <SelectScrollUpButton />
-          <SelectPrimitive.List>{children}</SelectPrimitive.List>
+          {/* The listbox is the list, not the popup, so the accessible name goes here. */}
+          <SelectPrimitive.List aria-label={ariaLabel}>{children}</SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>
       </SelectPrimitive.Positioner>

@@ -26,13 +26,6 @@ export interface ShellNavGroup {
   id: string
   title?: string
   items: ShellNavItem[]
-  /**
-   * Whether the whole group collapses under its own heading.
-   *
-   * The primary navigation must not — hiding it costs more than it saves. A
-   * secondary group of links is exactly what this is for.
-   */
-  collapsible?: boolean
 }
 
 /**

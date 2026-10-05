@@ -155,7 +155,7 @@ export function EditableCard({
           <div className="flex justify-end gap-2 border-t pt-4">
             <Button
               type="button"
-              variant="outline"
+              variant="ghost"
               disabled={pending}
               onClick={() => setEditing(false)}
             >

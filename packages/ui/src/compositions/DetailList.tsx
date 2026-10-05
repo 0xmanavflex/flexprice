@@ -3,7 +3,7 @@ import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
 /**
- * A read-only list of label → value pairs.
+ * A read-only list of label → value pairs (the reference's `Properties` look).
  *
  * The detail-page equivalent of `Field`: the same twelve lines of a `<dl>` grid
  * appeared on the coupon detail and the group profile, so it lives here once.
@@ -38,7 +38,7 @@ export function DetailList({ items, columns = 2, className }: DetailListProps) {
   return (
     <dl
       className={cn(
-        'grid grid-cols-1 gap-x-10 gap-y-4 text-sm',
+        'grid grid-cols-1 gap-x-8 gap-y-5',
         columns === 2 && 'sm:grid-cols-2',
         className,
       )}
@@ -46,10 +46,10 @@ export function DetailList({ items, columns = 2, className }: DetailListProps) {
       {items.map((item) => (
         <div
           key={item.label}
-          className={cn('flex flex-col gap-1', item.full && columns === 2 && 'sm:col-span-2')}
+          className={cn('min-w-0 space-y-1', item.full && columns === 2 && 'sm:col-span-2')}
         >
-          <dt className="text-xs font-medium text-muted-foreground">{item.label}</dt>
-          <dd className="min-w-0 break-words text-foreground">{item.value}</dd>
+          <dt className="text-muted-foreground text-xs">{item.label}</dt>
+          <dd className="min-w-0 text-sm break-words">{item.value}</dd>
         </div>
       ))}
     </dl>

@@ -14,6 +14,8 @@ import { provenance } from '@ui/provenance'
 import {
   type EntityColumn,
   type PillTone,
+  EmDash,
+  Tag,
   dateColumn,
   idColumn,
   moneyColumn,
@@ -163,8 +165,17 @@ export function PaymentGrid({
         tone: STATUS_TONE[row.status],
       })),
       textColumn<Payment>('method', 'Method', (row) => humanise(row.methodType), { width: 130 }),
-      textColumn<Payment>('gateway', 'Gateway', (row) => humanise(row.gateway), { width: 130 }),
-      textColumn<Payment>('invoice', 'Invoice', (row) => row.invoiceNumber, { width: 160 }),
+      {
+        id: 'gateway',
+        header: 'Gateway',
+        cell: (row) => {
+          const gateway = humanise(row.gateway)
+          return gateway ? <Tag>{gateway}</Tag> : <EmDash />
+        },
+        text: (row) => humanise(row.gateway) ?? '',
+        width: 130,
+      },
+      idColumn<Payment>('invoice', 'Invoice', (row) => row.invoiceNumber, { width: 160 }),
       // When it was taken, not when it landed: `succeededAt` is null for
       // everything still in flight and for everything that failed, which is
       // exactly the half of this list anyone is looking for.
@@ -276,6 +287,7 @@ export function PaymentGrid({
         title: 'No money has moved yet',
         description:
           'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
+        ...(onCreate ? { actions: <Button onClick={onCreate}>Record payment</Button> } : {}),
         guides: GUIDES,
       }}
     />

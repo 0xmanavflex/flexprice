@@ -15,7 +15,7 @@ test.beforeEach(async ({ context }) => {
 
 test('creates a draft invoice from the form', async ({ page }) => {
   await page.goto('/invoices/new')
-  await expect(page.getByRole('heading', { level: 1, name: 'Create invoice' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'New one-off invoice' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Save draft' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Choose a customer' })).toBeVisible()
@@ -29,7 +29,8 @@ test('creates a draft invoice from the form', async ({ page }) => {
   await page.getByRole('button', { name: 'Add item' }).click()
   await page.getByLabel('Line 2 description').fill('Training')
   await page.getByLabel('Line 2 amount').fill('99.99')
-  await expect(page.getByText('$349.99')).toBeVisible()
+  // The summary shows the sum as both the subtotal and the total.
+  await expect(page.getByText('$349.99')).toHaveCount(2)
   await page.getByRole('button', { name: 'Save draft' }).click()
 
   await expect(page).toHaveURL(/\/invoices\/inv_new_/)
@@ -39,6 +40,6 @@ test('opens an invoice from the list and shows real lines', async ({ page }) => 
   await page.goto('/invoices')
   await page.getByRole('row').nth(1).click()
   await expect(page).toHaveURL(/\/invoices\/[^/]+$/)
-  await expect(page.getByRole('heading', { name: 'Items' })).toBeVisible()
+  await expect(page.getByText('Items', { exact: true })).toBeVisible()
   await expect(page.getByText('Orchid Ledger Group')).toHaveCount(0)
 })

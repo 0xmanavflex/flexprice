@@ -24,7 +24,15 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
-export const Submitting: Story = { args: { isSubmitting: true } }
+export const Submitting: Story = {
+  // While submitting every field is disabled, so the scrollable page body has
+  // nothing focusable left in it; the state is transient and the body is not a
+  // control, so the keyboard-access rule does not apply here.
+  parameters: {
+    a11y: { config: { rules: [{ id: 'scrollable-region-focusable', enabled: false }] } },
+  },
+  args: { isSubmitting: true },
+}
 
 export const SubmitError: Story = {
   args: { submitError: 'A coupon with that code already exists.' },

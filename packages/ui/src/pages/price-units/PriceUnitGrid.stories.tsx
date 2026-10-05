@@ -37,18 +37,19 @@ export const Populated: Story = {
 }
 
 /**
- * No status dropdown and no filter builder — the redesign asks for neither.
+ * No status dropdown — status is a column and an entry in the filter popover.
  *
  * A tenant has a handful of price units, and the Status column says what a
- * dropdown would. Asserted so the toolbar does not quietly regrow one.
+ * dropdown would. Asserted so the toolbar does not quietly regrow one; the
+ * filter button stays, because the status filter lives behind it.
  */
-export const NoStatusOrFilterControls: Story = {
+export const NoStatusDropdown: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('Credits')
 
     await expect(canvas.queryByRole('combobox', { name: /status/i })).toBeNull()
-    await expect(canvas.queryByRole('button', { name: /filter/i })).toBeNull()
+    await expect(canvas.getByRole('button', { name: /filter/i })).toBeInTheDocument()
 
     // Search and sort remain, and so does the Status column.
     await expect(canvas.getByRole('columnheader', { name: /status/i })).toBeInTheDocument()

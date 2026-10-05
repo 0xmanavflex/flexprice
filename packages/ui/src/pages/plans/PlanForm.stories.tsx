@@ -118,7 +118,7 @@ export const PreviewFollowsTheDraft: Story = {
     await expect(within(preview).getByText('Untitled plan')).toBeInTheDocument()
     await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
     await expect(within(preview).getByText('Pro')).toBeInTheDocument()
-    await expect(within(preview).getByText('No charges yet', { exact: false })).toBeInTheDocument()
+    await expect(within(preview).getByText('Add a charge and the price customers see', { exact: false })).toBeInTheDocument()
   },
 }
 

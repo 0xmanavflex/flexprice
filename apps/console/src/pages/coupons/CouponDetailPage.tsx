@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { type ReactNode, useState } from 'react'
 import {
   COUPON_CADENCE_LABEL,
   type Coupon,
@@ -8,12 +8,17 @@ import {
   formatMoney,
 } from '@fp/domain'
 import { ApiError, useArchiveCoupon, useCoupon, useUpdateCoupon } from '@fp/query'
-import { CatalogDetailFrame, CatalogStatusBadge, CouponRedemptionsView, Money } from '@fp/ui/pages'
+import {
+  CatalogDetailFrame,
+  CatalogStatusBadge,
+  CouponRedemptionMeter,
+  CouponRedemptionsView,
+  Money,
+} from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
-  type DetailItem,
-  DetailList,
+  Dot,
   Properties,
   EditableCard,
   LoadingRows,
@@ -93,7 +98,19 @@ export function CouponDetailPage({
       onBack={onBack}
       icon={<TicketPercentIcon />}
       title={record.name}
-      subtitle={`${discountText(record)} · ${cadenceText(record)}`}
+      subtitle={
+        <>
+          <span>{discountText(record)}</span>
+          <Dot />
+          <span>{cadenceText(record)}</span>
+          {isArchived ? (
+            <>
+              <Dot />
+              <CatalogStatusBadge status={record.status} />
+            </>
+          ) : null}
+        </>
+      }
       id={record.code || record.id}
       onEdit={() => setTab('information')}
       menuLabel="Coupon actions"
@@ -128,8 +145,9 @@ export function CouponDetailPage({
           value: 'information',
           label: 'Information',
           content: (
-            <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+            <div className="grid gap-5 xl:grid-cols-3">
               <EditableCard
+                className="xl:col-span-2"
                 title="General"
                 locked={isArchived}
                 fields={[
@@ -138,7 +156,7 @@ export function CouponDetailPage({
                     key: 'id',
                     label: 'Coupon ID',
                     value: record.id,
-                    display: <span className="font-mono text-xs">{record.id}</span>,
+                    display: <span className="font-mono text-[13px]">{record.id}</span>,
                     readOnly: true,
                   },
                   {
@@ -170,7 +188,7 @@ export function CouponDetailPage({
               />
               <Section title="Metadata">
                 {record.metadata ? (
-                  <DetailList columns={1} items={metadataItems(record.metadata)} />
+                  <Properties columns={2} items={metadataItems(record.metadata)} />
                 ) : (
                   <p className="text-muted-foreground text-sm">This coupon carries no metadata.</p>
                 )}
@@ -202,13 +220,10 @@ export function CouponDetailPage({
 
 /** Overview: the terms a coupon carries, and how much of its redemption ceiling is used. */
 function OverviewTab({ coupon }: { coupon: Coupon }) {
-  const max = coupon.maxRedemptions
-  const pct = max && max > 0 ? Math.min(100, (coupon.totalRedemptions / max) * 100) : 0
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <Section title="Terms">
+    <div className="grid items-start gap-5 xl:grid-cols-3">
+      <Section className="xl:col-span-2" title="Terms">
         <Properties
-          columns={3}
           items={[
             {
               label: 'Discount',
@@ -224,7 +239,7 @@ function OverviewTab({ coupon }: { coupon: Coupon }) {
             { label: 'Applies', value: cadenceText(coupon) },
             {
               label: 'Code',
-              value: <span className="font-mono text-xs">{coupon.code || '—'}</span>,
+              value: <span className="font-mono text-[13px]">{coupon.code || '—'}</span>,
             },
             { label: 'Redeem after', value: formatDay(coupon.redeemAfter) },
             { label: 'Redeem before', value: formatDay(coupon.redeemBefore) },
@@ -233,33 +248,7 @@ function OverviewTab({ coupon }: { coupon: Coupon }) {
         />
       </Section>
       <Section title="Redemptions">
-        <div className="flex flex-col gap-3">
-          <p className="text-2xl font-medium tabular-nums">
-            {coupon.totalRedemptions.toLocaleString()}
-            <span className="text-muted-foreground text-sm font-normal">
-              {max !== null ? ` / ${max.toLocaleString()}` : ' redeemed'}
-            </span>
-          </p>
-          {max !== null ? (
-            <>
-              <div
-                role="progressbar"
-                aria-label="Redemptions used"
-                aria-valuenow={Math.round(pct)}
-                aria-valuemin={0}
-                aria-valuemax={100}
-                className="bg-muted h-2 overflow-hidden rounded-full"
-              >
-                <div className="bg-primary h-full" style={{ width: `${pct}%` }} />
-              </div>
-              <p className="text-muted-foreground text-xs tabular-nums">
-                {Math.max(0, max - coupon.totalRedemptions).toLocaleString()} left
-              </p>
-            </>
-          ) : (
-            <p className="text-muted-foreground text-xs">No redemption limit</p>
-          )}
-        </div>
+        <CouponRedemptionMeter redeemed={coupon.totalRedemptions} max={coupon.maxRedemptions} />
       </Section>
     </div>
   )
@@ -293,7 +282,7 @@ function formatDay(value: Date | null): string {
 }
 
 /** Metadata as readable rows, not a raw JSON dump. */
-function metadataItems(metadata: Record<string, string>): DetailItem[] {
+function metadataItems(metadata: Record<string, string>): { label: string; value: ReactNode }[] {
   return Object.entries(metadata).map(([key, value]) => ({
     label: key,
     value: <span className="break-words">{value}</span>,

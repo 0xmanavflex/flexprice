@@ -21,15 +21,17 @@ import {
 } from '@fp/domain'
 import { statusFilter } from '@ui/compositions/FilterBar'
 import { Button } from '@ui/components/primitives/button'
+import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import {
+  EmDash,
+  EntityCell,
+  Status,
+  Tag,
   type EntityColumn,
   dateColumn,
   idColumn,
-  numberColumn,
-  pillColumn,
-  textColumn,
 } from '../shared/cells'
 
 /**
@@ -174,29 +176,58 @@ export function PlanGrid({
 }: PlanGridProps) {
   const columns = useMemo<EntityColumn<Plan>[]>(
     () => [
-      textColumn<Plan>('name', 'Plan', (row) => row.name, {
+      {
+        id: 'name',
+        header: 'Plan',
         width: 240,
         sortable: true,
         sortValue: PlanSortField.Name,
         // The column the list is *for*. Hiding it leaves a table of
         // attributes belonging to nothing.
         hideable: false,
-      }),
+        text: (row) => row.name,
+        cell: (row) => <EntityCell name={row.name} />,
+        skeleton: <Skeleton className="h-4 w-32" />,
+      },
       idColumn<Plan>('lookupKey', 'Lookup key', (row) => row.lookupKey, { width: 180 }),
-      textColumn<Plan>('basePrice', 'Base price', headlinePrice, { width: 140 }),
-      numberColumn<Plan>('charges', 'Charges', (row) => row.chargeCount, {
-        width: 110,
-        ...(locale ? { locale } : {}),
-      }),
-      pillColumn<Plan>(
-        'status',
-        'Status',
-        (row) => ({
-          label: PLAN_STATUS_LABEL[row.status],
-          tone: row.status === PlanStatus.Published ? 'success' : 'neutral',
-        }),
-        { width: 130 },
-      ),
+      {
+        id: 'basePrice',
+        header: 'Base price',
+        width: 150,
+        text: (row) => headlinePrice(row) ?? '',
+        cell: (row) => {
+          if (!row.headline) return <EmDash />
+          const short = PERIOD_SHORT[row.headline.period]
+          return (
+            <span className="tabular-nums">
+              {row.headline.amount}
+              {short ? <span className="text-muted-foreground"> / {short}</span> : null}
+            </span>
+          )
+        },
+        skeleton: <Skeleton className="h-4 w-20" />,
+      },
+      {
+        id: 'charges',
+        header: 'Charges',
+        width: 130,
+        text: (row) => String(row.chargeCount),
+        cell: (row) => (
+          <Tag>
+            {new Intl.NumberFormat(locale).format(row.chargeCount)}{' '}
+            {row.chargeCount === 1 ? 'charge' : 'charges'}
+          </Tag>
+        ),
+        skeleton: <Skeleton className="h-6 w-20 rounded-full" />,
+      },
+      {
+        id: 'status',
+        header: 'Status',
+        width: 130,
+        text: (row) => PLAN_STATUS_LABEL[row.status],
+        cell: (row) => <Status value={PLAN_STATUS_LABEL[row.status]} />,
+        skeleton: <Skeleton className="h-6 w-24 rounded-full" />,
+      },
       dateColumn<Plan>('updatedAt', 'Updated', (row) => row.updatedAt, {
         width: 140,
         sortable: true,

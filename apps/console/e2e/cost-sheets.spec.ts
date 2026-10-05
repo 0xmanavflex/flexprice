@@ -61,7 +61,7 @@ test.describe('the cost sheets list', () => {
 
     await openRowMenu(page, 'Edit cost sheet')
     await expect(page).toHaveURL(/\/cost-sheets\/(?!new)[^/?]+\?edit=true/)
-    await page.getByRole('button', { name: 'Edit general' }).click()
+    await page.getByRole('button', { name: 'Edit cost sheet details' }).click()
     await expect(page.getByLabel('Name', { exact: true })).toBeVisible()
 
     await page.getByLabel('Description', { exact: true }).fill('Updated in place')

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import {
   AGGREGATION_LABEL,
   FEATURE_STATUS_LABEL,
@@ -7,25 +8,22 @@ import {
   needsAggregationTarget,
   type Feature,
 } from '@fp/domain'
-import { CheckIcon, CopyIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react'
-import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
+import { ArchiveIcon, BellIcon, CopyIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { Badge } from '@ui/components/reui/badge'
 import { Switch } from '@ui/components/primitives/switch'
-import { ChartBox } from '../../compositions/ChartBox'
+import { DetailHeader } from '../../compositions/DetailHeader'
 import { EditableCard } from '../../compositions/EditableCard'
 import { Section } from '../../compositions/Section'
-import { DetailTabs, Properties, SimpleTable } from '../../compositions/DetailKit'
-import { BlurredEmpty, MetricChart, type MetricPoint } from '../shared/charts'
-import { EntityHeader } from '../shared/EntityHeader'
-import { FEATURE_TYPE_GLYPH } from '../shared/cells'
+import { DetailTabs, Dot, Properties, SimpleTable } from '../../compositions/DetailKit'
+import { MetricChart, type MetricPoint } from '../shared/charts'
+import { FEATURE_TYPE_GLYPH, Status } from '../shared/cells'
 
 export type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
 
@@ -38,6 +36,10 @@ export interface FeatureDetailViewProps {
   onEditConfiguration: () => void
   /** Real save of name/description; rejects to show an inline error. */
   onSave: (changes: Record<string, string>) => Promise<unknown>
+  /** Header menu: Duplicate. Omitted, the item is not shown. */
+  onDuplicate?: () => void
+  /** Header menu: delete the feature. Omitted, the item is not shown. */
+  onDelete?: () => void
 }
 
 /** Thirty days of plausible-looking usage. Demo only: no usage read exists for a feature yet. */
@@ -103,14 +105,12 @@ const DEMO_CHARGES: DemoCharge[] = [
   },
 ]
 
-const PlanStatus = ({ active }: { active: boolean }) => (
-  <Badge variant="outline">{active ? 'Active' : 'Archived'}</Badge>
-)
+const ENTITLEMENT_ROWS = [DEMO_CHARGES[2]!, DEMO_CHARGES[3]!]
 
 const ALERTS = [
   { id: 'critical', label: 'Critical', hint: 'Above 100% of allowance', dot: 'bg-destructive' },
   { id: 'warning', label: 'Warning', hint: 'Above 80% of allowance', dot: 'bg-warning' },
-  { id: 'info', label: 'Info', hint: 'Above 50% of allowance', dot: 'bg-sky-500' },
+  { id: 'info', label: 'Info', hint: 'Above 50% of allowance', dot: 'bg-info' },
 ] as const
 
 /** Builds the ingest cURL from the feature's event name and aggregation. */
@@ -138,174 +138,183 @@ function formatDate(value: Date | null): string {
 }
 
 const mono = (value: string | null | undefined) =>
-  value ? <span className="font-mono text-xs">{value}</span> : '—'
+  value ? <span className="font-mono text-[13px]">{value}</span> : '—'
+
+const muted = (value: string) => <span className="text-muted-foreground">{value}</span>
 
 export function FeatureDetailView({
   feature,
   tab,
   onTabChange,
-  onBack,
   onEditConfiguration,
   onSave,
+  onDuplicate,
+  onDelete,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
   const Glyph = FEATURE_TYPE_GLYPH[feature.type]
   const archived = feature.status === 'archived'
-  const [copied, setCopied] = useState(false)
+  // Overview and Charges only exist for metered features; the rest start on Entitlements.
+  const active: FeatureTab = !isMetered && (tab === 'overview' || tab === 'charges') ? 'entitlements' : tab
+
+  const tabs = [
+    ...(isMetered
+      ? [
+          { value: 'overview', label: 'Overview' },
+          { value: 'charges', label: 'Charges', count: DEMO_CHARGES.length },
+        ]
+      : []),
+    { value: 'entitlements', label: 'Entitlements', count: ENTITLEMENT_ROWS.length },
+    { value: 'information', label: 'Information' },
+  ]
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <EntityHeader
-        trail={[
-          { label: 'Features', ...(onBack ? { onClick: onBack } : {}) },
-          { label: feature.name },
-        ]}
-        icon={<Glyph className="size-5" />}
+    <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
+      <DetailHeader
+        icon={<Glyph />}
         title={feature.name}
-        subtitle={FEATURE_TYPE_LABEL[feature.type]}
         id={feature.lookupKey || feature.id}
+        subtitle={
+          <>
+            <span>{FEATURE_TYPE_LABEL[feature.type]}</span>
+            {archived ? (
+              <>
+                <Dot />
+                <Status value="archived" />
+              </>
+            ) : null}
+          </>
+        }
         actions={
           <>
-            <Button variant="outline" onClick={onEditConfiguration}>
+            <Button variant="outline" className="h-8 px-3" onClick={onEditConfiguration}>
               <PencilIcon aria-hidden />
               Edit
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
-                render={<Button variant="outline" size="icon" aria-label="More actions" />}
+                render={
+                  <Button variant="outline" size="icon" className="size-8" aria-label="More actions" />
+                }
               >
-                <MoreHorizontalIcon aria-hidden className="size-4" />
+                <MoreHorizontalIcon aria-hidden />
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
-                <DropdownMenuGroup>
-                  <DropdownMenuItem className={MENU_ITEM} onClick={onEditConfiguration}>
-                    Edit configuration
+              <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => onTabChange('information')}>
+                  <BellIcon className="text-muted-foreground" aria-hidden />
+                  Usage alerts
+                </DropdownMenuItem>
+                {onDuplicate ? (
+                  <DropdownMenuItem onClick={onDuplicate}>
+                    <CopyIcon className="text-muted-foreground" aria-hidden />
+                    Duplicate
                   </DropdownMenuItem>
-                  <DropdownMenuItem
-                    className={MENU_ITEM}
-                    onClick={() => {
-                      void navigator.clipboard?.writeText(feature.id)
-                      setCopied(true)
-                      window.setTimeout(() => setCopied(false), 1500)
-                    }}
-                  >
-                    {copied ? 'Copied' : 'Copy feature ID'}
-                  </DropdownMenuItem>
-                </DropdownMenuGroup>
+                ) : null}
+                {onDelete ? (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem variant="destructive" onClick={onDelete}>
+                      <ArchiveIcon aria-hidden />
+                      Delete feature
+                    </DropdownMenuItem>
+                  </>
+                ) : null}
               </DropdownMenuContent>
             </DropdownMenu>
           </>
         }
       />
-      <div className="px-6 pb-10">
-        <DetailTabs
-          value={tab}
-          onValueChange={(next) => onTabChange(next as FeatureTab)}
-          tabs={[
-            {
-              value: 'overview',
-              label: 'Overview',
-              content: (
-                <OverviewTab
-                  feature={feature}
-                  isMetered={isMetered}
-                  onSeeCharges={() => onTabChange('charges')}
-                />
-              ),
-            },
-            {
-              value: 'charges',
-              label: 'Charges',
-              count: DEMO_CHARGES.length,
-              content: (
-                <Section
-                  title="Charges"
-                  description="Every plan and add-on that bills for this feature. Demo data until the linked-price view is wired."
-                  className="gap-0 p-0 [&>header]:p-5"
-                >
-                  <SimpleTable
-                    rows={DEMO_CHARGES}
-                    getRowId={(row) => row.id}
-                    columns={[
-                      {
-                        key: 'plan',
-                        header: 'Plan / add-on',
-                        cell: (row) => row.plan,
-                      },
-                      { key: 'model', header: 'Billing model', cell: (row) => row.model },
-                      { key: 'billed', header: 'Billed', cell: (row) => row.billed },
-                      { key: 'price', header: 'Price', cell: (row) => row.price },
-                      {
-                        key: 'status',
-                        header: 'Plan status',
-                        cell: (row) => <PlanStatus active={row.active} />,
-                      },
-                    ]}
-                  />
-                </Section>
-              ),
-            },
-            {
-              value: 'entitlements',
-              label: 'Entitlements',
-              count: 2,
-              content: (
-                <Section
-                  title="Entitlements"
-                  description="What each plan includes before charges apply. Demo data until the entitlement view is wired."
-                  className="gap-0 p-0 [&>header]:p-5"
-                >
-                  <SimpleTable
-                    rows={[DEMO_CHARGES[2]!, DEMO_CHARGES[3]!]}
-                    getRowId={(row) => row.id}
-                    columns={[
-                      {
-                        key: 'plan',
-                        header: 'Plan',
-                        cell: (row) => row.plan,
-                      },
-                      { key: 'allowance', header: 'Allowance', cell: (row) => row.allowance },
-                      { key: 'resets', header: 'Usage resets', cell: (row) => row.resets },
-                      {
-                        key: 'status',
-                        header: 'Plan status',
-                        cell: (row) => <PlanStatus active={row.active} />,
-                      },
-                    ]}
-                  />
-                </Section>
-              ),
-            },
-            {
-              value: 'information',
-              label: 'Information',
-              content: (
-                <InformationTab
-                  feature={feature}
-                  isMetered={isMetered}
-                  archived={archived}
-                  onSave={onSave}
-                />
-              ),
-            },
-          ]}
+
+      <DetailTabs
+        tabs={tabs}
+        value={active}
+        onChange={(next) => onTabChange(next as FeatureTab)}
+      />
+
+      {active === 'overview' ? (
+        <OverviewTab feature={feature} onSeeCharges={() => onTabChange('charges')} />
+      ) : null}
+
+      {active === 'charges' ? (
+        <Section
+          title="Charges"
+          description="Every plan and add-on that bills for this feature. Demo data until the linked-price view is wired."
+          flush
+        >
+          <SimpleTable
+            rows={DEMO_CHARGES}
+            getRowId={(row) => row.id}
+            columns={[
+              {
+                key: 'plan',
+                header: 'Plan / add-on',
+                cell: (row) => <span className="font-medium">{row.plan}</span>,
+              },
+              { key: 'model', header: 'Billing model', cell: (row) => muted(row.model) },
+              { key: 'billed', header: 'Billed', cell: (row) => muted(row.billed) },
+              {
+                key: 'price',
+                header: 'Price',
+                cell: (row) => <span className="tabular-nums">{row.price}</span>,
+              },
+              {
+                key: 'status',
+                header: 'Plan status',
+                cell: (row) => <Status value={row.active ? 'active' : 'archived'} />,
+              },
+            ]}
+          />
+        </Section>
+      ) : null}
+
+      {active === 'entitlements' ? (
+        <Section
+          title="Entitlements"
+          description="What each plan includes before charges apply. Demo data until the entitlement view is wired."
+          flush
+        >
+          {isMetered ? (
+            <SimpleTable
+              rows={ENTITLEMENT_ROWS}
+              getRowId={(row) => row.id}
+              columns={[
+                {
+                  key: 'plan',
+                  header: 'Plan',
+                  cell: (row) => <span className="font-medium">{row.plan}</span>,
+                },
+                { key: 'allowance', header: 'Allowance', cell: (row) => row.allowance },
+                { key: 'resets', header: 'Usage resets', cell: (row) => muted(row.resets) },
+                {
+                  key: 'status',
+                  header: 'Plan status',
+                  cell: (row) => <Status value={row.active ? 'active' : 'archived'} />,
+                },
+              ]}
+            />
+          ) : (
+            <p className="text-muted-foreground px-6 py-10 text-center text-[13px]">
+              No plan includes this feature yet.
+            </p>
+          )}
+        </Section>
+      ) : null}
+
+      {active === 'information' ? (
+        <InformationTab
+          feature={feature}
+          isMetered={isMetered}
+          archived={archived}
+          onSave={onSave}
         />
-      </div>
+      ) : null}
     </div>
   )
 }
 
-function OverviewTab({
-  feature,
-  isMetered,
-  onSeeCharges,
-}: {
-  feature: Feature
-  isMetered: boolean
-  onSeeCharges: () => void
-}) {
+function OverviewTab({ feature, onSeeCharges }: { feature: Feature; onSeeCharges: () => void }) {
   const [metric, setMetric] = useState('usage')
-  const usage = isMetered ? demoUsagePoints() : []
+  const usage = demoUsagePoints()
   const total = usage.reduce((sum, point) => sum + point.value, 0)
   const unit = feature.unitPlural || 'units'
   const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
@@ -313,20 +322,18 @@ function OverviewTab({
     {
       id: 'usage',
       label: 'Usage, last 30 days',
-      value: isMetered ? (
+      value: (
         <>
           {compact.format(total)}
           <span className="text-muted-foreground ms-1.5 text-sm font-normal">{unit}</span>
         </>
-      ) : (
-        '—'
       ),
       points: usage,
     },
     {
       id: 'customers',
       label: 'Customers reporting',
-      value: isMetered ? '212' : '—',
+      value: '212',
       points: usage.map((point, index) => ({
         ...point,
         value: 150 + Math.round(point.value / 160) + (index % 5),
@@ -335,109 +342,69 @@ function OverviewTab({
     {
       id: 'billed',
       label: 'Billed from this feature',
-      value: isMetered ? '$18,420' : '—',
+      value: '$18,420',
       points: usage.map((point) => ({ ...point, value: Math.round(point.value / 6) })),
     },
   ]
 
   return (
-    <div className="flex flex-col gap-6">
-      {isMetered ? (
-        <ChartBox
-          innerClassName="overflow-hidden p-0"
-        >
-          <MetricChart
-            tabs={chartTabs}
-            activeTab={metric}
-            onTabChange={setMetric}
-            caption="Demo data: real usage is not wired yet"
-            className="rounded-none border-0 bg-transparent"
-          />
-        </ChartBox>
-      ) : (
-        <BlurredEmpty
-          title="Nothing to chart"
-          description="This feature is not metered, so it records no usage."
-        >
-          <MetricChart
-            tabs={[{ id: 'usage', label: 'Usage', value: '—', points: demoUsagePoints() }]}
-            activeTab="usage"
-            onTabChange={() => undefined}
-          />
-        </BlurredEmpty>
-      )}
-
-      <div className="grid items-stretch gap-6 lg:grid-cols-2">
+    <div className="flex flex-col gap-5">
+      <MetricChart
+        tabs={chartTabs}
+        activeTab={metric}
+        onTabChange={setMetric}
+        caption="Demo data: real usage is not wired yet"
+      />
+      <div className="grid gap-5 xl:grid-cols-5">
         <Section
+          className="xl:col-span-3"
           title="Plans attached"
           description="Demo data: the plans-using-a-feature view is not wired yet."
-          className="h-full gap-0 p-0 [&>header]:p-5"
-          actions={
-            <Button variant="outline" onClick={onSeeCharges}>
+          flush
+          bodyClassName="flex flex-col"
+          action={
+            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onSeeCharges}>
               All charges
             </Button>
           }
         >
-          <SimpleTable
-            rows={DEMO_CHARGES.slice(0, 3)}
-            getRowId={(row) => row.id}
-            columns={[
-              {
-                key: 'plan',
-                header: 'Plan',
-                cell: (row) => row.plan,
-              },
-              {
-                key: 'model',
-                header: 'Model',
-                cell: (row) => <span className="text-muted-foreground">{row.model}</span>,
-              },
-              { key: 'price', header: 'Price', cell: (row) => row.price },
-            ]}
-          />
+          {/* Rows share the height of the panel so both overview panels line up. */}
+          <ul className="divide-border/50 flex flex-1 flex-col divide-y">
+            {DEMO_CHARGES.slice(0, 4).map((row) => (
+              <li key={row.id} className="flex min-h-12 flex-1 items-center gap-4 px-6">
+                <span className="flex-1 text-sm">{row.plan}</span>
+                <span className="text-muted-foreground w-28 text-[13px]">{row.model}</span>
+                <span className="w-56 text-[13px] tabular-nums">{row.price}</span>
+              </li>
+            ))}
+          </ul>
         </Section>
-
-        <TestEventPanel feature={feature} isMetered={isMetered} />
+        <TestEventPanel feature={feature} />
       </div>
     </div>
   )
 }
 
-function TestEventPanel({ feature, isMetered }: { feature: Feature; isMetered: boolean }) {
-  const [copied, setCopied] = useState(false)
+function TestEventPanel({ feature }: { feature: Feature }) {
   const command = buildIngestCurl(feature)
+  const copy = () => {
+    const done = navigator.clipboard?.writeText(command)
+    if (done) void done.then(() => toast.success('cURL copied'))
+  }
   return (
     <Section
+      className="xl:col-span-2"
       title="Send a test event"
-      description={
-        isMetered
-          ? 'Fill in the placeholders, then run it from your terminal or backend.'
-          : 'Boolean features do not ingest events; this shows the shape for a metered one.'
-      }
-      className="h-full"
+      description="Usage for this feature arrives as events"
+      bodyClassName="flex flex-col"
     >
-      <pre className="min-h-40 flex-1 overflow-x-auto rounded-lg bg-neutral-950 p-4 font-mono text-xs leading-relaxed text-neutral-100">
+      <pre className="border-border bg-invert text-invert-foreground flex-1 overflow-x-auto rounded-lg border p-4 font-mono text-[12px]/relaxed">
         <code>{command}</code>
       </pre>
-      <div>
-        <Button
-          variant="outline"
-          onClick={() => {
-            const done = navigator.clipboard?.writeText(command)
-            if (done) {
-              void done.then(() => {
-                setCopied(true)
-                window.setTimeout(() => setCopied(false), 1500)
-              })
-            }
-          }}
-        >
-          {copied ? (
-            <CheckIcon aria-hidden className="size-4" />
-          ) : (
-            <CopyIcon aria-hidden className="size-4" />
-          )}
-          {copied ? 'Copied' : 'Copy cURL'}
+      <div className="mt-4 flex gap-2">
+        <Button variant="outline" size="sm" className="h-8 px-3" onClick={copy}>
+          <CopyIcon aria-hidden />
+          Copy cURL
         </Button>
       </div>
     </Section>
@@ -462,14 +429,13 @@ function InformationTab({
   })
 
   return (
-    <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-      <div className="flex min-w-0 flex-col gap-6">
+    <div className="grid gap-5 xl:grid-cols-3">
+      <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
         <EditableCard
           title="General"
           locked={archived}
           fields={[
             { key: 'name', label: 'Name', value: feature.name, required: true },
-            { key: 'type', label: 'Type', value: FEATURE_TYPE_LABEL[feature.type], readOnly: true },
             {
               key: 'lookupKey',
               label: 'Lookup key',
@@ -477,10 +443,12 @@ function InformationTab({
               display: mono(feature.lookupKey),
               readOnly: true,
             },
+            { key: 'type', label: 'Type', value: FEATURE_TYPE_LABEL[feature.type], readOnly: true },
             {
               key: 'status',
               label: 'Status',
               value: FEATURE_STATUS_LABEL[feature.status],
+              display: <Status value={feature.status} />,
               readOnly: true,
             },
             {
@@ -506,84 +474,81 @@ function InformationTab({
           onSave={onSave}
         />
 
-        <Section
-          title="Event and aggregation"
-          description="What this feature meters, and how usage is measured."
-        >
-          {isMetered ? (
-            <div className="flex flex-col gap-5">
-              <Properties
-                columns={3}
-                items={[
-                  { label: 'Event name', value: mono(feature.eventName) },
-                  {
-                    label: 'Aggregation',
-                    value: feature.aggregationType
-                      ? AGGREGATION_LABEL[feature.aggregationType]
+        {isMetered ? (
+          <Section
+            title="Event and aggregation"
+            description="How raw events become billable usage"
+          >
+            <Properties
+              items={[
+                { label: 'Event name', value: mono(feature.eventName) },
+                {
+                  label: 'Aggregation',
+                  value: feature.aggregationType ? AGGREGATION_LABEL[feature.aggregationType] : '—',
+                },
+                ...(feature.aggregationField
+                  ? [{ label: 'Value property', value: mono(feature.aggregationField) }]
+                  : []),
+                {
+                  label: 'Unit',
+                  value:
+                    feature.unitSingular || feature.unitPlural
+                      ? `${feature.unitSingular || '—'} / ${feature.unitPlural || '—'}`
                       : '—',
-                  },
-                  ...(feature.aggregationField
-                    ? [{ label: 'Aggregated field', value: mono(feature.aggregationField) }]
-                    : []),
-                  { label: 'Unit (singular)', value: feature.unitSingular || '—' },
-                  { label: 'Unit (plural)', value: feature.unitPlural || '—' },
-                  { label: 'Meter ID', value: mono(feature.meterId) },
-                ]}
-              />
-              {feature.meterFilters && feature.meterFilters.length > 0 ? (
-                <div className="flex flex-col gap-2 border-t pt-4">
-                  <span className="text-muted-foreground text-xs">Event filters</span>
-                  <div className="flex flex-wrap gap-2">
-                    {feature.meterFilters.flatMap((filter) =>
-                      filter.values.map((value) => (
-                        <code
-                          key={`${filter.key}-${value}`}
-                          className="bg-muted rounded-md px-2 py-1 font-mono text-xs"
-                        >
-                          {filter.key} = {value}
-                        </code>
-                      )),
-                    )}
-                  </div>
+                },
+              ]}
+            />
+            {feature.meterFilters && feature.meterFilters.length > 0 ? (
+              <div className="mt-6 space-y-2 border-t pt-5">
+                <p className="text-muted-foreground text-xs">Event filters</p>
+                <div className="flex flex-wrap gap-1.5">
+                  {feature.meterFilters.flatMap((filter) =>
+                    filter.values.map((value) => (
+                      <span
+                        key={`${filter.key}-${value}`}
+                        className="bg-muted/70 text-muted-foreground rounded-md px-2 py-0.5 font-mono text-xs"
+                      >
+                        {filter.key} = {value}
+                      </span>
+                    )),
+                  )}
                 </div>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-muted-foreground text-sm">
-              This feature is not metered, so it has no event name or aggregation.
-            </p>
-          )}
-        </Section>
+              </div>
+            ) : null}
+          </Section>
+        ) : null}
       </div>
-      <div className="flex min-w-0 flex-col gap-6">
-        <Section
-          title="Usage alerts"
-          description="Demo: alert thresholds are not saved yet. Toggles only change this view."
-        >
-          <ul className="flex flex-col divide-y">
-            {ALERTS.map((alert) => (
-              <li key={alert.id} className="flex items-center justify-between gap-4 py-3 text-sm">
-                <div className="flex items-center gap-3">
+      <div className="flex min-w-0 flex-col gap-5">
+        {isMetered ? (
+          <Section
+            title="Usage alerts"
+            description="Demo: alert thresholds are not saved yet. Toggles only change this view."
+            flush
+          >
+            <ul className="divide-border/50 divide-y">
+              {ALERTS.map((alert) => (
+                <li key={alert.id} className="flex items-center gap-3 px-6 py-3.5">
                   <span aria-hidden className={`size-2 rounded-full ${alert.dot}`} />
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{alert.label}</span>
-                    <span className="text-muted-foreground text-xs">{alert.hint}</span>
-                  </div>
-                </div>
-                <Switch
-                  checked={enabled[alert.id] ?? false}
-                  onCheckedChange={(next) =>
-                    setEnabled((current) => ({ ...current, [alert.id]: next }))
-                  }
-                  aria-label={`${alert.label} alert`}
-                />
-              </li>
-            ))}
-          </ul>
-        </Section>
+                  <span className="flex-1">
+                    <span className="block text-sm">{alert.label}</span>
+                    <span className="text-muted-foreground block text-xs">{alert.hint}</span>
+                  </span>
+                  <Switch
+                    checked={enabled[alert.id] ?? false}
+                    onCheckedChange={(next) =>
+                      setEnabled((current) => ({ ...current, [alert.id]: next }))
+                    }
+                    aria-label={`${alert.label} alert`}
+                  />
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
 
         <Section title="Metadata">
           <Properties
+            columns={2}
             items={[
               { label: 'Feature ID', value: mono(feature.id) },
               { label: 'Meter ID', value: mono(feature.meterId) },

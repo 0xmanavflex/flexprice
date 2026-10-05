@@ -1,6 +1,5 @@
 import { COUPON_CADENCE_LABEL, CouponCadence, CouponType, formatMoney } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
-import { Card, CardContent } from '@ui/components/primitives/card'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -10,7 +9,7 @@ import { provenance } from '@ui/provenance'
  */
 export const CouponPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/card', '@reui/badge'],
+  composes: ['@reui/badge'],
   note: 'Live summary of the coupon being drafted; fetches nothing.',
 })
 
@@ -68,14 +67,14 @@ export function CouponPreviewCard(props: CouponPreviewCardProps) {
   const title = props.name.trim() || 'Untitled coupon'
   const max = props.maxRedemptions
   return (
-    <Card className="gap-0 p-0 shadow-xs">
-      <CardContent className="flex flex-col gap-3 p-4">
+    <aside aria-label="Coupon preview" className="bg-background rounded-xl border p-6">
+      <div className="flex flex-col gap-3">
         <p className="text-muted-foreground text-xs">How it will look</p>
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium">{title}</p>
           <Badge variant="outline">{COUPON_CADENCE_LABEL[props.cadence]}</Badge>
         </div>
-        <p className="text-2xl font-semibold tabular-nums">{discountText(props)}</p>
+        <p className="text-2xl font-medium tabular-nums">{discountText(props)}</p>
         <p className="text-muted-foreground font-mono text-xs break-all">
           {props.code.trim() || 'No code'}
         </p>
@@ -90,7 +89,7 @@ export function CouponPreviewCard(props: CouponPreviewCardProps) {
             {windowText(props.redeemAfter, props.redeemBefore)}
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </aside>
   )
 }

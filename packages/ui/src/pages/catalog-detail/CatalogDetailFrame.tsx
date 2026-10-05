@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
 import { MoreHorizontalIcon, PencilIcon } from 'lucide-react'
-import { MENU_CONTENT, MENU_ITEM } from '../../compositions/shell/menuSurface'
 import { DetailTabs, type DetailTabSpec } from '../../compositions/DetailKit'
-import { EntityHeader } from '../shared/EntityHeader'
+import { DetailShell } from '../../compositions/DetailShell'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -27,7 +26,7 @@ export interface CatalogDetailFrameProps {
   icon: ReactNode
   title: string
   /** One line under the title. */
-  subtitle?: string
+  subtitle?: ReactNode
   /** Copyable identifier. */
   id: string
   primary?: { label: string; onClick: () => void; disabled?: boolean }
@@ -44,7 +43,7 @@ export interface CatalogDetailFrameProps {
 
 /**
  * The shared shell for catalog detail pages (coupon, add-on, cost sheet, group):
- * icon-tile `EntityHeader` (title, one-line subtitle, id chip), one primary button with a ⋯ overflow menu, then `DetailTabs`.
+ * `DetailShell` (icon tile, title, one-line subtitle, copyable id), Edit and ⋯ overflow actions, then line `DetailTabs`.
  */
 export function CatalogDetailFrame({
   listLabel,
@@ -65,12 +64,17 @@ export function CatalogDetailFrame({
   const actions = (
     <>
       {primary ? (
-        <Button variant="outline" disabled={primary.disabled ?? false} onClick={primary.onClick}>
+        <Button
+          variant="outline"
+          className="h-8 px-3"
+          disabled={primary.disabled ?? false}
+          onClick={primary.onClick}
+        >
           {primary.label}
         </Button>
       ) : null}
       {onEdit ? (
-        <Button variant="outline" onClick={onEdit}>
+        <Button variant="outline" className="h-8 px-3" onClick={onEdit}>
           <PencilIcon aria-hidden />
           Edit
         </Button>
@@ -78,16 +82,15 @@ export function CatalogDetailFrame({
       {menu.length > 0 ? (
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button variant="outline" size="icon" aria-label={menuLabel} />}
+            render={<Button variant="outline" size="icon" className="size-8" aria-label={menuLabel} />}
           >
             <MoreHorizontalIcon aria-hidden />
           </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
+          <DropdownMenuContent align="end" className="w-44">
             <DropdownMenuGroup>
               {menu.map((item) => (
                 <DropdownMenuItem
                   key={item.id}
-                  className={MENU_ITEM}
                   disabled={item.disabled ?? false}
                   {...(item.destructive ? { variant: 'destructive' as const } : {})}
                   onClick={item.onSelect}
@@ -103,23 +106,20 @@ export function CatalogDetailFrame({
   )
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
-      <EntityHeader
-        trail={[{ label: listLabel, onClick: onBack }, { label: title }]}
-        icon={icon}
-        title={title}
-        {...(subtitle ? { subtitle } : {})}
-        id={id}
-        actions={actions}
+    <DetailShell
+      trail={[{ label: listLabel, onClick: onBack }, { label: title }]}
+      icon={icon}
+      title={title}
+      {...(subtitle ? { subtitle } : {})}
+      id={id}
+      actions={actions}
+    >
+      <DetailTabs
+        tabs={tabs}
+        {...(tab !== undefined ? { value: tab } : {})}
+        {...(onTabChange ? { onValueChange: onTabChange } : {})}
       />
-      <div className="px-6 pb-10">
-        <DetailTabs
-          tabs={tabs}
-          {...(tab !== undefined ? { value: tab } : {})}
-          {...(onTabChange ? { onValueChange: onTabChange } : {})}
-        />
-      </div>
       {children}
-    </div>
+    </DetailShell>
   )
 }

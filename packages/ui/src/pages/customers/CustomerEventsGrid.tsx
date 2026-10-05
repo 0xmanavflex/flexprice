@@ -1,15 +1,4 @@
 import { useState } from 'react'
-import { MoreHorizontalIcon } from 'lucide-react'
-import { MENU_CONTENT, MENU_ITEM } from '@ui/compositions/shell/menuSurface'
-import { Badge } from '@ui/components/reui/badge'
-import { Button } from '@ui/components/primitives/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@ui/components/primitives/dropdown-menu'
 import {
   Sheet,
   SheetContent,
@@ -19,7 +8,6 @@ import {
 } from '@ui/components/primitives/sheet'
 import { Section } from '@ui/compositions/Section'
 import { SimpleTable } from '@ui/compositions/DetailKit'
-import { EmptyState } from '@ui/compositions/EmptyState'
 
 /** Demo usage events: no customer event feed is wired yet. */
 export interface CustomerEvent {
@@ -85,7 +73,7 @@ export function CustomerEventsGrid({ events }: { events: CustomerEvent[] }) {
 
   return (
     <>
-      <Section title="Recent events" description="Latest usage events for this customer">
+      <Section title="Recent events" description="Latest usage events for this customer" flush>
         <SimpleTable
           rows={events}
           getRowId={(event) => event.id}
@@ -94,67 +82,30 @@ export function CustomerEventsGrid({ events }: { events: CustomerEvent[] }) {
             {
               key: 'name',
               header: 'Event',
-              cell: (e) => <span className="font-mono text-xs">{e.name}</span>,
+              cell: (e) => <span className="font-mono text-[13px]">{e.name}</span>,
             },
             {
               key: 'properties',
               header: 'Properties',
-              cell: (e) => <span className="text-muted-foreground">{summarize(e.properties)}</span>,
+              cell: (e) => (
+                <span className="text-muted-foreground block max-w-md truncate font-mono text-xs">
+                  {summarize(e.properties)}
+                </span>
+              ),
             },
             {
               key: 'source',
               header: 'Source',
-              cell: (e) => (
-                <Badge variant="outline" className="font-normal">
-                  {e.source}
-                </Badge>
-              ),
+              cell: (e) => <span className="text-muted-foreground">{e.source}</span>,
             },
             {
               key: 'at',
               header: 'Received',
               cell: (e) => <span className="text-muted-foreground">{e.receivedAt}</span>,
             },
-            {
-              key: 'actions',
-              header: '',
-              className: 'w-10 text-right',
-              cell: (e) => (
-                <DropdownMenu>
-                  <DropdownMenuTrigger
-                    render={
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        aria-label="Row actions"
-                        onClick={(event) => event.stopPropagation()}
-                      />
-                    }
-                  >
-                    <MoreHorizontalIcon aria-hidden />
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" sideOffset={8} className={MENU_CONTENT}>
-                    <DropdownMenuGroup>
-                      <DropdownMenuItem className={MENU_ITEM} onClick={() => setSelected(e)}>
-                        View event
-                      </DropdownMenuItem>
-                    </DropdownMenuGroup>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              ),
-            },
           ]}
-          empty={
-            <EmptyState
-              size="inline"
-              title="No events yet"
-              description="Events ingested for this customer appear here as they arrive."
-            />
-          }
+          empty="No events yet. Events ingested for this customer appear here as they arrive."
         />
-        <p className="text-muted-foreground text-xs">
-          Showing the {events.length} most recent events. Demo data.
-        </p>
       </Section>
 
       <Sheet

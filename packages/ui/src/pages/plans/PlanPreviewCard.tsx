@@ -3,15 +3,13 @@ import type { ReactNode } from 'react'
 import {
   BILLING_PERIOD_SHORT,
   BillingModel,
-  type BillingPeriod,
+  BillingPeriod,
   type CreateCharge,
   CreditGrantCadence,
   CreditGrantPeriod,
   FeatureType,
   PriceType,
 } from '@fp/domain'
-import { Card, CardContent } from '@ui/components/primitives/card'
-import { Separator } from '@ui/components/primitives/separator'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -29,7 +27,7 @@ import { provenance } from '@ui/provenance'
  */
 export const PlanPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/card', 'ui/separator'],
+  composes: [],
   note: 'Reuses PlanGrid’s pricing-card idiom; adds a live example-bill estimate.',
 })
 
@@ -80,7 +78,6 @@ export function creditLine(g: {
   return { key: g.key, label: g.name || 'Credit grant', value: `${amount} ${when}` }
 }
 
-const MAX_INCLUDED = 3
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
 /** One "Included" line for an entitlement, staged or saved — both share these fields. */
@@ -160,13 +157,21 @@ export function pricingSummary(
   }
 }
 
-function SectionLabel({ children }: { children: ReactNode }) {
+function PreviewBlock({ title, children }: { title: string; children: ReactNode }) {
   return (
-    <h3 className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+    <section className="space-y-3 border-t pt-4" aria-label={title}>
+      <p className="text-muted-foreground text-[11px] tracking-wider uppercase">{title}</p>
       {children}
-    </h3>
+    </section>
   )
 }
+
+function More({ n }: { n: number }) {
+  return n > 0 ? <li className="text-muted-foreground text-xs">and {n} more</li> : null
+}
+
+const CAP = 3
+const PERIOD_WORD: Record<string, string> = { mo: 'month', yr: 'year' }
 
 export function PlanPreviewCard({
   name,
@@ -182,111 +187,124 @@ export function PlanPreviewCard({
   const usageCharges = charges.filter((c) => c.type === PriceType.Usage)
   const fixed = charges.filter((c) => c.type !== PriceType.Usage)
   const base = fixed.find((c) => c.billingModel === BillingModel.FlatFee) ?? fixed[0]
-  const period = base ? BILLING_PERIOD_SHORT[base.billingPeriod as BillingPeriod] : undefined
-  const shown = included.slice(0, MAX_INCLUDED)
-  const extra = included.length - shown.length
+  const extras = fixed.filter((c) => c !== base)
+  const short = base ? BILLING_PERIOD_SHORT[base.billingPeriod as BillingPeriod] : undefined
+  const period = short ? (PERIOD_WORD[short] ?? short) : undefined
 
   const trial = trialDays && trialDays > 0 ? `${trialDays}-day free trial` : null
   const tail = [trial, usageCharges.length > 0 ? 'plus usage' : null].filter(Boolean).join(' · ')
 
   return (
-    <Card className="flex flex-col">
-      <CardContent className="flex flex-1 flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <span className="text-muted-foreground text-xs">What customers see</span>
-          <span className="truncate text-sm font-medium">{name || 'Untitled plan'}</span>
-        </div>
+    <aside aria-label="Plan preview" className="bg-background sticky top-6 space-y-5 rounded-xl border p-6">
+      <div className="space-y-1">
+        <p className="text-muted-foreground text-xs">What customers see</p>
+        <p className="truncate text-sm font-medium">{name || 'Untitled plan'}</p>
+      </div>
 
-        <div className="flex flex-col gap-1">
-          <div className="flex items-baseline gap-1.5">
-            {base ? (
-              <>
-                <span className="text-3xl font-medium tracking-tight tabular-nums">
-                  {base.billingModel === BillingModel.FlatFee
-                    ? money(Number(base.amount || 0), currency, locale)
-                    : pricingSummary(base, currency, locale)}
-                </span>
-                {period ? <span className="text-muted-foreground text-sm">/ {period}</span> : null}
-              </>
-            ) : (
-              <span className="text-muted-foreground text-3xl font-medium tracking-tight">
-                {usageCharges.length > 0 ? 'Usage-based' : '—'}
-              </span>
-            )}
-          </div>
-          {tail ? <span className="text-muted-foreground text-xs">{tail}</span> : null}
-        </div>
-
-        {charges.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            No charges yet. Add a fixed or usage charge to see the plan take shape.
-          </p>
-        ) : null}
-
-        {usageCharges.length > 0 ? (
-          <>
-            <Separator />
-            <section className="flex flex-col gap-2.5" aria-label="Usage">
-              <SectionLabel>Usage</SectionLabel>
-              {usageCharges.map((charge, index) => (
-                <div key={index} className="flex flex-col text-sm">
-                  <span className="font-medium">{chargeLabel(charge, meterLabel)}</span>
-                  <span className="text-muted-foreground">
-                    {pricingSummary(
-                      charge,
-                      currency,
-                      locale,
-                      charge.meterId ? meterUnit?.(charge.meterId) : undefined,
-                    )}
+      {charges.length === 0 ? (
+        <p className="text-muted-foreground text-[13px]/relaxed">
+          Add a charge and the price customers see builds up here.
+        </p>
+      ) : (
+        <>
+          <div className="space-y-1">
+            <div className="flex items-baseline gap-1.5">
+              {base ? (
+                <>
+                  <span className="text-3xl font-medium tabular-nums">
+                    {base.billingModel === BillingModel.FlatFee
+                      ? money(Number(base.amount || 0), currency, locale)
+                      : pricingSummary(base, currency, locale)}
                   </span>
-                </div>
-              ))}
-            </section>
-          </>
-        ) : null}
+                  {period ? <span className="text-muted-foreground text-sm">/ {period}</span> : null}
+                </>
+              ) : (
+                <span className="text-muted-foreground text-3xl font-medium">
+                  {usageCharges.length > 0 ? 'Usage-based' : '—'}
+                </span>
+              )}
+            </div>
+            {tail ? <p className="text-muted-foreground text-xs">{tail}</p> : null}
+          </div>
 
-        {included.length > 0 ? (
-          <>
-            <Separator />
-            <section className="flex flex-col gap-2" aria-label="Included">
-              <SectionLabel>Included</SectionLabel>
-              {shown.map((line) => (
-                <div key={line.key} className="flex items-center gap-2 text-sm">
-                  <CheckIcon aria-hidden className="size-3.5 shrink-0 text-emerald-600" />
-                  <span className="min-w-0 flex-1 truncate">{line.label}</span>
-                  {line.value ? (
-                    <span className="text-muted-foreground shrink-0 tabular-nums">
-                      {line.value}
+          {extras.length > 0 ? (
+            <PreviewBlock title="Also billed">
+              <ul className="space-y-2 text-[13px]">
+                {extras.slice(0, CAP).map((charge, index) => (
+                  <li key={index} className="flex justify-between gap-3">
+                    <span>{chargeLabel(charge, meterLabel)}</span>
+                    <span className="text-muted-foreground text-right tabular-nums">
+                      {charge.billingPeriod === BillingPeriod.OneTime
+                        ? `${pricingSummary(charge, currency, locale)} once`
+                        : pricingSummary(charge, currency, locale)}
                     </span>
-                  ) : null}
-                </div>
-              ))}
-              {extra > 0 ? (
-                <span className="text-muted-foreground text-xs">and {extra} more</span>
-              ) : null}
-            </section>
-          </>
-        ) : null}
+                  </li>
+                ))}
+                <More n={extras.length - CAP} />
+              </ul>
+            </PreviewBlock>
+          ) : null}
 
-        {credits.length > 0 ? (
-          <>
-            <Separator />
-            <section className="flex flex-col gap-2" aria-label="Credits">
-              <SectionLabel>Credits</SectionLabel>
-              {credits.map((line) => (
-                <div key={line.key} className="flex items-baseline justify-between gap-3 text-sm">
-                  <span className="min-w-0 truncate">{line.label}</span>
-                  {line.value ? (
-                    <span className="text-muted-foreground shrink-0 tabular-nums">
-                      {line.value}
+          {usageCharges.length > 0 ? (
+            <PreviewBlock title="Usage">
+              <ul className="space-y-2.5 text-[13px]">
+                {usageCharges.slice(0, CAP).map((charge, index) => (
+                  <li key={index} className="space-y-0.5">
+                    <span className="block">{chargeLabel(charge, meterLabel)}</span>
+                    <span className="text-muted-foreground block tabular-nums">
+                      {pricingSummary(
+                        charge,
+                        currency,
+                        locale,
+                        charge.meterId ? meterUnit?.(charge.meterId) : undefined,
+                      )}
                     </span>
-                  ) : null}
-                </div>
-              ))}
-            </section>
-          </>
-        ) : null}
-      </CardContent>
-    </Card>
+                  </li>
+                ))}
+                <More n={usageCharges.length - CAP} />
+              </ul>
+            </PreviewBlock>
+          ) : null}
+
+          {included.length > 0 ? (
+            <PreviewBlock title="Included">
+              <ul className="space-y-2 text-[13px]">
+                {included.slice(0, CAP).map((line) => (
+                  <li key={line.key} className="flex items-start gap-2">
+                    <CheckIcon
+                      aria-hidden
+                      className="text-success mt-0.5 size-3.5 shrink-0"
+                    />
+                    <span className="flex flex-1 justify-between gap-3">
+                      <span>{line.label}</span>
+                      {line.value ? (
+                        <span className="text-muted-foreground text-right">{line.value}</span>
+                      ) : null}
+                    </span>
+                  </li>
+                ))}
+                <More n={included.length - CAP} />
+              </ul>
+            </PreviewBlock>
+          ) : null}
+
+          {credits.length > 0 ? (
+            <PreviewBlock title="Credits">
+              <ul className="space-y-2 text-[13px]">
+                {credits.slice(0, CAP).map((line) => (
+                  <li key={line.key} className="flex justify-between gap-3">
+                    <span>{line.label}</span>
+                    {line.value ? (
+                      <span className="text-muted-foreground tabular-nums">{line.value}</span>
+                    ) : null}
+                  </li>
+                ))}
+                <More n={credits.length - CAP} />
+              </ul>
+            </PreviewBlock>
+          ) : null}
+        </>
+      )}
+    </aside>
   )
 }

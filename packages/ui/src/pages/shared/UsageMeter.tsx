@@ -1,4 +1,4 @@
-import { Progress, ProgressIndicator, ProgressTrack } from '@ui/components/primitives/progress'
+import { Progress } from '@ui/components/primitives/progress'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -47,34 +47,34 @@ export function UsageMeter({ label, used, limit, unit, locale }: UsageMeterProps
     : `${format(used)} of ${format(limit)}${unit ? ` ${unit}` : ''}`
 
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between gap-4">
-        <span className="text-sm font-medium">{label}</span>
+        <span className="text-[13px] font-medium">{label}</span>
         <span
-          className={cn('text-xs tabular-nums', over ? 'text-destructive' : 'text-muted-foreground')}
+          className={cn(
+            'text-xs tabular-nums',
+            over ? 'text-destructive' : 'text-muted-foreground',
+          )}
         >
           {summary}
         </span>
       </div>
 
       {unlimited ? (
-        <p className="text-xs text-muted-foreground">Unlimited</p>
+        <p className="text-muted-foreground text-xs">Unlimited</p>
       ) : (
         <Progress
           value={percent}
           aria-label={`${label}: ${summary}`}
-          className="h-1.5"
-        >
-          <ProgressTrack className="bg-muted h-1.5 rounded-full">
-            <ProgressIndicator
-              className={cn('h-full rounded-full', over ? 'bg-destructive' : 'bg-primary')}
-            />
-          </ProgressTrack>
-        </Progress>
+          className={cn(
+            '**:data-[slot=progress-track]:h-2',
+            over && '**:data-[slot=progress-indicator]:bg-destructive',
+          )}
+        />
       )}
 
       {over ? (
-        <p className="text-xs text-destructive">
+        <p className="text-destructive text-xs">
           Over the included amount by {format(used - (limit ?? 0))}
         </p>
       ) : null}

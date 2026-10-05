@@ -1,62 +1,34 @@
-import {
-  ArchiveIcon,
-  BracesIcon,
-  CircleAlertIcon,
-  CircleCheckIcon,
-  CircleDashedIcon,
-  CircleIcon,
-  CircleMinusIcon,
-  CircleSlashIcon,
-  GaugeIcon,
-  HashIcon,
-  ToggleRightIcon,
-} from 'lucide-react'
+import { BracesIcon, GaugeIcon, HashIcon, ToggleRightIcon, type CircleIcon } from 'lucide-react'
 import { FEATURE_TYPE_LABEL, FeatureType, InvoiceStatus, needsAttention } from '@fp/domain'
-import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
+import { Pill, type PillTone } from './cells'
 
 /**
- * A billing status: an icon in colour, on a surface that stays neutral.
+ * A billing status: a bordered pill with a coloured dot.
  *
- * Colour is carried by the glyph rather than a fill. With five statuses down
+ * Colour is carried by the 6px dot rather than a fill. With five statuses down
  * eighteen dense rows, tinted fills turn the status column into a traffic
  * light — every row shouting at once, which is the same as none of them
- * shouting. A ring of neutral pills with one red glyph in it reads instantly.
+ * shouting. A ring of neutral pills with one red dot in it reads instantly.
  *
- * The shape also does work colour cannot: dashed for draft, hollow for open,
- * a tick for paid, a slash for void. Someone who cannot distinguish the hues
- * can still tell the six apart, and so can a printed page.
- *
- * Only a status needing action gets the destructive colour. If several shout,
- * the one row a billing operator has to act on stops standing out.
- *
- * Solid variants were tried and dropped: white on `success` measures 2.47:1
- * against a 4.5:1 threshold. The accessibility check caught that, not the eye.
+ * The label is always spelled out beside the dot, so tone is never the only
+ * thing saying what the status is, and only a status needing action gets the
+ * destructive colour.
  */
 export const StatusBadgeProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/badge'],
-  note: 'Colour on the glyph, neutral surface — so a dense column is not a traffic light.',
+  composes: [],
+  note: 'Dot-pill status, colour on the dot — so a dense column is not a traffic light.',
 })
 
-/** The colour each status carries, on its icon only. */
-const INVOICE_TONE: Record<InvoiceStatus, string> = {
-  [InvoiceStatus.Draft]: 'text-muted-foreground',
-  [InvoiceStatus.Open]: 'text-info',
-  [InvoiceStatus.Paid]: 'text-success',
-  [InvoiceStatus.Overdue]: 'text-destructive',
-  [InvoiceStatus.Void]: 'text-muted-foreground',
-  [InvoiceStatus.Skipped]: 'text-muted-foreground',
-}
-
-/** Shape, so the six are distinguishable without colour at all. */
-const INVOICE_ICON: Record<InvoiceStatus, typeof CircleIcon> = {
-  [InvoiceStatus.Draft]: CircleDashedIcon,
-  [InvoiceStatus.Open]: CircleIcon,
-  [InvoiceStatus.Paid]: CircleCheckIcon,
-  [InvoiceStatus.Overdue]: CircleAlertIcon,
-  [InvoiceStatus.Void]: CircleSlashIcon,
-  [InvoiceStatus.Skipped]: CircleMinusIcon,
+/** The dot colour each status carries. */
+const INVOICE_TONE: Record<InvoiceStatus, PillTone> = {
+  [InvoiceStatus.Draft]: 'neutral',
+  [InvoiceStatus.Open]: 'info',
+  [InvoiceStatus.Paid]: 'success',
+  [InvoiceStatus.Overdue]: 'danger',
+  [InvoiceStatus.Void]: 'neutral',
+  [InvoiceStatus.Skipped]: 'neutral',
 }
 
 const INVOICE_LABEL: Record<InvoiceStatus, string> = {
@@ -73,64 +45,55 @@ export interface InvoiceStatusBadgeProps {
 }
 
 export function InvoiceStatusBadge({ status }: InvoiceStatusBadgeProps) {
-  const Icon = INVOICE_ICON[status]
-
   return (
-    <Badge
-      variant="outline"
-      size="sm"
-      radius="full"
-      className="border-border/60 bg-transparent px-2 font-normal text-foreground dark:bg-transparent"
-    >
-      <Icon aria-hidden className={INVOICE_TONE[status]} />
+    <Pill tone={INVOICE_TONE[status]}>
       {INVOICE_LABEL[status]}
       {/* Colour alone cannot carry "this one needs you". */}
       {needsAttention(status) ? <span className="sr-only"> — needs attention</span> : null}
-    </Badge>
+    </Pill>
   )
 }
 
 /**
- * A catalogue label, drawn the same way a status is: outline surface, colour on
- * the glyph only. One shape shared by every catalogue chip so the table reads as
- * one system rather than a colour swatch per column.
+ * A catalogue label, drawn the same way a status is: a dot pill. One shape
+ * shared by every catalogue chip so the table reads as one system rather than a
+ * colour swatch per column.
  */
 export interface GlyphBadgeProps {
-  /** A lucide icon component. */
+  /** A lucide icon component. Kept for call-site compatibility; the dot carries the tone. */
   icon: typeof CircleIcon
-  /** A `text-*` colour utility carried by the glyph only, e.g. `text-success`. */
+  /** A `text-*` colour utility naming the tone, e.g. `text-success`. */
   tone: string
   label: string
 }
 
+/** The tone each `text-*` utility names. Literal keys, so Tailwind never has to guess. */
+const TEXT_TONE: Record<string, PillTone> = {
+  'text-success': 'success',
+  'text-info': 'info',
+  'text-warning': 'warning',
+  'text-destructive': 'danger',
+  'text-muted-foreground': 'neutral',
+}
+
 /**
- * The one status chip shape: an outline pill, colour on the glyph only.
+ * The one status chip shape: a bordered pill with a coloured dot.
  *
  * Exported so a table that needs a status the shared badges do not cover yet —
  * a subscription's lifecycle, a payment's state — composes the *same* chip from
- * its own icon/tone/label map, rather than inventing a differently-shaped
- * badge. Every status across the console reads as one system this way.
+ * its own tone/label map, rather than inventing a differently-shaped badge.
+ * Every status across the console reads as one system this way.
  */
-export function GlyphBadge({ icon: Icon, tone, label }: GlyphBadgeProps) {
-  return (
-    <Badge
-      variant="outline"
-      size="sm"
-      radius="full"
-      className="border-border/60 bg-transparent px-2 font-normal text-foreground dark:bg-transparent"
-    >
-      <Icon aria-hidden className={tone} />
-      {label}
-    </Badge>
-  )
+export function GlyphBadge({ tone, label }: GlyphBadgeProps) {
+  return <Pill tone={TEXT_TONE[tone] ?? 'neutral'}>{label}</Pill>
 }
 
-/** The colour each feature type carries, on its icon only. */
-const FEATURE_TYPE_ICON: Record<FeatureType, { icon: typeof CircleIcon; tone: string }> = {
-  [FeatureType.Metered]: { icon: GaugeIcon, tone: 'text-info' },
-  [FeatureType.Boolean]: { icon: ToggleRightIcon, tone: 'text-muted-foreground' },
-  [FeatureType.Static]: { icon: HashIcon, tone: 'text-success' },
-  [FeatureType.Config]: { icon: BracesIcon, tone: 'text-muted-foreground' },
+/** The glyph each feature type carries. */
+const FEATURE_TYPE_ICON: Record<FeatureType, typeof CircleIcon> = {
+  [FeatureType.Metered]: GaugeIcon,
+  [FeatureType.Boolean]: ToggleRightIcon,
+  [FeatureType.Static]: HashIcon,
+  [FeatureType.Config]: BracesIcon,
 }
 
 export interface FeatureTypeBadgeProps {
@@ -138,20 +101,20 @@ export interface FeatureTypeBadgeProps {
 }
 
 export function FeatureTypeBadge({ type }: FeatureTypeBadgeProps) {
-  const { icon, tone } = FEATURE_TYPE_ICON[type]
-  return <GlyphBadge icon={icon} tone={tone} label={FEATURE_TYPE_LABEL[type]} />
+  const Icon = FEATURE_TYPE_ICON[type]
+  return <Pill icon={<Icon aria-hidden />}>{FEATURE_TYPE_LABEL[type]}</Pill>
 }
 
 /**
  * The shared catalogue status: published or archived, drawn like every status
- * here — colour on the glyph, neutral fill. Features, plans and add-ons all use
- * it, so a Published chip is the same object in every catalogue table.
+ * here — a dot pill. Features, plans and add-ons all use it, so a Published
+ * chip is the same object in every catalogue table.
  */
 export type CatalogStatus = 'published' | 'archived'
 
-const CATALOG_STATUS: Record<CatalogStatus, { icon: typeof CircleIcon; tone: string; label: string }> = {
-  published: { icon: CircleCheckIcon, tone: 'text-success', label: 'Published' },
-  archived: { icon: ArchiveIcon, tone: 'text-muted-foreground', label: 'Archived' },
+const CATALOG_STATUS: Record<CatalogStatus, { tone: PillTone; label: string }> = {
+  published: { tone: 'success', label: 'Published' },
+  archived: { tone: 'neutral', label: 'Archived' },
 }
 
 export interface CatalogStatusBadgeProps {
@@ -159,6 +122,6 @@ export interface CatalogStatusBadgeProps {
 }
 
 export function CatalogStatusBadge({ status }: CatalogStatusBadgeProps) {
-  const { icon, tone, label } = CATALOG_STATUS[status]
-  return <GlyphBadge icon={icon} tone={tone} label={label} />
+  const { tone, label } = CATALOG_STATUS[status]
+  return <Pill tone={tone}>{label}</Pill>
 }

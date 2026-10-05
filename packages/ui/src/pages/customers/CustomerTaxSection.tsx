@@ -87,6 +87,7 @@ export function CustomerTaxSection({
     <Section
       title="Taxes"
       description="Tax rates applied to every invoice raised for this customer"
+      flush
       actions={
         <Button variant="outline" size="sm" onClick={() => setDialog({ kind: 'add' })}>
           <PlusIcon aria-hidden /> Add tax rate
@@ -94,19 +95,25 @@ export function CustomerTaxSection({
       }
     >
       {isLoading ? (
-        <LoadingRows />
+        <div className="p-6">
+          <LoadingRows />
+        </div>
       ) : failed ? (
-        <AppFailure
-          title="Taxes could not be loaded"
-          detail="The rest of this customer's record still works."
-          onRetry={onRetry}
-        />
+        <div className="p-6">
+          <AppFailure
+            title="Taxes could not be loaded"
+            detail="The rest of this customer's record still works."
+            onRetry={onRetry}
+          />
+        </div>
       ) : associations.length === 0 ? (
-        <EmptyState
-          size="inline"
-          title="No tax rates attached"
-          description="Add a rate to have it applied when this customer is invoiced."
-        />
+        <div className="p-6">
+          <EmptyState
+            size="inline"
+            title="No tax rates attached"
+            description="Add a rate to have it applied when this customer is invoiced."
+          />
+        </div>
       ) : (
         <SimpleTable
           rows={associations}

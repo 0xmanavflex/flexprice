@@ -169,6 +169,11 @@ export const StatusDropdown: Story = {
           .some((query) => query.statuses?.[0] === SubscriptionStatus.Paused),
       ).toBe(true),
     )
+
+    // Let the select finish closing: while a Base UI popup is mounted its focus
+    // guards are aria-hidden *and* focusable, which axe rejects if the scan
+    // lands mid-animation. This waits for the settled state; it asserts nothing less.
+    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
   },
 }
 

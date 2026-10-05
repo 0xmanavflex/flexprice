@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { Badge } from '@ui/components/reui/badge'
+import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -36,24 +36,21 @@ export interface MetricProps {
 }
 
 /**
- * Rendered as a tinted badge rather than coloured text.
- *
- * `text-success` is a background-tuned green and fails WCAG AA as a foreground
- * on the card — caught by the accessibility check, not by eye. There is no
- * text-on-card success token, and adding one would breach the no-new-tokens
- * rule, so this reuses the `-light` badge variants that were already validated
- * for the status badges.
+ * Coloured text, drawn the way the reference draws a trend: `text-xs
+ * font-medium`, no fill. The `-foreground` token carries it in light mode and
+ * the base token in dark, the pairing the light badge variants use, because bare
+ * `text-success` fails contrast as small foreground text.
  */
-const SENTIMENT_VARIANT: Record<Sentiment, 'success-light' | 'destructive-light' | 'secondary'> = {
-  positive: 'success-light',
-  negative: 'destructive-light',
-  neutral: 'secondary',
+const SENTIMENT_TEXT: Record<Sentiment, string> = {
+  positive: 'text-success-foreground dark:text-success',
+  negative: 'text-destructive-foreground dark:text-destructive',
+  neutral: 'text-muted-foreground',
 }
 
 export function Metric({ label, value, hint, change, isLoading = false }: MetricProps) {
   return (
-    <div className="bg-card flex flex-col gap-1 rounded-xl border p-4">
-      <span className="text-muted-foreground text-xs font-medium">{label}</span>
+    <div className="bg-background flex flex-col gap-1 rounded-xl border p-4">
+      <span className="text-muted-foreground text-xs">{label}</span>
 
       {isLoading ? (
         <div aria-hidden className="bg-muted h-7 w-24 animate-pulse rounded" />
@@ -63,11 +60,13 @@ export function Metric({ label, value, hint, change, isLoading = false }: Metric
       {isLoading ? <span className="sr-only">Loading {label}</span> : null}
 
       {change && !isLoading ? (
-        <Badge variant={SENTIMENT_VARIANT[change.sentiment]} size="sm" className="w-fit">
+        <span
+          className={cn('w-fit text-xs font-medium tabular-nums', SENTIMENT_TEXT[change.sentiment])}
+        >
           <span aria-hidden>{change.direction === 'up' ? '↑' : '↓'} </span>
           {change.label}
           <span className="sr-only"> {change.direction === 'up' ? 'increase' : 'decrease'}</span>
-        </Badge>
+        </span>
       ) : null}
 
       {hint ? <span className="text-muted-foreground text-xs">{hint}</span> : null}

@@ -1,5 +1,4 @@
 import { Badge } from '@ui/components/reui/badge'
-import { Card, CardContent } from '@ui/components/primitives/card'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -9,7 +8,7 @@ import { provenance } from '@ui/provenance'
  */
 export const AddonPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/card', '@reui/badge'],
+  composes: ['@reui/badge'],
   note: 'Live summary of the add-on being drafted; fetches nothing.',
 })
 
@@ -24,8 +23,8 @@ export function AddonPreviewCard({ name, lookupKey, description }: AddonPreviewC
   const body = description?.trim()
 
   return (
-    <Card className="gap-0 p-0 shadow-xs">
-      <CardContent className="flex flex-col gap-3 p-4">
+    <aside aria-label="Add-on preview" className="bg-background rounded-xl border p-6">
+      <div className="flex flex-col gap-3">
         <p className="text-muted-foreground text-xs">How it will look</p>
         <div className="flex items-start justify-between gap-2">
           <p className="text-sm font-medium">{title}</p>
@@ -44,7 +43,7 @@ export function AddonPreviewCard({ name, lookupKey, description }: AddonPreviewC
             Price and entitlements are added after you create it.
           </p>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </aside>
   )
 }

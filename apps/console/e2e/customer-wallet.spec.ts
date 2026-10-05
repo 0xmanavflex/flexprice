@@ -41,6 +41,6 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await page.getByRole('button', { name: 'Wallet actions' }).click()
   await page.getByRole('menuitem', { name: 'Terminate wallet' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Terminate wallet' }).click()
-  await expect(page.getByText('Terminated')).toBeVisible()
+  await expect(page.getByText('Terminated', { exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Top up wallet' })).toBeDisabled()
 })

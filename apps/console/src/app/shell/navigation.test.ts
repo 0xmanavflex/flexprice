@@ -103,7 +103,6 @@ describe('the secondary destinations', () => {
     // only section on screen.
     expect(groups[0]?.title).toBeUndefined()
     expect(groups.some((group) => group.title === 'Quick links')).toBe(false)
-    expect(groups.some((group) => group.collapsible)).toBe(false)
   })
 
   // Kept out of the sidebar, but still real routes — the account menu and the
