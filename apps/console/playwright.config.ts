@@ -35,6 +35,9 @@ export default defineConfig({
   // A flaky test is a broken test (`e2e/AGENTS.md`), so a retry is not allowed
   // to turn one green. If a test needs a retry to pass, that is the finding.
   retries: 0,
+  // A cold first load of the mocked console on a 2-worker runner takes 10-15s, so
+  // Playwright's 5s default fails a different healthy journey on each run.
+  expect: { timeout: 15_000 },
   forbidOnly: !!process.env.CI,
   fullyParallel: true,
   workers: process.env.CI ? 2 : undefined,

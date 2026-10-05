@@ -34,7 +34,8 @@ export const RequiresAName: Story = {
   play: async ({ args }) => {
     const canvas = dialog()
     await userEvent.click(canvas.getByRole('button', { name: 'Create environment' }))
-    await expect(await canvas.findByText('Enter a name')).toBeVisible()
+    const message = await canvas.findByText('Enter a name')
+    await waitFor(() => expect(message).toBeVisible())
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
