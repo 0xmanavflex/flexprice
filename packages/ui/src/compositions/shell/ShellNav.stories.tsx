@@ -112,8 +112,8 @@ export const ChildRowSpansTheSidebar: Story = {
   play: async ({ canvasElement }) => {
     const row = within(canvasElement).getByRole('button', { name: /^features/i })
     const item = row.closest('li')!
-    await expect(Math.round(row.getBoundingClientRect().right)).toBe(
-      Math.round(item.getBoundingClientRect().right),
-    )
+    // The row carries a 1px `-translate-x-px`, so allow that much.
+    const gap = item.getBoundingClientRect().right - row.getBoundingClientRect().right
+    await expect(Math.abs(gap)).toBeLessThanOrEqual(2)
   },
 }

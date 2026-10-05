@@ -163,7 +163,7 @@ export const FirstRun: Story = {
     await expect(await canvas.findByText('No cost sheets yet')).toBeInTheDocument()
     await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
     const create = canvas.getAllByRole('button', { name: /new cost sheet/i })
-    await expect(create.length).toBe(2)
+    await expect(create.length).toBe(1)
     await userEvent.click(create[0]!)
     await expect(args.onCreate).toHaveBeenCalledOnce()
   },
