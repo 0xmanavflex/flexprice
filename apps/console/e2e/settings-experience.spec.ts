@@ -24,8 +24,8 @@ test('portal: switching a section off saves and survives leaving the tab', async
   await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByText('Saved.')).toBeVisible()
 
-  await page.getByRole('tab', { name: 'Onboarding' }).click()
-  await page.getByRole('tab', { name: 'Portal' }).click()
+  await page.getByRole('button', { name: 'Onboarding', exact: true }).click()
+  await page.getByRole('button', { name: 'Portal', exact: true }).click()
   await expect(
     page
       .getByRole('group', { name: /visibility$/ })
@@ -49,8 +49,8 @@ test('onboarding: adding a step saves it into the workflow', async ({ page }) =>
   await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByText('Saved.')).toBeVisible()
 
-  await page.getByRole('tab', { name: 'Portal' }).click()
-  await page.getByRole('tab', { name: 'Onboarding' }).click()
+  await page.getByRole('button', { name: 'Portal', exact: true }).click()
+  await page.getByRole('button', { name: 'Onboarding', exact: true }).click()
   await expect(steps).toHaveCount(before + 1)
 })
 

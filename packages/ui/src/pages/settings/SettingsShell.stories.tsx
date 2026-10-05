@@ -146,8 +146,8 @@ function Controlled({
 
 /**
  * Two-level settings navigation, laid out as the `settings-7` block: a heading,
- * a vertical rail of sections, then a column holding pill tabs for the active
- * section's own tabs and the active tab's content.
+ * a vertical rail of sections with the active section's tabs nested beneath it,
+ * then a column holding the active tab's content.
  *
  * Fully controlled. The stories own both ids the way a page owns them, because
  * on a real screen they live in the URL.
@@ -178,40 +178,41 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The active section's tabs sit above the content; picking a tab or another section is reported. */
+/** The active section expands in the rail to list its tabs; picking a tab or another section is reported. */
 export const Default: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    const strip = canvas.getByRole('tablist', { name: 'Settings' })
+    const nav = canvas.getByRole('navigation', { name: 'Settings' })
 
-    await expect(within(strip).getByRole('tab', { name: 'Organization' })).toHaveAttribute(
-      'aria-selected',
+    await expect(within(nav).getByRole('button', { name: 'Organization' })).toHaveAttribute(
+      'aria-expanded',
       'true',
     )
-    const tabs = canvas.getByRole('tablist', { name: 'Organization tabs' })
-    await expect(within(tabs).getByRole('tab', { name: 'Profile' })).toHaveAttribute(
-      'aria-selected',
-      'true',
+    const pages = within(nav).getByRole('list', { name: 'Organization pages' })
+    await expect(within(pages).getByRole('button', { name: 'Profile' })).toHaveAttribute(
+      'aria-current',
+      'page',
     )
-    await expect(canvas.queryByRole('tab', { name: 'People' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'People' })).toBeNull()
+    await expect(canvas.queryByRole('tablist')).toBeNull()
 
-    await userEvent.click(within(tabs).getByRole('tab', { name: 'Branding' }))
+    await userEvent.click(within(pages).getByRole('button', { name: 'Branding' }))
     await expect(args.onTabChange).toHaveBeenCalledWith('branding')
 
     // The shell does not pick a tab for the new section; the page does.
-    await userEvent.click(within(strip).getByRole('tab', { name: 'Members' }))
+    await userEvent.click(within(nav).getByRole('button', { name: 'Members' }))
     await expect(args.onSectionChange).toHaveBeenCalledWith('members')
-    await expect(canvas.getByRole('tab', { name: 'People' })).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'People' })).toBeInTheDocument()
   },
 }
 
-/** Every control is a real tab: arrow keys move between them and Enter commits. */
+/** Every control is a real button: focus reaches it and Enter commits. */
 export const Keyboard: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    const strip = canvas.getByRole('tablist', { name: 'Settings' })
+    const nav = canvas.getByRole('navigation', { name: 'Settings' })
 
-    const members = within(strip).getByRole('tab', { name: 'Members' })
+    const members = within(nav).getByRole('button', { name: 'Members' })
     members.focus()
     await expect(members).toHaveFocus()
     await userEvent.keyboard('{Enter}')
@@ -230,13 +231,13 @@ export const SectionEntirelyUnavailable: Story = {
   args: { sectionId: 'integrations', tabId: 'connected' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const strip = canvas.getByRole('tablist', { name: 'Settings' })
+    const nav = canvas.getByRole('navigation', { name: 'Settings' })
 
-    const integrations = within(strip).getByRole('tab', { name: 'Integrations' })
-    await expect(integrations).toHaveAttribute('aria-selected', 'true')
+    const integrations = within(nav).getByRole('button', { name: 'Integrations' })
+    await expect(integrations).toHaveAttribute('aria-expanded', 'true')
     await expect(canvas.getByText('Integrations is unavailable')).toBeInTheDocument()
 
-    await userEvent.click(canvas.getByRole('tab', { name: 'Marketplace' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Marketplace' }))
     await expect(canvas.getByText('Integrations is unavailable')).toBeInTheDocument()
   },
 }
@@ -249,7 +250,7 @@ export const SingleTabUnavailable: Story = {
 
     await expect(canvas.getByText(/Invoicing \/ Templates/)).toBeInTheDocument()
 
-    await userEvent.click(canvas.getByRole('tab', { name: 'Dunning' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Dunning' }))
     await expect(canvas.getByText('Dunning is unavailable')).toBeInTheDocument()
   },
 }
@@ -274,15 +275,15 @@ const LONG_SECTIONS: SettingsSection[] = [
 ]
 
 /**
- * Labels nobody sized for. The strips scroll sideways inside themselves — the
- * failure being avoided is the page itself growing a horizontal scrollbar.
+ * Labels nobody sized for. Labels truncate inside the rail — the failure being
+ * avoided is the page itself growing a horizontal scrollbar.
  */
 export const LongLabels: Story = {
   args: { sections: LONG_SECTIONS, sectionId: 'long', tabId: 'a' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(
-      canvas.getByRole('tab', { name: 'Registered legal entity and trading address' }),
+      canvas.getByRole('button', { name: 'Registered legal entity and trading address' }),
     ).toBeInTheDocument()
 
     const root = canvasElement.ownerDocument.documentElement
@@ -303,7 +304,7 @@ export const PhoneWidth: Story = {
     await expect(root.clientWidth).toBe(390)
     await expect(root.scrollWidth).toBe(root.clientWidth)
 
-    await userEvent.click(await canvas.findByRole('tab', { name: 'Usage and limits' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Usage and limits' }))
     await expect(args.onTabChange).toHaveBeenCalledWith('usage')
     await expect(root.scrollWidth).toBe(root.clientWidth)
   },
@@ -320,7 +321,7 @@ export const TabletWidth: Story = {
     await expect(root.clientWidth).toBe(768)
     await expect(root.scrollWidth).toBe(root.clientWidth)
 
-    await userEvent.click(await canvas.findByRole('tab', { name: 'Invoicing' }))
+    await userEvent.click(await canvas.findByRole('button', { name: 'Invoicing' }))
     await expect(args.onSectionChange).toHaveBeenCalledWith('invoicing')
     await expect(root.scrollWidth).toBe(root.clientWidth)
   },

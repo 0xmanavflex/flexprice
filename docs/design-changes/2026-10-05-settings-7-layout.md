@@ -22,10 +22,11 @@ Decision: product owner, 2026-10-05.
 Notes on the adaptation:
 
 - The block hard-codes its tabs and keeps its own state, so it cannot take Flexprice's sections. The block is
-  left untouched; `SettingsShell` reproduces its layout over the same `Tabs` primitive and stays fully controlled
+  left untouched; `SettingsShell` reproduces its layout and stays fully controlled
   (URL-backed section and tab).
 - Differences from the block: `font-medium` for the heading (no semibold in this system), `max-w-5xl` instead of
-  `max-w-4xl` so table panels keep their width beside the rail, and a second pill row for a section's own tabs.
-- Accessible names (`Settings`, `<Section> tabs`) are unchanged, so the stories and journeys still address it.
+  `max-w-4xl` so table panels keep their width beside the rail, and the active section's own tabs nested under it in the rail (a follow-up on 2026-10-05 removed the pill row above the content).
+- The rail is a `nav` named `Settings` of buttons (`aria-current`, `aria-expanded`), not a tablist; the stories and
+  the settings journeys address it that way.
 
 Migration: none. One composition, no page changes.

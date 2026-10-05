@@ -29,6 +29,7 @@ import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSte
 import { CreditGrantCreateForm } from '@ui/pages/credit-grants/CreditGrantForm'
 import { PriceOverrideForm } from '@ui/pages/charges/PriceOverrideForm'
 import { provenance } from '@ui/provenance'
+import { SubscriptionPreviewCard } from './SubscriptionPreviewCard'
 
 /**
  * Start a subscription: customer, plan, prices, entitlements, credits, review.
@@ -49,7 +50,7 @@ export const SubscriptionFormProvenance = provenance({
     'pages/price-override-form',
     'pages/credit-grant-form',
   ],
-  note: 'RHF + the domain schema, stepped; sub-forms (price override, credit grant) sit outside the form element.',
+  note: 'RHF + the domain schema, stepped, with a live summary rail beside it like the plan and customer forms; sub-forms (price override, credit grant) sit outside the form element.',
 })
 
 export interface SubscriptionPlanContext {
@@ -387,6 +388,22 @@ export function SubscriptionForm({
       {content[flow.step]}
     </FormSteps>
   )
+  const preview = (
+    <div className="flex flex-col gap-4 lg:sticky lg:top-4">
+      <SubscriptionPreviewCard
+        customer={customers.find((c) => c.value === values.customerId)?.label}
+        plan={plans.find((p) => p.value === values.planId)?.label}
+        currency={values.currency}
+        billingPeriod={values.billingPeriod}
+        billingPeriodCount={values.billingPeriodCount}
+        startDate={values.startDate}
+        trialPeriodDays={values.trialPeriodDays}
+        priceOverrides={values.priceOverrides.length}
+        entitlementOverrides={values.entitlementOverrides.length}
+        creditGrants={values.creditGrants.length}
+      />
+    </div>
+  )
 
   if (embedded) {
     return (
@@ -399,13 +416,16 @@ export function SubscriptionForm({
 
   return (
     <FormPage
-      title="New subscription"
+      title="Create subscription"
       description="Put a customer on a plan and start their billing cycle."
       trail={trail}
-      width="narrow"
+      width="wide"
       footer={footer}
     >
-      {stepper}
+      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
+        <div className="min-w-0">{stepper}</div>
+        {preview}
+      </div>
     </FormPage>
   )
 }

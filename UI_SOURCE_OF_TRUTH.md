@@ -53,9 +53,9 @@ pagination). Empty state is `EmptyState`.
 **Create / edit**: `FormPage` with `FormCard` sections and `FormActions`, or `FormDialog` for short edits.
 Steppers only when the workflow really has stages (`WorkflowStepper`).
 
-**Settings**: the ReUI `settings-7` layout (`SettingsShell`): a "Settings" heading, a vertical rail of sections,
-and a content column holding a pill row of the section's tabs and then `Section`s of `Properties` / `settingsSurface`
-cards. This replaced the reference's line-tab strip by design change `docs/design-changes/2026-10-05-settings-7-layout.md`.
+**Settings**: the ReUI `settings-7` layout (`SettingsShell`): a "Settings" heading, a vertical rail of sections
+with the active section's tabs nested under it (no second nav above the content), and a content column of `Section`s of
+`Properties` / `settingsSurface` cards. This replaced the reference's line-tab strip by design change `docs/design-changes/2026-10-05-settings-7-layout.md`.
 
 **Dashboard**: `Panel` and the shared chart kit. No bespoke chart components.
 
