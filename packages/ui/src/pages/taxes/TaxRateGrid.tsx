@@ -55,7 +55,6 @@ const SORT_OPTIONS = Object.values(TaxRateSortField).map((value) => ({
   label: TAX_RATE_SORT_LABEL[value],
 }))
 
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(TaxRateStatus).map((value) => ({
   value,
   label: TAX_RATE_STATUS_LABEL[value],
@@ -154,8 +153,6 @@ export function TaxRateGrid({
     [],
   )
 
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
-
   const isDefaultSort =
     query.sortBy === DEFAULT_TAX_RATE_QUERY.sortBy &&
     query.sortDirection === DEFAULT_TAX_RATE_QUERY.sortDirection
@@ -211,24 +208,6 @@ export function TaxRateGrid({
        * and nothing else, so `fetchTaxRates` narrows status on the page it
        * received. There is no per-status server total to read.
        */
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as TaxRateStatus],
-            page: 1,
-          }),
-        options: [
-          { value: STATUS_ALL, label: 'All' },
-          ...Object.values(TaxRateStatus).map((value) => ({
-            value,
-            label: TAX_RATE_STATUS_LABEL[value],
-          })),
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

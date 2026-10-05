@@ -5,7 +5,6 @@ import {
   USAGE_SYNC_STATE_LABEL,
   type UsageSync,
   type UsageSyncQuery,
-  type UsageSyncState,
 } from '@fp/domain'
 import { singleChoiceFilter } from '@ui/compositions/FilterBar'
 import { Button } from '@ui/components/primitives/button'
@@ -19,7 +18,7 @@ import { providerLabel } from './usageSyncProviders'
  *
  * Read-only: a row is one customer's usage on one subscription for one billing
  * period, and the interesting column is **Synced** — which marketplaces
- * received it. The status dropdown is a server-side filter on
+ * received it. The status filter is a server-side filter on
  * `POST /usage-records/search`; search narrows the page by customer,
  * subscription or plan id.
  *
@@ -91,7 +90,9 @@ export function UsageSyncGrid({
         (row) => row.customerExternalId || row.customerId,
         { width: 200, hideable: false },
       ),
-      idColumn<UsageSync>('subscription', 'Subscription', (row) => row.subscriptionId, { width: 200 }),
+      idColumn<UsageSync>('subscription', 'Subscription', (row) => row.subscriptionId, {
+        width: 200,
+      }),
       idColumn<UsageSync>('plan', 'Plan', (row) => row.planId, { width: 180 }),
       moneyColumn<UsageSync>('amount', 'Amount', (row) => row.amount, {
         width: 130,
@@ -163,15 +164,6 @@ export function UsageSyncGrid({
         })),
         onChange: (state) => onQueryChange({ ...query, state, page: 1 }),
       })}
-      status={{
-        value: query.state,
-        label: 'Sync',
-        onChange: (value) => onQueryChange({ ...query, state: value as UsageSyncState, page: 1 }),
-        options: Object.values(USAGE_SYNC_STATE).map((value) => ({
-          value,
-          label: USAGE_SYNC_STATE_LABEL[value],
-        })),
-      }}
       rowActions={rowActions}
       exportFileName="usage-syncs"
       {...(onRefresh

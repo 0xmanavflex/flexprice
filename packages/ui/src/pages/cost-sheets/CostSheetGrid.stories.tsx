@@ -9,20 +9,6 @@ import {
 import { CostSheetGrid } from './CostSheetGrid'
 
 /**
- * Wait for an open popup to finish unmounting.
- *
- * While a Base UI popup is open it mounts `data-base-ui-focus-guard` spans
- * that are `aria-hidden` *and* `tabindex="0"` — which is exactly what axe's
- * `aria-hidden-focus` rule forbids. The a11y scan runs when the play function
- * returns, so a story that returns while the popup is still closing is scanned
- * mid-animation and fails intermittently. This is not a suppression: it makes
- * the scan look at the settled DOM, which is the state being asserted about.
- */
-async function popupClosed(role: 'menu' | 'listbox') {
-  await waitFor(() => expect(within(document.body).queryByRole(role)).toBeNull())
-}
-
-/**
  * The cost sheet list, over the shared `EntityList`.
  *
  * Cost sheets as plain domain values — no client, no provider, no network.
@@ -128,38 +114,6 @@ export const OmitsUnsourcedColumns: Story = {
     await expect(canvas.queryByRole('columnheader', { name: /provider/i })).toBeNull()
     await expect(canvas.queryByRole('columnheader', { name: /margin/i })).toBeNull()
     await expect(canvas.getByRole('columnheader', { name: /line items/i })).toBeInTheDocument()
-  },
-}
-
-/**
- * No Draft option, and no counts.
- *
- * `CostSheetStatus` is published|archived, so a Draft tab would always show
- * nothing. And `useCatalogStats` does not cover cost sheets, so the options
- * carry no number rather than a number counted off the rows on screen.
- */
-export const StatusDropdownHasNoDraftAndNoCounts: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await canvas.findByText('AI inference costs')
-
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-
-    await expect(listbox.queryByRole('option', { name: /draft/i })).toBeNull()
-    const published = listbox.getByRole('option', { name: /published/i })
-    await expect(published.textContent).not.toMatch(/\d/)
-
-    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === 'archived'),
-      ).toBe(true),
-    )
-    await popupClosed('listbox')
   },
 }
 

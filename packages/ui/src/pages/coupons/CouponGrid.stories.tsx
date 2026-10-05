@@ -3,20 +3,6 @@ import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { CouponGrid } from './CouponGrid'
 import { couponFixtures, fixtureCouponQuery, manyCoupons } from './couponFixtures'
 
-/**
- * Wait for an open popup to finish unmounting.
- *
- * While a Base UI popup is open it mounts `data-base-ui-focus-guard` spans
- * that are `aria-hidden` *and* `tabindex="0"` — which is exactly what axe's
- * `aria-hidden-focus` rule forbids. The a11y scan runs when the play function
- * returns, so a story that returns while the popup is still closing is scanned
- * mid-animation and fails intermittently. This is not a suppression: it makes
- * the scan look at the settled DOM, which is the state being asserted about.
- */
-async function popupClosed(role: 'menu' | 'listbox') {
-  await waitFor(() => expect(within(document.body).queryByRole(role)).toBeNull())
-}
-
 const meta = {
   title: 'Surfaces/CouponGrid',
   component: CouponGrid,
@@ -57,29 +43,6 @@ export const Populated: Story = {
   },
 }
 
-/**
- * Expiry is a date, not a status.
- *
- * `CouponStatus` is published|archived, so the dropdown offers what the server
- * can actually count. An "Expired" option would have to be counted off the
- * twenty-five rows on screen while every other option carried a server total.
- */
-export const NoExpiredOption: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await canvas.findByText('Launch 20% off')
-
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-    await expect(listbox.queryByRole('option', { name: /expired/i })).toBeNull()
-    await expect(listbox.getByRole('option', { name: /archived/i })).toBeInTheDocument()
-
-    // Close it before the a11y scan runs — see `popupClosed`.
-    await userEvent.keyboard('{Escape}')
-    await popupClosed('listbox')
-  },
-}
-
 /** The shared table's geometry, as this surface renders it. */
 export const Layout: Story = {
   play: async ({ canvasElement }) => {
@@ -91,28 +54,6 @@ export const Layout: Story = {
     const cell = canvasElement.querySelector('tbody td') as HTMLElement
     await expect(Math.round(cell.getBoundingClientRect().height)).toBe(60)
     await expect(getComputedStyle(cell).paddingLeft).toBe('16px')
-  },
-}
-
-/** The status dropdown carries the server's counts and writes the query. */
-export const StatusDropdown: Story = {
-  args: { statusCounts: { total: 42, published: 31, archived: 11 } },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-    await expect(listbox.getByText('31')).toBeInTheDocument()
-    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === 'archived'),
-      ).toBe(true),
-    )
-    await popupClosed('listbox')
   },
 }
 

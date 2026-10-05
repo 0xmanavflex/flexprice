@@ -1,5 +1,13 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, GaugeIcon, LayersIcon, TagIcon, Trash2Icon, PlusIcon } from 'lucide-react'
+import {
+  BookOpenIcon,
+  CopyIcon,
+  GaugeIcon,
+  LayersIcon,
+  TagIcon,
+  Trash2Icon,
+  PlusIcon,
+} from 'lucide-react'
 import {
   DEFAULT_GROUP_QUERY,
   GROUP_ENTITY_TYPE_LABEL,
@@ -55,9 +63,6 @@ const SORT_OPTIONS = Object.values(GroupSortField).map((value) => ({
   label: GROUP_SORT_LABEL[value],
 }))
 
-/** `all` is a value, not the absence of one — a Select with an empty value
- *  renders its placeholder and reads as unset. */
-const STATUS_ALL = 'all'
 /** Every URL requested and returned 200; all three are in the docs sitemap. */
 const GUIDES: EntityGuide[] = [
   {
@@ -172,9 +177,6 @@ export function GroupGrid({
     [locale],
   )
 
-
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
-
   const isDefaultSort =
     query.sortBy === DEFAULT_GROUP_QUERY.sortBy &&
     query.sortDirection === DEFAULT_GROUP_QUERY.sortDirection
@@ -218,23 +220,6 @@ export function GroupGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search groups…"
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as GroupStatus],
-            page: 1,
-          }),
-        // No counts: nothing can supply an honest one for this entity.
-        options: [
-          { value: STATUS_ALL, label: 'All' },
-          { value: GroupStatus.Published, label: GROUP_STATUS_LABEL[GroupStatus.Published] },
-          { value: GroupStatus.Archived, label: GROUP_STATUS_LABEL[GroupStatus.Archived] },
-        ],
-      }}
       /*
        * No filter control. `useGroups` applies status on the page — "Status is
        * not a server-side filter here" (query/src/groups.ts) — so a filter

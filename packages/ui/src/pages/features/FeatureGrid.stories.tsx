@@ -51,32 +51,6 @@ export const Layout: Story = {
   },
 }
 
-/** The status dropdown carries the server's counts and writes the query. */
-export const StatusDropdown: Story = {
-  args: { statusCounts: { total: 64, published: 51, archived: 13 } },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-    await expect(listbox.getByText('51')).toBeInTheDocument()
-    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === 'archived'),
-      ).toBe(true),
-    )
-
-    // Let the select finish closing: while a Base UI popup is mounted its focus
-    // guards are aria-hidden *and* focusable, which axe rejects if the scan
-    // lands mid-animation. This waits for the settled state; it asserts nothing less.
-    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
-  },
-}
-
 export const Loading: Story = { args: { features: [], total: 0, isLoading: true } }
 
 /** A filter emptied the list — the toolbar survives, so it can be undone. */

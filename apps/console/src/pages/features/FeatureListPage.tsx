@@ -1,12 +1,6 @@
 import { useState } from 'react'
 import { type CloneFeature, type Feature, type FeatureQuery } from '@fp/domain'
-import {
-  ApiError,
-  useCatalogStats,
-  useCloneFeature,
-  useDeleteFeature,
-  useFeatures,
-} from '@fp/query'
+import { ApiError, useCloneFeature, useDeleteFeature, useFeatures } from '@fp/query'
 import { FeatureCloneDialog, FeatureGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { GaugeIcon } from 'lucide-react'
@@ -52,11 +46,6 @@ export function FeatureListPage({
   const submitClone = (draft: CloneFeature) => {
     if (cloning) clone.mutate({ id: cloning.id, draft }, { onSuccess: closeClone })
   }
-  // Counts per status for the toolbar's status dropdown. Each is one
-  // `limit: 1` request read for its `pagination.total` — the server's count,
-  // not the twenty-five rows that happen to be on screen.
-  const stats = useCatalogStats('features')
-
   const failure = toFailure(features.error)
   const rows = features.data?.features ?? []
   const isFiltered = query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0
@@ -106,11 +95,6 @@ export function FeatureListPage({
             onClone={setCloning}
             onDelete={setDeleting}
             onClearFilters={clearFilters}
-            statusCounts={{
-              total: stats.total,
-              published: stats.published,
-              archived: stats.archived,
-            }}
           />
         </ListState>
       </PageBody>

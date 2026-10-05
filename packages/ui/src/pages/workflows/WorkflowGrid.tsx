@@ -27,7 +27,6 @@ export const WorkflowGridProvenance = provenance({
   note: 'Workflow run columns and status filter over the shared list table.',
 })
 
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(WorkflowStatus).map((value) => ({
   value,
   label: WORKFLOW_STATUS_LABEL[value],
@@ -107,11 +106,16 @@ export function WorkflowGrid({
 }: WorkflowGridProps) {
   const columns = useMemo<EntityColumn<WorkflowRun>[]>(
     () => [
-      textColumn<WorkflowRun>('name', 'Workflow', (row) => row.name, { width: 220, hideable: false }),
+      textColumn<WorkflowRun>('name', 'Workflow', (row) => row.name, {
+        width: 220,
+        hideable: false,
+      }),
       idColumn<WorkflowRun>('workflowId', 'Workflow ID', (row) => row.workflowId, { width: 220 }),
       idColumn<WorkflowRun>('id', 'Run ID', (row) => row.id, { width: 200 }),
       pillColumn<WorkflowRun>('status', 'Status', (row) =>
-        row.status ? { label: WORKFLOW_STATUS_LABEL[row.status], tone: STATUS_TONE[row.status] } : null,
+        row.status
+          ? { label: WORKFLOW_STATUS_LABEL[row.status], tone: STATUS_TONE[row.status] }
+          : null,
       ),
       textColumn<WorkflowRun>(
         'startTime',
@@ -134,8 +138,6 @@ export function WorkflowGrid({
     ],
     [locale],
   )
-
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
   const rowActions = (run: WorkflowRun): EntityRowAction[] => [
     {
@@ -164,24 +166,6 @@ export function WorkflowGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search by workflow ID…"
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as WorkflowStatus],
-            page: 1,
-          }),
-        options: [
-          { value: STATUS_ALL, label: 'All' },
-          ...Object.values(WorkflowStatus).map((value) => ({
-            value,
-            label: WORKFLOW_STATUS_LABEL[value],
-          })),
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

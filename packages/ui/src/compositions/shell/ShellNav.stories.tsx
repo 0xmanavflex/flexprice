@@ -103,3 +103,17 @@ export const CountsAreVisible: Story = {
     await expect(canvas.getByRole('button', { name: 'Coupons, 0' })).toBeInTheDocument()
   },
 }
+
+/**
+ * A child row runs to the end of the sidebar, so the hover and active fill
+ * covers the whole row rather than hugging the label.
+ */
+export const ChildRowSpansTheSidebar: Story = {
+  play: async ({ canvasElement }) => {
+    const row = within(canvasElement).getByRole('button', { name: /^features/i })
+    const item = row.closest('li')!
+    await expect(Math.round(row.getBoundingClientRect().right)).toBe(
+      Math.round(item.getBoundingClientRect().right),
+    )
+  },
+}

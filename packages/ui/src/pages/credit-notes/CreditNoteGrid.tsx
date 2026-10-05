@@ -34,7 +34,6 @@ export const CreditNoteGridProvenance = provenance({
   note: 'Credit note columns and status filter over the shared list table.',
 })
 
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(CreditNoteStatus).map((value) => ({
   value,
   label: CREDIT_NOTE_STATUS_LABEL[value],
@@ -122,8 +121,6 @@ export function CreditNoteGrid({
     [locale],
   )
 
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
-
   const rowActions = (creditNote: CreditNote): EntityRowAction[] => {
     const actions: EntityRowAction[] = []
     if (onCreditNoteClick) {
@@ -155,24 +152,6 @@ export function CreditNoteGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search by number, invoice or customer…"
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as CreditNoteStatus],
-            page: 1,
-          }),
-        options: [
-          { value: STATUS_ALL, label: 'All' },
-          ...Object.values(CreditNoteStatus).map((value) => ({
-            value,
-            label: CREDIT_NOTE_STATUS_LABEL[value],
-          })),
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

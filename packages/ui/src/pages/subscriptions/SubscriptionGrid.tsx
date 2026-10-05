@@ -72,7 +72,6 @@ const SORT_OPTIONS = Object.values(SubscriptionSortField).map((value) => ({
   label: SUBSCRIPTION_SORT_LABEL[value],
 }))
 
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(SubscriptionStatus).map((value) => ({
   value,
   label: SUBSCRIPTION_STATUS_LABEL[value],
@@ -202,8 +201,6 @@ export function SubscriptionGrid({
     [formatPeriod, locale, onOpenCustomer, onOpenPlan],
   )
 
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
-
   const isDefaultSort =
     query.sortBy === DEFAULT_SUBSCRIPTION_QUERY.sortBy &&
     query.sortDirection === DEFAULT_SUBSCRIPTION_QUERY.sortDirection
@@ -250,24 +247,6 @@ export function SubscriptionGrid({
        * the fetch sends it — until then the dropdown shows no number rather
        * than counting the rows it happens to hold.
        */
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as SubscriptionStatus],
-            page: 1,
-          }),
-        options: [
-          { value: STATUS_ALL, label: 'All' },
-          ...Object.values(SubscriptionStatus).map((value) => ({
-            value,
-            label: SUBSCRIPTION_STATUS_LABEL[value],
-          })),
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

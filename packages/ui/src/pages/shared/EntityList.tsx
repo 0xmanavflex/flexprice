@@ -44,13 +44,6 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@ui/components/primitives/input-group'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@ui/components/primitives/select'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { GuidedEmptyState } from '@ui/compositions/GuidedEmptyState'
@@ -105,7 +98,7 @@ import type { EntityColumn } from './cells'
  */
 export const EntityListProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/filters', 'ui/select'],
+  composes: ['@reui/data-grid', '@reui/filters'],
   note: 'The one list table: borderless, 44px header, 60px rows, auto-width columns, pin-on-overflow. Lineage: @reui/empty-state-3.',
 })
 
@@ -138,41 +131,8 @@ const ACTIONS_ID = '__actions'
  * Props
  * ------------------------------------------------------------------ */
 
-/** One entry in the status dropdown, with how many records it would show. */
 /** What v9 no longer exports: column id to whether it is shown. */
 type ColumnVisibility = Record<string, boolean>
-
-/** One entry in the status dropdown, with how many records it would show. */
-export interface EntityStatusOption {
-  value: string
-  label: string
-  /**
-   * How many records this option selects.
-   *
-   * Optional because a count has to be *true*: it comes from the server's
-   * `pagination.total`, not from the page on screen, and a screen that cannot
-   * get one honestly shows the option without a number rather than counting
-   * the twenty-five rows it happens to be holding.
-   */
-  count?: number | undefined
-}
-
-/**
- * The status dropdown — what used to be a row of view tabs.
- *
- * Tabs spent a full row of the page on three links and still could not say how
- * many records each held without a second row of counts under them. A select
- * says the same thing in 160px and has room for the number.
- */
-export interface EntityStatusSelect {
-  value: string
-  onChange: (value: string) => void
-  options: EntityStatusOption[]
-  /** The control's accessible name. Defaults to "Status". */
-  label?: string | undefined
-  /** Trigger text when it is not one of the options, e.g. several statuses at once. */
-  valueLabel?: string | undefined
-}
 
 /** The filter button and the ReUI Filters chip row behind it. */
 export interface EntityFilter {
@@ -248,7 +208,6 @@ export interface EntityListProps<T> {
   search: string
   onSearchChange: (value: string) => void
   searchPlaceholder?: string | undefined
-  status?: EntityStatusSelect | undefined
   filter?: EntityFilter | undefined
   sort?: EntitySort | undefined
   /** The navy CTA at the end of the toolbar, e.g. "New feature". */
@@ -405,7 +364,6 @@ export function EntityList<T extends object>({
   search,
   onSearchChange,
   searchPlaceholder,
-  status,
   filter,
   sort,
   primaryAction,
@@ -716,46 +674,6 @@ export function EntityList<T extends object>({
             </InputGroupAddon>
           ) : null}
         </InputGroup>
-
-        {status ? (
-          <Select
-            value={status.value}
-            onValueChange={(value: string | null) => {
-              // Base UI can clear a select; this one always has a value, and
-              // "no status" is the `all` option rather than the absence of one.
-              if (value !== null) status.onChange(value)
-            }}
-          >
-            <SelectTrigger
-              className="h-9! w-48 justify-start gap-2 pl-3 [&>svg]:ml-auto"
-              aria-label={status.label ?? 'Status'}
-            >
-              <span className="text-muted-foreground">{status.label ?? 'Status'}</span>
-              {/* Base UI's SelectValue renders the raw value, so a select left
-                  to itself reads "all" and "published" rather than the labels
-                  in the list below it. */}
-              <SelectValue>
-                {(value: string) =>
-                  status.valueLabel ??
-                  status.options.find((option) => option.value === value)?.label ??
-                  value
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="start">
-              {status.options.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                  {option.count === undefined ? null : (
-                    <span className="text-muted-foreground ml-auto pl-4 tabular-nums">
-                      {option.count}
-                    </span>
-                  )}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : null}
       </div>
 
       <div className="flex items-center gap-2">
@@ -875,7 +793,9 @@ export function EntityList<T extends object>({
       className={cn('flex w-full min-w-0 flex-col gap-5', className)}
     >
       <h1 className="sr-only">{label}</h1>
-      {toolbar}
+      {/* A list with nothing in it has nothing to search, filter or sort: the
+          guided empty state stands alone until the first record exists. */}
+      {showFirstRun ? null : toolbar}
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
           stops an overflowing table pushing the page itself wider. */}

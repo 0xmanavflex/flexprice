@@ -3,20 +3,6 @@ import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { AddonGrid } from './AddonGrid'
 import { addonFixtures, fixtureAddonQuery, manyAddons } from './addonFixtures'
 
-/**
- * Wait for an open popup to finish unmounting.
- *
- * While a Base UI popup is open it mounts `data-base-ui-focus-guard` spans
- * that are `aria-hidden` *and* `tabindex="0"` — which is exactly what axe's
- * `aria-hidden-focus` rule forbids. The a11y scan runs when the play function
- * returns, so a story that returns while the popup is still closing is scanned
- * mid-animation and fails intermittently. This is not a suppression: it makes
- * the scan look at the settled DOM, which is the state being asserted about.
- */
-async function popupClosed(role: 'menu' | 'listbox') {
-  await waitFor(() => expect(within(document.body).queryByRole(role)).toBeNull())
-}
-
 const meta = {
   title: 'Surfaces/AddonGrid',
   component: AddonGrid,
@@ -77,28 +63,6 @@ export const Layout: Story = {
     const cell = canvasElement.querySelector('tbody td') as HTMLElement
     await expect(Math.round(cell.getBoundingClientRect().height)).toBe(60)
     await expect(getComputedStyle(cell).paddingLeft).toBe('16px')
-  },
-}
-
-/** The status dropdown carries the server's counts and writes the query. */
-export const StatusDropdown: Story = {
-  args: { statusCounts: { total: 18, published: 15, archived: 3 } },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-    await expect(listbox.getByText('15')).toBeInTheDocument()
-    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === 'archived'),
-      ).toBe(true),
-    )
-    await popupClosed('listbox')
   },
 }
 

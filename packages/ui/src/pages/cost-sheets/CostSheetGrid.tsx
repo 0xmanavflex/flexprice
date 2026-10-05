@@ -6,7 +6,9 @@ import {
   ScrollTextIcon,
   SheetIcon,
   Trash2Icon,
-  TrendingUpIcon, PlusIcon } from 'lucide-react'
+  TrendingUpIcon,
+  PlusIcon,
+} from 'lucide-react'
 import {
   COST_SHEET_SORT_LABEL,
   COST_SHEET_STATUS_LABEL,
@@ -61,9 +63,6 @@ const SORT_OPTIONS = Object.values(CostSheetSortField).map((value) => ({
   label: COST_SHEET_SORT_LABEL[value],
 }))
 
-/** `all` is a value, not the absence of one — a Select with an empty value
- *  renders its placeholder and reads as unset. */
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(CostSheetStatus).map((value) => ({
   value,
   label: COST_SHEET_STATUS_LABEL[value],
@@ -179,8 +178,6 @@ export function CostSheetGrid({
     [locale],
   )
 
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
-
   const isDefaultSort =
     query.sortBy === DEFAULT_COST_SHEET_QUERY.sortBy &&
     query.sortDirection === DEFAULT_COST_SHEET_QUERY.sortDirection
@@ -231,29 +228,6 @@ export function CostSheetGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search cost sheets…"
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as CostSheetStatus],
-            page: 1,
-          }),
-        // No counts: nothing can supply an honest one for this entity.
-        options: [
-          { value: STATUS_ALL, label: 'All' },
-          {
-            value: CostSheetStatus.Published,
-            label: COST_SHEET_STATUS_LABEL[CostSheetStatus.Published],
-          },
-          {
-            value: CostSheetStatus.Archived,
-            label: COST_SHEET_STATUS_LABEL[CostSheetStatus.Archived],
-          },
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

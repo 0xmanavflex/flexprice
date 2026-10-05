@@ -126,29 +126,6 @@ export const Layout: Story = {
   },
 }
 
-export const StatusDropdown: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === TaxRateStatus.Archived),
-      ).toBe(true),
-    )
-
-    // Let the select finish closing: while a Base UI popup is mounted its focus
-    // guards are aria-hidden *and* focusable, which axe rejects if the scan
-    // lands mid-animation. This waits for the settled state; it asserts nothing less.
-    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
-  },
-}
-
 export const Loading: Story = { args: { taxRates: [], total: 0, isLoading: true } }
 
 export const FilteredEmpty: Story = {

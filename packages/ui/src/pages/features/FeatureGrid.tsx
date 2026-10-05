@@ -19,7 +19,6 @@ import {
   type Feature,
   type FeatureQuery,
   FeatureSortField,
-  FeatureStatus,
   FeatureType,
 } from '@fp/domain'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
@@ -97,10 +96,6 @@ const FILTER_FIELDS: FilterField[] = [
 
 const TYPES = new Set<string>(Object.values(FeatureType))
 
-/** The status dropdown's options. `all` is a value, not the absence of one —
- *  a Select with an empty value renders its placeholder and reads as unset. */
-const STATUS_ALL = 'all'
-
 /**
  * The three cards under the first-run empty state.
  *
@@ -133,14 +128,6 @@ const GUIDES: EntityGuide[] = [
   },
 ]
 
-/** Counts per status, from the server. Undefined where not yet known — a
- *  confident "0" that has not been confirmed is worse than no number. */
-export interface FeatureStatusCounts {
-  total?: number | undefined
-  published?: number | undefined
-  archived?: number | undefined
-}
-
 export interface FeatureGridProps {
   features: Feature[]
   total: number
@@ -160,8 +147,6 @@ export interface FeatureGridProps {
   onDelete?: ((feature: Feature) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
-  /** Fills the counts beside each status option. */
-  statusCounts?: FeatureStatusCounts | undefined
   locale?: string
 }
 
@@ -179,7 +164,6 @@ export function FeatureGrid({
   onClone,
   onDelete,
   onClearFilters,
-  statusCounts,
 }: FeatureGridProps) {
   const columns = useMemo<EntityColumn<Feature>[]>(
     () => [
@@ -233,8 +217,6 @@ export function FeatureGrid({
       createFilterRule({ id: 'type', path: ['type'], operator: 'is_any_of', value: query.types }),
     )
   }
-
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
   const isDefaultSort =
     query.sortBy === DEFAULT_FEATURE_QUERY.sortBy &&
@@ -293,33 +275,6 @@ export function FeatureGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search features…"
-      status={{
-        value: statusValue,
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as FeatureStatus],
-            page: 1,
-          }),
-        options: [
-          {
-            value: STATUS_ALL,
-            label: 'All',
-            ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }),
-          },
-          {
-            value: FeatureStatus.Published,
-            label: FEATURE_STATUS_LABEL[FeatureStatus.Published],
-            ...(statusCounts?.published === undefined ? {} : { count: statusCounts.published }),
-          },
-          {
-            value: FeatureStatus.Archived,
-            label: FEATURE_STATUS_LABEL[FeatureStatus.Archived],
-            ...(statusCounts?.archived === undefined ? {} : { count: statusCounts.archived }),
-          },
-        ],
-      }}
       filter={{
         fields: FILTER_FIELDS,
         query: createFilterQuery(filterRules),
@@ -346,7 +301,14 @@ export function FeatureGrid({
       }}
       rowActions={rowActions}
       exportFileName="features"
-      primaryAction={onCreate ? <Button onClick={onCreate}><PlusIcon aria-hidden />New feature</Button> : undefined}
+      primaryAction={
+        onCreate ? (
+          <Button onClick={onCreate}>
+            <PlusIcon aria-hidden />
+            New feature
+          </Button>
+        ) : undefined
+      }
       {...(onFeatureClick ? { onRowClick: onFeatureClick } : {})}
       isLoading={isLoading}
       error={error}
@@ -358,7 +320,16 @@ export function FeatureGrid({
         title: 'Nothing is being measured yet',
         description:
           'A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}><PlusIcon aria-hidden />New feature</Button> } : {}),
+        ...(onCreate
+          ? {
+              actions: (
+                <Button onClick={onCreate}>
+                  <PlusIcon aria-hidden />
+                  New feature
+                </Button>
+              ),
+            }
+          : {}),
         guides: GUIDES,
       }}
     />

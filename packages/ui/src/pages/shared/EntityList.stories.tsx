@@ -167,7 +167,9 @@ export const ColumnsFillTheWidth: Story = {
 
     await waitFor(async () => {
       // Within a pixel of the frame: the columns were stretched to fill it.
-      await expect(Math.abs(table.getBoundingClientRect().width - frame.clientWidth)).toBeLessThan(2)
+      await expect(Math.abs(table.getBoundingClientRect().width - frame.clientWidth)).toBeLessThan(
+        2,
+      )
     })
 
     // Nothing overflows, so nothing is pinned.
@@ -235,32 +237,6 @@ export const SortArrowOnlyWhenSorted: Story = {
 
     await userEvent.click(sorted)
     await expect(args.sort!.onChange).toHaveBeenCalledWith('name', 'desc')
-  },
-}
-
-/** The status dropdown carries a count per option, and replaces the view tabs. */
-export const StatusCounts: Story = {
-  args: {
-    status: {
-      value: 'all',
-      onChange: fn(),
-      options: [
-        { value: 'all', label: 'All', count: 64 },
-        { value: 'published', label: 'Published', count: 51 },
-        { value: 'archived', label: 'Archived', count: 13 },
-      ],
-    },
-  },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-    await expect(listbox.getByText('51')).toBeInTheDocument()
-    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
-    await waitFor(() => expect(args.status!.onChange).toHaveBeenCalledWith('archived'))
-    // Wait for the popup to unmount: its focus guards are aria-hidden *and*
-    // focusable while it is open, which axe rejects if scanned mid-close.
-    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
   },
 }
 
@@ -371,6 +347,10 @@ export const FirstRun: Story = {
     await expect(
       Math.round(canvas.getByRole('button', { name: 'Import' }).getBoundingClientRect().height),
     ).toBe(32)
+
+    // Nothing to search, filter or sort yet, so no toolbar.
+    await expect(canvas.queryByRole('textbox', { name: /search widgets/i })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: /^(filter|sort by)/i })).toBeNull()
   },
 }
 
@@ -396,9 +376,7 @@ export const Paginates: Story = {
     // The grid also fires on settle, so the Next click is not necessarily
     // call[0]. Wait for the call that reported page 2.
     const spy = args.onPaginationChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(spy.mock.calls.some((call) => call[0] === 2)).toBe(true),
-    )
+    await waitFor(() => expect(spy.mock.calls.some((call) => call[0] === 2)).toBe(true))
   },
 }
 
@@ -426,8 +404,10 @@ export const Selection: Story = {
     })
     // The count sits in its own emphasised span, so match the whole live region.
     await expect(
-      canvas.getByText((_, element) => element?.getAttribute('aria-live') === 'polite' &&
-        element.textContent === '1 selected'),
+      canvas.getByText(
+        (_, element) =>
+          element?.getAttribute('aria-live') === 'polite' && element.textContent === '1 selected',
+      ),
     ).toBeInTheDocument()
   },
 }

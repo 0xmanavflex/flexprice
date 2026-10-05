@@ -108,37 +108,7 @@ export const StoredStatusIsSilent: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('INV-1041')
-    await expect(
-      canvas.queryByText(/narrows the invoices already loaded/i),
-    ).not.toBeInTheDocument()
-  },
-}
-
-/** Status writes the query, and every option is reachable from the dropdown. */
-export const StatusDropdown: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-
-    // Skipped is in the list. Its absence from the toolbar was what left a
-    // tenant whose only invoice was skipped staring at "No invoices yet".
-    await expect(listbox.getByRole('option', { name: /skipped/i })).toBeInTheDocument()
-    await userEvent.click(listbox.getByRole('option', { name: /^void$/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === InvoiceStatus.Void),
-      ).toBe(true),
-    )
-
-    // Let the select finish closing: while a Base UI popup is mounted its focus
-    // guards are aria-hidden *and* focusable, which axe rejects if the scan
-    // lands mid-animation. This waits for the settled state; it asserts nothing less.
-    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
+    await expect(canvas.queryByText(/narrows the invoices already loaded/i)).not.toBeInTheDocument()
   },
 }
 

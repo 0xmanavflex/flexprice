@@ -47,9 +47,6 @@ const SORT_OPTIONS = Object.values(AddonSortField).map((value) => ({
   label: ADDON_SORT_LABEL[value],
 }))
 
-/** `all` is a value, not the absence of one — a Select with an empty value
- *  renders its placeholder and reads as unset. */
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(AddonStatus).map((value) => ({
   value,
   label: ADDON_STATUS_LABEL[value],
@@ -77,14 +74,6 @@ const GUIDES: EntityGuide[] = [
   },
 ]
 
-/** Counts per status, from the server. Undefined where not yet known — a
- *  confident "0" that has not been confirmed is worse than no number. */
-export interface AddonStatusCounts {
-  total?: number | undefined
-  published?: number | undefined
-  archived?: number | undefined
-}
-
 export interface AddonGridProps {
   addons: Addon[]
   total: number
@@ -100,8 +89,6 @@ export interface AddonGridProps {
   onEdit?: ((addon: Addon) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
-  /** Fills the counts beside each status option. */
-  statusCounts?: AddonStatusCounts | undefined
   locale?: string
 }
 
@@ -117,7 +104,6 @@ export function AddonGrid({
   onCreate,
   onEdit,
   onClearFilters,
-  statusCounts,
   locale,
 }: AddonGridProps) {
   const columns = useMemo<EntityColumn<Addon>[]>(
@@ -159,8 +145,6 @@ export function AddonGrid({
     ],
     [locale],
   )
-
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
   const isDefaultSort =
     query.sortBy === DEFAULT_ADDON_QUERY.sortBy &&
@@ -204,34 +188,6 @@ export function AddonGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search add-ons…"
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as AddonStatus],
-            page: 1,
-          }),
-        options: [
-          {
-            value: STATUS_ALL,
-            label: 'All',
-            ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }),
-          },
-          {
-            value: AddonStatus.Published,
-            label: ADDON_STATUS_LABEL[AddonStatus.Published],
-            ...(statusCounts?.published === undefined ? {} : { count: statusCounts.published }),
-          },
-          {
-            value: AddonStatus.Archived,
-            label: ADDON_STATUS_LABEL[AddonStatus.Archived],
-            ...(statusCounts?.archived === undefined ? {} : { count: statusCounts.archived }),
-          },
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

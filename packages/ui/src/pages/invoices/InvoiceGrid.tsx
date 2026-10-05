@@ -111,8 +111,6 @@ const SORT_OPTIONS = Object.values(InvoiceSortField).map((value) => ({
   label: SORT_LABEL[value],
 }))
 
-const STATUS_ALL = 'all'
-
 /** The order the dropdown offers, which is the order a collections desk works
  *  in: what needs attention first, what is finished last. */
 const STATUS_ORDER: InvoiceStatus[] = [
@@ -249,8 +247,6 @@ export function InvoiceGrid({
     [locale, onOpenCustomer],
   )
 
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
-
   const isDefaultSort =
     query.sortBy === DEFAULT_INVOICE_QUERY.sortBy &&
     query.sortDirection === DEFAULT_INVOICE_QUERY.sortDirection
@@ -317,21 +313,6 @@ export function InvoiceGrid({
          * every option can be counted honestly or none of them shows a
          * number.
          */
-        status={{
-          value: statusValue,
-          ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-          label: 'Status',
-          onChange: (value) =>
-            onQueryChange({
-              ...query,
-              statuses: value === STATUS_ALL ? [] : [value as InvoiceStatus],
-              page: 1,
-            }),
-          options: [
-            { value: STATUS_ALL, label: 'All' },
-            ...STATUS_ORDER.map((value) => ({ value, label: STATUS_LABEL[value] })),
-          ],
-        }}
         filter={statusFilter({
           values: query.statuses,
           choices: STATUS_CHOICES,

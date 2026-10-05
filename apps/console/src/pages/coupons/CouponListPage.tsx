@@ -1,5 +1,5 @@
 import { type Coupon, type CouponQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, useCoupons } from '@fp/query'
+import { ApiError, useCoupons } from '@fp/query'
 import { CouponGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { TicketPercentIcon } from 'lucide-react'
@@ -27,10 +27,6 @@ export function CouponListPage({
 }: CouponListPageProps) {
   const coupons = useCoupons(query)
   const onCreate = onCreateCoupon
-  // The server's counts for the status dropdown — one `limit: 1` request each,
-  // read for `pagination.total`, never counted off the page on screen.
-  const stats = useCatalogStats('coupons')
-
   const failure = toFailure(coupons.error)
   const rows = coupons.data?.coupons ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -57,11 +53,6 @@ export function CouponListPage({
           onCouponClick={onOpenCoupon}
           onCreate={onCreate}
           onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-          statusCounts={{
-            total: stats.total,
-            published: stats.published,
-            archived: stats.archived,
-          }}
         />
       </ListState>
     </PageBody>

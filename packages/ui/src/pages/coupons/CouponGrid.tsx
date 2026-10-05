@@ -1,5 +1,12 @@
 import { useMemo } from 'react'
-import { ArchiveIcon, BookOpenIcon, CopyIcon, PencilIcon, TicketPercentIcon, PlusIcon } from 'lucide-react'
+import {
+  ArchiveIcon,
+  BookOpenIcon,
+  CopyIcon,
+  PencilIcon,
+  TicketPercentIcon,
+  PlusIcon,
+} from 'lucide-react'
 import {
   COUPON_CADENCE_LABEL,
   COUPON_SORT_LABEL,
@@ -47,9 +54,6 @@ const SORT_OPTIONS = Object.values(CouponSortField).map((value) => ({
   label: COUPON_SORT_LABEL[value],
 }))
 
-/** `all` is a value, not the absence of one — a Select with an empty value
- *  renders its placeholder and reads as unset. */
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(CouponStatus).map((value) => ({
   value,
   label: COUPON_STATUS_LABEL[value],
@@ -115,14 +119,6 @@ const GUIDES: EntityGuide[] = [
   },
 ]
 
-/** Counts per status, from the server. Undefined where not yet known — a
- *  confident "0" that has not been confirmed is worse than no number. */
-export interface CouponStatusCounts {
-  total?: number | undefined
-  published?: number | undefined
-  archived?: number | undefined
-}
-
 export interface CouponGridProps {
   coupons: Coupon[]
   total: number
@@ -140,8 +136,6 @@ export interface CouponGridProps {
   onArchive?: ((coupon: Coupon) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
-  /** Fills the counts beside each status option. */
-  statusCounts?: CouponStatusCounts | undefined
   locale?: string
 }
 
@@ -158,7 +152,6 @@ export function CouponGrid({
   onEdit,
   onArchive,
   onClearFilters,
-  statusCounts,
   locale,
 }: CouponGridProps) {
   const columns = useMemo<EntityColumn<Coupon>[]>(
@@ -202,8 +195,6 @@ export function CouponGrid({
     ],
     [locale],
   )
-
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
 
   const isDefaultSort =
     query.sortBy === DEFAULT_COUPON_QUERY.sortBy &&
@@ -255,34 +246,6 @@ export function CouponGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search coupons…"
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as CouponStatus],
-            page: 1,
-          }),
-        options: [
-          {
-            value: STATUS_ALL,
-            label: 'All',
-            ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }),
-          },
-          {
-            value: CouponStatus.Published,
-            label: COUPON_STATUS_LABEL[CouponStatus.Published],
-            ...(statusCounts?.published === undefined ? {} : { count: statusCounts.published }),
-          },
-          {
-            value: CouponStatus.Archived,
-            label: COUPON_STATUS_LABEL[CouponStatus.Archived],
-            ...(statusCounts?.archived === undefined ? {} : { count: statusCounts.archived }),
-          },
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

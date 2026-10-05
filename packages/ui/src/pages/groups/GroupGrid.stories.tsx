@@ -10,20 +10,6 @@ import {
 import { GroupGrid } from './GroupGrid'
 
 /**
- * Wait for an open popup to finish unmounting.
- *
- * While a Base UI popup is open it mounts `data-base-ui-focus-guard` spans
- * that are `aria-hidden` *and* `tabindex="0"` — which is exactly what axe's
- * `aria-hidden-focus` rule forbids. The a11y scan runs when the play function
- * returns, so a story that returns while the popup is still closing is scanned
- * mid-animation and fails intermittently. This is not a suppression: it makes
- * the scan look at the settled DOM, which is the state being asserted about.
- */
-async function popupClosed(role: 'menu' | 'listbox') {
-  await waitFor(() => expect(within(document.body).queryByRole(role)).toBeNull())
-}
-
-/**
  * The group list, over the shared `EntityList`.
  *
  * Groups as plain domain values — no client, no provider, no network.
@@ -142,30 +128,6 @@ export const NoEntityFilter: Story = {
     await expect(canvas.queryByRole('button', { name: /filter/i })).toBeNull()
     // The type is still a column, which is where it can be read honestly.
     await expect(canvas.getByRole('columnheader', { name: /entity type/i })).toBeInTheDocument()
-  },
-}
-
-/** No counts: `useCatalogStats` does not cover groups. */
-export const StatusDropdownHasNoCounts: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await canvas.findByText('Enterprise prices')
-
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-    const published = listbox.getByRole('option', { name: /published/i })
-    await expect(published.textContent).not.toMatch(/\d/)
-
-    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === 'archived'),
-      ).toBe(true),
-    )
-    await popupClosed('listbox')
   },
 }
 

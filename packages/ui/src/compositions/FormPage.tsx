@@ -50,22 +50,23 @@ export function FormPage({
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
-      {/* `self-center`: this column is a flex child, and a flex child with only
-          `mx-auto` stays pinned to the start. The cap (`narrow` / `wide`) then
-          sits in the middle of the page. `my-auto` on the card centres it
-          vertically when the page is taller than the form; a taller form keeps
-          its top reachable and scrolls. */}
-      <PageBody width={width} className="self-center">
+      {/* The card fills the viewport: `flex-1` takes every pixel the shell
+          leaves under the header, and the actions sit at its foot (`mt-auto`),
+          so a short form is a full-height page rather than a small card
+          floating in the middle of an empty one. A taller form scrolls. Always
+          the full `wide` measure; `narrow` caps the fields, not the surface. */}
+      <PageBody width="wide" className="self-center">
         <Section
           as="h1"
           title={title}
           {...(description ? { description } : {})}
-          className="my-auto"
+          className="flex-1"
+          bodyClassName="flex flex-col"
         >
-          <FieldSet className="gap-0">
-            <FieldGroup>{children}</FieldGroup>
+          <FieldSet className="gap-0 pb-6">
+            <FieldGroup className={cn(width === 'narrow' && 'max-w-3xl')}>{children}</FieldGroup>
           </FieldSet>
-          {footer ? <div className="mt-6 border-t pt-5">{footer}</div> : null}
+          {footer ? <div className="mt-auto border-t pt-5">{footer}</div> : null}
         </Section>
       </PageBody>
     </div>

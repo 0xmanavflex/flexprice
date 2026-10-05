@@ -68,9 +68,6 @@ const SORT_OPTIONS = Object.values(CustomerSortField).map((value) => ({
   label: CUSTOMER_SORT_LABEL[value],
 }))
 
-/** `all` is a value, not the absence of one — a Select with an empty value
- *  renders its placeholder and reads as unset. */
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(CustomerStatus).map((value) => ({
   value,
   label: CUSTOMER_STATUS_LABEL[value],
@@ -183,8 +180,6 @@ export function CustomerGrid({
     [locale],
   )
 
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
-
   const isDefaultSort =
     query.sortBy === DEFAULT_CUSTOMER_QUERY.sortBy &&
     query.sortDirection === DEFAULT_CUSTOMER_QUERY.sortDirection
@@ -246,28 +241,6 @@ export function CustomerGrid({
        * be a count of the twenty-five rows on screen. The dropdown shows no
        * number rather than a confident wrong one.
        */
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as CustomerStatus],
-            page: 1,
-          }),
-        options: [
-          { value: STATUS_ALL, label: 'All' },
-          {
-            value: CustomerStatus.Published,
-            label: CUSTOMER_STATUS_LABEL[CustomerStatus.Published],
-          },
-          {
-            value: CustomerStatus.Archived,
-            label: CUSTOMER_STATUS_LABEL[CustomerStatus.Archived],
-          },
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

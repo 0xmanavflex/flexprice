@@ -1,6 +1,12 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
-import { DEFAULT_PAYMENT_QUERY, type Payment, type PaymentQuery, PaymentStatus, money } from '@fp/domain'
+import {
+  DEFAULT_PAYMENT_QUERY,
+  type Payment,
+  type PaymentQuery,
+  PaymentStatus,
+  money,
+} from '@fp/domain'
 import { PaymentGrid } from './PaymentGrid'
 
 const meta = {
@@ -119,35 +125,6 @@ export const Layout: Story = {
 
     const cell = canvasElement.querySelector('tbody td') as HTMLElement
     await expect(Math.round(cell.getBoundingClientRect().height)).toBe(60)
-  },
-}
-
-/** Every state the domain can hold is reachable, not just the redesign's five. */
-export const StatusDropdown: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-
-    // Rows can arrive in these; leaving them out would make them visible in
-    // the list but unreachable from the control that exists to find them.
-    await expect(listbox.getByRole('option', { name: /overpaid/i })).toBeInTheDocument()
-    await expect(listbox.getByRole('option', { name: /voided/i })).toBeInTheDocument()
-    await userEvent.click(listbox.getByRole('option', { name: /^failed$/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === PaymentStatus.Failed),
-      ).toBe(true),
-    )
-
-    // Let the select finish closing: while a Base UI popup is mounted its focus
-    // guards are aria-hidden *and* focusable, which axe rejects if the scan
-    // lands mid-animation. This waits for the settled state; it asserts nothing less.
-    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
   },
 }
 

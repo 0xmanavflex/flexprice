@@ -52,8 +52,6 @@ export type {
   EntityListProps,
   EntityRowAction,
   EntitySort,
-  EntityStatusOption,
-  EntityStatusSelect,
 } from './shared/EntityList'
 export {
   CellsProvenance,
@@ -82,9 +80,9 @@ export type {
 export { FeatureDetailView } from './features/FeatureDetailView'
 export type { FeatureTab, FeatureDetailViewProps } from './features/FeatureDetailView'
 export { FeatureGrid, FeatureGridProvenance } from './features/FeatureGrid'
-export type { FeatureGridProps, FeatureStatusCounts } from './features/FeatureGrid'
+export type { FeatureGridProps } from './features/FeatureGrid'
 export { PlanGrid, PlanGridProvenance } from './plans/PlanGrid'
-export type { PlanGridProps, PlanStatusCounts } from './plans/PlanGrid'
+export type { PlanGridProps } from './plans/PlanGrid'
 export { PlanForm, PlanFormProvenance } from './plans/PlanForm'
 export type { PlanFormProps, PlanFormValue } from './plans/PlanForm'
 export { TierTable, TierTableProvenance } from './charges/TierTable'
@@ -122,11 +120,11 @@ export type { CreditGrantFormProps } from './credit-grants/CreditGrantForm'
 export { CreditGrantTable, CreditGrantTableProvenance } from './credit-grants/CreditGrantTable'
 export type { CreditGrantTableProps } from './credit-grants/CreditGrantTable'
 export { AddonGrid, AddonGridProvenance } from './addons/AddonGrid'
-export type { AddonGridProps, AddonStatusCounts } from './addons/AddonGrid'
+export type { AddonGridProps } from './addons/AddonGrid'
 export { AddonForm, AddonFormProvenance } from './addons/AddonForm'
 export type { AddonFormProps } from './addons/AddonForm'
 export { CouponGrid, CouponGridProvenance } from './coupons/CouponGrid'
-export type { CouponGridProps, CouponStatusCounts } from './coupons/CouponGrid'
+export type { CouponGridProps } from './coupons/CouponGrid'
 export { CouponCreateForm, CouponCreateFormProvenance } from './coupons/CouponCreateForm'
 export type { CouponCreateFormProps } from './coupons/CouponCreateForm'
 export { CouponForm, CouponFormProvenance } from './coupons/CouponForm'

@@ -184,7 +184,7 @@ function ExpandedParent({
                   onClick={() => onNavigate(child.id)}
                   aria-current={isActive ? 'page' : undefined}
                   aria-label={rowLabel(child)}
-                  className="h-8"
+                  className="h-8 w-full"
                 >
                   <span>{child.label}</span>
                   {child.count !== undefined ? <Count value={child.count} /> : null}
@@ -263,7 +263,9 @@ function Items({
             item={item}
             {...(activeItemId === undefined ? {} : { activeItemId })}
             open={effectiveOpen === item.id}
-            onToggle={() => setOpenId((previous) => ((previous ?? current) === item.id ? '' : item.id))}
+            onToggle={() =>
+              setOpenId((previous) => ((previous ?? current) === item.id ? '' : item.id))
+            }
             onNavigate={navigate}
           />
         )

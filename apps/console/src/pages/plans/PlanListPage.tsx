@@ -1,5 +1,5 @@
 import { type PlanQuery } from '@fp/domain'
-import { ApiError, useCatalogStats, usePlans } from '@fp/query'
+import { ApiError, usePlans } from '@fp/query'
 import { PlanGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PackageIcon } from 'lucide-react'
@@ -24,11 +24,6 @@ export function PlanListPage({
   onCreatePlan,
 }: PlanListPageProps) {
   const plans = usePlans(query)
-  // Counts per status for the toolbar's dropdown. Each is one `limit: 1`
-  // request read for its `pagination.total` — the server's count, not the
-  // twenty-five rows that happen to be on screen.
-  const stats = useCatalogStats('plans')
-
   const failure = toFailure(plans.error)
   const rows = plans.data?.plans ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -58,11 +53,6 @@ export function PlanListPage({
             onPlanClick={(plan) => onOpenPlan(plan.id)}
             onCreate={() => onCreatePlan()}
             onClearFilters={clearFilters}
-            statusCounts={{
-              total: stats.total,
-              published: stats.published,
-              archived: stats.archived,
-            }}
           />
         </ListState>
       </PageBody>

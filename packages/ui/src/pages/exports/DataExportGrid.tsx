@@ -126,15 +126,6 @@ export function DataExportGrid({
         })),
         onChange: (state) => onQueryChange({ ...query, state, page: 1 }),
       })}
-      status={{
-        value: query.state,
-        label: 'Status',
-        onChange: (value) => onQueryChange({ ...query, state: value as ExportState, page: 1 }),
-        options: Object.values(EXPORT_STATE).map((value) => ({
-          value,
-          label: STATE_LABEL[value],
-        })),
-      }}
       rowActions={rowActions}
       exportFileName="exports"
       {...(onRefresh

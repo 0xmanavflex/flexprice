@@ -66,9 +66,6 @@ const SORT_OPTIONS = Object.values(PlanSortField).map((value) => ({
   label: PLAN_SORT_LABEL[value],
 }))
 
-/** `all` is a value, not the absence of one — a Select with an empty value
- *  renders its placeholder and reads as unset. */
-const STATUS_ALL = 'all'
 const STATUS_CHOICES = Object.values(PlanStatus).map((value) => ({
   value,
   label: PLAN_STATUS_LABEL[value],
@@ -122,14 +119,6 @@ const GUIDES: EntityGuide[] = [
   },
 ]
 
-/** Counts per status, from the server. Undefined where not yet known — a
- *  confident "0" that has not been confirmed is worse than no number. */
-export interface PlanStatusCounts {
-  total?: number | undefined
-  published?: number | undefined
-  archived?: number | undefined
-}
-
 export interface PlanGridProps {
   plans: Plan[]
   total: number
@@ -151,8 +140,6 @@ export interface PlanGridProps {
   onArchive?: ((plan: Plan) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
-  /** Fills the counts beside each status option. */
-  statusCounts?: PlanStatusCounts | undefined
   locale?: string
 }
 
@@ -171,7 +158,6 @@ export function PlanGrid({
   onAddCharges,
   onArchive,
   onClearFilters,
-  statusCounts,
   locale,
 }: PlanGridProps) {
   const columns = useMemo<EntityColumn<Plan>[]>(
@@ -248,8 +234,6 @@ export function PlanGrid({
     [locale],
   )
 
-  const statusValue = query.statuses.length === 1 ? (query.statuses[0] ?? STATUS_ALL) : STATUS_ALL
-
   const isDefaultSort =
     query.sortBy === DEFAULT_PLAN_QUERY.sortBy &&
     query.sortDirection === DEFAULT_PLAN_QUERY.sortDirection
@@ -316,34 +300,6 @@ export function PlanGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search plans…"
-      status={{
-        value: statusValue,
-        ...(query.statuses.length > 1 ? { valueLabel: `${query.statuses.length} selected` } : {}),
-        label: 'Status',
-        onChange: (value) =>
-          onQueryChange({
-            ...query,
-            statuses: value === STATUS_ALL ? [] : [value as PlanStatus],
-            page: 1,
-          }),
-        options: [
-          {
-            value: STATUS_ALL,
-            label: 'All',
-            ...(statusCounts?.total === undefined ? {} : { count: statusCounts.total }),
-          },
-          {
-            value: PlanStatus.Published,
-            label: PLAN_STATUS_LABEL[PlanStatus.Published],
-            ...(statusCounts?.published === undefined ? {} : { count: statusCounts.published }),
-          },
-          {
-            value: PlanStatus.Archived,
-            label: PLAN_STATUS_LABEL[PlanStatus.Archived],
-            ...(statusCounts?.archived === undefined ? {} : { count: statusCounts.archived }),
-          },
-        ],
-      }}
       filter={statusFilter({
         values: query.statuses,
         choices: STATUS_CHOICES,

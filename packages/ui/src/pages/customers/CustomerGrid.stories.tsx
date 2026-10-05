@@ -139,39 +139,6 @@ export const Layout: Story = {
   },
 }
 
-/**
- * Status writes the query, and carries no count.
- *
- * The search endpoint has no status field, so `fetchCustomers` narrows the
- * page it received — there is no server total per status to read, and a count
- * of the rows on screen would be a number about this page dressed up as a
- * number about the ledger.
- */
-export const StatusDropdownHasNoCounts: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('combobox', { name: /status/i }))
-    const listbox = within(await within(document.body).findByRole('listbox'))
-
-    await expect(listbox.getByRole('option', { name: /^all$/i }).textContent).not.toMatch(/\d/)
-    await userEvent.click(listbox.getByRole('option', { name: /archived/i }))
-
-    const spy = args.onQueryChange as unknown as { mock: { calls: unknown[][] } }
-    await waitFor(() =>
-      expect(
-        spy.mock.calls
-          .map((call) => call[0] as { statuses?: string[] })
-          .some((query) => query.statuses?.[0] === CustomerStatus.Archived),
-      ).toBe(true),
-    )
-
-    // Let the select finish closing: while a Base UI popup is mounted its focus
-    // guards are aria-hidden *and* focusable, which axe rejects if the scan
-    // lands mid-animation. This waits for the settled state; it asserts nothing less.
-    await waitFor(() => expect(within(document.body).queryByRole('listbox')).toBeNull())
-  },
-}
-
 export const Loading: Story = { args: { customers: [], total: 0, isLoading: true } }
 
 /** A filter emptied the list — the toolbar survives, so it can be undone. */
