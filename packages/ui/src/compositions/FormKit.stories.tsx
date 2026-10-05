@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, within, screen } from 'storybook/test'
+import { expect, userEvent, waitFor, within, screen } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Field } from './Field'
@@ -81,7 +81,9 @@ export const CreateDialog: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'New thing' }))
     const dialog = await screen.findByRole('dialog', { name: 'New thing' })
-    await expect(within(dialog).getByRole('button', { name: 'Create thing' })).toBeVisible()
+    await waitFor(() =>
+      expect(within(dialog).getByRole('button', { name: 'Create thing' })).toBeVisible(),
+    )
     await expect(within(dialog).getByRole('alert')).toHaveTextContent('Could not save.')
   },
 }
