@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
-import { Stripe } from '@ui/components/primitives/svgs/stripe'
+import { INTEGRATION_LOGOS } from '@ui/assets/integrations'
 
 /**
  * The integrations gallery. The `settings-13` block is kept verbatim in
@@ -29,8 +29,9 @@ export interface IntegrationsBlockProps {
 }
 
 function Logo({ integration }: { integration: Integration }) {
-  return integration.id === 'stripe' ? (
-    <Stripe className="size-6" />
+  const src = INTEGRATION_LOGOS[integration.id]
+  return src ? (
+    <img src={src} alt="" className="h-7 w-auto max-w-24 object-contain" />
   ) : (
     <span aria-hidden className="text-base font-medium">
       {integration.name.charAt(0)}

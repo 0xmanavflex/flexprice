@@ -47,7 +47,7 @@ export function ConnectorCard({
     >
       <div className="bg-background flex flex-1 flex-col gap-4 rounded-lg border p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="bg-background dark:bg-foreground dark:text-background flex size-11 shrink-0 items-center justify-center rounded-lg border shadow-xs dark:border-transparent">
+          <span className="bg-background dark:bg-foreground dark:text-background flex h-11 min-w-11 shrink-0 items-center justify-center rounded-lg px-2 border shadow-xs dark:border-transparent">
             {logo}
           </span>
           {docsUrl ? (
