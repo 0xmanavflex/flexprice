@@ -1,21 +1,27 @@
 import { useId, type ReactNode } from 'react'
-import { Field as FieldRoot, FieldDescription, FieldError, FieldLabel } from '@ui/components/primitives/field'
+import {
+  Field as FieldRoot,
+  FieldDescription,
+  FieldError,
+  FieldLabel,
+} from '@ui/components/primitives/field'
 import { provenance } from '@ui/provenance'
+import { InfoHint } from './InfoHint'
 
 /**
  * A label, a control, its hint and its error — wired together.
  *
  * The layout and typography are the stock shadcn `Field` parts; this only adds
  * the wiring people forget: `htmlFor` to the control, `aria-describedby` to
- * both the hint and the error, `aria-invalid`, and an announced error.
+ * both the hint (shown behind an (i), kept in the DOM for screen readers) and the error, `aria-invalid`, and an announced error.
  *
  * The child is a function because the generated id has to reach the control,
  * and the control differs every time (input, select, combobox, switch).
  */
 export const FieldProvenance = provenance({
   source: 'composition',
-  composes: ['ui/field'],
-  note: 'Stock Field/FieldLabel/FieldDescription/FieldError plus id and aria wiring.',
+  composes: ['ui/field', 'compositions/InfoHint'],
+  note: 'Stock Field/FieldLabel/FieldDescription/FieldError plus id and aria wiring; the hint sits behind an (i).',
 })
 
 export interface FieldProps {
@@ -41,14 +47,17 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
 
   return (
     <FieldRoot data-invalid={error ? true : undefined}>
-      <FieldLabel htmlFor={id}>
-        {label}
-        {required ? (
-          <span aria-hidden className="text-destructive">
-            *
-          </span>
-        ) : null}
-      </FieldLabel>
+      <div className="flex items-center gap-1.5">
+        <FieldLabel htmlFor={id}>
+          {label}
+          {required ? (
+            <span aria-hidden className="text-destructive">
+              *
+            </span>
+          ) : null}
+        </FieldLabel>
+        {hint ? <InfoHint label={label}>{hint}</InfoHint> : null}
+      </div>
 
       {children({
         id,
@@ -58,7 +67,7 @@ export function Field({ label, hint, error, required, children }: FieldProps) {
       })}
 
       {hint ? (
-        <FieldDescription id={hintId} className="text-xs">
+        <FieldDescription id={hintId} className="sr-only">
           {hint}
         </FieldDescription>
       ) : null}

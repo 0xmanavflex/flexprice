@@ -14,17 +14,16 @@ import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ShellAccount } from './ShellAccount'
 import { ShellNav } from './ShellNav'
-import { ShellNotifications } from './ShellNotifications'
 import { ShellSearch, type ShellSearchProps } from './ShellSearch'
 import { ThemeShortcut } from './ThemeShortcut'
 import { ThemeToggle } from './ThemeToggle'
-import type { ShellNavGroup, ShellNotification, ShellUser } from './types'
+import type { ShellNavGroup, ShellUser } from './types'
 
 /**
  * The application shell, as the reference app draws it.
  *
  * One inset sidebar that collapses to icons, with the tenant's name and the
- * notifications and theme controls at the top, nested navigation below, and the
+ * theme control at the top, nested navigation below, and the
  * account menu at the bottom. The header carries the breadcrumb — which leads
  * with the environment switcher — and, top-right, search beside whatever one
  * control belongs to the whole page rather than to its content.
@@ -61,12 +60,6 @@ export interface AppShellProps {
   logo?: ReactNode
   /** Global search: static items, async results and the select handler. */
   search?: ShellSearchProps
-
-  notifications?: ShellNotification[]
-  notificationsLoading?: boolean
-  notificationsError?: { message: string } | null
-  onMarkNotificationsRead?: () => void
-  onOpenNotification?: (id: string) => void
 
   /** Pinned above the footer — an allowance, a usage meter, an alert count. */
   pinned?: ReactNode
@@ -107,11 +100,6 @@ export function AppShell({
   productName = 'Flexprice',
   logo,
   search,
-  notifications = [],
-  notificationsLoading = false,
-  notificationsError = null,
-  onMarkNotificationsRead,
-  onOpenNotification,
   pinned,
   breadcrumb,
   headerActions,
@@ -132,7 +120,7 @@ export function AppShell({
             {/*
               The tenant this console is signed in to — its name from `/users/me`
               (falling back to the product name until that resolves), with the
-              brand mark beside it. Notifications and the theme toggle sit at the
+              brand mark beside it. The theme toggle sits at the
               right of the same row, and drop out in the icon rail.
             */}
             <div className="flex h-8 items-center gap-2">
@@ -148,13 +136,6 @@ export function AppShell({
                 {user.organization ?? productName}
               </span>
               <div className="ml-auto flex items-center gap-0.5 in-data-[state=collapsed]:hidden">
-                <ShellNotifications
-                  notifications={notifications}
-                  isLoading={notificationsLoading}
-                  error={notificationsError}
-                  {...(onMarkNotificationsRead ? { onMarkAllRead: onMarkNotificationsRead } : {})}
-                  {...(onOpenNotification ? { onOpenNotification } : {})}
-                />
                 <ThemeToggle />
               </div>
             </div>

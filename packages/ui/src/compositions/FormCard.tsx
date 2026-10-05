@@ -11,6 +11,7 @@ import {
 import { Separator } from '@ui/components/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { InfoHint } from './InfoHint'
 
 /**
  * The single-page form layout from ReUI's `form-12`: one Section-style surface
@@ -118,19 +119,22 @@ export function FormRow({
       )}
     >
       <FieldContent className="gap-0.5 md:pt-0.5">
-        {isControl ? (
-          <FieldLabel htmlFor={id}>
-            {label}
-            {asterisk}
-          </FieldLabel>
-        ) : (
-          <FieldTitle>
-            {label}
-            {asterisk}
-          </FieldTitle>
-        )}
+        <div className="flex items-center gap-1.5">
+          {isControl ? (
+            <FieldLabel htmlFor={id}>
+              {label}
+              {asterisk}
+            </FieldLabel>
+          ) : (
+            <FieldTitle>
+              {label}
+              {asterisk}
+            </FieldTitle>
+          )}
+          {hint ? <InfoHint label={label}>{hint}</InfoHint> : null}
+        </div>
         {hint ? (
-          <FieldDescription id={hintId} className="text-xs">
+          <FieldDescription id={hintId} className="sr-only">
             {hint}
           </FieldDescription>
         ) : null}

@@ -14,8 +14,9 @@ import { provenance } from '@ui/provenance'
 /**
  * One way to start anything, in the header, from every screen.
  *
- * A filled primary button at the right of the top bar, as the reference shell
- * has it. The things a finance person creates do not live on the page they are
+ * A white (outline) button at the right of the top bar, by design feedback
+ * of 2026-10-05: primary colour is kept for the one action on a page, and this
+ * one is on every page. The things a finance person creates do not live on the page they are
  * usually looking at; starting a subscription would otherwise mean navigating
  * to Customers, finding the customer, and finding the button.
  *
@@ -57,7 +58,14 @@ export function ShellCreateMenu({ actions, onCreate, label = 'Create' }: ShellCr
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        render={<Button size="sm" className="h-8 px-3" aria-label={`${label} something new`} />}
+        render={
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-8 px-3"
+            aria-label={`${label} something new`}
+          />
+        }
       >
         <PlusIcon aria-hidden />
         {label}

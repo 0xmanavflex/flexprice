@@ -40,8 +40,7 @@ import { provenance } from '@ui/provenance'
  * typed is worse than no input, because it teaches that search is broken
  * rather than absent — so the unavailable state says so in words, points at
  * the per-list search boxes that do work, and the shortcuts and the hint are
- * not advertised. This is the same choice as `notifications={[]}` beside it:
- * the honest empty state, until the endpoint exists.
+ * not advertised: the honest empty state, until the endpoint exists.
  */
 export const ShellSearchProvenance = provenance({
   source: 'composition',

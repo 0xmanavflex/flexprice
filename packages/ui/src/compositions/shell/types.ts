@@ -49,16 +49,3 @@ export interface ShellUser {
   organization?: string
 }
 
-/**
- * Something that happened which the user did not ask to be told about.
- *
- * `timestamp` is a rendered string rather than a Date: formatting is
- * locale-dependent and this package is not where that decision belongs.
- */
-export interface ShellNotification {
-  id: string
-  title: string
-  description?: string
-  timestamp: string
-  unread?: boolean
-}

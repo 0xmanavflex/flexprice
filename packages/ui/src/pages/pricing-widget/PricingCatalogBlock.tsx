@@ -28,6 +28,9 @@ export interface PricingCatalogBlockProps {
 
 type Interval = 'monthly' | 'annual'
 
+/** Features a tile shows before "Show more". The widget is a pitch, not a spec sheet. */
+const VISIBLE_FEATURES = 3
+
 function describe(e: Entitlement): string {
   switch (e.featureType) {
     case FeatureType.Metered:
@@ -41,7 +44,7 @@ function describe(e: Entitlement): string {
   }
 }
 
-function toTile(plan: PlanRecord, entitlements: Entitlement[]): Plan {
+function toTile(plan: PlanRecord, entitlements: Entitlement[], showAll: boolean): Plan {
   const amount = Number((plan.headline?.amount ?? '').replace(/[^0-9.]/g, '')) || 0
   const yearly = /year|annual/i.test(plan.headline?.period ?? '')
   return {
@@ -52,14 +55,15 @@ function toTile(plan: PlanRecord, entitlements: Entitlement[]): Plan {
     monthlyPrice: yearly ? Math.round(amount / 12) : amount,
     annualPrice: yearly ? amount : amount * 12,
     perSeat: false,
-    entitlements: entitlements
-      .filter((e) => e.entityId === plan.id)
-      .map((e) => ({
-        id: e.id,
-        icon: <ZapIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />,
-        label: e.featureName ?? 'Feature',
-        value: describe(e),
-      })),
+    entitlements: (showAll
+      ? entitlements.filter((e) => e.entityId === plan.id)
+      : entitlements.filter((e) => e.entityId === plan.id).slice(0, VISIBLE_FEATURES)
+    ).map((e) => ({
+      id: e.id,
+      icon: <ZapIcon className="text-muted-foreground size-3.5 shrink-0" aria-hidden="true" />,
+      label: e.featureName ?? 'Feature',
+      value: describe(e),
+    })),
     addOns: [],
   }
 }
@@ -73,7 +77,15 @@ export function PricingCatalogBlock({
   tenant = 'your-tenant',
 }: PricingCatalogBlockProps) {
   const [interval, setInterval] = useState<Interval>('monthly')
-  const tiles = plans.map((plan) => toTile(plan, entitlements))
+  const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
+  const featureCount = (planId: string) => entitlements.filter((e) => e.entityId === planId).length
+  const toggle = (planId: string) =>
+    setExpanded((current) => {
+      const next = new Set(current)
+      if (!next.delete(planId)) next.add(planId)
+      return next
+    })
+  const tiles = plans.map((plan) => toTile(plan, entitlements, expanded.has(plan.id)))
   const published = tiles.filter((tile) => tile.status === 'active').length
 
   const snippet = `<script src="https://js.flexprice.io/pricing.js" data-tenant="${tenant}" data-interval="${interval}"></script>`
@@ -145,9 +157,29 @@ export function PricingCatalogBlock({
             </AlertDescription>
           </Alert>
           <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
-            {tiles.map((tile) => (
-              <PlanTile key={tile.id} plan={tile} onEdit={onEditPlan} />
-            ))}
+            {tiles.map((tile) => {
+              const total = featureCount(tile.id)
+              const hidden = total - VISIBLE_FEATURES
+              return (
+                <div key={tile.id} className="flex flex-col gap-2">
+                  <PlanTile plan={tile} onEdit={onEditPlan} />
+                  {hidden > 0 ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="self-center"
+                      aria-expanded={expanded.has(tile.id)}
+                      onClick={() => toggle(tile.id)}
+                    >
+                      {expanded.has(tile.id)
+                        ? 'Show fewer features'
+                        : `Show ${hidden} more ${hidden === 1 ? 'feature' : 'features'}`}
+                    </Button>
+                  ) : null}
+                </div>
+              )
+            })}
           </div>
           <div className="text-muted-foreground flex items-center gap-2 text-xs">
             <CopyIcon className="size-3.5" aria-hidden="true" />

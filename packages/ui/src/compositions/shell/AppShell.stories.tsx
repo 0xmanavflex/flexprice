@@ -5,7 +5,7 @@ import { AppShell } from './AppShell'
 import { EnvironmentSwitcher } from './EnvironmentSwitcher'
 import { ShellBreadcrumb } from './ShellBreadcrumb'
 import { ShellCreateMenu } from './ShellCreateMenu'
-import type { ShellEnvironment, ShellNavGroup, ShellNotification } from './types'
+import type { ShellEnvironment, ShellNavGroup } from './types'
 
 /**
  * The shell, in the arrangements that actually occur.
@@ -46,21 +46,6 @@ const navGroups: ShellNavGroup[] = [
     id: 'secondary',
     title: 'Quick links',
     items: [{ id: 'settings', label: 'Settings', icon: <SettingsIcon className="size-4" /> }],
-  },
-]
-
-const notifications: ShellNotification[] = [
-  {
-    id: 'n1',
-    title: 'Payment failed for Acme Corp',
-    description: 'Card declined on invoice INV-2041, $4,820.00.',
-    timestamp: '12 minutes ago',
-    unread: true,
-  },
-  {
-    id: 'n2',
-    title: 'Usage export finished',
-    timestamp: 'Yesterday',
   },
 ]
 
@@ -251,58 +236,6 @@ export const SearchOpensADialog: Story = {
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.type(dialog.getByRole('combobox', { name: 'Search' }), 'cust{Enter}')
     await expect(args.search?.onSelect).toHaveBeenCalled()
-  },
-}
-
-/**
- * Notifications, in each of the four states it can be in.
- *
- * This is the one surface guaranteed to be on screen during an incident, which
- * is exactly why it must not report "all clear" from a failed request.
- */
-export const NotificationsUnread: Story = {
-  args: { notifications, onMarkNotificationsRead: fn() },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByRole('button', { name: /1 unread/i })).toBeInTheDocument()
-
-    await userEvent.click(canvas.getByRole('button', { name: /notifications/i }))
-    const panel = within(await screen.findByText('Payment failed for Acme Corp'))
-    await expect(panel).toBeDefined()
-  },
-}
-
-export const NotificationsEmpty: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    // No dot, and the name does not claim a count.
-    await expect(canvas.getByRole('button', { name: 'Notifications' })).toBeInTheDocument()
-
-    await userEvent.click(canvas.getByRole('button', { name: 'Notifications' }))
-    await expect(await screen.findByText('You are all caught up.')).toBeInTheDocument()
-  },
-}
-
-/**
- * A failed request says so.
- *
- * An empty list here would assert "nothing has happened", which is a different
- * claim from "we could not ask" — and the difference matters most when
- * something *has* happened.
- */
-export const NotificationsFailed: Story = {
-  args: { notificationsError: { message: 'The service did not respond.' } },
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Notifications' }))
-    await expect(await screen.findByRole('alert')).toHaveTextContent(/could not be loaded/i)
-  },
-}
-
-export const NotificationsLoading: Story = {
-  args: { notificationsLoading: true },
-  play: async ({ canvasElement }) => {
-    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Notifications' }))
-    await expect(await screen.findByText('Loading notifications')).toBeInTheDocument()
   },
 }
 

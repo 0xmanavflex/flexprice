@@ -9,6 +9,8 @@ export { WorkflowStepper, WorkflowStepperProvenance } from './WorkflowStepper'
 export type { StepStatus, WorkflowStep, WorkflowStepperProps } from './WorkflowStepper'
 
 export { Field, FieldProvenance } from './Field'
+export { InfoHint, InfoHintProvenance } from './InfoHint'
+export type { InfoHintProps } from './InfoHint'
 export type { FieldProps } from './Field'
 
 export { FormCard, FormRow, FormCardProvenance } from './FormCard'

@@ -10,21 +10,17 @@ export { ShellCreateMenu, ShellCreateMenuProvenance } from './ShellCreateMenu'
 export type { ShellCreateAction, ShellCreateMenuProps } from './ShellCreateMenu'
 export { ShellNav } from './ShellNav'
 export type { ShellNavProps } from './ShellNav'
-export { ShellNotifications, ShellNotificationsProvenance } from './ShellNotifications'
-export type { ShellNotificationsProps } from './ShellNotifications'
 export { ShellPromoCard, ShellPromoCardProvenance } from './ShellPromoCard'
 export type { ShellPromoCardProps } from './ShellPromoCard'
 export { ShellSearch, ShellSearchProvenance } from './ShellSearch'
 export { ThemeProvider, ThemeProviderProvenance } from './ThemeProvider'
 export { ThemeToggle, ThemeToggleProvenance } from './ThemeToggle'
 export type { ShellSearchItem, ShellSearchProps } from './ShellSearch'
-export type {
-  ShellEnvironment,
-  ShellNavGroup,
-  ShellNavItem,
-  ShellNotification,
-  ShellUser,
-} from './types'
+export type { ShellEnvironment, ShellNavGroup, ShellNavItem, ShellUser } from './types'
 export { MENU_CONTENT, MENU_ITEM, MENU_LABEL } from './menuSurface'
-export { ShellDetailTrailProvider, usePublishDetailTrail, useShellDetailTrail } from './ShellDetailTrail'
+export {
+  ShellDetailTrailProvider,
+  usePublishDetailTrail,
+  useShellDetailTrail,
+} from './ShellDetailTrail'
 export type { ShellDetailCrumb } from './ShellDetailTrail'

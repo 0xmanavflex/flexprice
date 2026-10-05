@@ -217,13 +217,6 @@ export function ConsoleShell({
             />
           </>
         }
-        /*
-         * Notifications are declared empty rather than omitted: the bell is part
-         * of the shell from the start, and an empty list is the honest state
-         * until `POST /events/search` is wired to it. It is not loading, and it
-         * has not failed — there is nothing yet.
-         */
-        notifications={[]}
         search={{
           items: destinations.items,
           results: found.results,
