@@ -92,13 +92,11 @@ export function CouponCreateForm({
   const cadence = form.watch('cadence')
 
   const formEl = (
-    <form
-      id={FORM_ID}
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-6"
-    >
-      <FormCard title="Basics">
+    <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
+      <FormCard
+        title="Coupon details"
+        description="The discount type, amount and duration are fixed once the coupon is created."
+      >
         <FormRow label="Name" required error={errors.name?.message}>
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -113,12 +111,7 @@ export function CouponCreateForm({
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('couponCode')} />
           )}
         </FormRow>
-      </FormCard>
 
-      <FormCard
-        title="Discount"
-        description="The type, amount and duration are fixed once the coupon is created."
-      >
         <FormRow label="Discount type" required error={errors.type?.message}>
           {({ id, ...field }) => (
             <Controller
@@ -221,9 +214,7 @@ export function CouponCreateForm({
             )}
           </FormRow>
         ) : null}
-      </FormCard>
 
-      <FormCard title="Limits">
         <FormRow
           label="Max redemptions"
           hint="Leave blank for unlimited."

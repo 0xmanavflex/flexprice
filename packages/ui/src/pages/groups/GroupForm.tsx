@@ -74,9 +74,9 @@ export function GroupForm({
       <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
         <div className="flex flex-col gap-6">
           <FormCard
-            title="Details"
+            title="Group details"
             status="required"
-            description="What this group is called and how the API refers to it."
+            description="Name, lookup key and what the group can hold."
           >
             <FormRow label="Name" required error={errors.name?.message}>
               {({ id, ...field }) => (
@@ -94,9 +94,7 @@ export function GroupForm({
                 <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
               )}
             </FormRow>
-          </FormCard>
 
-          <FormCard title="Contents" status="required" description="What the group can hold.">
             <FormRow
               label="Holds"
               required

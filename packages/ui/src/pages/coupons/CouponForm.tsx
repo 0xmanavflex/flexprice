@@ -70,7 +70,10 @@ export function CouponForm({
       }}
     >
       <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
-        <FormCard>
+        <FormCard
+          title="Coupon details"
+          description="Only the name can change once a coupon exists."
+        >
           <FormRow label="Name" required error={errors.name?.message}>
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />

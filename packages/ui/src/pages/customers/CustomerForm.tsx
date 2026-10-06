@@ -68,8 +68,8 @@ export function CustomerForm({
 
   const submitAll = form.handleSubmit((values) => onSubmit(values))
 
-  const detailsStep = (
-    <FormCard title="Details" status="required">
+  const detailsRows = (
+    <>
       <FormRow label="Name" required error={errors.name?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -107,11 +107,11 @@ export function CustomerForm({
           />
         )}
       </FormRow>
-    </FormCard>
+    </>
   )
 
-  const addressStep = (
-    <FormCard title="Billing address" status="optional">
+  const addressRows = (
+    <>
       <FormRow label="Address line 1" error={errors.addressLine1?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressLine1')} />
@@ -157,11 +157,11 @@ export function CustomerForm({
           />
         )}
       </FormRow>
-    </FormCard>
+    </>
   )
 
-  const additionalStep = (
-    <FormCard title="Additional" status="optional">
+  const additionalRows = (
+    <>
       <FormRow
         label="Timezone"
         hint="An IANA name, e.g. Europe/London."
@@ -189,19 +189,20 @@ export function CustomerForm({
           />
         )}
       </FormRow>
-    </FormCard>
+    </>
   )
 
   const formEl = (
-    <form
-      id={FORM_ID}
-      onSubmit={(event) => void submitAll(event)}
-      noValidate
-      className="flex flex-col gap-6"
-    >
-      {detailsStep}
-      {addressStep}
-      {additionalStep}
+    <form id={FORM_ID} onSubmit={(event) => void submitAll(event)} noValidate>
+      <FormCard
+        title="Customer details"
+        description="Name and identifier are required; address and tax settings are optional."
+        status="required"
+      >
+        {detailsRows}
+        {addressRows}
+        {additionalRows}
+      </FormCard>
     </form>
   )
 

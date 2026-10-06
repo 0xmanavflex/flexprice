@@ -108,7 +108,11 @@ export function CreditNoteForm({
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
       >
-        <FormCard>
+        <FormCard
+          title="Credit note details"
+          description="Credit part or all of an invoice."
+          status="required"
+        >
           <FormRow label="Invoice" required error={errors.invoiceId?.message}>
             {({ id, ...field }) => (
               <Controller

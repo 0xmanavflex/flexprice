@@ -1,4 +1,4 @@
-import { Children, useId, type ReactNode } from 'react'
+import { Children, Fragment, isValidElement, useId, type ReactNode } from 'react'
 import {
   Field as FieldRoot,
   FieldContent,
@@ -12,27 +12,35 @@ import { Badge } from '@ui/components/reui/badge'
 import { Separator } from '@ui/components/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { InfoHint } from './InfoHint'
 
 /**
- * The single-page form layout from ReUI's `form-12`: one Section-style surface
- * (`bg-background rounded-xl border`, never the Card primitive), and inside it
- * label-and-hint on the left of each row, the control on the right, rows split
- * by inset dashed rules.
+ * The main content of a form: ONE card per form (or per step), laid out as in
+ * ReUI's `form-9` (`blocks/form-9/components/enterprise-member-invite.tsx`): a
+ * header with title, description and a Required/Optional badge, then rows with
+ * the title and its description on the left and the control on the right, every
+ * part split by inset dashed rules.
  *
- * `form-12` is an ecommerce block, so only its structure is taken, not its
- * fields. The stock Field / Separator primitives do the work; this adds
- * the row grid, the separators between rows, and the same id and aria wiring
- * as `Field` so labels, hints and errors stay connected to the control.
+ * `form-9`'s `FormRow` and `InsetSeparator` are private to that demo and cannot
+ * be edited in place, so the markup is rebuilt here with the same tokens, on the
+ * stock Field / Separator primitives, with the same id and aria wiring as `Field`
+ * so labels, descriptions and errors stay connected to the control.
  */
 export const FormCardProvenance = provenance({
   source: 'composition',
   composes: ['ui/field', 'ui/separator', '@reui/badge'],
-  note: 'form-12 layout: Section surface, label/control rows, dashed inset separators. Lineage: compositions/section.',
+  note: 'form-9 layout: one card, header with badge, title+description / control rows, dashed inset separators. Lineage: blocks/form-9.',
 })
 
 const dashedRule =
   'border-border bg-transparent data-horizontal:h-0 data-horizontal:border-t data-horizontal:border-dashed'
+
+function flattenRows(children: ReactNode): ReactNode[] {
+  return Children.toArray(children).flatMap((child) =>
+    isValidElement<{ children?: ReactNode }>(child) && child.type === Fragment
+      ? flattenRows(child.props.children)
+      : [child],
+  )
+}
 
 export interface FormCardProps {
   title?: string
@@ -44,11 +52,11 @@ export interface FormCardProps {
 }
 
 export function FormCard({ title, description, status, children, className }: FormCardProps) {
-  const rows = Children.toArray(children)
+  const rows = flattenRows(children)
   return (
     <section className={cn('bg-background flex w-full flex-col rounded-xl border', className)}>
       {title ? (
-        <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
+        <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6">
           <div className="space-y-0.5">
             <h2 className="text-sm font-medium">{title}</h2>
             {description ? (
@@ -62,20 +70,18 @@ export function FormCard({ title, description, status, children, className }: Fo
           ) : null}
         </div>
       ) : null}
-      <div>
-        <FieldGroup className="gap-0">
-          {rows.map((row, index) => (
-            <div key={index}>
-              {index > 0 ? (
-                <div className="px-5 sm:px-6">
-                  <Separator className={dashedRule} />
-                </div>
-              ) : null}
-              {row}
-            </div>
-          ))}
-        </FieldGroup>
-      </div>
+      <FieldGroup className="gap-0">
+        {rows.map((row, index) => (
+          <div key={index}>
+            {index > 0 || title ? (
+              <div className="px-5 sm:px-6">
+                <Separator className={dashedRule} />
+              </div>
+            ) : null}
+            {row}
+          </div>
+        ))}
+      </FieldGroup>
     </section>
   )
 }
@@ -89,7 +95,7 @@ interface ControlProps {
 
 export interface FormRowProps {
   label: string
-  /** Supporting text under the label; also the control's accessible description. */
+  /** Description shown under the title; also the control's accessible description. */
   hint?: string
   error?: string | undefined
   required?: boolean
@@ -126,7 +132,7 @@ export function FormRow({
     <FieldRoot
       data-invalid={error ? true : undefined}
       className={cn(
-        'grid gap-3 px-5 py-4 sm:px-6 md:grid-cols-[minmax(0,15rem)_minmax(0,1fr)]',
+        'grid gap-3 px-5 py-4 sm:px-6 md:grid-cols-[minmax(0,17rem)_minmax(0,1fr)]',
         align === 'start' ? 'md:items-start' : 'md:items-center',
       )}
     >
@@ -143,10 +149,9 @@ export function FormRow({
               {asterisk}
             </FieldTitle>
           )}
-          {hint ? <InfoHint>{hint}</InfoHint> : null}
         </div>
         {hint ? (
-          <FieldDescription id={hintId} className="sr-only">
+          <FieldDescription id={hintId} className="text-[13px]">
             {hint}
           </FieldDescription>
         ) : null}

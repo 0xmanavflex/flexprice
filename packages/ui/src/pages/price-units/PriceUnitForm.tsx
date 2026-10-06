@@ -114,7 +114,11 @@ export function PriceUnitForm({
         noValidate
         className="flex min-w-0 flex-col gap-6"
       >
-        <FormCard title="Unit">
+        <FormCard
+          title="Price unit"
+          description="The unit, and the currency rate it converts into."
+          status="required"
+        >
           <FormRow label="Name" required error={errors.name?.message}>
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -148,9 +152,7 @@ export function PriceUnitForm({
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('symbol')} />
             )}
           </FormRow>
-        </FormCard>
 
-        <FormCard title="Conversion">
           <FormRow
             label="Base currency"
             required

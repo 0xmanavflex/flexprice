@@ -64,13 +64,12 @@ export function AddonForm({
   const isEdit = mode === 'edit'
 
   const formEl = (
-    <form
-      id={FORM_ID}
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-6"
-    >
-      <FormCard title="Basics" status="required">
+    <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
+      <FormCard
+        title="Add-on details"
+        description="Name and lookup key identify the add-on."
+        status="required"
+      >
         <FormRow label="Name" required error={errors.name?.message}>
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -88,9 +87,7 @@ export function AddonForm({
             />
           )}
         </FormRow>
-      </FormCard>
 
-      <FormCard title="Identifier" {...(isEdit ? {} : { status: 'required' as const })}>
         <FormRow
           label="Lookup key"
           required={!isEdit}

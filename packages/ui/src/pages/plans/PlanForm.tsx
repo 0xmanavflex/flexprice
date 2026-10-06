@@ -143,7 +143,11 @@ export function PlanForm({
 
   const detailsStep = (
     <>
-      <FormCard>
+      <FormCard
+        title="Plan details"
+        description="Name and lookup key identify the plan; prices are added afterwards."
+        status="required"
+      >
         <FormRow label="Name" required error={errors.name?.message}>
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />

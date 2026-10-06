@@ -13,6 +13,8 @@ Affected:
 
 Honest note on "use the block's own component": the vendored `form-9`, `solution-billing-8` and `c-stepper-1` export only whole demos (or, for the stepper, a pattern over `@ui/components/reui/stepper`). The proration rail, its amount and summary rows, and the stepper markup are private to those demos and cannot be imported, and vendored files are hash-locked. The compositions therefore rebuild the same markup and tokens fed by props; each provenance note records the lineage. `form-9`, `tree` and `@headless-tree` are vendored and unused until a schema-driven permission form needs them.
 
+Follow-up, same day: the main content of every form is ONE form-9-style card (title/description/badge header, dashed inset rules, title + visible description left, control right) instead of several stacked cards; stepper forms show one card per step. Hints are visible under the row title, matching form-9, instead of an info icon.
+
 Retired: the inline stepper and bottom actions row on Subscription and Plan; the per-form preview grids.
 
 Decision: product owner, 2026-10-06.

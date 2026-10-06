@@ -350,8 +350,8 @@ export function FeatureForm(props: FeatureFormProps) {
     else props.onSubmit(values as unknown as CreateFeature)
   })
 
-  const detailsStep = (
-    <FormCard title="Basics">
+  const detailsRows = (
+    <>
       <FormRow label="Name" required error={message('name')}>
         {({ id, ...field }) => <Input id={id} disabled={isSubmitting} {...field} {...nameField} />}
       </FormRow>
@@ -400,123 +400,119 @@ export function FeatureForm(props: FeatureFormProps) {
           )}
         </FormRow>
       ) : null}
-    </FormCard>
+    </>
   )
 
-  const typeStep = (
-    <FormCard
-      title="Type"
-      description={
+  const typeRows = (
+    <FormRow
+      label="Type"
+      align="start"
+      hint={
         isEdit
           ? 'The type is fixed once the feature exists.'
           : 'What kind of feature this is decides what you configure next.'
       }
     >
-      <div className="px-5 py-4 sm:px-6">
-        <RadioGroup
-          aria-label="Feature type"
-          value={type}
-          disabled={isSubmitting || isEdit}
-          className="grid gap-3 sm:grid-cols-3"
-          onValueChange={(next) => {
-            if (next === type || isEdit) return
-            // A type switch keeps the shared fields and lets the schema drop the rest.
-            form.setValue('type', next as FeatureType, { shouldDirty: true })
-            form.clearErrors()
-          }}
-        >
-          {TYPES.map((value) => (
-            <label
-              key={value}
-              className="has-data-checked:border-primary has-data-checked:bg-primary/5 hover:bg-muted/40 flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-60"
-            >
-              <RadioGroupItem value={value} className="mt-0.5" />
-              <span className="flex flex-col gap-0.5">
-                <span className="text-sm font-medium">{FEATURE_TYPE_LABEL[value]}</span>
-                <span className="text-muted-foreground text-xs">{TYPE_HINT[value]}</span>
-              </span>
-            </label>
+      <RadioGroup
+        aria-label="Feature type"
+        value={type}
+        disabled={isSubmitting || isEdit}
+        className="grid gap-3"
+        onValueChange={(next) => {
+          if (next === type || isEdit) return
+          // A type switch keeps the shared fields and lets the schema drop the rest.
+          form.setValue('type', next as FeatureType, { shouldDirty: true })
+          form.clearErrors()
+        }}
+      >
+        {TYPES.map((value) => (
+          <label
+            key={value}
+            className="has-data-checked:border-primary has-data-checked:bg-primary/5 hover:bg-muted/40 flex cursor-pointer items-start gap-3 rounded-lg border p-3 has-[[data-disabled]]:cursor-not-allowed has-[[data-disabled]]:opacity-60"
+          >
+            <RadioGroupItem value={value} className="mt-0.5" />
+            <span className="flex flex-col gap-0.5">
+              <span className="text-sm font-medium">{FEATURE_TYPE_LABEL[value]}</span>
+              <span className="text-muted-foreground text-xs">{TYPE_HINT[value]}</span>
+            </span>
+          </label>
+        ))}
+      </RadioGroup>
+    </FormRow>
+  )
+
+  const eventRows = (
+    <>
+      <FormRow
+        label="Event name"
+        required
+        hint="The event whose usage is measured."
+        error={message('meter.eventName')}
+      >
+        {({ id, ...field }) => (
+          <Input
+            id={id}
+            readOnly={isEdit}
+            disabled={isEdit}
+            {...field}
+            {...form.register('meter.eventName')}
+          />
+        )}
+      </FormRow>
+      <FormRow
+        label="Event filters"
+        hint="Only events whose property matches one of the values are counted."
+        align="start"
+      >
+        <div className="flex flex-col gap-3">
+          {filters.fields.map((row, index) => (
+            <div key={row.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
+              <Field
+                label={`Filter ${index + 1} property`}
+                error={message(`${filterPath}.${index}.key`)}
+              >
+                {({ id, ...field }) => (
+                  <Input id={id} {...field} {...form.register(`filters.${index}.key`)} />
+                )}
+              </Field>
+              <Field
+                label={`Filter ${index + 1} values`}
+                hint="Comma separated."
+                error={message(`${filterPath}.${index}.values`)}
+              >
+                {({ id, ...field }) => (
+                  <Input id={id} {...field} {...form.register(`filters.${index}.valuesText`)} />
+                )}
+              </Field>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="mt-6"
+                aria-label={`Remove filter ${index + 1}`}
+                onClick={() => filters.remove(index)}
+              >
+                <Trash2Icon aria-hidden className="size-4" />
+              </Button>
+            </div>
           ))}
-        </RadioGroup>
-      </div>
-    </FormCard>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="self-start"
+            onClick={() => filters.append({ key: '', valuesText: '' })}
+          >
+            <PlusIcon aria-hidden className="size-4" />
+            Add filter
+          </Button>
+        </div>
+      </FormRow>
+    </>
   )
 
-  const eventStep = (
-    <div className="flex flex-col gap-4">
-      {isEdit ? (
-        <p className="text-muted-foreground text-xs">
-          The event, aggregation and reset are fixed once the meter exists. Filters can still
-          change.
-        </p>
-      ) : null}
-      <FormCard title="Configuration" description="How usage is measured from the events you send.">
-        <FormRow label="Event name" required error={message('meter.eventName')}>
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              readOnly={isEdit}
-              disabled={isEdit}
-              {...field}
-              {...form.register('meter.eventName')}
-            />
-          )}
-        </FormRow>
-        <FormRow
-          label="Event filters"
-          hint="Only events whose property matches one of the values are counted."
-          align="start"
-        >
-          <div className="flex flex-col gap-3">
-            {filters.fields.map((row, index) => (
-              <div key={row.id} className="grid items-start gap-3 sm:grid-cols-[1fr_1.5fr_auto]">
-                <Field
-                  label={`Filter ${index + 1} property`}
-                  error={message(`${filterPath}.${index}.key`)}
-                >
-                  {({ id, ...field }) => (
-                    <Input id={id} {...field} {...form.register(`filters.${index}.key`)} />
-                  )}
-                </Field>
-                <Field
-                  label={`Filter ${index + 1} values`}
-                  hint="Comma separated."
-                  error={message(`${filterPath}.${index}.values`)}
-                >
-                  {({ id, ...field }) => (
-                    <Input id={id} {...field} {...form.register(`filters.${index}.valuesText`)} />
-                  )}
-                </Field>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  className="mt-6"
-                  aria-label={`Remove filter ${index + 1}`}
-                  onClick={() => filters.remove(index)}
-                >
-                  <Trash2Icon aria-hidden className="size-4" />
-                </Button>
-              </div>
-            ))}
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="self-start"
-              onClick={() => filters.append({ key: '', valuesText: '' })}
-            >
-              <PlusIcon aria-hidden className="size-4" />
-              Add filter
-            </Button>
-          </div>
-        </FormRow>
-      </FormCard>
-    </div>
-  )
-
-  const aggregationStep = (
-    <FormCard>
+  const aggregationRows = (
+    <>
       <FormRow label="Aggregation">
         {({ id, ...field }) => (
           <OptionSelect
@@ -609,149 +605,146 @@ export function FeatureForm(props: FeatureFormProps) {
           />
         )}
       </FormRow>
-    </FormCard>
+    </>
   )
 
-  const additionalStep = (
-    <div className="flex flex-col gap-6">
-      <fieldset className="min-w-0 border-0 p-0" disabled={isSubmitting}>
-        <legend className="sr-only">Units</legend>
-        <FormCard
-          title={isMetered ? 'Reporting unit' : 'Units'}
-          description="Reporting unit: how usage is displayed in reports, as the feature unit times a conversion rate. Fill all three or none."
-        >
-          {isMetered ? null : (
-            <FormRow label="Unit (singular)" error={message('unitSingular')}>
-              {({ id, ...field }) => (
-                <Input id={id} placeholder="seat" {...field} {...form.register('unitSingular')} />
-              )}
-            </FormRow>
+  const additionalRows = (
+    <>
+      {isMetered ? null : (
+        <FormRow label="Unit (singular)" error={message('unitSingular')}>
+          {({ id, ...field }) => (
+            <Input id={id} placeholder="seat" {...field} {...form.register('unitSingular')} />
           )}
-          {isMetered ? null : (
-            <FormRow label="Unit (plural)" error={message('unitPlural')}>
-              {({ id, ...field }) => (
-                <Input id={id} placeholder="seats" {...field} {...form.register('unitPlural')} />
-              )}
-            </FormRow>
+        </FormRow>
+      )}
+      {isMetered ? null : (
+        <FormRow label="Unit (plural)" error={message('unitPlural')}>
+          {({ id, ...field }) => (
+            <Input id={id} placeholder="seats" {...field} {...form.register('unitPlural')} />
           )}
-          <FormRow label="Reporting unit (singular)" error={message('reportingUnit.unitSingular')}>
-            {({ id, ...field }) => (
-              <Input id={id} {...field} {...form.register('reportingUnit.unitSingular')} />
-            )}
-          </FormRow>
-          <FormRow label="Reporting unit (plural)" error={message('reportingUnit.unitPlural')}>
-            {({ id, ...field }) => (
-              <Input id={id} {...field} {...form.register('reportingUnit.unitPlural')} />
-            )}
-          </FormRow>
-          <FormRow label="Conversion rate" error={message('reportingUnit.conversionRate')}>
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                inputMode="decimal"
-                {...field}
-                {...form.register('reportingUnit.conversionRate')}
-              />
-            )}
-          </FormRow>
-        </FormCard>
-      </fieldset>
-      <fieldset className="min-w-0 border-0 p-0" disabled={isSubmitting}>
-        <legend className="sr-only">Alerts</legend>
-        <FormCard title="Alerts">
-          <FormRow
-            label="Usage alerts"
-            hint={
-              isEdit
-                ? 'Turning this on replaces the feature’s current alert thresholds.'
-                : 'Notify when usage crosses a threshold.'
-            }
-            error={message('alertSettings.info')}
-          >
-            {({ id, ...field }) => (
-              <Switch
-                id={id}
-                aria-describedby={field['aria-describedby']}
-                checked={alertsOn}
-                onCheckedChange={setAlertsOn}
-              />
-            )}
-          </FormRow>
+        </FormRow>
+      )}
+      <FormRow
+        label="Reporting unit (singular)"
+        hint="How usage is displayed in reports: the feature unit times a conversion rate. Fill all three or none."
+        error={message('reportingUnit.unitSingular')}
+      >
+        {({ id, ...field }) => (
+          <Input id={id} {...field} {...form.register('reportingUnit.unitSingular')} />
+        )}
+      </FormRow>
+      <FormRow label="Reporting unit (plural)" error={message('reportingUnit.unitPlural')}>
+        {({ id, ...field }) => (
+          <Input id={id} {...field} {...form.register('reportingUnit.unitPlural')} />
+        )}
+      </FormRow>
+      <FormRow label="Conversion rate" error={message('reportingUnit.conversionRate')}>
+        {({ id, ...field }) => (
+          <Input
+            id={id}
+            inputMode="decimal"
+            {...field}
+            {...form.register('reportingUnit.conversionRate')}
+          />
+        )}
+      </FormRow>
+      <FormRow
+        label="Usage alerts"
+        hint={
+          isEdit
+            ? 'Turning this on replaces the feature’s current alert thresholds.'
+            : 'Notify when usage crosses a threshold.'
+        }
+        error={message('alertSettings.info')}
+      >
+        {({ id, ...field }) => (
+          <Switch
+            id={id}
+            aria-describedby={field['aria-describedby']}
+            checked={alertsOn}
+            onCheckedChange={setAlertsOn}
+          />
+        )}
+      </FormRow>
 
-          {alertsOn ? (
-            <FormRow label="Threshold type">
+      {alertsOn ? (
+        <FormRow label="Threshold type">
+          {({ id, ...field }) => (
+            <OptionSelect
+              id={id}
+              aria-describedby={field['aria-describedby']}
+              value={form.watch('alerts.thresholdType')}
+              options={THRESHOLD_TYPE_OPTIONS}
+              onValueChange={(next) =>
+                form.setValue('alerts.thresholdType', next as AlertThresholdType, {
+                  shouldDirty: true,
+                })
+              }
+            />
+          )}
+        </FormRow>
+      ) : null}
+      {alertsOn
+        ? ALERT_SEVERITY_ORDER.flatMap((severity) => [
+            <FormRow
+              key={`${severity}-condition`}
+              label={`${ALERT_SEVERITY_LABEL[severity]} condition`}
+            >
               {({ id, ...field }) => (
                 <OptionSelect
                   id={id}
                   aria-describedby={field['aria-describedby']}
-                  value={form.watch('alerts.thresholdType')}
-                  options={THRESHOLD_TYPE_OPTIONS}
+                  value={form.watch(`alerts.${severity}.condition`)}
+                  options={CONDITION_OPTIONS}
                   onValueChange={(next) =>
-                    form.setValue('alerts.thresholdType', next as AlertThresholdType, {
+                    form.setValue(`alerts.${severity}.condition`, next as AlertCondition, {
                       shouldDirty: true,
                     })
                   }
                 />
               )}
-            </FormRow>
-          ) : null}
-          {alertsOn
-            ? ALERT_SEVERITY_ORDER.flatMap((severity) => [
-                <FormRow
-                  key={`${severity}-condition`}
-                  label={`${ALERT_SEVERITY_LABEL[severity]} condition`}
-                >
-                  {({ id, ...field }) => (
-                    <OptionSelect
-                      id={id}
-                      aria-describedby={field['aria-describedby']}
-                      value={form.watch(`alerts.${severity}.condition`)}
-                      options={CONDITION_OPTIONS}
-                      onValueChange={(next) =>
-                        form.setValue(`alerts.${severity}.condition`, next as AlertCondition, {
-                          shouldDirty: true,
-                        })
-                      }
-                    />
-                  )}
-                </FormRow>,
-                <FormRow
-                  key={`${severity}-threshold`}
-                  label={`${ALERT_SEVERITY_LABEL[severity]} threshold`}
-                  error={
-                    message(`alertSettings.${severity}.threshold`) ??
-                    message(`alertSettings.${severity}`)
-                  }
-                >
-                  {({ id, ...field }) => (
-                    <Input
-                      id={id}
-                      inputMode="decimal"
-                      {...field}
-                      {...form.register(`alerts.${severity}.threshold`)}
-                    />
-                  )}
-                </FormRow>,
-              ])
-            : null}
-        </FormCard>
-      </fieldset>
-    </div>
+            </FormRow>,
+            <FormRow
+              key={`${severity}-threshold`}
+              label={`${ALERT_SEVERITY_LABEL[severity]} threshold`}
+              error={
+                message(`alertSettings.${severity}.threshold`) ??
+                message(`alertSettings.${severity}`)
+              }
+            >
+              {({ id, ...field }) => (
+                <Input
+                  id={id}
+                  inputMode="decimal"
+                  {...field}
+                  {...form.register(`alerts.${severity}.threshold`)}
+                />
+              )}
+            </FormRow>,
+          ])
+        : null}
+    </>
   )
 
-  const meterSteps = isMetered ? (
-    <>
-      {eventStep}
-      {aggregationStep}
-    </>
-  ) : null
-
   const formEl = (
-    <form id={FORM_ID} onSubmit={submitAll} noValidate className="flex flex-col gap-6">
-      {typeStep}
-      {detailsStep}
-      {meterSteps}
-      {additionalStep}
+    <form id={FORM_ID} onSubmit={submitAll} noValidate>
+      <fieldset className="min-w-0 border-0 p-0" disabled={isSubmitting}>
+        <legend className="sr-only">Feature</legend>
+        <FormCard
+          title="Feature details"
+          description={
+            isEdit && isMetered
+              ? 'The event, aggregation and reset are fixed once the meter exists. Filters can still change.'
+              : 'Name, type and, for metered features, how usage is measured.'
+          }
+        >
+          {typeRows}
+          {detailsRows}
+          {isMetered ? eventRows : null}
+          {isMetered ? aggregationRows : null}
+          {additionalRows}
+        </FormCard>
+      </fieldset>
     </form>
   )
 

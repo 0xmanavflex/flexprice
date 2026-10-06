@@ -175,7 +175,7 @@ export function SubscriptionForm({
   })
 
   const customerStep = (
-    <FormCard>
+    <FormCard title="Customer" description="Who the subscription bills." status="required">
       <FormRow label="Customer" required error={errors.customerId?.message}>
         {({ id, ...field }) => (
           <Controller
@@ -199,7 +199,11 @@ export function SubscriptionForm({
   )
 
   const planStep = (
-    <FormCard>
+    <FormCard
+      title="Plan and billing"
+      description="What they subscribe to and when it starts."
+      status="required"
+    >
       <FormRow label="Plan" required error={errors.planId?.message}>
         {({ id, ...field }) => (
           <Controller

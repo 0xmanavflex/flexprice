@@ -96,7 +96,7 @@ export function TaxRateCreateForm({
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
       >
-        <FormCard>
+        <FormCard title="Tax rate details" status="required">
           <FormRow label="Name" required error={errors.name?.message}>
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -197,7 +197,7 @@ export function TaxRateEditForm({
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
       >
-        <FormCard>
+        <FormCard title="Tax rate details" status="required">
           <FormRow label="Name" required error={errors.name?.message}>
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />

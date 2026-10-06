@@ -61,16 +61,11 @@ export function CostSheetForm({
   const isEdit = mode === 'edit'
 
   const formEl = (
-    <form
-      id={FORM_ID}
-      onSubmit={form.handleSubmit((values) => onSubmit(values))}
-      noValidate
-      className="flex flex-col gap-6"
-    >
+    <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
       <FormCard
-        title="Details"
+        title="Cost sheet details"
         status="required"
-        description="What this cost sheet is called and what it covers."
+        description="Only the name is required; description and lookup key are optional."
       >
         <FormRow label="Name" required error={errors.name?.message}>
           {({ id, ...field }) => (
@@ -94,13 +89,7 @@ export function CostSheetForm({
             />
           )}
         </FormRow>
-      </FormCard>
 
-      <FormCard
-        title="Reference"
-        status="optional"
-        description="How other systems refer to this cost sheet."
-      >
         <FormRow
           label="Lookup key"
           hint="A stable identifier to reference the cost sheet by. Optional."

@@ -70,7 +70,11 @@ export function PaymentForm({
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
       >
-        <FormCard>
+        <FormCard
+          title="Payment details"
+          description="Record a payment against an invoice."
+          status="required"
+        >
           <FormRow label="Invoice" required error={errors.invoiceId?.message}>
             {({ id, ...field }) => (
               <Controller
