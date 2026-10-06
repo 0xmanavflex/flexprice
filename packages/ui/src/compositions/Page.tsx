@@ -53,7 +53,7 @@ export function PageHeader({
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
           <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-          {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
+          {description ? <p className="sr-only">{description}</p> : null}
           {meta ? <div className="text-muted-foreground text-[13px]">{meta}</div> : null}
         </div>
         {action || actions || menu ? (
@@ -102,9 +102,7 @@ export function PageBody({
         // This replaces both the old `max-w-[1440px]` (which capped but pinned
         // left, leaving a dead band) and the bare `w-full` (which fixed the band
         // but let big screens stretch the rows apart).
-        width === 'narrow'
-          ? 'mx-auto w-full max-w-3xl'
-          : 'mx-auto w-full max-w-[var(--shell-max)]',
+        width === 'narrow' ? 'mx-auto w-full max-w-3xl' : 'mx-auto w-full max-w-[var(--shell-max)]',
         className,
       )}
     >

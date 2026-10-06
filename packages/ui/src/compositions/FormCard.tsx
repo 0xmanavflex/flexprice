@@ -59,9 +59,7 @@ export function FormCard({ title, description, status, children, className }: Fo
         <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6">
           <div className="space-y-0.5">
             <h2 className="text-sm font-medium">{title}</h2>
-            {description ? (
-              <p className="text-muted-foreground text-[13px]">{description}</p>
-            ) : null}
+            {description ? <p className="sr-only">{description}</p> : null}
           </div>
           {status ? (
             <Badge variant={status === 'required' ? 'primary-light' : 'secondary'} size="sm">

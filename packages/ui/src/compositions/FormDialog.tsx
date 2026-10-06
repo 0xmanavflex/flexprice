@@ -58,7 +58,9 @@ export function FormDialog({
       >
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="text-base font-medium">{title}</DialogTitle>
-          {description ? <DialogDescription>{description}</DialogDescription> : null}
+          {description ? (
+            <DialogDescription className="sr-only">{description}</DialogDescription>
+          ) : null}
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
           <FormDialogBodyContext.Provider value>{children}</FormDialogBodyContext.Provider>

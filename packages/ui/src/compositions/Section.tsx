@@ -62,9 +62,11 @@ export function Section({
           <Heading id={id} className="text-sm font-medium">
             {title}
           </Heading>
-          {description ? <p className="text-muted-foreground text-[13px]">{description}</p> : null}
+          {description ? <p className="sr-only">{description}</p> : null}
         </div>
-        {headerAction ? <div className="flex shrink-0 items-center gap-2">{headerAction}</div> : null}
+        {headerAction ? (
+          <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
+        ) : null}
       </div>
       <div className={cn('flex-1', !flush && 'p-6', bodyClassName)}>{children}</div>
     </section>
@@ -130,7 +132,7 @@ export function Panel({
                 {titleAdornment}
               </Heading>
             ) : null}
-            {description ? <p className="text-muted-foreground text-xs">{description}</p> : null}
+            {description ? <p className="sr-only">{description}</p> : null}
           </div>
           {action}
         </div>

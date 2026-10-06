@@ -128,7 +128,7 @@ export function FormPage({
           }
         />
         <PageBody width="wide" className="self-center pt-6">
-          {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
+          {description ? <p className="sr-only">{description}</p> : null}
           {submitError ? (
             <Alert variant="destructive">
               <AlertDescription>{submitError}</AlertDescription>

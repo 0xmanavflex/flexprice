@@ -61,12 +61,12 @@ export function DetailHeader({
           ) : null}
           <div className="min-w-0 space-y-1">
             <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-            {line || badges ? (
+            {badges ? (
               <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-[13px]">
                 {badges}
-                {line}
               </div>
             ) : null}
+            {line ? <p className="sr-only">{line}</p> : null}
           </div>
         </div>
         {copyId || actions ? (

@@ -61,7 +61,7 @@ export function FormPreview({
           </h2>
           {badge}
         </div>
-        {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
+        {description ? <p className="sr-only">{description}</p> : null}
       </div>
       {children}
     </aside>
