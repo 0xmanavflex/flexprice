@@ -8,6 +8,7 @@ import {
 } from '@ui/components/primitives/dialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { DescriptionTip } from './DescriptionTip'
 import { FormDialogBodyContext } from './formDialogContext'
 
 /**
@@ -57,7 +58,10 @@ export function FormDialog({
         className={cn('flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0', SIZES[size])}
       >
         <DialogHeader className="border-b px-6 py-5">
-          <DialogTitle className="text-base font-medium">{title}</DialogTitle>
+          <div className="flex items-center gap-2">
+            <DialogTitle className="text-base font-medium">{title}</DialogTitle>
+            {description ? <DescriptionTip>{description}</DescriptionTip> : null}
+          </div>
           {description ? (
             <DialogDescription className="sr-only">{description}</DialogDescription>
           ) : null}

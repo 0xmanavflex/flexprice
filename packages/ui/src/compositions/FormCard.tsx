@@ -12,6 +12,7 @@ import { Badge } from '@ui/components/reui/badge'
 import { Separator } from '@ui/components/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { DescriptionTip } from './DescriptionTip'
 
 /**
  * The main content of a form: ONE card per form (or per step), laid out as in
@@ -58,8 +59,10 @@ export function FormCard({ title, description, status, children, className }: Fo
       {title ? (
         <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6">
           <div className="space-y-0.5">
-            <h2 className="text-sm font-medium">{title}</h2>
-            {description ? <p className="sr-only">{description}</p> : null}
+            <div className="flex items-center gap-1.5">
+              <h2 className="text-sm font-medium">{title}</h2>
+              {description ? <DescriptionTip>{description}</DescriptionTip> : null}
+            </div>
           </div>
           {status ? (
             <Badge variant={status === 'required' ? 'primary-light' : 'secondary'} size="sm">

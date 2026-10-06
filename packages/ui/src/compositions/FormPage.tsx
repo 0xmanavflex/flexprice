@@ -113,6 +113,7 @@ export function FormPage({
             `sticky`; the form cards are their own surfaces underneath. */}
         <FormToolbar
           title={title}
+          {...(description ? { description } : {})}
           {...toolbarProps}
           hideSubmit={hideSubmit}
           center={
@@ -128,7 +129,6 @@ export function FormPage({
           }
         />
         <PageBody width="wide" className="self-center pt-6">
-          {description ? <p className="sr-only">{description}</p> : null}
           {submitError ? (
             <Alert variant="destructive">
               <AlertDescription>{submitError}</AlertDescription>

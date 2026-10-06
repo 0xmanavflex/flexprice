@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { DescriptionTip } from './DescriptionTip'
 
 /**
  * The layout every screen uses.
@@ -52,8 +53,10 @@ export function PageHeader({
       {breadcrumb}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
-          <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-          {description ? <p className="sr-only">{description}</p> : null}
+          <div className="flex min-w-0 items-center gap-2">
+            <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
+            {description ? <DescriptionTip>{description}</DescriptionTip> : null}
+          </div>
           {meta ? <div className="text-muted-foreground text-[13px]">{meta}</div> : null}
         </div>
         {action || actions || menu ? (

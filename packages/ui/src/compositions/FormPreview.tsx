@@ -8,6 +8,7 @@ import {
 } from '@ui/components/primitives/item'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { DescriptionTip } from './DescriptionTip'
 
 /**
  * The live preview rail beside a form: a heading with an optional badge, a one
@@ -59,9 +60,9 @@ export function FormPreview({
           <h2 id={headingId} className="text-sm font-medium">
             {title}
           </h2>
+          {description ? <DescriptionTip>{description}</DescriptionTip> : null}
           {badge}
         </div>
-        {description ? <p className="sr-only">{description}</p> : null}
       </div>
       {children}
     </aside>

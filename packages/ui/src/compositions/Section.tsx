@@ -1,8 +1,7 @@
 import type { ReactNode } from 'react'
-import { InfoIcon } from 'lucide-react'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { DescriptionTip } from './DescriptionTip'
 
 /**
  * A titled, bordered surface on a detail or settings page.
@@ -59,10 +58,12 @@ export function Section({
     >
       <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
         <div className="space-y-0.5">
-          <Heading id={id} className="text-sm font-medium">
-            {title}
-          </Heading>
-          {description ? <p className="sr-only">{description}</p> : null}
+          <div className="flex items-center gap-1.5">
+            <Heading id={id} className="text-sm font-medium">
+              {title}
+            </Heading>
+            {description ? <DescriptionTip>{description}</DescriptionTip> : null}
+          </div>
         </div>
         {headerAction ? (
           <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
@@ -121,18 +122,12 @@ export function Panel({
             {title ? (
               <Heading id={titleId} className="flex items-center gap-1.5 text-sm font-medium">
                 {title}
-                {hint ? (
-                  <Tooltip>
-                    <TooltipTrigger render={<span className="text-muted-foreground inline-flex" />}>
-                      <InfoIcon className="size-3.5" aria-hidden="true" />
-                    </TooltipTrigger>
-                    <TooltipContent>{hint}</TooltipContent>
-                  </Tooltip>
+                {hint || description ? (
+                  <DescriptionTip>{[description, hint].filter(Boolean).join(' ')}</DescriptionTip>
                 ) : null}
                 {titleAdornment}
               </Heading>
             ) : null}
-            {description ? <p className="sr-only">{description}</p> : null}
           </div>
           {action}
         </div>

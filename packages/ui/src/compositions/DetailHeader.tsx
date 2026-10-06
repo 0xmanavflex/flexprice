@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
+import { DescriptionTip } from './DescriptionTip'
 import { CopyId } from './DetailKit'
 
 /**
@@ -60,13 +61,15 @@ export function DetailHeader({
             </span>
           ) : null}
           <div className="min-w-0 space-y-1">
-            <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
+            <div className="flex min-w-0 items-center gap-2">
+              <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
+              {line ? <DescriptionTip>{line}</DescriptionTip> : null}
+            </div>
             {badges ? (
               <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-[13px]">
                 {badges}
               </div>
             ) : null}
-            {line ? <p className="sr-only">{line}</p> : null}
           </div>
         </div>
         {copyId || actions ? (
