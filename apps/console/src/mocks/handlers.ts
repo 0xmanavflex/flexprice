@@ -796,7 +796,7 @@ const rawEvents: Record<string, unknown>[] = Array.from({ length: 60 }, (_, inde
  */
 const creditNotes: Record<string, unknown>[] = Array.from({ length: 30 }, (_, index) => {
   const statuses = ['FINALIZED', 'DRAFT', 'VOIDED']
-  const customers = ['Acme Corp', 'Globex', 'Initech']
+  const customers = ['Northwind Logistics', 'Lumen Analytics', 'Brightpath Health']
   return {
     id: `cnote_01M38Q${String(index).padStart(10, '0')}`,
     credit_note_number: `CN-${String(index + 1).padStart(4, '0')}`,

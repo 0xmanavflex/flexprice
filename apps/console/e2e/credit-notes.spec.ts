@@ -34,12 +34,12 @@ test.describe('credit notes', () => {
     await page.goto('/credit-notes')
     await expect(notes.rows().first()).toBeVisible()
 
-    await notes.search.fill('globex')
-    await expect(page).toHaveURL(/[?&]search=globex/)
-    await expect(notes.rows().first()).toContainText('Globex')
+    await notes.search.fill('lumen')
+    await expect(page).toHaveURL(/[?&]search=lumen/)
+    await expect(notes.rows().first()).toContainText('Lumen')
 
     await page.reload()
-    await expect(notes.search).toHaveValue('globex')
-    await expect(notes.rows().first()).toContainText('Globex')
+    await expect(notes.search).toHaveValue('lumen')
+    await expect(notes.rows().first()).toContainText('Lumen')
   })
 })

@@ -401,7 +401,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/pricing-widget',
     reference: 'pages/pricing-widget.tsx',
     pattern: 'dashboard',
-    ready: { heading: 'Vehement Capital 1' },
+    ready: { heading: 'Free' },
   },
   {
     name: 'settings-organization',

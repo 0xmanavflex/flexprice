@@ -13,7 +13,8 @@
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "capture": "node scripts/capture.mjs",
-    "synthesize": "node scripts/synthesize.mjs"
+    "synthesize": "node scripts/synthesize.mjs",
+    "polish": "node scripts/polish.mjs"
   },
   "dependencies": {
     "@fp/api": "workspace:*",
