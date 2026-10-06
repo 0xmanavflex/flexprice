@@ -12,9 +12,10 @@ import {
 import { Input } from '@ui/components/primitives/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { Switch } from '@ui/components/primitives/switch'
-import { SegmentMeter, SimpleTable } from '@ui/compositions/DetailKit'
+import { SegmentMeter } from '@ui/compositions/DetailKit'
 import { Section } from '@ui/compositions/Section'
 import { MetricChart } from '../shared/charts'
+import { DetailTable } from '../shared/DetailTable'
 
 export interface FeatureAnalytics {
   id: string
@@ -115,7 +116,9 @@ export function CustomerAnalyticsView({
       <div className="flex flex-wrap items-center gap-2">
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<Button variant="outline" size="sm" className="h-8 px-3" aria-label="Features" />}
+            render={
+              <Button variant="outline" size="sm" className="h-8 px-3" aria-label="Features" />
+            }
           >
             <LayersIcon aria-hidden="true" />
             {chosen.length === features.length ? 'All features' : `${chosen.length} features`}
@@ -202,11 +205,17 @@ export function CustomerAnalyticsView({
         description={`${current.from} to ${current.to}${current.includeChildren ? ', including child customers' : ''}`}
         flush
       >
-        <SimpleTable
+        <DetailTable
+          label="Usage breakdown"
+          noun="features"
           rows={visible}
           getRowId={(f) => f.id}
           columns={[
-            { key: 'name', header: 'Feature', cell: (f) => <span className="font-medium">{f.name}</span> },
+            {
+              key: 'name',
+              header: 'Feature',
+              cell: (f) => <span className="font-medium">{f.name}</span>,
+            },
             {
               key: 'usage',
               header: 'Usage',
@@ -216,7 +225,11 @@ export function CustomerAnalyticsView({
                 </span>
               ),
             },
-            { key: 'revenue', header: 'Revenue', cell: (f) => <span className="tabular-nums">{usd(f.revenue)}</span> },
+            {
+              key: 'revenue',
+              header: 'Revenue',
+              cell: (f) => <span className="tabular-nums">{usd(f.revenue)}</span>,
+            },
             { key: 'cost', header: 'Cost', cell: (f) => <Muted>{usd(f.cost)}</Muted> },
             {
               key: 'share',
@@ -239,8 +252,40 @@ export function CustomerAnalyticsView({
 }
 
 export const DEMO_FEATURE_ANALYTICS: FeatureAnalytics[] = [
-  { id: 'f1', name: 'API Calls', usage: '120,000', short: '120K', unit: 'calls', revenue: 240, cost: 100.8 },
-  { id: 'f2', name: 'AI Tokens', usage: '203,000', short: '203K', unit: 'tokens', revenue: 609, cost: 371.49 },
-  { id: 'f3', name: 'Video Minutes', usage: '286,000', short: '286K', unit: 'minutes', revenue: 1144, cost: 515.2 },
-  { id: 'f4', name: 'Compute Minutes', usage: '369,000', short: '369K', unit: 'minutes', revenue: 922.5, cost: 346.45 },
+  {
+    id: 'f1',
+    name: 'API Calls',
+    usage: '120,000',
+    short: '120K',
+    unit: 'calls',
+    revenue: 240,
+    cost: 100.8,
+  },
+  {
+    id: 'f2',
+    name: 'AI Tokens',
+    usage: '203,000',
+    short: '203K',
+    unit: 'tokens',
+    revenue: 609,
+    cost: 371.49,
+  },
+  {
+    id: 'f3',
+    name: 'Video Minutes',
+    usage: '286,000',
+    short: '286K',
+    unit: 'minutes',
+    revenue: 1144,
+    cost: 515.2,
+  },
+  {
+    id: 'f4',
+    name: 'Compute Minutes',
+    usage: '369,000',
+    short: '369K',
+    unit: 'minutes',
+    revenue: 922.5,
+    cost: 346.45,
+  },
 ]

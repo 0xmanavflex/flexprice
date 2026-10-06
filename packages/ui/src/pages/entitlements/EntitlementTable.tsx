@@ -2,10 +2,11 @@ import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon }
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/Section'
-import { SimpleTable } from '@ui/compositions/DetailKit'
+
 import { provenance } from '@ui/provenance'
 import { EmDash, EntityLink } from '../shared/cells'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
+import { DetailTable } from '../shared/DetailTable'
 
 /**
  * An entitlements section: a flush `Section` with a `SimpleTable`.
@@ -16,7 +17,7 @@ import { RowActionsMenu } from '../shared/RowActionsMenu'
  */
 export const EntitlementTableProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/section', 'compositions/detail-kit', 'ui/button'],
+  composes: ['compositions/section', 'pages/shared/DetailTable', 'ui/button'],
   note: 'Flush entitlements section for add-on and plan-like detail pages.',
 })
 
@@ -50,9 +51,7 @@ const TYPE_LABEL: Record<FeatureType, string> = {
 function valueOf(entitlement: Entitlement): string {
   switch (entitlement.featureType) {
     case FeatureType.Metered:
-      return entitlement.usageLimit == null
-        ? 'Unlimited'
-        : entitlement.usageLimit.toLocaleString()
+      return entitlement.usageLimit == null ? 'Unlimited' : entitlement.usageLimit.toLocaleString()
     case FeatureType.Boolean:
       return entitlement.isEnabled ? 'Yes' : 'No'
     case FeatureType.Static:
@@ -101,12 +100,16 @@ export function EntitlementTable({
       flush
       {...(addButton ? { action: addButton } : {})}
     >
-      <SimpleTable
+      <DetailTable
+        label="Entitlements"
+        facet={{ label: 'Type', value: (entitlement) => TYPE_LABEL[entitlement.featureType] }}
+        noun="entitlements"
         rows={entitlements}
         columns={[
           {
             key: 'feature',
             header: 'Feature',
+            sortBy: (entitlement) => entitlement.featureName ?? entitlement.featureId,
             cell: (entitlement) => {
               const Icon = TYPE_ICON[entitlement.featureType]
               const label = entitlement.featureName ?? entitlement.featureId
@@ -130,6 +133,7 @@ export function EntitlementTable({
           {
             key: 'type',
             header: 'Type',
+            sortBy: (entitlement) => TYPE_LABEL[entitlement.featureType],
             cell: (entitlement) => (
               <span className="text-muted-foreground">{TYPE_LABEL[entitlement.featureType]}</span>
             ),

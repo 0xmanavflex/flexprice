@@ -7,7 +7,7 @@ import {
   SheetTitle,
 } from '@ui/components/primitives/sheet'
 import { Section } from '@ui/compositions/Section'
-import { SimpleTable } from '@ui/compositions/DetailKit'
+import { DetailTable } from '../shared/DetailTable'
 
 /** Demo usage events: no customer event feed is wired yet. */
 export interface CustomerEvent {
@@ -74,7 +74,9 @@ export function CustomerEventsGrid({ events }: { events: CustomerEvent[] }) {
   return (
     <>
       <Section title="Recent events" description="Latest usage events for this customer" flush>
-        <SimpleTable
+        <DetailTable
+          label="Recent events"
+          noun="events"
           rows={events}
           getRowId={(event) => event.id}
           onRowClick={setSelected}

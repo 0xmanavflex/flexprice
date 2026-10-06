@@ -1,5 +1,5 @@
 import { Section } from '../../compositions'
-import { SimpleTable } from '../../compositions/DetailKit'
+import { DetailTable } from '../shared/DetailTable'
 
 export interface CouponRedemption {
   id: string
@@ -35,19 +35,35 @@ export function CouponRedemptionsView({
 }) {
   return (
     <Section title="Redemptions" description="Subscriptions this coupon is applied to" flush>
-      <SimpleTable
+      <DetailTable
+        label="Redemptions"
+        noun="redemptions"
         rows={redemptions}
         getRowId={(r) => r.id}
         empty="This coupon has not been redeemed yet."
         columns={[
-          { key: 'c', header: 'Customer', cell: (r) => <span className="font-medium">{r.customer}</span> },
-          { key: 's', header: 'Plan', cell: (r) => <span className="text-muted-foreground">{r.plan}</span> },
+          {
+            key: 'c',
+            header: 'Customer',
+            sortBy: (r) => r.customer,
+            cell: (r) => <span className="font-medium">{r.customer}</span>,
+          },
+          {
+            key: 's',
+            header: 'Plan',
+            sortBy: (r) => r.plan,
+            cell: (r) => <span className="text-muted-foreground">{r.plan}</span>,
+          },
           {
             key: 'd',
             header: 'Applied',
             cell: (r) => <span className="text-muted-foreground">{r.appliedAt}</span>,
           },
-          { key: 'a', header: 'Discounted so far', cell: (r) => <span className="tabular-nums">{r.discount}</span> },
+          {
+            key: 'a',
+            header: 'Discounted so far',
+            cell: (r) => <span className="tabular-nums">{r.discount}</span>,
+          },
         ]}
       />
     </Section>

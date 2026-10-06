@@ -1,0 +1,216 @@
+import { useMemo, useState, type ReactNode } from 'react'
+import { statusFilter } from '@ui/compositions/FilterBar'
+import { cn } from '@ui/lib/cn'
+import { provenance } from '@ui/provenance'
+import { EntityList } from './EntityList'
+import type { EntityColumn } from './cells'
+
+/**
+ * The list table, for rows a detail page already holds.
+ *
+ * A list page hands `EntityList` a server-paged slice and handlers for search,
+ * sort and paging. A detail page has the whole set in memory, so this keeps
+ * that state itself — search, a status facet, sort, page — and gives
+ * `EntityList` exactly what a list page would. Same toolbar, same header band,
+ * same rows, same footer; only the place the state lives is different.
+ *
+ * Bordered, because it sits inside a page of other panels rather than being
+ * the page.
+ */
+export const DetailTableProvenance = provenance({
+  source: 'composition',
+  composes: ['pages/shared/EntityList'],
+  note: 'EntityList with client-side search, facet filter, sort and paging, in a bordered frame, for tables on detail pages.',
+})
+
+export interface DetailColumn<T> {
+  key: string
+  header: string
+  cell: (row: T) => ReactNode
+  /** Makes the header and the Sort menu order by this value. */
+  sortBy?: (row: T) => string | number
+  /** Plain text for search and CSV. Defaults to nothing; search also reads the row's own fields. */
+  text?: (row: T) => string
+  /** Preferred width in px; the table scales the set to fill. */
+  width?: number
+  /** Extra classes on the cell. */
+  className?: string
+}
+
+export interface DetailTableProps<T> {
+  rows: T[]
+  columns: DetailColumn<T>[]
+  /** Defaults to `row.id`. */
+  getRowId?: (row: T) => string
+  /** Names the table for assistive tech, e.g. "Recent invoices". */
+  label: string
+  /** For "1 - 10 of 24 invoices". */
+  noun?: string
+  onRowClick?: (row: T) => void
+  /** Adds the filter button: rows are narrowed to the chosen values of this field. */
+  facet?: { label: string; value: (row: T) => string }
+  /** What the search matches. Defaults to the visible text of every column plus the row's own string fields. */
+  searchText?: (row: T) => string
+  pageSize?: number
+  /** Shown in place of the table when there are no rows at all. */
+  empty?: ReactNode
+  className?: string
+}
+
+function plainText(row: object): string {
+  return Object.values(row)
+    .filter(
+      (value): value is string | number => typeof value === 'string' || typeof value === 'number',
+    )
+    .join(' ')
+}
+
+export function DetailTable<T extends object>({
+  rows,
+  columns,
+  getRowId,
+  label,
+  noun = 'records',
+  onRowClick,
+  facet,
+  searchText,
+  pageSize: initialPageSize = 10,
+  empty,
+  className,
+}: DetailTableProps<T>) {
+  const [search, setSearch] = useState('')
+  const [facetValues, setFacetValues] = useState<string[]>([])
+  const [sortState, setSortState] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(
+    null,
+  )
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(initialPageSize)
+
+  const idOf = (row: T, index: number) =>
+    getRowId ? getRowId(row) : String((row as { id?: string }).id ?? index)
+
+  const entityColumns = useMemo<EntityColumn<T>[]>(
+    () =>
+      columns.map((column) => ({
+        id: column.key,
+        header: column.header,
+        cell: column.cell,
+        ...(column.text ? { text: column.text } : {}),
+        // A column with no title is the row menu: narrow, always shown.
+        ...(column.header ? {} : { fixed: true, width: column.width ?? 48, hideable: false }),
+        ...(column.width && column.header ? { width: column.width } : {}),
+        ...(column.sortBy ? { sortable: true } : {}),
+        ...(column.className ? { cellClassName: column.className } : {}),
+      })),
+    [columns],
+  )
+
+  const choices = useMemo(() => {
+    if (!facet) return []
+    return [...new Set(rows.map((row) => facet.value(row)))]
+      .filter((value) => value.length > 0)
+      .map((value) => ({ value, label: value }))
+  }, [rows, facet])
+
+  const visible = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    let next = rows
+    if (facet && facetValues.length > 0) {
+      next = next.filter((row) => facetValues.includes(facet.value(row)))
+    }
+    if (needle) {
+      next = next.filter((row) => {
+        const haystack = searchText
+          ? searchText(row)
+          : `${plainText(row)} ${columns.map((column) => column.text?.(row) ?? '').join(' ')}`
+        return haystack.toLowerCase().includes(needle)
+      })
+    }
+    const by = sortState ? columns.find((column) => column.key === sortState.field)?.sortBy : null
+    if (sortState && by) {
+      const sign = sortState.direction === 'asc' ? 1 : -1
+      next = [...next].sort((a, b) => {
+        const left = by(a)
+        const right = by(b)
+        return (
+          sign *
+          (typeof left === 'number' && typeof right === 'number'
+            ? left - right
+            : String(left).localeCompare(String(right)))
+        )
+      })
+    }
+    return next
+  }, [rows, columns, search, facet, facetValues, searchText, sortState])
+
+  if (rows.length === 0 && empty) {
+    return <div className={cn('text-muted-foreground p-6 text-sm', className)}>{empty}</div>
+  }
+
+  const sortable = columns.filter((column) => column.sortBy)
+  const start = (page - 1) * pageSize
+  const slice = visible.slice(start, start + pageSize)
+  const isFiltered = search.trim().length > 0 || facetValues.length > 0
+  const reset = () => {
+    setSearch('')
+    setFacetValues([])
+    setPage(1)
+  }
+
+  return (
+    <div className={cn('p-4', className)}>
+      <EntityList<T>
+        label={label}
+        noun={noun}
+        rows={slice}
+        total={visible.length}
+        columns={entityColumns}
+        getRowId={(row) => idOf(row, rows.indexOf(row))}
+        page={page}
+        pageSize={pageSize}
+        onPaginationChange={(nextPage, nextSize) => {
+          setPage(nextPage)
+          setPageSize(nextSize)
+        }}
+        search={search}
+        onSearchChange={(value) => {
+          setSearch(value)
+          setPage(1)
+        }}
+        searchPlaceholder={`Search ${noun}…`}
+        {...(facet && choices.length > 0
+          ? {
+              filter: statusFilter({
+                values: facetValues,
+                choices,
+                label: facet.label,
+                onChange: (values) => {
+                  setFacetValues(values)
+                  setPage(1)
+                },
+              }),
+            }
+          : {})}
+        {...(sortable.length > 0
+          ? {
+              sort: {
+                options: sortable.map((column) => ({ value: column.key, label: column.header })),
+                field: sortState?.field ?? '',
+                direction: sortState?.direction ?? 'asc',
+                activeCount: sortState ? 1 : 0,
+                onChange: (field: string, direction: 'asc' | 'desc') => {
+                  setSortState({ field, direction })
+                  setPage(1)
+                },
+              },
+            }
+          : {})}
+        {...(onRowClick ? { onRowClick } : {})}
+        isFiltered={isFiltered}
+        onClearFilters={reset}
+        filteredEmptyTitle={`No ${noun} match these filters`}
+        headingAs="h3"
+      />
+    </div>
+  )
+}

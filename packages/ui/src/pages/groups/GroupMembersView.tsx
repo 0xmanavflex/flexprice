@@ -1,5 +1,5 @@
 import { Section } from '../../compositions'
-import { SimpleTable } from '../../compositions/DetailKit'
+import { DetailTable } from '../shared/DetailTable'
 
 export interface GroupMember {
   id: string
@@ -25,18 +25,26 @@ export function GroupMembersView({
   members?: GroupMember[]
 }) {
   return (
-    <Section
-      title="Members"
-      description={`${count.toLocaleString()} ${kind} in this group`}
-      flush
-    >
-      <SimpleTable
+    <Section title="Members" description={`${count.toLocaleString()} ${kind} in this group`} flush>
+      <DetailTable
+        label="Members"
+        noun="members"
         rows={members}
         getRowId={(m) => m.id}
         empty={`This group holds no ${kind} yet.`}
         columns={[
-          { key: 'n', header: 'Name', cell: (m) => <span className="font-medium">{m.name}</span> },
-          { key: 'd', header: 'Type', cell: (m) => <span className="text-muted-foreground">{m.detail}</span> },
+          {
+            key: 'n',
+            header: 'Name',
+            sortBy: (m) => m.name,
+            cell: (m) => <span className="font-medium">{m.name}</span>,
+          },
+          {
+            key: 'd',
+            header: 'Type',
+            sortBy: (m) => m.detail,
+            cell: (m) => <span className="text-muted-foreground">{m.detail}</span>,
+          },
         ]}
       />
     </Section>

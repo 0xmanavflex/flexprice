@@ -8,8 +8,9 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/Section'
-import { SimpleTable } from '@ui/compositions/DetailKit'
+
 import { RowActionsMenu } from '../shared/RowActionsMenu'
+import { DetailTable } from '../shared/DetailTable'
 
 export interface PlanCreditGrantsViewProps {
   grants: CreditGrant[]
@@ -57,12 +58,15 @@ export function PlanCreditGrantsView({
           </Button>
         </div>
       ) : (
-        <SimpleTable
+        <DetailTable
+          label="Credit grants"
+          noun="credit grants"
           rows={grants}
           columns={[
             {
               key: 'name',
               header: 'Grant',
+              sortBy: (g) => g.name,
               cell: (g) => (
                 <span className="flex items-center gap-2.5">
                   <CoinsIcon aria-hidden className="text-muted-foreground size-4" />
@@ -73,7 +77,10 @@ export function PlanCreditGrantsView({
             {
               key: 'credits',
               header: 'Credits',
-              cell: (g) => <span className="tabular-nums">{Number(g.credits).toLocaleString()}</span>,
+              sortBy: (g) => Number(g.credits),
+              cell: (g) => (
+                <span className="tabular-nums">{Number(g.credits).toLocaleString()}</span>
+              ),
             },
             { key: 'granted', header: 'Granted', cell: (g) => grantedLabel(g) },
             {
@@ -88,6 +95,7 @@ export function PlanCreditGrantsView({
             {
               key: 'priority',
               header: 'Priority',
+              sortBy: (g) => Number(g.priority),
               cell: (g) => <span className="text-muted-foreground">{g.priority}</span>,
             },
             {

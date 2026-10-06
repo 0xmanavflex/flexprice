@@ -236,6 +236,8 @@ export interface EntityListProps<T> {
   filteredEmptyTitle?: string | undefined
   filteredEmptyDescription?: string | undefined
 
+  /** The sr-only heading's tag. A list page is the page (`h1`); a table inside a detail page is not. */
+  headingAs?: 'h1' | 'h3'
   className?: string
 }
 
@@ -380,6 +382,7 @@ export function EntityList<T extends object>({
   empty,
   filteredEmptyTitle,
   filteredEmptyDescription,
+  headingAs: Heading = 'h1',
   className,
 }: EntityListProps<T>) {
   /* --- column visibility, owned here so the ⋯ menu has something to toggle --- */
@@ -792,7 +795,7 @@ export function EntityList<T extends object>({
       aria-label={label}
       className={cn('flex w-full min-w-0 flex-col gap-5', className)}
     >
-      <h1 className="sr-only">{label}</h1>
+      <Heading className="sr-only">{label}</Heading>
       {/* A list with nothing in it has nothing to search, filter or sort: the
           guided empty state stands alone until the first record exists. */}
       {showFirstRun ? null : toolbar}

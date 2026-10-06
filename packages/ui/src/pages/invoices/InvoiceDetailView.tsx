@@ -22,7 +22,7 @@ import { Switch } from '@ui/components/primitives/switch'
 import { InvoiceStatus } from '@fp/domain'
 import { cn } from '@ui/lib/cn'
 import { DetailShell } from '../../compositions/DetailShell'
-import { DetailTabs, Dot, Properties, SimpleTable } from '../../compositions/DetailKit'
+import { DetailTabs, Dot, Properties } from '../../compositions/DetailKit'
 import { Section } from '../../compositions/Section'
 import { Pill, Status } from '../shared/cells'
 import {
@@ -31,6 +31,7 @@ import {
   type InvoiceDocument,
   type InvoiceLine,
 } from './invoiceDocument'
+import { DetailTable } from '../shared/DetailTable'
 
 export interface InvoiceDetailViewProps {
   invoice: InvoiceDocument
@@ -79,7 +80,9 @@ export function InvoiceDetailView({
     onVoid && (invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue)
   const lines = showZero ? invoice.lines : invoice.lines.filter((line) => line.amount !== 0)
   const title = isDraft ? 'Draft invoice' : (invoice.number ?? invoice.id)
-  const hasMenu = Boolean(paymentFailed || (isDraft && onEdit) || onOpenCustomer || canVoid || onBack)
+  const hasMenu = Boolean(
+    paymentFailed || (isDraft && onEdit) || onOpenCustomer || canVoid || onBack,
+  )
 
   return (
     <DetailShell
@@ -134,7 +137,12 @@ export function InvoiceDetailView({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button variant="outline" size="icon" className="size-8" aria-label="More actions" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    aria-label="More actions"
+                  />
                 }
               >
                 <MoreHorizontalIcon aria-hidden="true" />
@@ -156,7 +164,9 @@ export function InvoiceDetailView({
                       Go to customer
                     </DropdownMenuItem>
                   ) : null}
-                  {onBack ? <DropdownMenuItem onClick={onBack}>Back to invoices</DropdownMenuItem> : null}
+                  {onBack ? (
+                    <DropdownMenuItem onClick={onBack}>Back to invoices</DropdownMenuItem>
+                  ) : null}
                 </DropdownMenuGroup>
                 {canVoid ? (
                   <>
@@ -203,7 +213,11 @@ export function InvoiceDetailView({
             </Section>
             <Section title="Related" flush>
               <ul className="divide-border/50 divide-y text-[13px]">
-                <RelatedRow label="Customer" value={invoice.billTo.name} {...(onOpenCustomer ? { onClick: onOpenCustomer } : {})} />
+                <RelatedRow
+                  label="Customer"
+                  value={invoice.billTo.name}
+                  {...(onOpenCustomer ? { onClick: onOpenCustomer } : {})}
+                />
                 <RelatedRow label="Subscription" value={invoice.subscriptionLabel || '—'} />
                 <RelatedRow
                   label="Credit notes"
@@ -223,7 +237,9 @@ export function InvoiceDetailView({
               No payments recorded for this invoice yet.
             </p>
           ) : (
-            <SimpleTable
+            <DetailTable
+              label="Payments"
+              noun="payments"
               rows={invoice.payments}
               columns={[
                 {
@@ -256,7 +272,9 @@ export function InvoiceDetailView({
               No credit notes issued against this invoice.
             </p>
           ) : (
-            <SimpleTable
+            <DetailTable
+              label="Credit notes"
+              noun="credit notes"
               rows={invoice.creditNotes}
               columns={[
                 {
@@ -291,7 +309,9 @@ export function InvoiceDetailView({
                 },
                 { label: 'Currency', value: invoice.currency },
                 { label: 'Customer', value: invoice.billTo.name },
-                ...(invoice.payment ? [{ label: 'Payment terms', value: invoice.payment.terms }] : []),
+                ...(invoice.payment
+                  ? [{ label: 'Payment terms', value: invoice.payment.terms }]
+                  : []),
               ]}
             />
           </Section>
@@ -352,7 +372,12 @@ function InvoiceDocumentArticle({
         )}
         <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1 text-[13px]">
           <dt className="text-muted-foreground">Invoice</dt>
-          <dd className={cn('leading-5', invoice.number ? 'font-mono text-xs' : 'text-muted-foreground')}>
+          <dd
+            className={cn(
+              'leading-5',
+              invoice.number ? 'font-mono text-xs' : 'text-muted-foreground',
+            )}
+          >
             {invoice.number ?? 'On finalize'}
           </dd>
           <dt className="text-muted-foreground">Issued</dt>
@@ -372,15 +397,25 @@ function InvoiceDocumentArticle({
       <div className="grid gap-6 px-8 py-8 sm:grid-cols-3">
         <Party
           heading="Bill to"
-          lines={[invoice.billTo.name, invoice.billTo.email, ...addressLines(invoice.billTo.address)]}
+          lines={[
+            invoice.billTo.name,
+            invoice.billTo.email,
+            ...addressLines(invoice.billTo.address),
+          ]}
         />
         {invoice.from ? (
-          <Party heading="From" lines={[invoice.from.name, ...addressLines(invoice.from.address)]} />
+          <Party
+            heading="From"
+            lines={[invoice.from.name, ...addressLines(invoice.from.address)]}
+          />
         ) : null}
         {invoice.payment ? (
           <Party
             heading="Payment"
-            lines={[invoice.payment.method, invoice.payment.terms && `Terms: ${invoice.payment.terms}`]}
+            lines={[
+              invoice.payment.method,
+              invoice.payment.terms && `Terms: ${invoice.payment.terms}`,
+            ]}
           />
         ) : null}
       </div>
@@ -390,7 +425,11 @@ function InvoiceDocumentArticle({
           <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Items</p>
           <label className="text-muted-foreground flex items-center gap-2 text-xs">
             Show zero amounts
-            <Switch checked={showZero} onCheckedChange={onShowZero} aria-label="Show zero amounts" />
+            <Switch
+              checked={showZero}
+              onCheckedChange={onShowZero}
+              aria-label="Show zero amounts"
+            />
           </label>
         </div>
         <ul className="divide-border/50 divide-y">
@@ -461,7 +500,10 @@ function Party({ heading, lines }: { heading: string; lines: Array<string | fals
       {lines
         .filter((line): line is string => Boolean(line))
         .map((line, index) => (
-          <p key={`${index}-${line}`} className={cn(index === 0 ? 'font-medium' : 'text-muted-foreground')}>
+          <p
+            key={`${index}-${line}`}
+            className={cn(index === 0 ? 'font-medium' : 'text-muted-foreground')}
+          >
             {line}
           </p>
         ))}
@@ -491,11 +533,17 @@ function InvoiceTimeline({ events }: { events: InvoiceDocument['events'] }) {
         return (
           <li key={event.id} className="flex items-start gap-3">
             {done ? (
-              <CheckCircle2Icon className="text-success mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <CheckCircle2Icon
+                className="text-success mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
             ) : issue ? (
               <XCircleIcon className="text-destructive mt-0.5 size-4 shrink-0" aria-hidden="true" />
             ) : (
-              <CircleDashedIcon className="text-muted-foreground mt-0.5 size-4 shrink-0" aria-hidden="true" />
+              <CircleDashedIcon
+                className="text-muted-foreground mt-0.5 size-4 shrink-0"
+                aria-hidden="true"
+              />
             )}
             <span className="flex-1">
               <span className={cn('block text-[13px]', !done && !issue && 'text-muted-foreground')}>

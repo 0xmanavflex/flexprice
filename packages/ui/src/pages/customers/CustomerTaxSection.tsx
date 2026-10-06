@@ -23,7 +23,8 @@ import {
   OptionSelect,
   Section,
 } from '../../compositions'
-import { Composer, SimpleTable } from '../../compositions/DetailKit'
+import { Composer } from '../../compositions/DetailKit'
+import { DetailTable } from '../shared/DetailTable'
 
 export interface TaxRateOption {
   code: string
@@ -115,7 +116,9 @@ export function CustomerTaxSection({
           />
         </div>
       ) : (
-        <SimpleTable
+        <DetailTable
+          label="Tax rates"
+          noun="tax rates"
           rows={associations}
           getRowId={(a) => a.id}
           columns={[
@@ -142,6 +145,7 @@ export function CustomerTaxSection({
             {
               key: 'actions',
               header: '',
+              width: 168,
               cell: (a) => (
                 <span className="flex justify-end gap-1">
                   <Button

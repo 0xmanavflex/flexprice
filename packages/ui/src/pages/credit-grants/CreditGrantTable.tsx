@@ -7,11 +7,12 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { PlusIcon } from 'lucide-react'
-import { SimpleTable } from '@ui/compositions/DetailKit'
+
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { Section } from '@ui/compositions/Section'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
+import { DetailTable } from '../shared/DetailTable'
 
 /**
  * A plan's or add-on's credit grants: a titled, flush section holding the full table.
@@ -22,7 +23,7 @@ import { RowActionsMenu } from '../shared/RowActionsMenu'
  */
 export const CreditGrantTableProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/Section', 'compositions/DetailKit', 'ui/button'],
+  composes: ['compositions/Section', 'pages/shared/DetailTable', 'ui/button'],
   note: 'Read-only credit-grants table for the plan Credit Grants tab.',
 })
 
@@ -67,12 +68,24 @@ export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGran
           />
         </div>
       ) : (
-        <SimpleTable
+        <DetailTable
+          label="Credit grants"
+          noun="credit grants"
           rows={grants}
           getRowId={(grant) => grant.id}
           columns={[
-            { key: 'name', header: 'Name', cell: (grant) => <span className="font-medium">{grant.name}</span> },
-            { key: 'credits', header: 'Credits', cell: (grant) => <span className="tabular-nums">{grant.credits}</span> },
+            {
+              key: 'name',
+              header: 'Name',
+              sortBy: (grant) => grant.name,
+              cell: (grant) => <span className="font-medium">{grant.name}</span>,
+            },
+            {
+              key: 'credits',
+              header: 'Credits',
+              sortBy: (grant) => Number(grant.credits),
+              cell: (grant) => <span className="tabular-nums">{grant.credits}</span>,
+            },
             { key: 'cadence', header: 'Cadence', cell: (grant) => cadenceLabel(grant) },
             {
               key: 'expiry',
@@ -83,7 +96,12 @@ export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGran
                 </span>
               ),
             },
-            { key: 'priority', header: 'Priority', cell: (grant) => <span className="tabular-nums">{grant.priority}</span> },
+            {
+              key: 'priority',
+              header: 'Priority',
+              sortBy: (grant) => Number(grant.priority),
+              cell: (grant) => <span className="tabular-nums">{grant.priority}</span>,
+            },
             ...(hasActions
               ? [
                   {

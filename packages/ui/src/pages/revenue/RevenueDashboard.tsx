@@ -2,8 +2,7 @@ import type { ReactNode } from 'react'
 import { CalendarIcon } from 'lucide-react'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { SimpleTable } from '@ui/compositions/DetailKit'
-import type { SimpleColumn } from '@ui/compositions/DetailKit'
+
 import { Panel } from '@ui/compositions/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -13,6 +12,7 @@ import type { MetricTab } from '../shared/charts'
 import { HalfDonut } from '../shared/HalfDonut'
 import { Money } from '../shared/Money'
 import { SplitMeter } from '../shared/SplitMeter'
+import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 
 /**
  * Revenue — built on the shared chart library, and on what the API can answer.
@@ -58,7 +58,7 @@ export const RevenueDashboardProvenance = provenance({
     'pages/shared/ArcGauge',
     'pages/shared/Money',
     'compositions/Section',
-    'compositions/DetailKit',
+    'pages/shared/DetailTable',
   ],
   note: 'Revenue: metered volume over time, the usage mix by feature, collections by invoice state, and gross margin shown as unavailable. Every figure is API-sourced or explicitly absent.',
 })
@@ -542,7 +542,7 @@ function MarginPanel({
  * this dashboard replaced was five named customers with their spend, and not
  * one of those figures came from anywhere.
  */
-const BY_CUSTOMER_COLUMNS: SimpleColumn<RevenueByCustomerRow>[] = [
+const BY_CUSTOMER_COLUMNS: DetailColumn<RevenueByCustomerRow>[] = [
   {
     key: 'customer',
     header: 'Customer',
@@ -600,7 +600,13 @@ function RevenueByCustomerPanel({
 
       {rows.length > 0 ? (
         <div className="bg-background overflow-hidden rounded-xl border">
-          <SimpleTable columns={BY_CUSTOMER_COLUMNS} rows={rows} getRowId={(row) => row.id} />
+          <DetailTable
+            label="Revenue by customer"
+            noun="customers"
+            columns={BY_CUSTOMER_COLUMNS}
+            rows={rows}
+            getRowId={(row) => row.id}
+          />
         </div>
       ) : (
         <div className="text-muted-foreground rounded-xl border border-dashed px-5 py-10 text-center text-[13px]">

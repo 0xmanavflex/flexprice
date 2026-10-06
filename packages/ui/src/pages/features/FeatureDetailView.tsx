@@ -21,9 +21,10 @@ import { Switch } from '@ui/components/primitives/switch'
 import { DetailHeader } from '../../compositions/DetailHeader'
 import { EditableCard } from '../../compositions/EditableCard'
 import { Section } from '../../compositions/Section'
-import { DetailTabs, Dot, Properties, SimpleTable } from '../../compositions/DetailKit'
+import { DetailTabs, Dot, Properties } from '../../compositions/DetailKit'
 import { MetricChart, type MetricPoint } from '../shared/charts'
 import { FEATURE_TYPE_GLYPH, Status } from '../shared/cells'
+import { DetailTable } from '../shared/DetailTable'
 
 export type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
 
@@ -155,7 +156,8 @@ export function FeatureDetailView({
   const Glyph = FEATURE_TYPE_GLYPH[feature.type]
   const archived = feature.status === 'archived'
   // Overview and Charges only exist for metered features; the rest start on Entitlements.
-  const active: FeatureTab = !isMetered && (tab === 'overview' || tab === 'charges') ? 'entitlements' : tab
+  const active: FeatureTab =
+    !isMetered && (tab === 'overview' || tab === 'charges') ? 'entitlements' : tab
 
   const tabs = [
     ...(isMetered
@@ -194,7 +196,12 @@ export function FeatureDetailView({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button variant="outline" size="icon" className="size-8" aria-label="More actions" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    aria-label="More actions"
+                  />
                 }
               >
                 <MoreHorizontalIcon aria-hidden />
@@ -225,11 +232,7 @@ export function FeatureDetailView({
         }
       />
 
-      <DetailTabs
-        tabs={tabs}
-        value={active}
-        onChange={(next) => onTabChange(next as FeatureTab)}
-      />
+      <DetailTabs tabs={tabs} value={active} onChange={(next) => onTabChange(next as FeatureTab)} />
 
       {active === 'overview' ? (
         <OverviewTab feature={feature} onSeeCharges={() => onTabChange('charges')} />
@@ -241,7 +244,9 @@ export function FeatureDetailView({
           description="Every plan and add-on that bills for this feature. Demo data until the linked-price view is wired."
           flush
         >
-          <SimpleTable
+          <DetailTable
+            label="Charges"
+            noun="charges"
             rows={DEMO_CHARGES}
             getRowId={(row) => row.id}
             columns={[
@@ -274,7 +279,9 @@ export function FeatureDetailView({
           flush
         >
           {isMetered ? (
-            <SimpleTable
+            <DetailTable
+              label="Entitlements"
+              noun="entitlements"
               rows={ENTITLEMENT_ROWS}
               getRowId={(row) => row.id}
               columns={[
@@ -475,10 +482,7 @@ function InformationTab({
         />
 
         {isMetered ? (
-          <Section
-            title="Event and aggregation"
-            description="How raw events become billable usage"
-          >
+          <Section title="Event and aggregation" description="How raw events become billable usage">
             <Properties
               items={[
                 { label: 'Event name', value: mono(feature.eventName) },

@@ -3,8 +3,9 @@ import { EmDash } from '../shared/cells'
 import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/Section'
-import { SimpleTable } from '@ui/compositions/DetailKit'
+
 import { RowActionsMenu } from '../shared/RowActionsMenu'
+import { DetailTable } from '../shared/DetailTable'
 
 export interface PlanEntitlementsViewProps {
   entitlements: Entitlement[]
@@ -86,13 +87,17 @@ export function PlanEntitlementsView({
           </Button>
         </div>
       ) : (
-        <SimpleTable
+        <DetailTable
+          label="Entitlements"
+          facet={{ label: 'Type', value: (e) => TYPE_LABEL[e.featureType] }}
+          noun="entitlements"
           rows={entitlements}
           {...(onOpenFeature ? { onRowClick: (e: Entitlement) => onOpenFeature(e.featureId) } : {})}
           columns={[
             {
               key: 'feature',
               header: 'Feature',
+              sortBy: (e) => e.featureName ?? e.featureId,
               cell: (e) => {
                 const Icon = TYPE_ICON[e.featureType]
                 return (
@@ -106,7 +111,10 @@ export function PlanEntitlementsView({
             {
               key: 'type',
               header: 'Type',
-              cell: (e) => <span className="text-muted-foreground">{TYPE_LABEL[e.featureType]}</span>,
+              sortBy: (e) => TYPE_LABEL[e.featureType],
+              cell: (e) => (
+                <span className="text-muted-foreground">{TYPE_LABEL[e.featureType]}</span>
+              ),
             },
             { key: 'included', header: 'Included', cell: (e) => includedOf(e) },
             {

@@ -23,7 +23,7 @@ import {
 import { ScrollArea } from '@ui/components/primitives/scroll-area'
 import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
 import type { ActivityEvent } from '@ui/components/blocks/solution-billing-4/components/data'
-import { DetailTabs, Properties, SimpleTable } from '@ui/compositions/DetailKit'
+import { DetailTabs, Properties } from '@ui/compositions/DetailKit'
 import { Section } from '@ui/compositions/Section'
 import { EditableCard } from '@ui/compositions/EditableCard'
 import { EmptyState } from '@ui/compositions/EmptyState'
@@ -35,6 +35,7 @@ import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
 import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { cn } from '@ui/lib/cn'
 import { CustomerSubscriptionCards } from './CustomerSubscriptionCards'
+import { DetailTable } from '../shared/DetailTable'
 
 /**
  * A customer's detail page: an avatar-tile `EntityHeader` (name, id chip, ⋯ menu)
@@ -457,13 +458,17 @@ function SubscriptionsTab({
           <LoadingRows />
         </div>
       ) : (
-        <SimpleTable
+        <DetailTable
+          label="Subscriptions"
+          facet={{ label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] }}
+          noun="subscriptions"
           rows={subscriptions}
           getRowId={(s) => s.id}
           columns={[
             {
               key: 'plan',
               header: 'Plan',
+              sortBy: (s) => s.planName,
               cell: (s) =>
                 onOpenPlan ? (
                   <span className="font-medium">
@@ -476,16 +481,19 @@ function SubscriptionsTab({
             {
               key: 'status',
               header: 'Status',
+              sortBy: (s) => SUBSCRIPTION_STATUS_LABEL[s.status],
               cell: (s) => <Status value={SUBSCRIPTION_STATUS_LABEL[s.status]} />,
             },
             {
               key: 'billing',
               header: 'Billing',
+              sortBy: (s) => s.billingPeriodLabel,
               cell: (s) => <Muted>{s.billingPeriodLabel}</Muted>,
             },
             {
               key: 'period',
               header: 'Current period',
+              sortBy: (s) => Number(new Date(s.currentPeriodStart ?? 0)),
               cell: (s) => (
                 <Muted>
                   {s.currentPeriodStart && s.currentPeriodEnd
@@ -547,7 +555,10 @@ function InvoiceTable({
     )
   }
   return (
-    <SimpleTable
+    <DetailTable
+      label="Invoices"
+      facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
+      noun="invoices"
       rows={invoices}
       {...(onOpenInvoice ? { onRowClick: (invoice: Invoice) => onOpenInvoice(invoice.id) } : {})}
       empty="No invoices yet. Invoices are created automatically from subscriptions, or raised by hand."
@@ -555,6 +566,7 @@ function InvoiceTable({
         {
           key: 'number',
           header: 'Invoice',
+          sortBy: (invoice) => invoice.number,
           cell: (invoice) => (
             <span className={cn(invoice.status === InvoiceStatus.Draft && 'text-muted-foreground')}>
               {invoice.status === InvoiceStatus.Draft ? 'Draft' : invoice.number}
@@ -564,6 +576,7 @@ function InvoiceTable({
         {
           key: 'period',
           header: 'Period',
+          sortBy: (invoice) => Number(new Date(invoice.periodStart ?? 0)),
           cell: (invoice) => (
             <Muted>
               {invoice.periodStart && invoice.periodEnd
@@ -575,6 +588,7 @@ function InvoiceTable({
         {
           key: 'payment',
           header: 'Payment',
+          sortBy: (invoice) => invoicePayment(invoice).label,
           cell: (invoice) => {
             const payment = invoicePayment(invoice)
             return <Pill tone={payment.tone}>{payment.label}</Pill>
@@ -583,9 +597,15 @@ function InvoiceTable({
         {
           key: 'due',
           header: 'Due',
+          sortBy: (invoice) => Number(new Date(invoice.dueDate ?? 0)),
           cell: (invoice) => <Muted>{formatDate(invoice.dueDate)}</Muted>,
         },
-        { key: 'total', header: 'Total', cell: (invoice) => <Money value={invoice.total} /> },
+        {
+          key: 'total',
+          header: 'Total',
+          sortBy: (invoice) => Number(invoice.total.amount),
+          cell: (invoice) => <Money value={invoice.total} />,
+        },
       ]}
     />
   )

@@ -11,9 +11,10 @@ import {
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/Section'
-import { SimpleTable } from '@ui/compositions/DetailKit'
+
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
+import { DetailTable } from '../shared/DetailTable'
 
 /**
  * A charges section: what an add-on or cost sheet bills, at a glance.
@@ -27,7 +28,7 @@ import { RowActionsMenu } from '../shared/RowActionsMenu'
  */
 export const ChargeTableProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/section', 'compositions/detail-kit', 'ui/button'],
+  composes: ['compositions/section', 'pages/shared/DetailTable', 'ui/button'],
   note: 'Flush charges section for add-on and cost-sheet detail pages.',
 })
 
@@ -88,7 +89,11 @@ function KindDot({ usage }: { usage: boolean }) {
   return (
     <span
       aria-hidden="true"
-      className={usage ? 'bg-muted-foreground/50 size-1.5 rounded-full' : 'bg-foreground/60 size-1.5 rounded-full'}
+      className={
+        usage
+          ? 'bg-muted-foreground/50 size-1.5 rounded-full'
+          : 'bg-foreground/60 size-1.5 rounded-full'
+      }
     />
   )
 }
@@ -131,13 +136,22 @@ export function ChargeTable({
   }
 
   return (
-    <Section title={title} description={description} flush {...(addButton ? { action: addButton } : {})}>
-      <SimpleTable
+    <Section
+      title={title}
+      description={description}
+      flush
+      {...(addButton ? { action: addButton } : {})}
+    >
+      <DetailTable
+        label="Charges"
+        facet={{ label: 'Billing model', value: (charge) => modelLabel(charge) }}
+        noun="charges"
         rows={charges}
         columns={[
           {
             key: 'name',
             header: 'Charge',
+            sortBy: (charge) => charge.displayName || charge.meterName || '',
             cell: (charge) => (
               <span className="flex items-center gap-2.5">
                 <KindDot usage={charge.type === PriceType.Usage} />
@@ -150,6 +164,7 @@ export function ChargeTable({
           {
             key: 'model',
             header: 'Billing model',
+            sortBy: (charge) => modelLabel(charge),
             cell: (charge) => <span className="text-muted-foreground">{modelLabel(charge)}</span>,
           },
           {
