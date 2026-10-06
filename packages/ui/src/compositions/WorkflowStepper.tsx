@@ -68,8 +68,8 @@ export interface WorkflowStepperProps {
   /**
    * `inline` is the numbered row above the content. `header` is the ReUI
    * `c-stepper-1` pattern — numbered indicators joined by separators, no
-   * titles on the dots — with the current step's title and description as a
-   * caption beneath, for the band at the top of a form page.
+   * titles on the dots — with the current step's title announced to assistive tech
+   * only, small enough for the form toolbar.
    */
   variant?: 'inline' | 'header'
   'aria-label'?: string
@@ -97,7 +97,7 @@ export function WorkflowStepper({
           onStepChange(target.id)
         }
       }}
-      className={header ? 'mx-auto w-full max-w-md gap-3' : 'flex flex-col gap-6'}
+      className={header ? 'flex w-auto flex-row items-center gap-4' : 'flex flex-col gap-6'}
       /**
        * Overriding `role`, because ReUI's root declares `role="tablist"` while
        * none of its children declare `role="tab"` — which axe rejects as
@@ -120,7 +120,7 @@ export function WorkflowStepper({
       // ReUI sets this for its tab semantics; it is not allowed on `group`.
       aria-orientation={undefined}
     >
-      <StepperNav>
+      <StepperNav className={header ? 'w-auto min-w-0' : undefined}>
         {steps.map((step, index) => (
           <StepperItem
             key={step.id}
@@ -179,7 +179,9 @@ export function WorkflowStepper({
             </StepperTrigger>
             {index < steps.length - 1 ? (
               <StepperSeparator
-                {...(header ? { className: 'group-data-[state=completed]/step:bg-primary' } : {})}
+                {...(header
+                  ? { className: 'w-6 flex-none group-data-[state=completed]/step:bg-primary' }
+                  : {})}
               />
             ) : null}
           </StepperItem>
@@ -187,11 +189,8 @@ export function WorkflowStepper({
       </StepperNav>
 
       {header ? (
-        <p className="text-center text-sm" aria-live="polite">
-          <span className="font-medium">{steps[currentIndex - 1]?.title}</span>
-          {steps[currentIndex - 1]?.description ? (
-            <span className="text-muted-foreground"> · {steps[currentIndex - 1]?.description}</span>
-          ) : null}
+        <p className="sr-only" aria-live="polite">
+          {steps[currentIndex - 1]?.title}
         </p>
       ) : null}
 

@@ -15,6 +15,8 @@ Honest note on "use the block's own component": the vendored `form-9`, `solution
 
 Follow-up, same day: the main content of every form is ONE form-9-style card (title/description/badge header, dashed inset rules, title + visible description left, control right) instead of several stacked cards; stepper forms show one card per step. Hints are visible under the row title, matching form-9, instead of an info icon.
 
+Follow-up: the stepper is drawn inside the toolbar row (title left, numbered dots centred, Cancel/CTA right), with no visible step caption.
+
 Retired: the inline stepper and bottom actions row on Subscription and Plan; the per-form preview grids.
 
 Decision: product owner, 2026-10-06.

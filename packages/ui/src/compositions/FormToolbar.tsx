@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { XIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Separator } from '@ui/components/primitives/separator'
@@ -5,7 +6,7 @@ import { provenance } from '@ui/provenance'
 
 /**
  * The bar a create/edit page opens with: close, the title, Cancel and the one
- * primary action.
+ * primary action, and, optionally, a stepper centred between them.
  *
  * The structure of the ReUI `form-3` toolbar (`blocks/form-3/components/
  * invoice-toolbar.tsx`), which is hard-wired to an invoice and cannot be edited
@@ -30,6 +31,8 @@ export interface FormToolbarProps {
   submitLabel?: string
   /** A multi-step form submits only from its last step; earlier steps advance from the step nav instead. */
   hideSubmit?: boolean
+  /** Centred between the title and the actions, e.g. the stepper; wraps to its own row on narrow screens. */
+  center?: ReactNode
 }
 
 export function FormToolbar({
@@ -41,12 +44,13 @@ export function FormToolbar({
   isSubmitting = false,
   submitLabel,
   hideSubmit = false,
+  center,
 }: FormToolbarProps) {
   const label =
     submitLabel ?? (mode === 'create' ? `Create${noun ? ` ${noun}` : ''}` : 'Save changes')
   return (
-    <header className="border-border bg-background flex min-h-14 w-full shrink-0 items-center justify-between gap-3 border-b px-4">
-      <div className="flex min-w-0 items-center">
+    <header className="border-border bg-background flex min-h-14 w-full shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b px-4 py-2 md:flex-nowrap md:py-0">
+      <div className="flex min-w-0 flex-1 items-center">
         {onCancel ? (
           <>
             <Button
@@ -65,7 +69,12 @@ export function FormToolbar({
         ) : null}
         <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
       </div>
-      <div className="flex shrink-0 items-center gap-2">
+      {center ? (
+        <div className="order-last flex w-full min-w-0 justify-center md:order-none md:w-auto md:flex-none">
+          {center}
+        </div>
+      ) : null}
+      <div className="flex shrink-0 items-center justify-end gap-2 md:flex-1">
         {onCancel ? (
           <Button
             type="button"
