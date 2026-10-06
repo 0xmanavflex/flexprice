@@ -4,7 +4,6 @@ import { type CreateAddon, createAddonSchema, emptyAddon } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { AddonPreviewCard } from './AddonPreviewCard'
@@ -27,13 +26,7 @@ import { provenance } from '@ui/provenance'
  */
 export const AddonFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'ui/input',
-    'ui/textarea',
-    'compositions/form-card',
-    'compositions/form-page',
-    'compositions/form-actions',
-  ],
+  composes: ['ui/input', 'ui/textarea', 'compositions/form-card', 'compositions/form-page'],
   note: 'RHF + the domain schema. Details only; charges are the surface shared with plans.',
 })
 
@@ -77,7 +70,7 @@ export function AddonForm({
       noValidate
       className="flex flex-col gap-6"
     >
-      <FormCard title="Basics">
+      <FormCard title="Basics" status="required">
         <FormRow label="Name" required error={errors.name?.message}>
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -97,7 +90,7 @@ export function AddonForm({
         </FormRow>
       </FormCard>
 
-      <FormCard title="Identifier">
+      <FormCard title="Identifier" {...(isEdit ? {} : { status: 'required' as const })}>
         <FormRow
           label="Lookup key"
           required={!isEdit}
@@ -132,16 +125,14 @@ export function AddonForm({
       }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
-      footer={
-        <FormActions
-          mode={mode}
-          noun="add-on"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: mode,
+        noun: 'add-on',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       {isEdit ? (
         formEl

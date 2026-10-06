@@ -9,7 +9,6 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
@@ -21,12 +20,7 @@ import { provenance } from '@ui/provenance'
  */
 export const GroupFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'ui/input',
-    'compositions/form-card',
-    'compositions/form-page',
-    'compositions/form-actions',
-  ],
+  composes: ['ui/input', 'compositions/form-card', 'compositions/form-page'],
   note: 'RHF + the domain schema. Create only: the API has no group update.',
 })
 
@@ -68,21 +62,20 @@ export function GroupForm({
       description="Bundle prices or features so they can be filtered, reported and invoiced together."
       trail={trail}
       width="narrow"
-      footer={
-        <FormActions
-          mode="create"
-          noun="group"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: 'create',
+        noun: 'group',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
         <div className="flex flex-col gap-6">
           <FormCard
             title="Details"
+            status="required"
             description="What this group is called and how the API refers to it."
           >
             <FormRow label="Name" required error={errors.name?.message}>
@@ -103,7 +96,7 @@ export function GroupForm({
             </FormRow>
           </FormCard>
 
-          <FormCard title="Contents" description="What the group can hold.">
+          <FormCard title="Contents" status="required" description="What the group can hold.">
             <FormRow
               label="Holds"
               required

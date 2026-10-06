@@ -4,7 +4,6 @@ import { type CreateCostSheet, createCostSheetSchema, emptyCostSheet } from '@fp
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
@@ -25,7 +24,6 @@ export const CostSheetFormProvenance = provenance({
     'ui/textarea',
     'compositions/form-card',
     'compositions/form-page',
-    'compositions/form-actions',
     'pages/cost-sheet-summary-card',
   ],
   note: 'RHF + the domain schema. Prices are attached afterwards.',
@@ -69,7 +67,11 @@ export function CostSheetForm({
       noValidate
       className="flex flex-col gap-6"
     >
-      <FormCard title="Details" description="What this cost sheet is called and what it covers.">
+      <FormCard
+        title="Details"
+        status="required"
+        description="What this cost sheet is called and what it covers."
+      >
         <FormRow label="Name" required error={errors.name?.message}>
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -94,7 +96,11 @@ export function CostSheetForm({
         </FormRow>
       </FormCard>
 
-      <FormCard title="Reference" description="How other systems refer to this cost sheet.">
+      <FormCard
+        title="Reference"
+        status="optional"
+        description="How other systems refer to this cost sheet."
+      >
         <FormRow
           label="Lookup key"
           hint="A stable identifier to reference the cost sheet by. Optional."
@@ -118,16 +124,14 @@ export function CostSheetForm({
       }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
-      footer={
-        <FormActions
-          mode={mode}
-          noun="cost sheet"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: mode,
+        noun: 'cost sheet',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       {isEdit ? (
         formEl

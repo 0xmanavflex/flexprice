@@ -2,7 +2,9 @@ import type { ReactNode } from 'react'
 import { FieldGroup, FieldSet } from '@ui/components/primitives/field'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import type { DetailCrumb } from './DetailShell'
+import { FormToolbar, type FormToolbarProps } from './FormToolbar'
 import { usePublishDetailTrail } from './shell/ShellDetailTrail'
 import { PageBody } from './Page'
 import { Section } from './Section'
@@ -21,32 +23,72 @@ import { Section } from './Section'
  */
 export const FormPageProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/page', 'compositions/section', 'ui/field'],
-  note: 'Full-page create/edit shell on a Section. The heading says what the form is for. Actions sit inside the surface under the fields.',
+  composes: ['compositions/page', 'compositions/section', 'compositions/form-toolbar', 'ui/field'],
+  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, Cancel, primary CTA) with the form cards beneath it, or the Section surface with the actions at its foot.',
 })
 
-export interface FormPageProps {
+/** What the pinned toolbar needs from the caller; the title is the page's own. */
+export type FormPageToolbar = Omit<FormToolbarProps, 'title'> & {
+  submitError?: string | null | undefined
+}
+
+interface FormPageBaseProps {
   title: string
   description?: string
   /** The way back, then this form. The shell header draws it; the parent crumb is a link. */
   trail: DetailCrumb[]
   children: ReactNode
-  /** The sticky bar: usually `FormActions` or a stepper's footer. */
-  footer: ReactNode
   width?: 'wide' | 'narrow'
   className?: string
 }
+
+export type FormPageProps = FormPageBaseProps &
+  (
+    | {
+        /** Pins close, title, Cancel and the CTA above the page; the form cards sit directly beneath. */
+        toolbar: FormPageToolbar
+        footer?: never
+      }
+    | {
+        toolbar?: never
+        /** The bar at the foot of the surface: usually `FormActions` or a stepper's footer. */
+        footer: ReactNode
+      }
+  )
 
 export function FormPage({
   title,
   description,
   trail,
   children,
+  toolbar,
   footer,
   width = 'narrow',
   className,
 }: FormPageProps) {
   usePublishDetailTrail(trail)
+
+  if (toolbar) {
+    const { submitError, ...toolbarProps } = toolbar
+    return (
+      <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
+        {/* The bar sits outside the scrolling region, so it stays put without
+            `sticky`; the form cards are their own surfaces underneath. */}
+        <FormToolbar title={title} {...toolbarProps} />
+        <PageBody width="wide" className="self-center pt-6">
+          {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
+          {submitError ? (
+            <Alert variant="destructive">
+              <AlertDescription>{submitError}</AlertDescription>
+            </Alert>
+          ) : null}
+          <FieldSet className="gap-0 pb-6">
+            <FieldGroup className={cn(width === 'narrow' && 'max-w-3xl')}>{children}</FieldGroup>
+          </FieldSet>
+        </PageBody>
+      </div>
+    )
+  }
 
   return (
     <div className={cn('flex min-h-0 flex-1 flex-col', className)}>

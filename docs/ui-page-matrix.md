@@ -12,11 +12,11 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | --- | --- | --- | --- | --- |
 | PlaceholderPage.tsx | `PlaceholderPage` | Other | EmptyState, PageHeader | Button, PageBody |
 | addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailShell, DetailTabs, EmptyState, Field, FormActions, FormDialog, MetricRail, RowActionsMenu, Section, SimpleTable | AddonSubscriptionsView, AppFailure, CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, Dot, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, LoadingRows, PageBody |
-| addons | `AddonFormPage` | Form | Field, FormActions, FormCard, FormPage, Section | AddonForm, AppFailure, LoadingRows, PageBody |
+| addons | `AddonFormPage` | Form | Field, FormCard, FormPage, Section | AddonForm, AppFailure, LoadingRows, PageBody |
 | addons | `AddonListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | AddonGrid, Button, ListState, PageBody |
 | auth | `SignInPage` | Other | Field | SignInScreen |
 | cost-sheets | `CostSheetDetailPage` | Detail | DetailShell, DetailTabs, EmptyState, MetricRail, RowActionsMenu, Section, SimpleTable | AppFailure, CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CostMarginCard, Dot, EditableCard, LoadingRows, PageBody |
-| cost-sheets | `CostSheetFormPage` | Form | Field, FormActions, FormCard, FormPage, Section | AppFailure, CostSheetForm, LoadingRows, PageBody |
+| cost-sheets | `CostSheetFormPage` | Form | Field, FormCard, FormPage, Section | AppFailure, CostSheetForm, LoadingRows, PageBody |
 | cost-sheets | `CostSheetListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CostSheetGrid, ListState, PageBody |
 | coupons | `CouponDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Properties, Section, SimpleTable | AppFailure, CatalogDetailFrame, CatalogStatusBadge, CouponRedemptionMeter, CouponRedemptionsView, Dot, EditableCard, LoadingRows, Money |
 | coupons | `CouponFormPage` | Form | Field, FormActions, FormCard, FormPage, Section | AppFailure, CouponCreateForm, CouponForm, LoadingRows, PageBody |
@@ -25,7 +25,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | credit-notes | `CreditNoteFormPage` | Form | Field, FormActions, FormCard, FormPage, Section | CreditNoteForm |
 | credit-notes | `CreditNoteListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | CreditNoteGrid, ListState, PageBody |
 | customers | `CustomerDetailPage` | Detail | DetailTabs, EmptyState, Properties, Section, SimpleTable | AppFailure, CUSTOMER_TABS, CustomerAnalyticsView, CustomerDetail, CustomerTab, DEMO_FEATURE_ANALYTICS, LoadingRows, PageBody, QuotaCard |
-| customers | `CustomerFormPage` | Form | Field, FormActions, FormCard, FormPage, Section | AppFailure, CustomerForm, LoadingRows, PageBody |
+| customers | `CustomerFormPage` | Form | Field, FormCard, FormPage, Section | AppFailure, CustomerForm, LoadingRows, PageBody |
 | customers | `CustomerListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CustomerGrid, ListState, PageBody |
 | environments | `EnvironmentFormPage` | Form | Field, FormDialog | EnvironmentForm |
 | events | `EventListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | EventDetailSheet, EventGrid, ListState, PageBody |
@@ -34,7 +34,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | features | `FeatureFormPage` | Form | Field, FormActions, FormCard, FormPage, Section | AppFailure, FeatureForm, LoadingRows, PageBody |
 | features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, ListState, PageBody |
 | groups | `GroupDetailPage` | Detail | DetailShell, DetailTabs, MetricRail, Section, SimpleTable | AppFailure, CatalogDetailFrame, CatalogStatusBadge, Dot, EditableCard, GroupMembersView, LoadingRows, PageBody |
-| groups | `GroupFormPage` | Form | Field, FormActions, FormCard, FormPage, Section | GroupForm |
+| groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section | GroupForm |
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |
 | home | `HomePage` | Dashboard | Panel | DashboardHome |
 | integrations | `IntegrationListPage` | List | ConnectorCard | IntegrationsBlock |

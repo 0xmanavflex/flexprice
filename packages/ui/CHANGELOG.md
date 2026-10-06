@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-06
+
+- 2026-10-06 — compositions/FormToolbar: **new.** The form-3 toolbar structure (close, divider, title, Cancel, primary CTA wired by `formId`) as a composition, because the vendored block is hard-wired to an invoice. `FormPage` takes it through a new `toolbar` prop (mutually exclusive with `footer`) and drops the outer Section in that mode; `FormCard` gains an optional Required/Optional `status` badge. Migrated: Customer, Add-on, Cost sheet, Group. Layout deviation from the reference `Composer` is recorded in `docs/design-changes/2026-10-06-form-toolbar.md`.
+
 ## 2026-09-29
 
 From a live-data UI audit run against production at five viewports (1920 / 1440

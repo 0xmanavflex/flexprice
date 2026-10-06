@@ -10,7 +10,6 @@ import {
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
-import { FormActions } from '@ui/compositions/FormActions'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
@@ -70,7 +69,7 @@ export function CustomerForm({
   const submitAll = form.handleSubmit((values) => onSubmit(values))
 
   const detailsStep = (
-    <FormCard title="Details">
+    <FormCard title="Details" status="required">
       <FormRow label="Name" required error={errors.name?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
@@ -112,7 +111,7 @@ export function CustomerForm({
   )
 
   const addressStep = (
-    <FormCard title="Billing address">
+    <FormCard title="Billing address" status="optional">
       <FormRow label="Address line 1" error={errors.addressLine1?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressLine1')} />
@@ -162,7 +161,7 @@ export function CustomerForm({
   )
 
   const additionalStep = (
-    <FormCard title="Additional">
+    <FormCard title="Additional" status="optional">
       <FormRow
         label="Timezone"
         hint="An IANA name, e.g. Europe/London."
@@ -235,16 +234,14 @@ export function CustomerForm({
       }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
-      footer={
-        <FormActions
-          mode={mode}
-          noun="customer"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: mode,
+        noun: 'customer',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       {isEdit ? (
         formEl

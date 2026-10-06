@@ -8,6 +8,7 @@ import {
   FieldLabel,
   FieldTitle,
 } from '@ui/components/primitives/field'
+import { Badge } from '@ui/components/reui/badge'
 import { Separator } from '@ui/components/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -26,7 +27,7 @@ import { InfoHint } from './InfoHint'
  */
 export const FormCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/field', 'ui/separator'],
+  composes: ['ui/field', 'ui/separator', '@reui/badge'],
   note: 'form-12 layout: Section surface, label/control rows, dashed inset separators. Lineage: compositions/section.',
 })
 
@@ -36,18 +37,29 @@ const dashedRule =
 export interface FormCardProps {
   title?: string
   description?: string
+  /** Whether the card holds fields the form cannot be submitted without. */
+  status?: 'required' | 'optional'
   children: ReactNode
   className?: string
 }
 
-export function FormCard({ title, description, children, className }: FormCardProps) {
+export function FormCard({ title, description, status, children, className }: FormCardProps) {
   const rows = Children.toArray(children)
   return (
     <section className={cn('bg-background flex w-full flex-col rounded-xl border', className)}>
       {title ? (
-        <div className="space-y-0.5 border-b px-6 py-4">
-          <h2 className="text-sm font-medium">{title}</h2>
-          {description ? <p className="text-muted-foreground text-[13px]">{description}</p> : null}
+        <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
+          <div className="space-y-0.5">
+            <h2 className="text-sm font-medium">{title}</h2>
+            {description ? (
+              <p className="text-muted-foreground text-[13px]">{description}</p>
+            ) : null}
+          </div>
+          {status ? (
+            <Badge variant={status === 'required' ? 'primary-light' : 'secondary'} size="sm">
+              {status === 'required' ? 'Required' : 'Optional'}
+            </Badge>
+          ) : null}
         </div>
       ) : null}
       <div>

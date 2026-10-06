@@ -80,7 +80,9 @@ export type { DateInputProps } from './DateInput'
 export * from './shell'
 
 export { FormPage, FormPageProvenance } from './FormPage'
-export type { FormPageProps } from './FormPage'
+export type { FormPageProps, FormPageToolbar } from './FormPage'
+export { FormToolbar, FormToolbarProvenance } from './FormToolbar'
+export type { FormToolbarProps } from './FormToolbar'
 export { FormSteps, FormStepsProvenance, StepFooter, useFormSteps } from './useFormSteps'
 export type {
   FormFlow,
