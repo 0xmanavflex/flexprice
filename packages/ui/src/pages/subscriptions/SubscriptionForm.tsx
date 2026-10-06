@@ -389,20 +389,18 @@ export function SubscriptionForm({
     </FormSteps>
   )
   const preview = (
-    <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-      <SubscriptionPreviewCard
-        customer={customers.find((c) => c.value === values.customerId)?.label}
-        plan={plans.find((p) => p.value === values.planId)?.label}
-        currency={values.currency}
-        billingPeriod={values.billingPeriod}
-        billingPeriodCount={values.billingPeriodCount}
-        startDate={values.startDate}
-        trialPeriodDays={values.trialPeriodDays}
-        priceOverrides={values.priceOverrides.length}
-        entitlementOverrides={values.entitlementOverrides.length}
-        creditGrants={values.creditGrants.length}
-      />
-    </div>
+    <SubscriptionPreviewCard
+      customer={customers.find((c) => c.value === values.customerId)?.label}
+      plan={plans.find((p) => p.value === values.planId)?.label}
+      currency={values.currency}
+      billingPeriod={values.billingPeriod}
+      billingPeriodCount={values.billingPeriodCount}
+      startDate={values.startDate}
+      trialPeriodDays={values.trialPeriodDays}
+      priceOverrides={values.priceOverrides.length}
+      entitlementOverrides={values.entitlementOverrides.length}
+      creditGrants={values.creditGrants.length}
+    />
   )
 
   if (embedded) {
@@ -420,12 +418,18 @@ export function SubscriptionForm({
       description="Put a customer on a plan and start their billing cycle."
       trail={trail}
       width="wide"
-      footer={footer}
+      toolbar={{
+        mode: 'create',
+        noun: 'subscription',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
+      stepper={{ flow, label: 'Subscription steps' }}
+      preview={preview}
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-        <div className="min-w-0">{stepper}</div>
-        {preview}
-      </div>
+      {content[flow.step]}
     </FormPage>
   )
 }

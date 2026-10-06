@@ -1,4 +1,5 @@
 import { Badge } from '@ui/components/reui/badge'
+import { FormPreview, PreviewRow, PreviewRows, PreviewSection } from '@ui/compositions/FormPreview'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -8,7 +9,7 @@ import { provenance } from '@ui/provenance'
  */
 export const AddonPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/badge'],
+  composes: ['@reui/badge', 'compositions/form-preview'],
   note: 'Live summary of the add-on being drafted; fetches nothing.',
 })
 
@@ -23,27 +24,28 @@ export function AddonPreviewCard({ name, lookupKey, description }: AddonPreviewC
   const body = description?.trim()
 
   return (
-    <aside aria-label="Add-on preview" className="bg-background rounded-xl border p-6">
-      <div className="flex flex-col gap-3">
-        <p className="text-muted-foreground text-xs">How it will look</p>
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium">{title}</p>
-          <Badge variant="outline">Add-on</Badge>
-        </div>
-        <p className="text-muted-foreground font-mono text-xs break-all">
-          {lookupKey.trim() || 'lookup_key'}
+    <FormPreview
+      title="How it will look"
+      label="Add-on preview"
+      badge={<Badge variant="outline">Add-on</Badge>}
+      description="Updates as you type."
+    >
+      <PreviewSection title="Add-on">
+        <PreviewRows>
+          <PreviewRow label="Name" value={title} />
+          <PreviewRow label="Lookup key" value={lookupKey.trim() || 'lookup_key'} />
+        </PreviewRows>
+      </PreviewSection>
+      <PreviewSection title="Description">
+        {body ? (
+          <p className="text-sm break-words whitespace-pre-line">{body}</p>
+        ) : (
+          <p className="text-muted-foreground text-sm">No description yet.</p>
+        )}
+        <p className="text-muted-foreground text-xs">
+          Price and entitlements are added after you create it.
         </p>
-        <div className="border-t pt-3 text-sm">
-          {body ? (
-            <p className="break-words whitespace-pre-line">{body}</p>
-          ) : (
-            <p className="text-muted-foreground text-xs">No description yet.</p>
-          )}
-          <p className="text-muted-foreground mt-2 text-xs">
-            Price and entitlements are added after you create it.
-          </p>
-        </div>
-      </div>
-    </aside>
+      </PreviewSection>
+    </FormPreview>
   )
 }

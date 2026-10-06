@@ -10,6 +10,7 @@ import {
   FeatureType,
   PriceType,
 } from '@fp/domain'
+import { FormPreview, PreviewSection } from '@ui/compositions/FormPreview'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -27,7 +28,7 @@ import { provenance } from '@ui/provenance'
  */
 export const PlanPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: [],
+  composes: ['compositions/form-preview'],
   note: 'Reuses PlanGrid’s pricing-card idiom; adds a live example-bill estimate.',
 })
 
@@ -157,15 +158,6 @@ export function pricingSummary(
   }
 }
 
-function PreviewBlock({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <section className="space-y-3 border-t pt-4" aria-label={title}>
-      <p className="text-muted-foreground text-[11px] tracking-wider uppercase">{title}</p>
-      {children}
-    </section>
-  )
-}
-
 function More({ n }: { n: number }) {
   return n > 0 ? <li className="text-muted-foreground text-xs">and {n} more</li> : null
 }
@@ -195,12 +187,11 @@ export function PlanPreviewCard({
   const tail = [trial, usageCharges.length > 0 ? 'plus usage' : null].filter(Boolean).join(' · ')
 
   return (
-    <aside aria-label="Plan preview" className="bg-background sticky top-6 space-y-5 rounded-xl border p-6">
-      <div className="space-y-1">
-        <p className="text-muted-foreground text-xs">What customers see</p>
-        <p className="truncate text-sm font-medium">{name || 'Untitled plan'}</p>
-      </div>
-
+    <FormPreview
+      title="What customers see"
+      label="Plan preview"
+      description={name || 'Untitled plan'}
+    >
       {charges.length === 0 ? (
         <p className="text-muted-foreground text-[13px]/relaxed">
           Add a charge and the price customers see builds up here.
@@ -216,7 +207,9 @@ export function PlanPreviewCard({
                       ? money(Number(base.amount || 0), currency, locale)
                       : pricingSummary(base, currency, locale)}
                   </span>
-                  {period ? <span className="text-muted-foreground text-sm">/ {period}</span> : null}
+                  {period ? (
+                    <span className="text-muted-foreground text-sm">/ {period}</span>
+                  ) : null}
                 </>
               ) : (
                 <span className="text-muted-foreground text-3xl font-medium">
@@ -228,7 +221,7 @@ export function PlanPreviewCard({
           </div>
 
           {extras.length > 0 ? (
-            <PreviewBlock title="Also billed">
+            <PreviewSection title="Also billed">
               <ul className="space-y-2 text-[13px]">
                 {extras.slice(0, CAP).map((charge, index) => (
                   <li key={index} className="flex justify-between gap-3">
@@ -242,11 +235,11 @@ export function PlanPreviewCard({
                 ))}
                 <More n={extras.length - CAP} />
               </ul>
-            </PreviewBlock>
+            </PreviewSection>
           ) : null}
 
           {usageCharges.length > 0 ? (
-            <PreviewBlock title="Usage">
+            <PreviewSection title="Usage">
               <ul className="space-y-2.5 text-[13px]">
                 {usageCharges.slice(0, CAP).map((charge, index) => (
                   <li key={index} className="space-y-0.5">
@@ -263,18 +256,15 @@ export function PlanPreviewCard({
                 ))}
                 <More n={usageCharges.length - CAP} />
               </ul>
-            </PreviewBlock>
+            </PreviewSection>
           ) : null}
 
           {included.length > 0 ? (
-            <PreviewBlock title="Included">
+            <PreviewSection title="Included">
               <ul className="space-y-2 text-[13px]">
                 {included.slice(0, CAP).map((line) => (
                   <li key={line.key} className="flex items-start gap-2">
-                    <CheckIcon
-                      aria-hidden
-                      className="text-success mt-0.5 size-3.5 shrink-0"
-                    />
+                    <CheckIcon aria-hidden className="text-success mt-0.5 size-3.5 shrink-0" />
                     <span className="flex flex-1 justify-between gap-3">
                       <span>{line.label}</span>
                       {line.value ? (
@@ -285,11 +275,11 @@ export function PlanPreviewCard({
                 ))}
                 <More n={included.length - CAP} />
               </ul>
-            </PreviewBlock>
+            </PreviewSection>
           ) : null}
 
           {credits.length > 0 ? (
-            <PreviewBlock title="Credits">
+            <PreviewSection title="Credits">
               <ul className="space-y-2 text-[13px]">
                 {credits.slice(0, CAP).map((line) => (
                   <li key={line.key} className="flex justify-between gap-3">
@@ -301,10 +291,10 @@ export function PlanPreviewCard({
                 ))}
                 <More n={credits.length - CAP} />
               </ul>
-            </PreviewBlock>
+            </PreviewSection>
           ) : null}
         </>
       )}
-    </aside>
+    </FormPreview>
   )
 }

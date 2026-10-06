@@ -14,7 +14,6 @@ import {
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
@@ -30,13 +29,7 @@ import { provenance } from '@ui/provenance'
  */
 export const TaxRateFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'ui/input',
-    'ui/textarea',
-    'compositions/form-card',
-    'compositions/form-page',
-    'compositions/form-actions',
-  ],
+  composes: ['ui/input', 'ui/textarea', 'compositions/form-card', 'compositions/form-page'],
   note: 'RHF + the domain schemas. Create takes the value and scope; edit renames, recodes and archives.',
 })
 
@@ -89,16 +82,14 @@ export function TaxRateCreateForm({
       description="A percentage added to invoices. Its value and scope are fixed once created."
       trail={trail}
       width="narrow"
-      footer={
-        <FormActions
-          mode="create"
-          noun="tax rate"
-          formId="tax-rate-create-form"
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: 'create',
+        noun: 'tax rate',
+        formId: 'tax-rate-create-form',
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       <form
         id="tax-rate-create-form"
@@ -192,16 +183,14 @@ export function TaxRateEditForm({
       description="Rename, recode or archive the rate. Its value and scope are fixed once created."
       trail={trail}
       width="narrow"
-      footer={
-        <FormActions
-          mode="edit"
-          noun="tax rate"
-          formId="tax-rate-edit-form"
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: 'edit',
+        noun: 'tax rate',
+        formId: 'tax-rate-edit-form',
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       <form
         id="tax-rate-edit-form"

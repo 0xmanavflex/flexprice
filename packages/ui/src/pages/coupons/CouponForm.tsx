@@ -3,7 +3,6 @@ import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type EditCoupon, editCouponSchema } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
@@ -20,12 +19,7 @@ import { provenance } from '@ui/provenance'
  */
 export const CouponFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'ui/input',
-    'compositions/form-card',
-    'compositions/form-page',
-    'compositions/form-actions',
-  ],
+  composes: ['ui/input', 'compositions/form-card', 'compositions/form-page'],
   note: 'RHF + the domain schema. A rename — the discount is immutable, shown as context.',
 })
 
@@ -67,15 +61,13 @@ export function CouponForm({
       description="Rename the coupon. Its discount, cadence and redemption window are fixed once created."
       trail={trail}
       width="narrow"
-      footer={
-        <FormActions
-          mode="edit"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: 'edit',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
         <FormCard>

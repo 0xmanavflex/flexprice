@@ -1,6 +1,7 @@
 import { AGGREGATION_LABEL, FEATURE_TYPE_LABEL, FeatureType, ResetUsage } from '@fp/domain'
 import type { AggregationType } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
+import { FormPreview, PreviewRow, PreviewRows, PreviewSection } from '@ui/compositions/FormPreview'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -10,7 +11,7 @@ import { provenance } from '@ui/provenance'
  */
 export const FeaturePreviewCardProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/badge'],
+  composes: ['@reui/badge', 'compositions/form-preview'],
   note: 'Live summary of the feature being drafted; fetches nothing.',
 })
 
@@ -52,30 +53,31 @@ export function FeaturePreviewCard({
       : null
 
   return (
-    <aside aria-label="Feature preview" className="bg-background space-y-4 rounded-xl border p-6">
-      <div className="flex flex-col gap-3">
-        <p className="text-muted-foreground text-xs">How it will look</p>
-        <div className="flex items-start justify-between gap-2">
-          <p className="text-sm font-medium">{title}</p>
-          <Badge variant="outline">{FEATURE_TYPE_LABEL[type]}</Badge>
-        </div>
-        <p className="text-muted-foreground font-mono text-xs break-all">
-          {lookupKey.trim() || 'lookup_key'}
-        </p>
-        <div className="border-t pt-3 text-sm">
-          {summary ? (
-            <>
-              <p>{summary}</p>
-              <p className="text-muted-foreground mt-1 text-xs">
-                {aggregationType ? AGGREGATION_LABEL[aggregationType] : null}
-                {eventName?.trim() ? ` · event ${eventName.trim()}` : ' · event not set yet'}
-              </p>
-            </>
-          ) : (
-            <p className="text-muted-foreground text-xs">{TYPE_LINE[type]}</p>
-          )}
-        </div>
-      </div>
-    </aside>
+    <FormPreview
+      title="How it will look"
+      label="Feature preview"
+      badge={<Badge variant="outline">{FEATURE_TYPE_LABEL[type]}</Badge>}
+      description="Updates as you type."
+    >
+      <PreviewSection title="Feature">
+        <PreviewRows>
+          <PreviewRow label="Name" value={title} />
+          <PreviewRow label="Lookup key" value={lookupKey.trim() || 'lookup_key'} />
+        </PreviewRows>
+      </PreviewSection>
+      <PreviewSection title={summary ? 'Meter' : 'About this type'}>
+        {summary ? (
+          <>
+            <p className="text-sm">{summary}</p>
+            <p className="text-muted-foreground text-xs">
+              {aggregationType ? AGGREGATION_LABEL[aggregationType] : null}
+              {eventName?.trim() ? ` · event ${eventName.trim()}` : ' · event not set yet'}
+            </p>
+          </>
+        ) : (
+          <p className="text-muted-foreground text-sm">{TYPE_LINE[type]}</p>
+        )}
+      </PreviewSection>
+    </FormPreview>
   )
 }

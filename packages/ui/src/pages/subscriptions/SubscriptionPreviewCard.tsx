@@ -1,4 +1,11 @@
 import { BILLING_PERIOD_LABEL, type BillingPeriod } from '@fp/domain'
+import {
+  FormPreview,
+  PreviewAmount,
+  PreviewRow,
+  PreviewRows,
+  PreviewSection,
+} from '@ui/compositions/FormPreview'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -8,8 +15,8 @@ import { provenance } from '@ui/provenance'
  */
 export const SubscriptionPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: [],
-  note: 'Live subscription summary of the draft; fetches nothing. Same rail idiom as CustomerPreviewCard.',
+  composes: ['compositions/form-preview'],
+  note: 'Live subscription summary of the draft; fetches nothing. Rendered in the solution-billing-8 rail.',
 })
 
 export interface SubscriptionPreviewCardProps {
@@ -25,15 +32,6 @@ export interface SubscriptionPreviewCardProps {
   creditGrants: number
 }
 
-function Row({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-start justify-between gap-3 text-sm">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right">{value}</span>
-    </div>
-  )
-}
-
 export function SubscriptionPreviewCard(props: SubscriptionPreviewCardProps) {
   const every =
     props.billingPeriodCount > 1
@@ -41,29 +39,33 @@ export function SubscriptionPreviewCard(props: SubscriptionPreviewCardProps) {
       : BILLING_PERIOD_LABEL[props.billingPeriod]
 
   return (
-    <aside aria-label="Subscription preview" className="bg-background rounded-xl border">
-      <div className="flex flex-col gap-3 p-4">
-        <p className="text-muted-foreground text-xs">Subscription summary</p>
-        <div className="min-w-0">
-          <p className="truncate text-sm font-medium">{props.plan || 'No plan chosen'}</p>
-          <p className="text-muted-foreground truncate text-xs">
-            {props.customer || 'No customer chosen'}
-          </p>
-        </div>
-        <div className="flex flex-col gap-2 border-t pt-3">
-          <Row label="Billing" value={`${props.currency.toUpperCase() || '—'} · ${every}`} />
-          <Row label="Starts" value={props.startDate || 'Now'} />
-          <Row
+    <FormPreview
+      title="Subscription summary"
+      label="Subscription preview"
+      description="Updates as you fill in each step."
+    >
+      <PreviewAmount
+        label={props.plan || 'No plan chosen'}
+        value={props.currency.toUpperCase() || '—'}
+        hint={props.customer || 'No customer chosen'}
+      />
+      <PreviewSection title="Billing">
+        <PreviewRows>
+          <PreviewRow label="Cycle" value={every} />
+          <PreviewRow label="Starts" value={props.startDate || 'Now'} />
+          <PreviewRow
             label="Trial"
             value={props.trialPeriodDays ? `${props.trialPeriodDays} days` : 'None'}
           />
-        </div>
-        <div className="flex flex-col gap-2 border-t pt-3">
-          <Row label="Price overrides" value={String(props.priceOverrides)} />
-          <Row label="Entitlement overrides" value={String(props.entitlementOverrides)} />
-          <Row label="Credit grants" value={String(props.creditGrants)} />
-        </div>
-      </div>
-    </aside>
+        </PreviewRows>
+      </PreviewSection>
+      <PreviewSection title="Changes from the plan">
+        <PreviewRows>
+          <PreviewRow label="Price overrides" value={String(props.priceOverrides)} />
+          <PreviewRow label="Entitlement overrides" value={String(props.entitlementOverrides)} />
+          <PreviewRow label="Credit grants" value={String(props.creditGrants)} />
+        </PreviewRows>
+      </PreviewSection>
+    </FormPreview>
   )
 }

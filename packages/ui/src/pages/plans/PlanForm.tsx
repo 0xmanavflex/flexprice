@@ -18,7 +18,7 @@ import { Textarea } from '@ui/components/primitives/textarea'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
-import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSteps'
+import { useFormSteps } from '@ui/compositions/useFormSteps'
 import { provenance } from '@ui/provenance'
 import { ChargeForm, type MeterOption, type PriceUnitOption } from '../charges/ChargeForm'
 import { CreditGrantCreateForm } from '../credit-grants/CreditGrantForm'
@@ -282,64 +282,51 @@ export function PlanForm({
       }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
-      footer={
-        adding ? null : (
-          <StepFooter
-            flow={flow}
-            mode={mode}
-            noun="plan"
-            formId={FORM_ID}
-            onCancel={onCancel}
-            isSubmitting={isSubmitting}
-            submitError={submitError}
+      toolbar={{
+        mode,
+        noun: 'plan',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+        hideSubmit: Boolean(adding),
+      }}
+      stepper={{ flow, label: 'Plan steps', hideNav: Boolean(adding) }}
+      preview={
+        isEdit ? undefined : (
+          <PlanPreviewCard
+            name={planDraftName}
+            charges={charges}
+            meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}
+            meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+            included={entitlements.map((e, i) =>
+              includedLine({
+                key: `${e.featureId}-${i}`,
+                name: featureName(e.featureId),
+                unit: features.find((f) => f.id === e.featureId)?.unit,
+                featureType: e.featureType,
+                usageLimit: 'usageLimit' in e ? e.usageLimit : undefined,
+                staticValue: 'staticValue' in e ? e.staticValue : undefined,
+                isEnabled: 'isEnabled' in e ? e.isEnabled : undefined,
+              }),
+            )}
+            credits={grants.map((g, i) => creditLine({ ...g, key: `${i}` }))}
           />
         )
       }
     >
       {/* The staged steps hold their own forms, which cannot nest in this one, so
-          the plan form is rendered around the details fields only. The footer's
+          the plan form is rendered around the details fields only. The toolbar's
           submit reaches it by `form={FORM_ID}` on every step. */}
-      <div
-        className={
-          isEdit ? undefined : 'grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start'
-        }
+      <form
+        id={FORM_ID}
+        onSubmit={flow.guardSubmit(submitAll)}
+        noValidate
+        className="flex flex-col gap-4"
       >
-        <div className="min-w-0">
-          <FormSteps flow={flow} label="Plan steps">
-            <form
-              id={FORM_ID}
-              onSubmit={flow.guardSubmit(submitAll)}
-              noValidate
-              className="flex flex-col gap-4"
-            >
-              {inForm ? content['details'] : null}
-            </form>
-            {inForm ? null : content[flow.step]}
-          </FormSteps>
-        </div>
-        {isEdit ? null : (
-          <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-            <PlanPreviewCard
-              name={planDraftName}
-              charges={charges}
-              meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}
-              meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-              included={entitlements.map((e, i) =>
-                includedLine({
-                  key: `${e.featureId}-${i}`,
-                  name: featureName(e.featureId),
-                  unit: features.find((f) => f.id === e.featureId)?.unit,
-                  featureType: e.featureType,
-                  usageLimit: 'usageLimit' in e ? e.usageLimit : undefined,
-                  staticValue: 'staticValue' in e ? e.staticValue : undefined,
-                  isEnabled: 'isEnabled' in e ? e.isEnabled : undefined,
-                }),
-              )}
-              credits={grants.map((g, i) => creditLine({ ...g, key: `${i}` }))}
-            />
-          </div>
-        )}
-      </div>
+        {inForm ? content['details'] : null}
+      </form>
+      {inForm ? null : content[flow.step]}
     </FormPage>
   )
 }

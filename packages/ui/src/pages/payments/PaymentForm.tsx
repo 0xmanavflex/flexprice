@@ -8,7 +8,6 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
@@ -17,13 +16,7 @@ import { provenance } from '@ui/provenance'
 
 export const PaymentFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'ui/input',
-    'ui/switch',
-    'compositions/form-card',
-    'compositions/form-page',
-    'compositions/form-actions',
-  ],
+  composes: ['ui/input', 'ui/switch', 'compositions/form-card', 'compositions/form-page'],
   note: 'RHF + recordPaymentSchema; the same FormPage shell as the other create forms.',
 })
 
@@ -63,16 +56,14 @@ export function PaymentForm({
       description="Money collected against an invoice. Process it now, or leave it initiated to run later."
       trail={trail}
       width="narrow"
-      footer={
-        <FormActions
-          mode="create"
-          noun="payment"
-          formId="payment-create-form"
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: 'create',
+        noun: 'payment',
+        formId: 'payment-create-form',
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       <form
         id="payment-create-form"

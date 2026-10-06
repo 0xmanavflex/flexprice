@@ -1,3 +1,4 @@
+import { FormPreview, PreviewRow, PreviewRows, PreviewSection } from '@ui/compositions/FormPreview'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -6,7 +7,7 @@ import { provenance } from '@ui/provenance'
  */
 export const CostSheetSummaryCardProvenance = provenance({
   source: 'composition',
-  composes: [],
+  composes: ['compositions/form-preview'],
   note: 'Small draft summary; fetches nothing.',
 })
 
@@ -18,20 +19,19 @@ export interface CostSheetSummaryCardProps {
 
 export function CostSheetSummaryCard({ name, lookupKey, description }: CostSheetSummaryCardProps) {
   return (
-    <aside aria-label="Cost sheet summary" className="bg-background rounded-xl border p-6">
-      <div className="flex flex-col gap-3">
-        <p className="text-muted-foreground text-xs">Summary</p>
-        <p className="text-sm font-medium">{name.trim() || 'Untitled cost sheet'}</p>
-        <p className="text-muted-foreground font-mono text-xs break-all">
-          {lookupKey.trim() || 'No lookup key'}
-        </p>
+    <FormPreview title="Summary" label="Cost sheet summary" description="Updates as you type.">
+      <PreviewSection title="Cost sheet">
+        <PreviewRows>
+          <PreviewRow label="Name" value={name.trim() || 'Untitled cost sheet'} />
+          <PreviewRow label="Lookup key" value={lookupKey.trim() || '—'} />
+        </PreviewRows>
         {description.trim() ? (
-          <p className="text-muted-foreground line-clamp-3 text-xs">{description.trim()}</p>
+          <p className="text-muted-foreground line-clamp-3 text-sm">{description.trim()}</p>
         ) : null}
-        <p className="text-muted-foreground border-t pt-3 text-xs">
-          After you create it, add the cost of each unit of usage on the cost sheet’s page.
-        </p>
-      </div>
-    </aside>
+      </PreviewSection>
+      <p className="text-muted-foreground text-xs">
+        After you create it, add the cost of each unit of usage on the cost sheet’s page.
+      </p>
+    </FormPreview>
   )
 }

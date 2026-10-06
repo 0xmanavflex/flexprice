@@ -205,25 +205,6 @@ export function CustomerForm({
     </form>
   )
 
-  const preview = isEdit ? null : (
-    <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-      <CustomerPreviewCard
-        name={form.watch('name')}
-        externalId={form.watch('externalId')}
-        email={form.watch('email')}
-        phone={form.watch('phone')}
-        addressLine1={form.watch('addressLine1')}
-        addressLine2={form.watch('addressLine2')}
-        addressCity={form.watch('addressCity')}
-        addressState={form.watch('addressState')}
-        addressPostalCode={form.watch('addressPostalCode')}
-        addressCountry={form.watch('addressCountry')}
-        timezone={form.watch('timezone')}
-        taxTreatment={form.watch('taxTreatment')}
-      />
-    </div>
-  )
-
   return (
     <FormPage
       title={isEdit ? `Edit ${customerName || 'customer'}` : 'Create customer'}
@@ -234,6 +215,24 @@ export function CustomerForm({
       }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
+      preview={
+        isEdit ? undefined : (
+          <CustomerPreviewCard
+            name={form.watch('name')}
+            externalId={form.watch('externalId')}
+            email={form.watch('email')}
+            phone={form.watch('phone')}
+            addressLine1={form.watch('addressLine1')}
+            addressLine2={form.watch('addressLine2')}
+            addressCity={form.watch('addressCity')}
+            addressState={form.watch('addressState')}
+            addressPostalCode={form.watch('addressPostalCode')}
+            addressCountry={form.watch('addressCountry')}
+            timezone={form.watch('timezone')}
+            taxTreatment={form.watch('taxTreatment')}
+          />
+        )
+      }
       toolbar={{
         mode: mode,
         noun: 'customer',
@@ -243,14 +242,7 @@ export function CustomerForm({
         submitError,
       }}
     >
-      {isEdit ? (
-        formEl
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-          <div className="min-w-0">{formEl}</div>
-          {preview}
-        </div>
-      )}
+      {formEl}
     </FormPage>
   )
 }

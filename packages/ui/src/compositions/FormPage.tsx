@@ -8,6 +8,8 @@ import { FormToolbar, type FormToolbarProps } from './FormToolbar'
 import { usePublishDetailTrail } from './shell/ShellDetailTrail'
 import { PageBody } from './Page'
 import { Section } from './Section'
+import { StepNav, type FormFlow } from './useFormSteps'
+import { WorkflowStepper } from './WorkflowStepper'
 
 /**
  * The full-page shell for creating or editing a major resource.
@@ -23,9 +25,24 @@ import { Section } from './Section'
  */
 export const FormPageProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/page', 'compositions/section', 'compositions/form-toolbar', 'ui/field'],
-  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, Cancel, primary CTA) with the form cards beneath it, or the Section surface with the actions at its foot.',
+  composes: [
+    'compositions/page',
+    'compositions/section',
+    'compositions/form-toolbar',
+    'compositions/workflow-stepper',
+    'compositions/use-form-steps',
+    'ui/field',
+  ],
+  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, Cancel, primary CTA) with the form beneath it — plus, each optional, a c-stepper-2 style stepper in the header and a solution-billing-8 style preview rail — or the Section surface with the actions at its foot.',
 })
+
+/** A stepper in the header: the form's `useFormSteps` flow, drawn as the header stepper. */
+export interface FormPageStepper {
+  flow: FormFlow
+  label?: string
+  /** Hide Previous/Next, e.g. while a step's own sub-form is open. */
+  hideNav?: boolean
+}
 
 /** What the pinned toolbar needs from the caller; the title is the page's own. */
 export type FormPageToolbar = Omit<FormToolbarProps, 'title'> & {
@@ -48,9 +65,15 @@ export type FormPageProps = FormPageBaseProps &
         /** Pins close, title, Cancel and the CTA above the page; the form cards sit directly beneath. */
         toolbar: FormPageToolbar
         footer?: never
+        /** Optional. Draws the steps in a band under the toolbar; omit for a plain single-page form. */
+        stepper?: FormPageStepper | undefined
+        /** Optional. A `FormPreview` rail beside the form; omit and the fields are centred on their own. */
+        preview?: ReactNode | undefined
       }
     | {
         toolbar?: never
+        stepper?: never
+        preview?: never
         /** The bar at the foot of the surface: usually `FormActions` or a stepper's footer. */
         footer: ReactNode
       }
@@ -63,6 +86,8 @@ export function FormPage({
   children,
   toolbar,
   footer,
+  stepper,
+  preview,
   width = 'narrow',
   className,
 }: FormPageProps) {
@@ -70,11 +95,40 @@ export function FormPage({
 
   if (toolbar) {
     const { submitError, ...toolbarProps } = toolbar
+    const flow = stepper?.flow
+    // A staged form submits from its last step (or any step when editing);
+    // before that the step nav advances.
+    const hideSubmit =
+      toolbarProps.hideSubmit || (flow ? !(flow.isLast || toolbar.mode === 'edit') : false)
+    const fields = (
+      <FieldSet className="gap-0 pb-6">
+        <FieldGroup className={cn(width === 'narrow' && !stepper && !preview && 'max-w-3xl')}>
+          {children}
+        </FieldGroup>
+      </FieldSet>
+    )
     return (
       <div className={cn('flex min-h-0 flex-1 flex-col', className)}>
         {/* The bar sits outside the scrolling region, so it stays put without
             `sticky`; the form cards are their own surfaces underneath. */}
-        <FormToolbar title={title} {...toolbarProps} />
+        <FormToolbar title={title} {...toolbarProps} hideSubmit={hideSubmit} />
+        {stepper && flow ? (
+          <div className="border-border bg-background shrink-0 border-b px-6">
+            <div
+              data-stepper-scroll
+              className="mx-auto w-full max-w-4xl overflow-x-auto overflow-y-hidden py-4"
+            >
+              <h2 className="sr-only">{stepper.label ?? 'Steps'}</h2>
+              <WorkflowStepper
+                variant="header"
+                steps={flow.workflow}
+                currentStep={flow.step}
+                onStepChange={flow.goTo}
+                aria-label={stepper.label ?? 'Steps'}
+              />
+            </div>
+          </div>
+        ) : null}
         <PageBody width="wide" className="self-center pt-6">
           {description ? <p className="text-muted-foreground text-sm">{description}</p> : null}
           {submitError ? (
@@ -82,9 +136,19 @@ export function FormPage({
               <AlertDescription>{submitError}</AlertDescription>
             </Alert>
           ) : null}
-          <FieldSet className="gap-0 pb-6">
-            <FieldGroup className={cn(width === 'narrow' && 'max-w-3xl')}>{children}</FieldGroup>
-          </FieldSet>
+          <div
+            className={cn(
+              preview && 'grid gap-7 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start',
+            )}
+          >
+            <div className="flex min-w-0 flex-col">
+              {fields}
+              {flow && !stepper?.hideNav ? (
+                <StepNav flow={flow} isSubmitting={Boolean(toolbarProps.isSubmitting)} />
+              ) : null}
+            </div>
+            {preview ? <div className="min-w-0 lg:sticky lg:top-0">{preview}</div> : null}
+          </div>
         </PageBody>
       </div>
     )

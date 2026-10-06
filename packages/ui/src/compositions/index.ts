@@ -83,13 +83,17 @@ export { FormPage, FormPageProvenance } from './FormPage'
 export type { FormPageProps, FormPageToolbar } from './FormPage'
 export { FormToolbar, FormToolbarProvenance } from './FormToolbar'
 export type { FormToolbarProps } from './FormToolbar'
-export { FormSteps, FormStepsProvenance, StepFooter, useFormSteps } from './useFormSteps'
-export type {
-  FormFlow,
-  FormStepDef,
-  StepFooterProps,
-  UseFormStepsOptions,
-} from './useFormSteps'
+export { FormSteps, FormStepsProvenance, StepFooter, StepNav, useFormSteps } from './useFormSteps'
+export {
+  FormPreview,
+  FormPreviewProvenance,
+  PreviewAmount,
+  PreviewRow,
+  PreviewRows,
+  PreviewSection,
+} from './FormPreview'
+export type { FormPreviewProps } from './FormPreview'
+export type { FormFlow, FormStepDef, StepFooterProps, UseFormStepsOptions } from './useFormSteps'
 export { ContextualSection, ContextualSectionProvenance } from './ContextualSection'
 export type { ContextualSectionProps } from './ContextualSection'
 export { EditableFields, EditableFieldsProvenance } from './EditableFields'

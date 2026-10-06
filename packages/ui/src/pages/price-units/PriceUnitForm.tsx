@@ -22,7 +22,6 @@ import {
   NumberFieldInput,
 } from '@ui/components/reui/number-field'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
@@ -47,7 +46,6 @@ export const PriceUnitFormProvenance = provenance({
     '@reui/number-field',
     'compositions/form-card',
     'compositions/form-page',
-    'compositions/form-actions',
     'pages/price-unit-preview-card',
   ],
   note: 'RHF + the domain schema, in the shared full-page shell. The rate is a ReUI number field.',
@@ -92,148 +90,144 @@ export function PriceUnitForm({
       description="Define a unit to charge in — its code, symbol, and the rate it converts to a currency at. Only the name can change later."
       trail={trail}
       width="wide"
-      footer={
-        <FormActions
-          mode="create"
-          noun="price unit"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
+      preview={
+        <PriceUnitPreviewCard
+          name={name}
+          code={code}
+          symbol={symbol}
+          baseCurrency={baseCurrency}
+          conversionRate={typeof conversionRate === 'number' ? conversionRate : null}
         />
       }
+      toolbar={{
+        mode: 'create',
+        noun: 'price unit',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-        <form
-          id={FORM_ID}
-          onSubmit={form.handleSubmit((values) => onSubmit(values))}
-          noValidate
-          className="flex min-w-0 flex-col gap-6"
-        >
-          <FormCard title="Unit">
-            <FormRow label="Name" required error={errors.name?.message}>
-              {({ id, ...field }) => (
-                <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-              )}
-            </FormRow>
+      <form
+        id={FORM_ID}
+        onSubmit={form.handleSubmit((values) => onSubmit(values))}
+        noValidate
+        className="flex min-w-0 flex-col gap-6"
+      >
+        <FormCard title="Unit">
+          <FormRow label="Name" required error={errors.name?.message}>
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            )}
+          </FormRow>
 
-            <FormRow
-              label="Code"
-              required
-              hint="A three-character code, such as CRD or TOK."
-              error={errors.code?.message}
-            >
-              {({ id, ...field }) => (
-                <Input
+          <FormRow
+            label="Code"
+            required
+            hint="A three-character code, such as CRD or TOK."
+            error={errors.code?.message}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                maxLength={3}
+                disabled={isSubmitting}
+                {...field}
+                {...form.register('code')}
+              />
+            )}
+          </FormRow>
+
+          <FormRow
+            label="Symbol"
+            required
+            hint="The glyph a rendered amount carries, such as ★."
+            error={errors.symbol?.message}
+          >
+            {({ id, ...field }) => (
+              <Input id={id} disabled={isSubmitting} {...field} {...form.register('symbol')} />
+            )}
+          </FormRow>
+        </FormCard>
+
+        <FormCard title="Conversion">
+          <FormRow
+            label="Base currency"
+            required
+            hint="The currency the rate converts into."
+            error={errors.baseCurrency?.message}
+          >
+            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
+              <Select
+                value={baseCurrency || undefined}
+                onValueChange={(value) =>
+                  form.setValue('baseCurrency', value ?? '', {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+                disabled={isSubmitting}
+              >
+                <SelectTrigger
                   id={id}
-                  maxLength={3}
-                  disabled={isSubmitting}
-                  {...field}
-                  {...form.register('code')}
-                />
-              )}
-            </FormRow>
-
-            <FormRow
-              label="Symbol"
-              required
-              hint="The glyph a rendered amount carries, such as ★."
-              error={errors.symbol?.message}
-            >
-              {({ id, ...field }) => (
-                <Input id={id} disabled={isSubmitting} {...field} {...form.register('symbol')} />
-              )}
-            </FormRow>
-          </FormCard>
-
-          <FormCard title="Conversion">
-            <FormRow
-              label="Base currency"
-              required
-              hint="The currency the rate converts into."
-              error={errors.baseCurrency?.message}
-            >
-              {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
-                <Select
-                  value={baseCurrency || undefined}
-                  onValueChange={(value) =>
-                    form.setValue('baseCurrency', value ?? '', {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  }
-                  disabled={isSubmitting}
+                  className="w-full"
+                  aria-describedby={describedBy}
+                  aria-invalid={invalid}
                 >
-                  <SelectTrigger
-                    id={id}
-                    className="w-full"
-                    aria-describedby={describedBy}
-                    aria-invalid={invalid}
-                  >
-                    <SelectValue placeholder="Select a base currency" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {PRICE_UNIT_CURRENCIES.map((currency) => (
-                      <SelectItem key={currency.code} value={currency.code}>
-                        {currency.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-            </FormRow>
+                  <SelectValue placeholder="Select a base currency" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PRICE_UNIT_CURRENCIES.map((currency) => (
+                    <SelectItem key={currency.code} value={currency.code}>
+                      {currency.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </FormRow>
 
-            <FormRow
-              label="Conversion rate"
-              required
-              hint="How much of the base currency one unit is worth. Must be greater than zero."
-              error={errors.conversionRate?.message}
-            >
-              {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
-                <NumberField
-                  id={id}
-                  value={conversionRate ?? null}
-                  onValueChange={(value) =>
-                    form.setValue('conversionRate', value as never, {
-                      shouldDirty: true,
-                      shouldValidate: true,
-                    })
-                  }
-                  min={0}
-                  step={0.01}
-                  smallStep={0.001}
-                  largeStep={1}
-                  format={{ maximumFractionDigits: 8 }}
-                  disabled={isSubmitting}
-                >
-                  {/* `id` goes on the root NumberField, not the input: the
+          <FormRow
+            label="Conversion rate"
+            required
+            hint="How much of the base currency one unit is worth. Must be greater than zero."
+            error={errors.conversionRate?.message}
+          >
+            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
+              <NumberField
+                id={id}
+                value={conversionRate ?? null}
+                onValueChange={(value) =>
+                  form.setValue('conversionRate', value as never, {
+                    shouldDirty: true,
+                    shouldValidate: true,
+                  })
+                }
+                min={0}
+                step={0.01}
+                smallStep={0.001}
+                largeStep={1}
+                format={{ maximumFractionDigits: 8 }}
+                disabled={isSubmitting}
+              >
+                {/* `id` goes on the root NumberField, not the input: the
                   increment/decrement buttons' aria-controls reference the root's
                   id (axe aria-valid-attr-value). This matches ChargeForm. */}
-                  <NumberFieldGroup>
-                    <NumberFieldDecrement />
-                    <NumberFieldInput
-                      inputMode="decimal"
-                      aria-label="Conversion rate"
-                      aria-describedby={describedBy}
-                      aria-invalid={invalid}
-                    />
-                    <NumberFieldIncrement />
-                  </NumberFieldGroup>
-                </NumberField>
-              )}
-            </FormRow>
-          </FormCard>
-        </form>
-        <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-          <PriceUnitPreviewCard
-            name={name}
-            code={code}
-            symbol={symbol}
-            baseCurrency={baseCurrency}
-            conversionRate={typeof conversionRate === 'number' ? conversionRate : null}
-          />
-        </div>
-      </div>
+                <NumberFieldGroup>
+                  <NumberFieldDecrement />
+                  <NumberFieldInput
+                    inputMode="decimal"
+                    aria-label="Conversion rate"
+                    aria-describedby={describedBy}
+                    aria-invalid={invalid}
+                  />
+                  <NumberFieldIncrement />
+                </NumberFieldGroup>
+              </NumberField>
+            )}
+          </FormRow>
+        </FormCard>
+      </form>
     </FormPage>
   )
 }

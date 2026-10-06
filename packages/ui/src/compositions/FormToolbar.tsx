@@ -28,6 +28,8 @@ export interface FormToolbarProps {
   onCancel?: (() => void) | undefined
   isSubmitting?: boolean
   submitLabel?: string
+  /** A multi-step form submits only from its last step; earlier steps advance from the step nav instead. */
+  hideSubmit?: boolean
 }
 
 export function FormToolbar({
@@ -38,6 +40,7 @@ export function FormToolbar({
   onCancel,
   isSubmitting = false,
   submitLabel,
+  hideSubmit = false,
 }: FormToolbarProps) {
   const label =
     submitLabel ?? (mode === 'create' ? `Create${noun ? ` ${noun}` : ''}` : 'Save changes')
@@ -74,9 +77,11 @@ export function FormToolbar({
             Cancel
           </Button>
         ) : null}
-        <Button type="submit" form={formId} disabled={isSubmitting}>
-          {isSubmitting ? 'Saving…' : label}
-        </Button>
+        {hideSubmit ? null : (
+          <Button type="submit" form={formId} disabled={isSubmitting}>
+            {isSubmitting ? 'Saving…' : label}
+          </Button>
+        )}
       </div>
     </header>
   )

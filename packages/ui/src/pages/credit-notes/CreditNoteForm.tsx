@@ -11,7 +11,6 @@ import {
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
 import { Textarea } from '@ui/components/primitives/textarea'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
@@ -26,7 +25,6 @@ export const CreditNoteFormProvenance = provenance({
     'ui/switch',
     'compositions/form-card',
     'compositions/form-page',
-    'compositions/form-actions',
   ],
   note: 'RHF + createCreditNoteSchema; the lines come from the chosen invoice.',
 })
@@ -96,16 +94,14 @@ export function CreditNoteForm({
       description="Give back part of an invoice. Process it now, or keep a draft to review."
       trail={trail}
       width="narrow"
-      footer={
-        <FormActions
-          mode="create"
-          noun="credit note"
-          formId="credit-note-create-form"
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
-      }
+      toolbar={{
+        mode: 'create',
+        noun: 'credit note',
+        formId: 'credit-note-create-form',
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
       <form
         id="credit-note-create-form"

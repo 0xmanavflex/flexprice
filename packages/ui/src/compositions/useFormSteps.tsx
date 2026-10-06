@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from 'react'
+import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { FormActions } from './FormActions'
@@ -29,6 +30,8 @@ export const FormStepsProvenance = provenance({
 export interface FormStepDef {
   id: string
   title: string
+  /** A short line under the title in the header stepper. */
+  description?: string
 }
 
 export interface UseFormStepsOptions {
@@ -90,7 +93,12 @@ export function useFormSteps({
             : i <= reachable
               ? 'upcoming'
               : 'locked'
-      return { id: s.id, title: s.title, status }
+      return {
+        id: s.id,
+        title: s.title,
+        ...(s.description ? { description: s.description } : {}),
+        status,
+      }
     })
   }, [steps, done, step, unlockAll])
 
@@ -157,6 +165,37 @@ export function FormSteps({
         {children}
       </WorkflowStepper>
     </>
+  )
+}
+
+/**
+ * Previous on the left, Next on the right: the foot of a header-stepper form.
+ * The final step has no Next — the toolbar's primary action takes over there.
+ */
+export function StepNav({
+  flow,
+  isSubmitting = false,
+}: {
+  flow: FormFlow
+  isSubmitting?: boolean
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 border-t pt-4">
+      {flow.isFirst ? (
+        <span aria-hidden="true" />
+      ) : (
+        <Button type="button" variant="outline" onClick={flow.back} disabled={isSubmitting}>
+          <ArrowLeftIcon aria-hidden="true" />
+          Previous
+        </Button>
+      )}
+      {flow.isLast ? null : (
+        <Button type="button" onClick={() => void flow.next()} disabled={isSubmitting}>
+          Next
+          <ArrowRightIcon aria-hidden="true" />
+        </Button>
+      )}
+    </div>
   )
 }
 

@@ -28,7 +28,6 @@ import { Switch } from '@ui/components/primitives/switch'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { Field } from '@ui/compositions/Field'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
 import { FeaturePreviewCard } from './FeaturePreviewCard'
@@ -55,13 +54,7 @@ import { provenance } from '@ui/provenance'
  */
 export const FeatureFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'ui/input',
-    'ui/textarea',
-    'ui/switch',
-    'compositions/field',
-    'compositions/form-actions',
-  ],
+  composes: ['ui/input', 'ui/textarea', 'ui/switch', 'compositions/field'],
   note: 'RHF + the domain schemas; replaces a 1,106-line page holding four state slices.',
 })
 
@@ -308,14 +301,7 @@ function normalize(values: FormValues, mode: 'create' | 'edit') {
 }
 
 export function FeatureForm(props: FeatureFormProps) {
-  const {
-    mode,
-    onCancel,
-    isSubmitting = false,
-    submitError = null,
-    groups = [],
-    trail,
-  } = props
+  const { mode, onCancel, isSubmitting = false, submitError = null, groups = [], trail } = props
   const feature = props.mode === 'edit' ? props.feature : undefined
   const isEdit = mode === 'edit'
 
@@ -464,10 +450,7 @@ export function FeatureForm(props: FeatureFormProps) {
           change.
         </p>
       ) : null}
-      <FormCard
-        title="Configuration"
-        description="How usage is measured from the events you send."
-      >
+      <FormCard title="Configuration" description="How usage is measured from the events you send.">
         <FormRow label="Event name" required error={message('meter.eventName')}>
           {({ id, ...field }) => (
             <Input
@@ -764,30 +747,12 @@ export function FeatureForm(props: FeatureFormProps) {
   ) : null
 
   const formEl = (
-    <form
-      id={FORM_ID}
-      onSubmit={submitAll}
-      noValidate
-      className="flex flex-col gap-6"
-    >
+    <form id={FORM_ID} onSubmit={submitAll} noValidate className="flex flex-col gap-6">
       {typeStep}
       {detailsStep}
       {meterSteps}
       {additionalStep}
     </form>
-  )
-
-  const preview = isEdit ? null : (
-    <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-      <FeaturePreviewCard
-        name={form.watch('name')}
-        lookupKey={form.watch('lookupKey')}
-        type={type}
-        eventName={form.watch('meter.eventName')}
-        aggregationType={aggregationType}
-        resetUsage={form.watch('meter.resetUsage')}
-      />
-    </div>
   )
 
   return (
@@ -800,25 +765,28 @@ export function FeatureForm(props: FeatureFormProps) {
       }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
-      footer={
-        <FormActions
-          mode={mode}
-          noun="feature"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
-        />
+      preview={
+        isEdit ? undefined : (
+          <FeaturePreviewCard
+            name={form.watch('name')}
+            lookupKey={form.watch('lookupKey')}
+            type={type}
+            eventName={form.watch('meter.eventName')}
+            aggregationType={aggregationType}
+            resetUsage={form.watch('meter.resetUsage')}
+          />
+        )
       }
+      toolbar={{
+        mode,
+        noun: 'feature',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
-      {isEdit ? (
-        formEl
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-          <div className="min-w-0">{formEl}</div>
-          {preview}
-        </div>
-      )}
+      {formEl}
     </FormPage>
   )
 }

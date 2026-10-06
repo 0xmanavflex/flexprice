@@ -12,7 +12,6 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormActions } from '@ui/compositions/FormActions'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { DateInput } from '@ui/compositions/DateInput'
@@ -35,7 +34,6 @@ export const CouponCreateFormProvenance = provenance({
     'ui/input',
     'compositions/form-card',
     'compositions/form-page',
-    'compositions/form-actions',
     'pages/coupon-preview-card',
   ],
   note: 'RHF + the domain schema. One page of titled sections with a live summary rail; type and cadence reveal only the fields that apply.',
@@ -285,35 +283,31 @@ export function CouponCreateForm({
       description="A discount customers can redeem. Its type, amount and duration are fixed once created."
       trail={trail}
       width="wide"
-      footer={
-        <FormActions
-          mode="create"
-          noun="coupon"
-          formId={FORM_ID}
-          onCancel={onCancel}
-          isSubmitting={isSubmitting}
-          submitError={submitError}
+      preview={
+        <CouponPreviewCard
+          name={form.watch('name')}
+          code={form.watch('couponCode') ?? ''}
+          type={type}
+          percentageOff={form.watch('percentageOff')}
+          amountOff={form.watch('amountOff')}
+          currency={form.watch('currency')}
+          cadence={cadence}
+          durationInPeriods={form.watch('durationInPeriods')}
+          maxRedemptions={form.watch('maxRedemptions')}
+          redeemAfter={form.watch('redeemAfter')}
+          redeemBefore={form.watch('redeemBefore')}
         />
       }
+      toolbar={{
+        mode: 'create',
+        noun: 'coupon',
+        formId: FORM_ID,
+        onCancel,
+        isSubmitting,
+        submitError,
+      }}
     >
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-        <div className="min-w-0">{formEl}</div>
-        <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-          <CouponPreviewCard
-            name={form.watch('name')}
-            code={form.watch('couponCode') ?? ''}
-            type={type}
-            percentageOff={form.watch('percentageOff')}
-            amountOff={form.watch('amountOff')}
-            currency={form.watch('currency')}
-            cadence={cadence}
-            durationInPeriods={form.watch('durationInPeriods')}
-            maxRedemptions={form.watch('maxRedemptions')}
-            redeemAfter={form.watch('redeemAfter')}
-            redeemBefore={form.watch('redeemBefore')}
-          />
-        </div>
-      </div>
+      {formEl}
     </FormPage>
   )
 }

@@ -125,6 +125,15 @@ export function AddonForm({
       }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
+      preview={
+        isEdit ? undefined : (
+          <AddonPreviewCard
+            name={form.watch('name')}
+            lookupKey={form.watch('lookupKey')}
+            description={form.watch('description') ?? ''}
+          />
+        )
+      }
       toolbar={{
         mode: mode,
         noun: 'add-on',
@@ -134,20 +143,7 @@ export function AddonForm({
         submitError,
       }}
     >
-      {isEdit ? (
-        formEl
-      ) : (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_21rem] lg:items-start">
-          <div className="min-w-0">{formEl}</div>
-          <div className="flex flex-col gap-4 lg:sticky lg:top-4">
-            <AddonPreviewCard
-              name={form.watch('name')}
-              lookupKey={form.watch('lookupKey')}
-              description={form.watch('description') ?? ''}
-            />
-          </div>
-        </div>
-      )}
+      {formEl}
     </FormPage>
   )
 }

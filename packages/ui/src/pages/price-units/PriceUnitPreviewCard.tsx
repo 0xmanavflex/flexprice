@@ -1,3 +1,4 @@
+import { FormPreview, PreviewAmount, PreviewSection } from '@ui/compositions/FormPreview'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -7,7 +8,7 @@ import { provenance } from '@ui/provenance'
  */
 export const PriceUnitPreviewCardProvenance = provenance({
   source: 'composition',
-  composes: [],
+  composes: ['compositions/form-preview'],
   note: 'Live summary of the price unit being drafted; fetches nothing.',
 })
 
@@ -34,31 +35,32 @@ export function PriceUnitPreviewCard({
       : null
 
   return (
-    <aside aria-label="Price unit preview" className="bg-background rounded-xl border p-6">
-      <div className="flex flex-col gap-3">
-        <p className="text-muted-foreground text-xs">How it will look</p>
-        <div className="flex items-center gap-3">
-          <span
-            aria-hidden="true"
-            className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-md text-lg"
-          >
-            {symbol.trim() || '·'}
-          </span>
-          <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{name.trim() || 'Untitled price unit'}</p>
-            <p className="text-muted-foreground font-mono text-xs">{unitCode}</p>
-          </div>
-        </div>
-        <div className="border-t pt-3 text-sm">
-          {conversion ? (
-            <p>{conversion}</p>
-          ) : (
-            <p className="text-muted-foreground text-xs">
-              Choose a base currency and a rate to see the conversion.
-            </p>
-          )}
+    <FormPreview
+      title="How it will look"
+      label="Price unit preview"
+      description="Updates as you type."
+    >
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden="true"
+          className="bg-muted flex size-10 shrink-0 items-center justify-center rounded-md text-lg"
+        >
+          {symbol.trim() || '·'}
+        </span>
+        <div className="min-w-0">
+          <p className="truncate text-sm font-medium">{name.trim() || 'Untitled price unit'}</p>
+          <p className="text-muted-foreground font-mono text-xs">{unitCode}</p>
         </div>
       </div>
-    </aside>
+      {conversion ? (
+        <PreviewAmount label="Conversion" value={conversion} />
+      ) : (
+        <PreviewSection title="Conversion">
+          <p className="text-muted-foreground text-sm">
+            Choose a base currency and a rate to see the conversion.
+          </p>
+        </PreviewSection>
+      )}
+    </FormPreview>
   )
 }
