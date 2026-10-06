@@ -1,16 +1,12 @@
 import { useEffect, useId, useRef } from 'react'
+import { LabelWithHint } from '@ui/compositions/LabelWithHint'
 import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
 import { useState } from 'react'
 import { type SignInCredentials, signInSchema } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import {
-  Field as FieldRoot,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@ui/components/primitives/field'
+import { Field as FieldRoot, FieldError, FieldGroup } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
 import {
   InputGroup,
@@ -125,7 +121,11 @@ export function SignInForm({
       ) : null}
 
       <FieldGroup className="gap-4">
-        <Field label="Email" error={errors.email?.message}>
+        <Field
+          label="Email"
+          hint="The email address of your Flexprice account."
+          error={errors.email?.message}
+        >
           {({ id, ...field }) => (
             <Input
               id={id}
@@ -146,7 +146,12 @@ export function SignInForm({
 
         <FieldRoot data-invalid={errors.password ? true : undefined}>
           <div className="flex items-center justify-between">
-            <FieldLabel htmlFor={passwordId}>Password</FieldLabel>
+            <LabelWithHint
+              htmlFor={passwordId}
+              hint="The password you chose when you created your account."
+            >
+              Password
+            </LabelWithHint>
             {onForgotPassword ? (
               <button
                 type="button"

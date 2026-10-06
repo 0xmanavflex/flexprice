@@ -119,7 +119,12 @@ export function PriceUnitForm({
           description="The unit, and the currency rate it converts into."
           status="required"
         >
-          <FormRow label="Name" required error={errors.name?.message}>
+          <FormRow
+            label="Name"
+            hint="What this custom currency is called."
+            required
+            error={errors.name?.message}
+          >
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
             )}

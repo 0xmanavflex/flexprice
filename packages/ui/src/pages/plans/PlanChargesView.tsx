@@ -1,4 +1,5 @@
 import { GaugeIcon, PlusIcon, RepeatIcon } from 'lucide-react'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import {
   BILLING_PERIOD_LABEL,
   type BillingPeriod,
@@ -88,17 +89,18 @@ export function PlanChargesView({
       }
     >
       {charges.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-          <p className="text-muted-foreground text-[13px]">
-            Nothing is billed yet. Add a fixed fee, a usage charge, or both.
-          </p>
-          {readOnly ? null : (
-            <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-              <PlusIcon aria-hidden />
-              Add the first charge
-            </Button>
-          )}
-        </div>
+        <SectionEmpty
+          title="No charges yet"
+          description="Nothing is billed yet. Add a fixed fee, a usage charge, or both."
+          action={
+            readOnly ? null : (
+              <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+                <PlusIcon aria-hidden />
+                Add the first charge
+              </Button>
+            )
+          }
+        />
       ) : (
         GROUPS.map((group) => {
           const rows = charges.filter((c) => c.type === group.type)
@@ -107,7 +109,10 @@ export function PlanChargesView({
           return (
             <div key={group.type} role="group" aria-label={group.title}>
               <div
-                className={cn('flex items-center gap-3 border-y px-6 py-2.5 first:border-t-0', group.band)}
+                className={cn(
+                  'flex items-center gap-3 border-y px-6 py-2.5 first:border-t-0',
+                  group.band,
+                )}
               >
                 <span
                   aria-hidden
@@ -136,7 +141,9 @@ export function PlanChargesView({
                         group.rail,
                       )}
                     >
-                      <p className="truncate text-sm font-medium">{chargeLabel(draft, meterName)}</p>
+                      <p className="truncate text-sm font-medium">
+                        {chargeLabel(draft, meterName)}
+                      </p>
                       <span className="text-muted-foreground truncate text-[13px]">
                         {modelLabel(charge)}
                       </span>

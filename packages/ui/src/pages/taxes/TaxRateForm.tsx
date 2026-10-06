@@ -97,7 +97,12 @@ export function TaxRateCreateForm({
         noValidate
       >
         <FormCard title="Tax rate details" status="required">
-          <FormRow label="Name" required error={errors.name?.message}>
+          <FormRow
+            label="Name"
+            hint="What the tax rate is called on invoices."
+            required
+            error={errors.name?.message}
+          >
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
             )}
@@ -113,7 +118,12 @@ export function TaxRateCreateForm({
             )}
           </FormRow>
 
-          <FormRow label="Rate (%)" required error={errors.percentageValue?.message}>
+          <FormRow
+            label="Rate (%)"
+            hint="The percentage added to taxable amounts."
+            required
+            error={errors.percentageValue?.message}
+          >
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -144,7 +154,12 @@ export function TaxRateCreateForm({
             )}
           </FormRow>
 
-          <FormRow label="Description" align="start" error={errors.description?.message}>
+          <FormRow
+            label="Description"
+            hint="An internal note about when this rate applies. Optional."
+            align="start"
+            error={errors.description?.message}
+          >
             {({ id, ...field }) => (
               <Textarea
                 id={id}
@@ -198,18 +213,32 @@ export function TaxRateEditForm({
         noValidate
       >
         <FormCard title="Tax rate details" status="required">
-          <FormRow label="Name" required error={errors.name?.message}>
+          <FormRow
+            label="Name"
+            hint="What the tax rate is called on invoices."
+            required
+            error={errors.name?.message}
+          >
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
             )}
           </FormRow>
-          <FormRow label="Code" required error={errors.code?.message}>
+          <FormRow
+            label="Code"
+            hint="Stable identifier used by the API and by tax associations."
+            required
+            error={errors.code?.message}
+          >
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('code')} />
             )}
           </FormRow>
 
-          <FormRow label="Status" error={errors.status?.message}>
+          <FormRow
+            label="Status"
+            hint="Whether the rate can be attached to customers."
+            error={errors.status?.message}
+          >
             {({ id, ...field }) => (
               <Controller
                 control={form.control}
@@ -228,7 +257,12 @@ export function TaxRateEditForm({
             )}
           </FormRow>
 
-          <FormRow label="Description" align="start" error={errors.description?.message}>
+          <FormRow
+            label="Description"
+            hint="An internal note about when this rate applies. Optional."
+            align="start"
+            error={errors.description?.message}
+          >
             {({ id, ...field }) => (
               <Textarea
                 id={id}

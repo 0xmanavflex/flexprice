@@ -283,8 +283,8 @@ export function ChargeForm({
 
         <Field
           label="Currency"
+          hint={priceUnit ? 'Follows the price unit.' : 'The currency the charge is billed in.'}
           required
-          {...(priceUnit ? { hint: 'Follows the price unit.' } : {})}
         >
           {({ id, 'aria-describedby': describedBy }) =>
             isEdit || priceUnit ? (
@@ -308,7 +308,7 @@ export function ChargeForm({
           }
         </Field>
 
-        <Field label="Billing period" required>
+        <Field label="Billing period" hint="How often the charge is billed." required>
           {({ id }) =>
             isEdit ? (
               lockedInput(id, BILLING_PERIOD_LABEL[billingPeriod])
@@ -371,7 +371,11 @@ export function ChargeForm({
         ) : null}
 
         {!isUsage ? (
-          <Field label="Invoice timing" required>
+          <Field
+            label="Invoice timing"
+            hint="Whether the charge is invoiced at the start or the end of each period."
+            required
+          >
             {({ id }) =>
               isEdit ? (
                 lockedInput(
@@ -488,7 +492,10 @@ export function ChargeForm({
       {billingModel === BillingModel.Tiered ? (
         <div className="flex flex-col gap-3">
           <div className="max-w-sm">
-            <Field label="Tier mode">
+            <Field
+              label="Tier mode"
+              hint="Whether the whole quantity is priced at its tier rate (volume) or tier by tier (slab)."
+            >
               {({ id }) => (
                 <Controller
                   control={form.control}

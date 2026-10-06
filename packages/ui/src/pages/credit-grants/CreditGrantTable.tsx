@@ -5,10 +5,10 @@ import {
   type CreditGrant,
   CreditGrantCadence,
 } from '@fp/domain'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { Button } from '@ui/components/primitives/button'
 import { PlusIcon } from 'lucide-react'
 
-import { EmptyState } from '@ui/compositions/EmptyState'
 import { Section } from '@ui/compositions/Section'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
@@ -43,30 +43,25 @@ function cadenceLabel(grant: CreditGrant): string {
 
 export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGrantTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
+  const addButton = onAdd ? (
+    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+      <PlusIcon aria-hidden="true" />
+      Add credit grant
+    </Button>
+  ) : null
   return (
     <Section
       title="Credit grants"
       description="Balances handed to subscribers"
       flush
-      {...(onAdd
-        ? {
-            action: (
-              <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-                <PlusIcon aria-hidden="true" />
-                Add credit grant
-              </Button>
-            ),
-          }
-        : {})}
+      {...(addButton && grants.length > 0 ? { action: addButton } : {})}
     >
       {grants.length === 0 ? (
-        <div className="p-6">
-          <EmptyState
-            size="inline"
-            title="No credit grants yet"
-            description="Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period. Add one to include credits in the plan."
-          />
-        </div>
+        <SectionEmpty
+          title="No credit grants yet"
+          description={`Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`}
+          action={addButton}
+        />
       ) : (
         <DetailTable
           label="Credit grants"

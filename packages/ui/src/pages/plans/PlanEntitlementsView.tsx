@@ -1,4 +1,5 @@
 import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from 'lucide-react'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { EmDash } from '../shared/cells'
 import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -77,15 +78,16 @@ export function PlanEntitlementsView({
       }
     >
       {entitlements.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-          <p className="text-muted-foreground text-[13px]">
-            No entitlements yet. Add the features this plan includes.
-          </p>
-          <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-            <PlusIcon aria-hidden />
-            Add entitlement
-          </Button>
-        </div>
+        <SectionEmpty
+          title="No entitlements yet"
+          description="Add the features this plan includes."
+          action={
+            <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+              <PlusIcon aria-hidden />
+              Add entitlement
+            </Button>
+          }
+        />
       ) : (
         <DetailTable
           label="Entitlements"

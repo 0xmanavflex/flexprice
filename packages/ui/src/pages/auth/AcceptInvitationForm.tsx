@@ -117,7 +117,11 @@ export function AcceptInvitationForm({
         )}
       </Field>
 
-      <Field label="Type it again" error={errors.confirm?.message}>
+      <Field
+        label="Type it again"
+        hint="Repeat the password to make sure it was typed correctly."
+        error={errors.confirm?.message}
+      >
         {({ id, ...field }) => (
           <Input
             id={id}

@@ -89,7 +89,11 @@ export function ForgotPasswordForm({
         </p>
       ) : null}
 
-      <Field label="Email" error={form.formState.errors.email?.message}>
+      <Field
+        label="Email"
+        hint="The address you signed up with. The reset link is sent here."
+        error={form.formState.errors.email?.message}
+      >
         {({ id, ...field }) => (
           <Input
             id={id}

@@ -74,7 +74,12 @@ export function CouponForm({
           title="Coupon details"
           description="Only the name can change once a coupon exists."
         >
-          <FormRow label="Name" required error={errors.name?.message}>
+          <FormRow
+            label="Name"
+            hint="Shown on invoices wherever the discount is applied."
+            required
+            error={errors.name?.message}
+          >
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
             )}

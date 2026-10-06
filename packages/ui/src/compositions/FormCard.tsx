@@ -13,6 +13,7 @@ import { Separator } from '@ui/components/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { DescriptionTip } from './DescriptionTip'
+import { InfoHint } from './InfoHint'
 
 /**
  * The main content of a form: ONE card per form (or per step), laid out as in
@@ -28,7 +29,7 @@ import { DescriptionTip } from './DescriptionTip'
  */
 export const FormCardProvenance = provenance({
   source: 'composition',
-  composes: ['ui/field', 'ui/separator', '@reui/badge'],
+  composes: ['ui/field', 'ui/separator', '@reui/badge', 'compositions/InfoHint'],
   note: 'form-9 layout: one card, header with badge, title+description / control rows, dashed inset separators. Lineage: blocks/form-9.',
 })
 
@@ -150,9 +151,10 @@ export function FormRow({
               {asterisk}
             </FieldTitle>
           )}
+          {hint ? <InfoHint>{hint}</InfoHint> : null}
         </div>
         {hint ? (
-          <FieldDescription id={hintId} className="text-[13px]">
+          <FieldDescription id={hintId} className="sr-only">
             {hint}
           </FieldDescription>
         ) : null}

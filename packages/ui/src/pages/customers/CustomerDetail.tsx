@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { CopyIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, WalletIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
@@ -399,9 +400,12 @@ function OverviewTab({
               onOpenPlan={onOpenPlan}
             />
           ) : (
-            <p className="text-muted-foreground rounded-xl border border-dashed px-6 py-10 text-center text-[13px]">
-              No active subscriptions. Create one to start billing this customer.
-            </p>
+            <div className="rounded-xl border border-dashed">
+              <SectionEmpty
+                title="No active subscriptions"
+                description="Create one to start billing this customer."
+              />
+            </div>
           )}
         </section>
 

@@ -67,7 +67,12 @@ export function CostSheetForm({
         status="required"
         description="Only the name is required; description and lookup key are optional."
       >
-        <FormRow label="Name" required error={errors.name?.message}>
+        <FormRow
+          label="Name"
+          hint="What the cost sheet is called in reports."
+          required
+          error={errors.name?.message}
+        >
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
           )}
@@ -76,7 +81,11 @@ export function CostSheetForm({
         <FormRow
           align="start"
           label="Description"
-          {...(isEdit ? { hint: 'A blank field leaves the saved value unchanged.' } : {})}
+          hint={
+            isEdit
+              ? 'A blank field leaves the saved value unchanged.'
+              : 'What costs the sheet tracks. Optional.'
+          }
           error={errors.description?.message}
         >
           {({ id, ...field }) => (

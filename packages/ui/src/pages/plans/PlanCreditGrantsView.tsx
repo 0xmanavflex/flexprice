@@ -1,4 +1,5 @@
 import { PlusIcon, CoinsIcon } from 'lucide-react'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
@@ -48,15 +49,16 @@ export function PlanCreditGrantsView({
       }
     >
       {grants.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-          <p className="text-muted-foreground text-[13px]">
-            No credit grants. Subscribers start with an empty wallet.
-          </p>
-          <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-            <PlusIcon aria-hidden />
-            Add grant
-          </Button>
-        </div>
+        <SectionEmpty
+          title="No credit grants yet"
+          description="Subscribers start with an empty wallet."
+          action={
+            <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+              <PlusIcon aria-hidden />
+              Add grant
+            </Button>
+          }
+        />
       ) : (
         <DetailTable
           label="Credit grants"

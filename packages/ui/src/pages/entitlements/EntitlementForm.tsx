@@ -125,7 +125,12 @@ export function EntitlementCreateForm({
 
   return (
     <form onSubmit={submit} noValidate className="flex flex-col gap-5">
-      <Field label="Feature" required error={messageOf(errors, 'featureId')}>
+      <Field
+        label="Feature"
+        hint="The feature being granted."
+        required
+        error={messageOf(errors, 'featureId')}
+      >
         {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
           <OptionCombobox
             id={id}
@@ -165,7 +170,12 @@ export function EntitlementCreateForm({
       ) : null}
 
       {feature && featureType === FeatureType.Static ? (
-        <Field label="Value" required error={messageOf(errors, 'staticValue')}>
+        <Field
+          label="Value"
+          hint="How much of the feature is included."
+          required
+          error={messageOf(errors, 'staticValue')}
+        >
           {({ id, ...field }) => (
             <Input
               id={id}
@@ -196,7 +206,12 @@ export function EntitlementCreateForm({
       ) : null}
 
       {feature && featureType === FeatureType.Config ? (
-        <Field label="Configuration (JSON)" required error={configError ?? undefined}>
+        <Field
+          label="Configuration (JSON)"
+          hint="Extra settings passed with the entitlement, as a JSON object."
+          required
+          error={configError ?? undefined}
+        >
           {({ id, ...field }) => (
             <Textarea
               id={id}
@@ -287,7 +302,12 @@ export function EntitlementEditForm({
       ) : null}
 
       {feature.type === FeatureType.Static ? (
-        <Field label="Value" required error={messageOf(errors, 'staticValue')}>
+        <Field
+          label="Value"
+          hint="How much of the feature is included."
+          required
+          error={messageOf(errors, 'staticValue')}
+        >
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('staticValue')} />
           )}
@@ -312,7 +332,12 @@ export function EntitlementEditForm({
       ) : null}
 
       {feature.type === FeatureType.Config ? (
-        <Field label="Configuration (JSON)" required error={configError ?? undefined}>
+        <Field
+          label="Configuration (JSON)"
+          hint="Extra settings passed with the entitlement, as a JSON object."
+          required
+          error={configError ?? undefined}
+        >
           {({ id, ...field }) => (
             <Textarea
               id={id}

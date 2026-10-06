@@ -8,6 +8,7 @@ import {
   PriceType,
   TierMode,
 } from '@fp/domain'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/Section'
@@ -126,11 +127,7 @@ export function ChargeTable({
 
     return (
       <Section title={title} description={description} flush>
-        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-          <p className="text-sm font-medium">No charges yet</p>
-          <p className="text-muted-foreground max-w-md text-[13px]">{emptyText}</p>
-          {addButton}
-        </div>
+        <SectionEmpty title="No charges yet" description={emptyText} action={addButton} />
       </Section>
     )
   }

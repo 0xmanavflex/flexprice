@@ -113,7 +113,12 @@ export function CreditNoteForm({
           description="Credit part or all of an invoice."
           status="required"
         >
-          <FormRow label="Invoice" required error={errors.invoiceId?.message}>
+          <FormRow
+            label="Invoice"
+            hint="The invoice this credit note reduces."
+            required
+            error={errors.invoiceId?.message}
+          >
             {({ id, ...field }) => (
               <Controller
                 control={form.control}
@@ -135,7 +140,12 @@ export function CreditNoteForm({
               />
             )}
           </FormRow>
-          <FormRow label="Reason" required error={errors.reason?.message}>
+          <FormRow
+            label="Reason"
+            hint="Why the credit is being issued."
+            required
+            error={errors.reason?.message}
+          >
             {({ id, ...field }) => (
               <Controller
                 control={form.control}
@@ -214,7 +224,12 @@ export function CreditNoteForm({
               />
             )}
           </FormRow>
-          <FormRow label="Memo" align="start" error={errors.memo?.message}>
+          <FormRow
+            label="Memo"
+            hint="A note shown to the customer on the credit note."
+            align="start"
+            error={errors.memo?.message}
+          >
             {({ id, ...field }) => (
               <Textarea
                 id={id}

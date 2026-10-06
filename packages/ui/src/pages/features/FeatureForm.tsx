@@ -352,7 +352,12 @@ export function FeatureForm(props: FeatureFormProps) {
 
   const detailsRows = (
     <>
-      <FormRow label="Name" required error={message('name')}>
+      <FormRow
+        label="Name"
+        hint="What the feature is called in the console and on plans."
+        required
+        error={message('name')}
+      >
         {({ id, ...field }) => <Input id={id} disabled={isSubmitting} {...field} {...nameField} />}
       </FormRow>
       <FormRow
@@ -374,7 +379,12 @@ export function FeatureForm(props: FeatureFormProps) {
           />
         )}
       </FormRow>
-      <FormRow label="Description" align="start" error={message('description')}>
+      <FormRow
+        label="Description"
+        hint="What the feature measures or unlocks. Optional."
+        align="start"
+        error={message('description')}
+      >
         {({ id, ...field }) => (
           <Textarea
             id={id}
@@ -513,7 +523,7 @@ export function FeatureForm(props: FeatureFormProps) {
 
   const aggregationRows = (
     <>
-      <FormRow label="Aggregation">
+      <FormRow label="Aggregation" hint="How events are combined into a usage number.">
         {({ id, ...field }) => (
           <OptionSelect
             id={id}
@@ -550,7 +560,12 @@ export function FeatureForm(props: FeatureFormProps) {
       ) : null}
 
       {aggregationType === AggregationType.SumWithMultiplier ? (
-        <FormRow label="Multiplier" required error={message('meter.multiplier')}>
+        <FormRow
+          label="Multiplier"
+          hint="Scales each event's value before it is summed."
+          required
+          error={message('meter.multiplier')}
+        >
           {({ id, ...field }) => (
             <Input
               id={id}
@@ -581,17 +596,28 @@ export function FeatureForm(props: FeatureFormProps) {
         </FormRow>
       ) : null}
 
-      <FormRow label="Unit (singular)" error={message('unitSingular')}>
+      <FormRow
+        label="Unit (singular)"
+        hint="Shown after a quantity of one, for example call."
+        error={message('unitSingular')}
+      >
         {({ id, ...field }) => (
           <Input id={id} placeholder="call" {...field} {...form.register('unitSingular')} />
         )}
       </FormRow>
-      <FormRow label="Unit (plural)" error={message('unitPlural')}>
+      <FormRow
+        label="Unit (plural)"
+        hint="Shown after any other quantity, for example calls."
+        error={message('unitPlural')}
+      >
         {({ id, ...field }) => (
           <Input id={id} placeholder="calls" {...field} {...form.register('unitPlural')} />
         )}
       </FormRow>
-      <FormRow label="Reset usage">
+      <FormRow
+        label="Reset usage"
+        hint="Whether the usage total starts again each period or keeps building up."
+      >
         {({ id, ...field }) => (
           <OptionSelect
             id={id}
@@ -611,14 +637,22 @@ export function FeatureForm(props: FeatureFormProps) {
   const additionalRows = (
     <>
       {isMetered ? null : (
-        <FormRow label="Unit (singular)" error={message('unitSingular')}>
+        <FormRow
+          label="Unit (singular)"
+          hint="Shown after a quantity of one, for example call."
+          error={message('unitSingular')}
+        >
           {({ id, ...field }) => (
             <Input id={id} placeholder="seat" {...field} {...form.register('unitSingular')} />
           )}
         </FormRow>
       )}
       {isMetered ? null : (
-        <FormRow label="Unit (plural)" error={message('unitPlural')}>
+        <FormRow
+          label="Unit (plural)"
+          hint="Shown after any other quantity, for example calls."
+          error={message('unitPlural')}
+        >
           {({ id, ...field }) => (
             <Input id={id} placeholder="seats" {...field} {...form.register('unitPlural')} />
           )}
@@ -633,12 +667,20 @@ export function FeatureForm(props: FeatureFormProps) {
           <Input id={id} {...field} {...form.register('reportingUnit.unitSingular')} />
         )}
       </FormRow>
-      <FormRow label="Reporting unit (plural)" error={message('reportingUnit.unitPlural')}>
+      <FormRow
+        label="Reporting unit (plural)"
+        hint="The unit usage is shown in on reports."
+        error={message('reportingUnit.unitPlural')}
+      >
         {({ id, ...field }) => (
           <Input id={id} {...field} {...form.register('reportingUnit.unitPlural')} />
         )}
       </FormRow>
-      <FormRow label="Conversion rate" error={message('reportingUnit.conversionRate')}>
+      <FormRow
+        label="Conversion rate"
+        hint="How many metered units make one reporting unit."
+        error={message('reportingUnit.conversionRate')}
+      >
         {({ id, ...field }) => (
           <Input
             id={id}
@@ -668,7 +710,7 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
 
       {alertsOn ? (
-        <FormRow label="Threshold type">
+        <FormRow label="Threshold type" hint="What the alert threshold is measured against.">
           {({ id, ...field }) => (
             <OptionSelect
               id={id}

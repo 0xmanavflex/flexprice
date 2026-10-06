@@ -23,7 +23,7 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await page.getByRole('button', { name: 'Create wallet' }).click()
   const create = page.getByRole('dialog', { name: 'Create wallet' })
   await create.getByLabel('Conversion rate').fill('0.01')
-  await create.getByLabel('Initial credits (optional)').fill('1000')
+  await create.getByLabel('Initial credits').fill('1000')
   await create.getByRole('button', { name: 'Create wallet' }).click()
 
   await expect(page.getByText('Current balance')).toBeVisible()

@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { LabelWithHint } from '@ui/compositions/LabelWithHint'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
@@ -11,7 +12,7 @@ import {
 } from '@fp/domain'
 import { Composer } from '@ui/compositions/DetailKit'
 import { FormDialog } from '@ui/compositions/FormDialog'
-import { Field, FieldError, FieldGroup, FieldLabel } from '@ui/components/primitives/field'
+import { Field, FieldError, FieldGroup } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
@@ -32,7 +33,14 @@ import { provenance } from '@ui/provenance'
  */
 export const EnvironmentFormProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/form-dialog', 'compositions/detail-kit', 'ui/input', 'ui/radio-group', 'ui/field', '@reui/alert'],
+  composes: [
+    'compositions/form-dialog',
+    'compositions/detail-kit',
+    'ui/input',
+    'ui/radio-group',
+    'ui/field',
+    '@reui/alert',
+  ],
   note: 'Reference FormDialog and Composer. The type is a pair of one-line cards, not a select. Sandbox is the default.',
 })
 
@@ -107,12 +115,15 @@ export function EnvironmentForm({
       >
         <FieldGroup className="gap-4">
           <Field className="gap-2">
-            <FieldLabel htmlFor="environment-name">
+            <LabelWithHint
+              htmlFor="environment-name"
+              hint="What this environment is called in the environment switcher."
+            >
               Name
               <span aria-hidden className="text-destructive">
                 *
               </span>
-            </FieldLabel>
+            </LabelWithHint>
             <Input
               id="environment-name"
               autoFocus
@@ -127,12 +138,12 @@ export function EnvironmentForm({
           </Field>
 
           <Field className="gap-2">
-            <FieldLabel>
+            <LabelWithHint hint="A sandbox is for testing with fake data. Production handles real customers and real money.">
               Type
               <span aria-hidden className="text-destructive">
                 *
               </span>
-            </FieldLabel>
+            </LabelWithHint>
             <fieldset className="flex flex-col gap-1.5" disabled={isSubmitting}>
               <legend className="sr-only">Type</legend>
               <RadioGroup
@@ -157,7 +168,9 @@ export function EnvironmentForm({
                     >
                       <RadioGroupItem value={option} disabled={disabled} className="mt-0.5" />
                       <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium">{ENVIRONMENT_TYPE_LABEL[option]}</span>
+                        <span className="text-sm font-medium">
+                          {ENVIRONMENT_TYPE_LABEL[option]}
+                        </span>
                         <span className="text-muted-foreground text-[13px]/relaxed">
                           {disabled && productionUnavailableReason
                             ? productionUnavailableReason

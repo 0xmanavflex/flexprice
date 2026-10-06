@@ -5,18 +5,12 @@ import {
   CheckIcon,
   ReceiptIcon,
   HashIcon,
-  InfoIcon,
   PlusIcon,
   SaveIcon,
   Trash2Icon,
 } from 'lucide-react'
 import { z } from 'zod'
-import {
-  type CreateInvoice,
-  createInvoiceSchema,
-  emptyInvoice,
-  sumLineAmounts,
-} from '@fp/domain'
+import { type CreateInvoice, createInvoiceSchema, emptyInvoice, sumLineAmounts } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 // eslint-disable-next-line no-restricted-imports -- the redesign's form-3 InvoiceCreator block is built on Card, kept as in the reference
@@ -41,16 +35,11 @@ import {
   Field,
   FieldDescription,
   FieldGroup,
-  FieldLabel,
   FieldLegend,
   FieldSet,
 } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from '@ui/components/primitives/input-group'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import {
   Select,
   SelectContent,
@@ -71,12 +60,6 @@ import {
 } from '@ui/components/primitives/table'
 import { Textarea } from '@ui/components/primitives/textarea'
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@ui/components/primitives/tooltip'
-import {
   COLLECTION_METHOD_OPTIONS,
   CURRENCY_OPTIONS,
   PAYMENT_TERMS_OPTIONS,
@@ -89,6 +72,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitiv
 import { InvoiceDateField } from '@ui/components/blocks/form-3/components/invoice-date-field'
 import { InvoiceSection } from '@ui/components/blocks/form-3/components/invoice-section'
 import { InvoiceSummary } from '@ui/components/blocks/form-3/components/invoice-summary'
+import { LabelWithHint } from '@ui/compositions/LabelWithHint'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
 import { provenance } from '@ui/provenance'
@@ -112,6 +96,7 @@ export const InvoiceFormProvenance = provenance({
     'ui/field',
     'ui/table',
     'ui/select',
+    'compositions/LabelWithHint',
   ],
   note: 'Form 3 invoice creator for create and edit. Line total is sumLineAmounts.',
 })
@@ -170,7 +155,8 @@ function unitRate(quantity: string, amount: string): string {
   if (qtyInt === 0n) return amount
   const amtInt = BigInt(amt[1]!) * 10n ** BigInt(amtFrac.length) + BigInt(amtFrac || '0')
   const scale = 8
-  const quotient = (amtInt * 10n ** BigInt(scale + qtyFrac.length)) / (qtyInt * 10n ** BigInt(amtFrac.length))
+  const quotient =
+    (amtInt * 10n ** BigInt(scale + qtyFrac.length)) / (qtyInt * 10n ** BigInt(amtFrac.length))
   const digits = quotient.toString().padStart(scale + 1, '0')
   const whole = digits.slice(0, -scale)
   const fraction = digits.slice(-scale).replace(/0+$/, '')
@@ -300,14 +286,17 @@ export function InvoiceForm({
   }
 
   return (
-    <TooltipProvider delay={200}>
+    <>
       <div className="bg-background flex min-h-0 w-full flex-1 flex-col">
         <header className="border-border bg-background/95 sticky top-0 z-20 flex min-h-14 w-full shrink-0 items-center justify-between gap-3 border-b px-10 backdrop-blur 2xl:px-14">
           <div className="flex min-w-0 items-center gap-2">
             <h1 className="text-foreground truncate text-base leading-5 font-medium">
               {mode === 'edit' ? 'Edit invoice' : 'New one-off invoice'}
             </h1>
-            <Badge variant="warning-light" className="hidden translate-y-px self-center sm:inline-flex">
+            <Badge
+              variant="warning-light"
+              className="hidden translate-y-px self-center sm:inline-flex"
+            >
               Draft
             </Badge>
           </div>
@@ -388,13 +377,15 @@ export function InvoiceForm({
                       badgeVariant="success-light"
                     >
                       <FieldGroup className="grid gap-4 md:grid-cols-2">
-                        <Field data-invalid={issue(error ?? emptyZod(), 'customerId') ? true : undefined}>
-                          <FieldLabelWithHint
+                        <Field
+                          data-invalid={issue(error ?? emptyZod(), 'customerId') ? true : undefined}
+                        >
+                          <LabelWithHint
                             htmlFor="form-3-customer"
                             hint="This customer becomes the bill-to record on the invoice."
                           >
                             Customer
-                          </FieldLabelWithHint>
+                          </LabelWithHint>
                           <Combobox
                             items={customers}
                             value={customer}
@@ -408,7 +399,9 @@ export function InvoiceForm({
                               className="w-full"
                               showClear
                               disabled={isSubmitting}
-                              aria-invalid={issue(error ?? emptyZod(), 'customerId') ? true : undefined}
+                              aria-invalid={
+                                issue(error ?? emptyZod(), 'customerId') ? true : undefined
+                              }
                             />
                             <ComboboxContent className="w-(--anchor-width) min-w-(--anchor-width)">
                               <ComboboxEmpty>No customers found.</ComboboxEmpty>
@@ -435,12 +428,12 @@ export function InvoiceForm({
                           ) : null}
                         </Field>
                         <Field>
-                          <FieldLabelWithHint
+                          <LabelWithHint
                             htmlFor="form-3-tax-id"
                             hint="Shown for finance teams that match invoices against vendor records."
                           >
                             Tax ID
-                          </FieldLabelWithHint>
+                          </LabelWithHint>
                           <InputGroup>
                             <InputGroupAddon>
                               <Building2Icon aria-hidden />
@@ -454,12 +447,12 @@ export function InvoiceForm({
                           </InputGroup>
                         </Field>
                         <Field>
-                          <FieldLabelWithHint
+                          <LabelWithHint
                             htmlFor="form-3-invoice-number"
                             hint="Assigned when the invoice is created. On edit, this is the number already issued."
                           >
                             Invoice Number
-                          </FieldLabelWithHint>
+                          </LabelWithHint>
                           <InputGroup>
                             <InputGroupAddon>
                               <HashIcon aria-hidden />
@@ -473,7 +466,12 @@ export function InvoiceForm({
                           </InputGroup>
                         </Field>
                         <Field>
-                          <FieldLabel htmlFor="form-3-po-number">PO Reference</FieldLabel>
+                          <LabelWithHint
+                            htmlFor="form-3-po-number"
+                            hint="Your customer's purchase order number, printed on the invoice. Optional."
+                          >
+                            PO Reference
+                          </LabelWithHint>
                           <Input
                             id="form-3-po-number"
                             value={poNumber}
@@ -494,7 +492,12 @@ export function InvoiceForm({
                     >
                       <FieldGroup className="grid gap-4 md:grid-cols-3">
                         <Field>
-                          <FieldLabel htmlFor="form-3-issue-date">Issue Date</FieldLabel>
+                          <LabelWithHint
+                            htmlFor="form-3-issue-date"
+                            hint="The date shown on the invoice as when it was issued."
+                          >
+                            Issue Date
+                          </LabelWithHint>
                           <InvoiceDateField
                             id="form-3-issue-date"
                             label="Choose issue date"
@@ -503,12 +506,18 @@ export function InvoiceForm({
                           />
                         </Field>
                         <Field>
-                          <FieldLabel htmlFor="form-3-due-date">Due Date</FieldLabel>
+                          <LabelWithHint
+                            htmlFor="form-3-due-date"
+                            hint="The date payment is expected by."
+                          >
+                            Due Date
+                          </LabelWithHint>
                           <DueDateField id="form-3-due-date" date={dueDate} onSelect={setDueDate} />
                         </Field>
                         <SelectField
                           id="form-3-currency"
                           label="Currency"
+                          hint="The currency the invoice is issued in."
                           value={currency}
                           options={CURRENCY_OPTIONS}
                           disabled={isSubmitting}
@@ -518,6 +527,7 @@ export function InvoiceForm({
                         <SelectField
                           id="form-3-payment-terms"
                           label="Payment Terms"
+                          hint="How long the customer has to pay after the issue date."
                           value={paymentTerms}
                           options={PAYMENT_TERMS_OPTIONS}
                           disabled={isSubmitting}
@@ -526,13 +536,19 @@ export function InvoiceForm({
                         <SelectField
                           id="form-3-collection-method"
                           label="Collection"
+                          hint="Whether the customer is charged automatically or sent the invoice to pay."
                           value={collectionMethod}
                           options={COLLECTION_METHOD_OPTIONS}
                           disabled={isSubmitting}
                           onValueChange={setCollectionMethod}
                         />
                         <Field>
-                          <FieldLabel htmlFor="form-3-billing-address">Billing Address</FieldLabel>
+                          <LabelWithHint
+                            htmlFor="form-3-billing-address"
+                            hint="Where the invoice is addressed. Defaults to the customer's address."
+                          >
+                            Billing Address
+                          </LabelWithHint>
                           <Input
                             id="form-3-billing-address"
                             value={billingAddress}
@@ -551,7 +567,12 @@ export function InvoiceForm({
                       badge={`${lines.length} item${lines.length === 1 ? '' : 's'}`}
                       badgeVariant="secondary"
                       action={
-                        <Button type="button" variant="outline" disabled={isSubmitting} onClick={addLine}>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          disabled={isSubmitting}
+                          onClick={addLine}
+                        >
                           <PlusIcon data-icon="inline-start" aria-hidden />
                           Add item
                         </Button>
@@ -578,7 +599,9 @@ export function InvoiceForm({
                                   disabled={isSubmitting}
                                   placeholder="Description"
                                   onChange={(event) =>
-                                    updateLine(setLines, line.id, { description: event.target.value })
+                                    updateLine(setLines, line.id, {
+                                      description: event.target.value,
+                                    })
                                   }
                                 />
                                 {error && issue(error, `lines.${index}.description`) ? (
@@ -654,7 +677,9 @@ export function InvoiceForm({
                                   disabled={isSubmitting || lines.length === 1}
                                   onClick={() =>
                                     setLines((items) =>
-                                      items.length === 1 ? items : items.filter((item) => item.id !== line.id),
+                                      items.length === 1
+                                        ? items
+                                        : items.filter((item) => item.id !== line.id),
                                     )
                                   }
                                 >
@@ -682,7 +707,12 @@ export function InvoiceForm({
                     >
                       <FieldGroup className="grid gap-4 md:grid-cols-2">
                         <Field>
-                          <FieldLabel htmlFor="form-3-memo">Memo</FieldLabel>
+                          <LabelWithHint
+                            htmlFor="form-3-memo"
+                            hint="A note shown to the customer on the invoice."
+                          >
+                            Memo
+                          </LabelWithHint>
                           <Textarea
                             id="form-3-memo"
                             value={memo}
@@ -691,7 +721,12 @@ export function InvoiceForm({
                           />
                         </Field>
                         <Field>
-                          <FieldLabel htmlFor="form-3-footer-note">Footer Note</FieldLabel>
+                          <LabelWithHint
+                            htmlFor="form-3-footer-note"
+                            hint="Printed at the bottom of the invoice, for example payment instructions."
+                          >
+                            Footer Note
+                          </LabelWithHint>
                           <Textarea
                             id="form-3-footer-note"
                             value={footerNote}
@@ -726,7 +761,7 @@ export function InvoiceForm({
           </form>
         </div>
       </div>
-    </TooltipProvider>
+    </>
   )
 }
 
@@ -740,40 +775,6 @@ function updateLine(
   patch: Partial<Line>,
 ) {
   setLines((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)))
-}
-
-function FieldLabelWithHint({
-  htmlFor,
-  hint,
-  children,
-}: {
-  htmlFor: string
-  hint: string
-  children: string
-}) {
-  return (
-    <div className="flex items-center gap-1.5">
-      <FieldLabel htmlFor={htmlFor}>{children}</FieldLabel>
-      <Tooltip>
-        <TooltipTrigger
-          render={
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon-xs"
-              className="text-muted-foreground hover:text-foreground -my-1"
-              aria-label={`${children} info`}
-            />
-          }
-        >
-          <InfoIcon aria-hidden />
-        </TooltipTrigger>
-        <TooltipContent side="top" className="max-w-64 text-xs leading-relaxed">
-          {hint}
-        </TooltipContent>
-      </Tooltip>
-    </div>
-  )
 }
 
 function DueDateField({
@@ -819,6 +820,7 @@ function DueDateField({
 function SelectField({
   id,
   label,
+  hint,
   value,
   options,
   onValueChange,
@@ -827,6 +829,7 @@ function SelectField({
 }: {
   id: string
   label: string
+  hint: string
   value: string
   options: readonly SelectOption[]
   onValueChange: (value: string) => void
@@ -835,8 +838,14 @@ function SelectField({
 }) {
   return (
     <Field data-invalid={error ? true : undefined}>
-      <FieldLabel htmlFor={id}>{label}</FieldLabel>
-      <Select value={value} onValueChange={(next) => next && onValueChange(next)} disabled={disabled}>
+      <LabelWithHint htmlFor={id} hint={hint}>
+        {label}
+      </LabelWithHint>
+      <Select
+        value={value}
+        onValueChange={(next) => next && onValueChange(next)}
+        disabled={disabled}
+      >
         <SelectTrigger id={id} className="w-full" aria-invalid={error ? true : undefined}>
           <SelectValue>{value ? optionLabel(options, value) : 'Choose'}</SelectValue>
         </SelectTrigger>

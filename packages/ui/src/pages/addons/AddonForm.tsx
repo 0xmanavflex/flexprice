@@ -70,13 +70,23 @@ export function AddonForm({
         description="Name and lookup key identify the add-on."
         status="required"
       >
-        <FormRow label="Name" required error={errors.name?.message}>
+        <FormRow
+          label="Name"
+          hint="What the add-on is called on a subscription and on invoices."
+          required
+          error={errors.name?.message}
+        >
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
           )}
         </FormRow>
 
-        <FormRow label="Description" align="start" error={errors.description?.message}>
+        <FormRow
+          label="Description"
+          hint="What the add-on provides. Optional."
+          align="start"
+          error={errors.description?.message}
+        >
           {({ id, ...field }) => (
             <Textarea
               id={id}

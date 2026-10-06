@@ -1,11 +1,6 @@
 import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import {
-  type CloneFeature,
-  type Feature,
-  cloneFeatureSchema,
-  emptyCloneFeature,
-} from '@fp/domain'
+import { type CloneFeature, type Feature, cloneFeatureSchema, emptyCloneFeature } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { Field } from '@ui/compositions/Field'
@@ -85,19 +80,34 @@ function CloneForm({
       noValidate
       className="flex flex-col gap-5"
     >
-      <Field label="Name" required error={errors.name?.message}>
+      <Field label="Name" hint="Display name for the copy." required error={errors.name?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
         )}
       </Field>
-      <Field label="Lookup key" required error={errors.lookupKey?.message}>
+      <Field
+        label="Lookup key"
+        hint="Stable identifier the API uses to find the copy. Must be unique."
+        required
+        error={errors.lookupKey?.message}
+      >
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('lookupKey')} />
         )}
       </Field>
-      <Field label="Description" error={errors.description?.message}>
+      <Field
+        label="Description"
+        hint="What the copy measures or unlocks. Optional."
+        error={errors.description?.message}
+      >
         {({ id, ...field }) => (
-          <Textarea id={id} rows={2} disabled={isSubmitting} {...field} {...form.register('description')} />
+          <Textarea
+            id={id}
+            rows={2}
+            disabled={isSubmitting}
+            {...field}
+            {...form.register('description')}
+          />
         )}
       </Field>
       <FormActions

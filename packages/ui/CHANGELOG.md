@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-06 — compositions/SectionEmpty: one centred title, description and action for the empty body of every detail-page card (entitlements, charges, credit grants, plan tabs, invoice and feature tabs); the add button lives in the empty block until rows exist, then moves to the card header
+- 2026-10-06 — forms: every field label has an (i) revealing its explanation on hover; `FormRow` hints moved behind the (i), every field without copy got some, and `LabelWithHint` covers hand-wired controls (InfoHint provenance)
 - 2026-10-06 — compositions/DescriptionTip: heading descriptions (page, section, panel, form card, form toolbar, preview rail, dialog, detail header) now show in a tooltip behind an (i) beside the title, instead of being screen-reader-only text (composes ui/tooltip)
 - 2026-10-06 — pages/shared/DetailTable: tables on detail pages (customer subscriptions and invoices, feature charges and entitlements, invoice payments, and so on) now use the list-page table with search, filter, sort and paging in a bordered panel instead of SimpleTable (composes EntityList; client-side state)
 - 2026-10-06 — compositions/FormToolbar + FormPage + WorkflowStepper: **the stepper now sits in the toolbar row.** `FormToolbar` takes a `center` slot, drawn between the title and Cancel/CTA (its own row below on phones); `FormPage` puts the c-stepper-1 numbered dots there instead of in a band under the toolbar. The current step's title is no longer drawn — it is announced to assistive tech only.

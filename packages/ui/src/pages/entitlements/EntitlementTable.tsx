@@ -1,4 +1,5 @@
 import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from 'lucide-react'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/Section'
@@ -81,14 +82,11 @@ export function EntitlementTable({
   if (entitlements.length === 0) {
     return (
       <Section title={title} description={description} flush>
-        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
-          <p className="text-sm font-medium">No entitlements yet</p>
-          <p className="text-muted-foreground max-w-md text-[13px]">
-            Entitlements decide what is included of each feature: an allowance, a flag, or a value.
-            {onAdd ? ' Add one to define what subscribers get.' : ''}
-          </p>
-          {addButton}
-        </div>
+        <SectionEmpty
+          title="No entitlements yet"
+          description={`Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`}
+          action={addButton}
+        />
       </Section>
     )
   }

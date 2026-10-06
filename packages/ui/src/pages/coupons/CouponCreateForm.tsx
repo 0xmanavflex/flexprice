@@ -97,7 +97,12 @@ export function CouponCreateForm({
         title="Coupon details"
         description="The discount type, amount and duration are fixed once the coupon is created."
       >
-        <FormRow label="Name" required error={errors.name?.message}>
+        <FormRow
+          label="Name"
+          hint="Shown on invoices wherever the discount is applied."
+          required
+          error={errors.name?.message}
+        >
           {({ id, ...field }) => (
             <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
           )}
@@ -112,7 +117,12 @@ export function CouponCreateForm({
           )}
         </FormRow>
 
-        <FormRow label="Discount type" required error={errors.type?.message}>
+        <FormRow
+          label="Discount type"
+          hint="A percentage of the price, or a fixed amount."
+          required
+          error={errors.type?.message}
+        >
           {({ id, ...field }) => (
             <Controller
               control={form.control}
@@ -132,7 +142,12 @@ export function CouponCreateForm({
         </FormRow>
 
         {type === CouponType.Percentage ? (
-          <FormRow label="Percentage off" required error={errors.percentageOff?.message}>
+          <FormRow
+            label="Percentage off"
+            hint="The share of the price taken off, from 0 to 100."
+            required
+            error={errors.percentageOff?.message}
+          >
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -145,7 +160,12 @@ export function CouponCreateForm({
             )}
           </FormRow>
         ) : (
-          <FormRow label="Amount off" required error={errors.amountOff?.message}>
+          <FormRow
+            label="Amount off"
+            hint="The fixed amount taken off the price."
+            required
+            error={errors.amountOff?.message}
+          >
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -160,7 +180,12 @@ export function CouponCreateForm({
         )}
 
         {type === CouponType.Fixed ? (
-          <FormRow label="Currency" required error={errors.currency?.message}>
+          <FormRow
+            label="Currency"
+            hint="The currency the amount off is in."
+            required
+            error={errors.currency?.message}
+          >
             {({ id, ...field }) => (
               <Controller
                 control={form.control}
@@ -181,7 +206,12 @@ export function CouponCreateForm({
           </FormRow>
         ) : null}
 
-        <FormRow label="Duration" required error={errors.cadence?.message}>
+        <FormRow
+          label="Duration"
+          hint="Whether the discount applies once, for a set number of billing periods, or forever."
+          required
+          error={errors.cadence?.message}
+        >
           {({ id, ...field }) => (
             <Controller
               control={form.control}
@@ -201,7 +231,12 @@ export function CouponCreateForm({
         </FormRow>
 
         {cadence === CouponCadence.Repeated ? (
-          <FormRow label="Billing periods" required error={errors.durationInPeriods?.message}>
+          <FormRow
+            label="Billing periods"
+            hint="How many billing periods the discount repeats for."
+            required
+            error={errors.durationInPeriods?.message}
+          >
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -230,7 +265,11 @@ export function CouponCreateForm({
             />
           )}
         </FormRow>
-        <FormRow label="Redeemable from" error={errors.redeemAfter?.message}>
+        <FormRow
+          label="Redeemable from"
+          hint="The first day the coupon can be redeemed. Optional."
+          error={errors.redeemAfter?.message}
+        >
           {({ id, ...field }) => (
             <Controller
               control={form.control}
@@ -247,7 +286,11 @@ export function CouponCreateForm({
             />
           )}
         </FormRow>
-        <FormRow label="Redeemable until" error={errors.redeemBefore?.message}>
+        <FormRow
+          label="Redeemable until"
+          hint="The last day the coupon can be redeemed. Optional."
+          error={errors.redeemBefore?.message}
+        >
           {({ id, ...field }) => (
             <Controller
               control={form.control}

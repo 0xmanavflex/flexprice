@@ -75,7 +75,12 @@ export function PaymentForm({
           description="Record a payment against an invoice."
           status="required"
         >
-          <FormRow label="Invoice" required error={errors.invoiceId?.message}>
+          <FormRow
+            label="Invoice"
+            hint="The invoice this payment settles."
+            required
+            error={errors.invoiceId?.message}
+          >
             {({ id, ...field }) => (
               <Controller
                 control={form.control}
@@ -94,7 +99,12 @@ export function PaymentForm({
               />
             )}
           </FormRow>
-          <FormRow label="Currency" required error={errors.currency?.message}>
+          <FormRow
+            label="Currency"
+            hint="The currency the payment was made in."
+            required
+            error={errors.currency?.message}
+          >
             {({ id, ...field }) => (
               <Controller
                 control={form.control}
@@ -113,7 +123,7 @@ export function PaymentForm({
               />
             )}
           </FormRow>
-          <FormRow label="Amount" required error={errors.amount?.message}>
+          <FormRow label="Amount" hint="How much was paid." required error={errors.amount?.message}>
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -125,7 +135,12 @@ export function PaymentForm({
               />
             )}
           </FormRow>
-          <FormRow label="Method" required error={errors.methodType?.message}>
+          <FormRow
+            label="Method"
+            hint="How the payment was made."
+            required
+            error={errors.methodType?.message}
+          >
             {({ id, ...field }) => (
               <Controller
                 control={form.control}

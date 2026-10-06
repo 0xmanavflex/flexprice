@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LabelWithHint } from '@ui/compositions/LabelWithHint'
 import {
   ArrowDownRightIcon,
   ArrowUpRightIcon,
@@ -23,12 +24,8 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
-import { Field, FieldLabel } from '@ui/components/primitives/field'
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupInput,
-} from '@ui/components/primitives/input-group'
+import { Field } from '@ui/components/primitives/field'
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import { cn } from '@ui/lib/cn'
 import {
   DropdownMenu,
@@ -166,7 +163,8 @@ export function CustomerWalletView({
   const current = Number(wallet.creditBalance) || 0
   const ongoing = Number(wallet.realTimeCreditBalance) || 0
   const pendingUsage = Math.max(0, current - ongoing)
-  const usedShare = current > 0 ? Math.min(100, Math.round((pendingUsage / current) * 1000) / 10) : 0
+  const usedShare =
+    current > 0 ? Math.min(100, Math.round((pendingUsage / current) * 1000) / 10) : 0
 
   return (
     <div className="flex flex-col gap-5">
@@ -194,9 +192,7 @@ export function CustomerWalletView({
         ) : (
           <div className="space-y-0.5">
             <p className="text-sm font-medium">{wallet.description || 'Prepaid credits'}</p>
-            <p className="text-muted-foreground text-xs">
-              {wallet.currency}
-            </p>
+            <p className="text-muted-foreground text-xs">{wallet.currency}</p>
           </div>
         )}
         <div className="flex items-center gap-2">
@@ -207,7 +203,12 @@ export function CustomerWalletView({
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
-                <Button variant="outline" size="icon" className="size-8" aria-label="Wallet actions" />
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="size-8"
+                  aria-label="Wallet actions"
+                />
               }
             >
               <MoreHorizontalIcon aria-hidden="true" />
@@ -375,7 +376,9 @@ function LedgerRow({ row }: { row: WalletTransaction }) {
           <p className="text-muted-foreground truncate text-xs">{row.description}</p>
         ) : null}
       </div>
-      <span className="text-muted-foreground hidden w-28 text-xs sm:block">{day(row.createdAt)}</span>
+      <span className="text-muted-foreground hidden w-28 text-xs sm:block">
+        {day(row.createdAt)}
+      </span>
       <div className="w-32 space-y-0.5">
         <p
           className={cn(
@@ -432,7 +435,12 @@ function CreateWalletDialog({
       >
         <div className="grid gap-5 sm:grid-cols-2">
           <Field>
-            <FieldLabel htmlFor="wallet-currency">Currency</FieldLabel>
+            <LabelWithHint
+              htmlFor="wallet-currency"
+              hint="The currency the wallet balance is valued in."
+            >
+              Currency
+            </LabelWithHint>
             <OptionSelect
               id="wallet-currency"
               value={draft.currency}
@@ -441,7 +449,9 @@ function CreateWalletDialog({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="wallet-rate">Conversion rate</FieldLabel>
+            <LabelWithHint htmlFor="wallet-rate" hint="How much money one credit is worth.">
+              Conversion rate
+            </LabelWithHint>
             <InputGroup className="h-9">
               <InputGroupAddon align="inline-start">1 credit =</InputGroupAddon>
               <InputGroupInput
@@ -454,7 +464,12 @@ function CreateWalletDialog({
             </InputGroup>
           </Field>
           <Field>
-            <FieldLabel htmlFor="wallet-initial">Initial credits (optional)</FieldLabel>
+            <LabelWithHint
+              htmlFor="wallet-initial"
+              hint="Credits added as soon as the wallet is created. Optional."
+            >
+              Initial credits
+            </LabelWithHint>
             <Input
               id="wallet-initial"
               className="h-9"
@@ -464,7 +479,12 @@ function CreateWalletDialog({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="wallet-description">Description (optional)</FieldLabel>
+            <LabelWithHint
+              htmlFor="wallet-description"
+              hint="A note about what this wallet is for. Optional."
+            >
+              Description
+            </LabelWithHint>
             <Input
               id="wallet-description"
               className="h-9"
@@ -540,7 +560,9 @@ function TopUpDialog({
         />
         <div className="grid gap-5 sm:grid-cols-2">
           <Field>
-            <FieldLabel htmlFor="topup-credits">Credits</FieldLabel>
+            <LabelWithHint htmlFor="topup-credits" hint="How many credits to add to the wallet.">
+              Credits
+            </LabelWithHint>
             <Input
               id="topup-credits"
               className="h-9"
@@ -550,7 +572,9 @@ function TopUpDialog({
             />
           </Field>
           <Field>
-            <FieldLabel htmlFor="topup-note">Note (optional)</FieldLabel>
+            <LabelWithHint htmlFor="topup-note" hint="Why the credits are being added. Optional.">
+              Note
+            </LabelWithHint>
             <Input
               id="topup-note"
               className="h-9"

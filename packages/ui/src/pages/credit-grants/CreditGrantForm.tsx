@@ -86,7 +86,12 @@ export function CreditGrantEditForm({
       noValidate
       className="flex flex-col gap-4"
     >
-      <Field label="Name" required error={errors.name?.message}>
+      <Field
+        label="Name"
+        hint="What this grant is called on the customer's wallet and in reports."
+        required
+        error={errors.name?.message}
+      >
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
         )}
@@ -172,7 +177,7 @@ export function CreditGrantCreateForm({
       ? `Every ${period ? (CREDIT_GRANT_PERIOD_LABEL[period] ?? period).toLowerCase() : 'period'}, subscribers receive`
       : 'Subscribers receive once'
   } ${creditsNumber > 0 ? creditsNumber.toLocaleString() : 'some'} credits${
-    dollarValue ? ` (${dollarValue})`: ''
+    dollarValue ? ` (${dollarValue})` : ''
   }. Credits ${expiry}; priority ${form.watch('priority') ?? 0}.`
 
   return (
@@ -207,12 +212,22 @@ export function CreditGrantCreateForm({
 
       <div className="grid gap-x-6 gap-y-4 md:grid-cols-2">
         <div className="flex flex-col gap-4">
-          <Field label="Name" required error={errors.name?.message}>
+          <Field
+            label="Name"
+            hint="What this grant is called on the customer's wallet and in reports."
+            required
+            error={errors.name?.message}
+          >
             {({ id, ...field }) => (
               <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
             )}
           </Field>
-          <Field label="Credits" required error={errors.credits?.message}>
+          <Field
+            label="Credits"
+            hint="How many credits are issued each time the grant applies."
+            required
+            error={errors.credits?.message}
+          >
             {({ id, ...field }) => (
               <Input
                 id={id}
@@ -226,7 +241,9 @@ export function CreditGrantCreateForm({
           </Field>
           <Field
             label="Conversion rate"
-            hint={dollarValue ? `Worth ${dollarValue}.` : 'Optional. 1 credit = this much currency.'}
+            hint={
+              dollarValue ? `Worth ${dollarValue}.` : 'Optional. 1 credit = this much currency.'
+            }
             error={messageOf(errors, 'conversionRate')}
           >
             {({ id, ...field }) => (
@@ -241,7 +258,12 @@ export function CreditGrantCreateForm({
             )}
           </Field>
           {cadence === CreditGrantCadence.Recurring ? (
-            <Field label="Refreshes every" required error={messageOf(errors, 'period')}>
+            <Field
+              label="Refreshes every"
+              hint="How often a recurring grant issues its credits again."
+              required
+              error={messageOf(errors, 'period')}
+            >
               {({ id }) => (
                 <Controller
                   control={form.control}
@@ -266,7 +288,7 @@ export function CreditGrantCreateForm({
         </div>
 
         <div className="flex flex-col gap-4">
-          <Field label="Expiry" required>
+          <Field label="Expiry" hint="When credits from this grant stop being usable." required>
             {({ id }) => (
               <Controller
                 control={form.control}
@@ -288,7 +310,12 @@ export function CreditGrantCreateForm({
           </Field>
           {expirationType === CreditGrantExpiryType.Duration ? (
             <div className="grid grid-cols-2 gap-3">
-              <Field label="Duration" required error={messageOf(errors, 'expirationDuration')}>
+              <Field
+                label="Duration"
+                hint="How long credits last once issued, counted in the unit chosen next."
+                required
+                error={messageOf(errors, 'expirationDuration')}
+              >
                 {({ id, ...field }) => (
                   <Input
                     id={id}
@@ -300,7 +327,7 @@ export function CreditGrantCreateForm({
                   />
                 )}
               </Field>
-              <Field label="Unit">
+              <Field label="Unit" hint="The unit the duration is counted in.">
                 {({ id }) => (
                   <Controller
                     control={form.control}
@@ -334,7 +361,7 @@ export function CreditGrantCreateForm({
               />
             )}
           </Field>
-          <p className="rounded-lg border bg-muted/40 p-3 text-sm text-muted-foreground">
+          <p className="bg-muted/40 text-muted-foreground rounded-lg border p-3 text-sm">
             {summary}
           </p>
         </div>

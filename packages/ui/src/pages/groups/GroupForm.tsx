@@ -78,7 +78,12 @@ export function GroupForm({
             status="required"
             description="Name, lookup key and what the group can hold."
           >
-            <FormRow label="Name" required error={errors.name?.message}>
+            <FormRow
+              label="Name"
+              hint="What the group is called when you pick it elsewhere."
+              required
+              error={errors.name?.message}
+            >
               {({ id, ...field }) => (
                 <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
               )}

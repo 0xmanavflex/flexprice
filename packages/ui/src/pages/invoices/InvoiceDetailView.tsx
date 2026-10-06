@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import {
   CheckCircle2Icon,
   CircleDashedIcon,
@@ -233,9 +234,10 @@ export function InvoiceDetailView({
       {tab === 'payments' ? (
         <Section title="Payments" flush>
           {invoice.payments.length === 0 ? (
-            <p className="text-muted-foreground px-6 py-10 text-center text-[13px]">
-              No payments recorded for this invoice yet.
-            </p>
+            <SectionEmpty
+              title="No payments yet"
+              description="No payments recorded for this invoice yet."
+            />
           ) : (
             <DetailTable
               label="Payments"
@@ -268,9 +270,10 @@ export function InvoiceDetailView({
       {tab === 'credit-notes' ? (
         <Section title="Credit notes" flush>
           {invoice.creditNotes.length === 0 ? (
-            <p className="text-muted-foreground px-6 py-10 text-center text-[13px]">
-              No credit notes issued against this invoice.
-            </p>
+            <SectionEmpty
+              title="No credit notes yet"
+              description="No credit notes issued against this invoice."
+            />
           ) : (
             <DetailTable
               label="Credit notes"

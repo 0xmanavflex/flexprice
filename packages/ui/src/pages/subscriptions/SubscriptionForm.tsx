@@ -176,7 +176,12 @@ export function SubscriptionForm({
 
   const customerStep = (
     <FormCard title="Customer" description="Who the subscription bills." status="required">
-      <FormRow label="Customer" required error={errors.customerId?.message}>
+      <FormRow
+        label="Customer"
+        hint="The customer being subscribed."
+        required
+        error={errors.customerId?.message}
+      >
         {({ id, ...field }) => (
           <Controller
             control={form.control}
@@ -204,7 +209,12 @@ export function SubscriptionForm({
       description="What they subscribe to and when it starts."
       status="required"
     >
-      <FormRow label="Plan" required error={errors.planId?.message}>
+      <FormRow
+        label="Plan"
+        hint="The plan whose charges and entitlements apply."
+        required
+        error={errors.planId?.message}
+      >
         {({ id, ...field }) => (
           <Controller
             control={form.control}
@@ -247,7 +257,12 @@ export function SubscriptionForm({
           />
         )}
       </FormRow>
-      <FormRow label="Billing period" required error={errors.billingPeriod?.message}>
+      <FormRow
+        label="Billing period"
+        hint="How often the subscription is invoiced."
+        required
+        error={errors.billingPeriod?.message}
+      >
         {({ id, ...field }) => (
           <Controller
             control={form.control}

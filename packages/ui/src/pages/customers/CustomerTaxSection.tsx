@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { LabelWithHint } from '@ui/compositions/LabelWithHint'
 import { PlusIcon } from 'lucide-react'
 import {
   type CreateTaxAssociation,
@@ -12,7 +13,6 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
-import { Label } from '@ui/components/primitives/label'
 import { Switch } from '@ui/components/primitives/switch'
 import {
   AppFailure,
@@ -255,7 +255,9 @@ function TaxDialog({
         }}
       >
         <div className="flex flex-col gap-2">
-          <Label htmlFor="tax-rate">Tax rate</Label>
+          <LabelWithHint htmlFor="tax-rate" hint="The tax rate to apply to this customer.">
+            Tax rate
+          </LabelWithHint>
           <OptionSelect
             id="tax-rate"
             value={draft.taxRateCode}
@@ -265,7 +267,12 @@ function TaxDialog({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="tax-behavior">Behavior</Label>
+          <LabelWithHint
+            htmlFor="tax-behavior"
+            hint="Whether prices already include the tax or the tax is added on top."
+          >
+            Behavior
+          </LabelWithHint>
           <OptionSelect
             id="tax-behavior"
             value={draft.taxBehavior}
@@ -274,7 +281,12 @@ function TaxDialog({
           />
         </div>
         <div className="flex flex-col gap-2">
-          <Label htmlFor="tax-priority">Priority</Label>
+          <LabelWithHint
+            htmlFor="tax-priority"
+            hint="When several rates apply, the lower number is applied first."
+          >
+            Priority
+          </LabelWithHint>
           <Input
             id="tax-priority"
             inputMode="numeric"
@@ -283,7 +295,12 @@ function TaxDialog({
           />
         </div>
         <div className="flex items-center justify-between gap-4">
-          <Label htmlFor="tax-auto">Apply automatically to new invoices</Label>
+          <LabelWithHint
+            htmlFor="tax-auto"
+            hint="Adds this rate to every new invoice for the customer without further steps."
+          >
+            Apply automatically to new invoices
+          </LabelWithHint>
           <Switch
             id="tax-auto"
             checked={draft.autoApply}

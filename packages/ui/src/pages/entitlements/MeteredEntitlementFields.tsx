@@ -71,7 +71,7 @@ export function MeteredEntitlementFields({
 
   return (
     <div className="flex flex-col gap-5">
-      <Field label="Value type">
+      <Field label="Value type" hint="Whether the allowance is a set number or unlimited.">
         {({ id }) => (
           <OptionSelect
             id={id}
@@ -89,8 +89,12 @@ export function MeteredEntitlementFields({
       <div className="grid items-start gap-5 sm:grid-cols-2">
         <Field
           label="Value"
+          hint={
+            unit && valueType === 'quantity'
+              ? `In ${unit}.`
+              : 'The allowance for each usage period.'
+          }
           error={limitError}
-          {...(unit && valueType === 'quantity' ? { hint: `In ${unit}.` } : {})}
         >
           {({ id, ...field }) => (
             <div className="flex flex-col gap-2">
@@ -120,7 +124,7 @@ export function MeteredEntitlementFields({
         </Field>
 
         <div className={cn(unlimited && 'pointer-events-none opacity-50')}>
-          <Field label="Usage resets">
+          <Field label="Usage resets" hint="When the used amount returns to zero.">
             {({ id }) => (
               <OptionSelect
                 id={id}

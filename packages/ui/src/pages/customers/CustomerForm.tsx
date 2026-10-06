@@ -70,7 +70,12 @@ export function CustomerForm({
 
   const detailsRows = (
     <>
-      <FormRow label="Name" required error={errors.name?.message}>
+      <FormRow
+        label="Name"
+        hint="The customer's display name on invoices and in the console."
+        required
+        error={errors.name?.message}
+      >
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
         )}
@@ -85,7 +90,11 @@ export function CustomerForm({
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('externalId')} />
         )}
       </FormRow>
-      <FormRow label="Email" error={errors.email?.message}>
+      <FormRow
+        label="Email"
+        hint="Where invoices and billing emails are sent."
+        error={errors.email?.message}
+      >
         {({ id, ...field }) => (
           <Input
             id={id}
@@ -96,7 +105,11 @@ export function CustomerForm({
           />
         )}
       </FormRow>
-      <FormRow label="Phone" error={errors.phone?.message}>
+      <FormRow
+        label="Phone"
+        hint="A contact number for the customer. Optional."
+        error={errors.phone?.message}
+      >
         {({ id, ...field }) => (
           <Input
             id={id}
@@ -112,27 +125,43 @@ export function CustomerForm({
 
   const addressRows = (
     <>
-      <FormRow label="Address line 1" error={errors.addressLine1?.message}>
+      <FormRow
+        label="Address line 1"
+        hint="Street address printed on invoices."
+        error={errors.addressLine1?.message}
+      >
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressLine1')} />
         )}
       </FormRow>
-      <FormRow label="Address line 2" error={errors.addressLine2?.message}>
+      <FormRow
+        label="Address line 2"
+        hint="Apartment, suite or unit. Optional."
+        error={errors.addressLine2?.message}
+      >
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressLine2')} />
         )}
       </FormRow>
-      <FormRow label="City" error={errors.addressCity?.message}>
+      <FormRow
+        label="City"
+        hint="City or town for the billing address."
+        error={errors.addressCity?.message}
+      >
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressCity')} />
         )}
       </FormRow>
-      <FormRow label="State" error={errors.addressState?.message}>
+      <FormRow label="State" hint="State, province or region." error={errors.addressState?.message}>
         {({ id, ...field }) => (
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('addressState')} />
         )}
       </FormRow>
-      <FormRow label="Postal code" error={errors.addressPostalCode?.message}>
+      <FormRow
+        label="Postal code"
+        hint="ZIP or postal code."
+        error={errors.addressPostalCode?.message}
+      >
         {({ id, ...field }) => (
           <Input
             id={id}
@@ -171,7 +200,11 @@ export function CustomerForm({
           <Input id={id} disabled={isSubmitting} {...field} {...form.register('timezone')} />
         )}
       </FormRow>
-      <FormRow label="Tax treatment" error={errors.taxTreatment?.message}>
+      <FormRow
+        label="Tax treatment"
+        hint="How tax is handled on this customer's invoices."
+        error={errors.taxTreatment?.message}
+      >
         {({ id, ...field }) => (
           <Controller
             control={form.control}

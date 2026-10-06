@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { toast } from 'sonner'
 import {
   AGGREGATION_LABEL,
@@ -300,9 +301,7 @@ export function FeatureDetailView({
               ]}
             />
           ) : (
-            <p className="text-muted-foreground px-6 py-10 text-center text-[13px]">
-              No plan includes this feature yet.
-            </p>
+            <SectionEmpty title="No plans yet" description="No plan includes this feature yet." />
           )}
         </Section>
       ) : null}
