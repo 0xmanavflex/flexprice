@@ -50,7 +50,7 @@ export interface WorkflowStep {
   /** Stable, URL-safe: `prices`, not `3`. */
   id: string
   title: string
-  /** A short line under the title; drawn by the `header` variant only. */
+  /** A short line after the title in the `header` caption. */
   description?: string
   status: StepStatus
 }
@@ -66,18 +66,14 @@ export interface WorkflowStepperProps {
   /** The active step's content. The page renders it; the stepper only frames it. Omit for a bare nav. */
   children?: ReactNode
   /**
-   * `inline` is the numbered row above the content. `header` is the
-   * solution-billing-8 treatment: centred indicators with a title and
-   * description beneath, for the band at the top of a form page.
+   * `inline` is the numbered row above the content. `header` is the ReUI
+   * `c-stepper-1` pattern — numbered indicators joined by separators, no
+   * titles on the dots — with the current step's title and description as a
+   * caption beneath, for the band at the top of a form page.
    */
   variant?: 'inline' | 'header'
   'aria-label'?: string
 }
-
-// Verbatim from blocks/solution-billing-8 (plan-change-wizard.tsx): the active
-// step is a tinted disc with a slowly turning dashed ring, finished steps are solid.
-const HEADER_INDICATOR =
-  "data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=completed]:border-primary data-[state=completed]:bg-primary data-[state=inactive]:border-border data-[state=inactive]:bg-background data-[state=inactive]:text-foreground data-[state=active]:before:border-primary relative isolate size-6 overflow-visible rounded-full border border-transparent before:pointer-events-none before:absolute before:inset-0 before:z-10 before:rounded-full before:border before:border-dashed before:border-transparent before:content-[''] data-[state=active]:border-0 data-[state=active]:before:animate-[spin_8s_linear_infinite] motion-reduce:data-[state=active]:before:animate-none"
 
 export function WorkflowStepper({
   steps,
@@ -101,7 +97,7 @@ export function WorkflowStepper({
           onStepChange(target.id)
         }
       }}
-      className={header ? undefined : 'flex flex-col gap-6'}
+      className={header ? 'mx-auto w-full max-w-md gap-3' : 'flex flex-col gap-6'}
       /**
        * Overriding `role`, because ReUI's root declares `role="tablist"` while
        * none of its children declare `role="tab"` — which axe rejects as
@@ -124,14 +120,13 @@ export function WorkflowStepper({
       // ReUI sets this for its tab semantics; it is not allowed on `group`.
       aria-orientation={undefined}
     >
-      <StepperNav {...(header ? { className: 'min-w-full items-start' } : {})}>
+      <StepperNav>
         {steps.map((step, index) => (
           <StepperItem
             key={step.id}
             step={index + 1}
             completed={step.status === 'complete'}
             disabled={step.status === 'locked'}
-            {...(header ? { className: 'relative min-w-0 flex-1 overflow-visible' } : {})}
             /*
              * ReUI decides the state as `completed || step < activeStep`, so
              * the `completed` prop can *add* completion but never withhold it:
@@ -161,12 +156,6 @@ export function WorkflowStepper({
                * caller props last, so these override cleanly — the element is
                * already a `<button>` underneath.
                */
-              {...(header
-                ? {
-                    className:
-                      'w-full min-w-0 flex-col items-center justify-start gap-2 px-0 text-center',
-                  }
-                : {})}
               role={undefined}
               aria-selected={undefined}
               aria-controls={undefined}
@@ -179,7 +168,6 @@ export function WorkflowStepper({
             >
               <StepperIndicator
                 className={cn(
-                  header && HEADER_INDICATOR,
                   step.status !== 'complete' &&
                     index + 1 < currentIndex &&
                     'bg-accent! text-accent-foreground!',
@@ -187,32 +175,25 @@ export function WorkflowStepper({
               >
                 {index + 1}
               </StepperIndicator>
-              {header ? (
-                <span className="flex max-w-full min-w-0 flex-col items-center gap-1 text-center">
-                  <StepperTitle className="max-w-full truncate">{step.title}</StepperTitle>
-                  {step.description ? (
-                    <span className="text-muted-foreground hidden text-xs leading-none sm:block">
-                      {step.description}
-                    </span>
-                  ) : null}
-                </span>
-              ) : (
-                <StepperTitle>{step.title}</StepperTitle>
-              )}
+              {header ? null : <StepperTitle>{step.title}</StepperTitle>}
             </StepperTrigger>
             {index < steps.length - 1 ? (
               <StepperSeparator
-                {...(header
-                  ? {
-                      className:
-                        'group-data-[state=completed]/step:bg-primary absolute top-3 left-[calc(50%+1.125rem)] m-0 w-[calc(100%-2.25rem)] flex-none',
-                    }
-                  : {})}
+                {...(header ? { className: 'group-data-[state=completed]/step:bg-primary' } : {})}
               />
             ) : null}
           </StepperItem>
         ))}
       </StepperNav>
+
+      {header ? (
+        <p className="text-center text-sm" aria-live="polite">
+          <span className="font-medium">{steps[currentIndex - 1]?.title}</span>
+          {steps[currentIndex - 1]?.description ? (
+            <span className="text-muted-foreground"> · {steps[currentIndex - 1]?.description}</span>
+          ) : null}
+        </p>
+      ) : null}
 
       {children === undefined ? null : (
         <StepperPanel>

@@ -33,7 +33,7 @@ export const FormPageProvenance = provenance({
     'compositions/use-form-steps',
     'ui/field',
   ],
-  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, Cancel, primary CTA) with the form beneath it — plus, each optional, a c-stepper-2 style stepper in the header and a solution-billing-8 style preview rail — or the Section surface with the actions at its foot.',
+  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, Cancel, primary CTA) with the form beneath it — plus, each optional, a c-stepper-1 style stepper in the header and a solution-billing-8 style preview rail — or the Section surface with the actions at its foot.',
 })
 
 /** A stepper in the header: the form's `useFormSteps` flow, drawn as the header stepper. */

@@ -125,6 +125,7 @@
   "packages/ui/src/components/blocks/stats-14/page.tsx": "a2045a1f8224332d",
   "packages/ui/src/components/examples/c-badge-20.tsx": "dc8d8a2566d61c11",
   "packages/ui/src/components/examples/c-filters-6.tsx": "1577dabc10de0585",
+  "packages/ui/src/components/examples/c-stepper-1.tsx": "97c3e0be7cf10433",
   "packages/ui/src/components/examples/c-stepper-2.tsx": "27a73312d13a52c0",
   "packages/ui/src/components/primitives/avatar.tsx": "4271d105e2d7804f",
   "packages/ui/src/components/primitives/breadcrumb.tsx": "12ad3ad919b192d4",
