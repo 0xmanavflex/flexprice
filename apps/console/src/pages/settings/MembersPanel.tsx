@@ -38,7 +38,15 @@ import {
 } from '@fp/ui/primitives'
 import { UsersIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
-import { ActionError, PanelError, WidePanel, mutationMessage, toFailure, SettingsBlock } from './panelKit'
+import {
+  ActionError,
+  PanelError,
+  WidePanel,
+  mutationMessage,
+  toFailure,
+  SettingsBlock,
+  TableBlock,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -89,7 +97,7 @@ export function MembersPanel() {
 
   return (
     <WidePanel>
-      <SettingsBlock
+      <TableBlock
         title="Members"
         description="Everyone who can sign in to this organisation."
         actions={
@@ -159,7 +167,9 @@ export function MembersPanel() {
                       {member.id === me.data?.id ? <Badge variant="secondary">You</Badge> : null}
                     </span>
                   </TableCell>
-                  <TableCell className="text-muted-foreground max-w-40 truncate">{member.email || '—'}</TableCell>
+                  <TableCell className="text-muted-foreground max-w-40 truncate">
+                    {member.email || '—'}
+                  </TableCell>
                   <TableCell>
                     <RoleList roles={member.roles} catalogue={roles.data ?? []} />
                   </TableCell>
@@ -191,7 +201,7 @@ export function MembersPanel() {
             Showing {fetched.length} of {members.data.total}.
           </p>
         ) : null}
-      </SettingsBlock>
+      </TableBlock>
 
       <InviteDialog
         open={isInviting}
@@ -284,55 +294,60 @@ function InviteDialog({
             invite.mutate(value, { onSuccess: () => onOpenChange(false) }),
           )}
         >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Email"
-            required
-            {...(draft.error('email') ? { error: draft.error('email') } : {})}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                type="email"
-                autoFocus
-                placeholder="amara@northwind.example"
-                disabled={busy}
-                value={draft.text('email')}
-                onChange={(event) => draft.setText('email', event.target.value)}
-                {...field}
-              />
-            )}
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Email"
+              required
+              {...(draft.error('email') ? { error: draft.error('email') } : {})}
+            >
+              {({ id, ...field }) => (
+                <Input
+                  id={id}
+                  type="email"
+                  autoFocus
+                  placeholder="amara@northwind.example"
+                  disabled={busy}
+                  value={draft.text('email')}
+                  onChange={(event) => draft.setText('email', event.target.value)}
+                  {...field}
+                />
+              )}
+            </Field>
 
-          <Field label="Name" {...(draft.error('name') ? { error: draft.error('name') } : {})}>
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                placeholder="Amara Osei"
-                disabled={busy}
-                value={draft.text('name')}
-                onChange={(event) => draft.setText('name', event.target.value)}
-                {...field}
-              />
-            )}
-          </Field>
-        </div>
+            <Field label="Name" {...(draft.error('name') ? { error: draft.error('name') } : {})}>
+              {({ id, ...field }) => (
+                <Input
+                  id={id}
+                  placeholder="Amara Osei"
+                  disabled={busy}
+                  value={draft.text('name')}
+                  onChange={(event) => draft.setText('name', event.target.value)}
+                  {...field}
+                />
+              )}
+            </Field>
+          </div>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">Roles</span>
-          <RolePicker
-            label="Roles for the new member"
-            roles={roles}
-            selected={draft.value.roles ?? []}
-            disabled={busy}
-            onChange={(next) => draft.update((current) => ({ ...current, roles: next }))}
-          />
-        </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">Roles</span>
+            <RolePicker
+              label="Roles for the new member"
+              roles={roles}
+              selected={draft.value.roles ?? []}
+              disabled={busy}
+              onChange={(next) => draft.update((current) => ({ ...current, roles: next }))}
+            />
+          </div>
 
-        <ActionError message={error} />
-      </form>
+          <ActionError message={error} />
+        </form>
         <DialogFooter>
-          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="submit" form="invite-member" disabled={busy}>

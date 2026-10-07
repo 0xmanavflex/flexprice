@@ -56,6 +56,10 @@ export interface DetailTableProps<T> {
   pageSize?: number
   /** Shown in place of the table when there are no rows at all. */
   empty?: ReactNode
+  /** Row heights and footer for a table that is the whole body of a `Section table`: no inset, 48px rows, a footer only past one page. */
+  compact?: boolean
+  /** `false` leaves out the search row, for a short list that needs none. */
+  toolbar?: boolean
   className?: string
 }
 
@@ -79,6 +83,8 @@ export function DetailTable<T extends object>({
   searchText,
   pageSize: initialPageSize = 10,
   empty,
+  compact = false,
+  toolbar = true,
   className,
 }: DetailTableProps<T>) {
   const [search, setSearch] = useState('')
@@ -161,8 +167,10 @@ export function DetailTable<T extends object>({
   }
 
   return (
-    <div className={cn('p-4', className)}>
+    <div className={cn(!compact && 'p-4', className)}>
       <EntityList<T>
+        compact={compact}
+        hideToolbar={!toolbar}
         label={`${label} table`}
         noun={noun}
         rows={slice}

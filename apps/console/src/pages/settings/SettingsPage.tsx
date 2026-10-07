@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { EmbeddedPageContext } from '@fp/ui/compositions'
 import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BadgeDollarSignIcon,
@@ -109,16 +110,61 @@ const SECTION_ICONS: Record<string, ReactNode> = {
  * route. The tab is still listed and still selectable, which is the behaviour
  * the flag was there to guarantee.
  */
-function toShellSections(): SettingsSection[] {
+export function toShellSections(): SettingsSection[] {
   return [...RAIL_SECTIONS, ...SETTINGS_SECTIONS.filter((section) => 'hidden' in section)].map(
     (section) => ({
       id: section.id,
       label: section.label,
+      ...('description' in section ? { description: section.description } : {}),
       ...('hidden' in section ? { hidden: true } : {}),
       ...(SECTION_ICONS[section.id] ? { icon: SECTION_ICONS[section.id] } : {}),
       tabs: section.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
     }),
   )
+}
+
+/**
+ * The Settings frame around a row that is a page of its own (Discounts,
+ * Taxes, Cost tracking): the rail stays, the page renders in the content column
+ * and drops its own gutters.
+ */
+export function SettingsFrame({
+  sectionId,
+  onNavigate,
+  onOpenPage,
+  children,
+}: {
+  sectionId: string
+  onNavigate: (sectionId: string, tabId: string) => void
+  onOpenPage: (href: string) => void
+  children: ReactNode
+}) {
+  return (
+    <SettingsShell
+      sections={toShellSections()}
+      sectionId={sectionId}
+      tabId=""
+      onSectionChange={(next) => openSection(next, onNavigate, onOpenPage)}
+      onTabChange={() => undefined}
+    >
+      <EmbeddedPageContext.Provider value>{children}</EmbeddedPageContext.Provider>
+    </SettingsShell>
+  )
+}
+
+function openSection(
+  next: string,
+  onNavigate: (sectionId: string, tabId: string) => void,
+  onOpenPage: (href: string) => void,
+) {
+  const linked = SETTINGS_SECTIONS.find((candidate) => candidate.id === next && 'href' in candidate)
+  if (linked && 'href' in linked) {
+    onOpenPage(linked.href)
+    return
+  }
+  const target = findSettingsSection(next)
+  if (!target) return
+  onNavigate(target.id, firstTabOf(target).id)
 }
 
 export function SettingsPage({ sectionId, tabId, onNavigate, onOpenPage }: SettingsPageProps) {
@@ -130,19 +176,7 @@ export function SettingsPage({ sectionId, tabId, onNavigate, onOpenPage }: Setti
       sections={toShellSections()}
       sectionId={section.id}
       tabId={tab.id}
-      // Both ids, one navigation. See the note above.
-      onSectionChange={(next) => {
-        const linked = SETTINGS_SECTIONS.find(
-          (candidate) => candidate.id === next && 'href' in candidate,
-        )
-        if (linked && 'href' in linked) {
-          onOpenPage(linked.href)
-          return
-        }
-        const target = findSettingsSection(next)
-        if (!target) return
-        onNavigate(target.id, firstTabOf(target).id)
-      }}
+      onSectionChange={(next) => openSection(next, onNavigate, onOpenPage)}
       onTabChange={(next) => onNavigate(section.id, next)}
     >
       <SettingsPanel section={section} tabId={tab.id} />

@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -18,6 +18,9 @@ export const PageProvenance = provenance({
   composes: [],
   note: 'Shared page skeleton: header, toolbar, body. Layout only.',
 })
+
+/** A page rendered inside another page's frame (a Settings list) drops its own gutters and scroll. */
+export const EmbeddedPageContext = createContext(false)
 
 export interface PageHeaderProps {
   title: string
@@ -72,6 +75,9 @@ export function PageBody({
   className?: string
   width?: 'wide' | 'narrow'
 }) {
+  const embedded = useContext(EmbeddedPageContext)
+  if (embedded)
+    return <div className={cn('flex min-w-0 flex-col gap-4', className)}>{children}</div>
   return (
     <div
       className={cn(

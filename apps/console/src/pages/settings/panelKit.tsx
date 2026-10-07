@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { ApiError } from '@fp/query'
-import { ErrorState, SettingsCard } from '@fp/ui/compositions'
+import { ErrorState, Section, SettingsCard } from '@fp/ui/compositions'
 
 /**
  * The few things every settings panel needs, in one place.
@@ -122,6 +122,34 @@ export function SettingsBlock({
     >
       {children}
     </SettingsCard>
+  )
+}
+
+/**
+ * One list or table region: the title, its line and the primary action sit
+ * above a bordered body that holds the search and the rows.
+ */
+export function TableBlock({
+  title,
+  description,
+  actions,
+  children,
+}: {
+  title: string
+  description?: string
+  actions?: ReactNode
+  children: ReactNode
+}) {
+  return (
+    <Section
+      table
+      title={title}
+      {...(description ? { description } : {})}
+      {...(actions ? { actions } : {})}
+      bodyClassName="flex min-w-0 flex-col gap-4 overflow-x-auto p-4"
+    >
+      {children}
+    </Section>
   )
 }
 

@@ -41,6 +41,8 @@ export interface SettingsSection {
   label: string
   /** Shown beside the label in the section rail. */
   icon?: ReactNode
+  /** One sentence under the section's title above its content. */
+  description?: string
   tabs: SettingsTab[]
   /** Reachable and renderable, but not a row in the rail. */
   hidden?: boolean
@@ -74,16 +76,17 @@ export function SettingsShell({
 
   return (
     <div className="flex min-w-0 flex-1 items-start justify-center px-4 py-8 sm:px-6 md:px-10 md:pb-16">
-      <div className="w-full max-w-5xl space-y-8">
+      <div className="w-full max-w-6xl space-y-8">
         <header className="px-1">
           <h1 className="text-xl font-medium tracking-tight">Settings</h1>
           <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-            Your organization, billing defaults, pricing and developer tools.
+            Your organization, billing defaults, pricing setup, customer experience and developer
+            access.
           </p>
         </header>
 
         <div className="flex w-full flex-col gap-4 lg:flex-row lg:gap-8">
-          <nav aria-label="Settings" className="w-full min-w-0 lg:w-52 lg:shrink-0">
+          <nav aria-label="Settings" className="w-full min-w-0 lg:w-56 lg:shrink-0">
             <ul className="flex flex-col gap-1">
               {sections
                 .filter((entry) => !entry.hidden)
@@ -96,7 +99,7 @@ export function SettingsShell({
                         aria-current={active ? 'page' : undefined}
                         onClick={() => onSectionChange(entry.id)}
                         className={cn(
-                          'hover:bg-muted focus-visible:ring-ring/50 flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm font-medium outline-none focus-visible:ring-3 [&_svg]:size-4 [&_svg]:shrink-0',
+                          'hover:bg-muted focus-visible:ring-ring/50 flex w-full items-center gap-3 rounded-lg px-3 py-1.5 text-left text-sm font-medium outline-none focus-visible:ring-3 [&_svg]:size-4 [&_svg]:shrink-0',
                           active ? 'bg-muted' : 'text-muted-foreground',
                         )}
                       >
@@ -110,6 +113,14 @@ export function SettingsShell({
           </nav>
 
           <div className="flex min-w-0 flex-1 flex-col gap-5">
+            {section ? (
+              <div className="space-y-0.5">
+                <h2 className="text-base font-medium">{section.label}</h2>
+                {section.description ? (
+                  <p className="text-muted-foreground text-sm">{section.description}</p>
+                ) : null}
+              </div>
+            ) : null}
             {tabs.length > 1 ? (
               <div className="min-w-0 overflow-x-auto">
                 <DetailTabs

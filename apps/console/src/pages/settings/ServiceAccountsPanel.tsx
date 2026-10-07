@@ -38,7 +38,15 @@ import {
 } from '@fp/ui/primitives'
 import { BotIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
-import { ActionError, PanelError, WidePanel, mutationMessage, toFailure, SettingsBlock } from './panelKit'
+import {
+  ActionError,
+  PanelError,
+  WidePanel,
+  mutationMessage,
+  toFailure,
+  SettingsBlock,
+  TableBlock,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -83,7 +91,7 @@ export function ServiceAccountsPanel() {
 
   return (
     <WidePanel>
-      <SettingsBlock
+      <TableBlock
         title="Service accounts"
         description="Identities for your systems rather than your people. An API key is issued against one."
         actions={
@@ -169,7 +177,7 @@ export function ServiceAccountsPanel() {
             </TableBody>
           </Table>
         )}
-      </SettingsBlock>
+      </TableBlock>
 
       <CreateAccountDialog
         open={isCreating}
@@ -246,46 +254,51 @@ function CreateAccountDialog({
             create.mutate(value, { onSuccess: () => onOpenChange(false) }),
           )}
         >
-        <Field
-          label="Name"
-          required
-          {...(draft.error('name') ? { error: draft.error('name') } : {})}
-        >
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              autoFocus
-              placeholder="usage-ingest"
+          <Field
+            label="Name"
+            required
+            {...(draft.error('name') ? { error: draft.error('name') } : {})}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                autoFocus
+                placeholder="usage-ingest"
+                disabled={busy}
+                value={draft.text('name')}
+                onChange={(event) => draft.setText('name', event.target.value)}
+                {...field}
+              />
+            )}
+          </Field>
+
+          <div className="flex flex-col gap-1.5">
+            <span className="text-sm font-medium">
+              Roles <span className="text-destructive">*</span>
+            </span>
+            <RolePicker
+              label="Roles for the new service account"
+              roles={roles}
+              selected={draft.value.roles}
               disabled={busy}
-              value={draft.text('name')}
-              onChange={(event) => draft.setText('name', event.target.value)}
-              {...field}
+              onChange={(next) => draft.update((current) => ({ ...current, roles: next }))}
             />
-          )}
-        </Field>
+            {draft.error('roles') ? (
+              <p role="alert" className="text-destructive text-sm">
+                {draft.error('roles')}
+              </p>
+            ) : null}
+          </div>
 
-        <div className="flex flex-col gap-1.5">
-          <span className="text-sm font-medium">
-            Roles <span className="text-destructive">*</span>
-          </span>
-          <RolePicker
-            label="Roles for the new service account"
-            roles={roles}
-            selected={draft.value.roles}
-            disabled={busy}
-            onChange={(next) => draft.update((current) => ({ ...current, roles: next }))}
-          />
-          {draft.error('roles') ? (
-            <p role="alert" className="text-destructive text-sm">
-              {draft.error('roles')}
-            </p>
-          ) : null}
-        </div>
-
-        <ActionError message={mutationMessage(create.error, 'It could not be created.')} />
-      </form>
+          <ActionError message={mutationMessage(create.error, 'It could not be created.')} />
+        </form>
         <DialogFooter>
-          <Button type="button" variant="outline" disabled={busy} onClick={() => onOpenChange(false)}>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={busy}
+            onClick={() => onOpenChange(false)}
+          >
             Cancel
           </Button>
           <Button type="submit" form="create-service-account" disabled={busy}>

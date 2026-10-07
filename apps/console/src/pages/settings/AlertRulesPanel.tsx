@@ -30,7 +30,15 @@ import {
   TableRow,
 } from '@fp/ui/primitives'
 import { BellIcon } from 'lucide-react'
-import { ActionError, PanelError, WidePanel, mutationMessage, toFailure, SettingsBlock } from './panelKit'
+import {
+  ActionError,
+  PanelError,
+  WidePanel,
+  mutationMessage,
+  toFailure,
+  SettingsBlock,
+  TableBlock,
+} from './panelKit'
 
 /**
  * Alert rules — thresholds that watch one thing each.
@@ -82,7 +90,7 @@ export function AlertRulesPanel() {
 
   return (
     <WidePanel>
-      <SettingsBlock
+      <TableBlock
         title="Alert rules"
         description="Each rule watches one thing — a wallet, a feature, a subscription — and fires when it crosses a threshold."
       >
@@ -147,7 +155,7 @@ export function AlertRulesPanel() {
             </TableBody>
           </Table>
         )}
-      </SettingsBlock>
+      </TableBlock>
 
       {editing ? (
         <EditAlertSection key={editing.id} setting={editing} onDone={() => setEditing(null)} />

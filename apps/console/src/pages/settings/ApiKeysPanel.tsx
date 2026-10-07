@@ -39,7 +39,10 @@ import {
   WidePanel,
   formatDate,
   mutationMessage,
-  toFailure, SettingsBlock } from './panelKit'
+  toFailure,
+  SettingsBlock,
+  TableBlock,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -84,7 +87,7 @@ export function ApiKeysPanel() {
     <WidePanel>
       {issued ? <IssuedSecret issued={issued} onDismiss={() => setIssued(null)} /> : null}
 
-      <SettingsBlock
+      <TableBlock
         title="API keys"
         description="What your systems authenticate with when they send usage or read billing data."
         actions={
@@ -158,7 +161,7 @@ export function ApiKeysPanel() {
             </TableBody>
           </Table>
         )}
-      </SettingsBlock>
+      </TableBlock>
 
       <CreateKeyDialog
         open={isCreating}
@@ -170,20 +173,20 @@ export function ApiKeysPanel() {
           create.reset()
         }}
         onSubmit={(draft) => {
-            void create
-              .mutateAsync(draft)
-              .then((result) => {
-                // The secret is held in component state and nowhere else —
-                // putting it in the cache is what would let it outlive the
-                // one moment it is meant to be visible.
-                setIssued(result)
-                setIsCreating(false)
-              })
-              .catch(() => {
-                // Already surfaced through `create.error`; swallowed so the
-                // rejection is not an unhandled one.
-              })
-          }}
+          void create
+            .mutateAsync(draft)
+            .then((result) => {
+              // The secret is held in component state and nowhere else —
+              // putting it in the cache is what would let it outlive the
+              // one moment it is meant to be visible.
+              setIssued(result)
+              setIsCreating(false)
+            })
+            .catch(() => {
+              // Already surfaced through `create.error`; swallowed so the
+              // rejection is not an unhandled one.
+            })
+        }}
       />
 
       <ConfirmDialog
@@ -311,68 +314,68 @@ function CreateKeyDialog({
           noValidate
           onSubmit={draft.handleSubmit(onSubmit)}
         >
-        <div className="grid gap-4 sm:grid-cols-2">
-          <Field
-            label="Name"
-            required
-            {...(draft.error('name') ? { error: draft.error('name') } : {})}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                autoFocus
-                placeholder="Billing worker"
-                disabled={isPending}
-                value={draft.text('name')}
-                onChange={(event) => draft.setText('name', event.target.value)}
-                {...field}
-              />
-            )}
-          </Field>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Name"
+              required
+              {...(draft.error('name') ? { error: draft.error('name') } : {})}
+            >
+              {({ id, ...field }) => (
+                <Input
+                  id={id}
+                  autoFocus
+                  placeholder="Billing worker"
+                  disabled={isPending}
+                  value={draft.text('name')}
+                  onChange={(event) => draft.setText('name', event.target.value)}
+                  {...field}
+                />
+              )}
+            </Field>
 
-          <Field
-            label="Expires on"
-            hint="Leave blank for a key that never expires."
-            {...(draft.error('expiresAt') ? { error: draft.error('expiresAt') } : {})}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                type="date"
-                disabled={isPending}
-                value={draft.text('expiresAt')}
-                onChange={(event) => draft.setText('expiresAt', event.target.value)}
-                {...field}
-              />
-            )}
-          </Field>
-        </div>
-
-        <fieldset className="flex flex-col gap-1.5" disabled={isPending}>
-          <legend className="text-sm font-medium">Type</legend>
-          <div role="group" aria-label="Key type" className="flex flex-wrap gap-1.5">
-            {issuable.map((option) => (
-              <Button
-                key={option}
-                type="button"
-                size="sm"
-                variant={type === option ? 'default' : 'outline'}
-                aria-pressed={type === option}
-                onClick={() => draft.update((current) => ({ ...current, type: option }))}
-              >
-                {API_KEY_TYPE_LABEL[option]}
-              </Button>
-            ))}
+            <Field
+              label="Expires on"
+              hint="Leave blank for a key that never expires."
+              {...(draft.error('expiresAt') ? { error: draft.error('expiresAt') } : {})}
+            >
+              {({ id, ...field }) => (
+                <Input
+                  id={id}
+                  type="date"
+                  disabled={isPending}
+                  value={draft.text('expiresAt')}
+                  onChange={(event) => draft.setText('expiresAt', event.target.value)}
+                  {...field}
+                />
+              )}
+            </Field>
           </div>
-          <p className="text-muted-foreground text-xs">
-            {type === ApiKeyType.Publishable
-              ? 'A publishable key is safe to ship in a browser or mobile app. It can only do what a customer may do.'
-              : 'A secret key can do anything your account can. Keep it on a server.'}
-          </p>
-        </fieldset>
 
-        <ActionError message={error} />
-      </form>
+          <fieldset className="flex flex-col gap-1.5" disabled={isPending}>
+            <legend className="text-sm font-medium">Type</legend>
+            <div role="group" aria-label="Key type" className="flex flex-wrap gap-1.5">
+              {issuable.map((option) => (
+                <Button
+                  key={option}
+                  type="button"
+                  size="sm"
+                  variant={type === option ? 'default' : 'outline'}
+                  aria-pressed={type === option}
+                  onClick={() => draft.update((current) => ({ ...current, type: option }))}
+                >
+                  {API_KEY_TYPE_LABEL[option]}
+                </Button>
+              ))}
+            </div>
+            <p className="text-muted-foreground text-xs">
+              {type === ApiKeyType.Publishable
+                ? 'A publishable key is safe to ship in a browser or mobile app. It can only do what a customer may do.'
+                : 'A secret key can do anything your account can. Keep it on a server.'}
+            </p>
+          </fieldset>
+
+          <ActionError message={error} />
+        </form>
         <DialogFooter>
           <Button
             type="button"

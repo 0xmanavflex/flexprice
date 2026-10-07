@@ -126,7 +126,7 @@ test.describe('a customer detail page', () => {
     const customerUrl = page.url()
     const customerId = customerUrl.match(/\/customers\/([^/?]+)/)?.[1]
     await page.getByRole('button', { name: 'Customer actions' }).click()
-    await page.getByRole('menuitem', { name: 'Create subscription' }).click()
+    await page.getByRole('menuitem', { name: 'Create contract' }).click()
 
     await expect(page).toHaveURL(new RegExp(`/customers/${customerId}/subscriptions/new`))
     await expect(page.getByRole('button', { name: 'Next' })).toBeVisible()
@@ -134,7 +134,7 @@ test.describe('a customer detail page', () => {
     await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)
     await expect(
-      page.getByRole('heading', { level: 2, name: 'Subscriptions', exact: true }),
+      page.getByRole('heading', { level: 2, name: 'Contracts', exact: true }),
     ).toBeVisible()
   })
 })

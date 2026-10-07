@@ -11,7 +11,7 @@ import {
   useSearch,
 } from '@tanstack/react-router'
 import { Outlet } from '@tanstack/react-router'
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { AppFailure, LoadingRows } from '@fp/ui/compositions'
 import { useCurrentUser } from '@fp/query'
 import { ConsoleShell } from './shell/ConsoleShell'
@@ -181,6 +181,9 @@ const EventListPage = lazy(() =>
 )
 import { parseEventSearch } from './eventSearch'
 import { DEFAULT_RAW_EVENT_QUERY, type RawEventQuery } from '@fp/domain'
+const SettingsFrame = lazy(() =>
+  import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsFrame })),
+)
 const SettingsPage = lazy(() =>
   import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
@@ -1015,14 +1018,16 @@ function CouponsRouteComponent() {
   const navigate = useNavigate()
 
   return (
-    <CouponListPage
-      query={query}
-      onQueryChange={(next) => void navigate({ to: '/coupons', search: next, replace: true })}
-      onOpenCoupon={(coupon) =>
-        void navigate({ to: '/coupons/$couponId', params: { couponId: coupon.id } })
-      }
-      onCreateCoupon={() => void navigate({ to: '/coupons/new' })}
-    />
+    <SettingsListFrame sectionId="discounts">
+      <CouponListPage
+        query={query}
+        onQueryChange={(next) => void navigate({ to: '/coupons', search: next, replace: true })}
+        onOpenCoupon={(coupon) =>
+          void navigate({ to: '/coupons/$couponId', params: { couponId: coupon.id } })
+        }
+        onCreateCoupon={() => void navigate({ to: '/coupons/new' })}
+      />
+    </SettingsListFrame>
   )
 }
 
@@ -1224,21 +1229,23 @@ function CostSheetsRouteComponent() {
   const navigate = useNavigate()
 
   return (
-    <CostSheetListPage
-      query={query}
-      onQueryChange={(next) => void navigate({ to: '/cost-sheets', search: next, replace: true })}
-      onOpenCostSheet={(costSheet) =>
-        void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId: costSheet.id } })
-      }
-      onCreateCostSheet={() => void navigate({ to: '/cost-sheets/new' })}
-      onEditCostSheet={(costSheet) =>
-        void navigate({
-          to: '/cost-sheets/$costSheetId',
-          params: { costSheetId: costSheet.id },
-          search: { edit: true },
-        })
-      }
-    />
+    <SettingsListFrame sectionId="cost-tracking">
+      <CostSheetListPage
+        query={query}
+        onQueryChange={(next) => void navigate({ to: '/cost-sheets', search: next, replace: true })}
+        onOpenCostSheet={(costSheet) =>
+          void navigate({ to: '/cost-sheets/$costSheetId', params: { costSheetId: costSheet.id } })
+        }
+        onCreateCostSheet={() => void navigate({ to: '/cost-sheets/new' })}
+        onEditCostSheet={(costSheet) =>
+          void navigate({
+            to: '/cost-sheets/$costSheetId',
+            params: { costSheetId: costSheet.id },
+            search: { edit: true },
+          })
+        }
+      />
+    </SettingsListFrame>
   )
 }
 
@@ -1769,14 +1776,16 @@ function TaxesRouteComponent() {
   const navigate = useNavigate()
 
   return (
-    <TaxListPage
-      query={query}
-      onQueryChange={(next) => void navigate({ to: '/taxes', search: next, replace: true })}
-      onCreateTaxRate={() => void navigate({ to: '/taxes/new' })}
-      onEditTaxRate={(taxRate) =>
-        void navigate({ to: '/taxes/$taxRateId/edit', params: { taxRateId: taxRate.id } })
-      }
-    />
+    <SettingsListFrame sectionId="taxes">
+      <TaxListPage
+        query={query}
+        onQueryChange={(next) => void navigate({ to: '/taxes', search: next, replace: true })}
+        onCreateTaxRate={() => void navigate({ to: '/taxes/new' })}
+        onEditTaxRate={(taxRate) =>
+          void navigate({ to: '/taxes/$taxRateId/edit', params: { taxRateId: taxRate.id } })
+        }
+      />
+    </SettingsListFrame>
   )
 }
 
@@ -1847,6 +1856,25 @@ const settingsRoute = createRoute({
   search: { middlewares: [stripSearchParams(DEFAULT_SETTINGS_QUERY)] },
   component: SettingsRouteComponent,
 })
+
+/** Discounts, Taxes and Cost tracking keep their routes but sit inside the Settings frame. */
+function SettingsListFrame({ sectionId, children }: { sectionId: string; children: ReactNode }) {
+  const navigate = useNavigate()
+  return (
+    <SettingsFrame
+      sectionId={sectionId}
+      onNavigate={(nextSection, nextTab) =>
+        void navigate({
+          to: '/settings',
+          search: { section: nextSection, tab: nextTab },
+        })
+      }
+      onOpenPage={(href) => void navigate({ to: href, search: {} as never })}
+    >
+      {children}
+    </SettingsFrame>
+  )
+}
 
 function SettingsRouteComponent() {
   const { section, tab } = useSearch({ from: settingsRoute.id })

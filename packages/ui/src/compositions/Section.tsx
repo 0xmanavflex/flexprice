@@ -33,6 +33,10 @@ export interface SectionProps {
   flush?: boolean
   /** No header band: the title stays as a screen-reader heading and the body (a table) leads with its own search. */
   bare?: boolean
+  /** For a table: the title and actions sit above the box instead of in a header band, and the body is a bordered, clipped surface. */
+  table?: boolean
+  /** A line under the title. */
+  description?: string
   /** Heading level, so a page's outline stays correct. */
   as?: 'h1' | 'h2' | 'h3'
 }
@@ -46,10 +50,35 @@ export function Section({
   bodyClassName,
   flush,
   bare,
+  table,
+  description,
   as: Heading = 'h2',
 }: SectionProps) {
   const id = `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
   const headerAction = actions ?? action
+
+  if (table) {
+    return (
+      <section aria-labelledby={id} className={cn('flex flex-col gap-3', className)}>
+        <div className="flex min-h-8 items-center justify-between gap-4">
+          <div className="min-w-0">
+            <Heading id={id} className="text-sm font-medium">
+              {title}
+            </Heading>
+            {description ? (
+              <p className="text-muted-foreground text-[13px]">{description}</p>
+            ) : null}
+          </div>
+          {headerAction ? (
+            <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
+          ) : null}
+        </div>
+        <div className={cn('bg-background overflow-hidden rounded-xl border', bodyClassName)}>
+          {children}
+        </div>
+      </section>
+    )
+  }
 
   return (
     <section
@@ -62,9 +91,14 @@ export function Section({
         </Heading>
       ) : (
         <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
-          <Heading id={id} className="text-sm font-medium">
-            {title}
-          </Heading>
+          <div className="min-w-0 space-y-0.5">
+            <Heading id={id} className="text-sm font-medium">
+              {title}
+            </Heading>
+            {description ? (
+              <p className="text-muted-foreground text-[13px]">{description}</p>
+            ) : null}
+          </div>
           {headerAction ? (
             <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
           ) : null}

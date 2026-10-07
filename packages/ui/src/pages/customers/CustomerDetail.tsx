@@ -9,6 +9,7 @@ import {
   PaymentStatus,
   compareMoney,
   isZeroMoney,
+  SubscriptionStatus,
   type Subscription,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -35,6 +36,7 @@ import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
 import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { cn } from '@ui/lib/cn'
 import { DetailTable } from '../shared/DetailTable'
+import { SubscriptionCard } from './SubscriptionCard'
 
 /**
  * A customer's detail page: an avatar-tile `EntityHeader` (name, id chip, ⋯ menu)
@@ -152,9 +154,9 @@ export function CustomerDetail({
       .join('') || '?'
 
   const addButton = (
-    <Button size="sm" className="h-9 px-3" onClick={onCreateSubscription}>
+    <Button size="sm" className="h-8 px-3" onClick={onCreateSubscription}>
       <PlusIcon aria-hidden="true" />
-      Create subscription
+      Create contract
     </Button>
   )
 
@@ -184,7 +186,7 @@ export function CustomerDetail({
               <DropdownMenuGroup>
                 <DropdownMenuItem onClick={onCreateSubscription}>
                   <PlusIcon className="text-muted-foreground" aria-hidden="true" />
-                  Create subscription
+                  Create contract
                 </DropdownMenuItem>
                 {onEdit ? (
                   <DropdownMenuItem onClick={onEdit}>
@@ -215,7 +217,7 @@ export function CustomerDetail({
           onValueChange={(next) => onTabChange(next as CustomerTab)}
           tabs={[
             { value: 'overview', label: 'Overview' },
-            { value: 'subscriptions', label: 'Subscriptions', count: subscriptions.length },
+            { value: 'subscriptions', label: 'Contracts', count: subscriptions.length },
             { value: 'invoices', label: 'Invoices', count: invoices.length },
             { value: 'wallet', label: 'Wallet' },
             { value: 'usage', label: 'Analytics' },
@@ -226,9 +228,11 @@ export function CustomerDetail({
 
         {tab === 'overview' ? (
           <OverviewTab
+            subscriptions={subscriptions}
+            subscriptionsLoading={subscriptionsLoading}
+            onViewSubscriptions={() => onTabChange('subscriptions')}
             invoices={invoices}
             invoicesLoading={invoicesLoading}
-            onViewInvoices={() => onTabChange('invoices')}
             formatDate={formatDate}
             onOpenInvoice={onOpenInvoice}
           />
@@ -245,14 +249,17 @@ export function CustomerDetail({
         ) : null}
 
         {tab === 'invoices' ? (
-          <Section title="Invoices" flush bare>
+          <Section
+            table
+            title="Invoices"
+            action={
+              <Button size="sm" className="h-8 px-3">
+                <PlusIcon aria-hidden="true" />
+                New invoice
+              </Button>
+            }
+          >
             <InvoiceTable
-              action={
-                <Button size="sm" className="h-9 px-3">
-                  <PlusIcon aria-hidden="true" />
-                  New invoice
-                </Button>
-              }
               invoices={invoices}
               isLoading={invoicesLoading}
               formatDate={formatDate}
@@ -304,7 +311,7 @@ const DEMO_ACTIVITY: ActivityEvent[] = [
     at: 'Today, 09:14',
     status: 'issue',
     summary: '80% of the monthly API calls allowance used.',
-    labels: [{ id: 'a', label: 'Feature', hint: 'api_call', variant: 'secondary' }],
+    labels: [{ id: 'a', label: 'Product', hint: 'api_call', variant: 'secondary' }],
   },
   {
     id: 5,
@@ -348,29 +355,68 @@ const DEMO_ACTIVITY: ActivityEvent[] = [
   },
 ]
 
+const RUNNING: readonly SubscriptionStatus[] = [
+  SubscriptionStatus.Active,
+  SubscriptionStatus.Trialing,
+  SubscriptionStatus.Paused,
+]
+const MAX_CARDS = 4
+
 function OverviewTab({
+  subscriptions,
+  subscriptionsLoading,
+  onViewSubscriptions,
   invoices,
   invoicesLoading,
-  onViewInvoices,
   formatDate,
   onOpenInvoice,
 }: {
+  subscriptions: Subscription[]
+  subscriptionsLoading: boolean
+  onViewSubscriptions: () => void
   invoices: Invoice[]
   invoicesLoading: boolean
-  onViewInvoices: () => void
   formatDate: FormatDate
   onOpenInvoice: ((invoiceId: string) => void) | undefined
 }) {
+  const running = subscriptions.filter((s) => RUNNING.includes(s.status))
+  const shown = running.slice(0, MAX_CARDS)
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex min-w-0 flex-col gap-8">
-        <Section title="Recent invoices" flush bare>
+        <section aria-label="Running contracts">
+          {subscriptionsLoading ? (
+            <LoadingRows />
+          ) : shown.length > 0 ? (
+            <div className={cn('grid gap-4', shown.length > 1 && 'md:grid-cols-2')}>
+              {shown.map((s, index) => (
+                <SubscriptionCard
+                  key={s.id}
+                  subscription={s}
+                  formatDate={formatDate}
+                  onOpen={onViewSubscriptions}
+                  className={shown.length % 2 === 1 && index === 0 ? 'md:col-span-2' : ''}
+                />
+              ))}
+              {running.length > MAX_CARDS ? (
+                <button
+                  type="button"
+                  onClick={onViewSubscriptions}
+                  className="text-muted-foreground hover:bg-muted/40 hover:text-foreground rounded-xl border border-dashed py-3 text-[13px] md:col-span-2"
+                >
+                  View all {running.length} contracts
+                </button>
+              ) : null}
+            </div>
+          ) : (
+            <p className="text-muted-foreground rounded-xl border border-dashed px-6 py-10 text-center text-[13px]">
+              No active contracts. Create one from the Contracts tab.
+            </p>
+          )}
+        </section>
+        <Section table title="Recent invoices">
           <InvoiceTable
-            action={
-              <Button variant="outline" className="h-9 px-3" onClick={onViewInvoices}>
-                View all
-              </Button>
-            }
+            compactList
             invoices={invoices.slice(0, 5)}
             isLoading={invoicesLoading}
             formatDate={formatDate}
@@ -403,17 +449,22 @@ function SubscriptionsTab({
   onOpenPlan: ((planId: string) => void) | undefined
 }) {
   return (
-    <Section title="Subscriptions" flush bare>
+    <Section
+      table
+      title="Contracts"
+      description="Every contract this customer has had"
+      action={addButton}
+    >
       {isLoading ? (
         <div className="p-4">
           <LoadingRows />
         </div>
       ) : (
         <DetailTable
-          label="Subscriptions"
-          action={addButton}
+          compact
+          label="Contracts"
           facet={{ label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] }}
-          noun="subscriptions"
+          noun="contracts"
           rows={subscriptions}
           getRowId={(s) => s.id}
           columns={[
@@ -465,7 +516,7 @@ function SubscriptionsTab({
               cell: (s) => <span className="text-muted-foreground font-mono text-xs">{s.id}</span>,
             },
           ]}
-          empty="No subscriptions yet. Subscribe this customer to a plan to start billing."
+          empty="No contracts yet. Create a contract to put this customer on a plan and start billing."
         />
       )}
     </Section>
@@ -489,13 +540,14 @@ function invoicePayment(invoice: Invoice): { label: string; tone: PillTone } {
 
 /** The invoices table, edge to edge inside a flush section. */
 function InvoiceTable({
-  action,
+  compactList = false,
   invoices,
   isLoading,
   formatDate,
   onOpenInvoice,
 }: {
-  action?: ReactNode
+  /** The short list on the Overview: no search row and no Period column. */
+  compactList?: boolean
   invoices: Invoice[]
   isLoading: boolean
   formatDate: FormatDate
@@ -510,13 +562,14 @@ function InvoiceTable({
   }
   return (
     <DetailTable
+      compact
+      toolbar={!compactList}
       label="Invoices"
-      {...(action ? { action } : {})}
       facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
       noun="invoices"
       rows={invoices}
       {...(onOpenInvoice ? { onRowClick: (invoice: Invoice) => onOpenInvoice(invoice.id) } : {})}
-      empty="No invoices yet. Invoices are created automatically from subscriptions, or raised by hand."
+      empty="No invoices yet. Invoices are created automatically from contracts, or raised by hand."
       columns={[
         {
           key: 'number',
@@ -528,18 +581,22 @@ function InvoiceTable({
             </span>
           ),
         },
-        {
-          key: 'period',
-          header: 'Period',
-          sortBy: (invoice) => Number(new Date(invoice.periodStart ?? 0)),
-          cell: (invoice) => (
-            <Muted>
-              {invoice.periodStart && invoice.periodEnd
-                ? `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
-                : '—'}
-            </Muted>
-          ),
-        },
+        ...(compactList
+          ? []
+          : [
+              {
+                key: 'period',
+                header: 'Period',
+                sortBy: (invoice: Invoice) => Number(new Date(invoice.periodStart ?? 0)),
+                cell: (invoice: Invoice) => (
+                  <Muted>
+                    {invoice.periodStart && invoice.periodEnd
+                      ? `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
+                      : '—'}
+                  </Muted>
+                ),
+              },
+            ]),
         {
           key: 'payment',
           header: 'Payment',
@@ -585,16 +642,7 @@ function InformationTab({
   onEdit: (() => void) | undefined
   taxes: ReactNode
 }) {
-  const address = [
-    customer.addressLine1,
-    customer.addressLine2,
-    [customer.addressCity, customer.addressState, customer.addressPostalCode]
-      .filter(Boolean)
-      .join(', '),
-    customer.addressCountry,
-  ]
-    .filter(Boolean)
-    .join('\n')
+  const street = [customer.addressLine1, customer.addressLine2].filter(Boolean).join(', ')
 
   return (
     <div className="grid gap-5 xl:grid-cols-3">
@@ -641,7 +689,21 @@ function InformationTab({
           title="Billing address"
           locked
           fields={[
-            { key: 'address', label: 'Address', value: address, multiline: true, readOnly: true },
+            { key: 'address', label: 'Address', value: street, readOnly: true },
+            { key: 'city', label: 'City', value: customer.addressCity ?? '', readOnly: true },
+            { key: 'state', label: 'State', value: customer.addressState ?? '', readOnly: true },
+            {
+              key: 'postal',
+              label: 'Postal code',
+              value: customer.addressPostalCode ?? '',
+              readOnly: true,
+            },
+            {
+              key: 'country',
+              label: 'Country',
+              value: customer.addressCountry ?? '',
+              readOnly: true,
+            },
             { key: 'timezone', label: 'Timezone', value: customer.timezone || '', readOnly: true },
             {
               key: 'tax',

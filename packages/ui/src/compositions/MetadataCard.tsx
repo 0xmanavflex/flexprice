@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { PlusIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
@@ -8,7 +8,7 @@ import { Section } from './Section'
 export const MetadataCardProvenance = provenance({
   source: 'composition',
   composes: ['compositions/section', 'ui/input', 'ui/button'],
-  note: 'A key/value card with an Edit button in the header: rows become inputs with add and remove, Save and Cancel in place.',
+  note: 'A key/value card with an Edit button in the header: rows become inputs with add and remove, and Save and Cancel replace Edit in the header.',
 })
 
 export interface MetadataCardProps {
@@ -44,6 +44,7 @@ export function MetadataCard({
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
   const entries = Object.entries(metadata)
+  const formId = useId()
 
   const start = () => {
     setRows(entries.map(([key, value], index) => ({ id: index, key, value })))
@@ -77,19 +78,38 @@ export function MetadataCard({
     }
   }
 
-  const edit =
-    onSave && !editing ? (
-      <Button variant="outline" size="sm" onClick={start}>
-        Edit
+  const actions = editing ? (
+    <>
+      <Button
+        type="button"
+        variant="ghost"
+        size="sm"
+        disabled={pending}
+        onClick={() => setEditing(false)}
+      >
+        Cancel
       </Button>
-    ) : undefined
+      <Button type="submit" form={formId} size="sm" disabled={pending}>
+        {pending ? 'Saving…' : 'Save'}
+      </Button>
+    </>
+  ) : onSave ? (
+    <Button variant="outline" size="sm" onClick={start}>
+      Edit
+    </Button>
+  ) : undefined
 
   return (
-    <Section title={title} actions={edit} {...(className ? { className } : {})}>
-      <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-4">
-        <p className="text-muted-foreground text-[13px]">{description}</p>
+    <Section
+      title={title}
+      description={description}
+      actions={actions}
+      flush
+      {...(className ? { className } : {})}
+    >
+      <form id={formId} onSubmit={(event) => void submit(event)} className="flex flex-col">
         {editing ? (
-          <>
+          <div className="flex flex-col gap-4 p-6">
             <ul className="flex flex-col gap-2">
               {rows.map((row, index) => (
                 <li key={row.id} className="flex items-center gap-2">
@@ -135,13 +155,13 @@ export function MetadataCard({
               <PlusIcon aria-hidden />
               Add field
             </Button>
-          </>
+          </div>
         ) : entries.length > 0 ? (
-          <dl className="flex flex-col divide-y rounded-lg border text-sm">
+          <dl className="flex flex-col divide-y text-sm">
             {entries.map(([key, value]) => (
               <div
                 key={key}
-                className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-4 py-2.5"
+                className="grid grid-cols-[minmax(0,1fr)_minmax(0,2fr)] gap-4 px-6 py-3"
               >
                 <dt className="text-muted-foreground min-w-0 font-mono text-xs break-words">
                   {key}
@@ -151,27 +171,12 @@ export function MetadataCard({
             ))}
           </dl>
         ) : (
-          <p className="text-muted-foreground text-[13px]">No metadata yet.</p>
+          <p className="text-muted-foreground p-6 text-[13px]">No metadata yet.</p>
         )}
         {error ? (
-          <p role="alert" className="text-destructive text-sm">
+          <p role="alert" className="text-destructive px-6 pb-4 text-sm">
             {error}
           </p>
-        ) : null}
-        {editing ? (
-          <div className="flex justify-end gap-2 border-t pt-4">
-            <Button
-              type="button"
-              variant="ghost"
-              disabled={pending}
-              onClick={() => setEditing(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={pending}>
-              {pending ? 'Saving…' : 'Save'}
-            </Button>
-          </div>
         ) : null}
       </form>
     </Section>

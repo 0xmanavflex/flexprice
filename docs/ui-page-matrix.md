@@ -52,7 +52,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | price-units | `PriceUnitListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |
 | pricing-widget | `PricingWidgetPage` | Other | EmptyState | PricingCatalogBlock |
 | revenue | `RevenuePage` | Dashboard | EntityList, Panel | RevenueDashboard |
-| settings | `SettingsPage` | Settings | DetailTabs, EmptyState | SettingsSection, SettingsShell |
+| settings | `SettingsPage` | Settings | DetailTabs, EmptyState | EmbeddedPageContext, SettingsSection, SettingsShell |
 | subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
 | subscriptions | `SubscriptionDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section, SimpleTable | AppFailure, CatalogDetailFrame, DateInput, EditableCard, EntityLink, Input, LoadingRows, OptionSelect, PageBody, SubscriptionStatusBadge |
 | subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, Field, FormActions, FormCard, FormPage, Section, SimpleTable, WorkflowStepper | SubscriptionForm |

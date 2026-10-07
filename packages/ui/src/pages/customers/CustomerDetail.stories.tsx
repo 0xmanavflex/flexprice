@@ -160,14 +160,14 @@ export const NavigatesSections: Story = {
   },
 }
 
-/** Create subscription leaves this page. The detail view only hands off. */
+/** Create contract leaves this page. The detail view only hands off. */
 export const CreatesSubscription: Story = {
   args: { onCreateSubscription: fn() },
   parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Create subscription' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Create contract' }))
     await expect(args.onCreateSubscription).toHaveBeenCalledOnce()
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
   },

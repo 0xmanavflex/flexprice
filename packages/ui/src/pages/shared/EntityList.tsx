@@ -238,6 +238,10 @@ export interface EntityListProps<T> {
 
   /** The sr-only heading's tag. A list page is the page (`h1`); a table inside a detail page is not. */
   headingAs?: 'h1' | 'h3'
+  /** For a table inside a panel: 36px header, 48px rows, 32px toolbar controls, and a footer only once there is a second page. */
+  compact?: boolean | undefined
+  /** Leaves out the search and filter row: a short list that needs none. */
+  hideToolbar?: boolean | undefined
   className?: string
 }
 
@@ -383,6 +387,8 @@ export function EntityList<T extends object>({
   filteredEmptyTitle,
   filteredEmptyDescription,
   headingAs: Heading = 'h1',
+  compact = false,
+  hideToolbar = false,
   className,
 }: EntityListProps<T>) {
   /* --- column visibility, owned here so the ⋯ menu has something to toggle --- */
@@ -653,10 +659,10 @@ export function EntityList<T extends object>({
     <div
       role="search"
       aria-label={`Search and filter ${noun}`}
-      className="flex flex-wrap items-center justify-between gap-3"
+      className={cn('flex flex-wrap items-center justify-between gap-3', compact && 'px-6 py-3')}
     >
       <div className="flex flex-wrap items-center gap-2">
-        <InputGroup className="h-9 w-72 max-w-full">
+        <InputGroup className={cn(compact ? 'h-8 w-60' : 'h-9 w-72', 'max-w-full')}>
           <InputGroupAddon align="inline-start">
             <SearchIcon className="text-muted-foreground size-4" aria-hidden />
           </InputGroupAddon>
@@ -702,7 +708,7 @@ export function EntityList<T extends object>({
                 variant="outline"
                 size="icon"
                 aria-label={filter.activeCount ? `Filter. ${filter.activeCount} active` : 'Filter'}
-                className="relative size-9"
+                className={cn('relative', compact ? 'size-8' : 'size-9')}
               >
                 <FilterIcon aria-hidden />
                 {filter.activeCount ? <CountBadge count={filter.activeCount} /> : null}
@@ -726,7 +732,7 @@ export function EntityList<T extends object>({
                 aria-label={`Sort by ${
                   sort.options.find((option) => option.value === sort.field)?.label ?? sort.field
                 }, ${sort.direction === 'asc' ? 'ascending' : 'descending'}. Change sorting`}
-                className="relative size-9"
+                className={cn('relative', compact ? 'size-8' : 'size-9')}
               >
                 <ArrowUpDownIcon aria-hidden />
                 {sort.activeCount ? <CountBadge count={sort.activeCount} /> : null}
@@ -743,7 +749,7 @@ export function EntityList<T extends object>({
                   type="button"
                   variant="outline"
                   size="icon"
-                  className="size-9"
+                  className={compact ? 'size-8' : 'size-9'}
                   aria-label="Table options"
                 />
               }
@@ -795,12 +801,12 @@ export function EntityList<T extends object>({
     <div
       role="region"
       aria-label={label}
-      className={cn('flex w-full min-w-0 flex-col gap-5', className)}
+      className={cn('flex w-full min-w-0 flex-col', compact ? 'gap-0' : 'gap-5', className)}
     >
       <Heading className="sr-only">{label}</Heading>
       {/* A list with nothing in it has nothing to search, filter or sort: the
           guided empty state stands alone until the first record exists. */}
-      {showFirstRun ? null : toolbar}
+      {showFirstRun || hideToolbar ? null : toolbar}
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
           stops an overflowing table pushing the page itself wider. */}
@@ -850,9 +856,13 @@ export function EntityList<T extends object>({
             }}
             tableClassNames={{
               base: 'min-w-(--table-min)',
-              edgeCell: 'first:ps-4 last:pe-2',
-              headerRow:
-                'bg-muted/60 [&>th]:h-11 [&>th]:px-4 [&>th]:border-0 [&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
+              edgeCell: compact ? 'first:ps-6 last:pe-4' : 'first:ps-4 last:pe-2',
+              headerRow: cn(
+                'bg-muted/60 [&>th]:px-4 [&>th]:border-0',
+                compact
+                  ? '[&>th]:h-9'
+                  : '[&>th]:h-11 [&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
+              ),
               /*
                * Every cell clips (`overflow-hidden`): `table-fixed` fixes the
                * cell box, not its contents, so a pill or any other
@@ -861,7 +871,8 @@ export function EntityList<T extends object>({
                * this is the backstop for the ones that cannot.
                */
               bodyRow: cn(
-                'h-[60px] hover:bg-muted/30 [&>td]:px-4 [&>td]:whitespace-nowrap [&>td]:border-border/40 [&>td]:overflow-hidden last:[&>td]:border-b-0',
+                compact ? 'h-12 [&_.font-medium]:font-[450]' : 'h-[60px]',
+                'hover:bg-muted/30 [&>td]:px-4 [&>td]:whitespace-nowrap [&>td]:border-border/40 [&>td]:overflow-hidden last:[&>td]:border-b-0',
                 onRowClick && 'cursor-pointer',
               ),
             }}
@@ -873,8 +884,10 @@ export function EntityList<T extends object>({
               >
                 <DataGridTable />
               </div>
-              {total > 0 ? (
-                <div className="border-border/60 border-t px-4 pt-4">
+              {total > 0 && (!compact || total > pageSize) ? (
+                <div
+                  className={cn('border-border/60 border-t', compact ? 'px-6 py-3' : 'px-4 pt-4')}
+                >
                   <DataGridPagination
                     sizes={PAGE_SIZES}
                     info={`{from} - {to} of {count} ${noun}`}

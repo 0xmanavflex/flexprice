@@ -102,11 +102,11 @@ export function EditableCard({
       {...(className ? { className } : {})}
     >
       <form onSubmit={(event) => void submit(event)} className="flex flex-col gap-5">
-        <dl className="grid grid-cols-1 gap-x-10 gap-y-5 text-sm sm:grid-cols-2">
+        <dl className="grid grid-cols-1 gap-x-10 gap-y-5 text-sm md:grid-cols-3">
           {fields.map((field) => {
             const id = `edit-${title}-${field.key}`.replace(/\s+/g, '-').toLowerCase()
             const error = errors[field.key]
-            const wide = field.multiline ? 'sm:col-span-2' : ''
+            const wide = field.multiline ? 'md:col-span-3' : ''
             if (!editing || field.readOnly) {
               return (
                 <div key={field.key} className={`flex min-w-0 flex-col gap-1 ${wide}`}>
