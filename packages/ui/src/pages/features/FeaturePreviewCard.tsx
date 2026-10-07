@@ -57,7 +57,6 @@ export function FeaturePreviewCard({
       title="How it will look"
       label="Feature preview"
       badge={<Badge variant="outline">{FEATURE_TYPE_LABEL[type]}</Badge>}
-      description="Updates as you type."
     >
       <PreviewSection title="Feature">
         <PreviewRows>

@@ -2,7 +2,6 @@ import { type Charge, type CreditGrant, type Entitlement, chargeToDraft } from '
 import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
 
 export interface PlanCustomerPreviewProps {
-  name: string
   charges: Charge[]
   entitlements: Entitlement[]
   grants: CreditGrant[]
@@ -18,7 +17,6 @@ export interface PlanCustomerPreviewProps {
  * entitlements and grants to `PlanPreviewCard`, the one preview the form shares.
  */
 export function PlanCustomerPreview({
-  name,
   charges,
   entitlements,
   grants,
@@ -29,7 +27,6 @@ export function PlanCustomerPreview({
   const meterNames = new Map(charges.map((c) => [c.meterId, c.meterName] as const))
   return (
     <PlanPreviewCard
-      name={name}
       charges={charges.map(chargeToDraft)}
       meterLabel={(id) => meterNames.get(id) ?? id}
       {...(meterUnit ? { meterUnit } : {})}

@@ -19,7 +19,7 @@ export interface CostSheetSummaryCardProps {
 
 export function CostSheetSummaryCard({ name, lookupKey, description }: CostSheetSummaryCardProps) {
   return (
-    <FormPreview title="Summary" label="Cost sheet summary" description="Updates as you type.">
+    <FormPreview title="Summary" label="Cost sheet summary">
       <PreviewSection title="Cost sheet">
         <PreviewRows>
           <PreviewRow label="Name" value={name.trim() || 'Untitled cost sheet'} />

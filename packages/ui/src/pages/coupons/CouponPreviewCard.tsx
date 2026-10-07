@@ -78,7 +78,6 @@ export function CouponPreviewCard(props: CouponPreviewCardProps) {
       title="How it will look"
       label="Coupon preview"
       badge={<Badge variant="outline">{COUPON_CADENCE_LABEL[props.cadence]}</Badge>}
-      description="Updates as you type."
     >
       <PreviewAmount
         label={title}

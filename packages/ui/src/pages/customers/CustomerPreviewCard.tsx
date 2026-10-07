@@ -57,7 +57,6 @@ export function CustomerPreviewCard(props: CustomerPreviewCardProps) {
       title="Customer profile"
       label="Customer preview"
       badge={<Badge variant="outline">{CUSTOMER_TAX_TREATMENT_LABEL[tax]}</Badge>}
-      description="Updates as you type."
     >
       <div className="flex items-center gap-3">
         <Avatar>

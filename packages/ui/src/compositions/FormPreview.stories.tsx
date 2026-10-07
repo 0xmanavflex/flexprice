@@ -27,7 +27,6 @@ type Story = StoryObj<typeof meta>
 export const Rail: Story = {
   args: {
     title: 'Subscription summary',
-    description: 'Updates as you fill in each step.',
     badge: <Badge>Draft</Badge>,
     children: (
       <>

@@ -28,9 +28,8 @@ export const Header: Story = {
 }
 
 /** The one thing this page is for — a single action, not a row of them. */
-export const WithDescriptionAndAction: Story = {
+export const WithAction: Story = {
   args: {
-    description: 'Discounts you can apply to a subscription or an invoice.',
     action: <Button>New coupon</Button>,
   },
   play: async ({ canvasElement }) => {
@@ -42,11 +41,7 @@ export const WithDescriptionAndAction: Story = {
 export const FullLayout: Story = {
   render: () => (
     <div className="flex flex-col rounded-lg border">
-      <PageHeader
-        title="Coupons"
-        description="Discounts you can apply to a subscription or an invoice."
-        action={<Button>New coupon</Button>}
-      />
+      <PageHeader title="Coupons" action={<Button>New coupon</Button>} />
       <PageToolbar>
         <GridToolbar search="" onSearchChange={() => {}} label="Search coupons" />
       </PageToolbar>

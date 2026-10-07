@@ -109,16 +109,15 @@ export const CreatesWithDetailsOnly: Story = {
   },
 }
 
-/** Create shows a live preview beside the steps; it follows the name as it is typed. */
+/** Create shows a live preview beside the steps, prompting for a charge until there is one. */
 export const PreviewFollowsTheDraft: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const preview = canvas.getByRole('complementary', { name: 'Plan preview' })
 
-    await expect(within(preview).getByText('Untitled plan')).toBeInTheDocument()
-    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
-    await expect(within(preview).getByText('Pro')).toBeInTheDocument()
-    await expect(within(preview).getByText('Add a charge and the price customers see', { exact: false })).toBeInTheDocument()
+    await expect(
+      within(preview).getByText('Add a charge and the price customers see', { exact: false }),
+    ).toBeInTheDocument()
   },
 }
 

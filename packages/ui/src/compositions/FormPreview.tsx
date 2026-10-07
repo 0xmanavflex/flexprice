@@ -8,11 +8,9 @@ import {
 } from '@ui/components/primitives/item'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { DescriptionTip } from './DescriptionTip'
 
 /**
- * The live preview rail beside a form: a heading with an optional badge, a one
- * line description, then a big amount, titled sections and label/value rows.
+ * The live preview rail beside a form: a heading with an optional badge, then a big amount, titled sections and label/value rows.
  *
  * The structure of the ReUI `solution-billing-8` proration rail
  * (`blocks/solution-billing-8/components/plan-change-wizard.tsx`: `ProrationSummary`,
@@ -32,19 +30,11 @@ export interface FormPreviewProps {
   label?: string
   /** A status or direction badge beside the title. */
   badge?: ReactNode
-  description?: string
   children: ReactNode
   className?: string
 }
 
-export function FormPreview({
-  title,
-  label,
-  badge,
-  description,
-  children,
-  className,
-}: FormPreviewProps) {
+export function FormPreview({ title, label, badge, children, className }: FormPreviewProps) {
   const headingId = useId()
   return (
     <aside
@@ -60,7 +50,6 @@ export function FormPreview({
           <h2 id={headingId} className="text-sm font-medium">
             {title}
           </h2>
-          {description ? <DescriptionTip>{description}</DescriptionTip> : null}
           {badge}
         </div>
       </div>

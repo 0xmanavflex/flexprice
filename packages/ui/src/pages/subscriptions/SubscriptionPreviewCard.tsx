@@ -39,11 +39,7 @@ export function SubscriptionPreviewCard(props: SubscriptionPreviewCardProps) {
       : BILLING_PERIOD_LABEL[props.billingPeriod]
 
   return (
-    <FormPreview
-      title="Subscription summary"
-      label="Subscription preview"
-      description="Updates as you fill in each step."
-    >
+    <FormPreview title="Subscription summary" label="Subscription preview">
       <PreviewAmount
         label={props.plan || 'No plan chosen'}
         value={props.currency.toUpperCase() || '—'}

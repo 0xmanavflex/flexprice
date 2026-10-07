@@ -43,11 +43,7 @@ function Fields() {
 
 function Preview({ name }: { name: string }) {
   return (
-    <FormPreview
-      title="Summary"
-      description="Updates as you fill in each step."
-      badge={<Badge>Draft</Badge>}
-    >
+    <FormPreview title="Summary" badge={<Badge>Draft</Badge>}>
       <PreviewAmount label="Per month" value="$29.00" hint="Billed in advance" />
       <PreviewSection title="Plan">
         <PreviewRows>

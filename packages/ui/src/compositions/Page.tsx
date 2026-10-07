@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { DescriptionTip } from './DescriptionTip'
 
 /**
  * The layout every screen uses.
@@ -22,27 +21,18 @@ export const PageProvenance = provenance({
 
 export interface PageHeaderProps {
   title: string
-  description?: string
   /** The one thing this page is for. A single button, not a row of them. */
   action?: ReactNode
   /** Reference name for `action`; both render in the same right-hand cluster. */
   actions?: ReactNode
   /** Everything else, behind an overflow menu. */
   menu?: ReactNode
-  /** Small inline meta under the description (counts, status, last sync). */
+  /** Small inline meta under the title (counts, status, last sync). */
   meta?: ReactNode
   breadcrumb?: ReactNode
 }
 
-export function PageHeader({
-  title,
-  description,
-  action,
-  actions,
-  menu,
-  meta,
-  breadcrumb,
-}: PageHeaderProps) {
+export function PageHeader({ title, action, actions, menu, meta, breadcrumb }: PageHeaderProps) {
   /*
    * No rule under it. The shell's own header already draws one a few pixels
    * above, and two stacked hairlines read as a seam rather than a boundary.
@@ -53,10 +43,7 @@ export function PageHeader({
       {breadcrumb}
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div className="flex min-w-0 flex-col gap-1">
-          <div className="flex min-w-0 items-center gap-2">
-            <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-            {description ? <DescriptionTip>{description}</DescriptionTip> : null}
-          </div>
+          <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
           {meta ? <div className="text-muted-foreground text-[13px]">{meta}</div> : null}
         </div>
         {action || actions || menu ? (

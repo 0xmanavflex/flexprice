@@ -28,7 +28,6 @@ export function AddonPreviewCard({ name, lookupKey, description }: AddonPreviewC
       title="How it will look"
       label="Add-on preview"
       badge={<Badge variant="outline">Add-on</Badge>}
-      description="Updates as you type."
     >
       <PreviewSection title="Add-on">
         <PreviewRows>

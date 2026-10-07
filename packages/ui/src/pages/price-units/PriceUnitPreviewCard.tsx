@@ -35,11 +35,7 @@ export function PriceUnitPreviewCard({
       : null
 
   return (
-    <FormPreview
-      title="How it will look"
-      label="Price unit preview"
-      description="Updates as you type."
-    >
+    <FormPreview title="How it will look" label="Price unit preview">
       <div className="flex items-center gap-3">
         <span
           aria-hidden="true"

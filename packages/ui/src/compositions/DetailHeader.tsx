@@ -1,6 +1,5 @@
 import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
-import { DescriptionTip } from './DescriptionTip'
 import { CopyId } from './DetailKit'
 
 /**
@@ -9,8 +8,7 @@ import { CopyId } from './DetailKit'
  *
  * Status and type belong in the subtitle (use `badges` for pills that sit on
  * the subtitle line) and the Information tab, not beside the name.
- * `subtitle` is the reference prop; `description` and `identifier` remain as
- * aliases of `subtitle` and `id`.
+ * `subtitle` is the reference prop; `identifier` remains as an alias of `id`.
  */
 export const DetailHeaderProvenance = provenance({
   source: 'composition',
@@ -24,8 +22,6 @@ export interface DetailHeaderProps {
   icon?: ReactNode
   /** One line under the title; use `Dot` between facts. */
   subtitle?: ReactNode
-  /** Alias of `subtitle`. */
-  description?: string
   /** Status and type pills, leading the subtitle line. */
   badges?: ReactNode
   /** The record id, rendered as a copy button. */
@@ -41,7 +37,6 @@ export function DetailHeader({
   title,
   icon,
   subtitle,
-  description,
   badges,
   id,
   identifier,
@@ -49,7 +44,6 @@ export function DetailHeader({
   breadcrumb,
 }: DetailHeaderProps) {
   const copyId = id ?? identifier
-  const line = subtitle ?? description
   return (
     <header className="flex flex-col gap-3">
       {breadcrumb}
@@ -61,13 +55,11 @@ export function DetailHeader({
             </span>
           ) : null}
           <div className="min-w-0 space-y-1">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-              {line ? <DescriptionTip>{line}</DescriptionTip> : null}
-            </div>
-            {badges ? (
+            <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
+            {badges || subtitle ? (
               <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-[13px]">
                 {badges}
+                {subtitle}
               </div>
             ) : null}
           </div>

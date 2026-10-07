@@ -62,11 +62,11 @@ const packageUsage: CreateCharge = {
 }
 
 export const Empty: Story = {
-  args: { name: 'Starter', charges: [] },
+  args: { charges: [] },
 }
 
 export const FixedOnly: Story = {
-  args: { name: 'Starter', charges: [base] },
+  args: { charges: [base] },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('What customers see')).toBeInTheDocument()
   },
@@ -74,7 +74,6 @@ export const FixedOnly: Story = {
 
 export const FixedAndUsage: Story = {
   args: {
-    name: 'Growth',
     charges: [base, tieredUsage, packageUsage],
     meterLabel: (id) => (id === 'meter_api' ? 'API calls' : 'Tokens'),
   },
@@ -82,7 +81,6 @@ export const FixedAndUsage: Story = {
 
 export const FullPlan: Story = {
   args: {
-    name: 'Starter',
     trialDays: 14,
     charges: [base, tieredUsage, packageUsage],
     meterLabel: (id) => (id === 'meter_api' ? 'API calls' : 'Tokens'),
@@ -128,7 +126,6 @@ export const FullPlan: Story = {
 /** Units read as words, and recurring credits as a rate, as in the redesign. */
 export const ReadsLikeTheRedesign: Story = {
   args: {
-    name: 'Starter',
     trialDays: 14,
     charges: [base, tieredUsage],
     meterLabel: () => 'API Calls',

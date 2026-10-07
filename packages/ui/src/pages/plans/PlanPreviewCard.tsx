@@ -33,7 +33,6 @@ export const PlanPreviewCardProvenance = provenance({
 })
 
 export interface PlanPreviewCardProps {
-  name: string
   charges: CreateCharge[]
   /** Resolves a usage charge's meter id to a readable feature name. */
   meterLabel?: (meterId: string) => string
@@ -166,7 +165,6 @@ const CAP = 3
 const PERIOD_WORD: Record<string, string> = { mo: 'month', yr: 'year' }
 
 export function PlanPreviewCard({
-  name,
   charges,
   meterLabel = (id) => id,
   meterUnit,
@@ -187,11 +185,7 @@ export function PlanPreviewCard({
   const tail = [trial, usageCharges.length > 0 ? 'plus usage' : null].filter(Boolean).join(' · ')
 
   return (
-    <FormPreview
-      title="What customers see"
-      label="Plan preview"
-      description={name || 'Untitled plan'}
-    >
+    <FormPreview title="What customers see" label="Plan preview">
       {charges.length === 0 ? (
         <p className="text-muted-foreground text-[13px]/relaxed">
           Add a charge and the price customers see builds up here.

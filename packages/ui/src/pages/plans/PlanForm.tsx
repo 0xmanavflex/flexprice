@@ -137,7 +137,6 @@ export function PlanForm({
     onSubmit({ plan, charges, entitlements, creditGrants: grants }),
   )
 
-  const planDraftName = form.watch('name')
   const featureName = (id: string) => features.find((f) => f.id === id)?.name ?? id
   const grantable = features.filter((f) => !entitlements.some((e) => e.featureId === f.id))
 
@@ -309,7 +308,6 @@ export function PlanForm({
       preview={
         isEdit ? undefined : (
           <PlanPreviewCard
-            name={planDraftName}
             charges={charges}
             meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}
             meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
