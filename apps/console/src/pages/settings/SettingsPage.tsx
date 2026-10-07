@@ -1,12 +1,17 @@
 import type { ReactNode } from 'react'
 import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
+  BadgeDollarSignIcon,
   BellIcon,
-  BuildingIcon,
-  CreditCardIcon,
-  PaletteIcon,
-  TerminalIcon,
-  UserRoundCogIcon,
+  BotIcon,
+  CoinsIcon,
+  KeyRoundIcon,
+  PercentIcon,
+  ReceiptTextIcon,
+  RepeatIcon,
+  SmileIcon,
+  TagIcon,
+  TicketPercentIcon,
   UsersIcon,
 } from 'lucide-react'
 import { AlertRulesPanel } from './AlertRulesPanel'
@@ -26,8 +31,8 @@ import { SubscriptionsPanel } from './SubscriptionsPanel'
 import { WalletAlertsPanel } from './WalletAlertsPanel'
 import { WebhooksPanel } from './WebhooksPanel'
 import { SettingsUnavailable, UNAVAILABLE_COPY } from './SettingsUnavailable'
-import { TaxesPanel } from './TaxesPanel'
 import {
+  RAIL_SECTIONS,
   SETTINGS_SECTIONS,
   type SettingsSectionSpec,
   findSettingsSection,
@@ -36,7 +41,7 @@ import {
 } from './sections'
 
 /**
- * Settings, on two levels, both of them in the URL.
+ * Settings: a flat rail of sections, with a tab strip for those that have several pages. Both ids are in the URL.
  *
  * The page is wiring and dispatch: it turns `?section=&tab=` into a section
  * and a tab, hands `SettingsShell` a fully controlled pair, and renders the
@@ -63,6 +68,8 @@ export interface SettingsPageProps {
   tabId: string
   /** Writes both ids at once. The route owns the navigation. */
   onNavigate: (sectionId: string, tabId: string) => void
+  /** Opens a row that is a page of its own (Discounts, Taxes, Cost tracking, Labels). */
+  onOpenPage: (href: string) => void
 }
 
 /**
@@ -72,13 +79,18 @@ export interface SettingsPageProps {
  * JSX in it would pull React into a test that parses strings.
  */
 const SECTION_ICONS: Record<string, ReactNode> = {
-  organization: <BuildingIcon aria-hidden className="size-4" />,
   team: <UsersIcon aria-hidden className="size-4" />,
-  billing: <CreditCardIcon aria-hidden className="size-4" />,
-  'customer-experience': <UserRoundCogIcon aria-hidden className="size-4" />,
-  developers: <TerminalIcon aria-hidden className="size-4" />,
-  notifications: <BellIcon aria-hidden className="size-4" />,
-  appearance: <PaletteIcon aria-hidden className="size-4" />,
+  discounts: <TicketPercentIcon aria-hidden className="size-4" />,
+  taxes: <PercentIcon aria-hidden className="size-4" />,
+  'cost-tracking': <CoinsIcon aria-hidden className="size-4" />,
+  invoicing: <ReceiptTextIcon aria-hidden className="size-4" />,
+  subscription: <RepeatIcon aria-hidden className="size-4" />,
+  currency: <BadgeDollarSignIcon aria-hidden className="size-4" />,
+  alerts: <BellIcon aria-hidden className="size-4" />,
+  labels: <TagIcon aria-hidden className="size-4" />,
+  'customer-experience': <SmileIcon aria-hidden className="size-4" />,
+  'api-keys': <KeyRoundIcon aria-hidden className="size-4" />,
+  'service-accounts': <BotIcon aria-hidden className="size-4" />,
 }
 
 /**
@@ -98,15 +110,18 @@ const SECTION_ICONS: Record<string, ReactNode> = {
  * the flag was there to guarantee.
  */
 function toShellSections(): SettingsSection[] {
-  return SETTINGS_SECTIONS.map((section) => ({
-    id: section.id,
-    label: section.label,
-    ...(SECTION_ICONS[section.id] ? { icon: SECTION_ICONS[section.id] } : {}),
-    tabs: section.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
-  }))
+  return [...RAIL_SECTIONS, ...SETTINGS_SECTIONS.filter((section) => 'hidden' in section)].map(
+    (section) => ({
+      id: section.id,
+      label: section.label,
+      ...('hidden' in section ? { hidden: true } : {}),
+      ...(SECTION_ICONS[section.id] ? { icon: SECTION_ICONS[section.id] } : {}),
+      tabs: section.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
+    }),
+  )
 }
 
-export function SettingsPage({ sectionId, tabId, onNavigate }: SettingsPageProps) {
+export function SettingsPage({ sectionId, tabId, onNavigate, onOpenPage }: SettingsPageProps) {
   const section = findSettingsSection(sectionId) ?? SETTINGS_SECTIONS[0]
   const tab = findSettingsTab(section, tabId) ?? firstTabOf(section)
 
@@ -117,6 +132,13 @@ export function SettingsPage({ sectionId, tabId, onNavigate }: SettingsPageProps
       tabId={tab.id}
       // Both ids, one navigation. See the note above.
       onSectionChange={(next) => {
+        const linked = SETTINGS_SECTIONS.find(
+          (candidate) => candidate.id === next && 'href' in candidate,
+        )
+        if (linked && 'href' in linked) {
+          onOpenPage(linked.href)
+          return
+        }
         const target = findSettingsSection(next)
         if (!target) return
         onNavigate(target.id, firstTabOf(target).id)
@@ -161,27 +183,25 @@ function SettingsPanel({ section, tabId }: { section: SettingsSectionSpec; tabId
       return <MembersPanel />
     case 'team/roles':
       return <RolesPanel />
-    case 'billing/invoices':
+    case 'invoicing/invoices':
       return <InvoicesPanel />
-    case 'billing/subscriptions':
+    case 'subscription/subscriptions':
       return <SubscriptionsPanel />
-    case 'billing/currencies':
+    case 'currency/currencies':
       return <CurrenciesPanel />
-    case 'billing/taxes':
-      return <TaxesPanel />
     case 'customer-experience/portal':
       return <PortalPanel />
     case 'customer-experience/onboarding':
       return <OnboardingPanel />
-    case 'developers/api-keys':
+    case 'api-keys/api-keys':
       return <ApiKeysPanel />
-    case 'developers/service-accounts':
+    case 'service-accounts/service-accounts':
       return <ServiceAccountsPanel />
-    case 'developers/webhooks':
+    case 'webhooks/webhooks':
       return <WebhooksPanel />
-    case 'notifications/alert-rules':
+    case 'alerts/alert-rules':
       return <AlertRulesPanel />
-    case 'notifications/wallet-alerts':
+    case 'alerts/wallet-alerts':
       return <WalletAlertsPanel />
     case 'appearance/theme':
       return <AppearancePanel />

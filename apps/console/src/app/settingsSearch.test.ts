@@ -12,19 +12,19 @@ const SECTIONS: readonly SettingsSectionSpec[] = SETTINGS_SECTIONS
 describe('parseSettingsSearch', () => {
   it('returns defaults for an empty URL', () => {
     expect(parseSettingsSearch({})).toEqual(DEFAULT_SETTINGS_QUERY)
-    expect(DEFAULT_SETTINGS_QUERY).toEqual({ section: 'organization', tab: 'profile' })
+    expect(DEFAULT_SETTINGS_QUERY).toEqual({ section: 'team', tab: 'members' })
   })
 
   it('reads a full pair', () => {
-    expect(parseSettingsSearch({ section: 'developers', tab: 'service-accounts' })).toEqual({
-      section: 'developers',
+    expect(parseSettingsSearch({ section: 'service-accounts', tab: 'service-accounts' })).toEqual({
+      section: 'service-accounts',
       tab: 'service-accounts',
     })
   })
 
   it('opens a section on its own first tab when no tab is named', () => {
-    expect(parseSettingsSearch({ section: 'notifications' })).toEqual({
-      section: 'notifications',
+    expect(parseSettingsSearch({ section: 'alerts' })).toEqual({
+      section: 'alerts',
       tab: 'alert-rules',
     })
   })
@@ -32,9 +32,9 @@ describe('parseSettingsSearch', () => {
   // The one worth naming: two ids that are each real but do not go together,
   // which is what a half-rewritten link looks like.
   it('falls back when the tab belongs to another section', () => {
-    expect(parseSettingsSearch({ section: 'developers', tab: 'members' })).toEqual({
-      section: 'developers',
-      tab: 'api-keys',
+    expect(parseSettingsSearch({ section: 'alerts', tab: 'members' })).toEqual({
+      section: 'alerts',
+      tab: 'alert-rules',
     })
   })
 
@@ -51,7 +51,7 @@ describe('parseSettingsSearch', () => {
     ['both unknown', { section: 'nonsense', tab: 'nonsense' }],
     ['nulls', { section: null, tab: null }],
     ['numbers', { section: 7, tab: 9 }],
-    ['repeated params', { section: ['team', 'developers'], tab: ['members'] }],
+    ['repeated params', { section: ['team', 'alerts'], tab: ['members'] }],
     ['an empty string', { section: '', tab: '' }],
   ])('degrades %s rather than throwing', (_label, raw) => {
     expect(() => parseSettingsSearch(raw as Record<string, unknown>)).not.toThrow()
@@ -61,8 +61,12 @@ describe('parseSettingsSearch', () => {
     expect(section?.tabs.some((tab) => tab.id === parsed.tab)).toBe(true)
   })
 
+  it('does not open a row that links to a page of its own', () => {
+    expect(parseSettingsSearch({ section: 'discounts' })).toEqual(DEFAULT_SETTINGS_QUERY)
+  })
+
   it('reads a repeated param as its first value', () => {
-    expect(parseSettingsSearch({ section: ['team', 'developers'] }).section).toBe('team')
+    expect(parseSettingsSearch({ section: ['team', 'alerts'] }).section).toBe('team')
   })
 
   // Parsing its own output must be a fixed point, or a reload moves the user.
@@ -83,8 +87,11 @@ describe('the settings table itself', () => {
     expect(new Set(ids).size).toBe(ids.length)
   })
 
-  it('gives every section at least one tab, with unique ids inside it', () => {
-    for (const section of SECTIONS) {
+  it('gives every section with panels at least one tab, and every link row none', () => {
+    for (const section of SECTIONS.filter((entry) => entry.href)) {
+      expect(section.tabs, section.id).toHaveLength(0)
+    }
+    for (const section of SECTIONS.filter((entry) => !entry.href)) {
       expect(section.tabs.length, section.id).toBeGreaterThan(0)
       const ids = section.tabs.map((tab) => tab.id)
       expect(new Set(ids).size, section.id).toBe(ids.length)

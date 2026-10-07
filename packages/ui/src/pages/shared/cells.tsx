@@ -231,15 +231,38 @@ export const FEATURE_TYPE_GLYPH = {
   config: BracesIcon,
 } as const satisfies Record<string, typeof CircleIcon>
 
+/** The glyph colours: metered orange, boolean blue, static and config quiet grey. */
+const FEATURE_TYPE_COLOR = {
+  metered: 'text-feature-metered',
+  boolean: 'text-feature-boolean',
+  static: 'text-muted-foreground',
+  config: 'text-muted-foreground',
+} as const satisfies Record<keyof typeof FEATURE_TYPE_GLYPH, string>
+
+export interface FeatureTypeGlyphProps {
+  type: keyof typeof FEATURE_TYPE_GLYPH
+  className?: string
+}
+
+/** Just the coloured glyph of a feature type, for a pill or the end of a dropdown option. */
+export function FeatureTypeGlyph({ type, className }: FeatureTypeGlyphProps) {
+  const Icon = FEATURE_TYPE_GLYPH[type]
+  return (
+    <Icon
+      aria-hidden
+      className={cn('size-3.5 shrink-0 opacity-100!', FEATURE_TYPE_COLOR[type], className)}
+    />
+  )
+}
+
 export interface FeatureTypePillProps {
   type: keyof typeof FEATURE_TYPE_GLYPH
   label: string
 }
 
-/** A feature type: its glyph, and the type spelled out. */
+/** A feature type: its coloured glyph, and the type spelled out. */
 export function FeatureTypePill({ type, label }: FeatureTypePillProps) {
-  const Icon = FEATURE_TYPE_GLYPH[type]
-  return <Pill icon={<Icon aria-hidden />}>{label}</Pill>
+  return <Pill icon={<FeatureTypeGlyph type={type} className="size-3" />}>{label}</Pill>
 }
 
 /** Nothing here — said out loud, rather than left blank. A blank cell reads as

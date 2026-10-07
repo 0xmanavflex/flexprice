@@ -1872,6 +1872,7 @@ function SettingsRouteComponent() {
           replace: true,
         })
       }
+      onOpenPage={(href) => void navigate({ to: href, search: {} as never })}
     />
   )
 }

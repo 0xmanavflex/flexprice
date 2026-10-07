@@ -58,6 +58,7 @@ export {
   EmDash,
   EntityLink,
   FEATURE_TYPE_GLYPH,
+  FeatureTypeGlyph,
   FeatureTypePill,
   Pill,
   Status,
@@ -72,6 +73,7 @@ export {
 export type {
   ColumnOptions,
   EntityColumn,
+  FeatureTypeGlyphProps,
   FeatureTypePillProps,
   PillProps,
   PillSpec,

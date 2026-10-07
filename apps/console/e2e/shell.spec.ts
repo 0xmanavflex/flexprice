@@ -72,19 +72,30 @@ test.describe('the shell', () => {
     await expect(page.getByRole('heading', { level: 1, name: 'Coupons' })).toBeAttached()
   })
 
-  test('the footer opens Settings, whose rows reach the pages that configure the product', async ({
+  test('Settings lists the pages that configure the product, in one flat list', async ({
     page,
   }) => {
     const shell = new ShellPage(page)
     await shell.goto('/')
 
     await shell.go('Settings')
-    await expect(page).toHaveURL(/\/settings\?section=team/)
-    await shell.go('Discounts')
+    await expect(page).toHaveURL(atPath('/settings'))
+    const rail = page.getByRole('navigation', { name: 'Settings' })
+    await rail.getByRole('button', { name: 'Invoicing' }).click()
+    await expect(page).toHaveURL(/\/settings\?section=invoicing/)
+    await rail.getByRole('button', { name: 'Discounts' }).click()
     await expect(page).toHaveURL(atPath('/coupons'))
-    await shell.go('Invoicing')
-    await expect(page).toHaveURL(/\/settings\?section=billing&tab=invoices/)
     await expect(shell.home).toBeVisible()
+  })
+
+  test('the footer holds Integrations and Documentation, not Settings', async ({ page }) => {
+    const shell = new ShellPage(page)
+    await shell.goto('/')
+
+    await shell.go('Integrations')
+    await expect(page).toHaveURL(atPath('/integrations'))
+    await shell.go('Documentation')
+    await expect(page).toHaveURL(atPath('/docs'))
   })
 
   test('a Product Catalogue parent routes to its first child rather than a dead end', async ({

@@ -20,7 +20,7 @@ test.describe.skip('integrations', () => {
 
     await expect(page.getByRole('heading', { name: 'Available', level: 2 })).toBeVisible()
     await expect(page.getByTestId('integration-stripe')).toContainText('Disconnect')
-    await expect(page.getByTestId('integration-razorpay')).toContainText('Connect')
+    await expect(page.getByTestId('integration-razorpay')).toContainText('Not connected')
   })
 
   test('links a provider to its setup guide', async ({ page }) => {

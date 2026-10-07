@@ -1,11 +1,9 @@
 import { type ReactNode } from 'react'
-import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { CopyIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, WalletIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
-  SubscriptionStatus,
   type Invoice,
   InvoiceStatus,
   PaymentStatus,
@@ -24,9 +22,10 @@ import {
 import { ScrollArea } from '@ui/components/primitives/scroll-area'
 import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
 import type { ActivityEvent } from '@ui/components/blocks/solution-billing-4/components/data'
-import { DetailTabs, Properties } from '@ui/compositions/DetailKit'
+import { DetailTabs } from '@ui/compositions/DetailKit'
 import { Section } from '@ui/compositions/Section'
 import { EditableCard } from '@ui/compositions/EditableCard'
+import { MetadataCard } from '@ui/compositions/MetadataCard'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { LoadingRows } from '@ui/compositions/States'
 import { Money } from '../shared/Money'
@@ -35,7 +34,6 @@ import { provenance } from '@ui/provenance'
 import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
 import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { cn } from '@ui/lib/cn'
-import { CustomerSubscriptionCards } from './CustomerSubscriptionCards'
 import { DetailTable } from '../shared/DetailTable'
 
 /**
@@ -83,6 +81,8 @@ export interface CustomerDetailProps {
    * show its message beside the field.
    */
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
+  /** Save the whole metadata map. Omitted, the Metadata card is read-only. */
+  onUpdateMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /** Open an invoice from a row action. */
   onOpenInvoice?: (invoiceId: string) => void
   onOpenPlan?: (planId: string) => void
@@ -130,6 +130,7 @@ export function CustomerDetail({
   onCreateSubscription,
   onEdit,
   onUpdateField,
+  onUpdateMetadata,
   onOpenInvoice,
   onOpenPlan,
   subscriptionsLoading = false,
@@ -225,16 +226,11 @@ export function CustomerDetail({
 
         {tab === 'overview' ? (
           <OverviewTab
-            subscriptions={subscriptions}
-            subscriptionsLoading={subscriptionsLoading}
             invoices={invoices}
             invoicesLoading={invoicesLoading}
-            addButton={addButton}
             onViewInvoices={() => onTabChange('invoices')}
-            onViewSubscriptions={() => onTabChange('subscriptions')}
             formatDate={formatDate}
             onOpenInvoice={onOpenInvoice}
-            onOpenPlan={onOpenPlan}
           />
         ) : null}
 
@@ -290,6 +286,7 @@ export function CustomerDetail({
             customer={customer}
             formatDate={formatDate}
             onUpdateField={onUpdateField}
+            onUpdateMetadata={onUpdateMetadata}
             onEdit={onEdit}
             taxes={taxes}
           />
@@ -352,60 +349,21 @@ const DEMO_ACTIVITY: ActivityEvent[] = [
 ]
 
 function OverviewTab({
-  subscriptions,
-  subscriptionsLoading,
   invoices,
   invoicesLoading,
-  addButton,
   onViewInvoices,
-  onViewSubscriptions,
   formatDate,
   onOpenInvoice,
-  onOpenPlan,
 }: {
-  subscriptions: Subscription[]
-  subscriptionsLoading: boolean
   invoices: Invoice[]
   invoicesLoading: boolean
-  addButton: ReactNode
   onViewInvoices: () => void
-  onViewSubscriptions: () => void
   formatDate: FormatDate
   onOpenInvoice: ((invoiceId: string) => void) | undefined
-  onOpenPlan: ((planId: string) => void) | undefined
 }) {
-  const running = subscriptions.filter((s) => s.status !== SubscriptionStatus.Cancelled)
-
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex min-w-0 flex-col gap-8">
-        <section aria-labelledby="customer-subscriptions" className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
-            <h2 id="customer-subscriptions" className="text-sm font-medium">
-              Active subscriptions{' '}
-              <span className="text-muted-foreground ml-1 tabular-nums">{running.length}</span>
-            </h2>
-            {addButton}
-          </div>
-          {subscriptionsLoading ? (
-            <LoadingRows rows={2} columns={3} />
-          ) : running.length > 0 ? (
-            <CustomerSubscriptionCards
-              subscriptions={running}
-              formatDate={formatDate}
-              onViewAll={onViewSubscriptions}
-              onOpenPlan={onOpenPlan}
-            />
-          ) : (
-            <div className="rounded-xl border border-dashed">
-              <SectionEmpty
-                title="No active subscriptions"
-                description="Create one to start billing this customer."
-              />
-            </div>
-          )}
-        </section>
-
         <Section title="Recent invoices" flush bare>
           <InvoiceTable
             action={
@@ -616,12 +574,14 @@ function InformationTab({
   customer,
   formatDate,
   onUpdateField,
+  onUpdateMetadata,
   onEdit,
   taxes,
 }: {
   customer: CustomerDetailModel
   formatDate: FormatDate
   onUpdateField: CustomerDetailProps['onUpdateField']
+  onUpdateMetadata: CustomerDetailProps['onUpdateMetadata']
   onEdit: (() => void) | undefined
   taxes: ReactNode
 }) {
@@ -635,8 +595,6 @@ function InformationTab({
   ]
     .filter(Boolean)
     .join('\n')
-
-  const metadata = Object.entries(customer.metadata)
 
   return (
     <div className="grid gap-5 xl:grid-cols-3">
@@ -713,16 +671,10 @@ function InformationTab({
       </div>
 
       <div className="flex flex-col gap-5">
-        <Section title="Metadata">
-          {metadata.length > 0 ? (
-            <Properties
-              columns={2}
-              items={metadata.map(([key, value]) => ({ label: key, value }))}
-            />
-          ) : (
-            <p className="text-muted-foreground text-[13px]">No metadata on this customer.</p>
-          )}
-        </Section>
+        <MetadataCard
+          metadata={customer.metadata}
+          {...(onUpdateMetadata ? { onSave: onUpdateMetadata } : {})}
+        />
       </div>
     </div>
   )

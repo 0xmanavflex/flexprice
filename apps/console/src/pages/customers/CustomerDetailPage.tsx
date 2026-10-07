@@ -126,6 +126,12 @@ export function CustomerDetailPage({
           draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
         })
       }
+      onUpdateMetadata={(metadata) =>
+        update.mutateAsync({
+          id: customer.data.id,
+          draft: { externalId: customer.data.externalId, name: customer.data.name, metadata },
+        })
+      }
       subscriptionsLoading={subscriptions.isLoading}
       invoicesLoading={invoices.isLoading}
       wallet={<CustomerWalletPanel customerId={customer.data.id} />}

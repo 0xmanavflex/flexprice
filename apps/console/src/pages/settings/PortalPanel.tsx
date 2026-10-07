@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import {
   PORTAL_TAB_TYPE_LABEL,
   type CustomerPortalConfig,
@@ -20,9 +21,17 @@ import {
   useResetCustomerPortalConfig,
   useUpdateCustomerPortalConfig,
 } from '@fp/query'
-import { EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
+import {
+  CheckboxRow,
+  EmptyState,
+  Field,
+  LoadingRows,
+  OptionSelect,
+  SortableItem,
+  SortableList,
+} from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { LayoutPanelLeftIcon } from 'lucide-react'
+import { EyeIcon, EyeOffIcon, LayoutPanelLeftIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
 import {
   ActionError,
@@ -31,7 +40,9 @@ import {
   Panel,
   PanelError,
   mutationMessage,
-  toFailure, SettingsBlock } from './panelKit'
+  toFailure,
+  SettingsBlock,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -98,19 +109,6 @@ export function PortalPanel() {
   return <PortalForm key={environmentId} environmentId={environmentId} config={portal.data} />
 }
 
-/** Moves one id within an ordered list, or leaves the list alone at its ends. */
-function reorder(ids: readonly string[], id: string, delta: number): string[] {
-  const at = ids.indexOf(id)
-  const to = at + delta
-  if (at === -1 || to < 0 || to >= ids.length) return [...ids]
-
-  const next = [...ids]
-  const [moved] = next.splice(at, 1)
-  if (moved === undefined) return [...ids]
-  next.splice(to, 0, moved)
-  return next
-}
-
 function PortalForm({
   environmentId,
   config,
@@ -170,65 +168,63 @@ function PortalForm({
           </dl>
         </SettingsBlock>
 
-        {sections.length === 0 ? (
-          <SettingsBlock title="Sections" description="Nothing is configured for this environment yet.">
+        <SettingsBlock
+          title="Sections and tabs"
+          description="Drag to reorder. The eye shows or hides a part of the portal; hiding a section hides all its tabs."
+        >
+          {sections.length === 0 ? (
             <EmptyState
               size="inline"
               icon={<LayoutPanelLeftIcon aria-hidden />}
               title="This portal has no sections"
               description="Resetting to defaults asks the server for its standard layout, which is the only place a starting tree can honestly come from."
             />
-          </SettingsBlock>
-        ) : (
-          sections.map((section, index) => (
-            <SectionCard
-              key={section.id}
-              section={section}
-              busy={busy}
-              isFirst={index === 0}
-              isLast={index === sections.length - 1}
-              onToggle={(enabled) =>
-                draft.update((current) => withSectionEnabled(current, section.id, enabled))
-              }
-              onMove={(delta) =>
-                draft.update((current) =>
-                  withSectionOrder(
-                    current,
-                    reorder(
-                      orderedSections(current).map((each) => each.id),
-                      section.id,
-                      delta,
-                    ),
-                  ),
-                )
-              }
-              onMoveTab={(tabId, delta) =>
-                draft.update((current) => {
-                  const live = current.sections.find((each) => each.id === section.id)
-                  if (!live) return current
-                  return withTabOrder(
-                    current,
-                    section.id,
-                    reorder(
-                      orderedTabs(live).map((tab) => tab.id),
-                      tabId,
-                      delta,
-                    ),
-                  )
-                })
-              }
-              onToggleTab={(tabId, enabled) =>
-                draft.update((current) => withTabEnabled(current, section.id, tabId, enabled))
-              }
-              onMetricCards={(tabId, patch) =>
-                draft.update((current) => withMetricCards(current, section.id, tabId, patch))
-              }
-              onUsageGraph={(tabId, patch) =>
-                draft.update((current) => withUsageGraph(current, section.id, tabId, patch))
-              }
-            />
-          ))
-        )}
+          ) : (
+            <SortableList
+              ids={sections.map((section) => section.id)}
+              disabled={busy}
+              onReorder={(ids) => draft.update((current) => withSectionOrder(current, ids))}
+              className="-mx-5 -my-4 divide-y"
+            >
+              {sections.map((section) => (
+                <SortableItem
+                  key={section.id}
+                  id={section.id}
+                  label={section.label || `section ${section.id}`}
+                  disabled={busy}
+                  className="px-5 py-3"
+                >
+                  {(grip) => (
+                    <SectionRow
+                      grip={grip}
+                      section={section}
+                      busy={busy}
+                      onToggle={(enabled) =>
+                        draft.update((current) => withSectionEnabled(current, section.id, enabled))
+                      }
+                      onReorderTabs={(ids) =>
+                        draft.update((current) => withTabOrder(current, section.id, ids))
+                      }
+                      onToggleTab={(tabId, enabled) =>
+                        draft.update((current) =>
+                          withTabEnabled(current, section.id, tabId, enabled),
+                        )
+                      }
+                      onMetricCards={(tabId, patch) =>
+                        draft.update((current) =>
+                          withMetricCards(current, section.id, tabId, patch),
+                        )
+                      }
+                      onUsageGraph={(tabId, patch) =>
+                        draft.update((current) => withUsageGraph(current, section.id, tabId, patch))
+                      }
+                    />
+                  )}
+                </SortableItem>
+              ))}
+            </SortableList>
+          )}
+        </SettingsBlock>
 
         <SettingsBlock
           title="Theme"
@@ -237,7 +233,9 @@ function PortalForm({
             <div className="flex w-full flex-wrap items-center justify-end gap-3">
               <ActionError message={saveError} />
               {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-              {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
+              {!saveError && reset.isSuccess ? (
+                <ActionNote message="Back to the defaults." />
+              ) : null}
               <Button type="submit" disabled={busy}>
                 {update.isPending ? 'Saving…' : 'Save changes'}
               </Button>
@@ -286,225 +284,7 @@ function ColorField({
   )
 }
 
-function SectionCard({
-  section,
-  busy,
-  isFirst,
-  isLast,
-  onToggle,
-  onMove,
-  onToggleTab,
-  onMoveTab,
-  onMetricCards,
-  onUsageGraph,
-}: {
-  section: PortalSection
-  busy: boolean
-  isFirst: boolean
-  isLast: boolean
-  onToggle: (enabled: boolean) => void
-  onMove: (delta: number) => void
-  onToggleTab: (tabId: string, enabled: boolean) => void
-  onMoveTab: (tabId: string, delta: number) => void
-  onMetricCards: (tabId: string, patch: Partial<NonNullable<PortalTab['metricCards']>>) => void
-  onUsageGraph: (tabId: string, patch: Partial<NonNullable<PortalTab['usageGraph']>>) => void
-}) {
-  const tabs = orderedTabs(section)
-
-  return (
-    <SettingsBlock
-      title={section.label || `Section ${section.id}`}
-      description={
-        section.enabled
-          ? 'Shown in the portal. Its switched-on tabs are reachable.'
-          : 'Hidden. None of its tabs are reachable, however they are set below.'
-      }
-      actions={
-        <>
-          <OnOff
-            label={`${section.label || 'Section'} visibility`}
-            on={section.enabled}
-            busy={busy}
-            onChange={onToggle}
-          />
-          <MoveButtons
-            label={section.label || 'Section'}
-            busy={busy}
-            isFirst={isFirst}
-            isLast={isLast}
-            onMove={onMove}
-          />
-        </>
-      }
-    >
-      {tabs.length === 0 ? (
-        <p className="text-muted-foreground text-xs">This section has no tabs.</p>
-      ) : (
-        <ul className="flex flex-col gap-3">
-          {tabs.map((tab, index) => (
-            <li key={tab.id} className="flex flex-col gap-3 rounded-lg border p-3">
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="flex flex-col">
-                  <span className="text-sm font-medium">{portalTabLabel(tab.type)}</span>
-                  <span className="text-muted-foreground font-mono text-xs">
-                    {tab.type}
-                    {tab.type in PORTAL_TAB_TYPE_LABEL
-                      ? ''
-                      : ' — a tab type this console does not know; it is kept as it is'}
-                  </span>
-                </span>
-                <span className="flex gap-1.5">
-                  <OnOff
-                    label={`${portalTabLabel(tab.type)} visibility`}
-                    on={tab.enabled}
-                    busy={busy}
-                    onChange={(enabled) => onToggleTab(tab.id, enabled)}
-                  />
-                  <MoveButtons
-                    label={portalTabLabel(tab.type)}
-                    busy={busy}
-                    isFirst={index === 0}
-                    isLast={index === tabs.length - 1}
-                    onMove={(delta) => onMoveTab(tab.id, delta)}
-                  />
-                </span>
-              </div>
-
-              {tab.metricCards ? (
-                <div className="flex flex-col gap-1.5">
-                  <span className="text-xs font-medium">Cards on this tab</span>
-                  <div role="group" aria-label="Metric cards" className="flex flex-wrap gap-1.5">
-                    <Toggle
-                      label="Cost"
-                      on={tab.metricCards.showCostMetrics}
-                      busy={busy}
-                      onChange={(showCostMetrics) => onMetricCards(tab.id, { showCostMetrics })}
-                    />
-                    <Toggle
-                      label="Custom"
-                      on={tab.metricCards.showCustomMetrics}
-                      busy={busy}
-                      onChange={(showCustomMetrics) => onMetricCards(tab.id, { showCustomMetrics })}
-                    />
-                    <Toggle
-                      label="Revenue"
-                      on={tab.metricCards.showRevenueMetric}
-                      busy={busy}
-                      onChange={(showRevenueMetric) => onMetricCards(tab.id, { showRevenueMetric })}
-                    />
-                  </div>
-                </div>
-              ) : null}
-
-              {tab.usageGraph ? (
-                <div className="flex flex-col gap-3">
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium">Date range</span>
-                    <div>
-                      <Toggle
-                        label="Customers may pick their own dates"
-                        on={tab.usageGraph.allowCustomDateRange}
-                        busy={busy}
-                        onChange={(allowCustomDateRange) =>
-                          onUsageGraph(tab.id, { allowCustomDateRange })
-                        }
-                      />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col gap-1.5">
-                    <span className="text-xs font-medium">Opens on</span>
-                    {tab.usageGraph.datePresets.length === 0 ? (
-                      <p className="text-muted-foreground text-xs">
-                        This graph offers no presets, so there is nothing to default to.
-                      </p>
-                    ) : (
-                      <div
-                        role="group"
-                        aria-label="Default preset"
-                        className="flex flex-wrap gap-1.5"
-                      >
-                        {tab.usageGraph.datePresets.map((preset) => (
-                          <Button
-                            key={preset}
-                            type="button"
-                            size="xs"
-                            variant={
-                              tab.usageGraph?.defaultPreset === preset ? 'default' : 'outline'
-                            }
-                            aria-pressed={tab.usageGraph?.defaultPreset === preset}
-                            disabled={busy}
-                            onClick={() => onUsageGraph(tab.id, { defaultPreset: preset })}
-                          >
-                            {preset.replaceAll('_', ' ')}
-                          </Button>
-                        ))}
-                      </div>
-                    )}
-                    <p className="text-muted-foreground text-xs">
-                      The preset list and the feature filter mode
-                      {tab.usageGraph.featureFilterMode
-                        ? ` (${tab.usageGraph.featureFilterMode})`
-                        : ''}{' '}
-                      are the portal&rsquo;s own vocabulary and are carried through untouched.
-                    </p>
-                  </div>
-                </div>
-              ) : null}
-            </li>
-          ))}
-        </ul>
-      )}
-    </SettingsBlock>
-  )
-}
-
-/**
- * On/off as two buttons.
- *
- * `@fp/ui/primitives` does not re-export a switch or a checkbox, and
- * `aria-pressed` on a pair of buttons is the pattern the other settings panels
- * already use — see `RolePicker` and `AlertRulesPanel`.
- */
-function OnOff({
-  label,
-  on,
-  busy,
-  onChange,
-}: {
-  label: string
-  on: boolean
-  busy: boolean
-  onChange: (next: boolean) => void
-}) {
-  return (
-    <span role="group" aria-label={label} className="flex gap-1.5">
-      <Button
-        type="button"
-        size="xs"
-        variant={on ? 'default' : 'outline'}
-        aria-pressed={on}
-        disabled={busy}
-        onClick={() => onChange(true)}
-      >
-        On
-      </Button>
-      <Button
-        type="button"
-        size="xs"
-        variant={on ? 'outline' : 'default'}
-        aria-pressed={!on}
-        disabled={busy}
-        onClick={() => onChange(false)}
-      >
-        Off
-      </Button>
-    </span>
-  )
-}
-
-/** A single labelled toggle, for the payload switches inside a tab. */
-function Toggle({
+function EyeToggle({
   label,
   on,
   busy,
@@ -518,52 +298,218 @@ function Toggle({
   return (
     <Button
       type="button"
-      size="xs"
-      variant={on ? 'default' : 'outline'}
+      size="icon"
+      variant="ghost"
+      aria-label={label}
       aria-pressed={on}
       disabled={busy}
+      className={on ? undefined : 'text-muted-foreground'}
       onClick={() => onChange(!on)}
     >
-      {label}
+      {on ? <EyeIcon aria-hidden /> : <EyeOffIcon aria-hidden />}
     </Button>
   )
 }
 
-function MoveButtons({
-  label,
+function SectionRow({
+  grip,
+  section,
   busy,
-  isFirst,
-  isLast,
-  onMove,
+  onToggle,
+  onReorderTabs,
+  onToggleTab,
+  onMetricCards,
+  onUsageGraph,
 }: {
-  label: string
+  grip: ReactNode
+  section: PortalSection
   busy: boolean
-  isFirst: boolean
-  isLast: boolean
-  onMove: (delta: number) => void
+  onToggle: (enabled: boolean) => void
+  onReorderTabs: (ids: string[]) => void
+  onToggleTab: (tabId: string, enabled: boolean) => void
+  onMetricCards: (tabId: string, patch: Partial<NonNullable<PortalTab['metricCards']>>) => void
+  onUsageGraph: (tabId: string, patch: Partial<NonNullable<PortalTab['usageGraph']>>) => void
 }) {
+  const tabs = orderedTabs(section)
+  const name = section.label || `Section ${section.id}`
+
   return (
-    <span className="flex gap-1.5">
-      <Button
-        type="button"
-        size="xs"
-        variant="ghost"
-        aria-label={`Move ${label} up`}
-        disabled={busy || isFirst}
-        onClick={() => onMove(-1)}
-      >
-        ↑
-      </Button>
-      <Button
-        type="button"
-        size="xs"
-        variant="ghost"
-        aria-label={`Move ${label} down`}
-        disabled={busy || isLast}
-        onClick={() => onMove(1)}
-      >
-        ↓
-      </Button>
-    </span>
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-3">
+        {grip}
+        <span
+          className={cx('flex-1 text-sm font-medium', !section.enabled && 'text-muted-foreground')}
+        >
+          {name}
+        </span>
+        <EyeToggle
+          label={`${name} visibility`}
+          on={section.enabled}
+          busy={busy}
+          onChange={onToggle}
+        />
+      </div>
+
+      {tabs.length === 0 ? (
+        <p className="text-muted-foreground ml-9 text-xs">This section has no tabs.</p>
+      ) : (
+        <SortableList
+          ids={tabs.map((tab) => tab.id)}
+          disabled={busy}
+          onReorder={onReorderTabs}
+          className={cx('ml-3 border-l pl-6', !section.enabled && 'opacity-60')}
+        >
+          {tabs.map((tab) => {
+            const label = portalTabLabel(tab.type)
+            return (
+              <SortableItem
+                key={tab.id}
+                id={tab.id}
+                label={label}
+                disabled={busy}
+                className="py-1.5"
+              >
+                {(tabGrip) => (
+                  <div className="flex flex-col gap-2">
+                    <div className="flex items-center gap-3">
+                      {tabGrip}
+                      <span className="flex-1 text-sm">
+                        {label}
+                        {tab.type in PORTAL_TAB_TYPE_LABEL ? null : (
+                          <span className="text-muted-foreground ml-2 font-mono text-xs">
+                            {tab.type} (unknown type, kept)
+                          </span>
+                        )}
+                      </span>
+                      <EyeToggle
+                        label={`${label} visibility`}
+                        on={tab.enabled}
+                        busy={busy}
+                        onChange={(enabled) => onToggleTab(tab.id, enabled)}
+                      />
+                    </div>
+
+                    {tab.metricCards ? (
+                      <TabSetting label="Cards">
+                        <div
+                          role="group"
+                          aria-label="Metric cards"
+                          className="flex flex-wrap gap-1.5"
+                        >
+                          <Chip
+                            label="Cost"
+                            on={tab.metricCards.showCostMetrics}
+                            busy={busy}
+                            onChange={(showCostMetrics) =>
+                              onMetricCards(tab.id, { showCostMetrics })
+                            }
+                          />
+                          <Chip
+                            label="Custom"
+                            on={tab.metricCards.showCustomMetrics}
+                            busy={busy}
+                            onChange={(showCustomMetrics) =>
+                              onMetricCards(tab.id, { showCustomMetrics })
+                            }
+                          />
+                          <Chip
+                            label="Revenue"
+                            on={tab.metricCards.showRevenueMetric}
+                            busy={busy}
+                            onChange={(showRevenueMetric) =>
+                              onMetricCards(tab.id, { showRevenueMetric })
+                            }
+                          />
+                        </div>
+                      </TabSetting>
+                    ) : null}
+
+                    {tab.usageGraph ? (
+                      <>
+                        {tab.usageGraph.datePresets.length > 0 ? (
+                          <TabSetting label="Opens on">
+                            <div className="w-56">
+                              <OptionSelect
+                                value={tab.usageGraph.defaultPreset ?? undefined}
+                                onValueChange={(defaultPreset) =>
+                                  onUsageGraph(tab.id, { defaultPreset })
+                                }
+                                options={tab.usageGraph.datePresets.map((preset) => ({
+                                  value: preset,
+                                  label: presetLabel(preset),
+                                }))}
+                                placeholder="Choose a preset"
+                                disabled={busy}
+                                aria-label="Opens on"
+                              />
+                            </div>
+                          </TabSetting>
+                        ) : null}
+                        <TabSetting label="Date range">
+                          <CheckboxRow
+                            checked={tab.usageGraph.allowCustomDateRange}
+                            disabled={busy}
+                            onCheckedChange={(allowCustomDateRange) =>
+                              onUsageGraph(tab.id, { allowCustomDateRange })
+                            }
+                          >
+                            Customers can pick their own dates
+                          </CheckboxRow>
+                        </TabSetting>
+                      </>
+                    ) : null}
+                  </div>
+                )}
+              </SortableItem>
+            )
+          })}
+        </SortableList>
+      )}
+    </div>
   )
 }
+
+const presetLabel = (preset: string): string => {
+  const words = preset.replaceAll('_', ' ')
+  return words.charAt(0).toUpperCase() + words.slice(1)
+}
+
+/** A quiet label beside a tab's own setting, aligned with the tab's name. */
+function TabSetting({ label, children }: { label: string; children: ReactNode }) {
+  return (
+    <div className="flex items-center gap-3 pl-9">
+      <span className="text-muted-foreground w-20 shrink-0 text-[13px]">{label}</span>
+      {children}
+    </div>
+  )
+}
+
+/** A pill that is solid when the card is on and dashed when it is off. */
+function Chip({
+  label,
+  on,
+  busy,
+  onChange,
+}: {
+  label: string
+  on: boolean
+  busy: boolean
+  onChange: (next: boolean) => void
+}) {
+  return (
+    <button
+      type="button"
+      aria-pressed={on}
+      disabled={busy}
+      onClick={() => onChange(!on)}
+      className={cx(
+        'focus-visible:ring-ring/50 rounded-full border px-3 py-1 text-sm outline-none focus-visible:ring-3 disabled:opacity-50',
+        on ? 'bg-muted text-foreground' : 'text-muted-foreground border-dashed',
+      )}
+    >
+      {label}
+    </button>
+  )
+}
+
+const cx = (...parts: (string | false | undefined)[]): string => parts.filter(Boolean).join(' ')

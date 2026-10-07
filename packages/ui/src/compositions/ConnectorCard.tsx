@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowUpRightIcon, PlugIcon, SettingsIcon } from 'lucide-react'
+import { ArrowUpRightIcon, SettingsIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Switch } from '@ui/components/primitives/switch'
 import { cn } from '@ui/lib/cn'
@@ -22,8 +22,8 @@ export interface ConnectorCardProps {
 
 /**
  * A connector: a muted tray holding a white card (logo, name, description,
- * docs link), with the actions in the tray footer — Connect/Disconnect,
- * Configure, and an on/off switch. The reference's connector card, markup for
+ * docs link), with the actions in the tray footer — one on/off switch (turning
+ * it on connects an unconnected connector), plus Disconnect and Configure once connected. The reference's connector card, markup for
  * markup. Purely presentational; every action is a prop.
  */
 export function ConnectorCard({
@@ -47,7 +47,7 @@ export function ConnectorCard({
     >
       <div className="bg-background flex flex-1 flex-col gap-4 rounded-lg border p-5">
         <div className="flex items-start justify-between gap-3">
-          <span className="bg-background dark:bg-foreground dark:text-background flex h-11 min-w-11 shrink-0 items-center justify-center rounded-lg px-2 border shadow-xs dark:border-transparent">
+          <span className="bg-background dark:bg-foreground dark:text-background flex size-12 shrink-0 items-center justify-center rounded-lg border p-1.5 shadow-xs dark:border-transparent">
             {logo}
           </span>
           {docsUrl ? (
@@ -93,16 +93,12 @@ export function ConnectorCard({
             </Button>
           </div>
         ) : (
-          <Button type="button" size="sm" className="h-7 px-2.5" onClick={onConnect}>
-            <PlugIcon aria-hidden="true" />
-            Connect
-          </Button>
+          <span className="text-muted-foreground text-[13px]">Not connected</span>
         )}
         <Switch
           checked={connected && enabled}
-          disabled={!connected}
           aria-label={`${name} enabled`}
-          onCheckedChange={onEnabledChange}
+          onCheckedChange={(on) => (connected ? onEnabledChange(on) : on ? onConnect() : undefined)}
         />
       </div>
     </article>

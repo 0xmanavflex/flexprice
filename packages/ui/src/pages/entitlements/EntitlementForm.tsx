@@ -17,6 +17,7 @@ import { Field } from '@ui/compositions/Field'
 import { FormActions } from '@ui/compositions/FormActions'
 import { OptionCombobox } from '@ui/compositions/OptionCombobox'
 import { provenance } from '@ui/provenance'
+import { FeatureTypeGlyph } from '../shared/cells'
 import { MeteredEntitlementFields } from './MeteredEntitlementFields'
 
 /**
@@ -136,7 +137,12 @@ export function EntitlementCreateForm({
             id={id}
             value={featureId}
             onValueChange={choose}
-            options={features.map((option) => ({ value: option.id, label: option.name }))}
+            options={features.map((option) => ({
+              value: option.id,
+              label: option.name,
+              ...(option.unit ? { hint: option.unit } : {}),
+              trailing: <FeatureTypeGlyph type={option.type} />,
+            }))}
             placeholder="Choose a feature"
             emptyText="Every feature is already granted."
             disabled={isSubmitting}

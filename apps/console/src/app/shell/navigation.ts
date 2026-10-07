@@ -6,16 +6,16 @@ import type { ShellCrumb, ShellNavGroup, ShellNavItem } from '@fp/ui/composition
  *
  * The primary tree follows the revenue lifecycle: who you bill (Customers),
  * what they signed (Contracts), what you bill and collect, what it earned
- * (Revenue), what you sell (Product Catalog) and how it is wired (Developers).
- * Integrations and Settings sit apart, pinned under a rule at the foot of the
- * rail, because nobody works *in* them.
+ * (Revenue), what you sell (Product Catalog) and how it is wired (Developers),
+ * then Settings. Integrations and Documentation sit apart, pinned under a rule
+ * at the foot of the rail, because nobody works *in* them.
  *
  * Destinations the design marks v2.1 (Reports, Revenue's sub-reports, Billing &
  * Usage) are left out until they exist; a placeholder row is a dead end with a
  * label.
  *
- * Paths are one flat segment each. A Settings child that is a tab of the
- * Settings page carries the `query` that selects it, so it highlights and
+ * Paths are one flat segment each. A row that is a tab of the Settings page
+ * (Webhooks) carries the `query` that selects it, so it highlights and
  * deep-links like any other row.
  *
  * Icons are attached by the app rather than declared here, so this module stays
@@ -70,87 +70,41 @@ export const NAV: NavEntry[] = [
         id: 'webhooks',
         label: 'Webhooks',
         path: '/settings',
-        query: { section: 'developers', tab: 'webhooks' },
+        query: { section: 'webhooks', tab: 'webhooks' },
       },
       { id: 'usage-syncs', label: 'Usage Sync', path: '/usage-syncs' },
       { id: 'exports', label: 'Exports', path: '/exports' },
       { id: 'workflows', label: 'Workflows', path: '/workflows' },
     ],
   },
+  { id: 'settings', label: 'Settings', path: '/settings' },
 ]
 
 /**
- * The foot of the rail: Integrations, then Settings with its children.
+ * The foot of the rail: Integrations and Documentation.
  *
- * Settings' children are the pages that configure the product. Four are tabs of
- * the Settings page itself; Discounts, Taxes and Cost Tracking are the existing
- * Coupons, Taxes and Cost Sheets pages under their new names.
+ * Both are places you visit rather than work in, so they sit apart under a
+ * rule. Settings is an ordinary row of the primary tree, after Developers.
  */
 export const FOOTER_NAV: NavEntry[] = [
   { id: 'integrations', label: 'Integrations', path: '/integrations' },
-  {
-    id: 'settings',
-    label: 'Settings',
-    children: [
-      {
-        id: 'settings-team',
-        label: 'Team',
-        path: '/settings',
-        query: { section: 'team', tab: 'members' },
-        match: ['section'],
-      },
-      { id: 'settings-discounts', label: 'Discounts', path: '/coupons' },
-      { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
-      { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
-      {
-        id: 'settings-invoicing',
-        label: 'Invoicing',
-        path: '/settings',
-        query: { section: 'billing', tab: 'invoices' },
-      },
-      {
-        id: 'settings-subscription',
-        label: 'Subscription',
-        path: '/settings',
-        query: { section: 'billing', tab: 'subscriptions' },
-      },
-      {
-        id: 'settings-currency',
-        label: 'Currency',
-        path: '/settings',
-        query: { section: 'billing', tab: 'currencies' },
-      },
-      {
-        id: 'settings-alerts',
-        label: 'Alerts',
-        path: '/settings',
-        query: { section: 'notifications', tab: 'alert-rules' },
-        match: ['section'],
-      },
-      { id: 'settings-labels', label: 'Labels', path: '/labels' },
-      {
-        id: 'settings-customer-experience',
-        label: 'Customer Experience',
-        path: '/settings',
-        query: { section: 'customer-experience', tab: 'portal' },
-        match: ['section'],
-      },
-    ],
-  },
+  { id: 'docs', label: 'Documentation', path: '/docs' },
 ]
 
 /**
  * Destinations that are real routes but not rows in the rail.
  *
- * Not part of the product's map — Settings (the page itself, for the sections
- * with no row above), Documentation, and the pages the new tree no longer
- * lists but which are still linked to, searched for and reachable by URL.
- * `pathForNavId`, `labelForNavId`, `breadcrumbForPath` and the command palette
- * resolve against them.
+ * The pages Settings lists but which keep their own routes (Discounts, Taxes,
+ * Cost Tracking, Labels), and the pages the tree no longer lists but which are
+ * still linked to, searched for and reachable by URL. `pathForNavId`,
+ * `labelForNavId`, `breadcrumbForPath` and the command palette resolve against
+ * them.
  */
 export const SECONDARY: NavEntry[] = [
-  { id: 'settings-page', label: 'Settings', path: '/settings' },
-  { id: 'docs', label: 'Documentation', path: '/docs' },
+  { id: 'settings-discounts', label: 'Discounts', path: '/coupons' },
+  { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
+  { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
+  { id: 'settings-labels', label: 'Labels', path: '/labels' },
   { id: 'price-units', label: 'Price Units', path: '/price-units' },
   { id: 'groups', label: 'Groups', path: '/groups' },
   { id: 'api-keys', label: 'API Keys', path: '/api-keys' },
@@ -213,6 +167,8 @@ export function labelForNavId(id: string): string | undefined {
 /** A parent, if the entry has one. Drives both the breadcrumb and the counts. */
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
+  // Discounts, Taxes, Cost Tracking and Labels are rows of Settings that keep their own routes.
+  if (id.startsWith('settings-')) return NAV.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),
   )

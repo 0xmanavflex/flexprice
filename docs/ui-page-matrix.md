@@ -24,7 +24,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | credit-notes | `CreditNoteDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section | AppFailure, CatalogDetailFrame, EditableCard, EntityLink, LoadingRows, PageBody |
 | credit-notes | `CreditNoteFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | CreditNoteForm |
 | credit-notes | `CreditNoteListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | CreditNoteGrid, ListState, PageBody |
-| customers | `CustomerDetailPage` | Detail | DetailTabs, EmptyState, EntityList, Properties, Section | AppFailure, CUSTOMER_TABS, CustomerAnalyticsView, CustomerDetail, CustomerTab, DEMO_FEATURE_ANALYTICS, LoadingRows, PageBody, QuotaCard |
+| customers | `CustomerDetailPage` | Detail | DetailTabs, EmptyState, EntityList, Section | AppFailure, CUSTOMER_TABS, CustomerAnalyticsView, CustomerDetail, CustomerTab, DEMO_FEATURE_ANALYTICS, LoadingRows, PageBody, QuotaCard |
 | customers | `CustomerFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, CustomerForm, LoadingRows, PageBody |
 | customers | `CustomerListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CustomerGrid, ListState, PageBody |
 | environments | `EnvironmentFormPage` | Form | Field, FormDialog | EnvironmentForm |
@@ -52,7 +52,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | price-units | `PriceUnitListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PriceUnitGrid |
 | pricing-widget | `PricingWidgetPage` | Other | EmptyState | PricingCatalogBlock |
 | revenue | `RevenuePage` | Dashboard | EntityList, Panel | RevenueDashboard |
-| settings | `SettingsPage` | Settings | EmptyState | SettingsSection, SettingsShell |
+| settings | `SettingsPage` | Settings | DetailTabs, EmptyState | SettingsSection, SettingsShell |
 | subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
 | subscriptions | `SubscriptionDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section, SimpleTable | AppFailure, CatalogDetailFrame, DateInput, EditableCard, EntityLink, Input, LoadingRows, OptionSelect, PageBody, SubscriptionStatusBadge |
 | subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, Field, FormActions, FormCard, FormPage, Section, SimpleTable, WorkflowStepper | SubscriptionForm |

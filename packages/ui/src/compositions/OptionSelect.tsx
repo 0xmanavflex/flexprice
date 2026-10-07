@@ -5,6 +5,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
+import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -21,6 +22,27 @@ export const OptionSelectProvenance = provenance({
 export interface Option {
   value: string
   label: string
+  /** Quiet second line text beside the label, e.g. a lookup key. */
+  hint?: string
+  /** Pinned to the right end of the option, e.g. a type glyph. */
+  trailing?: ReactNode
+}
+
+/** An option's body: label, optional hint, optional trailing mark pushed to the end. */
+export function OptionBody({ option }: { option: Option }) {
+  return (
+    <>
+      <span className="min-w-0 truncate">{option.label}</span>
+      {option.hint ? (
+        <span className="text-muted-foreground min-w-0 truncate font-mono text-xs">
+          {option.hint}
+        </span>
+      ) : null}
+      {option.trailing ? (
+        <span className="ml-auto flex shrink-0 items-center">{option.trailing}</span>
+      ) : null}
+    </>
+  )
 }
 
 export interface OptionSelectProps {
@@ -62,7 +84,7 @@ export function OptionSelect({
       <SelectContent>
         {options.map((option) => (
           <SelectItem key={option.value} value={option.value}>
-            {option.label}
+            <OptionBody option={option} />
           </SelectItem>
         ))}
       </SelectContent>

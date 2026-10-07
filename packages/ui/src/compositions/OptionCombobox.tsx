@@ -7,7 +7,7 @@ import {
   ComboboxList,
 } from '@ui/components/primitives/combobox'
 import { provenance } from '@ui/provenance'
-import type { Option } from './OptionSelect'
+import { OptionBody, type Option } from './OptionSelect'
 
 /**
  * A stock `Combobox` over an options array — the searchable picker for long or
@@ -68,7 +68,7 @@ export function OptionCombobox({
         <ComboboxList>
           {(option: Option) => (
             <ComboboxItem key={option.value} value={option}>
-              {option.label}
+              <OptionBody option={option} />
             </ComboboxItem>
           )}
         </ComboboxList>

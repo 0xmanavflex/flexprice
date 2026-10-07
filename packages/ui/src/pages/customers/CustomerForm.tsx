@@ -9,6 +9,7 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
+import { FormDisclosure } from '@ui/compositions/FormDisclosure'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
@@ -16,7 +17,7 @@ import { provenance } from '@ui/provenance'
 import { CustomerPreviewCard } from './CustomerPreviewCard'
 
 /**
- * Create or edit a customer on its own page: details, billing address, additional.
+ * Create or edit a customer on its own page: name, ID and email, then the optional rest under More details.
  *
  * Presentational: it emits a validated `CreateCustomer` (an edit carries the
  * same fields) and never imports `@fp/query`. The external ID is the key the
@@ -24,8 +25,13 @@ import { CustomerPreviewCard } from './CustomerPreviewCard'
  */
 export const CustomerFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/input', 'compositions/form-page', 'compositions/option-select'],
-  note: 'RHF + the domain schema, one page: details, billing address, additional, with a live profile rail on create. Create and edit share it. Lineage: compositions/field.',
+  composes: [
+    'ui/input',
+    'compositions/form-page',
+    'compositions/option-select',
+    'compositions/form-disclosure',
+  ],
+  note: 'RHF + the domain schema, one page: name, external ID and email up front, the rest folded under More details, with a live profile rail on create. Create and edit share it. Lineage: compositions/field.',
 })
 
 export interface CustomerFormProps {
@@ -41,6 +47,18 @@ export interface CustomerFormProps {
 }
 
 const FORM_ID = 'customer-form'
+
+const OPTIONAL_FIELDS = [
+  'phone',
+  'addressLine1',
+  'addressLine2',
+  'addressCity',
+  'addressState',
+  'addressPostalCode',
+  'addressCountry',
+  'timezone',
+  'taxTreatment',
+] as const satisfies readonly (keyof CreateCustomer)[]
 
 const TAX_OPTIONS = Object.values(CustomerTaxTreatment).map((value) => ({
   value,
@@ -105,6 +123,11 @@ export function CustomerForm({
           />
         )}
       </FormRow>
+    </>
+  )
+
+  const addressRows = (
+    <>
       <FormRow
         label="Phone"
         hint="A contact number for the customer. Optional."
@@ -120,11 +143,6 @@ export function CustomerForm({
           />
         )}
       </FormRow>
-    </>
-  )
-
-  const addressRows = (
-    <>
       <FormRow
         label="Address line 1"
         hint="Street address printed on invoices."
@@ -227,11 +245,20 @@ export function CustomerForm({
 
   const formEl = (
     <form id={FORM_ID} onSubmit={(event) => void submitAll(event)} noValidate>
-      <FormCard title="Customer details" status="required">
-        {detailsRows}
-        {addressRows}
-        {additionalRows}
-      </FormCard>
+      <div className="flex flex-col gap-5">
+        <FormCard title="Customer details" status="required">
+          {detailsRows}
+        </FormCard>
+        <FormDisclosure
+          title="More details"
+          summary="Phone, billing address, timezone and tax treatment. All optional."
+          defaultOpen={isEdit}
+          forceOpen={OPTIONAL_FIELDS.some((name) => errors[name])}
+        >
+          {addressRows}
+          {additionalRows}
+        </FormDisclosure>
+      </div>
     </form>
   )
 

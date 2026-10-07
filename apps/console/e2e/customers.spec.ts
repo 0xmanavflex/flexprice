@@ -41,6 +41,10 @@ test.describe('the customers list', () => {
     await expect(page.getByText('Enter a name')).toBeVisible()
     await expect(page).toHaveURL(/\/customers\/new/)
 
+    // Only the essentials are on show; no copyable ID chip on a record that has no ID yet.
+    await expect(page.getByRole('button', { name: /Copy ID/ })).toHaveCount(0)
+    await expect(page.getByLabel('Phone')).toBeHidden()
+
     await page.getByLabel('Name', { exact: false }).first().fill('Acme Robotics')
     await page.getByLabel('External ID').fill('acme_robotics')
 

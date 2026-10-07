@@ -17,21 +17,20 @@ test('portal: switching a section off saves and survives leaving the tab', async
   await page.goto('/settings?section=customer-experience&tab=portal')
   await expect(page.getByText('Customer portal', { exact: true })).toBeVisible()
 
-  const group = page.getByRole('group', { name: /visibility$/ }).first()
-  await group.getByRole('button', { name: 'Off' }).click()
-  await expect(group.getByRole('button', { name: 'Off' })).toHaveAttribute('aria-pressed', 'true')
+  const eye = page.getByRole('button', { name: /visibility$/ }).first()
+  await expect(eye).toHaveAttribute('aria-pressed', 'true')
+  await eye.click()
+  await expect(eye).toHaveAttribute('aria-pressed', 'false')
 
   await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByText('Saved.')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Onboarding', exact: true }).click()
-  await page.getByRole('button', { name: 'Portal', exact: true }).click()
-  await expect(
-    page
-      .getByRole('group', { name: /visibility$/ })
-      .first()
-      .getByRole('button', { name: 'Off' }),
-  ).toHaveAttribute('aria-pressed', 'true')
+  await page.getByRole('tab', { name: 'Onboarding', exact: true }).click()
+  await page.getByRole('tab', { name: 'Portal', exact: true }).click()
+  await expect(page.getByRole('button', { name: /visibility$/ }).first()).toHaveAttribute(
+    'aria-pressed',
+    'false',
+  )
 
   await page.getByRole('button', { name: 'Reset to defaults' }).click()
   await expect(page.getByText('Back to the defaults.')).toBeVisible()
@@ -49,8 +48,8 @@ test('onboarding: adding a step saves it into the workflow', async ({ page }) =>
   await page.getByRole('button', { name: 'Save changes' }).click()
   await expect(page.getByText('Saved.')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Portal', exact: true }).click()
-  await page.getByRole('button', { name: 'Onboarding', exact: true }).click()
+  await page.getByRole('tab', { name: 'Portal', exact: true }).click()
+  await page.getByRole('tab', { name: 'Onboarding', exact: true }).click()
   await expect(steps).toHaveCount(before + 1)
 })
 

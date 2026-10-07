@@ -24,7 +24,7 @@ import { EditableCard } from '../../compositions/EditableCard'
 import { Section } from '../../compositions/Section'
 import { DetailTabs, Dot, Properties } from '../../compositions/DetailKit'
 import { MetricChart, type MetricPoint } from '../shared/charts'
-import { FEATURE_TYPE_GLYPH, Status } from '../shared/cells'
+import { FEATURE_TYPE_GLYPH, FeatureTypePill, Status } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
 
 export type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
@@ -389,16 +389,20 @@ function TestEventPanel({ feature }: { feature: Feature }) {
     if (done) void done.then(() => toast.success('cURL copied'))
   }
   return (
-    <Section className="xl:col-span-2" title="Send a test event" bodyClassName="flex flex-col">
-      <pre className="border-border bg-invert text-invert-foreground flex-1 overflow-x-auto rounded-lg border p-4 font-mono text-[12px]/relaxed">
-        <code>{command}</code>
-      </pre>
-      <div className="mt-4 flex gap-2">
+    <Section
+      className="xl:col-span-2"
+      title="Send a test event"
+      bodyClassName="flex flex-col"
+      action={
         <Button variant="outline" size="sm" className="h-8 px-3" onClick={copy}>
           <CopyIcon aria-hidden />
           Copy cURL
         </Button>
-      </div>
+      }
+    >
+      <pre className="border-border bg-invert text-invert-foreground flex-1 overflow-x-auto rounded-lg border p-4 font-mono text-[12px]/relaxed">
+        <code>{command}</code>
+      </pre>
     </Section>
   )
 }
@@ -435,7 +439,15 @@ function InformationTab({
               display: mono(feature.lookupKey),
               readOnly: true,
             },
-            { key: 'type', label: 'Type', value: FEATURE_TYPE_LABEL[feature.type], readOnly: true },
+            {
+              key: 'type',
+              label: 'Type',
+              value: FEATURE_TYPE_LABEL[feature.type],
+              display: (
+                <FeatureTypePill type={feature.type} label={FEATURE_TYPE_LABEL[feature.type]} />
+              ),
+              readOnly: true,
+            },
             {
               key: 'status',
               label: 'Status',

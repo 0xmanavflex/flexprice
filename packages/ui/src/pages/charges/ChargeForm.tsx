@@ -25,6 +25,7 @@ import { FormActions } from '@ui/compositions/FormActions'
 import { OptionCombobox } from '@ui/compositions/OptionCombobox'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
+import { FeatureTypeGlyph } from '../shared/cells'
 import { TierTable, type TierRowError } from './TierTable'
 
 /**
@@ -256,7 +257,11 @@ export function ChargeForm({
                     id={id}
                     value={(field.value as string) || ''}
                     onValueChange={field.onChange}
-                    options={meters.map((meter) => ({ value: meter.id, label: meter.name }))}
+                    options={meters.map((meter) => ({
+                      value: meter.id,
+                      label: meter.name,
+                      trailing: <FeatureTypeGlyph type="metered" />,
+                    }))}
                     placeholder="Choose a feature to meter"
                     emptyText="No metered features."
                     disabled={isSubmitting || isEdit}

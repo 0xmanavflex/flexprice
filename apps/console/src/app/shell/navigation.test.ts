@@ -23,6 +23,7 @@ describe('navEntryForPath', () => {
     ['/customers/cus_1/edit', 'customers'],
     ['/subscriptions', 'subscriptions'],
     ['/coupons', 'settings-discounts'],
+    ['/labels', 'settings-labels'],
     ['/taxes', 'settings-taxes'],
     ['/cost-sheets', 'settings-cost-tracking'],
     ['/pricing-widget', 'pricing-widget'],
@@ -37,15 +38,11 @@ describe('navEntryForPath', () => {
   })
 
   it.each([
-    ['?section=team&tab=roles', 'settings-team'],
-    ['?section=billing&tab=invoices', 'settings-invoicing'],
-    ['?section=billing&tab=subscriptions', 'settings-subscription'],
-    ['?section=billing&tab=currencies', 'settings-currency'],
-    ['?section=notifications&tab=wallet-alerts', 'settings-alerts'],
-    ['?section=customer-experience&tab=onboarding', 'settings-customer-experience'],
-    ['?section=developers&tab=webhooks', 'webhooks'],
-    ['?section=developers&tab=api-keys', 'settings-page'],
-    ['', 'settings-page'],
+    ['?section=team&tab=roles', 'settings'],
+    ['?section=invoicing&tab=invoices', 'settings'],
+    ['?section=webhooks&tab=webhooks', 'webhooks'],
+    ['?section=api-keys&tab=api-keys', 'settings'],
+    ['', 'settings'],
   ])('resolves /settings%s to %s', (search, id) => {
     expect(navEntryForPath('/settings', search)).toBe(id)
   })
@@ -59,7 +56,7 @@ describe('groupForNavId', () => {
   it('finds the group a child belongs to', () => {
     expect(groupForNavId('features')).toBe('catalog')
     expect(groupForNavId('invoices')).toBe('billing')
-    expect(groupForNavId('settings-team')).toBe('settings')
+    expect(groupForNavId('settings')).toBe('settings')
   })
 
   it('treats a top-level entry as its own group', () => {
@@ -114,13 +111,13 @@ describe('the tree itself', () => {
 })
 
 describe('the sidebar layout', () => {
-  it('renders the primary tree unlabelled, then a pinned footer with Integrations and Settings', () => {
+  it('renders the primary tree unlabelled, then a pinned footer with Integrations and Documentation', () => {
     const groups = toNavGroups()
     expect(groups.map((group) => group.id)).toEqual(['main', 'footer'])
     expect(groups[0]?.title).toBeUndefined()
     expect(groups[0]?.pinned).toBeUndefined()
     expect(groups[1]?.pinned).toBe(true)
-    expect(groups[1]?.items.map((item) => item.id)).toEqual(['integrations', 'settings'])
+    expect(groups[1]?.items.map((item) => item.id)).toEqual(['integrations', 'docs'])
   })
 
   it('lists the top level in the order of the design', () => {
@@ -133,31 +130,20 @@ describe('the sidebar layout', () => {
       'Revenue',
       'Product Catalog',
       'Developers',
+      'Settings',
     ])
-    expect(
-      FOOTER_NAV.find((entry) => entry.id === 'settings')?.children?.map((c) => c.label),
-    ).toEqual([
-      'Team',
-      'Discounts',
-      'Taxes',
-      'Cost Tracking',
-      'Invoicing',
-      'Subscription',
-      'Currency',
-      'Alerts',
-      'Labels',
-      'Customer Experience',
-    ])
+    expect(FOOTER_NAV.map((entry) => entry.label)).toEqual(['Integrations', 'Documentation'])
   })
 
   // Not in the rail, but still real routes: the command palette and the
   // breadcrumb resolve against them.
   it('keeps unlisted pages reachable', () => {
-    expect(pathForNavId('settings-page')).toBe('/settings')
     expect(pathForNavId('docs')).toBe('/docs')
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
-      'settings-page',
-      'docs',
+      'settings-discounts',
+      'settings-taxes',
+      'settings-cost-tracking',
+      'settings-labels',
       'price-units',
       'groups',
       'api-keys',
@@ -166,8 +152,8 @@ describe('the sidebar layout', () => {
   })
 
   it('links a Settings tab with the search that selects it', () => {
-    expect(hrefForNavId('settings-invoicing')).toBe('/settings?section=billing&tab=invoices')
-    expect(hrefForNavId('webhooks')).toBe('/settings?section=developers&tab=webhooks')
+    expect(hrefForNavId('settings')).toBe('/settings')
+    expect(hrefForNavId('webhooks')).toBe('/settings?section=webhooks&tab=webhooks')
     expect(hrefForNavId('plans')).toBe('/plans')
     expect(hrefForNavId('billing')).toBeUndefined()
   })
@@ -185,7 +171,6 @@ describe('breadcrumbForPath', () => {
     expect(breadcrumbForPath('/coupons')).toEqual([{ label: 'Settings' }, { label: 'Discounts' }])
     expect(breadcrumbForPath('/settings', '?section=team&tab=members')).toEqual([
       { label: 'Settings' },
-      { label: 'Team' },
     ])
   })
 

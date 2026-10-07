@@ -47,37 +47,49 @@ export interface SettingsSectionSpec {
   id: string
   label: string
   tabs: readonly SettingsTabSpec[]
+  /**
+   * A row that opens a page of its own (Discounts, Taxes, Cost tracking,
+   * Labels) instead of a panel here. It has no tabs and is never the open
+   * section.
+   */
+  href?: string
+  /** Reachable by URL and from elsewhere in the console, but not a row in the rail. */
+  hidden?: true
 }
 
+/**
+ * The rail, top to bottom: one flat list, no groups and no nesting. A section
+ * with more than one tab shows them as a strip above its content.
+ */
 export const SETTINGS_SECTIONS = [
   {
-    id: 'organization',
-    label: 'Organization',
-    tabs: [
-      { id: 'profile', label: 'Profile' },
-      { id: 'plan', label: 'Plan & usage' },
-      { id: 'environments', label: 'Environments' },
-    ],
-  },
-  {
     id: 'team',
-    label: 'Team & access',
+    label: 'Team',
     tabs: [
       { id: 'members', label: 'Members' },
       { id: 'roles', label: 'Roles & permissions' },
       { id: 'sso', label: 'Single sign-on', unavailable: true },
     ],
   },
+  { id: 'discounts', label: 'Discounts', href: '/coupons', tabs: [] },
+  { id: 'taxes', label: 'Taxes', href: '/taxes', tabs: [] },
+  { id: 'cost-tracking', label: 'Cost tracking', href: '/cost-sheets', tabs: [] },
+  { id: 'invoicing', label: 'Invoicing', tabs: [{ id: 'invoices', label: 'Invoices' }] },
   {
-    id: 'billing',
-    label: 'Billing configuration',
+    id: 'subscription',
+    label: 'Subscription',
+    tabs: [{ id: 'subscriptions', label: 'Subscriptions' }],
+  },
+  { id: 'currency', label: 'Currency', tabs: [{ id: 'currencies', label: 'Currencies' }] },
+  {
+    id: 'alerts',
+    label: 'Alerts',
     tabs: [
-      { id: 'invoices', label: 'Invoices' },
-      { id: 'subscriptions', label: 'Subscriptions' },
-      { id: 'currencies', label: 'Currencies' },
-      { id: 'taxes', label: 'Taxes' },
+      { id: 'alert-rules', label: 'Alert rules' },
+      { id: 'wallet-alerts', label: 'Wallet alerts' },
     ],
   },
+  { id: 'labels', label: 'Labels', href: '/labels', tabs: [] },
   {
     id: 'customer-experience',
     label: 'Customer experience',
@@ -86,26 +98,32 @@ export const SETTINGS_SECTIONS = [
       { id: 'onboarding', label: 'Onboarding' },
     ],
   },
+  { id: 'api-keys', label: 'API keys', tabs: [{ id: 'api-keys', label: 'API keys' }] },
   {
-    id: 'developers',
-    label: 'Developers',
-    tabs: [
-      { id: 'api-keys', label: 'API keys' },
-      { id: 'service-accounts', label: 'Service accounts' },
-      { id: 'webhooks', label: 'Webhooks' },
-    ],
+    id: 'service-accounts',
+    label: 'Service accounts',
+    tabs: [{ id: 'service-accounts', label: 'Service accounts' }],
   },
   {
-    id: 'notifications',
-    label: 'Notifications & alerts',
+    id: 'webhooks',
+    label: 'Webhooks',
+    hidden: true,
+    tabs: [{ id: 'webhooks', label: 'Webhooks' }],
+  },
+  {
+    id: 'organization',
+    label: 'Organization',
+    hidden: true,
     tabs: [
-      { id: 'alert-rules', label: 'Alert rules' },
-      { id: 'wallet-alerts', label: 'Wallet alerts' },
+      { id: 'profile', label: 'Profile' },
+      { id: 'plan', label: 'Plan & usage' },
+      { id: 'environments', label: 'Environments' },
     ],
   },
   {
     id: 'appearance',
     label: 'Appearance',
+    hidden: true,
     tabs: [{ id: 'theme', label: 'Theme' }],
   },
 ] as const satisfies readonly SettingsSectionSpec[]
@@ -113,9 +131,15 @@ export const SETTINGS_SECTIONS = [
 /** The section a bad or absent `?section=` falls back to. */
 export const DEFAULT_SECTION: SettingsSectionSpec = SETTINGS_SECTIONS[0]
 
+/** A section that has panels here, as opposed to a row that links to another page. */
 export function findSettingsSection(id: string): SettingsSectionSpec | undefined {
-  return SETTINGS_SECTIONS.find((section) => section.id === id)
+  return SETTINGS_SECTIONS.find((section) => section.id === id && !('href' in section))
 }
+
+/** The rail's rows, in order. */
+export const RAIL_SECTIONS: readonly SettingsSectionSpec[] = SETTINGS_SECTIONS.filter(
+  (section) => !('hidden' in section),
+)
 
 /**
  * The tab a section opens on.

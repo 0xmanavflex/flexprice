@@ -405,7 +405,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
   },
   {
     name: 'settings-organization',
-    route: '/settings',
+    route: '/settings?section=organization&tab=profile',
     reference: 'pages/settings.tsx',
     pattern: 'settings',
     ready: { text: 'Plan & usage' },
@@ -419,7 +419,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
   },
   {
     name: 'settings-developers',
-    route: '/settings?section=developers&tab=api-keys',
+    route: '/settings?section=api-keys&tab=api-keys',
     reference: 'pages/settings.tsx',
     pattern: 'settings',
     ready: { text: 'Create API key' },

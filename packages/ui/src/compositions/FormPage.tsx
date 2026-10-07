@@ -100,7 +100,9 @@ export function FormPage({
       toolbarProps.hideSubmit || (flow ? !(flow.isLast || toolbar.mode === 'edit') : false)
     const fields = (
       <FieldSet className="gap-0 pb-6">
-        <FieldGroup className={cn(width === 'narrow' && !stepper && !preview && 'max-w-3xl')}>
+        <FieldGroup
+          className={cn(width === 'narrow' && !stepper && !preview && 'mx-auto max-w-3xl')}
+        >
           {children}
         </FieldGroup>
       </FieldSet>
@@ -159,7 +161,9 @@ export function FormPage({
       <PageBody width="wide" className="self-center">
         <Section as="h1" title={title} className="flex-1" bodyClassName="flex flex-col">
           <FieldSet className="gap-0 pb-6">
-            <FieldGroup className={cn(width === 'narrow' && 'max-w-3xl')}>{children}</FieldGroup>
+            <FieldGroup className={cn(width === 'narrow' && 'mx-auto max-w-3xl')}>
+              {children}
+            </FieldGroup>
           </FieldSet>
           {footer ? <div className="mt-auto border-t pt-5">{footer}</div> : null}
         </Section>

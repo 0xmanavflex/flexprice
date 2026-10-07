@@ -31,7 +31,7 @@ export interface IntegrationsBlockProps {
 function Logo({ integration }: { integration: Integration }) {
   const src = INTEGRATION_LOGOS[integration.id]
   return src ? (
-    <img src={src} alt="" className="h-7 w-auto max-w-24 object-contain" />
+    <img src={src} alt="" className="max-h-full max-w-full object-contain" />
   ) : (
     <span aria-hidden className="text-base font-medium">
       {integration.name.charAt(0)}
