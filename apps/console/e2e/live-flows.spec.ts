@@ -193,25 +193,25 @@ test.describe('live flows', () => {
     test.setTimeout(90_000)
     const name = `${run}-flag`
     await open('/features')
-    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await page.getByRole('button', { name: 'New product' }).first().click()
     const main = page.getByRole('main')
     await fill(main, 'Name', name)
     await nextStep()
     await choose(main, 'Type', 'Boolean')
     await nextStep()
-    await submitPage(/^Create feature/)
+    await submitPage(/^Create product/)
 
     await open('/features')
     await search(name)
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
 
-    await openRowMenu(name, 'Edit feature')
+    await openRowMenu(name, 'Edit product')
     await fill(main, 'Description', 'edited by live e2e')
     await submitPage(/^Save changes/)
 
     await open('/features')
     await search(name)
-    await openRowMenu(name, 'Delete feature')
+    await openRowMenu(name, 'Delete product')
     await confirm(/Delete/)
     // Deleted features linger as "Archived" rather than leaving the list.
     await expect(row(name).filter({ hasText: 'Published' })).toHaveCount(0, {
@@ -223,7 +223,7 @@ test.describe('live flows', () => {
     test.setTimeout(120_000)
     const name = `${run}-metered`
     await open('/features')
-    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await page.getByRole('button', { name: 'New product' }).first().click()
     const main = page.getByRole('main')
     await fill(main, 'Name', name)
     await nextStep()
@@ -231,13 +231,13 @@ test.describe('live flows', () => {
     await fill(main, 'Event name', `${run}_evt`)
     await nextStep()
     await nextStep()
-    await submitPage(/^Create feature/)
+    await submitPage(/^Create product/)
 
     await open('/features')
     await search(name)
     await expect(row(name)).toBeVisible({ timeout: 30_000 })
 
-    await openRowMenu(name, 'Edit feature')
+    await openRowMenu(name, 'Edit product')
     await fill(main, 'Description', 'metered, edited by live e2e')
     await page.getByRole('button', { name: /Additional/ }).click()
     await fill(main, 'Unit (singular)', 'call')
@@ -246,7 +246,7 @@ test.describe('live flows', () => {
 
     await open('/features')
     await search(name)
-    await openRowMenu(name, 'Delete feature')
+    await openRowMenu(name, 'Delete product')
     await confirm(/Delete/)
     await expect(row(name).filter({ hasText: 'Published' })).toHaveCount(0, {
       timeout: 30_000,
@@ -406,7 +406,7 @@ test.describe('live flows', () => {
 
     // A metered feature (for the usage charge) and a boolean one (entitlement).
     await open('/features')
-    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await page.getByRole('button', { name: 'New product' }).first().click()
     const main = page.getByRole('main')
     await fill(main, 'Name', feature)
     await nextStep()
@@ -414,16 +414,16 @@ test.describe('live flows', () => {
     await fill(main, 'Event name', `${run}_plan_evt`)
     await nextStep()
     await nextStep()
-    await submitPage(/^Create feature/)
+    await submitPage(/^Create product/)
     await open('/features')
     await search(feature)
     await expect(row(feature)).toBeVisible({ timeout: 30_000 })
-    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await page.getByRole('button', { name: 'New product' }).first().click()
     await fill(main, 'Name', flag)
     await nextStep()
     await choose(main, 'Type', 'Boolean')
     await nextStep()
-    await submitPage(/^Create feature/)
+    await submitPage(/^Create product/)
     await open('/features')
     await search(flag)
     await expect(row(flag)).toBeVisible({ timeout: 30_000 })

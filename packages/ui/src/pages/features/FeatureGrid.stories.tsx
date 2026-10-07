@@ -1,7 +1,25 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
-import { FeatureGrid } from './FeatureGrid'
+import { FeatureGrid, type ProductLinkage } from './FeatureGrid'
 import { featureFixtures, fixtureFeatureQuery, manyFeatures } from './featureFixtures'
+
+/** Plans, entitlements and subscriptions for the first three fixture products. */
+const linkage = new Map<string, ProductLinkage>([
+  [
+    'feat_01',
+    {
+      plans: [
+        { id: 'plan_a', name: 'Starter' },
+        { id: 'plan_b', name: 'Growth' },
+        { id: 'plan_c', name: 'Scale' },
+      ],
+      entitlements: 3,
+      subscriptions: 1280,
+    },
+  ],
+  ['feat_02', { plans: [{ id: 'plan_b', name: 'Growth' }], entitlements: 1, subscriptions: 412 }],
+  ['feat_03', { plans: [], entitlements: 0, subscriptions: 0 }],
+])
 
 const meta = {
   title: 'Surfaces/FeatureGrid',
@@ -9,6 +27,9 @@ const meta = {
   parameters: { layout: 'padded' },
   args: {
     features: featureFixtures,
+    linkage,
+    onCreateEntitlement: fn(),
+    onFeatureClick: fn(),
     total: featureFixtures.length,
     query: fixtureFeatureQuery,
     onQueryChange: fn(),
@@ -29,11 +50,31 @@ export const Populated: Story = {
     // Each column is a single value: the measurement is the aggregation, not the
     // event name repeated from the feature's own key.
     await expect(canvas.getByText('Count of events')).toBeInTheDocument()
-    // Type and status render as the shared pill.
-    await expect(canvas.getAllByText('Published').length).toBeGreaterThan(0)
-    // Non-metered features measure nothing; the cell says so rather than
+    // Non-metered products measure nothing; the cell says so rather than
     // rendering blank, which reads as missing data.
     await expect(canvas.getAllByText('—').length).toBeGreaterThan(0)
+  },
+}
+
+/** Plans as chips (the overflow collapses to +N), entitlements and subscriptions as counts. */
+export const Linkage: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('API calls')
+    await expect(canvas.getAllByText('Starter').length).toBeGreaterThan(0)
+    await expect(canvas.getByText('+1')).toBeInTheDocument()
+    await expect(canvas.getByText('3 entitlements')).toBeInTheDocument()
+    await expect(canvas.getByText('1,280')).toBeInTheDocument()
+  },
+}
+
+/** A product no plan grants offers to create the entitlement, without opening the row. */
+export const AddEntitlement: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add entitlement' }))
+    await expect(args.onCreateEntitlement).toHaveBeenCalledOnce()
+    await expect(args.onFeatureClick).not.toHaveBeenCalled()
   },
 }
 
@@ -63,7 +104,7 @@ export const FilteredEmpty: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText(/no features match these filters/i),
+      await within(canvasElement).findByText(/no products match these filters/i),
     ).toBeInTheDocument()
   },
 }

@@ -87,7 +87,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/features',
     reference: 'pages/catalog.tsx',
     pattern: 'list',
-    ready: { heading: 'Features', rows: true },
+    ready: { heading: 'Products', rows: true },
   },
   {
     name: 'feature-detail',

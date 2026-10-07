@@ -255,7 +255,7 @@ import { SignInPage } from '@/pages/auth/SignInPage'
  */
 function ShellLayout() {
   const navigate = useNavigate()
-  const { pathname } = useRouterState({ select: (state) => state.location })
+  const { pathname, searchStr } = useRouterState({ select: (state) => state.location })
   const environments = useEnvironments()
   const { session, signOut } = useSession()
   /*
@@ -271,7 +271,15 @@ function ShellLayout() {
   return (
     <ConsoleShell
       pathname={pathname}
-      onNavigate={(path) => void navigate({ to: path, search: {} as never })}
+      search={searchStr}
+      onNavigate={(path) => {
+        // A row may carry the search that selects it (a Settings tab).
+        const [to = path, query = ''] = path.split('?')
+        void navigate({
+          to,
+          search: Object.fromEntries(new URLSearchParams(query)) as never,
+        })
+      }}
       environment={environments.current}
       environments={environments.environments}
       onEnvironmentChange={environments.select}
@@ -563,6 +571,7 @@ function FeaturesRouteComponent() {
         void navigate({ to: '/features/$featureId', params: { featureId: feature.id } })
       }
       onCreateFeature={() => void navigate({ to: '/features/new' })}
+      onCreateEntitlement={() => void navigate({ to: '/plans', search: {} as never })}
       onEditFeature={(feature) =>
         void navigate({ to: '/features/$featureId/edit', params: { featureId: feature.id } })
       }

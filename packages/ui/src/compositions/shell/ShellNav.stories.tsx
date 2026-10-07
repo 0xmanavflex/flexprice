@@ -117,3 +117,41 @@ export const ChildRowSpansTheSidebar: Story = {
     await expect(Math.abs(gap)).toBeLessThanOrEqual(2)
   },
 }
+
+/**
+ * A `pinned` group sits at the foot of the sidebar under a rule, and only one
+ * section is open across both groups.
+ */
+export const PinnedFooter: Story = {
+  args: {
+    activeItemId: 'plans',
+    groups: [
+      ...navGroups,
+      {
+        id: 'footer',
+        pinned: true,
+        items: [
+          { id: 'integrations', label: 'Integrations' },
+          {
+            id: 'settings',
+            label: 'Settings',
+            items: [
+              { id: 'settings-team', label: 'Team' },
+              { id: 'settings-taxes', label: 'Taxes' },
+            ],
+          },
+        ],
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const catalog = canvas.getByRole('button', { name: /product catalog/i })
+    const settings = canvas.getByRole('button', { name: /^settings/i })
+    await expect(settings.closest('[data-pinned]')).not.toBeNull()
+    await expect(catalog).toHaveAttribute('aria-expanded', 'true')
+    await userEvent.click(settings)
+    await expect(settings).toHaveAttribute('aria-expanded', 'true')
+    await expect(catalog).toHaveAttribute('aria-expanded', 'false')
+  },
+}

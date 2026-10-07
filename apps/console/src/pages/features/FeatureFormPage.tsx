@@ -43,7 +43,7 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
     return (
       <FeatureForm
         mode="create"
-        trail={[{ label: 'Features', onClick: onCancel }, { label: 'Create feature' }]}
+        trail={[{ label: 'Products', onClick: onCancel }, { label: 'Create product' }]}
         {...formProps}
         isSubmitting={create.isPending}
         submitError={toSubmitError(create.error, 'create')}
@@ -69,7 +69,7 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
     return (
       <PageBody>
         <AppFailure
-          title="This feature could not be loaded"
+          title="This product could not be loaded"
           detail="Try again, or go back."
           onRetry={existing.error ? () => void existing.refetch() : onCancel}
         />
@@ -83,7 +83,7 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
       mode="edit"
       feature={feature}
       trail={[
-        { label: 'Features', onClick: onCancel },
+        { label: 'Products', onClick: onCancel },
         { label: feature.name, onClick: () => props.onDone(feature.id) },
         { label: 'Edit' },
       ]}

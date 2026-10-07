@@ -23,7 +23,7 @@ test.beforeEach(async ({ context }) => {
  */
 test.describe('the features list', () => {
   const list = (page: Page) =>
-    new CatalogListPage(page, { heading: 'Features', searchLabel: 'Search features' })
+    new CatalogListPage(page, { heading: 'Products', searchLabel: 'Search products' })
 
   const openRowMenu = async (page: Page, item: string) => {
     await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
@@ -34,7 +34,7 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
-    await page.getByRole('button', { name: 'New feature' }).first().click()
+    await page.getByRole('button', { name: 'New product' }).first().click()
     await expect(page).toHaveURL(/\/features\/new/)
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
@@ -42,7 +42,7 @@ test.describe('the features list', () => {
     await expect(page.getByRole('radio', { name: /Metered/ })).toBeChecked()
     await expect(page.getByRole('button', { name: 'Next' })).toHaveCount(0)
 
-    const create = page.getByRole('button', { name: 'Create feature' })
+    const create = page.getByRole('button', { name: 'Create product' })
     await create.click()
     await expect(page.getByText('Enter a name')).toBeVisible()
 
@@ -62,7 +62,7 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
-    await openRowMenu(page, 'Edit feature')
+    await openRowMenu(page, 'Edit product')
     await expect(page).toHaveURL(/\/features\/[^/]+\/edit/)
     await expect(page.getByLabel('Lookup key')).toHaveAttribute('readonly', '')
 
@@ -79,8 +79,8 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
-    await openRowMenu(page, 'Clone feature')
-    const dialog = page.getByRole('dialog', { name: 'Clone feature' })
+    await openRowMenu(page, 'Clone product')
+    const dialog = page.getByRole('dialog', { name: 'Clone product' })
     await dialog.getByLabel('Lookup key').fill('cloned_key')
 
     const request = page.waitForRequest(
@@ -96,13 +96,13 @@ test.describe('the features list', () => {
     await page.goto('/features')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
 
-    await openRowMenu(page, 'Delete feature')
-    const dialog = page.getByRole('dialog', { name: 'Delete feature' })
+    await openRowMenu(page, 'Delete product')
+    const dialog = page.getByRole('dialog', { name: 'Delete product' })
 
     const request = page.waitForRequest(
       (r) => r.method() === 'DELETE' && /\/v1\/features\/[^/]+$/.test(new URL(r.url()).pathname),
     )
-    await dialog.getByRole('button', { name: 'Delete feature' }).click()
+    await dialog.getByRole('button', { name: 'Delete product' }).click()
     await request
     await expect(dialog).toBeHidden()
   })
@@ -111,7 +111,7 @@ test.describe('the features list', () => {
     page,
   }) => {
     await page.goto('/features/new')
-    await expect(page.getByRole('heading', { name: 'Create feature' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Create product' })).toBeVisible()
 
     await page.goto('/features')
     await list(page).rows().first().getByRole('cell').nth(2).click()

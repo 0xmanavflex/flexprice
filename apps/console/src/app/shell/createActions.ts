@@ -36,7 +36,7 @@ export const CREATE_ACTIONS: CreateAction[] = [
   { id: 'customer', label: 'New customer', path: '/customers/new' },
 
   { id: 'plan', label: 'New plan', path: '/plans/new', startsGroup: true },
-  { id: 'feature', label: 'New feature', path: '/features/new' },
+  { id: 'feature', label: 'New product', path: '/features/new' },
   { id: 'group', label: 'New group', path: '/groups/new' },
   { id: 'cost-sheet', label: 'New cost sheet', path: '/cost-sheets/new' },
 

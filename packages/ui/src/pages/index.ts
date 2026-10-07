@@ -80,7 +80,7 @@ export type {
 export { FeatureDetailView } from './features/FeatureDetailView'
 export type { FeatureTab, FeatureDetailViewProps } from './features/FeatureDetailView'
 export { FeatureGrid, FeatureGridProvenance } from './features/FeatureGrid'
-export type { FeatureGridProps } from './features/FeatureGrid'
+export type { FeatureGridProps, ProductLinkage } from './features/FeatureGrid'
 export { PlanGrid, PlanGridProvenance } from './plans/PlanGrid'
 export type { PlanGridProps } from './plans/PlanGrid'
 export { PlanForm, PlanFormProvenance } from './plans/PlanForm'

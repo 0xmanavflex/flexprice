@@ -17,6 +17,9 @@ import {
   SettingsIcon,
   CalculatorIcon,
   FolderTreeIcon,
+  UsersIcon,
+  FileSignatureIcon,
+  HandCoinsIcon,
 } from 'lucide-react'
 import { useNavCounts } from '@fp/query'
 import {
@@ -34,9 +37,12 @@ import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { searchableDestinations, useGlobalSearch } from './useGlobalSearch'
 import {
+  ALWAYS_COUNTED,
   breadcrumbForPath,
+  FOOTER_NAV,
   GROUP_COUNTS,
   groupForNavId,
+  hrefForNavId,
   labelForNavId,
   NAV,
   navEntryForPath,
@@ -54,6 +60,9 @@ import {
  */
 const ICONS: Record<string, ReactNode> = {
   home: <HouseIcon className="size-4" />,
+  customers: <UsersIcon className="size-4" />,
+  subscriptions: <FileSignatureIcon className="size-4" />,
+  collections: <HandCoinsIcon className="size-4" />,
   catalog: <Layers2Icon className="size-4" />,
   billing: <LandmarkIcon className="size-4" />,
   revenue: <BarChart3Icon className="size-4" />,
@@ -78,6 +87,8 @@ const CREATE_ICONS: Record<string, ReactNode> = {
 
 export interface ConsoleShellProps {
   pathname: string
+  /** The query string (`?section=team`), so a Settings tab can be the active row. */
+  search?: string
   onNavigate: (path: string) => void
   environment: ShellEnvironment
   environments: ShellEnvironment[]
@@ -102,6 +113,7 @@ export interface ConsoleShellProps {
  */
 export function ConsoleShell({
   pathname,
+  search = '',
   onNavigate,
   environment,
   environments,
@@ -111,25 +123,28 @@ export function ConsoleShell({
   headerActions,
   children,
 }: ConsoleShellProps) {
-  const activeItemId = navEntryForPath(pathname)
+  const activeItemId = navEntryForPath(pathname, search)
   const openGroup = groupForNavId(activeItemId)
   const [detailTrail, setDetailTrail] = useState<ShellDetailCrumb[] | null>(null)
   const [creatingEnvironment, setCreatingEnvironment] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const destinations = useMemo(() => searchableDestinations(), [])
   const found = useGlobalSearch(searchTerm)
-  const counts = useNavCounts(openGroup ? (GROUP_COUNTS[openGroup] ?? []) : [])
+  const counts = useNavCounts([
+    ...ALWAYS_COUNTED,
+    ...(openGroup ? (GROUP_COUNTS[openGroup] ?? []) : []),
+  ])
 
   const goTo = (id: string) => {
-    const path = pathForNavId(id)
-    if (path) {
-      onNavigate(path)
+    const href = hrefForNavId(id)
+    if (href) {
+      onNavigate(href)
       return
     }
     // A parent: go to its first child rather than doing nothing.
-    const firstChild = NAV.find((entry) => entry.id === id)?.children?.[0]
-    const childPath = firstChild ? pathForNavId(firstChild.id) : undefined
-    if (childPath) onNavigate(childPath)
+    const firstChild = [...NAV, ...FOOTER_NAV].find((entry) => entry.id === id)?.children?.[0]
+    const childHref = firstChild ? hrefForNavId(firstChild.id) : undefined
+    if (childHref) onNavigate(childHref)
   }
 
   // A detail page hands up "list, record": the list crumb becomes a link back
@@ -137,14 +152,15 @@ export function ConsoleShell({
   // The group crumb goes where the sidebar's group goes — its first page.
   // The page crumb is a link whenever you are somewhere under it.
   const pagePath = activeItemId ? pathForNavId(activeItemId) : undefined
+  const pageHref = activeItemId ? hrefForNavId(activeItemId) : undefined
   const pageLabel = activeItemId ? labelForNavId(activeItemId) : undefined
   const parent = parentForNavId(activeItemId)
-  const navTrail: ShellCrumb[] = breadcrumbForPath(pathname).map((crumb) => {
+  const navTrail: ShellCrumb[] = breadcrumbForPath(pathname, search).map((crumb) => {
     if (parent && crumb.label === parent.label) {
       return { ...crumb, onClick: () => goTo(parent.id) }
     }
-    if (pagePath && pageLabel && crumb.label === pageLabel && pathname !== pagePath) {
-      return { ...crumb, onClick: () => onNavigate(pagePath) }
+    if (pageHref && pageLabel && crumb.label === pageLabel && pathname !== pagePath) {
+      return { ...crumb, onClick: () => onNavigate(pageHref) }
     }
     return crumb
   })

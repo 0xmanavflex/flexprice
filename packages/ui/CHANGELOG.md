@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-07 — pages/features/FeatureGrid: Features becomes Products — columns are now Name, Type, Event name, Aggregation type, Aggregation field, Plans (chips, +N overflow), Entitlements (count, or an Add entitlement action) and Subscriptions; linkage comes in as a `linkage` map so the grid stays a table (user request)
+- 2026-10-07 — compositions/shell/ShellNav: `pinned` groups sit at the foot of the sidebar under a rule, open-section state is shared across groups, and any leaf can carry a count (user-requested IA: Settings footer with child rows)
 - 2026-10-07 — compositions/Section + pages/shared/{EntityList,DetailTable}: `Section bare` drops the header band and keeps the title as a screen-reader heading; DetailTable `action` closes the toolbar after the last control. Every table on a detail page (customer, plan, add-on, coupon, feature, group, invoice, tax, revenue) now leads with its search, and the Section's header button moved into the toolbar (user request)
 - 2026-10-07 — pages/features/FeatureForm story: Submitting waives axe scrollable-region-focusable (all fields are disabled while saving; the removed description tip was the only focusable element left)
 - 2026-10-06 — compositions: Section, Panel, FormCard, FormDialog, FormToolbar and FormPage no longer take a description or hint; DescriptionTip is deleted. The (i) now appears only beside input labels (Field, FormRow, LabelWithHint via InfoHint) (user request)

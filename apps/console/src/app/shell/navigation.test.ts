@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  FOOTER_NAV,
   NAV,
   SECONDARY,
+  hrefForNavId,
   breadcrumbForPath,
   groupForNavId,
   navEntryForPath,
@@ -19,6 +21,11 @@ describe('navEntryForPath', () => {
     ['/customers', 'customers'],
     ['/customers/new', 'customers'],
     ['/customers/cus_1/edit', 'customers'],
+    ['/subscriptions', 'subscriptions'],
+    ['/coupons', 'settings-discounts'],
+    ['/taxes', 'settings-taxes'],
+    ['/cost-sheets', 'settings-cost-tracking'],
+    ['/pricing-widget', 'pricing-widget'],
   ])('resolves %s to %s', (path, id) => {
     expect(navEntryForPath(path)).toBe(id)
   })
@@ -27,6 +34,20 @@ describe('navEntryForPath', () => {
   it('does not let the root entry swallow every path', () => {
     expect(navEntryForPath('/')).toBe('home')
     expect(navEntryForPath('/features')).not.toBe('home')
+  })
+
+  it.each([
+    ['?section=team&tab=roles', 'settings-team'],
+    ['?section=billing&tab=invoices', 'settings-invoicing'],
+    ['?section=billing&tab=subscriptions', 'settings-subscription'],
+    ['?section=billing&tab=currencies', 'settings-currency'],
+    ['?section=notifications&tab=wallet-alerts', 'settings-alerts'],
+    ['?section=customer-experience&tab=onboarding', 'settings-customer-experience'],
+    ['?section=developers&tab=webhooks', 'webhooks'],
+    ['?section=developers&tab=api-keys', 'settings-page'],
+    ['', 'settings-page'],
+  ])('resolves /settings%s to %s', (search, id) => {
+    expect(navEntryForPath('/settings', search)).toBe(id)
   })
 
   it('returns nothing for a path with no entry', () => {
@@ -38,6 +59,7 @@ describe('groupForNavId', () => {
   it('finds the group a child belongs to', () => {
     expect(groupForNavId('features')).toBe('catalog')
     expect(groupForNavId('invoices')).toBe('billing')
+    expect(groupForNavId('settings-team')).toBe('settings')
   })
 
   it('treats a top-level entry as its own group', () => {
@@ -57,19 +79,17 @@ describe('toNavGroups', () => {
     expect(catalog?.items?.map((child) => child.id)).toEqual([
       'features',
       'plans',
-      'coupons',
       'addons',
-      'cost-sheets',
-      'price-units',
-      'groups',
+      'pricing-widget',
     ])
   })
 
-  it('carries counts onto children, and omits them when absent', () => {
-    const [group] = toNavGroups({}, { features: 12 })
+  it('carries counts onto children and top-level rows, and omits them when absent', () => {
+    const [group] = toNavGroups({}, { features: 12, customers: 40 })
     const catalog = group?.items.find((item) => item.id === 'catalog')
     expect(catalog?.items?.find((c) => c.id === 'features')?.count).toBe(12)
     expect(catalog?.items?.find((c) => c.id === 'plans')).not.toHaveProperty('count')
+    expect(group?.items.find((item) => item.id === 'customers')?.count).toBe(40)
   })
 
   it('shows a zero count rather than hiding it', () => {
@@ -81,44 +101,75 @@ describe('toNavGroups', () => {
 
 describe('the tree itself', () => {
   it('gives every entry either a path or children, never neither', () => {
-    for (const entry of NAV) {
+    for (const entry of [...NAV, ...FOOTER_NAV]) {
       expect(entry.path ?? entry.children, entry.id).toBeDefined()
     }
   })
 
   it('every navigable id round-trips to a path', () => {
-    for (const entry of NAV) {
+    for (const entry of [...NAV, ...FOOTER_NAV]) {
       for (const child of entry.children ?? []) expect(pathForNavId(child.id)).toBeDefined()
     }
   })
 })
 
-describe('the secondary destinations', () => {
-  // The "Quick links" group is gone: Settings and Documentation moved to the
-  // footer account menu, so the sidebar renders only the primary tree now.
-  it('renders a single unlabelled primary group, with no Quick links group', () => {
+describe('the sidebar layout', () => {
+  it('renders the primary tree unlabelled, then a pinned footer with Integrations and Settings', () => {
     const groups = toNavGroups()
-    expect(groups).toHaveLength(1)
-    // The lone primary tree carries no heading — no "Workspace" label over the
-    // only section on screen.
+    expect(groups.map((group) => group.id)).toEqual(['main', 'footer'])
     expect(groups[0]?.title).toBeUndefined()
-    expect(groups.some((group) => group.title === 'Quick links')).toBe(false)
+    expect(groups[0]?.pinned).toBeUndefined()
+    expect(groups[1]?.pinned).toBe(true)
+    expect(groups[1]?.items.map((item) => item.id)).toEqual(['integrations', 'settings'])
   })
 
-  // Kept out of the sidebar, but still real routes — the account menu and the
+  it('lists the top level in the order of the design', () => {
+    expect(NAV.map((entry) => entry.label)).toEqual([
+      'Home',
+      'Customers',
+      'Contracts',
+      'Billing',
+      'Collections',
+      'Revenue',
+      'Product Catalog',
+      'Developers',
+    ])
+    expect(
+      FOOTER_NAV.find((entry) => entry.id === 'settings')?.children?.map((c) => c.label),
+    ).toEqual([
+      'Team',
+      'Discounts',
+      'Taxes',
+      'Cost Tracking',
+      'Invoicing',
+      'Subscription',
+      'Currency',
+      'Alerts',
+      'Labels',
+      'Customer Experience',
+    ])
+  })
+
+  // Not in the rail, but still real routes: the command palette and the
   // breadcrumb resolve against them.
-  it('still resolves Settings and Documentation as routes', () => {
-    expect(pathForNavId('settings')).toBe('/settings')
+  it('keeps unlisted pages reachable', () => {
+    expect(pathForNavId('settings-page')).toBe('/settings')
     expect(pathForNavId('docs')).toBe('/docs')
-    expect(SECONDARY.map((entry) => entry.id)).toEqual(['settings', 'docs'])
+    expect(SECONDARY.map((entry) => entry.id)).toEqual([
+      'settings-page',
+      'docs',
+      'price-units',
+      'groups',
+      'api-keys',
+      'service-accounts',
+    ])
   })
 
-  it('keeps the primary tree at twenty-four destinations', () => {
-    const count = NAV.reduce(
-      (total, entry) => total + (entry.path ? 1 : 0) + (entry.children?.length ?? 0),
-      0,
-    )
-    expect(count).toBe(24)
+  it('links a Settings tab with the search that selects it', () => {
+    expect(hrefForNavId('settings-invoicing')).toBe('/settings?section=billing&tab=invoices')
+    expect(hrefForNavId('webhooks')).toBe('/settings?section=developers&tab=webhooks')
+    expect(hrefForNavId('plans')).toBe('/plans')
+    expect(hrefForNavId('billing')).toBeUndefined()
   })
 })
 
@@ -126,7 +177,15 @@ describe('breadcrumbForPath', () => {
   it('names the group before the page', () => {
     expect(breadcrumbForPath('/features')).toEqual([
       { label: 'Product Catalog' },
-      { label: 'Features' },
+      { label: 'Products' },
+    ])
+  })
+
+  it('names Settings before a Settings child, wherever the page lives', () => {
+    expect(breadcrumbForPath('/coupons')).toEqual([{ label: 'Settings' }, { label: 'Discounts' }])
+    expect(breadcrumbForPath('/settings', '?section=team&tab=members')).toEqual([
+      { label: 'Settings' },
+      { label: 'Team' },
     ])
   })
 
@@ -181,10 +240,14 @@ describe('every destination resolves', () => {
     '/webhooks',
   ]
 
-  const destinations = [...NAV, ...SECONDARY].flatMap((entry) => [
+  const destinations = [...NAV, ...FOOTER_NAV, ...SECONDARY].flatMap((entry) => [
     ...(entry.path ? [entry.path] : []),
     ...(entry.children ?? []).map((child) => child.path ?? ''),
   ])
+  const hrefs = [...NAV, ...FOOTER_NAV, ...SECONDARY]
+    .flatMap((entry) => [entry, ...(entry.children ?? [])])
+    .filter((entry) => entry.path)
+    .map((entry) => hrefForNavId(entry.id))
 
   it.each(destinations)('%s has a route', (path) => {
     const routed = BUILT.includes(path) || PLACEHOLDER_ROUTES.some((route) => route.path === path)
@@ -198,6 +261,6 @@ describe('every destination resolves', () => {
   })
 
   it('has no duplicate paths', () => {
-    expect(new Set(destinations).size).toBe(destinations.length)
+    expect(new Set(hrefs).size).toBe(hrefs.length)
   })
 })

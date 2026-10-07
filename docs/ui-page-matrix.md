@@ -32,7 +32,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | exports | `ExportListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | DataExportGrid, ListState, PageBody |
 | features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, Properties, Section | AppFailure, FeatureCloneDialog, FeatureDetailView, FeatureTab, LoadingRows, PageBody |
 | features | `FeatureFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, FeatureForm, LoadingRows, PageBody |
-| features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, ListState, PageBody |
+| features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, ListState, PageBody, ProductLinkage |
 | groups | `GroupDetailPage` | Detail | DetailShell, DetailTabs, EntityList, MetricRail, Section | AppFailure, CatalogDetailFrame, CatalogStatusBadge, Dot, EditableCard, GroupMembersView, LoadingRows, PageBody |
 | groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | GroupForm |
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |

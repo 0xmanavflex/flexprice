@@ -14,7 +14,6 @@ import {
   AGGREGATION_LABEL,
   DEFAULT_FEATURE_QUERY,
   FEATURE_SORT_LABEL,
-  FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   type Feature,
   type FeatureQuery,
@@ -29,9 +28,10 @@ import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import {
+  EmDash,
   EntityCell,
   FeatureTypePill,
-  Status,
+  Pill,
   type EntityColumn,
   idColumn,
   textColumn,
@@ -109,27 +109,50 @@ const TYPES = new Set<string>(Object.values(FeatureType))
  */
 const GUIDES: EntityGuide[] = [
   {
-    title: 'What a feature is',
-    description: 'Metered, boolean and static features, and when to reach for each.',
+    title: 'What a product is',
+    description: 'Metered, boolean and static products, and when to reach for each.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/features/use-cases',
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Sending usage events',
-    description: 'How a metered feature turns raw events into something billable.',
+    description: 'How a metered product turns raw events into something billable.',
     href: 'https://docs.flexprice.io/api-reference/events/ingest-event',
     icon: <ScrollTextIcon aria-hidden className="size-4" />,
   },
   {
-    title: 'Pricing a feature',
-    description: 'Attach a feature to a plan with a charge and an entitlement.',
+    title: 'Pricing a product',
+    description: 'Attach a product to a plan with a charge and an entitlement.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/features/linking-to-plans',
     icon: <SquareStackIcon aria-hidden className="size-4" />,
   },
 ]
 
+/**
+ * How a product is wired into the catalogue, as the grid shows it.
+ *
+ * Read from elsewhere (entitlements, plans, subscriptions) and handed in per
+ * product id, so the grid stays a table and never becomes a data loader. A
+ * product with no entry is still loading its linkage; `subscriptions` is
+ * undefined when it could not be counted, which is not the same as zero.
+ */
+export interface ProductLinkage {
+  plans: { id: string; name: string }[]
+  entitlements: number
+  subscriptions: number | undefined
+}
+
+/** Chips shown before the rest collapse into "+N". */
+const VISIBLE_PLAN_CHIPS = 2
+
 export interface FeatureGridProps {
   features: Feature[]
+  /** Plans, entitlements and subscriptions per product id. */
+  linkage?: ReadonlyMap<string, ProductLinkage>
+  /** The linkage is still being read; its three columns show a placeholder. */
+  linkageLoading?: boolean
+  /** The "Add entitlement" action on a product no plan grants yet. */
+  onCreateEntitlement?: (feature: Feature) => void
   total: number
   query: FeatureQuery
   onQueryChange: (query: FeatureQuery) => void
@@ -137,7 +160,7 @@ export interface FeatureGridProps {
   error?: string | null
   onRetry?: () => void
   onFeatureClick?: (feature: Feature) => void
-  /** The primary create action; renders a "New feature" CTA at the toolbar's end. */
+  /** The primary create action; renders a "New product" CTA at the toolbar's end. */
   onCreate?: () => void
   /** Row-menu Edit; opens the editor dialog. */
   onEdit?: ((feature: Feature) => void) | undefined
@@ -152,6 +175,9 @@ export interface FeatureGridProps {
 
 export function FeatureGrid({
   features,
+  linkage,
+  linkageLoading = false,
+  onCreateEntitlement,
   total,
   query,
   onQueryChange,
@@ -178,7 +204,6 @@ export function FeatureGrid({
         }),
         cell: (row) => <EntityCell name={row.name} />,
       },
-      textColumn<Feature>('lookupKey', 'Key', (row) => row.lookupKey, { width: 180, muted: true }),
       {
         // The glyph depends on the row, so the cell is written here rather
         // than through `pillColumn`, which takes one spec per row.
@@ -189,24 +214,99 @@ export function FeatureGrid({
         cell: (row) => <FeatureTypePill type={row.type} label={FEATURE_TYPE_LABEL[row.type]} />,
         skeleton: <Skeleton className="h-6 w-24 rounded-full" />,
       },
-      idColumn<Feature>('eventName', 'Event', (row) => row.eventName, { width: 190 }),
+      idColumn<Feature>('eventName', 'Event name', (row) => row.eventName, { width: 190 }),
       textColumn<Feature>(
-        'measurement',
-        'Aggregation',
+        'aggregationType',
+        'Aggregation type',
         (row) => (row.aggregationType ? AGGREGATION_LABEL[row.aggregationType] : null),
-        { width: 200, muted: true },
+        { width: 190, muted: true },
       ),
-      textColumn<Feature>('unit', 'Unit', (row) => row.unitSingular, { width: 110, muted: true }),
+      idColumn<Feature>('aggregationField', 'Aggregation field', (row) => row.aggregationField, {
+        width: 180,
+      }),
       {
-        id: 'status',
-        header: 'Status',
-        width: 150,
-        text: (row) => FEATURE_STATUS_LABEL[row.status],
-        cell: (row) => <Status value={FEATURE_STATUS_LABEL[row.status]} />,
+        id: 'plans',
+        header: 'Plans',
+        width: 260,
+        text: (row) => (linkage?.get(row.id)?.plans ?? []).map((plan) => plan.name).join(', '),
+        cell: (row) => {
+          const entry = linkage?.get(row.id)
+          if (!entry)
+            return linkageLoading ? <Skeleton className="h-6 w-24 rounded-full" /> : <EmDash />
+          if (entry.plans.length === 0) return <EmDash />
+          const shown = entry.plans.slice(0, VISIBLE_PLAN_CHIPS)
+          const rest = entry.plans.length - shown.length
+          return (
+            <div className="flex min-w-0 items-center gap-1.5">
+              {shown.map((plan) => (
+                <Pill key={plan.id} className="max-w-36 min-w-0">
+                  <span className="truncate">{plan.name}</span>
+                </Pill>
+              ))}
+              {rest > 0 ? (
+                <span
+                  className="text-muted-foreground shrink-0 text-xs"
+                  title={entry.plans
+                    .slice(VISIBLE_PLAN_CHIPS)
+                    .map((plan) => plan.name)
+                    .join(', ')}
+                >
+                  +{rest}
+                </span>
+              ) : null}
+            </div>
+          )
+        },
+        skeleton: <Skeleton className="h-6 w-32 rounded-full" />,
+      },
+      {
+        id: 'entitlements',
+        header: 'Entitlements',
+        width: 170,
+        text: (row) => String(linkage?.get(row.id)?.entitlements ?? 0),
+        cell: (row) => {
+          const entry = linkage?.get(row.id)
+          if (!entry)
+            return linkageLoading ? <Skeleton className="h-6 w-20 rounded-full" /> : <EmDash />
+          if (entry.entitlements > 0) {
+            return (
+              <Pill tone="success">
+                {entry.entitlements} {entry.entitlements === 1 ? 'entitlement' : 'entitlements'}
+              </Pill>
+            )
+          }
+          if (!onCreateEntitlement) return <EmDash />
+          return (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(event) => {
+                event.stopPropagation()
+                onCreateEntitlement(row)
+              }}
+            >
+              <PlusIcon aria-hidden />
+              Add entitlement
+            </Button>
+          )
+        },
         skeleton: <Skeleton className="h-6 w-24 rounded-full" />,
       },
+      {
+        id: 'subscriptions',
+        header: 'Subscriptions',
+        width: 150,
+        text: (row) => String(linkage?.get(row.id)?.subscriptions ?? ''),
+        cell: (row) => {
+          const entry = linkage?.get(row.id)
+          if (!entry) return linkageLoading ? <Skeleton className="h-4 w-8" /> : <EmDash />
+          if (entry.subscriptions === undefined) return <EmDash />
+          return <span className="tabular-nums">{entry.subscriptions.toLocaleString()}</span>
+        },
+        skeleton: <Skeleton className="h-4 w-8" />,
+      },
     ],
-    [],
+    [linkage, linkageLoading, onCreateEntitlement],
   )
 
   /* --- the filter builder's tree, rebuilt from the query every render, so
@@ -226,33 +326,33 @@ export function FeatureGrid({
     const actions: EntityRowAction[] = []
     if (onFeatureClick) {
       actions.push({
-        label: 'View feature',
+        label: 'View product',
         icon: <GaugeIcon aria-hidden className="size-4" />,
         onSelect: () => onFeatureClick(feature),
       })
     }
     if (onEdit) {
       actions.push({
-        label: 'Edit feature',
+        label: 'Edit product',
         icon: <PencilIcon aria-hidden className="size-4" />,
         onSelect: () => onEdit(feature),
       })
     }
     if (onClone) {
       actions.push({
-        label: 'Clone feature',
+        label: 'Clone product',
         icon: <CopyPlusIcon aria-hidden className="size-4" />,
         onSelect: () => onClone(feature),
       })
     }
     actions.push({
-      label: 'Copy feature ID',
+      label: 'Copy product ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(feature.id),
     })
     if (onDelete) {
       actions.push({
-        label: 'Delete feature',
+        label: 'Delete product',
         icon: <Trash2Icon aria-hidden className="size-4" />,
         onSelect: () => onDelete(feature),
         destructive: true,
@@ -263,8 +363,8 @@ export function FeatureGrid({
 
   return (
     <EntityList<Feature>
-      label="Features"
-      noun="features"
+      label="Products"
+      noun="products"
       rows={features}
       total={total}
       columns={columns}
@@ -274,7 +374,7 @@ export function FeatureGrid({
       onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search features…"
+      searchPlaceholder="Search products…"
       filter={{
         fields: FILTER_FIELDS,
         query: createFilterQuery(filterRules),
@@ -300,12 +400,12 @@ export function FeatureGrid({
           }),
       }}
       rowActions={rowActions}
-      exportFileName="features"
+      exportFileName="products"
       primaryAction={
         onCreate ? (
           <Button onClick={onCreate}>
             <PlusIcon aria-hidden />
-            New feature
+            New product
           </Button>
         ) : undefined
       }
@@ -315,17 +415,17 @@ export function FeatureGrid({
       {...(onRetry ? { onRetry } : {})}
       isFiltered={query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0}
       {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No features match these filters"
+      filteredEmptyTitle="No products match these filters"
       empty={{
         title: 'Nothing is being measured yet',
         description:
-          'A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
+          'A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
         ...(onCreate
           ? {
               actions: (
                 <Button onClick={onCreate}>
                   <PlusIcon aria-hidden />
-                  New feature
+                  New product
                 </Button>
               ),
             }

@@ -4,14 +4,19 @@ import type { ShellCrumb, ShellNavGroup, ShellNavItem } from '@fp/ui/composition
 /**
  * The navigation tree.
  *
- * Twenty-four destinations, one level of nesting, in the arrangement the
- * current dashboard already uses: Product Catalog has seven children, Billing
- * six, Developers seven. Keeping the grouping means nobody has to relearn where
- * anything lives during the migration — the shell changed, the map did not.
+ * The primary tree follows the revenue lifecycle: who you bill (Customers),
+ * what they signed (Contracts), what you bill and collect, what it earned
+ * (Revenue), what you sell (Product Catalog) and how it is wired (Developers).
+ * Integrations and Settings sit apart, pinned under a rule at the foot of the
+ * rail, because nobody works *in* them.
  *
- * Paths are one flat segment each. The current dashboard nests them
- * (`/product-catalog/coupons`, `/billing/payments`), which buys nothing a
- * person can see and makes every URL longer than the thing it identifies.
+ * Destinations the design marks v2.1 (Reports, Revenue's sub-reports, Billing &
+ * Usage) are left out until they exist; a placeholder row is a dead end with a
+ * label.
+ *
+ * Paths are one flat segment each. A Settings child that is a tab of the
+ * Settings page carries the `query` that selects it, so it highlights and
+ * deep-links like any other row.
  *
  * Icons are attached by the app rather than declared here, so this module stays
  * free of JSX and can be tested as data.
@@ -21,70 +26,141 @@ export interface NavEntry {
   label: string
   /** Absent for a parent: it expands, and clicking it goes to its first child. */
   path?: string
+  /** Search params that select this row on a page shared with others (Settings tabs). */
+  query?: Record<string, string>
+  /** Which `query` keys decide whether the row is active. Defaults to all of them. */
+  match?: readonly string[]
   children?: NavEntry[]
 }
 
 export const NAV: NavEntry[] = [
   { id: 'home', label: 'Home', path: '/' },
-  {
-    id: 'catalog',
-    label: 'Product Catalog',
-    children: [
-      { id: 'features', label: 'Features', path: '/features' },
-      { id: 'plans', label: 'Plans', path: '/plans' },
-      { id: 'coupons', label: 'Coupons', path: '/coupons' },
-      { id: 'addons', label: 'Addons', path: '/addons' },
-      { id: 'cost-sheets', label: 'Cost Sheets', path: '/cost-sheets' },
-      { id: 'price-units', label: 'Price Units', path: '/price-units' },
-      { id: 'groups', label: 'Groups', path: '/groups' },
-    ],
-  },
+  { id: 'customers', label: 'Customers', path: '/customers' },
+  { id: 'subscriptions', label: 'Contracts', path: '/subscriptions' },
   {
     id: 'billing',
     label: 'Billing',
     children: [
-      { id: 'customers', label: 'Customers', path: '/customers' },
-      { id: 'subscriptions', label: 'Subscriptions', path: '/subscriptions' },
       { id: 'invoices', label: 'Invoices', path: '/invoices' },
-      { id: 'payments', label: 'Payments', path: '/payments' },
       { id: 'credit-notes', label: 'Credit Notes', path: '/credit-notes' },
-      { id: 'taxes', label: 'Taxes', path: '/taxes' },
     ],
   },
+  {
+    id: 'collections',
+    label: 'Collections',
+    children: [{ id: 'payments', label: 'Payments', path: '/payments' }],
+  },
   { id: 'revenue', label: 'Revenue', path: '/revenue' },
+  {
+    id: 'catalog',
+    label: 'Product Catalog',
+    children: [
+      { id: 'features', label: 'Products', path: '/features' },
+      { id: 'plans', label: 'Plans', path: '/plans' },
+      { id: 'addons', label: 'Addons', path: '/addons' },
+      { id: 'pricing-widget', label: 'Pricing page', path: '/pricing-widget' },
+    ],
+  },
   {
     id: 'developers',
     label: 'Developers',
     children: [
       { id: 'events', label: 'Events Debugger', path: '/events' },
-      { id: 'api-keys', label: 'API Keys', path: '/api-keys' },
-      { id: 'service-accounts', label: 'Service Accounts', path: '/service-accounts' },
-      { id: 'webhooks', label: 'Webhooks', path: '/webhooks' },
+      {
+        id: 'webhooks',
+        label: 'Webhooks',
+        path: '/settings',
+        query: { section: 'developers', tab: 'webhooks' },
+      },
+      { id: 'usage-syncs', label: 'Usage Sync', path: '/usage-syncs' },
       { id: 'exports', label: 'Exports', path: '/exports' },
-      { id: 'usage-syncs', label: 'Usage Syncs', path: '/usage-syncs' },
       { id: 'workflows', label: 'Workflows', path: '/workflows' },
     ],
   },
-  { id: 'integrations', label: 'Integrations', path: '/integrations' },
-  { id: 'pricing-widget', label: 'Pricing Widget', path: '/pricing-widget' },
 ]
 
 /**
- * Secondary destinations — Settings and Documentation.
+ * The foot of the rail: Integrations, then Settings with its children.
  *
- * Separate from `NAV` because they are not part of the product's map — nobody
- * navigates the console by way of Settings. They are no longer rendered as a
- * "Quick links" sidebar group; Documentation now lives in the footer account
- * menu beside Settings. They stay here because they are still real routes, and
- * `pathForNavId`, `labelForNavId`, and `breadcrumbForPath` resolve against them.
+ * Settings' children are the pages that configure the product. Four are tabs of
+ * the Settings page itself; Discounts, Taxes and Cost Tracking are the existing
+ * Coupons, Taxes and Cost Sheets pages under their new names.
  */
-export const SECONDARY: NavEntry[] = [
-  { id: 'settings', label: 'Settings', path: '/settings' },
-  { id: 'docs', label: 'Documentation', path: '/docs' },
+export const FOOTER_NAV: NavEntry[] = [
+  { id: 'integrations', label: 'Integrations', path: '/integrations' },
+  {
+    id: 'settings',
+    label: 'Settings',
+    children: [
+      {
+        id: 'settings-team',
+        label: 'Team',
+        path: '/settings',
+        query: { section: 'team', tab: 'members' },
+        match: ['section'],
+      },
+      { id: 'settings-discounts', label: 'Discounts', path: '/coupons' },
+      { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
+      { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
+      {
+        id: 'settings-invoicing',
+        label: 'Invoicing',
+        path: '/settings',
+        query: { section: 'billing', tab: 'invoices' },
+      },
+      {
+        id: 'settings-subscription',
+        label: 'Subscription',
+        path: '/settings',
+        query: { section: 'billing', tab: 'subscriptions' },
+      },
+      {
+        id: 'settings-currency',
+        label: 'Currency',
+        path: '/settings',
+        query: { section: 'billing', tab: 'currencies' },
+      },
+      {
+        id: 'settings-alerts',
+        label: 'Alerts',
+        path: '/settings',
+        query: { section: 'notifications', tab: 'alert-rules' },
+        match: ['section'],
+      },
+      { id: 'settings-labels', label: 'Labels', path: '/labels' },
+      {
+        id: 'settings-customer-experience',
+        label: 'Customer Experience',
+        path: '/settings',
+        query: { section: 'customer-experience', tab: 'portal' },
+        match: ['section'],
+      },
+    ],
+  },
 ]
 
+/**
+ * Destinations that are real routes but not rows in the rail.
+ *
+ * Not part of the product's map — Settings (the page itself, for the sections
+ * with no row above), Documentation, and the pages the new tree no longer
+ * lists but which are still linked to, searched for and reachable by URL.
+ * `pathForNavId`, `labelForNavId`, `breadcrumbForPath` and the command palette
+ * resolve against them.
+ */
+export const SECONDARY: NavEntry[] = [
+  { id: 'settings-page', label: 'Settings', path: '/settings' },
+  { id: 'docs', label: 'Documentation', path: '/docs' },
+  { id: 'price-units', label: 'Price Units', path: '/price-units' },
+  { id: 'groups', label: 'Groups', path: '/groups' },
+  { id: 'api-keys', label: 'API Keys', path: '/api-keys' },
+  { id: 'service-accounts', label: 'Service Accounts', path: '/service-accounts' },
+]
+
+const ALL: NavEntry[] = [...NAV, ...FOOTER_NAV, ...SECONDARY]
+
 /** Every entry that can be navigated to, flattened. */
-function leaves(entries: NavEntry[] = [...NAV, ...SECONDARY]): NavEntry[] {
+function leaves(entries: NavEntry[] = ALL): NavEntry[] {
   return entries.flatMap((entry) => [
     ...(entry.path ? [entry] : []),
     ...leaves(entry.children ?? []),
@@ -95,15 +171,34 @@ function leaves(entries: NavEntry[] = [...NAV, ...SECONDARY]): NavEntry[] {
  * Which entry a path belongs to.
  *
  * Longest match wins, so `/features/new` resolves to `features` rather than to
- * `/` — which would otherwise match everything.
+ * `/` — which would otherwise match everything. A row that selects a Settings
+ * tab also has to match the search, and beats the bare `/settings` row when it
+ * does. `search` is a query string, with or without the leading `?`.
  */
-export function navEntryForPath(pathname: string): string | undefined {
-  const match = leaves()
-    .filter((entry) =>
-      entry.path === '/' ? pathname === '/' : pathname.startsWith(entry.path ?? ''),
-    )
-    .sort((a, b) => (b.path?.length ?? 0) - (a.path?.length ?? 0))[0]
-  return match?.id
+export function navEntryForPath(pathname: string, search = ''): string | undefined {
+  const params = new URLSearchParams(search)
+  const score = (entry: NavEntry): number => {
+    const path = entry.path ?? ''
+    if (path === '/' ? pathname !== '/' : !pathname.startsWith(path)) return -1
+    if (!entry.query) return path.length * 10
+    const keys = entry.match ?? Object.keys(entry.query)
+    return keys.every((key) => params.get(key) === entry.query?.[key])
+      ? path.length * 10 + keys.length
+      : -1
+  }
+  let best: { id: string; score: number } | undefined
+  for (const entry of leaves()) {
+    const value = score(entry)
+    if (value >= 0 && (!best || value > best.score)) best = { id: entry.id, score: value }
+  }
+  return best?.id
+}
+
+/** The link for an entry: its path, with the search that selects it. */
+export function hrefForNavId(id: string): string | undefined {
+  const entry = leaves().find((candidate) => candidate.id === id)
+  if (!entry?.path) return undefined
+  return entry.query ? `${entry.path}?${new URLSearchParams(entry.query).toString()}` : entry.path
 }
 
 export function pathForNavId(id: string): string | undefined {
@@ -111,15 +206,16 @@ export function pathForNavId(id: string): string | undefined {
 }
 
 export function labelForNavId(id: string): string | undefined {
-  return [...NAV, ...SECONDARY]
-    .flatMap((entry) => [entry, ...(entry.children ?? [])])
-    .find((entry) => entry.id === id)?.label
+  return ALL.flatMap((entry) => [entry, ...(entry.children ?? [])]).find((entry) => entry.id === id)
+    ?.label
 }
 
 /** A parent, if the entry has one. Drives both the breadcrumb and the counts. */
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
-  return NAV.find((entry) => (entry.children ?? []).some((child) => child.id === id))
+  return [...NAV, ...FOOTER_NAV].find((entry) =>
+    (entry.children ?? []).some((child) => child.id === id),
+  )
 }
 
 /**
@@ -129,8 +225,8 @@ export function parentForNavId(id: string | undefined): NavEntry | undefined {
  * crumb that navigates somewhere the user did not name is worse than one that
  * does nothing.
  */
-export function breadcrumbForPath(pathname: string): ShellCrumb[] {
-  const id = navEntryForPath(pathname)
+export function breadcrumbForPath(pathname: string, search = ''): ShellCrumb[] {
+  const id = navEntryForPath(pathname, search)
   if (!id) return []
 
   const label = labelForNavId(id)
@@ -149,13 +245,16 @@ export function breadcrumbForPath(pathname: string): ShellCrumb[] {
  */
 export const GROUP_COUNTS: Record<string, readonly CountableId[]> = {
   catalog: ['features', 'plans'],
-  billing: ['customers', 'invoices', 'subscriptions'],
+  billing: ['invoices'],
 }
+
+/** Top-level rows that show their count whichever group is open. */
+export const ALWAYS_COUNTED: readonly CountableId[] = ['customers', 'subscriptions']
 
 /** The group an entry sits in, so its counts can be fetched. */
 export function groupForNavId(id: string | undefined): string | undefined {
   if (!id) return undefined
-  return NAV.find(
+  return [...NAV, ...FOOTER_NAV].find(
     (entry) => entry.id === id || (entry.children ?? []).some((child) => child.id === id),
   )?.id
 }
@@ -179,11 +278,10 @@ export function toNavGroups(
   icons: Record<string, React.ReactNode> = {},
   counts: Partial<Record<string, number>> = {},
 ): ShellNavGroup[] {
-  // The single primary tree, with no group heading. A lone group needs no label
-  // — "Workspace" over the only section on screen named the obvious and cost a
-  // row of vertical space at the top of the rail. The former "Quick links" group
-  // (Settings + Documentation, from `SECONDARY`) is likewise gone: both now live
-  // in the footer account menu. `SECONDARY` remains for route resolution — see
-  // the note on that constant.
-  return [{ id: 'main', items: toItems(NAV, icons, counts) }]
+  // The primary tree carries no heading — a lone label over the main section
+  // names the obvious. The footer group is pinned to the bottom of the rail.
+  return [
+    { id: 'main', items: toItems(NAV, icons, counts) },
+    { id: 'footer', pinned: true, items: toItems(FOOTER_NAV, icons, counts) },
+  ]
 }

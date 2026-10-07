@@ -408,6 +408,8 @@ export {
 export type { AlertSettingPage, AlertSettingWire } from './alertSettings'
 
 export { useNavCounts } from './counts'
+export { useFeatureLinkage } from './featureLinkage'
+export type { FeatureLinkage } from './featureLinkage'
 export type { CountableId } from './counts'
 
 export { useCatalogStats } from './catalogStats'

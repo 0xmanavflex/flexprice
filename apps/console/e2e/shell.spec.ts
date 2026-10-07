@@ -5,13 +5,16 @@ import { ShellPage } from './pages/shell'
 /** Seed the mock demo session (see catalog.spec.ts) — the guard now requires a
  *  sign-in even under mocks, so the journeys seed rather than click through it. */
 test.beforeEach(async ({ context }) => {
-  await context.addInitScript((value) => {
-    try {
-      window.localStorage.setItem('flexprice.session', value)
-    } catch {
-      /* private-mode browser */
-    }
-  }, JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }))
+  await context.addInitScript(
+    (value) => {
+      try {
+        window.localStorage.setItem('flexprice.session', value)
+      } catch {
+        /* private-mode browser */
+      }
+    },
+    JSON.stringify({ token: 'mock_demo_token', userId: 'user_demo', tenantId: 'tenant_demo' }),
+  )
 })
 
 /**
@@ -29,13 +32,10 @@ test.beforeEach(async ({ context }) => {
  * `(\?|$)` rather than an end-anchored path.
  */
 const CATALOG = [
-  { name: 'Features', path: '/features' },
+  { name: 'Products', path: '/features' },
   { name: 'Plans', path: '/plans' },
-  { name: 'Coupons', path: '/coupons' },
   { name: 'Addons', path: '/addons' },
-  { name: 'Price Units', path: '/price-units' },
-  { name: 'Groups', path: '/groups' },
-  { name: 'Cost Sheets', path: '/cost-sheets' },
+  { name: 'Pricing page', path: '/pricing-widget' },
 ] as const
 
 function atPath(path: string): RegExp {
@@ -70,6 +70,21 @@ test.describe('the shell', () => {
 
     await expect(shell.home).toBeVisible()
     await expect(page.getByRole('heading', { level: 1, name: 'Coupons' })).toBeAttached()
+  })
+
+  test('the footer opens Settings, whose rows reach the pages that configure the product', async ({
+    page,
+  }) => {
+    const shell = new ShellPage(page)
+    await shell.goto('/')
+
+    await shell.go('Settings')
+    await expect(page).toHaveURL(/\/settings\?section=team/)
+    await shell.go('Discounts')
+    await expect(page).toHaveURL(atPath('/coupons'))
+    await shell.go('Invoicing')
+    await expect(page).toHaveURL(/\/settings\?section=billing&tab=invoices/)
+    await expect(shell.home).toBeVisible()
   })
 
   test('a Product Catalogue parent routes to its first child rather than a dead end', async ({

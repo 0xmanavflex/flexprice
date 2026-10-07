@@ -8,7 +8,7 @@ import {
 import { useCustomers, useFeatures, useInvoices, usePlans } from '@fp/query'
 import type { ShellSearchItem } from '@fp/ui/compositions'
 import { CREATE_ACTIONS } from './createActions'
-import { NAV, SECONDARY } from './navigation'
+import { FOOTER_NAV, hrefForNavId, NAV, SECONDARY } from './navigation'
 
 const MIN_TERM = 2
 const PAGE_SIZE = 5
@@ -18,10 +18,11 @@ export function searchableDestinations(): { items: ShellSearchItem[]; paths: Map
   const items: ShellSearchItem[] = []
   const paths = new Map<string, string>()
 
-  for (const entry of [...NAV, ...SECONDARY]) {
+  for (const entry of [...NAV, ...FOOTER_NAV, ...SECONDARY]) {
     const rows = entry.path ? [entry] : []
     for (const row of [...rows, ...(entry.children ?? [])]) {
-      if (!row.path) continue
+      const href = hrefForNavId(row.id)
+      if (!href) continue
       const id = `page:${row.id}`
       items.push({
         id,
@@ -29,7 +30,7 @@ export function searchableDestinations(): { items: ShellSearchItem[]; paths: Map
         group: 'Pages',
         ...(entry.children ? { hint: entry.label } : {}),
       })
-      paths.set(id, row.path)
+      paths.set(id, href)
     }
   }
 
@@ -91,7 +92,7 @@ export function useGlobalSearch(rawTerm: string) {
       )
     }
     for (const f of features.data?.features ?? []) {
-      add({ id: `feature:${f.id}`, group: 'Features', label: f.name }, `/features/${f.id}`)
+      add({ id: `feature:${f.id}`, group: 'Products', label: f.name }, `/features/${f.id}`)
     }
     for (const i of invoices.data?.invoices ?? []) {
       add(

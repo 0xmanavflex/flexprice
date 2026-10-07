@@ -25,6 +25,8 @@ export interface ShellNavItem {
 export interface ShellNavGroup {
   id: string
   title?: string
+  /** Sits at the foot of the sidebar, under a rule, instead of following the groups above it. */
+  pinned?: boolean
   items: ShellNavItem[]
 }
 
@@ -48,4 +50,3 @@ export interface ShellUser {
   /** Shown under the name in the footer, where the block shows a workspace. */
   organization?: string
 }
-

@@ -129,6 +129,7 @@ function Leaf({
       >
         {item.icon}
         <span>{item.label}</span>
+        {item.count !== undefined ? <Count value={item.count} /> : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
@@ -201,28 +202,20 @@ function ExpandedParent({
 function Items({
   items,
   activeItemId,
+  openId,
+  onToggle,
   onNavigate,
 }: {
   items: ShellNavItem[]
   activeItemId?: string
+  openId: string | null
+  onToggle: (id: string) => void
   onNavigate: (id: string) => void
 }) {
   const { state, isMobile, setOpenMobile } = useSidebar()
   // The rail only exists on desktop; on mobile the sidebar is a sheet and is
   // always at full width, so the flyout branch would be wrong there.
   const isRail = state === 'collapsed' && !isMobile
-
-  // One section open at a time, defaulting to the one that holds the current
-  // page. The default follows the page when it changes (a deep link, the
-  // back button) so the open section never falls out of step with the URL.
-  const current = items.find((item) => containsActive(item, activeItemId))?.id ?? null
-  const [openId, setOpenId] = useState<string | null>(current)
-  const [seenCurrent, setSeenCurrent] = useState<string | null>(current)
-  if (seenCurrent !== current) {
-    setSeenCurrent(current)
-    setOpenId(current)
-  }
-  const effectiveOpen = openId ?? current
 
   /*
    * On a phone the sheet covers most of the screen, so leaving it open after a
@@ -262,10 +255,8 @@ function Items({
             key={item.id}
             item={item}
             {...(activeItemId === undefined ? {} : { activeItemId })}
-            open={effectiveOpen === item.id}
-            onToggle={() =>
-              setOpenId((previous) => ((previous ?? current) === item.id ? '' : item.id))
-            }
+            open={openId === item.id}
+            onToggle={() => onToggle(item.id)}
             onNavigate={navigate}
           />
         )
@@ -275,15 +266,36 @@ function Items({
 }
 
 export function ShellNav({ groups, activeItemId, onNavigate }: ShellNavProps) {
+  // One section open at a time across every group, defaulting to the one that
+  // holds the current page. The default follows the page when it changes (a
+  // deep link, the back button) so the open section never falls out of step
+  // with the URL.
+  const current =
+    groups.flatMap((group) => group.items).find((item) => containsActive(item, activeItemId))?.id ??
+    null
+  const [openId, setOpenId] = useState<string | null>(current)
+  const [seenCurrent, setSeenCurrent] = useState<string | null>(current)
+  if (seenCurrent !== current) {
+    setSeenCurrent(current)
+    setOpenId(current)
+  }
+  const effectiveOpen = openId ?? current
+
   return (
     <>
       {groups.map((group) => (
-        <SidebarGroup key={group.id}>
+        <SidebarGroup
+          key={group.id}
+          className={cn(group.pinned && 'mt-auto border-t pt-2')}
+          data-pinned={group.pinned ? '' : undefined}
+        >
           {group.title ? <SidebarGroupLabel>{group.title}</SidebarGroupLabel> : null}
           <SidebarGroupContent>
             <Items
               items={group.items}
               {...(activeItemId === undefined ? {} : { activeItemId })}
+              openId={effectiveOpen}
+              onToggle={(id) => setOpenId(effectiveOpen === id ? '' : id)}
               onNavigate={onNavigate}
             />
           </SidebarGroupContent>
