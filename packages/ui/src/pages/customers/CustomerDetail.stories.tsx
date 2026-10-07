@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import {
   type CustomerDetail as CustomerDetailModel,
   type Invoice,
@@ -140,7 +140,7 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
     // Overview is the opening section.
-    await expect(canvas.getByRole('heading', { name: /Active subscriptions/ })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
   },
@@ -165,7 +165,8 @@ export const CreatesSubscription: Story = {
   args: { onCreateSubscription: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Create subscription' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Create subscription' }))
     await expect(args.onCreateSubscription).toHaveBeenCalledOnce()
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
   },
@@ -207,6 +208,7 @@ export const Empty: Story = {
   args: { subscriptions: [], invoices: [] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText(/No active subscriptions/)).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: /Active subscriptions/ })).toBeNull()
   },
 }

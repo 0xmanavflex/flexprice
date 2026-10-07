@@ -48,6 +48,7 @@ export const PreviewFollowsDraft: Story = {
     const rail = canvas.getByRole('complementary', { name: 'Customer preview' })
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Corp')
     await userEvent.type(canvas.getByRole('textbox', { name: /^email/i }), 'billing@acme.test')
+    await userEvent.click(canvas.getByRole('button', { name: /More details/ }))
     await userEvent.type(canvas.getByRole('textbox', { name: /city/i }), 'London')
     await expect(within(rail).getByText('Acme Corp')).toBeInTheDocument()
     await expect(within(rail).getByText('AC')).toBeInTheDocument()

@@ -37,8 +37,10 @@ export const Create: Story = {}
 /** Picks a feature in the combobox, then waits for its portalled list to close. */
 async function chooseFeature(canvas: ReturnType<typeof within>, name: string) {
   await userEvent.click(canvas.getByRole('combobox'))
-  await userEvent.click(await screen.findByRole('option', { name }))
-  await waitFor(() => expect(screen.queryByRole('option', { name })).toBeNull())
+  // An option also carries its unit hint, so match the start of its name.
+  const option = new RegExp(`^${name}`)
+  await userEvent.click(await screen.findByRole('option', { name: option }))
+  await waitFor(() => expect(screen.queryByRole('option', { name: option })).toBeNull())
 }
 
 /** Choosing a metered feature reveals the limit and reset fields. */
