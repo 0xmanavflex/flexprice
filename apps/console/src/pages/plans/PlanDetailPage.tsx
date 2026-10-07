@@ -210,7 +210,12 @@ export function PlanDetailPage({
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={
-                  <Button variant="outline" size="icon" className="size-8" aria-label="More actions" />
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="size-8"
+                    aria-label="More actions"
+                  />
                 }
               >
                 <MoreHorizontalIcon aria-hidden />
@@ -262,9 +267,7 @@ export function PlanDetailPage({
         ]}
       />
 
-      {tab === 'overview' ? (
-        <ChargesTab planId={planId} planName={record.name} readOnly={isArchived} />
-      ) : null}
+      {tab === 'overview' ? <ChargesTab planId={planId} readOnly={isArchived} /> : null}
       {tab === 'entitlements' ? <EntitlementsTab planId={planId} /> : null}
       {tab === 'credit-grants' ? <CreditGrantsTab planId={planId} /> : null}
       {tab === 'information' ? (
@@ -318,15 +321,7 @@ export function PlanDetailPage({
  * dialog that asks Fixed or Usage first; a row's Edit opens the form directly.
  * An edit is saved as a new price version; terminate ends a charge behind a confirm.
  */
-function ChargesTab({
-  planId,
-  planName,
-  readOnly,
-}: {
-  planId: string
-  planName: string
-  readOnly: boolean
-}) {
+function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
@@ -374,7 +369,6 @@ function ChargesTab({
           onTerminate={(charge) => setTerminating(charge)}
         />
         <PlanCustomerPreview
-          name={planName}
           charges={rows}
           entitlements={entitlements.data ?? []}
           grants={grants.data ?? []}

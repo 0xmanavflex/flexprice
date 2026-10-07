@@ -18,8 +18,6 @@ import { env } from '@/env'
  */
 export interface PlaceholderPageProps {
   title: string
-  /** What this screen is for, in the page header. */
-  description: string
   /** The empty state's own headline. */
   emptyTitle: string
   emptyDescription: string
@@ -35,7 +33,6 @@ export interface PlaceholderPageProps {
 
 export function PlaceholderPage({
   title,
-  description,
   emptyTitle,
   emptyDescription,
   cta,
@@ -52,7 +49,7 @@ export function PlaceholderPage({
 
   return (
     <>
-      <PageHeader title={title} description={description} />
+      <PageHeader title={title} />
       <PageBody>
         <EmptyState
           {...(icon ? { icon } : {})}

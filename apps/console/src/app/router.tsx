@@ -415,7 +415,6 @@ const placeholderRoutes = PLACEHOLDER_ROUTES.map((entry) =>
     component: () => (
       <PlaceholderPage
         title={entry.title}
-        description={entry.description}
         emptyTitle={entry.emptyTitle}
         emptyDescription={entry.emptyDescription}
         cta={entry.cta}
