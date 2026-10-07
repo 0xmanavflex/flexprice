@@ -101,7 +101,7 @@ export const PreviewFollowsTheDraft: Story = {
     const canvas = within(canvasElement)
 
     await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
-    const rail = within(canvas.getByRole('complementary', { name: 'Feature preview' }))
+    const rail = within(canvas.getByRole('complementary', { name: 'Product preview' }))
     await expect(rail.getByText('API calls')).toBeInTheDocument()
     await expect(rail.getByText('feat-api-calls')).toBeInTheDocument()
   },

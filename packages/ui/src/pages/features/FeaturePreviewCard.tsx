@@ -44,7 +44,7 @@ export function FeaturePreviewCard({
   aggregationType,
   resetUsage,
 }: FeaturePreviewCardProps) {
-  const title = name.trim() || 'Untitled feature'
+  const title = name.trim() || 'Untitled product'
   const summary =
     type === FeatureType.Metered
       ? [title, aggregationType ?? null, resetUsage ? RESET_PHRASE[resetUsage] : null]
@@ -55,10 +55,10 @@ export function FeaturePreviewCard({
   return (
     <FormPreview
       title="How it will look"
-      label="Feature preview"
+      label="Product preview"
       badge={<Badge variant="outline">{FEATURE_TYPE_LABEL[type]}</Badge>}
     >
-      <PreviewSection title="Feature">
+      <PreviewSection title="Product">
         <PreviewRows>
           <PreviewRow label="Name" value={title} />
           <PreviewRow label="Lookup key" value={lookupKey.trim() || 'lookup_key'} />
