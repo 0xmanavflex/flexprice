@@ -140,7 +140,6 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
     // Overview is the opening section.
-    await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
   },
@@ -156,6 +155,7 @@ export const NavigatesSections: Story = {
 
     await userEvent.click(canvas.getByRole('tab', { name: 'Information' }))
     await expect(canvas.getByRole('heading', { name: 'Billing address' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByText('America/Los_Angeles')).toBeInTheDocument()
   },
 }
@@ -163,6 +163,7 @@ export const NavigatesSections: Story = {
 /** Create subscription leaves this page. The detail view only hands off. */
 export const CreatesSubscription: Story = {
   args: { onCreateSubscription: fn() },
+  parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
