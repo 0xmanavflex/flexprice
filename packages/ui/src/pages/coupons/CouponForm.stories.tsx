@@ -51,7 +51,8 @@ export const WithPreview: Story = {
     },
   },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('20% off')).toBeInTheDocument()
+    const rail = within(canvasElement).getByRole('complementary')
+    await expect(within(rail).getByText('20% off')).toBeInTheDocument()
   },
 }
 
