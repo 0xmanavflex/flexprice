@@ -13,9 +13,17 @@ import {
   SettingsCard,
   SettingsFieldGroup,
 } from '@fp/ui/compositions'
-import { Button, Input, Switch } from '@fp/ui/primitives'
+import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
+import {
+  ActionError,
+  ActionNote,
+  Panel,
+  PanelError,
+  mutationMessage,
+  toFailure,
+  SettingsBlock,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -53,7 +61,7 @@ export function SubscriptionsPanel() {
     return (
       <Panel>
         <SettingsBlock
-          title="Unpaid subscriptions"
+          title="Unpaid contracts"
           description="Stored per environment, so a sandbox experiment cannot cancel a real customer."
         >
           <EmptyState
@@ -167,75 +175,98 @@ function SubscriptionForm({
       >
         <Panel>
           <SettingsCard
-            title="Unpaid subscriptions"
-            description="Whether Flexprice cancels a subscription on your behalf when its invoices go unpaid, and how long it waits first."
+            title="Unpaid contracts"
+            description="Whether Flexprice cancels a contract when its invoices go unpaid, and how long it waits first."
             footer={
-              <div className="flex w-full flex-wrap items-center justify-end gap-3">
-                <ActionError message={saveError} />
-                {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-                {!resetError && reset.isSuccess ? (
-                  <ActionNote message="Back to the defaults." />
-                ) : null}
+              <div className="flex w-full flex-wrap items-center justify-between gap-3">
                 <Button
                   type="button"
-                  variant="outline"
+                  variant="ghost"
                   disabled={busy}
                   onClick={() => setResetting(true)}
                 >
                   Reset to defaults
                 </Button>
-                <Button type="submit" disabled={busy}>
-                  {update.isPending ? 'Saving…' : 'Save changes'}
-                </Button>
+                <div className="flex items-center gap-3">
+                  <ActionError message={saveError} />
+                  {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+                  {!resetError && reset.isSuccess ? (
+                    <ActionNote message="Back to the defaults." />
+                  ) : null}
+                  <Button type="submit" disabled={busy}>
+                    {update.isPending ? 'Saving…' : 'Save changes'}
+                  </Button>
+                </div>
               </div>
             }
           >
             <SettingsFieldGroup
-              legend="Unpaid subscriptions"
-              description="Whether Flexprice cancels a subscription on your behalf when its invoices go unpaid."
+              legend="Unpaid contracts"
+              description="Whether Flexprice cancels a contract when its invoices go unpaid."
             >
               <SettingRow
-                title="Cancel automatically"
-                description="Off by default — cancelling a paying customer is something you opt into."
-                labelFor="subscription-auto-cancel"
-                last={!enabled}
+                title="When an invoice stays unpaid"
+                description="Keeping the contract active is the default. Cancelling a paying customer is something you opt into."
               >
-                <Switch
-                  id="subscription-auto-cancel"
-                  checked={enabled}
-                  disabled={busy}
-                  onCheckedChange={(checked) => setEnabled(checked)}
-                />
-              </SettingRow>
-              {enabled ? (
-                <SettingRow
-                  title="Grace period"
-                  description="How long non-payment is tolerated before the subscription is cancelled. At least one day."
-                  labelFor="subscription-grace-days"
-                  last
-                  titleAddon={<span className="text-destructive" aria-hidden="true">*</span>}
+                <div
+                  role="group"
+                  aria-label="When an invoice stays unpaid"
+                  className="bg-muted flex gap-0.5 rounded-lg p-0.5"
                 >
-                  <div className="flex w-full flex-col gap-1">
+                  {[
+                    { value: false, label: 'Keep it active' },
+                    { value: true, label: 'Cancel it' },
+                  ].map((option) => (
+                    <Button
+                      key={option.label}
+                      type="button"
+                      size="sm"
+                      variant={enabled === option.value ? 'outline' : 'ghost'}
+                      aria-pressed={enabled === option.value}
+                      disabled={busy}
+                      className={enabled === option.value ? '' : 'text-muted-foreground'}
+                      onClick={() => setEnabled(option.value)}
+                    >
+                      {option.label}
+                    </Button>
+                  ))}
+                </div>
+              </SettingRow>
+              <SettingRow
+                title="Grace period"
+                description="How long non-payment is tolerated before the contract is cancelled. At least one day."
+                labelFor="subscription-grace-days"
+                last
+              >
+                <div className="flex w-full flex-col gap-1">
+                  <div
+                    className={
+                      enabled ? 'flex items-center gap-2' : 'flex items-center gap-2 opacity-50'
+                    }
+                  >
                     <Input
                       id="subscription-grace-days"
-                      disabled={busy}
+                      disabled={busy || !enabled}
                       inputMode="numeric"
                       aria-invalid={graceError ? true : undefined}
                       value={daysText}
                       onChange={(event) => setDays(event.target.value)}
                     />
-                    {graceError ? (
-                      <p role="alert" className="text-destructive text-xs">
-                        {graceError}
-                      </p>
-                    ) : null}
+                    <span className="text-muted-foreground text-sm">Days</span>
                   </div>
-                </SettingRow>
-              ) : null}
+                  {graceError ? (
+                    <p role="alert" className="text-destructive text-xs">
+                      {graceError}
+                    </p>
+                  ) : null}
+                </div>
+              </SettingRow>
             </SettingsFieldGroup>
-            <div className="px-5 pb-4">
-              <CancellationPreview enabled={enabled} days={days} />
-            </div>
+            <p className="bg-muted/40 border-t px-5 py-3 text-[13px]">
+              {enabled
+                ? `${Number.isFinite(days) && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'}` : 'Some days'} after an invoice is overdue, the contract is cancelled and stops billing.`
+                : 'Contracts keep running when an invoice is overdue; the invoice stays open in Collections.'}
+            </p>
           </SettingsCard>
         </Panel>
       </form>
@@ -259,76 +290,5 @@ function SubscriptionForm({
         }
       />
     </>
-  )
-}
-
-/**
- * The rule as a sentence: what starts the clock, how long it runs, what it does.
- *
- * Two numbers in two boxes do not say what they add up to. V1 renders the same
- * three beats for the same reason — the setting's effect has to be legible
- * without the reader reconstructing it from field names.
- */
-function CancellationPreview({ enabled, days }: { enabled: boolean; days: number }) {
-  const period = Number.isFinite(days) && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'}` : '—'
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border p-4">
-      <span className="text-muted-foreground text-xs">What happens</span>
-      <ol className="flex flex-col gap-3 sm:flex-row sm:items-stretch">
-        <PreviewStep
-          step="Trigger"
-          headline="An invoice goes unpaid"
-          detail="The subscription's invoice passes its due date without payment."
-        />
-        <PreviewArrow />
-        <PreviewStep
-          step="Grace"
-          headline={enabled ? period : 'Not counted'}
-          detail={
-            enabled
-              ? 'The customer keeps the service while the dunning schedule runs.'
-              : 'Nothing is counting down while automatic cancellation is off.'
-          }
-        />
-        <PreviewArrow />
-        <PreviewStep
-          step="Action"
-          headline={enabled ? 'The subscription is cancelled' : 'The subscription keeps running'}
-          detail={
-            enabled
-              ? 'Flexprice cancels it for you. Nobody has to remember to.'
-              : 'Unpaid invoices stay unpaid until somebody acts on them.'
-          }
-        />
-      </ol>
-    </div>
-  )
-}
-
-function PreviewStep({
-  step,
-  headline,
-  detail,
-}: {
-  step: string
-  headline: string
-  detail: string
-}) {
-  return (
-    <li className="bg-muted/40 flex flex-1 flex-col gap-1 rounded-md border p-3">
-      <span className="text-muted-foreground text-[0.7rem] font-medium uppercase">{step}</span>
-      <span className="text-sm font-medium">{headline}</span>
-      <span className="text-muted-foreground text-xs">{detail}</span>
-    </li>
-  )
-}
-
-function PreviewArrow() {
-  return (
-    <li aria-hidden className="text-muted-foreground self-center text-sm">
-      <span className="hidden sm:inline">→</span>
-      <span className="sm:hidden">↓</span>
-    </li>
   )
 }
