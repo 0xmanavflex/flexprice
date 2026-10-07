@@ -44,6 +44,10 @@ export interface DetailTableProps<T> {
   getRowId?: (row: T) => string
   /** Names the table for assistive tech, e.g. "Recent invoices"; "table" is added so it never repeats the section's own name. */
   label: string
+  /** A visible title before the search in the toolbar, e.g. "Recent invoices". */
+  title?: string
+  /** A button after the last toolbar control, e.g. "View all". */
+  action?: ReactNode
   /** For "1 - 10 of 24 invoices". */
   noun?: string
   onRowClick?: (row: T) => void
@@ -70,6 +74,8 @@ export function DetailTable<T extends object>({
   columns,
   getRowId,
   label,
+  title,
+  action,
   noun = 'records',
   onRowClick,
   facet,
@@ -209,7 +215,9 @@ export function DetailTable<T extends object>({
         isFiltered={isFiltered}
         onClearFilters={reset}
         filteredEmptyTitle={`No ${noun} match these filters`}
-        headingAs="h3"
+        headingAs={title ? 'h2' : 'h3'}
+        {...(title ? { title } : {})}
+        {...(action ? { primaryAction: action } : {})}
       />
     </div>
   )

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, userEvent, within } from 'storybook/test'
+import { Button } from '@ui/components/primitives/button'
 import { DetailTable, type DetailColumn } from './DetailTable'
 
 interface Invoice {
@@ -49,6 +50,23 @@ export const Default: Story = {
     await expect(canvas.getByText('1 - 10 of 14 invoices')).toBeInTheDocument()
     await userEvent.type(canvas.getByLabelText('Search invoices'), '1013')
     await expect(canvas.getByText('1 - 1 of 1 invoices')).toBeInTheDocument()
+  },
+}
+
+/** A visible title leads the toolbar and an action closes it, in place of a separate section header. */
+export const WithTitleAndAction: Story = {
+  args: {
+    title: 'Recent invoices',
+    action: (
+      <Button variant="outline" className="h-9 px-3">
+        View all
+      </Button>
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'View all' })).toBeVisible()
   },
 }
 

@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-07 — pages/shared/{EntityList,DetailTable}: optional `title` leads the toolbar before the search and `action` closes it after the last control; the customer overview's Recent invoices card uses them instead of a Section header band (user request)
 - 2026-10-07 — pages/features/FeatureForm story: Submitting waives axe scrollable-region-focusable (all fields are disabled while saving; the removed description tip was the only focusable element left)
 - 2026-10-06 — compositions: Section, Panel, FormCard, FormDialog, FormToolbar and FormPage no longer take a description or hint; DescriptionTip is deleted. The (i) now appears only beside input labels (Field, FormRow, LabelWithHint via InfoHint) (user request)
 - 2026-10-06 — pages/shared/DetailTable: its region is named "<label> table" so it never repeats the surrounding Section; EntityList gives an untitled column a screen-reader "Actions" header (axe landmark-unique, empty-table-header)

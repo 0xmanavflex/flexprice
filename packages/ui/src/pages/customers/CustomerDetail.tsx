@@ -409,22 +409,20 @@ function OverviewTab({
           )}
         </section>
 
-        <Section
-          title="Recent invoices"
-          flush
-          action={
-            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onViewInvoices}>
-              View all
-            </Button>
-          }
-        >
+        <div className="bg-background rounded-xl border">
           <InvoiceTable
+            title="Recent invoices"
+            action={
+              <Button variant="outline" className="h-9 px-3" onClick={onViewInvoices}>
+                View all
+              </Button>
+            }
             invoices={invoices.slice(0, 5)}
             isLoading={invoicesLoading}
             formatDate={formatDate}
             onOpenInvoice={onOpenInvoice}
           />
-        </Section>
+        </div>
       </div>
       <Section title="Activity" flush className="xl:sticky xl:top-6">
         <ScrollArea className="h-[560px]">
@@ -541,11 +539,15 @@ function invoicePayment(invoice: Invoice): { label: string; tone: PillTone } {
 
 /** The invoices table, edge to edge inside a flush section. */
 function InvoiceTable({
+  title,
+  action,
   invoices,
   isLoading,
   formatDate,
   onOpenInvoice,
 }: {
+  title?: string
+  action?: ReactNode
   invoices: Invoice[]
   isLoading: boolean
   formatDate: FormatDate
@@ -553,7 +555,8 @@ function InvoiceTable({
 }) {
   if (isLoading) {
     return (
-      <div className="p-4">
+      <div className="flex flex-col gap-4 p-4">
+        {title ? <h2 className="text-sm font-medium">{title}</h2> : null}
         <LoadingRows />
       </div>
     )
@@ -561,6 +564,8 @@ function InvoiceTable({
   return (
     <DetailTable
       label="Invoices"
+      {...(title ? { title } : {})}
+      {...(action ? { action } : {})}
       facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
       noun="invoices"
       rows={invoices}
