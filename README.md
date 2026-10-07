@@ -1,73 +1,265 @@
-# Flexprice Console
+# Flexprice Portal
 
-The Flexprice dashboard (V2): customers, contracts, invoices, payments, product catalog, developer tools and settings. React + Vite, pnpm + Nx monorepo, talks to the Flexprice API through the generated `@flexprice/sdk`.
+The **Flexprice Portal** is the web application for managing customers, contracts, invoices, payments, product catalog, developer tools, and platform settings.
 
-## What is in the repo
+It is built with **React + Vite** in a **pnpm + Nx monorepo** and communicates with the Flexprice API through the generated `@flexprice/sdk`.
 
-```
-apps/console/        the dashboard: routes, pages, URL state, e2e + visual tests
+## Repository Structure
+
+```text
+apps/
+  console/          Portal application, routes, pages, URL state, E2E and visual tests
+
 packages/
-  ui/       @fp/ui        components, forms, page layouts, Storybook
-  domain/   @fp/domain    product types, zod schemas, Money (pure, no React)
-  query/    @fp/query     the only data door: SDK calls, mappers, React Query hooks
-  api/      @fp/api       SDK client, auth headers, one error shape
-  actions/  @fp/actions   capabilities declared once (buttons, ⌘K, agents)
-  sdk-adapter/            shims for SDK gaps (keep empty)
-  eslint-config/          the layer rules, as lint errors
-scripts/             vendor-hash check, UI page matrix
-docs/                architecture, adding a surface, forms, guardrails
+  ui/               Shared UI components, forms, layouts and Storybook
+  domain/           Product types, Zod schemas and Money utilities
+  query/            API data layer: SDK calls, mappers and React Query hooks
+  api/              SDK client, authentication and API error handling
+  actions/          Shared actions used by buttons, ⌘K and agents
+  sdk-adapter/      Small shims for SDK gaps
+  eslint-config/    Architecture and dependency rules
+
+scripts/             Repository checks and UI documentation tools
+docs/                Architecture, forms, guardrails and development guides
 ```
 
-Layers only point down: **pages → ui / query / actions → domain → SDK**. `@fp/ui` never fetches and never imports the SDK; pages are where data meets components. ESLint enforces it.
+## Architecture
 
-## Install
+The Portal follows a simple layered architecture:
 
-Needs Node 24+ and pnpm 11+.
+```text
+Pages
+  ↓
+UI / Query / Actions
+  ↓
+Domain
+  ↓
+SDK
+```
+
+### Responsibilities
+
+* **Pages** — Connect application data with UI components.
+* **UI** — Presentational components. No API calls or SDK imports.
+* **Query** — The only data-access layer. Handles SDK calls, mapping and React Query.
+* **Actions** — Defines capabilities that can be triggered from the UI, ⌘K or agents.
+* **Domain** — Framework-independent business types, schemas and utilities.
+* **SDK** — Generated client for the Flexprice API.
+
+Architecture boundaries are enforced through **ESLint**, so invalid dependencies fail the build.
+
+## Getting Started
+
+### Requirements
+
+* Node.js 24+
+* pnpm 11+
+
+### Install
 
 ```bash
 pnpm install
-cp apps/console/.env.example apps/console/.env.local
-pnpm dev                          # console on http://localhost:3000
-pnpm --filter @fp/ui storybook    # components on http://localhost:6006
 ```
 
-No account? Set `VITE_USE_MOCKS=true` in `.env.local` to run on bundled fixtures. Otherwise set `VITE_FLEXPRICE_API_URL` and sign in at `/sign-in`. Never put an API key in a `VITE_` variable outside `.env.local`: those are served to every visitor.
-
-## How we work
-
-**Build a screen.** Domain type/schema → query hook → UI component + story → page in `apps/console`. Copy the Coupons slice; the steps are in [`docs/adding-a-surface.md`](docs/adding-a-surface.md). Forms follow [`docs/forms-and-editing.md`](docs/forms-and-editing.md): react-hook-form + the domain zod schema, and the same form (with its preview) for create and edit.
-
-**Rules that fail the build**
-
-- Don't hand-edit `packages/ui/src/components/{primitives,reui,blocks,examples,ui}/**`. It is vendored and hash-checked; to update, re-install from ReUI (`pnpm --filter @fp/ui ui:add <item>`).
-- Every shared component declares `provenance({...})` and every `composes` entry must be imported. Add a story and a line in `packages/ui/CHANGELOG.md`.
-- No `font-semibold` / `font-bold`, no raw palette colours: semantic tokens only.
-- No floats for money. `Money` holds the exact decimal string the API sent.
-
-**Check before you push**
+Create your local environment:
 
 ```bash
-cd packages/ui && npx tsc --noEmit && npx eslint src --max-warnings 0
-cd apps/console && npx tsc -b && npx eslint src e2e --max-warnings 0
-pnpm test                      # unit tests, all packages
-node scripts/check-vendor.mjs  # vendored files untouched
-pnpm ui:matrix                 # regenerates docs/ui-page-matrix.md; commit it
-pnpm verify                    # everything: typecheck + lint + test + build
+cp apps/console/.env.example apps/console/.env.local
 ```
 
-**Test**
+Start the Portal:
 
-| What                           | Command                             |
-| ------------------------------ | ----------------------------------- |
-| Unit                           | `pnpm test`                         |
-| Stories (real Chromium + a11y) | `pnpm --filter @fp/ui test:stories` |
-| E2E (mocked API)               | `cd apps/console && pnpm test:e2e`  |
-| Visual (1440×900 screenshots)  | `pnpm test:visual`                  |
+```bash
+pnpm dev
+```
 
-Visual baselines are generated on Linux in CI. If a screenshot change is intended, download the `visual-<runId>` artifact from the failed run and commit the new PNGs into `apps/console/e2e/visual/__screenshots__/`. Don't update them from macOS/Windows.
+The Portal runs at:
 
-**Commit and ship.** Conventional commits (`feat:`, `fix:`, `chore:`; commitlint runs in the hook). Open a PR to `main`. CI runs Build, Lint, Unit, SAST, Storybook, E2E, Visual and Deploy (Vercel; skips until its secrets are set). All must be green.
+```text
+http://localhost:3000
+```
 
-## More docs
+Start Storybook:
 
-[`architecture.md`](docs/architecture.md) · [`component-guardrails.md`](docs/component-guardrails.md) · [`ui-foundation.md`](docs/ui-foundation.md) · [`migration.md`](docs/migration.md) · [`ui-page-matrix.md`](docs/ui-page-matrix.md) · [`UI_SOURCE_OF_TRUTH.md`](UI_SOURCE_OF_TRUTH.md)
+```bash
+pnpm --filter @fp/ui storybook
+```
+
+Storybook runs at:
+
+```text
+http://localhost:6006
+```
+
+### Running without an account
+
+For local development, you can use the bundled mock data:
+
+```env
+VITE_USE_MOCKS=true
+```
+
+Otherwise, configure the Flexprice API:
+
+```env
+VITE_FLEXPRICE_API_URL=...
+```
+
+Then sign in through `/sign-in`.
+
+> **Security:** Never put API keys in `VITE_` environment variables outside `.env.local`. Vite exposes `VITE_` variables to the browser.
+
+## Adding a New Screen
+
+The standard flow is:
+
+```text
+Domain type/schema
+      ↓
+Query hook
+      ↓
+UI component + Story
+      ↓
+Portal page
+```
+
+For a complete example, follow:
+
+[`docs/adding-a-surface.md`](docs/adding-a-surface.md)
+
+For forms and create/edit flows, follow:
+
+[`docs/forms-and-editing.md`](docs/forms-and-editing.md)
+
+Forms use:
+
+* `react-hook-form`
+* Domain Zod schemas
+* The same form for create and edit
+* A shared preview where applicable
+
+## UI Rules
+
+The shared UI package is partially vendored from ReUI and is protected by hash checks.
+
+### Do not manually edit
+
+```text
+packages/ui/src/components/
+  primitives/
+  reui/
+  blocks/
+  examples/
+  ui/
+```
+
+To add or update a vendored component, use:
+
+```bash
+pnpm --filter @fp/ui ui:add <item>
+```
+
+### Component requirements
+
+Every shared component must:
+
+* Declare its `provenance(...)`
+* Import every component referenced by `composes`
+* Include a Storybook story
+* Include an entry in `packages/ui/CHANGELOG.md`
+
+### Design rules
+
+* Use semantic design tokens instead of raw colors.
+* Do not use `font-semibold` or `font-bold`.
+* Do not use floating-point numbers for money.
+* Use `Money` to preserve the exact decimal value returned by the API.
+
+## Before You Push
+
+Run the relevant checks locally:
+
+```bash
+# UI
+cd packages/ui
+npx tsc --noEmit
+npx eslint src --max-warnings 0
+
+# Portal
+cd apps/console
+npx tsc -b
+npx eslint src e2e --max-warnings 0
+```
+
+Repository-wide checks:
+
+```bash
+pnpm test
+node scripts/check-vendor.mjs
+pnpm ui:matrix
+pnpm verify
+```
+
+`pnpm verify` runs the complete validation pipeline including typecheck, lint, tests and build.
+
+## Testing
+
+| Test             | Command                             |
+| ---------------- | ----------------------------------- |
+| Unit             | `pnpm test`                         |
+| Storybook + a11y | `pnpm --filter @fp/ui test:stories` |
+| E2E              | `cd apps/console && pnpm test:e2e`  |
+| Visual           | `pnpm test:visual`                  |
+
+### Visual Tests
+
+Visual tests run at **1440×900**.
+
+Visual baselines are generated in Linux CI. If a visual change is intentional:
+
+1. Download the `visual-<runId>` artifact from the failed CI run.
+2. Review the screenshots.
+3. Replace the expected PNGs in:
+   `apps/console/e2e/visual/__screenshots__/`
+4. Commit the updated baselines.
+
+Do not generate visual baselines locally on macOS or Windows.
+
+## Commit and Pull Request
+
+Use Conventional Commits:
+
+```text
+feat:
+fix:
+chore:
+```
+
+Commitlint runs automatically through the repository hooks.
+
+Open pull requests against `main`.
+
+CI validates:
+
+* Build
+* Typecheck
+* Lint
+* Unit tests
+* SAST
+* Storybook
+* E2E
+* Visual tests
+* Deployment
+
+All required checks must pass before merging.
+
+## Documentation
+
+For deeper details, see:
+
+* [`docs/architecture.md`](docs/architecture.md) — Application architecture
+* [`docs/component-guardrails.md`](docs/component-guardrails.md) — UI and component rules
+* [`docs/ui-foundation.md`](docs/ui-foundation.md) — UI foundation
+* [`docs/migration.md`](docs/migration.md) — Migration notes
+* [`docs/ui-page-matrix.md`](docs/ui-page-matrix.md) — Page/component inventory
+* [`UI_SOURCE_OF_TRUTH.md`](UI_SOURCE_OF_TRUTH.md) — UI source of truth
