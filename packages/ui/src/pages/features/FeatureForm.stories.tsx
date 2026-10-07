@@ -20,10 +20,10 @@ async function chooseOption(label: string, optionName: string) {
 }
 
 async function submit(canvas: ReturnType<typeof within>) {
-  await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
+  await userEvent.click(canvas.getByRole('button', { name: /create product/i }))
 }
 
-const trail: { label: string }[] = [{ label: 'Features' }, { label: 'Create feature' }]
+const trail: { label: string }[] = [{ label: 'Products' }, { label: 'Create product' }]
 
 const withHeight: Decorator = (Story) => (
   <div className="flex h-[720px] flex-col">

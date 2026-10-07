@@ -126,7 +126,7 @@ export const PinnedFooter: Story = {
   args: {
     activeItemId: 'plans',
     groups: [
-      ...navGroups,
+      ...navGroups.filter((group) => group.id !== 'secondary'),
       {
         id: 'footer',
         pinned: true,
