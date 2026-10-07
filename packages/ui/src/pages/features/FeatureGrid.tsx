@@ -11,7 +11,7 @@ import {
   Trash2Icon,
 } from 'lucide-react'
 import {
-  AGGREGATION_LABEL,
+  aggregationFormula,
   DEFAULT_FEATURE_QUERY,
   FEATURE_SORT_LABEL,
   FEATURE_TYPE_LABEL,
@@ -31,6 +31,7 @@ import {
   EmDash,
   EntityCell,
   FeatureTypePill,
+  Formula,
   Pill,
   type EntityColumn,
   idColumn,
@@ -215,15 +216,14 @@ export function FeatureGrid({
         skeleton: <Skeleton className="h-6 w-24 rounded-full" />,
       },
       idColumn<Feature>('eventName', 'Event name', (row) => row.eventName, { width: 190 }),
-      textColumn<Feature>(
-        'aggregationType',
-        'Aggregation type',
-        (row) => (row.aggregationType ? AGGREGATION_LABEL[row.aggregationType] : null),
-        { width: 190, muted: true },
-      ),
-      idColumn<Feature>('aggregationField', 'Aggregation field', (row) => row.aggregationField, {
-        width: 180,
-      }),
+      {
+        id: 'aggregation',
+        header: 'Aggregation',
+        width: 280,
+        text: (row) => aggregationFormula(row) ?? '',
+        cell: (row) => <Formula value={aggregationFormula(row)} />,
+        skeleton: <Skeleton className="h-6 w-32 rounded-md" />,
+      },
       {
         id: 'plans',
         header: 'Plans',

@@ -206,6 +206,17 @@ export function Tag({ children, icon }: { children: ReactNode; icon?: ReactNode 
   return <Pill {...(icon ? { icon } : {})}>{children}</Pill>
 }
 
+/** A meter's aggregation as a formula chip: an italic "fx" and the expression in mono. */
+export function Formula({ value }: { value: string | null }) {
+  if (!value) return <EmDash />
+  return (
+    <span className="bg-muted/60 text-foreground/80 inline-flex h-6 max-w-full items-center gap-1 rounded-md border px-1.5 font-mono text-xs">
+      <span className="text-muted-foreground font-sans italic">fx</span>
+      <span className="truncate">{value}</span>
+    </span>
+  )
+}
+
 /** The name cell: medium weight, truncating, with an optional muted sub-label. */
 export function EntityCell({ name, sub }: { name: string; sub?: ReactNode }) {
   return (

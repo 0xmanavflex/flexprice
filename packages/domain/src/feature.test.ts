@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  aggregationFormula,
   AggregationType,
   FeatureType,
   ResetUsage,
@@ -25,7 +26,10 @@ const meter = (overrides: Record<string, unknown> = {}) => ({
   ...overrides,
 })
 
-const metered = (meterOverrides: Record<string, unknown> = {}, rest: Record<string, unknown> = {}) => ({
+const metered = (
+  meterOverrides: Record<string, unknown> = {},
+  rest: Record<string, unknown> = {},
+) => ({
   name: 'API calls',
   type: FeatureType.Metered,
   meter: meter(meterOverrides),
@@ -117,8 +121,9 @@ describe('SUM_WITH_MULTIPLIER', () => {
   })
 
   it('requires a multiplier at all', () => {
-    expect(paths(metered({ aggregationType: AggregationType.SumWithMultiplier, field: 'x' })))
-      .toContain('meter.multiplier')
+    expect(
+      paths(metered({ aggregationType: AggregationType.SumWithMultiplier, field: 'x' })),
+    ).toContain('meter.multiplier')
   })
 
   // V1 writes `multiplier <= 0` against a *string*, which is always false — so
@@ -162,5 +167,33 @@ describe('emptyFeature', () => {
     expect(value.type === FeatureType.Metered && value.meter.aggregationType).toBe(
       AggregationType.Count,
     )
+  })
+})
+
+describe('aggregationFormula', () => {
+  it('writes each aggregation as a spreadsheet formula over the field', () => {
+    expect(aggregationFormula({ aggregationType: AggregationType.Count })).toBe('COUNT()')
+    expect(
+      aggregationFormula({ aggregationType: AggregationType.Sum, aggregationField: 'tokens' }),
+    ).toBe('SUM(tokens)')
+    expect(
+      aggregationFormula({ aggregationType: AggregationType.Avg, aggregationField: 'latency' }),
+    ).toBe('AVERAGE(latency)')
+    expect(
+      aggregationFormula({
+        aggregationType: AggregationType.CountUnique,
+        aggregationField: 'user_id',
+      }),
+    ).toBe('COUNTUNIQUE(user_id)')
+    expect(
+      aggregationFormula({
+        aggregationType: AggregationType.SumWithMultiplier,
+        aggregationField: 'tokens',
+      }),
+    ).toBe('SUM(tokens * multiplier)')
+  })
+
+  it('is null without a meter', () => {
+    expect(aggregationFormula({ aggregationType: null })).toBeNull()
   })
 })

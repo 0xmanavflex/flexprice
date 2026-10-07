@@ -156,6 +156,8 @@ export { CreditNoteGrid, CreditNoteGridProvenance } from './credit-notes/CreditN
 export type { CreditNoteGridProps } from './credit-notes/CreditNoteGrid'
 export { CreditNoteForm, CreditNoteFormProvenance } from './credit-notes/CreditNoteForm'
 export type { CreditNoteFormProps, CreditNoteInvoiceLine } from './credit-notes/CreditNoteForm'
+export { CollectionsSummary, CollectionsSummaryProvenance } from './payments/CollectionsSummary'
+export type { CollectionsSummaryCell, CollectionsSummaryProps } from './payments/CollectionsSummary'
 export { PaymentGrid, PaymentGridProvenance } from './payments/PaymentGrid'
 export type { PaymentGridProps } from './payments/PaymentGrid'
 export { PaymentForm, PaymentFormProvenance } from './payments/PaymentForm'

@@ -221,7 +221,9 @@ export function InvoiceDetailView({
                   value={invoice.billTo.name}
                   {...(onOpenCustomer ? { onClick: onOpenCustomer } : {})}
                 />
-                <RelatedRow label="Contract" value={invoice.subscriptionLabel || '—'} />
+                {invoice.subscriptionLabel ? (
+                  <RelatedRow label="Contract" value={invoice.subscriptionLabel} />
+                ) : null}
                 <RelatedRow
                   label="Credit notes"
                   value={invoice.creditNotes.length ? String(invoice.creditNotes.length) : 'None'}
@@ -356,48 +358,61 @@ function InvoiceDocumentArticle({
         ? `Payment is due${invoice.dueAt ? ` ${invoice.dueAt}` : ''}.`
         : 'Paid in full.'
 
+  const settled = totals.due <= 0 && invoice.paid > 0
+  const amountBlock = (
+    <div className="space-y-2">
+      <p className="text-3xl font-medium tracking-tight tabular-nums">
+        {money(settled ? totals.total : totals.due)}
+      </p>
+      <p className="text-muted-foreground text-[13px]">
+        {settled ? 'Paid in full' : invoice.dueAt ? `Due ${invoice.dueAt}` : null}
+      </p>
+    </div>
+  )
+  const meta = (
+    <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1 text-[13px]">
+      <dt className="text-muted-foreground">Invoice</dt>
+      <dd
+        className={cn('leading-5', invoice.number ? 'font-mono text-xs' : 'text-muted-foreground')}
+      >
+        {invoice.number ?? 'On finalize'}
+      </dd>
+      <dt className="text-muted-foreground">Issued</dt>
+      <dd className="tabular-nums">{invoice.issuedAt ?? 'On finalize'}</dd>
+      <dt className="text-muted-foreground">Due</dt>
+      <dd className="tabular-nums">{invoice.dueAt ?? '—'}</dd>
+    </dl>
+  )
+
   return (
     <article className="bg-background mx-auto w-full max-w-4xl overflow-hidden rounded-xl border shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
-      <div className="flex flex-wrap items-start justify-between gap-6 px-8 pt-8">
-        {invoice.from ? (
-          <div className="flex items-center gap-3">
-            <span
-              aria-hidden
-              className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-lg text-sm font-medium"
-            >
-              {invoice.from.name.slice(0, 1)}
-            </span>
-            <div className="leading-tight">
-              <p className="text-sm font-medium">{invoice.from.name}</p>
-              <p className="text-muted-foreground text-xs">{invoice.billTo.email}</p>
+      {invoice.from ? (
+        <>
+          <div className="flex flex-wrap items-start justify-between gap-6 px-8 pt-8">
+            <div className="flex items-center gap-3">
+              <span
+                aria-hidden
+                className="bg-primary text-primary-foreground flex size-9 items-center justify-center rounded-lg text-sm font-medium"
+              >
+                {invoice.from.name.slice(0, 1)}
+              </span>
+              <div className="leading-tight">
+                <p className="text-sm font-medium">{invoice.from.name}</p>
+                <p className="text-muted-foreground text-xs">{invoice.billTo.email}</p>
+              </div>
             </div>
+            {meta}
           </div>
-        ) : (
-          <span />
-        )}
-        <dl className="grid grid-cols-[auto_auto] gap-x-6 gap-y-1 text-[13px]">
-          <dt className="text-muted-foreground">Invoice</dt>
-          <dd
-            className={cn(
-              'leading-5',
-              invoice.number ? 'font-mono text-xs' : 'text-muted-foreground',
-            )}
-          >
-            {invoice.number ?? 'On finalize'}
-          </dd>
-          <dt className="text-muted-foreground">Issued</dt>
-          <dd className="tabular-nums">{invoice.issuedAt ?? 'On finalize'}</dd>
-          <dt className="text-muted-foreground">Due</dt>
-          <dd className="tabular-nums">{invoice.dueAt ?? '—'}</dd>
-        </dl>
-      </div>
-
-      <div className="space-y-2 px-8 pt-8">
-        <p className="text-3xl font-medium tracking-tight tabular-nums">{money(totals.due)}</p>
-        {invoice.dueAt ? (
-          <p className="text-muted-foreground text-[13px]">Due {invoice.dueAt}</p>
-        ) : null}
-      </div>
+          <div className="px-8 pt-8">{amountBlock}</div>
+        </>
+      ) : (
+        // No sender on file: the amount leads and the invoice facts sit beside it,
+        // rather than leaving the top-left of the page empty.
+        <div className="flex flex-wrap items-start justify-between gap-6 px-8 pt-8">
+          {amountBlock}
+          {meta}
+        </div>
+      )}
 
       <div className="grid gap-6 px-8 py-8 sm:grid-cols-3">
         <Party

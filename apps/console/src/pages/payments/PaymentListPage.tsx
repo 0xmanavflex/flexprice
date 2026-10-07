@@ -1,6 +1,6 @@
-import { type Payment, type PaymentQuery } from '@fp/domain'
-import { ApiError, usePayments } from '@fp/query'
-import { PaymentGrid } from '@fp/ui/pages'
+import { type Payment, type PaymentQuery, formatMoney } from '@fp/domain'
+import { ApiError, useCollectionsSummary, usePayments } from '@fp/query'
+import { CollectionsSummary, PaymentGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { CreditCardIcon } from 'lucide-react'
 
@@ -25,6 +25,7 @@ export function PaymentListPage({
   onPaymentClick,
 }: PaymentListPageProps) {
   const payments = usePayments(query)
+  const collections = useCollectionsSummary()
 
   const failure = toFailure(payments.error)
   const rows = payments.data?.payments ?? []
@@ -33,6 +34,10 @@ export function PaymentListPage({
   return (
     <>
       <PageBody>
+        <CollectionsSummary
+          isLoading={collections.isPending}
+          cells={collectionsCells(collections.data)}
+        />
         <ListState
           isLoading={payments.isPending}
           error={failure}
@@ -57,6 +62,38 @@ export function PaymentListPage({
       </PageBody>
     </>
   )
+}
+
+function plural(count: number, noun: string) {
+  return `${count} ${noun}${count === 1 ? '' : 's'}`
+}
+
+function collectionsCells(summary: ReturnType<typeof useCollectionsSummary>['data']) {
+  const floor = summary?.isPartial ? 'at least ' : ''
+  const elsewhere = summary?.otherCurrencies
+    ? ` · ${plural(summary.otherCurrencies, 'invoice')} in other currencies`
+    : ''
+  return [
+    {
+      label: 'Total outstanding',
+      value: summary?.outstanding
+        ? formatMoney(summary.outstanding)
+        : summary
+          ? formatMoney({ amount: '0', currency: 'USD' })
+          : null,
+      hint: `${floor}${plural(summary?.unpaidCount ?? 0, 'unpaid invoice')}${elsewhere}`,
+    },
+    {
+      label: 'Total overdue',
+      value: summary?.overdue
+        ? formatMoney(summary.overdue)
+        : summary
+          ? formatMoney({ amount: '0', currency: 'USD' })
+          : null,
+      hint: `${floor}${plural(summary?.overdueCount ?? 0, 'invoice')} past their due date or failed`,
+      ...((summary?.overdueCount ?? 0) > 0 ? { tone: 'danger' as const } : {}),
+    },
+  ]
 }
 
 /**

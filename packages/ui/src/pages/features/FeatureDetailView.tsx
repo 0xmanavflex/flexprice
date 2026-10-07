@@ -3,6 +3,7 @@ import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { toast } from 'sonner'
 import {
   AGGREGATION_LABEL,
+  aggregationFormula,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   FeatureType,
@@ -24,7 +25,7 @@ import { EditableCard } from '../../compositions/EditableCard'
 import { Section } from '../../compositions/Section'
 import { DetailTabs, Dot, Properties } from '../../compositions/DetailKit'
 import { MetricChart, type MetricPoint } from '../shared/charts'
-import { FEATURE_TYPE_GLYPH, FeatureTypePill, Status } from '../shared/cells'
+import { FEATURE_TYPE_GLYPH, FeatureTypePill, Formula, Status } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
 
 export type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
@@ -485,7 +486,16 @@ function InformationTab({
                 { label: 'Event name', value: mono(feature.eventName) },
                 {
                   label: 'Aggregation',
-                  value: feature.aggregationType ? AGGREGATION_LABEL[feature.aggregationType] : '—',
+                  value: feature.aggregationType ? (
+                    <span className="flex flex-wrap items-center gap-2">
+                      <Formula value={aggregationFormula(feature)} />
+                      <span className="text-muted-foreground">
+                        {AGGREGATION_LABEL[feature.aggregationType]}
+                      </span>
+                    </span>
+                  ) : (
+                    '—'
+                  ),
                 },
                 ...(feature.aggregationField
                   ? [{ label: 'Value property', value: mono(feature.aggregationField) }]

@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-07 — pages/shared/cells `Formula` + pages/features/FeatureGrid, FeatureDetailView: Aggregation shown as an "fx COUNT()" / "fx SUM(tokens)" chip, replacing the separate type and field columns (design refresh: products)
+- 2026-10-07 — pages/payments/CollectionsSummary: new two-cell strip (total outstanding, total overdue) above the Payments list (design refresh: collections)
 - 2026-10-07 — pages/shared/EntityList + compositions/FilterBar `statusFilter({ inline })`: an optional "Status: All" select beside the search, writing the same rule as the filter button; Invoices opts in and its number column no longer truncates (design refresh: invoices)
 - 2026-10-07 — pages/invoices/InvoiceDetailView: Related and header contract labels truncate instead of overflowing the card (design refresh: invoices)
 - 2026-10-07 — pages/settings/SettingsShell: each section gets a title and one-line description above its tabs, a w-56 rail with tighter rows and a max-w-6xl frame (design refresh: settings)

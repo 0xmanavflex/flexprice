@@ -1,4 +1,4 @@
-import type { InvoiceDetail } from '@fp/domain'
+import { InvoiceStatus, type InvoiceDetail } from '@fp/domain'
 import type { InvoiceDocument } from '@fp/ui/pages'
 
 const day = (date: Date | null) =>
@@ -32,8 +32,12 @@ export function toInvoiceDocument(invoice: InvoiceDetail): InvoiceDocument {
   // What is still to come, so a draft reads as a path rather than a dead end.
   // Only steps the invoice's own state implies: no "sent" step, the API does not say.
   const upcoming: InvoiceDocument['events'] = []
-  const settled = invoice.paidAt || invoice.voidedAt
-  if (!invoice.finalizedAt && !settled) {
+  const settled =
+    invoice.paidAt ||
+    invoice.voidedAt ||
+    invoice.status === InvoiceStatus.Paid ||
+    invoice.status === InvoiceStatus.Void
+  if (!invoice.finalizedAt && !settled && invoice.status === InvoiceStatus.Draft) {
     upcoming.push({
       id: 0,
       title: 'Invoice finalized',
@@ -78,7 +82,7 @@ export function toInvoiceDocument(invoice: InvoiceDetail): InvoiceDocument {
       due: num(invoice.amountRemaining.amount),
     },
     customerId: invoice.customerId,
-    subscriptionLabel: invoice.subscriptionId ?? 'None',
+    subscriptionLabel: invoice.subscriptionId ?? '',
     creditNotes: [],
     payments: [],
     events,

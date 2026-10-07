@@ -77,14 +77,14 @@ export const NAV: NavEntry[] = [
       { id: 'workflows', label: 'Workflows', path: '/workflows' },
     ],
   },
-  { id: 'settings', label: 'Settings', path: '/settings' },
 ]
 
 /**
  * The foot of the rail: Integrations and Documentation.
  *
  * Both are places you visit rather than work in, so they sit apart under a
- * rule. Settings is an ordinary row of the primary tree, after Developers.
+ * rule. Settings is not in the rail at all: it lives in the account menu, next
+ * to sign out.
  */
 export const FOOTER_NAV: NavEntry[] = [
   { id: 'integrations', label: 'Integrations', path: '/integrations' },
@@ -94,13 +94,14 @@ export const FOOTER_NAV: NavEntry[] = [
 /**
  * Destinations that are real routes but not rows in the rail.
  *
- * The pages Settings lists but which keep their own routes (Discounts, Taxes,
+ * Settings itself (reached from the account menu), the pages it lists but which keep their own routes (Discounts, Taxes,
  * Cost Tracking, Labels), and the pages the tree no longer lists but which are
  * still linked to, searched for and reachable by URL. `pathForNavId`,
  * `labelForNavId`, `breadcrumbForPath` and the command palette resolve against
  * them.
  */
 export const SECONDARY: NavEntry[] = [
+  { id: 'settings', label: 'Settings', path: '/settings' },
   { id: 'settings-discounts', label: 'Discounts', path: '/coupons' },
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
@@ -168,7 +169,7 @@ export function labelForNavId(id: string): string | undefined {
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
   // Discounts, Taxes, Cost Tracking and Labels are rows of Settings that keep their own routes.
-  if (id.startsWith('settings-')) return NAV.find((entry) => entry.id === 'settings')
+  if (id.startsWith('settings-')) return SECONDARY.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),
   )

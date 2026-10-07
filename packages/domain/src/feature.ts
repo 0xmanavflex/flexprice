@@ -308,6 +308,35 @@ export const FEATURE_TYPE_LABEL: Record<FeatureType, string> = {
   [FeatureType.Config]: 'Config',
 }
 
+/** Spreadsheet names for the aggregations, as people write them in Sheets. */
+const FORMULA_FUNCTION: Record<AggregationType, string> = {
+  [AggregationType.Count]: 'COUNT',
+  [AggregationType.CountUnique]: 'COUNTUNIQUE',
+  [AggregationType.Sum]: 'SUM',
+  [AggregationType.SumWithMultiplier]: 'SUM',
+  [AggregationType.Avg]: 'AVERAGE',
+  [AggregationType.Max]: 'MAX',
+  [AggregationType.Latest]: 'LATEST',
+  [AggregationType.WeightedSum]: 'WEIGHTEDSUM',
+}
+
+/**
+ * A metered feature's aggregation as a formula over its event property:
+ * `COUNT()`, `SUM(tokens)`, `COUNTUNIQUE(user_id)`. Null when there is no meter.
+ */
+export function aggregationFormula(
+  feature: Pick<Feature, 'aggregationType' | 'aggregationField'>,
+): string | null {
+  const { aggregationType: type, aggregationField: field } = feature
+  if (!type) return null
+  const name = FORMULA_FUNCTION[type]
+  if (!needsAggregationTarget(type)) return `${name}()`
+  const target = field ?? ''
+  return type === AggregationType.SumWithMultiplier
+    ? `${name}(${target} * multiplier)`
+    : `${name}(${target})`
+}
+
 export const AGGREGATION_LABEL: Record<AggregationType, string> = {
   [AggregationType.Count]: 'Count of events',
   [AggregationType.CountUnique]: 'Count of unique values',

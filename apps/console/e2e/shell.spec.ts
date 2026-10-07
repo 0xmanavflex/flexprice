@@ -78,7 +78,9 @@ test.describe('the shell', () => {
     const shell = new ShellPage(page)
     await shell.goto('/')
 
-    await shell.go('Settings')
+    await expect(shell.item('Settings')).toHaveCount(0)
+    await page.getByRole('button', { name: /^account:/i }).click()
+    await page.getByRole('menuitem', { name: 'Settings' }).click()
     await expect(page).toHaveURL(atPath('/settings'))
     const rail = page.getByRole('navigation', { name: 'Settings' })
     await rail.getByRole('button', { name: 'Invoicing' }).click()

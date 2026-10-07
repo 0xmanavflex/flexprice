@@ -56,6 +56,9 @@ export {
 } from './invoices'
 export type { InvoiceDetailWire, InvoicePage, InvoiceWire } from './invoices'
 
+export { summariseCollections, useCollectionsSummary } from './collections'
+export type { CollectionsSummary } from './collections'
+
 export { toOverrideLineItem } from './priceOverrides'
 export type { OverrideLineItem } from './priceOverrides'
 

@@ -14,7 +14,6 @@ import {
   HouseIcon,
   Layers2Icon,
   LandmarkIcon,
-  SettingsIcon,
   CalculatorIcon,
   FolderTreeIcon,
   UsersIcon,
@@ -69,7 +68,6 @@ const ICONS: Record<string, ReactNode> = {
   developers: <CodeXmlIcon className="size-4" />,
   integrations: <IntegrationsIcon className="size-4" />,
   'pricing-widget': <GalleryHorizontalEndIcon className="size-4" />,
-  settings: <SettingsIcon className="size-4" />,
   docs: <BookOpenIcon className="size-4" />,
 }
 

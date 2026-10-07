@@ -56,7 +56,6 @@ describe('groupForNavId', () => {
   it('finds the group a child belongs to', () => {
     expect(groupForNavId('features')).toBe('catalog')
     expect(groupForNavId('invoices')).toBe('billing')
-    expect(groupForNavId('settings')).toBe('settings')
   })
 
   it('treats a top-level entry as its own group', () => {
@@ -130,7 +129,6 @@ describe('the sidebar layout', () => {
       'Revenue',
       'Product catalog',
       'Developers',
-      'Settings',
     ])
     expect(FOOTER_NAV.map((entry) => entry.label)).toEqual(['Integrations', 'Documentation'])
   })
@@ -140,6 +138,7 @@ describe('the sidebar layout', () => {
   it('keeps unlisted pages reachable', () => {
     expect(pathForNavId('docs')).toBe('/docs')
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
+      'settings',
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',

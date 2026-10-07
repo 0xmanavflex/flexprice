@@ -108,6 +108,7 @@ export type { CreateCreditGrant, CreditGrant, EditCreditGrant } from './creditGr
 
 export {
   AGGREGATION_LABEL,
+  aggregationFormula,
   AggregationType,
   DEFAULT_FEATURE_QUERY,
   FEATURE_STATUS_LABEL,
