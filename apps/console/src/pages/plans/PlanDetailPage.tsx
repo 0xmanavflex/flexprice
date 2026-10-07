@@ -491,11 +491,6 @@ function EntitlementsTab({ planId }: { planId: string }) {
         }}
         size="md"
         title={editing ? 'Edit entitlement' : 'Add entitlement'}
-        description={
-          editing
-            ? 'Change what this entitlement grants.'
-            : 'Grant a feature to everyone on this plan.'
-        }
       >
         {form === null ? null : editing && editingOption ? (
           <EntitlementEditForm
@@ -589,11 +584,6 @@ function CreditGrantsTab({ planId }: { planId: string }) {
         }}
         size={editing ? 'md' : 'lg'}
         title={editing ? 'Edit credit grant' : 'Add credit grant'}
-        description={
-          editing
-            ? 'Rename the grant or change when it ends. Its credits and schedule are fixed.'
-            : 'Hand subscribers a balance of credits to spend against usage.'
-        }
       >
         {form === null ? null : editing ? (
           <CreditGrantEditForm
