@@ -373,7 +373,7 @@ function StagedStep({
   return (
     <section aria-label={title} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1">
-        <h3 className="text-sm font-medium">{title}</h3>
+        <h2 className="text-sm font-medium">{title}</h2>
         <p className="text-muted-foreground text-sm">{description}</p>
       </div>
       {items.length === 0 ? (

@@ -47,7 +47,7 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('1 - 10 of 14 invoices')).toBeInTheDocument()
-    await userEvent.type(canvas.getByRole('searchbox'), '1013')
+    await userEvent.type(canvas.getByLabelText('Search invoices'), '1013')
     await expect(canvas.getByText('1 - 1 of 1 invoices')).toBeInTheDocument()
   },
 }

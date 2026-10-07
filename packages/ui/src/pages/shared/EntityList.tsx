@@ -538,8 +538,10 @@ export function EntityList<T extends object>({
                 onSortChange(value, isCurrent && sortDirection === 'asc' ? 'desc' : 'asc')
               }}
             />
-          ) : (
+          ) : column.header ? (
             <HeaderLabel title={column.header} />
+          ) : (
+            <span className="sr-only">Actions</span>
           ),
         cell: ({ row }: { row: { original: T } }) => column.cell(row.original),
       } as never)

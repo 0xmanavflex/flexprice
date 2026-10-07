@@ -42,7 +42,7 @@ export interface DetailTableProps<T> {
   columns: DetailColumn<T>[]
   /** Defaults to `row.id`. */
   getRowId?: (row: T) => string
-  /** Names the table for assistive tech, e.g. "Recent invoices". */
+  /** Names the table for assistive tech, e.g. "Recent invoices"; "table" is added so it never repeats the section's own name. */
   label: string
   /** For "1 - 10 of 24 invoices". */
   noun?: string
@@ -160,7 +160,7 @@ export function DetailTable<T extends object>({
   return (
     <div className={cn('p-4', className)}>
       <EntityList<T>
-        label={label}
+        label={`${label} table`}
         noun={noun}
         rows={slice}
         total={visible.length}
