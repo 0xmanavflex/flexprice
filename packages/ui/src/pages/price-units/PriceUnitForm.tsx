@@ -87,7 +87,6 @@ export function PriceUnitForm({
   return (
     <FormPage
       title="Create price unit"
-      description="Define a unit to charge in — its code, symbol, and the rate it converts to a currency at. Only the name can change later."
       trail={trail}
       width="wide"
       preview={
@@ -114,11 +113,7 @@ export function PriceUnitForm({
         noValidate
         className="flex min-w-0 flex-col gap-6"
       >
-        <FormCard
-          title="Price unit"
-          description="The unit, and the currency rate it converts into."
-          status="required"
-        >
+        <FormCard title="Price unit" status="required">
           <FormRow
             label="Name"
             hint="What this custom currency is called."

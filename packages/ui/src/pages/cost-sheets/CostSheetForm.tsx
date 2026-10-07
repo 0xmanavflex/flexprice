@@ -62,11 +62,7 @@ export function CostSheetForm({
 
   const formEl = (
     <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
-      <FormCard
-        title="Cost sheet details"
-        status="required"
-        description="Only the name is required; description and lookup key are optional."
-      >
+      <FormCard title="Cost sheet details" status="required">
         <FormRow
           label="Name"
           hint="What the cost sheet is called in reports."
@@ -115,11 +111,6 @@ export function CostSheetForm({
   return (
     <FormPage
       title={isEdit ? `Edit ${defaultValue?.name || 'cost sheet'}` : 'Create cost sheet'}
-      description={
-        isEdit
-          ? 'Update the cost sheet’s details.'
-          : 'Record what each unit of usage costs you, so margin can be measured.'
-      }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
       preview={

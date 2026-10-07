@@ -419,7 +419,6 @@ function CreateWalletDialog({
       open={open}
       onOpenChange={(next) => (next ? undefined : onClose())}
       title="Create wallet"
-      description="A prepaid wallet in one currency. Credits convert to money at the rate you set."
     >
       <Composer
         submitLabel="Create wallet"
@@ -525,7 +524,6 @@ function TopUpDialog({
       open={open}
       onOpenChange={(next) => (next ? undefined : onClose())}
       title="Top up wallet"
-      description="Add credits to this customer's wallet."
     >
       <Composer
         submitLabel="Top up"

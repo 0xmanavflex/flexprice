@@ -494,8 +494,6 @@ function SubscriptionsCard({
   return (
     <Panel
       title="Recent subscriptions"
-      description={`New in the ${rangeLabel}.`}
-      hint="Subscriptions whose start date falls inside this window, counted by the plan they were created on."
       action={
         <Button variant="outline" size="sm" onClick={onViewAll}>
           View all
@@ -575,11 +573,9 @@ function SubscriptionsCard({
  */
 function InvoicesCard({
   invoices,
-  rangeLabel,
   onViewInvoices,
 }: {
   invoices: InvoicesPanel
-  rangeLabel: string
   onViewInvoices: () => void
 }) {
   const ready = invoices.status === 'ready'
@@ -592,8 +588,6 @@ function InvoicesCard({
   return (
     <Panel
       title="Invoice payment status"
-      description={`Finalized in the ${rangeLabel}.`}
-      hint="Invoices issued inside this window, grouped by whether they are settled, still open, or past their due date."
       action={
         <Button variant="outline" size="sm" onClick={onViewInvoices}>
           View invoices
@@ -624,12 +618,10 @@ function InvoicesCard({
 
 function UsageCard({
   usage,
-  rangeLabel,
   onViewFeatures,
   className,
 }: {
   usage: UsagePanel
-  rangeLabel: string
   onViewFeatures: () => void
   className?: string
 }) {
@@ -648,8 +640,6 @@ function UsageCard({
   return (
     <Panel
       title="Usage by feature"
-      description={`Top metered features, ${rangeLabel}.`}
-      hint="Metered quantity per feature over this window, with the change against the window before it."
       action={
         <Button variant="outline" size="sm" onClick={onViewFeatures}>
           All features
@@ -686,23 +676,13 @@ function UsageCard({
  * The tone is the page's judgement, not the gauge's: `ArcGauge` never decides
  * that a reading is bad.
  */
-function ApiCard({
-  api,
-  rangeLabel,
-  onApiKeys,
-}: {
-  api: ApiPanel
-  rangeLabel: string
-  onApiKeys: () => void
-}) {
+function ApiCard({ api, onApiKeys }: { api: ApiPanel; onApiKeys: () => void }) {
   const ready = api.status === 'ready' && api.totalKeys > 0
   const healthy = api.activeKeys === api.totalKeys
 
   return (
     <Panel
       title="API"
-      description={rangeLabel.charAt(0).toUpperCase() + rangeLabel.slice(1)}
-      hint="Key health for this environment. Request volume, latency and error counts are not exposed by the Flexprice API."
       action={
         <Button variant="outline" size="sm" onClick={onApiKeys}>
           API keys
@@ -806,21 +786,12 @@ export function DashboardHome({
           rangeLabel={rangeLabel}
           onViewAll={() => go('/subscriptions')}
         />
-        <InvoicesCard
-          invoices={invoices}
-          rangeLabel={rangeLabel}
-          onViewInvoices={() => go('/invoices')}
-        />
+        <InvoicesCard invoices={invoices} onViewInvoices={() => go('/invoices')} />
       </div>
 
       <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <UsageCard
-          usage={usage}
-          rangeLabel={rangeLabel}
-          onViewFeatures={() => go('/features')}
-          className="xl:col-span-2"
-        />
-        <ApiCard api={api} rangeLabel={rangeLabel} onApiKeys={() => go('/settings')} />
+        <UsageCard usage={usage} onViewFeatures={() => go('/features')} className="xl:col-span-2" />
+        <ApiCard api={api} onApiKeys={() => go('/settings')} />
       </div>
     </div>
   )

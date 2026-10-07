@@ -142,11 +142,7 @@ export function PlanForm({
 
   const detailsStep = (
     <>
-      <FormCard
-        title="Plan details"
-        description="Name and lookup key identify the plan; prices are added afterwards."
-        status="required"
-      >
+      <FormCard title="Plan details" status="required">
         <FormRow
           label="Name"
           hint="What the plan is called to customers and on invoices."
@@ -288,11 +284,6 @@ export function PlanForm({
   return (
     <FormPage
       title={isEdit ? `Edit ${planName ?? 'plan'}` : 'Create plan'}
-      description={
-        isEdit
-          ? 'Update this plan’s details.'
-          : 'Plans are what customers subscribe to. Set it up here, or add the pieces later from the plan page.'
-      }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
       toolbar={{

@@ -227,11 +227,7 @@ export function CustomerForm({
 
   const formEl = (
     <form id={FORM_ID} onSubmit={(event) => void submitAll(event)} noValidate>
-      <FormCard
-        title="Customer details"
-        description="Name and identifier are required; address and tax settings are optional."
-        status="required"
-      >
+      <FormCard title="Customer details" status="required">
         {detailsRows}
         {addressRows}
         {additionalRows}
@@ -242,11 +238,6 @@ export function CustomerForm({
   return (
     <FormPage
       title={isEdit ? `Edit ${customerName || 'customer'}` : 'Create customer'}
-      description={
-        isEdit
-          ? 'Update this customer.'
-          : 'Add someone you bill. Subscriptions and invoices are attached afterwards.'
-      }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
       preview={

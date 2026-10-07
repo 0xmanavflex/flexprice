@@ -237,7 +237,6 @@ function TaxDialog({
       open={open}
       onOpenChange={(next) => (next ? undefined : onClose())}
       title={mode === 'add' ? 'Add tax rate' : 'Edit tax rate'}
-      description="Attach a tax rate to this customer. Lower priority numbers apply first."
     >
       <Composer
         submitLabel={mode === 'add' ? 'Add tax rate' : 'Save changes'}

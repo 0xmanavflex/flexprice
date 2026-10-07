@@ -93,10 +93,7 @@ export function CouponCreateForm({
 
   const formEl = (
     <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
-      <FormCard
-        title="Coupon details"
-        description="The discount type, amount and duration are fixed once the coupon is created."
-      >
+      <FormCard title="Coupon details">
         <FormRow
           label="Name"
           hint="Shown on invoices wherever the discount is applied."
@@ -314,7 +311,6 @@ export function CouponCreateForm({
   return (
     <FormPage
       title="Create coupon"
-      description="A discount customers can redeem. Its type, amount and duration are fixed once created."
       trail={trail}
       width="wide"
       preview={

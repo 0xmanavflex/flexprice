@@ -18,7 +18,7 @@ import { WorkflowStepper } from './WorkflowStepper'
  * card under the fields. Edit is the same form prepopulated, so a person who has
  * created a plan already knows how to edit one. The surface is the reference
  * `Section` (never the Card primitive): it opens with what this form is for —
- * the title and the one-line description. The shell still owns the breadcrumb.
+ * the title. The shell still owns the breadcrumb.
  *
  * Layout only: the `<form>` (and its state) lives in the caller. Pass the
  * form's `id` to `FormActions` so the bar can sit outside the `<form>` element.
@@ -51,7 +51,6 @@ export type FormPageToolbar = Omit<FormToolbarProps, 'title'> & {
 
 interface FormPageBaseProps {
   title: string
-  description?: string
   /** The way back, then this form. The shell header draws it; the parent crumb is a link. */
   trail: DetailCrumb[]
   children: ReactNode
@@ -81,7 +80,6 @@ export type FormPageProps = FormPageBaseProps &
 
 export function FormPage({
   title,
-  description,
   trail,
   children,
   toolbar,
@@ -113,7 +111,6 @@ export function FormPage({
             `sticky`; the form cards are their own surfaces underneath. */}
         <FormToolbar
           title={title}
-          {...(description ? { description } : {})}
           {...toolbarProps}
           hideSubmit={hideSubmit}
           center={
@@ -160,13 +157,7 @@ export function FormPage({
           floating in the middle of an empty one. A taller form scrolls. Always
           the full `wide` measure; `narrow` caps the fields, not the surface. */}
       <PageBody width="wide" className="self-center">
-        <Section
-          as="h1"
-          title={title}
-          {...(description ? { description } : {})}
-          className="flex-1"
-          bodyClassName="flex flex-col"
-        >
+        <Section as="h1" title={title} className="flex-1" bodyClassName="flex flex-col">
           <FieldSet className="gap-0 pb-6">
             <FieldGroup className={cn(width === 'narrow' && 'max-w-3xl')}>{children}</FieldGroup>
           </FieldSet>

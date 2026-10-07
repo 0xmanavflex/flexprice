@@ -1,14 +1,7 @@
 import type { ReactNode } from 'react'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@ui/components/primitives/dialog'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui/components/primitives/dialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { DescriptionTip } from './DescriptionTip'
 import { FormDialogBodyContext } from './formDialogContext'
 
 /**
@@ -39,32 +32,18 @@ export interface FormDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   title: string
-  description?: string
   size?: keyof typeof SIZES
   children: ReactNode
 }
 
-export function FormDialog({
-  open,
-  onOpenChange,
-  title,
-  description,
-  size = 'md',
-  children,
-}: FormDialogProps) {
+export function FormDialog({ open, onOpenChange, title, size = 'md', children }: FormDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className={cn('flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0', SIZES[size])}
       >
         <DialogHeader className="border-b px-6 py-5">
-          <div className="flex items-center gap-2">
-            <DialogTitle className="text-base font-medium">{title}</DialogTitle>
-            {description ? <DescriptionTip>{description}</DescriptionTip> : null}
-          </div>
-          {description ? (
-            <DialogDescription className="sr-only">{description}</DialogDescription>
-          ) : null}
+          <DialogTitle className="text-base font-medium">{title}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
           <FormDialogBodyContext.Provider value>{children}</FormDialogBodyContext.Provider>

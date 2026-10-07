@@ -65,11 +65,7 @@ export function AddonForm({
 
   const formEl = (
     <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
-      <FormCard
-        title="Add-on details"
-        description="Name and lookup key identify the add-on."
-        status="required"
-      >
+      <FormCard title="Add-on details" status="required">
         <FormRow
           label="Name"
           hint="What the add-on is called on a subscription and on invoices."
@@ -125,11 +121,6 @@ export function AddonForm({
   return (
     <FormPage
       title={mode === 'create' ? 'Create add-on' : `Edit ${defaultValue?.name || 'add-on'}`}
-      description={
-        mode === 'create'
-          ? 'An optional extra customers buy alongside a plan. Charges and entitlements are added afterwards.'
-          : 'Update the add-on’s details. Its charges are edited separately.'
-      }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
       preview={

@@ -53,7 +53,6 @@ export function PaymentForm({
   return (
     <FormPage
       title="Record payment"
-      description="Money collected against an invoice. Process it now, or leave it initiated to run later."
       trail={trail}
       width="narrow"
       toolbar={{
@@ -70,11 +69,7 @@ export function PaymentForm({
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
       >
-        <FormCard
-          title="Payment details"
-          description="Record a payment against an invoice."
-          status="required"
-        >
+        <FormCard title="Payment details" status="required">
           <FormRow
             label="Invoice"
             hint="The invoice this payment settles."

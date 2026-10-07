@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { DescriptionTip } from './DescriptionTip'
 
 /**
  * A titled, bordered surface on a detail or settings page.
@@ -39,7 +38,6 @@ export interface SectionProps {
 
 export function Section({
   title,
-  description,
   actions,
   action,
   children,
@@ -57,14 +55,9 @@ export function Section({
       className={cn('bg-background flex flex-col rounded-xl border', className)}
     >
       <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
-        <div className="space-y-0.5">
-          <div className="flex items-center gap-1.5">
-            <Heading id={id} className="text-sm font-medium">
-              {title}
-            </Heading>
-            {description ? <DescriptionTip>{description}</DescriptionTip> : null}
-          </div>
-        </div>
+        <Heading id={id} className="text-sm font-medium">
+          {title}
+        </Heading>
         {headerAction ? (
           <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
         ) : null}
@@ -82,9 +75,6 @@ export const PanelProvenance = provenance({
 
 export interface PanelProps {
   title?: string
-  /** Tooltip text behind an info icon beside the title. */
-  hint?: string
-  description?: string
   action?: ReactNode
   /** Sits beside the title (anything richer than `hint`). */
   titleAdornment?: ReactNode
@@ -101,8 +91,6 @@ export interface PanelProps {
 /** Console panel: soft outer tray, title row, white inner surface. */
 export function Panel({
   title,
-  hint,
-  description,
   action,
   titleAdornment,
   titleId,
@@ -122,9 +110,6 @@ export function Panel({
             {title ? (
               <Heading id={titleId} className="flex items-center gap-1.5 text-sm font-medium">
                 {title}
-                {hint || description ? (
-                  <DescriptionTip>{[description, hint].filter(Boolean).join(' ')}</DescriptionTip>
-                ) : null}
                 {titleAdornment}
               </Heading>
             ) : null}

@@ -91,7 +91,6 @@ export function CreditNoteForm({
   return (
     <FormPage
       title="New credit note"
-      description="Give back part of an invoice. Process it now, or keep a draft to review."
       trail={trail}
       width="narrow"
       toolbar={{
@@ -108,11 +107,7 @@ export function CreditNoteForm({
         onSubmit={form.handleSubmit((values) => onSubmit(values))}
         noValidate
       >
-        <FormCard
-          title="Credit note details"
-          description="Credit part or all of an invoice."
-          status="required"
-        >
+        <FormCard title="Credit note details" status="required">
           <FormRow
             label="Invoice"
             hint="The invoice this credit note reduces."

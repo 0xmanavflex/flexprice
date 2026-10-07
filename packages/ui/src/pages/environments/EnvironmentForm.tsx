@@ -105,7 +105,6 @@ export function EnvironmentForm({
       }}
       size="sm"
       title="Create environment"
-      description="Data does not cross between environments. A sandbox is the safe default; production is real customers and real money."
     >
       <Composer
         submitLabel={isSubmitting ? 'Creating…' : 'Create environment'}

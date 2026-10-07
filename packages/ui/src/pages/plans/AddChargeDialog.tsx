@@ -55,15 +55,6 @@ export function AddChargeDialog({
       onOpenChange={handleOpenChange}
       size="lg"
       title={editing ? 'Edit charge' : 'Add charge'}
-      description={
-        editing
-          ? 'Update the price. Everything else about a charge is fixed once created.'
-          : chosen
-            ? type === PriceType.Fixed
-              ? 'A fixed fee billed at the start of each period.'
-              : 'Usage billed at the end of the period.'
-            : 'Choose how this charge bills.'
-      }
     >
       {showForm ? (
         <ChargeForm
@@ -89,13 +80,13 @@ export function AddChargeDialog({
                 value: PriceType.Fixed,
                 title: 'Fixed',
                 description: 'A flat fee billed at the start of each period.',
-                icon: <RepeatIcon aria-hidden className="size-4 text-muted-foreground" />,
+                icon: <RepeatIcon aria-hidden className="text-muted-foreground size-4" />,
               },
               {
                 value: PriceType.Usage,
                 title: 'Usage',
                 description: 'Billed at the end of the period for what was used.',
-                icon: <GaugeIcon aria-hidden className="size-4 text-muted-foreground" />,
+                icon: <GaugeIcon aria-hidden className="text-muted-foreground size-4" />,
               },
             ]}
           />

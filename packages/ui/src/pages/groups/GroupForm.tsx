@@ -59,7 +59,6 @@ export function GroupForm({
   return (
     <FormPage
       title="Create group"
-      description="Bundle prices or features so they can be filtered, reported and invoiced together."
       trail={trail}
       width="narrow"
       toolbar={{
@@ -73,11 +72,7 @@ export function GroupForm({
     >
       <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
         <div className="flex flex-col gap-6">
-          <FormCard
-            title="Group details"
-            status="required"
-            description="Name, lookup key and what the group can hold."
-          >
+          <FormCard title="Group details" status="required">
             <FormRow
               label="Name"
               hint="What the group is called when you pick it elsewhere."

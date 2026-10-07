@@ -28,12 +28,7 @@ function Demo() {
   return (
     <>
       <Button onClick={() => setOpen(true)}>New thing</Button>
-      <FormDialog
-        open={open}
-        onOpenChange={setOpen}
-        title="New thing"
-        description="Every create form opens here."
-      >
+      <FormDialog open={open} onOpenChange={setOpen} title="New thing">
         <form className="flex flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
           <Field label="Name" required>
             {(p) => <Input {...p} />}

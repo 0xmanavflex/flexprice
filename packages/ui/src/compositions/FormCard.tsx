@@ -12,7 +12,6 @@ import { Badge } from '@ui/components/reui/badge'
 import { Separator } from '@ui/components/primitives/separator'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { DescriptionTip } from './DescriptionTip'
 import { InfoHint } from './InfoHint'
 
 /**
@@ -46,25 +45,19 @@ function flattenRows(children: ReactNode): ReactNode[] {
 
 export interface FormCardProps {
   title?: string
-  description?: string
   /** Whether the card holds fields the form cannot be submitted without. */
   status?: 'required' | 'optional'
   children: ReactNode
   className?: string
 }
 
-export function FormCard({ title, description, status, children, className }: FormCardProps) {
+export function FormCard({ title, status, children, className }: FormCardProps) {
   const rows = flattenRows(children)
   return (
     <section className={cn('bg-background flex w-full flex-col rounded-xl border', className)}>
       {title ? (
         <div className="flex items-start justify-between gap-4 px-5 py-4 sm:px-6">
-          <div className="space-y-0.5">
-            <div className="flex items-center gap-1.5">
-              <h2 className="text-sm font-medium">{title}</h2>
-              {description ? <DescriptionTip>{description}</DescriptionTip> : null}
-            </div>
-          </div>
+          <h2 className="text-sm font-medium">{title}</h2>
           {status ? (
             <Badge variant={status === 'required' ? 'primary-light' : 'secondary'} size="sm">
               {status === 'required' ? 'Required' : 'Optional'}

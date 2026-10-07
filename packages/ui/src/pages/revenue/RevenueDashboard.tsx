@@ -405,7 +405,6 @@ function MixPanel({
   return (
     <Panel
       title="Revenue mix"
-      description={`Metered events by feature, ${rangeLabel}`}
       action={<PanelButton onClick={onViewFeatures}>All features</PanelButton>}
     >
       <div className="flex flex-1 flex-col justify-center p-6">
@@ -462,7 +461,6 @@ function MarginPanel({
   return (
     <Panel
       title="Gross margin"
-      description="Revenue after cost sheets"
       action={<PanelButton onClick={onCostSheets}>Cost sheets</PanelButton>}
     >
       <div className="flex flex-1 flex-col gap-5 p-6">
@@ -667,7 +665,6 @@ function CollectionsPanel({
   return (
     <Panel
       title="Collections"
-      description={`Invoiced ${rangeLabel}, by payment state`}
       action={<PanelButton onClick={onViewInvoices}>View invoices</PanelButton>}
     >
       <div className="flex flex-1 flex-col gap-6 p-6">

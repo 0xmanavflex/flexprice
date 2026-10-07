@@ -10,7 +10,7 @@ const meta = {
   parameters: { layout: 'padded' },
   args: {
     title: 'Entitlements',
-    children: <p className="text-sm text-muted-foreground">Section content.</p>,
+    children: <p className="text-muted-foreground text-sm">Section content.</p>,
   },
 } satisfies Meta<typeof Section>
 
@@ -19,10 +19,13 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
-export const WithDescriptionAndActions: Story = {
+export const WithActions: Story = {
   args: {
-    description: 'What this plan includes.',
-    actions: <Button size="sm" variant="outline">Add</Button>,
+    actions: (
+      <Button size="sm" variant="outline">
+        Add
+      </Button>
+    ),
   },
 }
 
@@ -55,7 +58,7 @@ export const FlushTable: Story = {
 /** The reference Panel: a muted tray holding a white inner surface. */
 export const PanelTray: StoryObj = {
   render: () => (
-    <Panel title="Usage" description="Last 30 days">
+    <Panel title="Usage">
       <p className="text-muted-foreground p-5 text-sm">Panel content.</p>
     </Panel>
   ),

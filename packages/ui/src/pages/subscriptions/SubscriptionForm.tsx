@@ -175,7 +175,7 @@ export function SubscriptionForm({
   })
 
   const customerStep = (
-    <FormCard title="Customer" description="Who the subscription bills." status="required">
+    <FormCard title="Customer" status="required">
       <FormRow
         label="Customer"
         hint="The customer being subscribed."
@@ -204,11 +204,7 @@ export function SubscriptionForm({
   )
 
   const planStep = (
-    <FormCard
-      title="Plan and billing"
-      description="What they subscribe to and when it starts."
-      status="required"
-    >
+    <FormCard title="Plan and billing" status="required">
       <FormRow
         label="Plan"
         hint="The plan whose charges and entitlements apply."
@@ -434,7 +430,6 @@ export function SubscriptionForm({
   return (
     <FormPage
       title="Create subscription"
-      description="Put a customer on a plan and start their billing cycle."
       trail={trail}
       width="wide"
       toolbar={{
@@ -478,10 +473,7 @@ function PricesStep({
     )
 
   return (
-    <FormCard
-      title="Charges"
-      description="The plan's prices apply as they are. Override one to charge this customer differently."
-    >
+    <FormCard title="Charges">
       <ul className="divide-y">
         {charges.map((charge) => {
           const override = byId.get(charge.id)
@@ -575,10 +567,7 @@ function EntitlementsStep({
   }
 
   return (
-    <FormCard
-      title="Entitlements"
-      description="What this customer gets. Change a limit or switch a feature to differ from the plan."
-    >
+    <FormCard title="Entitlements">
       <ul className="divide-y">
         {editable.map((entitlement) => {
           const override = overrides.find((o) => o.entitlementId === entitlement.id)
@@ -640,10 +629,7 @@ function CreditsStep({
   const [adding, setAdding] = useState(false)
 
   return (
-    <FormCard
-      title="Credit grants"
-      description="Optional. Credits this customer receives with the subscription."
-    >
+    <FormCard title="Credit grants">
       {grants.length > 0 ? (
         <ul className="divide-y">
           {grants.map((grant, index) => (
@@ -730,7 +716,7 @@ function ReviewStep({
   ]
 
   return (
-    <FormCard title="Review" description="Check the details, then create the subscription.">
+    <FormCard title="Review">
       <dl className="divide-y">
         {rows.map((row) => (
           <div

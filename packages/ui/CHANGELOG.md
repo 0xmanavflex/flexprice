@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-06 — compositions: Section, Panel, FormCard, FormDialog, FormToolbar and FormPage no longer take a description or hint; DescriptionTip is deleted. The (i) now appears only beside input labels (Field, FormRow, LabelWithHint via InfoHint) (user request)
 - 2026-10-06 — pages/shared/DetailTable: its region is named "<label> table" so it never repeats the surrounding Section; EntityList gives an untitled column a screen-reader "Actions" header (axe landmark-unique, empty-table-header)
 - 2026-10-06 — compositions: PageHeader, FormPreview and DetailHeader no longer take a description; the (i) is gone from page headings and the preview rail, and DetailHeader's subtitle is a visible meta line again. PlanPreviewCard drops its `name` prop (user request; DescriptionTip stays on FormCard, FormDialog, FormToolbar, Section)
 - 2026-10-06 — compositions/SectionEmpty: one centred title, description and action for the empty body of every detail-page card (entitlements, charges, credit grants, plan tabs, invoice and feature tabs); the add button lives in the empty block until rows exist, then moves to the card header

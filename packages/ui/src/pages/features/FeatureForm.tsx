@@ -772,14 +772,7 @@ export function FeatureForm(props: FeatureFormProps) {
     <form id={FORM_ID} onSubmit={submitAll} noValidate>
       <fieldset className="min-w-0 border-0 p-0" disabled={isSubmitting}>
         <legend className="sr-only">Feature</legend>
-        <FormCard
-          title="Feature details"
-          description={
-            isEdit && isMetered
-              ? 'The event, aggregation and reset are fixed once the meter exists. Filters can still change.'
-              : 'Name, type and, for metered features, how usage is measured.'
-          }
-        >
+        <FormCard title="Feature details">
           {typeRows}
           {detailsRows}
           {isMetered ? eventRows : null}
@@ -793,11 +786,6 @@ export function FeatureForm(props: FeatureFormProps) {
   return (
     <FormPage
       title={isEdit ? `Edit ${feature?.name ?? 'feature'}` : 'Create feature'}
-      description={
-        isEdit
-          ? 'Update this feature.'
-          : 'Define what you measure or gate. Plans price it and entitlements limit it.'
-      }
       trail={trail}
       width={isEdit ? 'narrow' : 'wide'}
       preview={

@@ -3,7 +3,6 @@ import { XIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Separator } from '@ui/components/primitives/separator'
 import { provenance } from '@ui/provenance'
-import { DescriptionTip } from './DescriptionTip'
 
 /**
  * The bar a create/edit page opens with: close, the title, Cancel and the one
@@ -21,8 +20,6 @@ export const FormToolbarProvenance = provenance({
 
 export interface FormToolbarProps {
   title: string
-  /** Shown in a tooltip behind an (i) beside the title. */
-  description?: string
   mode: 'create' | 'edit'
   /** Noun for the create label, e.g. "group" → "Create group". */
   noun?: string
@@ -40,7 +37,6 @@ export interface FormToolbarProps {
 
 export function FormToolbar({
   title,
-  description,
   mode,
   noun,
   formId,
@@ -72,11 +68,6 @@ export function FormToolbar({
           </>
         ) : null}
         <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
-        {description ? (
-          <span className="ms-2 flex shrink-0">
-            <DescriptionTip>{description}</DescriptionTip>
-          </span>
-        ) : null}
       </div>
       {center ? (
         <div className="order-last flex w-full min-w-0 justify-center md:order-none md:w-auto md:flex-none">

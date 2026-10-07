@@ -58,7 +58,6 @@ export function CouponForm({
   return (
     <FormPage
       title={`Edit ${defaultValue.name || 'coupon'}`}
-      description="Rename the coupon. Its discount, cadence and redemption window are fixed once created."
       trail={trail}
       width="narrow"
       toolbar={{
@@ -70,10 +69,7 @@ export function CouponForm({
       }}
     >
       <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
-        <FormCard
-          title="Coupon details"
-          description="Only the name can change once a coupon exists."
-        >
+        <FormCard title="Coupon details">
           <FormRow
             label="Name"
             hint="Shown on invoices wherever the discount is applied."

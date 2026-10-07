@@ -79,7 +79,6 @@ export function TaxRateCreateForm({
   return (
     <FormPage
       title="Create tax rate"
-      description="A percentage added to invoices. Its value and scope are fixed once created."
       trail={trail}
       width="narrow"
       toolbar={{
@@ -195,7 +194,6 @@ export function TaxRateEditForm({
   return (
     <FormPage
       title="Edit tax rate"
-      description="Rename, recode or archive the rate. Its value and scope are fixed once created."
       trail={trail}
       width="narrow"
       toolbar={{
