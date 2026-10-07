@@ -47,9 +47,9 @@ export const Populated: Story = {
     const canvas = within(canvasElement)
 
     await expect(await canvas.findByText('API calls')).toBeInTheDocument()
-    // Each column is a single value: the measurement is the aggregation, not the
-    // event name repeated from the feature's own key.
-    await expect(canvas.getByText('Count of events')).toBeInTheDocument()
+    // The measurement is shown as the aggregation's formula chip, not the event
+    // name repeated from the feature's own key.
+    await expect(canvas.getByText('COUNT()')).toBeInTheDocument()
     // Non-metered products measure nothing; the cell says so rather than
     // rendering blank, which reads as missing data.
     await expect(canvas.getAllByText('—').length).toBeGreaterThan(0)

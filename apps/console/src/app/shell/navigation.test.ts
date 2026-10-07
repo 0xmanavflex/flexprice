@@ -23,7 +23,6 @@ describe('navEntryForPath', () => {
     ['/customers/cus_1/edit', 'customers'],
     ['/subscriptions', 'subscriptions'],
     ['/coupons', 'settings-discounts'],
-    ['/labels', 'settings-labels'],
     ['/taxes', 'settings-taxes'],
     ['/cost-sheets', 'settings-cost-tracking'],
     ['/pricing-widget', 'pricing-widget'],
@@ -41,6 +40,7 @@ describe('navEntryForPath', () => {
     ['?section=team&tab=roles', 'settings'],
     ['?section=invoicing&tab=invoices', 'settings'],
     ['?section=webhooks&tab=webhooks', 'webhooks'],
+    ['?section=labels&tab=labels', 'settings-labels'],
     ['?section=api-keys&tab=api-keys', 'settings'],
     ['', 'settings'],
   ])('resolves /settings%s to %s', (search, id) => {

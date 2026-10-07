@@ -1935,6 +1935,15 @@ const developerRedirects = (
   }),
 )
 
+/** Labels live in Settings now; the old path keeps working. */
+const labelsRedirect = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/labels',
+  beforeLoad: () => {
+    throw redirect({ to: '/settings', search: { section: 'labels', tab: 'labels' } })
+  },
+})
+
 export const routeTree = rootRoute.addChildren([
   signInRoute,
   shellRoute.addChildren([
@@ -1996,6 +2005,7 @@ export const routeTree = rootRoute.addChildren([
     subscriptionCreateRoute,
     subscriptionDetailRoute,
     ...developerRedirects,
+    labelsRedirect,
     ...placeholderRoutes,
   ]),
 ])

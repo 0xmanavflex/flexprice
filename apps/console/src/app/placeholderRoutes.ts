@@ -59,15 +59,7 @@ export const PLACEHOLDER_ROUTES = [
   // Elsewhere
   // `/integrations` is a real page — see `integrationsRoute` in router.tsx.
   // `/settings` is a real page now — see `settingsRoute` in router.tsx.
-  {
-    path: '/labels',
-    title: 'Labels',
-    description: 'Tag customers, plans and invoices so they can be filtered and reported on.',
-    emptyTitle: 'No labels yet',
-    emptyDescription:
-      'Labels tag customers, plans and invoices so you can filter and report on them. They are not available in the console yet.',
-    cta: null,
-  },
+  // `/labels` redirects to Settings → Labels — see `labelsRedirect` in router.tsx.
   {
     path: '/docs',
     title: 'Documentation',

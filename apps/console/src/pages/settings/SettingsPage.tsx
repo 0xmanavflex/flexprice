@@ -21,6 +21,7 @@ import { AppearancePanel } from './AppearancePanel'
 import { CurrenciesPanel } from './CurrenciesPanel'
 import { EnvironmentsPanel } from './EnvironmentsPanel'
 import { InvoicesPanel } from './InvoicesPanel'
+import { LabelsPanel } from './LabelsPanel'
 import { OnboardingPanel } from './OnboardingPanel'
 import { PortalPanel } from './PortalPanel'
 import { MembersPanel } from './MembersPanel'
@@ -179,7 +180,7 @@ export function SettingsPage({ sectionId, tabId, onNavigate, onOpenPage }: Setti
       onSectionChange={(next) => openSection(next, onNavigate, onOpenPage)}
       onTabChange={(next) => onNavigate(section.id, next)}
     >
-      <SettingsPanel section={section} tabId={tab.id} />
+      <SettingsPanel section={section} tabId={tab.id} onOpenPage={onOpenPage} />
     </SettingsShell>
   )
 }
@@ -191,7 +192,15 @@ export function SettingsPage({ sectionId, tabId, onNavigate, onOpenPage }: Setti
  * have a tab with the same id without one silently rendering the other's
  * panel.
  */
-function SettingsPanel({ section, tabId }: { section: SettingsSectionSpec; tabId: string }) {
+function SettingsPanel({
+  section,
+  tabId,
+  onOpenPage,
+}: {
+  section: SettingsSectionSpec
+  tabId: string
+  onOpenPage: (href: string) => void
+}) {
   const key = `${section.id}/${tabId}`
   const tab = findSettingsTab(section, tabId)
 
@@ -231,6 +240,8 @@ function SettingsPanel({ section, tabId }: { section: SettingsSectionSpec; tabId
       return <ApiKeysPanel />
     case 'service-accounts/service-accounts':
       return <ServiceAccountsPanel />
+    case 'labels/labels':
+      return <LabelsPanel onOpenPage={onOpenPage} />
     case 'webhooks/webhooks':
       return <WebhooksPanel />
     case 'alerts/alert-rules':

@@ -126,8 +126,7 @@ export const SETTINGS_SECTIONS = [
     id: 'labels',
     label: 'Labels',
     description: 'Group products and charges for reporting and filters.',
-    href: '/labels',
-    tabs: [],
+    tabs: [{ id: 'labels', label: 'Labels' }],
   },
   {
     id: 'customer-experience',
