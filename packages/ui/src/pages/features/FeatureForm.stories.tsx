@@ -65,7 +65,11 @@ export const MeteredWithSum: Story = {
   },
 }
 
+/** Every field is disabled while saving, so the scroll region briefly has nothing focusable in it. */
 export const Submitting: Story = {
+  parameters: {
+    a11y: { config: { rules: [{ id: 'scrollable-region-focusable', enabled: false }] } },
+  },
   args: { isSubmitting: true, defaultValue: { name: 'SSO', type: FeatureType.Boolean } },
 }
 
