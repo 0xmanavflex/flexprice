@@ -98,7 +98,7 @@ const GUIDES: EntityGuide[] = [
   },
   {
     title: 'Archiving a customer',
-    description: 'What happens to their subscriptions and invoices when you do.',
+    description: 'What happens to their contracts and invoices when you do.',
     href: 'https://docs.flexprice.io/docs/customers/archive',
     icon: <ReceiptIcon aria-hidden className="size-4" />,
   },

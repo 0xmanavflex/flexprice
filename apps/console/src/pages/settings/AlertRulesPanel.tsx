@@ -92,7 +92,7 @@ export function AlertRulesPanel() {
     <WidePanel>
       <TableBlock
         title="Alert rules"
-        description="Each rule watches one thing — a wallet, a feature, a subscription — and fires when it crosses a threshold."
+        description="Each rule watches one thing — a wallet, a feature, a contract — and fires when it crosses a threshold."
       >
         {alerts.isPending ? (
           <LoadingRows rows={3} columns={4} />
@@ -101,7 +101,7 @@ export function AlertRulesPanel() {
             size="inline"
             icon={<BellIcon aria-hidden />}
             title="No alert rules yet"
-            description="A rule is attached to the thing it watches, so it is created from that wallet, feature or subscription rather than from here."
+            description="A rule is attached to the thing it watches, so it is created from that wallet, feature or contract rather than from here."
           />
         ) : (
           <Table>

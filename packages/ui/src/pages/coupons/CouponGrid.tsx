@@ -113,7 +113,7 @@ const GUIDES: EntityGuide[] = [
   },
   {
     title: 'Applying a discount',
-    description: 'Put a coupon on a subscription and see it on the next invoice.',
+    description: 'Put a coupon on a contract and see it on the next invoice.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/coupons/apply-discount-on-subscription',
     icon: <PencilIcon aria-hidden className="size-4" />,
   },
@@ -279,7 +279,7 @@ export function CouponGrid({
       empty={{
         title: 'No coupons yet',
         description:
-          'A coupon takes an amount or a percentage off a subscription — once, for a few periods, or forever. Create one and apply it at checkout or on an existing subscription.',
+          'A coupon takes an amount or a percentage off a contract — once, for a few periods, or forever. Create one and apply it at checkout or on an existing contract.',
         ...(onCreate ? { actions: <Button onClick={onCreate}>New coupon</Button> } : {}),
         guides: GUIDES,
       }}

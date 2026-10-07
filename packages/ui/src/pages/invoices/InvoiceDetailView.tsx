@@ -219,7 +219,7 @@ export function InvoiceDetailView({
                   value={invoice.billTo.name}
                   {...(onOpenCustomer ? { onClick: onOpenCustomer } : {})}
                 />
-                <RelatedRow label="Subscription" value={invoice.subscriptionLabel || '—'} />
+                <RelatedRow label="Contract" value={invoice.subscriptionLabel || '—'} />
                 <RelatedRow
                   label="Credit notes"
                   value={invoice.creditNotes.length ? String(invoice.creditNotes.length) : 'None'}

@@ -74,7 +74,7 @@ export function SubscriptionFormPage({
           : undefined
       }
       onPlanChange={setPlanId}
-      trail={[{ label: 'Subscriptions', onClick: onCancel }, { label: 'New subscription' }]}
+      trail={[{ label: 'Contracts', onClick: onCancel }, { label: 'New contract' }]}
       {...(step ? { step } : {})}
       onStepChange={onStepChange}
       onCancel={onCancel}
@@ -97,12 +97,12 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to create subscriptions here.'
+        return 'You do not have permission to create contracts here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not create the subscription. Try again.'
+        return 'Could not create the contract. Try again.'
     }
   }
-  return 'Could not create the subscription. Try again.'
+  return 'Could not create the contract. Try again.'
 }

@@ -255,7 +255,7 @@ export function SubscriptionForm({
       </FormRow>
       <FormRow
         label="Billing period"
-        hint="How often the subscription is invoiced."
+        hint="How often the contract is invoiced."
         required
         error={errors.billingPeriod?.message}
       >
@@ -399,7 +399,7 @@ export function SubscriptionForm({
     />
   )
   const stepper = (
-    <FormSteps flow={flow} label="Subscription steps">
+    <FormSteps flow={flow} label="Contract steps">
       {content[flow.step]}
     </FormSteps>
   )
@@ -429,7 +429,7 @@ export function SubscriptionForm({
 
   return (
     <FormPage
-      title="Create subscription"
+      title="Create contract"
       trail={trail}
       width="wide"
       toolbar={{
@@ -440,7 +440,7 @@ export function SubscriptionForm({
         isSubmitting,
         submitError,
       }}
-      stepper={{ flow, label: 'Subscription steps' }}
+      stepper={{ flow, label: 'Contract steps' }}
       preview={preview}
     >
       {content[flow.step]}

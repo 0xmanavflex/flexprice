@@ -121,7 +121,7 @@ test.describe('a customer detail page', () => {
     await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
   })
 
-  test('opens subscription creation on its own page for this customer', async ({ page }) => {
+  test('opens contract creation on its own page for this customer', async ({ page }) => {
     await openFirstCustomer(page)
     const customerUrl = page.url()
     const customerId = customerUrl.match(/\/customers\/([^/?]+)/)?.[1]

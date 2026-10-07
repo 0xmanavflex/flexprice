@@ -55,7 +55,7 @@ export function SubscriptionsPanel() {
   const { environmentId } = useSession()
   const config = useSubscriptionConfig(environmentId)
 
-  const failure = toFailure(config.error, 'your subscription settings')
+  const failure = toFailure(config.error, 'your contract settings')
 
   if (!environmentId) {
     return (
@@ -113,8 +113,8 @@ function SubscriptionForm({
   const [floorIssue, setFloorIssue] = useState<string | null>(null)
   const [resetting, setResetting] = useState(false)
 
-  const saveError = mutationMessage(update.error, 'The subscription settings could not be saved.')
-  const resetError = mutationMessage(reset.error, 'The subscription settings could not be reset.')
+  const saveError = mutationMessage(update.error, 'The contract settings could not be saved.')
+  const resetError = mutationMessage(reset.error, 'The contract settings could not be reset.')
   const busy = update.isPending || reset.isPending
 
   const enabled = draft.value.autoCancellationEnabled
@@ -274,8 +274,8 @@ function SubscriptionForm({
       <ConfirmDialog
         open={resetting}
         onOpenChange={setResetting}
-        title="Reset subscription settings?"
-        description="This environment goes back to the Flexprice defaults: automatic cancellation off, with the default grace period. Subscriptions already cancelled are not restored."
+        title="Reset contract settings?"
+        description="This environment goes back to the Flexprice defaults: automatic cancellation off, with the default grace period. Contracts already cancelled are not restored."
         confirmLabel="Reset to defaults"
         destructive
         isPending={reset.isPending}

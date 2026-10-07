@@ -13,16 +13,16 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('opens a subscription from the list and cancels it', async ({ page }) => {
+test('opens a contract from the list and cancels it', async ({ page }) => {
   await page.goto('/subscriptions')
   await page.getByRole('row').nth(1).click()
   await expect(page).toHaveURL(/\/subscriptions\/[^/]+$/)
-  await expect(page.getByText('Subscription ID')).toBeVisible()
+  await expect(page.getByText('Contract ID')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Subscription actions' }).click()
-  await page.getByRole('menuitem', { name: 'Cancel subscription' }).click()
+  await page.getByRole('button', { name: 'Contract actions' }).click()
+  await page.getByRole('menuitem', { name: 'Cancel contract' }).click()
   const dialog = page.getByRole('dialog')
   await expect(dialog).toBeVisible()
-  await dialog.getByRole('button', { name: 'Cancel subscription' }).click()
+  await dialog.getByRole('button', { name: 'Cancel contract' }).click()
   await expect(dialog).toBeHidden()
 })

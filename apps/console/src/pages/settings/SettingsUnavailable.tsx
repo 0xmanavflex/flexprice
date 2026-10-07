@@ -55,7 +55,8 @@ export function SettingsUnavailable({ tab, what, workaround }: SettingsUnavailab
         description={
           `${what} This Flexprice deployment reports it as switched off, so there is ` +
           `nothing here to read or change. Turning it on is a server-side change, not ` +
-          `something this console can do.` + (workaround ? ` ${workaround}` : '')
+          `something this console can do.` +
+          (workaround ? ` ${workaround}` : '')
         }
       />
     </SettingsBlock>
@@ -80,8 +81,8 @@ export const UNAVAILABLE_COPY: Record<string, { what: string; workaround?: strin
     workaround: 'Individual invoices are still fully editable under Invoices.',
   },
   'billing/subscriptions': {
-    what: 'These are the defaults every new subscription inherits — proration, the billing anchor, what happens at the end of a term.',
-    workaround: 'Each subscription still carries its own settings where it is created.',
+    what: 'These are the defaults every new contract inherits — proration, the billing anchor, what happens at the end of a term.',
+    workaround: 'Each contract still carries its own settings where it is created.',
   },
   'billing/currencies': {
     what: 'Custom currencies would let you bill in a unit Flexprice does not ship with.',

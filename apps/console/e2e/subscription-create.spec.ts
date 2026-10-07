@@ -13,9 +13,9 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('creates a subscription through the steps and posts it', async ({ page }) => {
+test('creates a contract through the steps and posts it', async ({ page }) => {
   await page.goto('/subscriptions/new')
-  await expect(page.getByRole('heading', { level: 1, name: 'Create subscription' })).toBeVisible()
+  await expect(page.getByRole('heading', { level: 1, name: 'Create contract' })).toBeVisible()
 
   // The Customer step is gated on a choice.
   await page.getByRole('button', { name: 'Next' }).click()

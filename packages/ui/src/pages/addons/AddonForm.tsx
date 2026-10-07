@@ -68,7 +68,7 @@ export function AddonForm({
       <FormCard title="Add-on details" status="required">
         <FormRow
           label="Name"
-          hint="What the add-on is called on a subscription and on invoices."
+          hint="What the add-on is called on a contract and on invoices."
           required
           error={errors.name?.message}
         >

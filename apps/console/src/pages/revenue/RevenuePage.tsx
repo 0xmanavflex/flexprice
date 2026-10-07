@@ -123,7 +123,7 @@ const REVENUE_BY_CUSTOMER_GAPS = [
   {
     column: 'Plan',
     blocker:
-      'A customer record carries no plan; a plan belongs to their subscriptions. Needs a joined list view, or one subscriptions request per customer.',
+      'A customer record carries no plan; a plan belongs to their contracts. Needs a joined list view, or one contracts request per customer.',
   },
   {
     column: 'Net revenue',

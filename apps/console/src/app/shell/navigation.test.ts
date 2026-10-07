@@ -128,7 +128,7 @@ describe('the sidebar layout', () => {
       'Billing',
       'Collections',
       'Revenue',
-      'Product Catalog',
+      'Product catalog',
       'Developers',
       'Settings',
     ])
@@ -162,7 +162,7 @@ describe('the sidebar layout', () => {
 describe('breadcrumbForPath', () => {
   it('names the group before the page', () => {
     expect(breadcrumbForPath('/features')).toEqual([
-      { label: 'Product Catalog' },
+      { label: 'Product catalog' },
       { label: 'Products' },
     ])
   })

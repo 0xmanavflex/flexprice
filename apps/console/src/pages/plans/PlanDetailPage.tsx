@@ -205,7 +205,7 @@ export function PlanDetailPage({
               onClick={() => sync.mutate(planId)}
             >
               <RefreshCwIcon aria-hidden />
-              {sync.isPending ? 'Syncing…' : 'Sync to subscriptions'}
+              {sync.isPending ? 'Syncing…' : 'Sync to contracts'}
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -298,7 +298,7 @@ export function PlanDetailPage({
         open={archiving}
         onOpenChange={setArchiving}
         title="Archive this plan?"
-        description="Archiving retires the plan from the catalogue. Existing subscriptions keep billing; the plan can no longer be added to new ones."
+        description="Archiving retires the plan from the catalogue. Existing contracts keep billing; the plan can no longer be added to new ones."
         confirmLabel="Archive plan"
         destructive
         isPending={archive.isPending}

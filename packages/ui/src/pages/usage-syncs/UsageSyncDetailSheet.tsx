@@ -1,8 +1,19 @@
 import type { UsageSync } from '@fp/domain'
-import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockTitle } from '@ui/components/reui/code-block/code-block'
+import {
+  CodeBlock,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from '@ui/components/reui/code-block/code-block'
 import { DetailList } from '@ui/compositions/DetailList'
 import { Pill } from '../shared/cells'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@ui/components/primitives/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@ui/components/primitives/sheet'
 import { provenance } from '@ui/provenance'
 import { providerLabel } from './usageSyncProviders'
 
@@ -41,12 +52,20 @@ export function UsageSyncDetailSheet({ usageSync, onClose }: UsageSyncDetailShee
             <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
               <DetailList
                 items={[
-                  { label: 'Record ID', value: <span className="font-mono text-xs">{usageSync.id || '—'}</span> },
                   {
-                    label: 'Subscription',
-                    value: <span className="font-mono text-xs">{usageSync.subscriptionId || '—'}</span>,
+                    label: 'Record ID',
+                    value: <span className="font-mono text-xs">{usageSync.id || '—'}</span>,
                   },
-                  { label: 'Plan', value: <span className="font-mono text-xs">{usageSync.planId || '—'}</span> },
+                  {
+                    label: 'Contract',
+                    value: (
+                      <span className="font-mono text-xs">{usageSync.subscriptionId || '—'}</span>
+                    ),
+                  },
+                  {
+                    label: 'Plan',
+                    value: <span className="font-mono text-xs">{usageSync.planId || '—'}</span>,
+                  },
                 ]}
               />
               {usageSync.syncs.length === 0 ? (

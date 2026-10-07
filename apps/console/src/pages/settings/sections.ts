@@ -103,9 +103,9 @@ export const SETTINGS_SECTIONS = [
   },
   {
     id: 'subscription',
-    label: 'Subscription',
+    label: 'Contract',
     description: 'What happens to a contract when its invoices go unpaid.',
-    tabs: [{ id: 'subscriptions', label: 'Subscriptions' }],
+    tabs: [{ id: 'subscriptions', label: 'Contracts' }],
   },
   {
     id: 'currency',

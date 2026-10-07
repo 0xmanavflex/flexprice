@@ -34,8 +34,8 @@ test.beforeEach(async ({ context }) => {
 const CATALOG = [
   { name: 'Products', path: '/features' },
   { name: 'Plans', path: '/plans' },
-  { name: 'Addons', path: '/addons' },
-  { name: 'Pricing page', path: '/pricing-widget' },
+  { name: 'Add-ons', path: '/addons' },
+  { name: 'Pricing widgets', path: '/pricing-widget' },
 ] as const
 
 function atPath(path: string): RegExp {
@@ -52,7 +52,7 @@ test.describe('the shell', () => {
 
     // The parent opens the group and lands on its first child; from there each
     // sibling is one click away.
-    await shell.go('Product Catalog')
+    await shell.go('Product catalog')
 
     for (const surface of CATALOG) {
       await shell.go(surface.name)
@@ -106,7 +106,7 @@ test.describe('the shell', () => {
     const shell = new ShellPage(page)
     await shell.goto('/')
 
-    await shell.go('Product Catalog')
+    await shell.go('Product catalog')
     await expect(page).toHaveURL(atPath('/features'))
     await expect(shell.home).toBeVisible()
   })

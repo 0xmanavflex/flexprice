@@ -23,7 +23,10 @@ export interface InvoiceListPageProps {
  * Note what is absent: any `useState`. The query lives in the URL, so this
  * component has nothing to remember.
  */
-export function InvoiceListPage({ query, onQueryChange, onCreate,
+export function InvoiceListPage({
+  query,
+  onQueryChange,
+  onCreate,
   onInvoiceClick,
   onOpenCustomer,
 }: InvoiceListPageProps) {
@@ -79,7 +82,7 @@ export function InvoiceListPage({ query, onQueryChange, onCreate,
           onRetry={() => void invoices.refetch()}
           emptyIcon={<ReceiptIcon aria-hidden />}
           emptyTitle="No invoices yet"
-          emptyDescription="Invoices are produced when a subscription's billing period closes. Create a plan and subscribe a customer, and the first one will appear here."
+          emptyDescription="Invoices are produced when a contract's billing period closes. Create a plan and subscribe a customer, and the first one will appear here."
           onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
         >
           <InvoiceGrid

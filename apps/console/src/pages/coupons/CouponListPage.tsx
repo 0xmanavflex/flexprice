@@ -43,7 +43,7 @@ export function CouponListPage({
         createAction={<Button onClick={onCreate}>New coupon</Button>}
         emptyIcon={<TicketPercentIcon aria-hidden />}
         emptyTitle="No coupons yet"
-        emptyDescription="Coupons apply a discount to a subscription or an invoice — once, for a set number of periods, or forever. Create the first to offer one."
+        emptyDescription="Coupons apply a discount to a contract or an invoice — once, for a set number of periods, or forever. Create the first to offer one."
       >
         <CouponGrid
           coupons={rows}

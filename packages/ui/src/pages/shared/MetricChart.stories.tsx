@@ -38,7 +38,7 @@ const tabs: MetricTab[] = [
   { id: 'invoices', label: 'Invoices', value: '842', changePercent: -3.1, points: series(70, 18) },
   {
     id: 'subscriptions',
-    label: 'Subscriptions',
+    label: 'Contracts',
     value: '319',
     changePercent: 5.8,
     points: series(26, 7),

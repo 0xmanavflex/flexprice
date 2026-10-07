@@ -14,7 +14,7 @@ const meta = {
   args: {
     metrics: [
       {
-        label: 'Active subscriptions',
+        label: 'Active contracts',
         value: '128',
         hint: '+12 this month',
         sentiment: 'positive',

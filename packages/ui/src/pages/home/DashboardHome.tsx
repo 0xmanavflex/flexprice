@@ -70,7 +70,7 @@ export const DashboardHomeProvenance = provenance({
     'ui/select',
     'compositions/Section',
   ],
-  note: 'Billing overview: event series, revenue, subscriptions, invoice payment status, metered usage and API keys, drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
+  note: 'Billing overview: event series, revenue, contracts, invoice payment status, metered usage and API keys, drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
 })
 
 /* ---- What the page is told ---------------------------------------------- */
@@ -493,7 +493,7 @@ function SubscriptionsCard({
 
   return (
     <Panel
-      title="Recent subscriptions"
+      title="Recent contracts"
       action={
         <Button variant="outline" size="sm" onClick={onViewAll}>
           View all
@@ -507,7 +507,7 @@ function SubscriptionsCard({
           >
             {ready ? total : 0}
           </span>
-          <span className="text-muted-foreground text-xs">new subscriptions</span>
+          <span className="text-muted-foreground text-xs">new contracts</span>
           {ready && changePercent !== null ? (
             <span
               className={cn(
@@ -526,7 +526,7 @@ function SubscriptionsCard({
           <PillColumns
             columns={columns}
             series={series}
-            label={`New subscriptions by plan, ${rangeLabel}`}
+            label={`New contracts by plan, ${rangeLabel}`}
           />
         ) : (
           <>
@@ -543,10 +543,10 @@ function SubscriptionsCard({
               ))}
             </div>
             {status === 'unavailable' ? (
-              <Unavailable what="Subscriptions could not be loaded." />
+              <Unavailable what="Contracts could not be loaded." />
             ) : (
               <p className="text-muted-foreground border-t pt-4 text-xs">
-                Subscriptions created in this period appear here, by plan.
+                Contracts created in this period appear here, by plan.
               </p>
             )}
           </>

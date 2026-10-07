@@ -294,7 +294,7 @@ export function FeatureGrid({
       },
       {
         id: 'subscriptions',
-        header: 'Subscriptions',
+        header: 'Contracts',
         width: 150,
         text: (row) => String(linkage?.get(row.id)?.subscriptions ?? ''),
         cell: (row) => {

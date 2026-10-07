@@ -64,7 +64,7 @@ import {
 export const SubscriptionGridProvenance = provenance({
   source: 'composition',
   composes: ['pages/shared/EntityList'],
-  note: 'Subscription columns and actions over the shared list table.',
+  note: 'Contract columns and actions over the shared list table.',
 })
 
 const SORT_OPTIONS = Object.values(SubscriptionSortField).map((value) => ({
@@ -97,7 +97,7 @@ const GUIDES: EntityGuide[] = [
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
-    title: 'How plans price a subscription',
+    title: 'How plans price a contract',
     description: 'Charges, entitlements, and what the customer is actually billed for.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/plans/overview',
     icon: <LayersIcon aria-hidden className="size-4" />,
@@ -209,13 +209,13 @@ export function SubscriptionGrid({
     const actions: EntityRowAction[] = []
     if (onSubscriptionClick) {
       actions.push({
-        label: 'View subscription',
+        label: 'View contract',
         icon: <RepeatIcon aria-hidden className="size-4" />,
         onSelect: () => onSubscriptionClick(subscription),
       })
     }
     actions.push({
-      label: 'Copy subscription ID',
+      label: 'Copy contract ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(subscription.id),
     })
@@ -224,7 +224,7 @@ export function SubscriptionGrid({
 
   return (
     <EntityList<Subscription>
-      label="Subscriptions"
+      label="Contracts"
       noun="subscriptions"
       rows={subscriptions}
       total={total}
@@ -235,7 +235,7 @@ export function SubscriptionGrid({
       onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search subscriptions…"
+      searchPlaceholder="Search contracts…"
       /*
        * Status in the dropdown, and not also in a filter builder — two
        * controls writing `query.statuses` disagree on first interaction.
@@ -281,12 +281,12 @@ export function SubscriptionGrid({
       {...(onRetry ? { onRetry } : {})}
       isFiltered={query.search.length > 0 || query.statuses.length > 0}
       {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No subscriptions match these filters"
+      filteredEmptyTitle="No contracts match these filters"
       empty={{
         title: 'Nobody is on a plan yet',
         description:
-          'A subscription puts a customer on a plan and starts their billing cycle. Once one is running, invoices appear on their own as each period closes.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New subscription</Button> } : {}),
+          'A contract puts a customer on a plan and starts their billing cycle. Once one is running, invoices appear on their own as each period closes.',
+        ...(onCreate ? { actions: <Button onClick={onCreate}>New contract</Button> } : {}),
         guides: GUIDES,
       }}
     />

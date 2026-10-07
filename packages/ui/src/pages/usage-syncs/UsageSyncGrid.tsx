@@ -90,7 +90,7 @@ export function UsageSyncGrid({
         (row) => row.customerExternalId || row.customerId,
         { width: 200, hideable: false },
       ),
-      idColumn<UsageSync>('subscription', 'Subscription', (row) => row.subscriptionId, {
+      idColumn<UsageSync>('subscription', 'Contract', (row) => row.subscriptionId, {
         width: 200,
       }),
       idColumn<UsageSync>('plan', 'Plan', (row) => row.planId, { width: 180 }),
@@ -152,7 +152,7 @@ export function UsageSyncGrid({
       onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search by customer, subscription or plan…"
+      searchPlaceholder="Search by customer, contract or plan…"
       filter={singleChoiceFilter({
         id: 'state',
         label: 'Sync',

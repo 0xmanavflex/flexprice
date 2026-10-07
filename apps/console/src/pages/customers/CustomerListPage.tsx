@@ -58,7 +58,7 @@ export function CustomerListPage({
           createAction={<Button onClick={onCreateCustomer}>New customer</Button>}
           emptyIcon={<UsersIcon aria-hidden />}
           emptyTitle="No customers yet"
-          emptyDescription="Customers are who you bill. Each carries subscriptions, invoices and a payment history."
+          emptyDescription="Customers are who you bill. Each carries contracts, invoices and a payment history."
         >
           <CustomerGrid
             customers={rows}

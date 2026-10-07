@@ -210,6 +210,6 @@ export const Empty: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
-    await expect(canvas.queryByRole('heading', { name: /Active subscriptions/ })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: /Active contracts/ })).toBeNull()
   },
 }

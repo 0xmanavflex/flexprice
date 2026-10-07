@@ -14,7 +14,7 @@ const meta = {
   },
   args: {
     actions: [
-      { id: 'subscription', label: 'New subscription', icon: <RepeatIcon className="size-4" /> },
+      { id: 'subscription', label: 'New contract', icon: <RepeatIcon className="size-4" /> },
       { id: 'customer', label: 'New customer', icon: <UserPlusIcon className="size-4" /> },
       {
         id: 'invoice',
@@ -38,7 +38,7 @@ export const ListsTheFlows: Story = {
 
     const items = await screen.findAllByRole('menuitem')
     await expect(items.map((item) => item.textContent)).toEqual([
-      'New subscription',
+      'New contract',
       'New customer',
       'New invoice',
     ])
@@ -49,7 +49,7 @@ export const ListsTheFlows: Story = {
 export const ReportsTheChoice: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /create/i }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'New subscription' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'New contract' }))
     await expect(args.onCreate).toHaveBeenCalledWith('subscription')
   },
 }

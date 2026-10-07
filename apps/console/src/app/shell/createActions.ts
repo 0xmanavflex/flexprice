@@ -32,7 +32,7 @@ export interface CreateAction extends ShellCreateAction {
 }
 
 export const CREATE_ACTIONS: CreateAction[] = [
-  { id: 'subscription', label: 'New subscription', path: '/subscriptions/new' },
+  { id: 'subscription', label: 'New contract', path: '/subscriptions/new' },
   { id: 'customer', label: 'New customer', path: '/customers/new' },
 
   { id: 'plan', label: 'New plan', path: '/plans/new', startsGroup: true },

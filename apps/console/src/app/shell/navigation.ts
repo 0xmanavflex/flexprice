@@ -42,7 +42,7 @@ export const NAV: NavEntry[] = [
     label: 'Billing',
     children: [
       { id: 'invoices', label: 'Invoices', path: '/invoices' },
-      { id: 'credit-notes', label: 'Credit Notes', path: '/credit-notes' },
+      { id: 'credit-notes', label: 'Credit notes', path: '/credit-notes' },
     ],
   },
   {
@@ -53,26 +53,26 @@ export const NAV: NavEntry[] = [
   { id: 'revenue', label: 'Revenue', path: '/revenue' },
   {
     id: 'catalog',
-    label: 'Product Catalog',
+    label: 'Product catalog',
     children: [
       { id: 'features', label: 'Products', path: '/features' },
       { id: 'plans', label: 'Plans', path: '/plans' },
-      { id: 'addons', label: 'Addons', path: '/addons' },
-      { id: 'pricing-widget', label: 'Pricing page', path: '/pricing-widget' },
+      { id: 'addons', label: 'Add-ons', path: '/addons' },
+      { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },
     ],
   },
   {
     id: 'developers',
     label: 'Developers',
     children: [
-      { id: 'events', label: 'Events Debugger', path: '/events' },
+      { id: 'events', label: 'Events debugger', path: '/events' },
       {
         id: 'webhooks',
         label: 'Webhooks',
         path: '/settings',
         query: { section: 'webhooks', tab: 'webhooks' },
       },
-      { id: 'usage-syncs', label: 'Usage Sync', path: '/usage-syncs' },
+      { id: 'usage-syncs', label: 'Usage sync', path: '/usage-syncs' },
       { id: 'exports', label: 'Exports', path: '/exports' },
       { id: 'workflows', label: 'Workflows', path: '/workflows' },
     ],

@@ -23,7 +23,7 @@ const meta = {
   title: 'Foundation/Flexprice/PillColumns',
   component: PillColumns,
   parameters: { layout: 'padded' },
-  args: { columns, series, label: 'New subscriptions by day and plan' },
+  args: { columns, series, label: 'New contracts by day and plan' },
 } satisfies Meta<typeof PillColumns>
 
 export default meta

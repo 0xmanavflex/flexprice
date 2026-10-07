@@ -145,7 +145,7 @@ export const FilteredEmpty: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText(/no subscriptions match these filters/i),
+      await within(canvasElement).findByText(/no contracts match these filters/i),
     ).toBeInTheDocument()
   },
 }
@@ -163,7 +163,7 @@ export const Error: Story = {
   args: {
     subscriptions: [],
     total: 0,
-    error: 'You do not have access to subscriptions in this environment.',
+    error: 'You do not have access to contracts in this environment.',
     onRetry: fn(),
   },
   play: async ({ canvasElement, args }) => {

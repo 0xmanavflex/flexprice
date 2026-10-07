@@ -196,7 +196,7 @@ export function AddonDetailPage({
             </div>
           ),
         },
-        { value: 'subscriptions', label: 'Subscriptions', content: <AddonSubscriptionsView /> },
+        { value: 'subscriptions', label: 'Contracts', content: <AddonSubscriptionsView /> },
         {
           value: 'information',
           label: 'Information',

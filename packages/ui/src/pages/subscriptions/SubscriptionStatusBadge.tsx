@@ -23,7 +23,7 @@ import { GlyphBadge } from '../shared/StatusBadge'
 export const SubscriptionStatusBadgeProvenance = provenance({
   source: 'composition',
   composes: ['@reui/badge'],
-  note: 'The shared glyph badge, mapped to a subscription lifecycle. Colour on the glyph only.',
+  note: 'The shared glyph badge, mapped to a contract lifecycle. Colour on the glyph only.',
 })
 
 const SUBSCRIPTION_STATUS: Record<SubscriptionStatus, { icon: typeof CircleIcon; tone: string }> = {

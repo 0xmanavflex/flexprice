@@ -44,10 +44,10 @@ export function SubscriptionListPage({
           isFiltered={isFiltered}
           onRetry={() => void subscriptions.refetch()}
           onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-          createAction={<Button onClick={onCreate}>New subscription</Button>}
+          createAction={<Button onClick={onCreate}>New contract</Button>}
           emptyIcon={<RefreshCwIcon aria-hidden />}
-          emptyTitle="No subscriptions yet"
-          emptyDescription="A subscription puts a customer on a plan and starts their billing cycle."
+          emptyTitle="No contracts yet"
+          emptyDescription="A contract puts a customer on a plan and starts their billing cycle."
         >
           <SubscriptionGrid
             subscriptions={rows}
@@ -72,16 +72,16 @@ function toFailure(error: unknown): { message: string; canRetry: boolean } | nul
   if (error instanceof ApiError) {
     switch (error.kind) {
       case 'forbidden':
-        return { message: 'You do not have access to subscriptions here.', canRetry: false }
+        return { message: 'You do not have access to contracts here.', canRetry: false }
       case 'unauthorized':
         return { message: 'Your session has expired. Sign in again.', canRetry: false }
       case 'network':
         return { message: 'Could not reach Flexprice.', canRetry: true }
       case 'server':
-        return { message: 'Flexprice had a problem loading subscriptions.', canRetry: true }
+        return { message: 'Flexprice had a problem loading contracts.', canRetry: true }
       default:
         return { message: error.message, canRetry: false }
     }
   }
-  return { message: 'Something went wrong loading subscriptions.', canRetry: true }
+  return { message: 'Something went wrong loading contracts.', canRetry: true }
 }

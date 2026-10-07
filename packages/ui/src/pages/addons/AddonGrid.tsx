@@ -67,8 +67,8 @@ const GUIDES: EntityGuide[] = [
     icon: <PuzzleIcon aria-hidden className="size-4" />,
   },
   {
-    title: 'Adding one to a subscription',
-    description: 'Put an add-on on a live subscription and see it billed.',
+    title: 'Adding one to a contract',
+    description: 'Put an add-on on a live contract and see it billed.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/addons/add-to-subscription',
     icon: <PlusIcon aria-hidden className="size-4" />,
   },

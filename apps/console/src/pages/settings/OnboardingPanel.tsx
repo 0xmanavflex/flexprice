@@ -36,7 +36,9 @@ import {
   Panel,
   PanelError,
   mutationMessage,
-  toFailure, SettingsBlock } from './panelKit'
+  toFailure,
+  SettingsBlock,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -198,12 +200,15 @@ function OnboardingForm({
         </SettingsBlock>
 
         {actions.length === 0 ? (
-          <SettingsBlock title="Steps" description="Nothing runs automatically in this environment.">
+          <SettingsBlock
+            title="Steps"
+            description="Nothing runs automatically in this environment."
+          >
             <EmptyState
               size="inline"
               icon={<WorkflowIcon aria-hidden />}
               title="No onboarding steps"
-              description="Add a step below to have Flexprice open a wallet, start a subscription or roll out a price whenever a customer is created."
+              description="Add a step below to have Flexprice open a wallet, start a contract or roll out a price whenever a customer is created."
             />
           </SettingsBlock>
         ) : (
@@ -263,7 +268,9 @@ function OnboardingForm({
             <div className="flex w-full flex-wrap items-center justify-end gap-3">
               <ActionError message={saveError} />
               {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-              {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
+              {!saveError && reset.isSuccess ? (
+                <ActionNote message="Back to the defaults." />
+              ) : null}
               <Button type="submit" disabled={busy}>
                 {update.isPending ? 'Saving…' : 'Save changes'}
               </Button>
@@ -296,7 +303,7 @@ const STEP_DESCRIPTION: Record<OnboardingAction, string> = {
   [OnboardingAction.CreateSubscription]: 'Puts the customer on a plan.',
   [OnboardingAction.CreateFeatureAndPrice]: 'Adds a feature to a plan and prices it.',
   [OnboardingAction.RolloutToSubscriptions]:
-    'Applies the plan’s prices to subscriptions that already exist.',
+    'Applies the plan’s prices to contracts that already exist.',
 }
 
 type ErrorAt = (field: string) => string | undefined
@@ -616,7 +623,7 @@ function RolloutFields({
       <TextRow
         label="Plan"
         required
-        hint="Subscriptions already on this plan pick up its prices."
+        hint="Contracts already on this plan pick up its prices."
         value={action.planId}
         busy={busy}
         error={error('planId')}

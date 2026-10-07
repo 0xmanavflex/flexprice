@@ -339,7 +339,7 @@ const DEMO_ACTIVITY: ActivityEvent[] = [
   },
   {
     id: 2,
-    title: 'Subscription renewed',
+    title: 'Contract renewed',
     at: 'Sep 1',
     status: 'completed',
     summary: 'Billing period rolled over.',

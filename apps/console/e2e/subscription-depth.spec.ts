@@ -13,7 +13,7 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('subscription detail shows pricing and entitlements', async ({ page }) => {
+test('contract detail shows pricing and entitlements', async ({ page }) => {
   await page.goto('/subscriptions')
   await page.getByRole('row').nth(1).click()
   await expect(page).toHaveURL(/\/subscriptions\/[^/]+$/)

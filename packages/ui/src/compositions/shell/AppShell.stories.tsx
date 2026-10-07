@@ -347,7 +347,7 @@ export const CreateMenu: Story = {
     headerActions: (
       <ShellCreateMenu
         actions={[
-          { id: 'subscription', label: 'New subscription' },
+          { id: 'subscription', label: 'New contract' },
           { id: 'customer', label: 'New customer' },
           { id: 'plan', label: 'New plan', startsGroup: true },
         ]}

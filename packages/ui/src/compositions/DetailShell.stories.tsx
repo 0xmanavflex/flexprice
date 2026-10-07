@@ -21,7 +21,7 @@ const meta = {
     actions: <Button variant="outline">Edit</Button>,
     metrics: [
       {
-        label: 'Active subscriptions',
+        label: 'Active contracts',
         value: '128',
         hint: '+12 this month',
         sentiment: 'positive',
@@ -45,7 +45,7 @@ export const WithoutMetrics: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'Scale' })).toBeInTheDocument()
-    await expect(canvas.queryByText('Active subscriptions')).not.toBeInTheDocument()
+    await expect(canvas.queryByText('Active contracts')).not.toBeInTheDocument()
   },
 }
 

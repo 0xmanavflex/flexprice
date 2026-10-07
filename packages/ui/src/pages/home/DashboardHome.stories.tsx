@@ -169,7 +169,7 @@ export const Populated: Story = {
 
     for (const heading of [
       'Events monitoring',
-      'Recent subscriptions',
+      'Recent contracts',
       'Invoice payment status',
       'Usage by feature',
       'API',
@@ -277,7 +277,7 @@ export const FirstRun: Story = {
     await expect(canvas.getByText('Waiting for first request')).toBeInTheDocument()
     await expect(canvas.getByText('No usage recorded yet')).toBeInTheDocument()
     await expect(
-      canvas.getByText('Subscriptions created in this period appear here, by plan.'),
+      canvas.getByText('Contracts created in this period appear here, by plan.'),
     ).toBeInTheDocument()
 
     // Nothing is claimed: every headline figure is a dash or a zero, and the
@@ -305,7 +305,7 @@ export const Unavailable: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Subscriptions could not be loaded.')).toBeInTheDocument()
+    await expect(canvas.getByText('Contracts could not be loaded.')).toBeInTheDocument()
     await expect(canvas.getByText('Invoices could not be loaded.')).toBeInTheDocument()
     await expect(canvas.getByText('API keys could not be loaded.')).toBeInTheDocument()
   },

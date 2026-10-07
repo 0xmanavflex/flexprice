@@ -16,7 +16,7 @@ import { provenance } from '@ui/provenance'
 export const SubscriptionPreviewCardProvenance = provenance({
   source: 'composition',
   composes: ['compositions/form-preview'],
-  note: 'Live subscription summary of the draft; fetches nothing. Rendered in the solution-billing-8 rail.',
+  note: 'Live contract summary of the draft; fetches nothing. Rendered in the solution-billing-8 rail.',
 })
 
 export interface SubscriptionPreviewCardProps {
@@ -39,7 +39,7 @@ export function SubscriptionPreviewCard(props: SubscriptionPreviewCardProps) {
       : BILLING_PERIOD_LABEL[props.billingPeriod]
 
   return (
-    <FormPreview title="Subscription summary" label="Subscription preview">
+    <FormPreview title="Contract summary" label="Contract preview">
       <PreviewAmount
         label={props.plan || 'No plan chosen'}
         value={props.currency.toUpperCase() || '—'}

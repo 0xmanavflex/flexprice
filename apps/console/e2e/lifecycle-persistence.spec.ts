@@ -84,12 +84,12 @@ test('price unit inline edit persists across a reload', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Renamed unit' })).toBeVisible()
 })
 
-test('cancelling a subscription at period end is reflected on the detail', async ({ page }) => {
+test('cancelling a contract at period end is reflected on the detail', async ({ page }) => {
   await page.goto('/subscriptions')
   await page.getByRole('row').nth(1).click()
-  await page.getByRole('button', { name: 'Subscription actions' }).click()
-  await page.getByRole('menuitem', { name: 'Cancel subscription' }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Cancel subscription' }).click()
+  await page.getByRole('button', { name: 'Contract actions' }).click()
+  await page.getByRole('menuitem', { name: 'Cancel contract' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Cancel contract' }).click()
   await expect(page.getByText('Cancels at period end')).toBeVisible()
 })
 
@@ -120,21 +120,21 @@ test('finalize now creates an open invoice that can be voided from the detail', 
   await expect(page.getByRole('menuitem', { name: 'Void invoice' })).toBeHidden()
 })
 
-test('cancelling a subscription immediately marks it cancelled', async ({ page }) => {
+test('cancelling a contract immediately marks it cancelled', async ({ page }) => {
   await page.goto('/subscriptions')
   await page.getByRole('row').nth(1).click()
-  await page.getByRole('button', { name: 'Subscription actions' }).click()
-  await page.getByRole('menuitem', { name: 'Cancel subscription' }).click()
+  await page.getByRole('button', { name: 'Contract actions' }).click()
+  await page.getByRole('menuitem', { name: 'Cancel contract' }).click()
   const dialog = page.getByRole('dialog')
   await dialog.getByRole('combobox').click()
   await page.getByRole('option', { name: 'Immediately' }).click()
-  await dialog.getByRole('button', { name: 'Cancel subscription' }).click()
+  await dialog.getByRole('button', { name: 'Cancel contract' }).click()
   await expect(page.getByText('Cancelled', { exact: true }).first()).toBeVisible()
-  await page.getByRole('button', { name: 'Subscription actions' }).click()
-  await expect(page.getByRole('menuitem', { name: 'Cancel subscription' })).toBeDisabled()
+  await page.getByRole('button', { name: 'Contract actions' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Cancel contract' })).toBeDisabled()
 })
 
-test('a future-dated subscription is incomplete until it is activated', async ({ page }) => {
+test('a future-dated contract is incomplete until it is activated', async ({ page }) => {
   await page.goto('/subscriptions/new')
   await page.getByRole('combobox').first().click()
   await page.getByRole('option').first().click()

@@ -79,7 +79,7 @@ export const WithCounts: Story = {
   args: {
     items: [
       { id: 'overview', label: 'Overview' },
-      { id: 'subscriptions', label: 'Subscriptions', count: 12 },
+      { id: 'subscriptions', label: 'Contracts', count: 12 },
       { id: 'invoices', label: 'Invoices', count: 3 },
       { id: 'payments', label: 'Payments' },
     ],

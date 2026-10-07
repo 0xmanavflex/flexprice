@@ -26,7 +26,7 @@ type Story = StoryObj<typeof meta>
 
 export const Rail: Story = {
   args: {
-    title: 'Subscription summary',
+    title: 'Contract summary',
     badge: <Badge>Draft</Badge>,
     children: (
       <>
@@ -43,7 +43,7 @@ export const Rail: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('complementary', { name: 'Subscription summary' })).toBeVisible()
+    await expect(canvas.getByRole('complementary', { name: 'Contract summary' })).toBeVisible()
     await expect(canvas.getByText('Monthly')).toBeVisible()
   },
 }

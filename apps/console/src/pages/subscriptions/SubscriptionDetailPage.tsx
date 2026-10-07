@@ -84,9 +84,7 @@ export function SubscriptionDetailPage({
     return (
       <PageBody>
         <AppFailure
-          title={
-            subscription.error ? 'This subscription could not be loaded' : 'Subscription not found'
-          }
+          title={subscription.error ? 'This contract could not be loaded' : 'Contract not found'}
           detail="The rest of the console still works. Try again, or go back to the list."
           onRetry={subscription.error ? () => void subscription.refetch() : onNavigateToList}
         />
@@ -102,7 +100,7 @@ export function SubscriptionDetailPage({
 
   return (
     <CatalogDetailFrame
-      listLabel="Subscriptions"
+      listLabel="Contracts"
       onBack={onNavigateToList}
       icon={<RefreshCwIcon />}
       title={`${data.customerName} on ${data.planName}`}
@@ -111,11 +109,11 @@ export function SubscriptionDetailPage({
       {...(canActivate
         ? { primary: { label: 'Activate', onClick: () => setDialog('activate') } }
         : {})}
-      menuLabel="Subscription actions"
+      menuLabel="Contract actions"
       menu={[
         {
           id: 'cancel',
-          label: 'Cancel subscription',
+          label: 'Cancel contract',
           destructive: true,
           disabled: !canCancel,
           onSelect: () => setDialog('cancel'),
@@ -127,7 +125,7 @@ export function SubscriptionDetailPage({
           label: 'Overview',
           content: (
             <EditableCard
-              title="Subscription"
+              title="Contract"
               locked
               fields={[
                 {
@@ -241,7 +239,7 @@ export function SubscriptionDetailPage({
                 })),
                 {
                   key: 'id',
-                  label: 'Subscription ID',
+                  label: 'Contract ID',
                   value: data.id,
                   display: <span className="font-mono text-xs">{data.id}</span>,
                   readOnly: true,
@@ -266,7 +264,7 @@ export function SubscriptionDetailPage({
       <ConfirmDialog
         open={dialog === 'cancel'}
         onOpenChange={(open) => (open ? undefined : close())}
-        title="Cancel this subscription?"
+        title="Cancel this contract?"
         description={
           <span className="flex flex-col gap-3 pt-2 text-left">
             <label htmlFor="cancel-when" className="flex flex-col gap-1.5 text-sm">
@@ -290,8 +288,8 @@ export function SubscriptionDetailPage({
             </label>
           </span>
         }
-        confirmLabel="Cancel subscription"
-        cancelLabel="Keep subscription"
+        confirmLabel="Cancel contract"
+        cancelLabel="Keep contract"
         destructive
         isPending={cancel.isPending}
         error={toError(cancel.error, 'cancel')}
@@ -302,7 +300,7 @@ export function SubscriptionDetailPage({
       <ConfirmDialog
         open={dialog === 'activate'}
         onOpenChange={(open) => (open ? undefined : close())}
-        title="Activate this subscription?"
+        title="Activate this contract?"
         description={
           <span className="flex flex-col gap-3 pt-2 text-left">
             <label htmlFor="activate-start" className="flex flex-col gap-1.5 text-sm">
@@ -328,10 +326,10 @@ export function SubscriptionDetailPage({
 function toError(error: unknown, verb: 'cancel' | 'activate'): string | null {
   if (!error) return null
   if (error instanceof ApiError && error.kind === 'forbidden')
-    return `You do not have permission to ${verb} subscriptions here.`
+    return `You do not have permission to ${verb} contracts here.`
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
-  return `Could not ${verb} the subscription. Try again.`
+  return `Could not ${verb} the contract. Try again.`
 }
 
 function PricingTab({ subscriptionId }: { subscriptionId: string }) {
@@ -344,7 +342,7 @@ function PricingTab({ subscriptionId }: { subscriptionId: string }) {
     <SimpleTable<SubscriptionLine>
       rows={lines.data ?? []}
       getRowId={(line) => line.id}
-      empty="This subscription has no priced lines."
+      empty="This contract has no priced lines."
       columns={[
         { key: 'name', header: 'Charge', cell: (line) => line.name },
         {
@@ -380,7 +378,7 @@ function EntitlementsTab({ subscriptionId }: { subscriptionId: string }) {
     <SimpleTable<SubscriptionEntitlement>
       rows={entitlements.data ?? []}
       getRowId={(row) => row.featureId || row.name}
-      empty="This subscription includes no features."
+      empty="This contract includes no features."
       columns={[
         { key: 'feature', header: 'Feature', cell: (row) => row.name },
         {

@@ -130,7 +130,7 @@ const STATUS_CHOICES = STATUS_ORDER.map((value) => ({
 const GUIDES: EntityGuide[] = [
   {
     title: 'Raising a one-off invoice',
-    description: 'Billing something that is not on a subscription.',
+    description: 'Billing something that is not on a contract.',
     href: 'https://docs.flexprice.io/api-reference/invoices/create-one-off-invoice',
     icon: <ReceiptIcon aria-hidden className="size-4" />,
   },
@@ -351,7 +351,7 @@ export function InvoiceGrid({
         empty={{
           title: 'No invoices yet',
           description:
-            'Invoices are produced when a subscription’s billing period closes. Put a customer on a plan and the first one will appear here on its own.',
+            'Invoices are produced when a contract’s billing period closes. Put a customer on a plan and the first one will appear here on its own.',
           ...(onCreate ? { actions: <Button onClick={onCreate}>New invoice</Button> } : {}),
           guides: GUIDES,
         }}

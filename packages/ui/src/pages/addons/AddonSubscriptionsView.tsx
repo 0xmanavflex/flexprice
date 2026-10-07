@@ -30,14 +30,14 @@ export function AddonSubscriptionsView({
   subscriptions?: AddonSubscriber[]
 }) {
   return (
-    <Section title="Subscriptions" flush bare>
+    <Section title="Contracts" flush bare>
       <DetailTable
-        label="Subscriptions"
+        label="Contracts"
         facet={{ label: 'Status', value: (s) => s.status }}
         noun="subscriptions"
         rows={subscriptions}
         getRowId={(s) => s.id}
-        empty="No subscription uses this add-on yet."
+        empty="No contract uses this add-on yet."
         columns={[
           {
             key: 'c',
