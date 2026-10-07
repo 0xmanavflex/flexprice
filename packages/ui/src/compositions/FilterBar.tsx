@@ -276,11 +276,14 @@ export function statusFilter<S extends string>({
   choices,
   onChange,
   label = 'Status',
+  inline = false,
 }: {
   values: readonly S[]
   choices: readonly { value: S; label: string }[]
   onChange: (values: S[]) => void
   label?: string
+  /** Also offer the choices as a select beside the search box. */
+  inline?: boolean
 }) {
   const allowed = new Set<string>(choices.map((choice) => choice.value))
   return {
@@ -296,6 +299,28 @@ export function statusFilter<S extends string>({
     onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
       onChange(readSelectFilter(flat, 'status', allowed) as S[])
     },
+    ...(inline
+      ? {
+          quick: {
+            label,
+            value:
+              values.length === 0 ? 'all' : values.length === 1 ? (values[0] as string) : 'many',
+            options: [
+              { value: 'all', label: 'All' },
+              ...(values.length > 1 ? [{ value: 'many', label: `${values.length} selected` }] : []),
+              ...choices.map((choice) => ({ value: choice.value as string, label: choice.label })),
+            ],
+            onChange: (next: string) =>
+              onChange(
+                next === 'all' || next === 'many'
+                  ? next === 'many'
+                    ? [...values]
+                    : []
+                  : ([next] as S[]),
+              ),
+          },
+        }
+      : {}),
   }
 }
 

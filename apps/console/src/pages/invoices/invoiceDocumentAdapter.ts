@@ -29,6 +29,29 @@ export function toInvoiceDocument(invoice: InvoiceDetail): InvoiceDocument {
   push('Invoice finalized', invoice.finalizedAt, 'The invoice was locked and issued.', 'completed')
   push('Paid', invoice.paidAt, 'Payment was received in full.', 'completed')
   push('Voided', invoice.voidedAt, 'The invoice was voided.', 'issue')
+  // What is still to come, so a draft reads as a path rather than a dead end.
+  // Only steps the invoice's own state implies: no "sent" step, the API does not say.
+  const upcoming: InvoiceDocument['events'] = []
+  const settled = invoice.paidAt || invoice.voidedAt
+  if (!invoice.finalizedAt && !settled) {
+    upcoming.push({
+      id: 0,
+      title: 'Invoice finalized',
+      at: 'When the period closes',
+      status: 'pending',
+      summary: '',
+    })
+  }
+  if (!settled && invoice.dueDate) {
+    upcoming.push({
+      id: 0,
+      title: 'Payment due',
+      at: day(invoice.dueDate) ?? '',
+      status: 'pending',
+      summary: '',
+    })
+  }
+  events.unshift(...upcoming.map((event, index) => ({ ...event, id: events.length + 1 + index })))
 
   return {
     id: invoice.id,

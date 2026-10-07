@@ -44,6 +44,13 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@ui/components/primitives/input-group'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@ui/components/primitives/select'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { GuidedEmptyState } from '@ui/compositions/GuidedEmptyState'
@@ -98,7 +105,7 @@ import type { EntityColumn } from './cells'
  */
 export const EntityListProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/filters'],
+  composes: ['@reui/data-grid', '@reui/filters', 'ui/select'],
   note: 'The one list table: borderless, 44px header, 60px rows, auto-width columns, pin-on-overflow. Lineage: @reui/empty-state-3.',
 })
 
@@ -141,6 +148,16 @@ export interface EntityFilter {
   onQueryChange: (query: FilterQuery, flat: FlatFilter[]) => void
   /** Drives the badge on the icon button. Omit for no badge. */
   activeCount?: number | undefined
+  /** A "Status: All" select beside the search, writing the same rule as the filter. */
+  quick?: EntityQuickSelect | undefined
+}
+
+/** The inline select next to the search box: one value, `all` for none. */
+export interface EntityQuickSelect {
+  label: string
+  value: string
+  options: readonly { value: string; label: string }[]
+  onChange: (value: string) => void
 }
 
 /** The sort button and the menu behind it. */
@@ -685,6 +702,28 @@ export function EntityList<T extends object>({
             </InputGroupAddon>
           ) : null}
         </InputGroup>
+        {filter?.quick ? (
+          <Select
+            items={filter.quick.options as { value: string; label: string }[]}
+            value={filter.quick.value}
+            onValueChange={(next) => filter.quick?.onChange(String(next ?? 'all'))}
+          >
+            <SelectTrigger
+              aria-label={filter.quick.label}
+              className={cn('w-48 justify-start gap-2 pl-3', compact ? 'h-8' : 'h-9')}
+            >
+              <span className="text-muted-foreground">{filter.quick.label}</span>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent align="start">
+              {filter.quick.options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : null}
       </div>
 
       <div className="flex items-center gap-2">

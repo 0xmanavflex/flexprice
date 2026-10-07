@@ -193,7 +193,7 @@ export function InvoiceGrid({
   const columns = useMemo<EntityColumn<Invoice>[]>(
     () => [
       textColumn<Invoice>('number', 'Invoice', (row) => row.number, {
-        width: 170,
+        width: 210,
         // The document's own identity. A row without it is unciteable.
         hideable: false,
       }),
@@ -316,6 +316,7 @@ export function InvoiceGrid({
         filter={statusFilter({
           values: query.statuses,
           choices: STATUS_CHOICES,
+          inline: true,
           onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
         })}
         sort={{

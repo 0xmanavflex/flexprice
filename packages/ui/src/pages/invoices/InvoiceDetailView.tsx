@@ -107,7 +107,9 @@ export function InvoiceDetailView({
           {invoice.subscriptionLabel ? (
             <>
               <Dot />
-              <span>{invoice.subscriptionLabel}</span>
+              <span className="max-w-56 truncate" title={invoice.subscriptionLabel}>
+                {invoice.subscriptionLabel}
+              </span>
             </>
           ) : null}
           {/* The one status on the page. A draft's title already says so. */}
@@ -581,8 +583,10 @@ function RelatedRow({
         onClick={onClick}
         className="hover:bg-muted/30 flex w-full items-center justify-between gap-3 px-6 py-3 text-left disabled:pointer-events-none"
       >
-        <span className="text-muted-foreground">{label}</span>
-        <span>{value}</span>
+        <span className="text-muted-foreground shrink-0">{label}</span>
+        <span className="min-w-0 truncate" title={value}>
+          {value}
+        </span>
       </button>
     </li>
   )

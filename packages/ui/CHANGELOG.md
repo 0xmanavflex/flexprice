@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-07 — pages/shared/EntityList + compositions/FilterBar `statusFilter({ inline })`: an optional "Status: All" select beside the search, writing the same rule as the filter button; Invoices opts in and its number column no longer truncates (design refresh: invoices)
+- 2026-10-07 — pages/invoices/InvoiceDetailView: Related and header contract labels truncate instead of overflowing the card (design refresh: invoices)
 - 2026-10-07 — pages/settings/SettingsShell: each section gets a title and one-line description above its tabs, a w-56 rail with tighter rows and a max-w-6xl frame (design refresh: settings)
 - 2026-10-07 — compositions/Page `EmbeddedPageContext`: a PageBody inside it drops its gutters, cap and scroll, so a list page can sit inside the Settings frame (design refresh: Discounts, Taxes and Cost tracking keep the Settings rail)
 - 2026-10-07 — compositions/Section `table`, pages/shared/{EntityList,DetailTable} `compact`: a table-mode Section puts the title, an optional description and the actions above a bordered table box; compact lists use 48px rows, an h-8 search and no footer unless there is a second page (design refresh: customer detail tables)
