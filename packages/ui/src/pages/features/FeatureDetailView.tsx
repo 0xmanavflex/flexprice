@@ -240,11 +240,7 @@ export function FeatureDetailView({
       ) : null}
 
       {active === 'charges' ? (
-        <Section
-          title="Charges"
-          description="Every plan and add-on that bills for this feature. Demo data until the linked-price view is wired."
-          flush
-        >
+        <Section title="Charges" flush bare>
           <DetailTable
             label="Charges"
             noun="charges"
@@ -274,11 +270,7 @@ export function FeatureDetailView({
       ) : null}
 
       {active === 'entitlements' ? (
-        <Section
-          title="Entitlements"
-          description="What each plan includes before charges apply. Demo data until the entitlement view is wired."
-          flush
-        >
+        <Section title="Entitlements" flush bare={isMetered}>
           {isMetered ? (
             <DetailTable
               label="Entitlements"
@@ -365,7 +357,6 @@ function OverviewTab({ feature, onSeeCharges }: { feature: Feature; onSeeCharges
         <Section
           className="xl:col-span-3"
           title="Plans attached"
-          description="Demo data: the plans-using-a-feature view is not wired yet."
           flush
           bodyClassName="flex flex-col"
           action={
@@ -398,12 +389,7 @@ function TestEventPanel({ feature }: { feature: Feature }) {
     if (done) void done.then(() => toast.success('cURL copied'))
   }
   return (
-    <Section
-      className="xl:col-span-2"
-      title="Send a test event"
-      description="Usage for this feature arrives as events"
-      bodyClassName="flex flex-col"
-    >
+    <Section className="xl:col-span-2" title="Send a test event" bodyClassName="flex flex-col">
       <pre className="border-border bg-invert text-invert-foreground flex-1 overflow-x-auto rounded-lg border p-4 font-mono text-[12px]/relaxed">
         <code>{command}</code>
       </pre>
@@ -481,7 +467,7 @@ function InformationTab({
         />
 
         {isMetered ? (
-          <Section title="Event and aggregation" description="How raw events become billable usage">
+          <Section title="Event and aggregation">
             <Properties
               items={[
                 { label: 'Event name', value: mono(feature.eventName) },
@@ -523,11 +509,7 @@ function InformationTab({
       </div>
       <div className="flex min-w-0 flex-col gap-5">
         {isMetered ? (
-          <Section
-            title="Usage alerts"
-            description="Demo: alert thresholds are not saved yet. Toggles only change this view."
-            flush
-          >
+          <Section title="Usage alerts" flush>
             <ul className="divide-border/50 divide-y">
               {ALERTS.map((alert) => (
                 <li key={alert.id} className="flex items-center gap-3 px-6 py-3.5">

@@ -136,7 +136,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/plans/new',
     reference: 'pages/catalog.tsx',
     pattern: 'create',
-    ready: { heading: 'Plan steps' },
+    ready: { heading: 'Create plan' },
   },
   {
     name: 'plan-new-charges',
@@ -285,7 +285,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/subscriptions/new',
     reference: 'pages/billing.tsx',
     pattern: 'create',
-    ready: { heading: 'Subscription steps' },
+    ready: { heading: 'Create subscription' },
   },
   {
     name: 'invoices-list',

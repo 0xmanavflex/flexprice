@@ -200,11 +200,7 @@ export function CustomerAnalyticsView({
         />
       ) : null}
 
-      <Section
-        title="Usage breakdown"
-        description={`${current.from} to ${current.to}${current.includeChildren ? ', including child customers' : ''}`}
-        flush
-      >
+      <Section title="Usage breakdown" flush bare>
         <DetailTable
           label="Usage breakdown"
           noun="features"

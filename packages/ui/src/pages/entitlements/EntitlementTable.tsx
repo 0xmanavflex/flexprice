@@ -30,8 +30,6 @@ export interface EntitlementTableProps {
   onOpenFeature?: (featureId: string) => void
   /** Section heading; defaults to "Entitlements". */
   title?: string
-  /** Section sub-heading under the title. */
-  description?: string
 }
 
 const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
@@ -69,11 +67,10 @@ export function EntitlementTable({
   onDelete,
   onOpenFeature,
   title = 'Entitlements',
-  description = 'What subscribers get: feature access and included allowances',
 }: EntitlementTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
-    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+    <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
       <PlusIcon aria-hidden />
       Add entitlement
     </Button>
@@ -81,7 +78,7 @@ export function EntitlementTable({
 
   if (entitlements.length === 0) {
     return (
-      <Section title={title} description={description} flush>
+      <Section title={title} flush>
         <SectionEmpty
           title="No entitlements yet"
           description={`Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`}
@@ -92,13 +89,9 @@ export function EntitlementTable({
   }
 
   return (
-    <Section
-      title={title}
-      description={description}
-      flush
-      {...(addButton ? { action: addButton } : {})}
-    >
+    <Section title={title} flush bare>
       <DetailTable
+        {...(addButton ? { action: addButton } : {})}
         label="Entitlements"
         facet={{ label: 'Type', value: (entitlement) => TYPE_LABEL[entitlement.featureType] }}
         noun="entitlements"

@@ -30,7 +30,7 @@ export function AddonSubscriptionsView({
   subscriptions?: AddonSubscriber[]
 }) {
   return (
-    <Section title="Subscriptions" description="Where this add-on is attached" flush>
+    <Section title="Subscriptions" flush bare>
       <DetailTable
         label="Subscriptions"
         facet={{ label: 'Status', value: (s) => s.status }}

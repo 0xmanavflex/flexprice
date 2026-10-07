@@ -197,7 +197,7 @@ function UsageSection({
 }) {
   if (isLoading) {
     return (
-      <Section title="Usage" description="What this customer has used of each entitlement.">
+      <Section title="Usage">
         <LoadingRows />
       </Section>
     )
@@ -205,7 +205,7 @@ function UsageSection({
 
   if (failed) {
     return (
-      <Section title="Usage" description="What this customer has used of each entitlement.">
+      <Section title="Usage">
         <AppFailure
           title="Usage could not be loaded"
           detail="The rest of this customer's record still works."
@@ -217,7 +217,7 @@ function UsageSection({
 
   if (features.length === 0) {
     return (
-      <Section title="Usage" description="What this customer has used of each entitlement.">
+      <Section title="Usage">
         <EmptyState
           size="inline"
           title="No entitlements yet"
@@ -228,10 +228,7 @@ function UsageSection({
   }
 
   return (
-    <Section
-      title="Usage"
-      description="What this customer has used of each entitlement, this billing period."
-    >
+    <Section title="Usage">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {features.map((feature) => (
           <QuotaCard

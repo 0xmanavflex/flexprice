@@ -22,7 +22,6 @@ export const SectionProvenance = provenance({
 
 export interface SectionProps {
   title: string
-  description?: string
   /** Buttons scoped to this section, in the header. */
   actions?: ReactNode
   /** Reference name for `actions`; either works. */
@@ -32,6 +31,8 @@ export interface SectionProps {
   bodyClassName?: string
   /** No inner padding: for tables and lists that run edge to edge. */
   flush?: boolean
+  /** No header band: the title stays as a screen-reader heading and the body (a table) leads with its own search. */
+  bare?: boolean
   /** Heading level, so a page's outline stays correct. */
   as?: 'h1' | 'h2' | 'h3'
 }
@@ -44,6 +45,7 @@ export function Section({
   className,
   bodyClassName,
   flush,
+  bare,
   as: Heading = 'h2',
 }: SectionProps) {
   const id = `section-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
@@ -54,14 +56,20 @@ export function Section({
       aria-labelledby={id}
       className={cn('bg-background flex flex-col rounded-xl border', className)}
     >
-      <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
-        <Heading id={id} className="text-sm font-medium">
+      {bare ? (
+        <Heading id={id} className="sr-only">
           {title}
         </Heading>
-        {headerAction ? (
-          <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
-        ) : null}
-      </div>
+      ) : (
+        <div className="flex items-start justify-between gap-4 border-b px-6 py-4">
+          <Heading id={id} className="text-sm font-medium">
+            {title}
+          </Heading>
+          {headerAction ? (
+            <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
+          ) : null}
+        </div>
+      )}
       <div className={cn('flex-1', !flush && 'p-6', bodyClassName)}>{children}</div>
     </section>
   )

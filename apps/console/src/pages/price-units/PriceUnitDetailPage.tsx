@@ -106,14 +106,7 @@ export function PriceUnitDetailPage({
           value: 'overview',
           label: 'Overview',
           content: (
-            <Section
-              title="Conversion"
-              description={
-                conversion
-                  ? `How ${codeLabel === 'unit' ? 'this unit' : codeLabel} converts into ${baseCurrency}.`
-                  : 'How this unit converts into its base currency.'
-              }
-            >
+            <Section title="Conversion">
               {conversion ? (
                 <div className="bg-muted/40 rounded-lg border p-4">
                   <p className="text-muted-foreground text-xs">Worked example</p>
@@ -154,7 +147,11 @@ export function PriceUnitDetailPage({
                   key: 'code',
                   label: 'Code',
                   value: data.code,
-                  display: data.code ? <span className="font-mono text-[13px]">{data.code}</span> : '—',
+                  display: data.code ? (
+                    <span className="font-mono text-[13px]">{data.code}</span>
+                  ) : (
+                    '—'
+                  ),
                   readOnly: true,
                 },
                 { key: 'symbol', label: 'Symbol', value: symbolDisplay, readOnly: true },

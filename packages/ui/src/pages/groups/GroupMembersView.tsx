@@ -16,16 +16,14 @@ export const DEMO_GROUP_MEMBERS: GroupMember[] = [
 
 export function GroupMembersView({
   kind,
-  count,
   members = DEMO_GROUP_MEMBERS,
 }: {
   /** Lower-case noun the group holds, e.g. "features". */
   kind: string
-  count: number
   members?: GroupMember[]
 }) {
   return (
-    <Section title="Members" description={`${count.toLocaleString()} ${kind} in this group`} flush>
+    <Section title="Members" flush bare>
       <DetailTable
         label="Members"
         noun="members"

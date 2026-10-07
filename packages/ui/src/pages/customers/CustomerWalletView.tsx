@@ -294,7 +294,6 @@ export function CustomerWalletView({
 
       <Section
         title="Transactions"
-        description="Every credit in and out of this wallet"
         flush
         action={
           <Select

@@ -126,19 +126,15 @@ export function CostSheetDetailPage({
           content: (
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
               {prices.isPending ? (
-                <Section title="Costs" description="The prices this cost sheet groups to measure cost" flush>
+                <Section title="Costs" flush>
                   <div className="p-6">
                     <LoadingRows />
                   </div>
                 </Section>
               ) : charges && charges.length > 0 ? (
-                <ChargeTable
-                  charges={charges}
-                  title="Costs"
-                  description="The prices this cost sheet groups to measure cost"
-                />
+                <ChargeTable charges={charges} title="Costs" />
               ) : (
-                <Section title="Costs" description="The prices this cost sheet groups to measure cost" flush>
+                <Section title="Costs" flush>
                   <EmptyState
                     size="inline"
                     icon={<ReceiptIcon aria-hidden />}

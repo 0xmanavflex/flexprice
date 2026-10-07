@@ -151,7 +151,7 @@ export function CustomerDetail({
       .join('') || '?'
 
   const addButton = (
-    <Button size="sm" className="h-8 px-3" onClick={onCreateSubscription}>
+    <Button size="sm" className="h-9 px-3" onClick={onCreateSubscription}>
       <PlusIcon aria-hidden="true" />
       Create subscription
     </Button>
@@ -249,17 +249,14 @@ export function CustomerDetail({
         ) : null}
 
         {tab === 'invoices' ? (
-          <Section
-            title="Invoices"
-            flush
-            action={
-              <Button size="sm" className="h-8 px-3">
-                <PlusIcon aria-hidden="true" />
-                New invoice
-              </Button>
-            }
-          >
+          <Section title="Invoices" flush bare>
             <InvoiceTable
+              action={
+                <Button size="sm" className="h-9 px-3">
+                  <PlusIcon aria-hidden="true" />
+                  New invoice
+                </Button>
+              }
               invoices={invoices}
               isLoading={invoicesLoading}
               formatDate={formatDate}
@@ -409,9 +406,8 @@ function OverviewTab({
           )}
         </section>
 
-        <div className="bg-background rounded-xl border">
+        <Section title="Recent invoices" flush bare>
           <InvoiceTable
-            title="Recent invoices"
             action={
               <Button variant="outline" className="h-9 px-3" onClick={onViewInvoices}>
                 View all
@@ -422,7 +418,7 @@ function OverviewTab({
             formatDate={formatDate}
             onOpenInvoice={onOpenInvoice}
           />
-        </div>
+        </Section>
       </div>
       <Section title="Activity" flush className="xl:sticky xl:top-6">
         <ScrollArea className="h-[560px]">
@@ -449,12 +445,7 @@ function SubscriptionsTab({
   onOpenPlan: ((planId: string) => void) | undefined
 }) {
   return (
-    <Section
-      title="Subscriptions"
-      description="Every subscription this customer has had"
-      flush
-      action={addButton}
-    >
+    <Section title="Subscriptions" flush bare>
       {isLoading ? (
         <div className="p-4">
           <LoadingRows />
@@ -462,6 +453,7 @@ function SubscriptionsTab({
       ) : (
         <DetailTable
           label="Subscriptions"
+          action={addButton}
           facet={{ label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] }}
           noun="subscriptions"
           rows={subscriptions}
@@ -539,14 +531,12 @@ function invoicePayment(invoice: Invoice): { label: string; tone: PillTone } {
 
 /** The invoices table, edge to edge inside a flush section. */
 function InvoiceTable({
-  title,
   action,
   invoices,
   isLoading,
   formatDate,
   onOpenInvoice,
 }: {
-  title?: string
   action?: ReactNode
   invoices: Invoice[]
   isLoading: boolean
@@ -555,8 +545,7 @@ function InvoiceTable({
 }) {
   if (isLoading) {
     return (
-      <div className="flex flex-col gap-4 p-4">
-        {title ? <h2 className="text-sm font-medium">{title}</h2> : null}
+      <div className="p-4">
         <LoadingRows />
       </div>
     )
@@ -564,7 +553,6 @@ function InvoiceTable({
   return (
     <DetailTable
       label="Invoices"
-      {...(title ? { title } : {})}
       {...(action ? { action } : {})}
       facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
       noun="invoices"
@@ -725,7 +713,7 @@ function InformationTab({
       </div>
 
       <div className="flex flex-col gap-5">
-        <Section title="Metadata" description="Keys your own system attached to this customer">
+        <Section title="Metadata">
           {metadata.length > 0 ? (
             <Properties
               columns={2}

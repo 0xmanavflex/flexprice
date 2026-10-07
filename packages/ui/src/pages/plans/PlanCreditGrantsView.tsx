@@ -35,19 +35,7 @@ export function PlanCreditGrantsView({
   onDelete,
 }: PlanCreditGrantsViewProps) {
   return (
-    <Section
-      title="Credit grants"
-      description="Credits every subscriber receives in their wallet"
-      flush
-      action={
-        grants.length > 0 ? (
-          <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-            <PlusIcon aria-hidden />
-            Add grant
-          </Button>
-        ) : undefined
-      }
-    >
+    <Section title="Credit grants" flush bare={grants.length > 0}>
       {grants.length === 0 ? (
         <SectionEmpty
           title="No credit grants yet"
@@ -62,6 +50,12 @@ export function PlanCreditGrantsView({
       ) : (
         <DetailTable
           label="Credit grants"
+          action={
+            <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
+              <PlusIcon aria-hidden />
+              Add grant
+            </Button>
+          }
           noun="credit grants"
           rows={grants}
           columns={[

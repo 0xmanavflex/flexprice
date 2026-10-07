@@ -29,6 +29,16 @@ export const WithActions: Story = {
   },
 }
 
+/** `bare` drops the header band: the title stays for screen readers, and the body leads with its own search. */
+export const Bare: Story = {
+  args: { bare: true, flush: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('region', { name: 'Entitlements' })).toBeInTheDocument()
+    await expect(canvas.getByRole('heading', { name: 'Entitlements' })).toBeInTheDocument()
+  },
+}
+
 /** A region labelled by a real heading, not by large text. */
 export const IsALabelledRegion: Story = {
   play: async ({ canvasElement }) => {

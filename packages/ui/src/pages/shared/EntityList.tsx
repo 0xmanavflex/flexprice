@@ -236,10 +236,8 @@ export interface EntityListProps<T> {
   filteredEmptyTitle?: string | undefined
   filteredEmptyDescription?: string | undefined
 
-  /** The heading's tag. A list page is the page (`h1`); a table inside a detail page is not. */
-  headingAs?: 'h1' | 'h2' | 'h3'
-  /** A visible title at the start of the toolbar, before the search. Without it the heading is screen-reader only. */
-  title?: string | undefined
+  /** The sr-only heading's tag. A list page is the page (`h1`); a table inside a detail page is not. */
+  headingAs?: 'h1' | 'h3'
   className?: string
 }
 
@@ -385,7 +383,6 @@ export function EntityList<T extends object>({
   filteredEmptyTitle,
   filteredEmptyDescription,
   headingAs: Heading = 'h1',
-  title,
   className,
 }: EntityListProps<T>) {
   /* --- column visibility, owned here so the ⋯ menu has something to toggle --- */
@@ -658,8 +655,7 @@ export function EntityList<T extends object>({
       aria-label={`Search and filter ${noun}`}
       className="flex flex-wrap items-center justify-between gap-3"
     >
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {title ? <Heading className="text-sm font-medium">{title}</Heading> : null}
+      <div className="flex flex-wrap items-center gap-2">
         <InputGroup className="h-9 w-72 max-w-full">
           <InputGroupAddon align="inline-start">
             <SearchIcon className="text-muted-foreground size-4" aria-hidden />
@@ -801,7 +797,7 @@ export function EntityList<T extends object>({
       aria-label={label}
       className={cn('flex w-full min-w-0 flex-col gap-5', className)}
     >
-      {title ? null : <Heading className="sr-only">{label}</Heading>}
+      <Heading className="sr-only">{label}</Heading>
       {/* A list with nothing in it has nothing to search, filter or sort: the
           guided empty state stands alone until the first record exists. */}
       {showFirstRun ? null : toolbar}

@@ -73,7 +73,7 @@ export function CustomerEventsGrid({ events }: { events: CustomerEvent[] }) {
 
   return (
     <>
-      <Section title="Recent events" description="Latest usage events for this customer" flush>
+      <Section title="Recent events" flush bare>
         <DetailTable
           label="Recent events"
           noun="events"

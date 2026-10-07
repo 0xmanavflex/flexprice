@@ -41,8 +41,6 @@ export interface ChargeTableProps {
   locale?: string
   /** Section heading; defaults to "Charges". */
   title?: string
-  /** Section sub-heading under the title. */
-  description?: string
   /**
    * The sentence shown when there are no charges, in the caller's own noun.
    *
@@ -106,11 +104,10 @@ export function ChargeTable({
   onTerminate,
   emptyDescription,
   title = 'Charges',
-  description = 'What it bills, and when',
 }: ChargeTableProps) {
   const hasActions = Boolean(onEdit || onTerminate)
   const addButton = onAdd ? (
-    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+    <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
       <PlusIcon aria-hidden />
       Add charges
     </Button>
@@ -126,21 +123,17 @@ export function ChargeTable({
         : 'Nothing is billed until there is a charge.')
 
     return (
-      <Section title={title} description={description} flush>
+      <Section title={title} flush>
         <SectionEmpty title="No charges yet" description={emptyText} action={addButton} />
       </Section>
     )
   }
 
   return (
-    <Section
-      title={title}
-      description={description}
-      flush
-      {...(addButton ? { action: addButton } : {})}
-    >
+    <Section title={title} flush bare>
       <DetailTable
         label="Charges"
+        {...(addButton ? { action: addButton } : {})}
         facet={{ label: 'Billing model', value: (charge) => modelLabel(charge) }}
         noun="charges"
         rows={charges}

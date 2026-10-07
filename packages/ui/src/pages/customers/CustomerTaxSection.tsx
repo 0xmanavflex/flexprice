@@ -84,17 +84,20 @@ export function CustomerTaxSection({
   const target =
     dialog && dialog.kind !== 'add' ? associations.find((a) => a.id === dialog.id) : undefined
 
-  return (
-    <Section
-      title="Taxes"
-      description="Tax rates applied to every invoice raised for this customer"
-      flush
-      actions={
-        <Button variant="outline" size="sm" onClick={() => setDialog({ kind: 'add' })}>
-          <PlusIcon aria-hidden /> Add tax rate
-        </Button>
-      }
+  const addTaxRate = (
+    <Button
+      variant="outline"
+      size="sm"
+      className="h-9 px-3"
+      onClick={() => setDialog({ kind: 'add' })}
     >
+      <PlusIcon aria-hidden /> Add tax rate
+    </Button>
+  )
+  const showTable = !isLoading && !failed && associations.length > 0
+
+  return (
+    <Section title="Taxes" flush bare={showTable} {...(showTable ? {} : { actions: addTaxRate })}>
       {isLoading ? (
         <div className="p-6">
           <LoadingRows />
@@ -118,6 +121,7 @@ export function CustomerTaxSection({
       ) : (
         <DetailTable
           label="Tax rates"
+          action={addTaxRate}
           noun="tax rates"
           rows={associations}
           getRowId={(a) => a.id}

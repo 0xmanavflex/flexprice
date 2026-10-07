@@ -44,18 +44,13 @@ function cadenceLabel(grant: CreditGrant): string {
 export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGrantTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
-    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+    <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
       <PlusIcon aria-hidden="true" />
       Add credit grant
     </Button>
   ) : null
   return (
-    <Section
-      title="Credit grants"
-      description="Balances handed to subscribers"
-      flush
-      {...(addButton && grants.length > 0 ? { action: addButton } : {})}
-    >
+    <Section title="Credit grants" flush bare={grants.length > 0}>
       {grants.length === 0 ? (
         <SectionEmpty
           title="No credit grants yet"
@@ -65,6 +60,7 @@ export function CreditGrantTable({ grants, onAdd, onEdit, onDelete }: CreditGran
       ) : (
         <DetailTable
           label="Credit grants"
+          {...(addButton ? { action: addButton } : {})}
           noun="credit grants"
           rows={grants}
           getRowId={(grant) => grant.id}

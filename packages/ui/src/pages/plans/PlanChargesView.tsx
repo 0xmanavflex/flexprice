@@ -77,7 +77,6 @@ export function PlanChargesView({
   return (
     <Section
       title="Charges"
-      description="What this plan bills, and when"
       flush
       action={
         readOnly || charges.length === 0 ? undefined : (

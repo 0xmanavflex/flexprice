@@ -91,7 +91,7 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           value: 'members',
           label: noun,
           count: data.entityCount,
-          content: <GroupMembersView kind={kind} count={data.entityCount} />,
+          content: <GroupMembersView kind={kind} />,
         },
         {
           value: 'information',

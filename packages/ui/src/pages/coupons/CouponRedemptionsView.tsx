@@ -34,7 +34,7 @@ export function CouponRedemptionsView({
   redemptions?: CouponRedemption[]
 }) {
   return (
-    <Section title="Redemptions" description="Subscriptions this coupon is applied to" flush>
+    <Section title="Redemptions" flush bare>
       <DetailTable
         label="Redemptions"
         noun="redemptions"

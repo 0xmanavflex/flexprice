@@ -232,7 +232,7 @@ export function InvoiceDetailView({
       ) : null}
 
       {tab === 'payments' ? (
-        <Section title="Payments" flush>
+        <Section title="Payments" flush bare={invoice.payments.length > 0}>
           {invoice.payments.length === 0 ? (
             <SectionEmpty
               title="No payments yet"
@@ -268,7 +268,7 @@ export function InvoiceDetailView({
       ) : null}
 
       {tab === 'credit-notes' ? (
-        <Section title="Credit notes" flush>
+        <Section title="Credit notes" flush bare={invoice.creditNotes.length > 0}>
           {invoice.creditNotes.length === 0 ? (
             <SectionEmpty
               title="No credit notes yet"

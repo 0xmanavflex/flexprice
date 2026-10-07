@@ -53,10 +53,9 @@ export const Default: Story = {
   },
 }
 
-/** A visible title leads the toolbar and an action closes it, in place of a separate section header. */
-export const WithTitleAndAction: Story = {
+/** An action closes the toolbar, after the last control, in place of a section header button. */
+export const WithAction: Story = {
   args: {
-    title: 'Recent invoices',
     action: (
       <Button variant="outline" className="h-9 px-3">
         View all
@@ -65,7 +64,6 @@ export const WithTitleAndAction: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'View all' })).toBeVisible()
   },
 }

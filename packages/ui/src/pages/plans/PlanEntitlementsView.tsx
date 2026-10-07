@@ -64,19 +64,7 @@ export function PlanEntitlementsView({
   onOpenFeature,
 }: PlanEntitlementsViewProps) {
   return (
-    <Section
-      title="Entitlements"
-      description="What subscribers get: feature access and included allowances"
-      flush
-      action={
-        entitlements.length > 0 ? (
-          <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-            <PlusIcon aria-hidden />
-            Add entitlement
-          </Button>
-        ) : undefined
-      }
-    >
+    <Section title="Entitlements" flush bare={entitlements.length > 0}>
       {entitlements.length === 0 ? (
         <SectionEmpty
           title="No entitlements yet"
@@ -91,6 +79,12 @@ export function PlanEntitlementsView({
       ) : (
         <DetailTable
           label="Entitlements"
+          action={
+            <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
+              <PlusIcon aria-hidden />
+              Add entitlement
+            </Button>
+          }
           facet={{ label: 'Type', value: (e) => TYPE_LABEL[e.featureType] }}
           noun="entitlements"
           rows={entitlements}

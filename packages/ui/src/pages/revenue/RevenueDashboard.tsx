@@ -589,12 +589,18 @@ function RevenueByCustomerPanel({
 
   return (
     <section aria-labelledby="revenue-by-customer" className="flex flex-col gap-4">
-      <div className="flex items-center justify-between gap-3 pt-4">
-        <h2 id="revenue-by-customer" className="text-sm font-medium">
+      {rows.length > 0 ? (
+        <h2 id="revenue-by-customer" className="sr-only">
           Revenue by customer
         </h2>
-        <PanelButton onClick={onViewCustomers}>All customers</PanelButton>
-      </div>
+      ) : (
+        <div className="flex items-center justify-between gap-3 pt-4">
+          <h2 id="revenue-by-customer" className="text-sm font-medium">
+            Revenue by customer
+          </h2>
+          <PanelButton onClick={onViewCustomers}>All customers</PanelButton>
+        </div>
+      )}
 
       {rows.length > 0 ? (
         <div className="bg-background overflow-hidden rounded-xl border">
@@ -604,6 +610,11 @@ function RevenueByCustomerPanel({
             columns={BY_CUSTOMER_COLUMNS}
             rows={rows}
             getRowId={(row) => row.id}
+            action={
+              <Button variant="outline" className="h-9 px-3" onClick={onViewCustomers}>
+                All customers
+              </Button>
+            }
           />
         </div>
       ) : (
