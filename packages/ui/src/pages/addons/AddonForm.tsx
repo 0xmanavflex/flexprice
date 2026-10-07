@@ -122,15 +122,13 @@ export function AddonForm({
     <FormPage
       title={mode === 'create' ? 'Create add-on' : `Edit ${defaultValue?.name || 'add-on'}`}
       trail={trail}
-      width={isEdit ? 'narrow' : 'wide'}
+      width="wide"
       preview={
-        isEdit ? undefined : (
-          <AddonPreviewCard
-            name={form.watch('name')}
-            lookupKey={form.watch('lookupKey')}
-            description={form.watch('description') ?? ''}
-          />
-        )
+        <AddonPreviewCard
+          name={form.watch('name')}
+          lookupKey={form.watch('lookupKey')}
+          description={form.watch('description') ?? ''}
+        />
       }
       toolbar={{
         mode: mode,

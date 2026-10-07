@@ -4,7 +4,10 @@ import {
   useCreateBulkEntitlements,
   useCreateBulkPrices,
   useCreateCreditGrant,
+  useCreditGrants,
+  useEntitlements,
   usePlan,
+  usePrices,
   useUpdatePlan,
   useCreatePlan,
 } from '@fp/query'
@@ -14,7 +17,7 @@ import {
   PriceEntityType,
   type CreatePlan,
 } from '@fp/domain'
-import { PlanForm, type PlanFormValue } from '@fp/ui/pages'
+import { PlanCustomerPreview, PlanForm, type PlanFormValue } from '@fp/ui/pages'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { usePlanFormOptions } from './planFormOptions'
 
@@ -44,6 +47,10 @@ export function PlanFormPage(props: PlanFormPageProps) {
   const createGrant = useCreateCreditGrant()
   const existing = usePlan(props.mode === 'edit' ? props.planId : '')
   const { meters, units, featureOptions } = usePlanFormOptions()
+  const savedId = props.mode === 'edit' ? props.planId : ''
+  const savedCharges = usePrices(PriceEntityType.Plan, savedId)
+  const savedEntitlements = useEntitlements(EntitlementEntityType.Plan, savedId)
+  const savedGrants = useCreditGrants(CreditGrantScope.Plan, savedId)
   const progress = useRef<{
     planId: string
     charges: boolean
@@ -152,6 +159,15 @@ export function PlanFormPage(props: PlanFormPageProps) {
         { label: 'Edit' },
       ]}
       {...stepProps}
+      savedPreview={
+        <PlanCustomerPreview
+          charges={savedCharges.data ?? []}
+          entitlements={savedEntitlements.data ?? []}
+          grants={savedGrants.data ?? []}
+          meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+          featureUnit={(id) => featureOptions.find((f) => f.id === id)?.unit}
+        />
+      }
       isSubmitting={updatePlan.isPending}
       submitError={updatePlan.error ? toSubmitError(updatePlan.error) : null}
       onSubmit={({ plan: draft }: { plan: CreatePlan }) =>

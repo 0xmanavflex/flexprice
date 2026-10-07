@@ -1,7 +1,8 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { FeatureType } from '@fp/domain'
+import { BillingModel, BillingPeriod, FeatureType, InvoiceCadence, PriceType } from '@fp/domain'
 import { PlanForm } from './PlanForm'
+import { PlanPreviewCard } from './PlanPreviewCard'
 
 /**
  * The plan create/edit page — same proof as every form here: fixtures in, a
@@ -121,12 +122,27 @@ export const PreviewFollowsTheDraft: Story = {
   },
 }
 
-/** Edit is the details step alone, so there is nothing to preview. */
-export const EditHasNoPreview: Story = {
-  args: Edit.args ?? {},
+/** Edit is the details step alone; the rail shows the saved plan's own pricing. */
+export const EditKeepsThePreview: Story = {
+  args: {
+    ...(Edit.args ?? {}),
+    savedPreview: (
+      <PlanPreviewCard
+        charges={[
+          {
+            type: PriceType.Fixed,
+            billingModel: BillingModel.FlatFee,
+            amount: '49',
+            currency: 'USD',
+            billingPeriod: BillingPeriod.Monthly,
+            invoiceCadence: InvoiceCadence.Advance,
+          },
+        ]}
+      />
+    ),
+  },
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).queryByRole('complementary', { name: 'Plan preview' }),
-    ).not.toBeInTheDocument()
+    const rail = within(canvasElement).getByRole('complementary', { name: 'Plan preview' })
+    await expect(within(rail).getByText('$49.00')).toBeInTheDocument()
   },
 }

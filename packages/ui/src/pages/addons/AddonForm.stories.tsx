@@ -139,12 +139,11 @@ export const PreviewFollowsTheDraft: Story = {
   },
 }
 
-/** Edit stays narrow with no rail. */
-export const EditHasNoPreview: Story = {
+/** Edit keeps the same rail as create. */
+export const EditKeepsThePreview: Story = {
   args: { mode: 'edit', defaultValue: { name: 'Priority support', lookupKey: 'priority_support' } },
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).queryByRole('complementary', { name: 'Add-on preview' }),
-    ).toBeNull()
+    const rail = within(canvasElement).getByRole('complementary', { name: 'Add-on preview' })
+    await expect(within(rail).getByText('Priority support')).toBeInTheDocument()
   },
 }

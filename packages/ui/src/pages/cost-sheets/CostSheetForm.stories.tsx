@@ -63,7 +63,8 @@ export const SummaryFollowsDraft: Story = {
   },
 }
 
-export const EditHasNoSummary: Story = {
+/** Edit keeps the same summary rail as create. */
+export const EditKeepsTheSummary: Story = {
   args: {
     mode: 'edit',
     defaultValue: {
@@ -73,8 +74,7 @@ export const EditHasNoSummary: Story = {
     },
   },
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).queryByRole('complementary', { name: /cost sheet summary/i }),
-    ).not.toBeInTheDocument()
+    const rail = within(canvasElement).getByRole('complementary', { name: /cost sheet summary/i })
+    await expect(within(rail).getByText('Infrastructure')).toBeInTheDocument()
   },
 }

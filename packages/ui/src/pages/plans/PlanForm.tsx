@@ -52,7 +52,7 @@ export const PlanFormProvenance = provenance({
     'ui/textarea',
     'ui/button',
   ],
-  note: 'Full-page stepped plan form: details plus staged charges, entitlements and credit grants, with a live preview beside it on create.',
+  note: 'Full-page stepped plan form: details plus staged charges, entitlements and credit grants, with a live preview beside it (the saved plan’s own pricing on edit).',
 })
 
 /** What a create emits: the plan and the children to write after it. */
@@ -75,6 +75,8 @@ export interface PlanFormProps {
   priceUnits?: PriceUnitOption[]
   /** Features an entitlement can be granted on. */
   features?: FeatureOption[]
+  /** Edit only: the preview of the saved plan, since charges are edited on the plan page. */
+  savedPreview?: ReactNode
   onSubmit: (value: PlanFormValue) => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -103,6 +105,7 @@ export function PlanForm({
   meters = [],
   priceUnits = [],
   features = [],
+  savedPreview,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -285,7 +288,7 @@ export function PlanForm({
     <FormPage
       title={isEdit ? `Edit ${planName ?? 'plan'}` : 'Create plan'}
       trail={trail}
-      width={isEdit ? 'narrow' : 'wide'}
+      width="wide"
       toolbar={{
         mode,
         noun: 'plan',
@@ -297,7 +300,9 @@ export function PlanForm({
       }}
       stepper={{ flow, label: 'Plan steps', hideNav: Boolean(adding) }}
       preview={
-        isEdit ? undefined : (
+        isEdit ? (
+          savedPreview
+        ) : (
           <PlanPreviewCard
             charges={charges}
             meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}

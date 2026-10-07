@@ -266,24 +266,22 @@ export function CustomerForm({
     <FormPage
       title={isEdit ? `Edit ${customerName || 'customer'}` : 'Create customer'}
       trail={trail}
-      width={isEdit ? 'narrow' : 'wide'}
+      width="wide"
       preview={
-        isEdit ? undefined : (
-          <CustomerPreviewCard
-            name={form.watch('name')}
-            externalId={form.watch('externalId')}
-            email={form.watch('email')}
-            phone={form.watch('phone')}
-            addressLine1={form.watch('addressLine1')}
-            addressLine2={form.watch('addressLine2')}
-            addressCity={form.watch('addressCity')}
-            addressState={form.watch('addressState')}
-            addressPostalCode={form.watch('addressPostalCode')}
-            addressCountry={form.watch('addressCountry')}
-            timezone={form.watch('timezone')}
-            taxTreatment={form.watch('taxTreatment')}
-          />
-        )
+        <CustomerPreviewCard
+          name={form.watch('name')}
+          externalId={form.watch('externalId')}
+          email={form.watch('email')}
+          phone={form.watch('phone')}
+          addressLine1={form.watch('addressLine1')}
+          addressLine2={form.watch('addressLine2')}
+          addressCity={form.watch('addressCity')}
+          addressState={form.watch('addressState')}
+          addressPostalCode={form.watch('addressPostalCode')}
+          addressCountry={form.watch('addressCountry')}
+          timezone={form.watch('timezone')}
+          taxTreatment={form.watch('taxTreatment')}
+        />
       }
       toolbar={{
         mode: mode,

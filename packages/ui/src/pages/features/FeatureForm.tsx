@@ -787,18 +787,16 @@ export function FeatureForm(props: FeatureFormProps) {
     <FormPage
       title={isEdit ? `Edit ${feature?.name ?? 'product'}` : 'Create product'}
       trail={trail}
-      width={isEdit ? 'narrow' : 'wide'}
+      width="wide"
       preview={
-        isEdit ? undefined : (
-          <FeaturePreviewCard
-            name={form.watch('name')}
-            lookupKey={form.watch('lookupKey')}
-            type={type}
-            eventName={form.watch('meter.eventName')}
-            aggregationType={aggregationType}
-            resetUsage={form.watch('meter.resetUsage')}
-          />
-        )
+        <FeaturePreviewCard
+          name={form.watch('name')}
+          lookupKey={form.watch('lookupKey')}
+          type={type}
+          eventName={form.watch('meter.eventName')}
+          aggregationType={aggregationType}
+          resetUsage={form.watch('meter.resetUsage')}
+        />
       }
       toolbar={{
         mode,

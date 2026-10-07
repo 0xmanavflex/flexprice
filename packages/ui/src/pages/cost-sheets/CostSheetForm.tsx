@@ -112,15 +112,13 @@ export function CostSheetForm({
     <FormPage
       title={isEdit ? `Edit ${defaultValue?.name || 'cost sheet'}` : 'Create cost sheet'}
       trail={trail}
-      width={isEdit ? 'narrow' : 'wide'}
+      width="wide"
       preview={
-        isEdit ? undefined : (
-          <CostSheetSummaryCard
-            name={form.watch('name') ?? ''}
-            lookupKey={form.watch('lookupKey') ?? ''}
-            description={form.watch('description') ?? ''}
-          />
-        )
+        <CostSheetSummaryCard
+          name={form.watch('name') ?? ''}
+          lookupKey={form.watch('lookupKey') ?? ''}
+          description={form.watch('description') ?? ''}
+        />
       }
       toolbar={{
         mode: mode,

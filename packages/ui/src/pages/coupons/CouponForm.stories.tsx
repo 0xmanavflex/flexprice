@@ -1,5 +1,6 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
+import { CouponCadence, CouponType } from '@fp/domain'
 import { CouponForm } from './CouponForm'
 
 /**
@@ -36,6 +37,22 @@ export const Default: Story = {}
 /** The read-only summary tells the person which coupon they are renaming. */
 export const WithSummary: Story = {
   args: { summary: { code: 'LAUNCH20', discount: '20% off' } },
+}
+
+/** The same preview as create, drawn from the coupon's fixed terms, with the name following the draft. */
+export const WithPreview: Story = {
+  args: {
+    summary: { code: 'LAUNCH20', discount: '20% off' },
+    terms: {
+      code: 'LAUNCH20',
+      type: CouponType.Percentage,
+      percentageOff: '20',
+      cadence: CouponCadence.Once,
+    },
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('20% off')).toBeInTheDocument()
+  },
 }
 
 export const Submitting: Story = { args: { isSubmitting: true } }

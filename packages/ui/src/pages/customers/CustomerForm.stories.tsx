@@ -67,7 +67,8 @@ export const Edit: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
-    await expect(canvas.queryByRole('complementary')).not.toBeInTheDocument()
+    const rail = canvas.getByRole('complementary', { name: 'Customer preview' })
+    await expect(within(rail).getByText('billing@acme.test')).toBeInTheDocument()
     await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
     await expect(args.onSubmit).toHaveBeenCalled()
