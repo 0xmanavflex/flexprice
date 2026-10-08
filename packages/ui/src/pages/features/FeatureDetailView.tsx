@@ -39,7 +39,7 @@ import { EditableCard } from '../../compositions/EditableCard'
 import { LoadingRows } from '../../compositions'
 import { MetadataCard } from '../../compositions/MetadataCard'
 import { Section } from '../../compositions/Section'
-import { DetailTabs, Dot, Properties } from '../../compositions/DetailKit'
+import { DetailTabs, Properties } from '../../compositions/DetailKit'
 import { MetricChart, type MetricPoint } from '../shared/charts'
 import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
@@ -241,23 +241,20 @@ export function FeatureDetailView({
         icon={<Glyph />}
         title={feature.name}
         id={feature.lookupKey || feature.id}
-        subtitle={
+        badges={
           <>
-            <span>{FEATURE_TYPE_LABEL[feature.type]}</span>
-            {archived ? (
-              <>
-                <Dot />
-                <Status value="archived" />
-              </>
-            ) : null}
+            <FeatureTypePill type={feature.type} label={FEATURE_TYPE_LABEL[feature.type]} />
+            {archived ? <Status value="archived" /> : null}
           </>
+        }
+        primary={
+          <Button variant="outline" className="h-8 px-3" onClick={onEditConfiguration}>
+            <PencilIcon aria-hidden />
+            Edit
+          </Button>
         }
         actions={
           <>
-            <Button variant="outline" className="h-8 px-3" onClick={onEditConfiguration}>
-              <PencilIcon aria-hidden />
-              Edit
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={

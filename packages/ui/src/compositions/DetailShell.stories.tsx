@@ -16,9 +16,8 @@ const meta = {
   args: {
     title: 'Scale',
     identifier: 'plan_scale_monthly',
-    description: 'Usage-based plan for growing teams.',
     badges: <Badge variant="success-light">Published</Badge>,
-    actions: <Button variant="outline">Edit</Button>,
+    primary: <Button variant="outline">Edit</Button>,
     metrics: [
       {
         label: 'Active contracts',
@@ -38,6 +37,24 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+/**
+ * The right-hand cluster: primary action first, then chips, then the "ID" copy
+ * chip. The full id is never printed; it is the copy chip's tooltip.
+ */
+export const HeaderCluster: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const copy = canvas.getByRole('button', { name: 'Copy ID plan_scale_monthly' })
+    await expect(copy).toHaveTextContent('ID')
+    await expect(canvas.queryByText('plan_scale_monthly')).not.toBeInTheDocument()
+    const edit = canvas.getByRole('button', { name: 'Edit' })
+    const chip = canvas.getByText('Published')
+    // Document order: primary action, then chip, then the id chip.
+    await expect(edit.compareDocumentPosition(chip) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    await expect(chip.compareDocumentPosition(copy) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  },
+}
 
 /** No metrics: the rail is omitted, not rendered empty. */
 export const WithoutMetrics: Story = {

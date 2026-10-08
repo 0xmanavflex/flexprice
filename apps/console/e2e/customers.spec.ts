@@ -127,14 +127,14 @@ test.describe('a customer detail page', () => {
     await openFirstCustomer(page)
     const customerUrl = page.url()
     const customerId = customerUrl.match(/\/customers\/([^/?]+)/)?.[1]
-    await page.getByRole('button', { name: 'Customer actions' }).click()
-    await page.getByRole('menuitem', { name: 'Create contract' }).click()
+    // Create contract is the header's primary action, not a menu item.
+    await page.getByRole('button', { name: 'Create contract' }).first().click()
 
     await expect(page).toHaveURL(new RegExp(`/customers/${customerId}/subscriptions/new`))
     await expect(page.getByRole('button', { name: 'Next' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Close form' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)
-    await expect(page.getByRole('button', { name: 'Create contract' })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Create contract' }).first()).toBeVisible()
   })
 })

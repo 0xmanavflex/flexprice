@@ -1,5 +1,15 @@
-import { InvoiceStatus, type InvoiceDetail } from '@fp/domain'
-import type { InvoiceDocument } from '@fp/ui/pages'
+import {
+  CREDIT_NOTE_STATUS_LABEL,
+  PAYMENT_METHOD_LABEL,
+  PAYMENT_STATUS_LABEL,
+  type CreditNote,
+  type InvoiceDetail,
+  type Payment,
+  type Tenant,
+  formatAddress,
+} from '@fp/domain'
+import type { InvoiceDocument, InvoiceLine } from '@fp/ui/pages'
+import { mockInvoiceActivity } from './invoiceActivityMock'
 
 const day = (date: Date | null) =>
   date
@@ -13,49 +23,39 @@ const num = (value: string) => {
 }
 
 /**
+ * The per-unit price shown beside a line, for display only.
+ *
+ * The API sends a line's quantity and amount, not its unit price, so this is
+ * the amount over the quantity. For tiered or package pricing that is the
+ * effective (average) unit price. `null` when there is no quantity to divide by.
+ */
+function unitPrice(quantity: string, amount: string): number | null {
+  const qty = Number(quantity.replace(/,/g, ''))
+  if (!Number.isFinite(qty) || qty <= 0) return null
+  return num(amount) / qty
+}
+
+export interface InvoiceDocumentSources {
+  /** The issuing tenant, for "Bill from". Omitted while it loads. */
+  tenant?: Tenant | undefined
+  payments?: Payment[] | undefined
+  creditNotes?: CreditNote[] | undefined
+}
+
+/**
  * Maps the invoice read model onto the document the detail view renders.
  *
- * Figures come from the API (`totals`), not from the lines. What the API does
- * not send — issuer, payment method, payments, credit notes — is left out
- * rather than invented, and the timeline is only the lifecycle moments the
- * invoice actually timestamps.
+ * Figures come from the API (`totals`), not from the lines. The issuer comes
+ * from the tenant record, payments and credit notes from their own lists
+ * filtered to this invoice. The activity log is mock data — see
+ * `invoiceActivityMock.ts`.
  */
-export function toInvoiceDocument(invoice: InvoiceDetail): InvoiceDocument {
-  const events: InvoiceDocument['events'] = []
-  const push = (title: string, at: Date | null, summary: string, status: 'completed' | 'issue') => {
-    if (at) events.unshift({ id: events.length + 1, title, at: day(at) ?? '', status, summary })
-  }
-  push('Draft created', invoice.createdAt, 'The invoice was created.', 'completed')
-  push('Invoice finalized', invoice.finalizedAt, 'The invoice was locked and issued.', 'completed')
-  push('Paid', invoice.paidAt, 'Payment was received in full.', 'completed')
-  push('Voided', invoice.voidedAt, 'The invoice was voided.', 'issue')
-  // What is still to come, so a draft reads as a path rather than a dead end.
-  // Only steps the invoice's own state implies: no "sent" step, the API does not say.
-  const upcoming: InvoiceDocument['events'] = []
-  const settled =
-    invoice.paidAt ||
-    invoice.voidedAt ||
-    invoice.status === InvoiceStatus.Paid ||
-    invoice.status === InvoiceStatus.Void
-  if (!invoice.finalizedAt && !settled && invoice.status === InvoiceStatus.Draft) {
-    upcoming.push({
-      id: 0,
-      title: 'Invoice finalized',
-      at: 'When the period closes',
-      status: 'pending',
-      summary: '',
-    })
-  }
-  if (!settled && invoice.dueDate) {
-    upcoming.push({
-      id: 0,
-      title: 'Payment due',
-      at: day(invoice.dueDate) ?? '',
-      status: 'pending',
-      summary: '',
-    })
-  }
-  events.unshift(...upcoming.map((event, index) => ({ ...event, id: events.length + 1 + index })))
+export function toInvoiceDocument(
+  invoice: InvoiceDetail,
+  sources: InvoiceDocumentSources = {},
+): InvoiceDocument {
+  const { tenant, payments = [], creditNotes = [] } = sources
+  const supportEmail = tenant ? tenant.helpEmail || tenant.billingEmail : ''
 
   return {
     id: invoice.id,
@@ -65,13 +65,30 @@ export function toInvoiceDocument(invoice: InvoiceDetail): InvoiceDocument {
     currency: invoice.currency || 'USD',
     issuedAt: day(invoice.issuedAt),
     dueAt: day(invoice.dueDate),
-    billTo: { name: invoice.customerName, email: invoice.customerEmail, address: '' },
-    lines: invoice.lines.map((line) => ({
+    billTo: {
+      name: invoice.customerName,
+      ...(invoice.customerEmail ? { email: invoice.customerEmail } : {}),
+      address: formatAddress(invoice.customerAddress),
+    },
+    ...(tenant
+      ? {
+          from: {
+            name: tenant.name,
+            ...(supportEmail ? { email: supportEmail } : {}),
+            address: formatAddress(tenant.address),
+            // The tenant record carries no logo yet; the view draws an initial tile.
+            logoUrl: null,
+          },
+        }
+      : {}),
+    lines: invoice.lines.map((line): InvoiceLine => ({
       id: line.id,
       description: line.description,
       ...(line.detail ? { detail: line.detail } : {}),
       quantity: line.quantity,
+      unitPrice: unitPrice(line.quantity, line.amount),
       amount: num(line.amount),
+      kind: line.priceType,
     })),
     prepaidCredits: num(invoice.prepaidCredits),
     tax: num(invoice.tax),
@@ -82,9 +99,27 @@ export function toInvoiceDocument(invoice: InvoiceDetail): InvoiceDocument {
       due: num(invoice.amountRemaining.amount),
     },
     customerId: invoice.customerId,
+    subscriptionId: invoice.subscriptionId,
     subscriptionLabel: invoice.subscriptionId ?? '',
-    creditNotes: [],
-    payments: [],
-    events,
+    // The API has no hosted invoice page yet, so Copy link stays disabled.
+    hostedUrl: null,
+    metadata: invoice.metadata,
+    payments: payments.map((payment) => ({
+      id: payment.id,
+      date: day(payment.succeededAt ?? payment.createdAt) ?? '—',
+      method:
+        PAYMENT_METHOD_LABEL[payment.methodType as keyof typeof PAYMENT_METHOD_LABEL] ??
+        payment.methodType,
+      amount: num(payment.amount.amount),
+      status: PAYMENT_STATUS_LABEL[payment.status],
+    })),
+    creditNotes: creditNotes.map((note) => ({
+      id: note.id,
+      number: note.number,
+      amount: num(note.amount.amount),
+      date: day(note.createdAt) ?? '—',
+      status: CREDIT_NOTE_STATUS_LABEL[note.status],
+    })),
+    events: mockInvoiceActivity(invoice),
   }
 }

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import {
   type CustomerDetail as CustomerDetailModel,
   type Invoice,
@@ -112,6 +112,7 @@ function Harness({
         onTabChange={setTab}
         onBack={onBack ?? (() => {})}
         onCreateSubscription={() => onCreateSubscription?.()}
+        onCreateInvoice={() => {}}
         {...(onEdit ? { onEdit } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
       />
@@ -150,7 +151,8 @@ export const NavigatesSections: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
-    await expect(canvas.getByRole('button', { name: 'Create contract' })).toBeVisible()
+    // One in the header, one on the Contracts table.
+    await expect(canvas.getAllByRole('button', { name: 'Create contract' })).toHaveLength(2)
 
     await userEvent.click(canvas.getByRole('tab', { name: /Invoices/ }))
     // The Invoices tab, with the full invoice number, is now on screen.
@@ -164,16 +166,23 @@ export const NavigatesSections: Story = {
   },
 }
 
-/** Create contract leaves this page. The detail view only hands off. */
+/** Create contract is the header's primary action. The detail view only hands off. */
 export const CreatesSubscription: Story = {
   args: { onCreateSubscription: fn() },
-  parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Create contract' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await expect(args.onCreateSubscription).toHaveBeenCalledOnce()
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
+  },
+}
+
+/** The header shows the id and email as copy chips, never as text under the name. */
+export const HeaderCopyChips: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: /^Copy ID / })).toHaveTextContent('ID')
+    await expect(canvas.getByRole('button', { name: /^Copy email / })).toBeVisible()
   },
 }
 

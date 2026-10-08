@@ -104,13 +104,18 @@ export { EditableCard, EditableCardProvenance } from './EditableCard'
 export type { EditableCardProps } from './EditableCard'
 export { MetadataCard, MetadataCardProvenance } from './MetadataCard'
 export type { MetadataCardProps } from './MetadataCard'
+export { RelatedCard, RelatedCardProvenance } from './RelatedCard'
+export type { RelatedCardProps, RelatedItem } from './RelatedCard'
 export { InlineField, InlineFieldProvenance } from './InlineField'
 export type { InlineFieldProps } from './InlineField'
 
 export {
   ChoiceCards,
   Composer,
+  CopyChip,
+  CopyEmail,
   CopyId,
+  DetailHeaderCluster,
   DetailKitProvenance,
   DetailTabs,
   Dot,

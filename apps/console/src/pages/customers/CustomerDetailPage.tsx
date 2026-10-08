@@ -113,6 +113,7 @@ export function CustomerDetailPage({
           params: { customerId: customer.data.id },
         })
       }
+      onCreateInvoice={() => void navigate({ to: '/invoices/new' })}
       onEdit={() => onEdit(customer.data.id)}
       onOpenInvoice={(invoiceId) =>
         void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })

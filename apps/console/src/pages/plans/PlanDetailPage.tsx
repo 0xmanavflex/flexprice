@@ -53,6 +53,7 @@ import {
   PlanChargesView,
   PlanCustomerPreview,
   PlanEntitlementsView,
+  Pill,
   Status,
   pricingSummary,
 } from '@fp/ui/pages'
@@ -61,7 +62,6 @@ import {
   ConfirmDialog,
   DetailHeader,
   DetailTabs,
-  Dot,
   EditableCard,
   FormDialog,
   LoadingRows,
@@ -179,34 +179,26 @@ export function PlanDetailPage({
         icon={<LayersIcon />}
         title={record.name}
         id={record.lookupKey || record.id}
-        subtitle={
+        badges={
           <>
-            <span>{planKind(charged)}</span>
-            {billedLabel(charged) ? (
-              <>
-                <Dot />
-                <span>{billedLabel(charged)}</span>
-              </>
-            ) : null}
-            {isArchived ? (
-              <>
-                <Dot />
-                <Status value={PLAN_STATUS_LABEL[record.status]} />
-              </>
-            ) : null}
+            <Pill>{planKind(charged)}</Pill>
+            {billedLabel(charged) ? <Pill>{billedLabel(charged)}</Pill> : null}
+            {isArchived ? <Status value={PLAN_STATUS_LABEL[record.status]} /> : null}
           </>
+        }
+        primary={
+          <Button
+            variant="outline"
+            className="h-8 px-3"
+            disabled={sync.isPending || isArchived}
+            onClick={() => sync.mutate(planId)}
+          >
+            <RefreshCwIcon aria-hidden />
+            {sync.isPending ? 'Syncing…' : 'Sync to contracts'}
+          </Button>
         }
         actions={
           <>
-            <Button
-              variant="outline"
-              className="h-8 px-3"
-              disabled={sync.isPending || isArchived}
-              onClick={() => sync.mutate(planId)}
-            >
-              <RefreshCwIcon aria-hidden />
-              {sync.isPending ? 'Syncing…' : 'Sync to contracts'}
-            </Button>
             <DropdownMenu>
               <DropdownMenuTrigger
                 render={

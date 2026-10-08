@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { CopyIcon, MoreHorizontalIcon, PencilIcon, PlusIcon, WalletIcon } from 'lucide-react'
+import { MoreHorizontalIcon, PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
@@ -39,7 +39,8 @@ import { DetailTable } from '../shared/DetailTable'
 import { SubscriptionCard } from './SubscriptionCard'
 
 /**
- * A customer's detail page: an avatar-tile `EntityHeader` (name, id chip, ⋯ menu)
+ * A customer's detail page: an avatar-tile `EntityHeader` (name; on the right
+ * Create contract / Create invoice, "ID" and email copy chips, ⋯ menu)
  * over line `DetailTabs`; the active tab renders as reference-style sections. It is presentational: the page fetches and hands data in.
  *
  * It shows only what the API has. A customer record carries no plan, currency or
@@ -75,6 +76,8 @@ export interface CustomerDetailProps {
   onBack: () => void
   /** The header's primary action. */
   onCreateSubscription: () => void
+  /** The header's second primary action; omitted, it is not shown. */
+  onCreateInvoice?: () => void
   /** Open the stepped Edit page: address and billing configuration. */
   onEdit?: () => void
   /**
@@ -130,6 +133,7 @@ export function CustomerDetail({
   onTabChange,
   onBack,
   onCreateSubscription,
+  onCreateInvoice,
   onEdit,
   onUpdateField,
   onUpdateMetadata,
@@ -143,8 +147,6 @@ export function CustomerDetail({
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
-  const since = customer.createdAt ? `Customer since ${formatDate(customer.createdAt)}` : null
-  const subtitle = [customer.email || null, since].filter(Boolean).join(' · ')
   const initials =
     customer.name
       .split(/\s+/)
@@ -166,8 +168,22 @@ export function CustomerDetail({
         trail={[{ label: 'Customers', onClick: onBack }, { label: customer.name }]}
         icon={<span className="text-xs font-medium">{initials}</span>}
         title={customer.name}
-        {...(subtitle ? { subtitle } : {})}
         id={customer.externalId || customer.id}
+        {...(customer.email ? { email: customer.email } : {})}
+        primary={
+          <>
+            <Button className="h-8 px-3" onClick={onCreateSubscription}>
+              <PlusIcon aria-hidden="true" />
+              Create contract
+            </Button>
+            {onCreateInvoice ? (
+              <Button variant="outline" className="h-8 px-3" onClick={onCreateInvoice}>
+                <ReceiptIcon aria-hidden="true" />
+                Create invoice
+              </Button>
+            ) : null}
+          </>
+        }
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -184,10 +200,6 @@ export function CustomerDetail({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
               <DropdownMenuGroup>
-                <DropdownMenuItem onClick={onCreateSubscription}>
-                  <PlusIcon className="text-muted-foreground" aria-hidden="true" />
-                  Create contract
-                </DropdownMenuItem>
                 {onEdit ? (
                   <DropdownMenuItem onClick={onEdit}>
                     <PencilIcon className="text-muted-foreground" aria-hidden="true" />
@@ -197,14 +209,6 @@ export function CustomerDetail({
                 <DropdownMenuItem onClick={() => onTabChange('wallet')}>
                   <WalletIcon className="text-muted-foreground" aria-hidden="true" />
                   Top up wallet
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    void navigator.clipboard?.writeText(customer.externalId || customer.id)
-                  }
-                >
-                  <CopyIcon className="text-muted-foreground" aria-hidden="true" />
-                  Copy customer ID
                 </DropdownMenuItem>
               </DropdownMenuGroup>
             </DropdownMenuContent>
@@ -255,12 +259,16 @@ export function CustomerDetail({
               isLoading={invoicesLoading}
               formatDate={formatDate}
               onOpenInvoice={onOpenInvoice}
-              action={
-                <Button size="sm" className="h-8 px-3">
-                  <PlusIcon aria-hidden="true" />
-                  New invoice
-                </Button>
-              }
+              {...(onCreateInvoice
+                ? {
+                    action: (
+                      <Button size="sm" className="h-8 px-3" onClick={onCreateInvoice}>
+                        <PlusIcon aria-hidden="true" />
+                        New invoice
+                      </Button>
+                    ),
+                  }
+                : {})}
             />
           </Section>
         ) : null}

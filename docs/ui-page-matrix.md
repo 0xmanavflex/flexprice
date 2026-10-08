@@ -39,13 +39,13 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |
 | home | `HomePage` | Dashboard | Panel | DashboardHome |
 | integrations | `IntegrationListPage` | List | ConnectorCard | IntegrationsBlock |
-| invoices | `InvoiceDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, Properties, Section | AppFailure, InvoiceDetailView, LoadingRows, PageBody, Toaster |
+| invoices | `InvoiceDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, Section | AppFailure, InvoiceDetailView, LoadingRows, PageBody, Toaster |
 | invoices | `InvoiceFormPage` | Form | Field | AppFailure, InvoiceForm, LoadingRows, PageBody |
 | invoices | `InvoiceListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | InvoiceGrid, ListState, PageBody |
 | payments | `PaymentDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section | AppFailure, CatalogDetailFrame, EditableCard, EntityLink, LoadingRows, PageBody, PaymentStatusBadge |
 | payments | `PaymentFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | PaymentForm |
 | payments | `PaymentListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | CollectionsSummary, ListState, PageBody, PaymentGrid |
-| plans | `PlanDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, Properties, RowActionsMenu, Section | AddChargeDialog, AppFailure, Button, CreditGrantCreateForm, CreditGrantEditForm, Dot, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EditableCard, EntitlementCreateForm, EntitlementEditForm, FeatureOption, LoadingRows, PlanChargesView, PlanCreditGrantsView, PlanCustomerPreview, PlanEntitlementsView, Status |
+| plans | `PlanDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, Properties, RowActionsMenu, Section | AddChargeDialog, AppFailure, Button, CreditGrantCreateForm, CreditGrantEditForm, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EditableCard, EntitlementCreateForm, EntitlementEditForm, FeatureOption, LoadingRows, Pill, PlanChargesView, PlanCreditGrantsView, PlanCustomerPreview, PlanEntitlementsView, Status |
 | plans | `PlanFormPage` | Form | ChoiceCards, Field, FormActions, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, PlanForm, PlanFormValue |
 | plans | `PlanListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PlanGrid |
 | price-units | `PriceUnitDetailPage` | Detail | DetailShell, DetailTabs, MetricRail, Section | AppFailure, CatalogDetailFrame, CatalogStatusBadge, Dot, EditableCard, LoadingRows |

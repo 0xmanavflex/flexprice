@@ -5,7 +5,45 @@ export interface InvoiceLine {
   description: string
   detail?: string
   quantity: string
+  /** Per-unit price for display; `null` when it cannot be stated (no quantity). */
+  unitPrice?: number | null
   amount: number
+  /** Usage (metered) or fixed charge; `null` when the API does not say. */
+  kind?: 'usage' | 'fixed' | null
+}
+
+export interface InvoiceParty {
+  name: string
+  email?: string
+  /** Display lines, already formatted (street, city/region, country). */
+  address: string[]
+  /** Square logo; the view draws an initial tile when it is absent. */
+  logoUrl?: string | null
+}
+
+/** One entry in the invoice's activity log (right rail). */
+export interface InvoiceActivity {
+  id: number
+  title: string
+  at: string
+  status: 'completed' | 'active' | 'pending' | 'issue'
+  summary: string
+}
+
+export interface InvoicePaymentRow {
+  id: string
+  date: string
+  method: string
+  amount: number
+  status: string
+}
+
+export interface InvoiceCreditNoteRow {
+  id: string
+  number: string
+  amount: number
+  date: string
+  status?: string
 }
 
 export interface InvoiceDocument {
@@ -16,9 +54,9 @@ export interface InvoiceDocument {
   currency: string
   issuedAt: string | null
   dueAt: string | null
-  billTo: { name: string; email: string; address: string }
-  /** Absent when the API does not send the issuer or terms; the view then omits the block. */
-  from?: { name: string; address: string }
+  billTo: InvoiceParty
+  /** The issuing tenant. Absent while it loads or when it cannot be read; the block is then omitted. */
+  from?: InvoiceParty
   payment?: { method: string; terms: string }
   /** The API's own figures. When present they replace the sums the view would otherwise compute. */
   totals?: { subtotal: number; total: number; due: number }
@@ -27,16 +65,45 @@ export interface InvoiceDocument {
   tax: number
   paid: number
   customerId: string
+  /** The subscription (contract) this invoice bills, if any. */
+  subscriptionId?: string | null
   subscriptionLabel: string
-  creditNotes: { id: string; number: string; amount: number; date: string }[]
-  payments: { id: string; date: string; method: string; amount: number; status: string }[]
-  events: {
-    id: number
-    title: string
-    at: string
-    status: 'completed' | 'active' | 'pending' | 'issue'
-    summary: string
-  }[]
+  /** A customer-facing hosted invoice page. Copy link is disabled until one exists. */
+  hostedUrl?: string | null
+  metadata?: Readonly<Record<string, string>>
+  creditNotes: InvoiceCreditNoteRow[]
+  payments: InvoicePaymentRow[]
+  events: InvoiceActivity[]
+}
+
+export type ChipVariant =
+  'outline' | 'success-light' | 'warning-light' | 'destructive-light' | 'info-light'
+
+export interface StatusChip {
+  label: string
+  variant: ChipVariant
+}
+
+/**
+ * The header's status chips: the document state (Draft, Finalized, Void,
+ * Skipped), then — for a finalized invoice — what the money did (Paid, Overdue,
+ * Payment failed, Partially paid). Overdue and failed use the subtle red.
+ */
+export function statusChips(
+  doc: Pick<InvoiceDocument, 'status' | 'paymentStatus' | 'paid'>,
+): StatusChip[] {
+  if (doc.status === InvoiceStatus.Draft) return [{ label: 'Draft', variant: 'outline' }]
+  if (doc.status === InvoiceStatus.Void) return [{ label: 'Void', variant: 'outline' }]
+  if (doc.status === InvoiceStatus.Skipped) return [{ label: 'Skipped', variant: 'outline' }]
+  const chips: StatusChip[] = [{ label: 'Finalized', variant: 'outline' }]
+  if (doc.status === InvoiceStatus.Paid) chips.push({ label: 'Paid', variant: 'success-light' })
+  else if (doc.status === InvoiceStatus.Overdue)
+    chips.push({ label: 'Overdue', variant: 'destructive-light' })
+  if (doc.status !== InvoiceStatus.Paid && doc.paymentStatus === PaymentStatus.Failed)
+    chips.push({ label: 'Payment failed', variant: 'destructive-light' })
+  else if (doc.status !== InvoiceStatus.Paid && doc.paid > 0)
+    chips.push({ label: 'Partially paid', variant: 'warning-light' })
+  return chips
 }
 
 export type DisplayStatus = {
@@ -44,7 +111,7 @@ export type DisplayStatus = {
   tone: 'neutral' | 'success' | 'warning' | 'danger'
 } | null
 
-/** One status for the header, folded from document status and payment status. A draft has none. */
+/** One status, folded from document status and payment status. A draft has none. */
 export function displayStatus(
   doc: Pick<
     InvoiceDocument,
@@ -78,27 +145,59 @@ export const DEMO_INVOICE: InvoiceDocument = {
   billTo: {
     name: 'Orchid Ledger Group',
     email: 'billing@orchidledger.com',
-    address: '14 Warren Street, Suite 620, New York, NY',
+    address: ['14 Warren Street, Suite 620', 'New York, NY 10007', 'US'],
   },
-  from: { name: 'Northwind Systems', address: '500 Howard Street, San Francisco, CA' },
+  from: {
+    name: 'Northwind Systems',
+    email: 'support@northwind.example',
+    address: ['500 Howard Street', 'San Francisco, CA 94105', 'US'],
+  },
   payment: { method: 'Visa ending 4242', terms: 'Net 14' },
   lines: [
-    { id: 'l1', description: 'Scale plan', detail: 'May 1 – May 31', quantity: '1', amount: 750 },
+    {
+      id: 'l1',
+      description: 'Scale plan',
+      detail: 'May 1 – May 31',
+      quantity: '1',
+      unitPrice: 750,
+      amount: 750,
+      kind: 'fixed',
+    },
     {
       id: 'l2',
       description: 'API requests',
-      detail: '1,204,000 at $0.0001',
+      detail: 'May 1 – May 31',
       quantity: '1,204,000',
+      unitPrice: 0.0001,
       amount: 120.4,
+      kind: 'usage',
     },
-    { id: 'l3', description: 'Seats', detail: '12 seats', quantity: '12', amount: 120 },
-    { id: 'l4', description: 'Storage', detail: 'No usage this period', quantity: '0', amount: 0 },
+    {
+      id: 'l3',
+      description: 'Seats',
+      quantity: '12',
+      unitPrice: 10,
+      amount: 120,
+      kind: 'fixed',
+    },
+    {
+      id: 'l4',
+      description: 'Storage',
+      detail: 'No usage this period',
+      quantity: '0',
+      unitPrice: null,
+      amount: 0,
+      kind: 'usage',
+    },
   ],
   prepaidCredits: 100,
   tax: 0,
   paid: 0,
   customerId: 'cust_demo',
+  subscriptionId: 'subs_demo',
   subscriptionLabel: 'Scale · monthly',
+  hostedUrl: null,
+  metadata: { region: 'us-east', po_number: 'PO-7781' },
   creditNotes: [],
   payments: [
     { id: 'p1', date: 'May 12, 2026', method: 'Visa ending 4242', amount: 890.4, status: 'Failed' },

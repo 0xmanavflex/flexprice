@@ -25,8 +25,13 @@ export interface CatalogDetailFrameProps {
   onBack: () => void
   icon: ReactNode
   title: string
-  /** One line under the title. */
+  /**
+   * @deprecated Detail headers no longer have a subtitle line; this is not
+   * rendered. Pass status and type chips through `badges` instead.
+   */
   subtitle?: ReactNode
+  /** Status and type chips, shown in the header's right-hand cluster. */
+  badges?: ReactNode
   /** Copyable identifier. */
   id: string
   primary?: { label: string; onClick: () => void; disabled?: boolean }
@@ -43,14 +48,15 @@ export interface CatalogDetailFrameProps {
 
 /**
  * The shared shell for catalog detail pages (coupon, add-on, cost sheet, group):
- * `DetailShell` (icon tile, title, one-line subtitle, copyable id), Edit and ⋯ overflow actions, then line `DetailTabs`.
+ * `DetailShell` (icon tile, title; right cluster of primary + Edit, chips, "ID"
+ * copy chip, ⋯ overflow), then line `DetailTabs`.
  */
 export function CatalogDetailFrame({
   listLabel,
   onBack,
   icon,
   title,
-  subtitle,
+  badges,
   id,
   primary,
   onEdit,
@@ -61,7 +67,7 @@ export function CatalogDetailFrame({
   onTabChange,
   children,
 }: CatalogDetailFrameProps) {
-  const actions = (
+  const primaryActions = (
     <>
       {primary ? (
         <Button
@@ -79,40 +85,44 @@ export function CatalogDetailFrame({
           Edit
         </Button>
       ) : null}
-      {menu.length > 0 ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            render={<Button variant="outline" size="icon" className="size-8" aria-label={menuLabel} />}
-          >
-            <MoreHorizontalIcon aria-hidden />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end" className="w-44">
-            <DropdownMenuGroup>
-              {menu.map((item) => (
-                <DropdownMenuItem
-                  key={item.id}
-                  disabled={item.disabled ?? false}
-                  {...(item.destructive ? { variant: 'destructive' as const } : {})}
-                  onClick={item.onSelect}
-                >
-                  {item.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
     </>
   )
+  const more =
+    menu.length > 0 ? (
+      <DropdownMenu>
+        <DropdownMenuTrigger
+          render={
+            <Button variant="outline" size="icon" className="size-8" aria-label={menuLabel} />
+          }
+        >
+          <MoreHorizontalIcon aria-hidden />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="w-44">
+          <DropdownMenuGroup>
+            {menu.map((item) => (
+              <DropdownMenuItem
+                key={item.id}
+                disabled={item.disabled ?? false}
+                {...(item.destructive ? { variant: 'destructive' as const } : {})}
+                onClick={item.onSelect}
+              >
+                {item.label}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuGroup>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    ) : null
 
   return (
     <DetailShell
       trail={[{ label: listLabel, onClick: onBack }, { label: title }]}
       icon={icon}
       title={title}
-      {...(subtitle ? { subtitle } : {})}
+      {...(badges ? { badges } : {})}
       id={id}
-      actions={actions}
+      primary={primaryActions}
+      actions={more}
     >
       <DetailTabs
         tabs={tabs}

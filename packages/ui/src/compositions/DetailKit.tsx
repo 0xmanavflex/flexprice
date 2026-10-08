@@ -1,10 +1,11 @@
 import { useState, type ReactNode } from 'react'
-import { CheckIcon, CopyIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, MailIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Button } from '@ui/components/primitives/button'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { useInFormDialog } from './formDialogContext'
 
 /*
@@ -13,39 +14,124 @@ import { useInFormDialog } from './formDialogContext'
  *   header  -> what this thing is, in one line, plus its actions
  *   tabs    -> one job per tab; "Information" holds every raw property
  *   section -> a titled surface; tables inside it use the list-page style
- * Status and type live in the subtitle and the Information tab, not as badges
- * beside the name.
+ * Status and type chips sit in the header's right-hand cluster (see
+ * `DetailHeaderCluster`), never beside the name; there is no subtitle line.
  */
 export const DetailKitProvenance = provenance({
   source: 'composition',
-  composes: ['ui/tabs', 'ui/button'],
+  composes: ['ui/tabs', 'ui/button', 'ui/tooltip'],
   note: 'Detail-page pieces (reference detail.tsx): line tabs with counts, light table, property grid, summary row, choice cards, form footer, copyable id, meters.',
 })
 
 /** Muted separator dot for subtitles. */
 export const Dot = () => <span aria-hidden="true">·</span>
 
-export function CopyId({ value }: { value: string }) {
+/**
+ * A compact copy control for the detail header: an icon (and optional short
+ * label) whose tooltip shows the full value that a click copies. The long value
+ * itself is never printed in the header.
+ */
+export function CopyChip({
+  value,
+  icon,
+  label,
+  tooltip,
+  ariaLabel,
+  copiedMessage,
+}: {
+  value: string
+  icon: ReactNode
+  /** Short visible text beside the icon, e.g. "ID". Omitted, the chip is icon-only. */
+  label?: string
+  /** Defaults to the value itself. */
+  tooltip?: ReactNode
+  ariaLabel: string
+  copiedMessage: string
+}) {
   const [copied, setCopied] = useState(false)
   return (
-    <button
-      type="button"
-      onClick={() => {
-        void navigator.clipboard?.writeText(value)
-        setCopied(true)
-        toast.success('ID copied')
-        setTimeout(() => setCopied(false), 1200)
-      }}
-      className="text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 font-mono text-xs transition-colors"
-      aria-label={`Copy ID ${value}`}
-    >
-      {value}
-      {copied ? (
-        <CheckIcon className="size-3.5" aria-hidden="true" />
-      ) : (
-        <CopyIcon className="size-3.5" aria-hidden="true" />
-      )}
-    </button>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <button
+            type="button"
+            onClick={() => {
+              void navigator.clipboard?.writeText(value)
+              setCopied(true)
+              toast.success(copiedMessage)
+              setTimeout(() => setCopied(false), 1200)
+            }}
+            className={cn(
+              'text-muted-foreground hover:text-foreground hover:bg-muted inline-flex h-8 items-center gap-1.5 rounded-md border text-xs transition-colors',
+              label ? 'px-2.5' : 'w-8 justify-center',
+            )}
+            aria-label={ariaLabel}
+          />
+        }
+      >
+        {label ? <span>{label}</span> : null}
+        {copied ? <CheckIcon className="size-3.5" aria-hidden="true" /> : icon}
+      </TooltipTrigger>
+      <TooltipContent>
+        <span className="font-mono">{tooltip ?? value}</span>
+      </TooltipContent>
+    </Tooltip>
+  )
+}
+
+/** The record id as "ID" plus a copy icon; hover shows the full id, click copies it. */
+export function CopyId({ value }: { value: string }) {
+  return (
+    <CopyChip
+      value={value}
+      label="ID"
+      icon={<CopyIcon className="size-3.5" aria-hidden="true" />}
+      ariaLabel={`Copy ID ${value}`}
+      copiedMessage="ID copied"
+    />
+  )
+}
+
+/** An email as a mail icon; hover shows the address, click copies it. */
+export function CopyEmail({ value }: { value: string }) {
+  return (
+    <CopyChip
+      value={value}
+      icon={<MailIcon className="size-3.5" aria-hidden="true" />}
+      ariaLabel={`Copy email ${value}`}
+      copiedMessage="Email copied"
+    />
+  )
+}
+
+/**
+ * The right-hand cluster every detail header shares, in one fixed order:
+ * primary actions (at most two), status and type chips, the id and email copy
+ * chips, then the overflow menu. Chips never sit beside the record name.
+ */
+export function DetailHeaderCluster({
+  primary,
+  badges,
+  id,
+  email,
+  more,
+}: {
+  primary?: ReactNode
+  badges?: ReactNode
+  id?: string | undefined
+  email?: string | undefined
+  /** The overflow ("More") menu, always last. */
+  more?: ReactNode
+}) {
+  if (!primary && !badges && !id && !email && !more) return null
+  return (
+    <div className="flex flex-wrap items-center justify-end gap-2">
+      {primary}
+      {badges ? <div className="flex flex-wrap items-center gap-1.5">{badges}</div> : null}
+      {id ? <CopyId value={id} /> : null}
+      {email ? <CopyEmail value={email} /> : null}
+      {more}
+    </div>
   )
 }
 
@@ -141,7 +227,11 @@ export function SummaryRow({
     <dl
       className={cn(
         'grid grid-cols-2 gap-y-4 border-y py-5 md:divide-x',
-        items.length === 3 ? 'md:grid-cols-3' : items.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-4',
+        items.length === 3
+          ? 'md:grid-cols-3'
+          : items.length === 2
+            ? 'md:grid-cols-2'
+            : 'md:grid-cols-4',
         className,
       )}
     >
@@ -424,7 +514,9 @@ export function SplitMeter(
   const meter = (
     <Pills
       colors={colors}
-      label={parts.map((part) => `${part.label} ${Math.round((part.value / total) * 100)}%`).join(', ')}
+      label={parts
+        .map((part) => `${part.label} ${Math.round((part.value / total) * 100)}%`)
+        .join(', ')}
     />
   )
   if (!legend) return meter
@@ -455,7 +547,9 @@ export function SegmentMeter(
     return (
       <div className={props.className}>
         <Pills
-          colors={Array.from({ length: count }, (_, index) => (index < filled ? color : 'bg-muted'))}
+          colors={Array.from({ length: count }, (_, index) =>
+            index < filled ? color : 'bg-muted',
+          )}
           label={`${Math.round(props.value * 100)}%`}
         />
       </div>

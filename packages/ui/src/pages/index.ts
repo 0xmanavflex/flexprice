@@ -34,9 +34,18 @@ export type { InvoiceGridProps } from './invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance } from './invoices/InvoiceForm'
 export type { InvoiceFormProps } from './invoices/InvoiceForm'
 export { InvoiceBillingDetailBlock } from './invoices/InvoiceBillingDetailBlock'
-export { InvoiceDetailView } from './invoices/InvoiceDetailView'
-export { DEMO_INVOICE, displayStatus, invoiceTotals } from './invoices/invoiceDocument'
-export type { InvoiceDocument } from './invoices/invoiceDocument'
+export { InvoiceDetailView, InvoiceDetailViewProvenance } from './invoices/InvoiceDetailView'
+export type { InvoiceDetailViewProps } from './invoices/InvoiceDetailView'
+export { DEMO_INVOICE, displayStatus, invoiceTotals, statusChips } from './invoices/invoiceDocument'
+export type {
+  InvoiceActivity,
+  InvoiceCreditNoteRow,
+  InvoiceDocument,
+  InvoiceLine,
+  InvoiceParty,
+  InvoicePaymentRow,
+  StatusChip,
+} from './invoices/invoiceDocument'
 export { PriceOverrideForm, PriceOverrideFormProvenance } from './charges/PriceOverrideForm'
 export type { PriceOverrideFormProps } from './charges/PriceOverrideForm'
 /*

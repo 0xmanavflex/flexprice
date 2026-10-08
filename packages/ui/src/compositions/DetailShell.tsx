@@ -4,7 +4,7 @@ import { ChevronRightIcon } from 'lucide-react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { MetricRail, type DetailMetric } from './MetricRail'
-import { CopyId } from './DetailKit'
+import { DetailHeaderCluster } from './DetailKit'
 
 /**
  * The one shell every detail page opens with.
@@ -12,7 +12,8 @@ import { CopyId } from './DetailKit'
  * Before this, detail pages used two different headers with two different
  * breadcrumb styles, and only some got a summary strip — so the flagship plan
  * page looked unlike the rest. This is the single opening: a breadcrumb, a large
- * title with its status badges and identifier, an actions cluster, and — the
+ * title, a right-hand cluster (primary actions, status chips, "ID" copy chip,
+ * More menu; see `DetailHeaderCluster`), and — the
  * part that makes a detail page worth visiting — a **metric rail** of how the
  * record is doing. The body (tabs or sections) is `children`.
  */
@@ -47,7 +48,7 @@ export function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
   if (publish) return null
   return (
     <nav aria-label="Breadcrumb">
-      <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
+      <ol className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm">
         {trail.map((crumb, index) => {
           const isLast = index === trail.length - 1
           return (
@@ -56,13 +57,13 @@ export function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
                 <button
                   type="button"
                   onClick={crumb.onClick}
-                  className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                  className="hover:text-foreground focus-visible:outline-ring rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
                 >
                   {crumb.label}
                 </button>
               ) : (
                 <span
-                  className={cn(isLast && 'font-medium text-foreground')}
+                  className={cn(isLast && 'text-foreground font-medium')}
                   {...(isLast ? { 'aria-current': 'page' as const } : {})}
                 >
                   {crumb.label}
@@ -85,17 +86,17 @@ export interface DetailShellProps {
   title: string
   /** Icon shown in the tile left of the title (reference DetailHeader). */
   icon?: ReactNode
-  /** One line under the title; use `Dot` between facts. */
-  subtitle?: ReactNode
-  /** Status and type chips, leading the subtitle line. */
+  /** Status and type chips, shown in the right-hand cluster (never beside the name). */
   badges?: ReactNode
-  /** The record id, rendered as a copy button on the right. */
+  /** The record id, rendered as an "ID" copy chip on the right. */
   id?: string
-  /** Alias of `id` for strings; a non-string node renders as monospaced text. */
-  identifier?: ReactNode
-  /** Alias of `subtitle`. */
-  description?: ReactNode
-  /** The primary action and any overflow menu, kept to the right of the title. */
+  /** Alias of `id`. */
+  identifier?: string
+  /** An email, rendered as a mail-icon copy chip beside the id. */
+  email?: string
+  /** Up to two primary actions, first in the right-hand cluster. */
+  primary?: ReactNode
+  /** The overflow (More) menu, last in the right-hand cluster. */
   actions?: ReactNode
   /** The metric rail. Omitted (not an empty strip) when there is nothing to show. */
   metrics?: DetailMetric[]
@@ -138,18 +139,16 @@ export function DetailShell({
   breadcrumb,
   title,
   icon,
-  subtitle,
   badges,
   id,
   identifier,
-  description,
+  email,
+  primary,
   actions,
   metrics,
   children,
   className,
 }: DetailShellProps) {
-  const copyId = id ?? (typeof identifier === 'string' ? identifier : undefined)
-  const line = subtitle ?? description
   return (
     // `overflow-y-auto` so the whole detail page scrolls within the shell's
     // content region (which is `overflow-hidden`): header + body together, so a
@@ -157,32 +156,22 @@ export function DetailShell({
     <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
       <header className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-5 px-6 pt-5 pb-5">
         {trail && trail.length > 0 ? <DetailBreadcrumb trail={trail} /> : breadcrumb}
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex min-w-0 items-center gap-4">
             {icon ? (
               <span className="bg-muted/60 text-foreground/70 flex size-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-5">
                 {icon}
               </span>
             ) : null}
-            <div className="min-w-0 space-y-1">
-              <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-              {line || badges ? (
-                <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-[13px]">
-                  {badges}
-                  {line}
-                </div>
-              ) : null}
-              {!copyId && identifier ? (
-                <span className="text-muted-foreground font-mono text-xs">{identifier}</span>
-              ) : null}
-            </div>
+            <h1 className="min-w-0 truncate text-xl font-medium tracking-tight">{title}</h1>
           </div>
-          {copyId || actions ? (
-            <div className="flex items-center gap-2">
-              {copyId ? <CopyId value={copyId} /> : null}
-              {actions}
-            </div>
-          ) : null}
+          <DetailHeaderCluster
+            primary={primary}
+            badges={badges}
+            id={id ?? identifier}
+            email={email}
+            more={actions}
+          />
         </div>
         {metrics && metrics.length > 0 ? <MetricRail metrics={metrics} /> : null}
       </header>
@@ -195,7 +184,7 @@ export function DetailShell({
           detail page can forget it and clip its last tab off a phone. */}
       <div
         className={cn(
-          'mx-auto flex w-full max-w-[var(--shell-max)] min-h-0 flex-1 flex-col gap-6 px-6 pb-10',
+          'mx-auto flex min-h-0 w-full max-w-[var(--shell-max)] flex-1 flex-col gap-6 px-6 pb-10',
           TAB_STRIP,
         )}
       >

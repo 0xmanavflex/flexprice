@@ -1,42 +1,45 @@
 import type { ReactNode } from 'react'
 import { DetailBreadcrumb, type DetailCrumb } from '../../compositions/DetailShell'
-import { CopyId } from '../../compositions/DetailKit'
+import { DetailHeaderCluster } from '../../compositions/DetailKit'
 
 export interface EntityHeaderProps {
   trail: DetailCrumb[]
   /** Glyph shown inside the neutral icon tile. */
   icon: ReactNode
   title: string
-  /** Status badge shown beside the title. */
-  badge?: ReactNode
-  /** One short line under the name, e.g. the feature type. */
-  subtitle?: string
-  /** Copyable identifier shown beside the subtitle. */
+  /** Status and type chips, shown in the right-hand cluster (never beside the name). */
+  badges?: ReactNode
+  /** Copyable identifier, shown as an "ID" copy chip. */
   id?: string
-  /** One primary action and its overflow menu. */
+  /** Copyable email, shown as a mail-icon copy chip beside the id. */
+  email?: string
+  /** Up to two primary actions, first in the right-hand cluster. */
+  primary?: ReactNode
+  /** The overflow (More) menu, last in the right-hand cluster. */
   actions?: ReactNode
 }
 
 /**
- * The detail-page header for catalogue records: an icon tile, the name, a
- * one-line subtitle, and on the right a copyable id chip and the actions. The
- * trail is published to the shell's header breadcrumb, not drawn here.
- * Built here (not in `DetailHeader`) because the tile needs a slot that shared
- * header does not have.
+ * The detail-page header for records that need a custom tile (an avatar, say):
+ * the tile and the name on the left; on the right the shared
+ * `DetailHeaderCluster` — primary actions, chips, "ID"/email copy chips, More.
+ * There is no subtitle line. The trail is published to the shell's header
+ * breadcrumb, not drawn here.
  */
 export function EntityHeader({
   trail,
   icon,
   title,
-  badge,
-  subtitle,
+  badges,
   id,
+  email,
+  primary,
   actions,
 }: EntityHeaderProps) {
   return (
     <header className="flex flex-col gap-4 px-6 pt-6 pb-4">
       <DetailBreadcrumb trail={trail} />
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-3">
           <span
             aria-hidden
@@ -44,22 +47,17 @@ export function EntityHeader({
           >
             {icon}
           </span>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <div className="flex min-w-0 items-center gap-2">
-              <h1 className="truncate text-xl leading-tight font-medium tracking-tight">{title}</h1>
-              {badge}
-            </div>
-            {subtitle ? <span className="text-muted-foreground text-xs font-normal">{subtitle}</span> : null}
-          </div>
+          <h1 className="min-w-0 truncate text-xl leading-tight font-medium tracking-tight">
+            {title}
+          </h1>
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {id ? (
-            <span className="px-2.5 py-1.5">
-              <CopyId value={id} />
-            </span>
-          ) : null}
-          {actions}
-        </div>
+        <DetailHeaderCluster
+          primary={primary}
+          badges={badges}
+          id={id}
+          email={email}
+          more={actions}
+        />
       </div>
     </header>
   )

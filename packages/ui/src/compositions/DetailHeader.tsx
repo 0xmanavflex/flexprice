@@ -1,34 +1,36 @@
 import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
-import { CopyId } from './DetailKit'
+import { DetailHeaderCluster } from './DetailKit'
 
 /**
- * A detail page's header (reference `DetailHeader`): icon tile, record name,
- * one-line subtitle, copyable id, and the actions (one primary plus a menu).
+ * A detail page's header (reference `DetailHeader`): icon tile and record name
+ * on the left; on the right, in this order, the primary actions (at most two),
+ * the status and type chips, the "ID" (and email) copy chips, and the More menu.
  *
- * Status and type belong in the subtitle (use `badges` for pills that sit on
- * the subtitle line) and the Information tab, not beside the name.
- * `subtitle` is the reference prop; `identifier` remains as an alias of `id`.
+ * There is no subtitle line, and no chip sits beside the name.
+ * `identifier` remains as an alias of `id`.
  */
 export const DetailHeaderProvenance = provenance({
   source: 'composition',
   composes: ['compositions/detail-kit'],
-  note: 'Reference detail header: icon tile, title, subtitle line, copyable id, actions.',
+  note: 'Reference detail header: icon tile, title; right cluster of primary actions, chips, copy chips, More menu.',
 })
 
 export interface DetailHeaderProps {
   title: string
   /** Icon shown in the tile left of the title. */
   icon?: ReactNode
-  /** One line under the title; use `Dot` between facts. */
-  subtitle?: ReactNode
-  /** Status and type pills, leading the subtitle line. */
+  /** Status and type chips, shown in the right-hand cluster. */
   badges?: ReactNode
-  /** The record id, rendered as a copy button. */
+  /** The record id, rendered as an "ID" copy chip. */
   id?: string
   /** Alias of `id`. */
   identifier?: string
-  /** The primary action and any overflow menu. */
+  /** An email, rendered as a mail-icon copy chip beside the id. */
+  email?: string
+  /** Up to two primary actions, first in the right-hand cluster. */
+  primary?: ReactNode
+  /** The overflow (More) menu, last in the right-hand cluster. */
   actions?: ReactNode
   breadcrumb?: ReactNode
 }
@@ -36,40 +38,33 @@ export interface DetailHeaderProps {
 export function DetailHeader({
   title,
   icon,
-  subtitle,
   badges,
   id,
   identifier,
+  email,
+  primary,
   actions,
   breadcrumb,
 }: DetailHeaderProps) {
-  const copyId = id ?? identifier
   return (
     <header className="flex flex-col gap-3">
       {breadcrumb}
-      <div className="flex flex-wrap items-start justify-between gap-4">
+      <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex min-w-0 items-center gap-4">
           {icon ? (
             <span className="bg-muted/60 text-foreground/70 flex size-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-5">
               {icon}
             </span>
           ) : null}
-          <div className="min-w-0 space-y-1">
-            <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
-            {badges || subtitle ? (
-              <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-[13px]">
-                {badges}
-                {subtitle}
-              </div>
-            ) : null}
-          </div>
+          <h1 className="min-w-0 truncate text-xl font-medium tracking-tight">{title}</h1>
         </div>
-        {copyId || actions ? (
-          <div className="flex items-center gap-2">
-            {copyId ? <CopyId value={copyId} /> : null}
-            {actions}
-          </div>
-        ) : null}
+        <DetailHeaderCluster
+          primary={primary}
+          badges={badges}
+          id={id ?? identifier}
+          email={email}
+          more={actions}
+        />
       </div>
     </header>
   )
