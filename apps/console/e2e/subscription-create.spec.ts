@@ -13,7 +13,7 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('creates a contract through the steps and posts it', async ({ page }) => {
+test('creates a contract in two blocks and posts it', async ({ page }) => {
   await page.goto('/subscriptions/new')
   await expect(page.getByRole('heading', { level: 1, name: 'Create contract' })).toBeVisible()
 
@@ -36,10 +36,8 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
     await page.getByRole('option').first().click()
   }
 
-  for (const step of ['prices', 'entitlements', 'credits', 'review']) {
-    await page.getByRole('button', { name: 'Next' }).click()
-    await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
-  }
+  // Block 2 carries the plan, its charges, entitlements and credit grants together.
+  await expect(page.getByText('Credit grants')).toBeVisible({ timeout: 15_000 })
 
   const request = page.waitForRequest(
     (r) => r.method() === 'POST' && /\/v1\/subscriptions$/.test(new URL(r.url()).pathname),

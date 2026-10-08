@@ -169,8 +169,9 @@ export function FormSteps({
 }
 
 /**
- * Previous on the left, Next on the right: the foot of a header-stepper form.
- * The final step has no Next — the toolbar's primary action takes over there.
+ * Next, bottom right, with an arrow: the foot of a header-stepper form. Previous
+ * lives in the toolbar where Cancel was. The final step has no Next — the
+ * toolbar's primary action takes over there.
  */
 export function StepNav({
   flow,
@@ -179,22 +180,13 @@ export function StepNav({
   flow: FormFlow
   isSubmitting?: boolean
 }) {
+  if (flow.isLast) return null
   return (
-    <div className="flex items-center justify-between gap-3 border-t pt-4">
-      {flow.isFirst ? (
-        <span aria-hidden="true" />
-      ) : (
-        <Button type="button" variant="outline" onClick={flow.back} disabled={isSubmitting}>
-          <ArrowLeftIcon aria-hidden="true" />
-          Previous
-        </Button>
-      )}
-      {flow.isLast ? null : (
-        <Button type="button" onClick={() => void flow.next()} disabled={isSubmitting}>
-          Next
-          <ArrowRightIcon aria-hidden="true" />
-        </Button>
-      )}
+    <div className="flex items-center justify-end gap-3 border-t pt-4">
+      <Button type="button" onClick={() => void flow.next()} disabled={isSubmitting}>
+        Next
+        <ArrowRightIcon aria-hidden="true" />
+      </Button>
     </div>
   )
 }
@@ -210,7 +202,7 @@ export interface StepFooterProps {
 }
 
 /**
- * Cancel · Previous · Next, becoming the submit on the last step. In edit mode
+ * Previous · Next (Cancel on the first step, where there is no Previous), becoming the submit on the last step. In edit mode
  * the submit is available on every step: nothing is gated behind reaching the end.
  */
 export function StepFooter({
@@ -224,7 +216,8 @@ export function StepFooter({
 }: StepFooterProps) {
   const showSubmit = flow.isLast || mode === 'edit'
   const previous = flow.isFirst ? null : (
-    <Button type="button" variant="ghost" onClick={flow.back} disabled={isSubmitting}>
+    <Button type="button" variant="outline" onClick={flow.back} disabled={isSubmitting}>
+      <ArrowLeftIcon aria-hidden="true" />
       Previous
     </Button>
   )
@@ -236,6 +229,7 @@ export function StepFooter({
       disabled={isSubmitting}
     >
       Next
+      <ArrowRightIcon aria-hidden="true" />
     </Button>
   )
 
@@ -245,7 +239,7 @@ export function StepFooter({
         mode={mode}
         {...(noun ? { noun } : {})}
         formId={formId}
-        onCancel={onCancel}
+        {...(flow.isFirst ? { onCancel } : {})}
         isSubmitting={isSubmitting}
         submitError={submitError}
         between={

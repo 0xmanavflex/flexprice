@@ -30,7 +30,6 @@ import { Field } from '@ui/compositions/Field'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
-import { FeaturePreviewCard } from './FeaturePreviewCard'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect, type Option } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
@@ -787,17 +786,6 @@ export function FeatureForm(props: FeatureFormProps) {
     <FormPage
       title={isEdit ? `Edit ${feature?.name ?? 'product'}` : 'Create product'}
       trail={trail}
-      width="wide"
-      preview={
-        <FeaturePreviewCard
-          name={form.watch('name')}
-          lookupKey={form.watch('lookupKey')}
-          type={type}
-          eventName={form.watch('meter.eventName')}
-          aggregationType={aggregationType}
-          resetUsage={form.watch('meter.resetUsage')}
-        />
-      }
       toolbar={{
         mode,
         noun: 'product',

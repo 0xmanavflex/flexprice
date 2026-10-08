@@ -171,6 +171,8 @@ export function WorkflowStepper({
                   step.status !== 'complete' &&
                     index + 1 < currentIndex &&
                     'bg-accent! text-accent-foreground!',
+                  step.status === 'current' &&
+                    'border-primary! bg-background! text-primary! border-2',
                 )}
               >
                 {index + 1}

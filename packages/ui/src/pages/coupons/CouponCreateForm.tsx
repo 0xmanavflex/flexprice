@@ -17,7 +17,6 @@ import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { DateInput } from '@ui/compositions/DateInput'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
-import { CouponPreviewCard } from './CouponPreviewCard'
 
 /**
  * Create a coupon, on a full page.
@@ -313,21 +312,6 @@ export function CouponCreateForm({
       title="Create coupon"
       trail={trail}
       width="wide"
-      preview={
-        <CouponPreviewCard
-          name={form.watch('name')}
-          code={form.watch('couponCode') ?? ''}
-          type={type}
-          percentageOff={form.watch('percentageOff')}
-          amountOff={form.watch('amountOff')}
-          currency={form.watch('currency')}
-          cadence={cadence}
-          durationInPeriods={form.watch('durationInPeriods')}
-          maxRedemptions={form.watch('maxRedemptions')}
-          redeemAfter={form.watch('redeemAfter')}
-          redeemBefore={form.watch('redeemBefore')}
-        />
-      }
       toolbar={{
         mode: 'create',
         noun: 'coupon',

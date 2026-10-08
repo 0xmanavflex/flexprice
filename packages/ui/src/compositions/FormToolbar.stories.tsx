@@ -50,6 +50,16 @@ export const CancelAndCloseReturn: Story = {
   },
 }
 
+export const PreviousReplacesCancel: Story = {
+  args: { onPrevious: fn() },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('button', { name: 'Cancel' })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Previous' }))
+    await expect(args.onPrevious).toHaveBeenCalledTimes(1)
+  },
+}
+
 export const Submitting: Story = {
   args: { isSubmitting: true },
   play: async ({ canvasElement }) => {

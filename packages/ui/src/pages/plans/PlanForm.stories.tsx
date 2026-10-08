@@ -1,8 +1,7 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { BillingModel, BillingPeriod, FeatureType, InvoiceCadence, PriceType } from '@fp/domain'
+import { FeatureType } from '@fp/domain'
 import { PlanForm } from './PlanForm'
-import { PlanPreviewCard } from './PlanPreviewCard'
 
 /**
  * The plan create/edit page — same proof as every form here: fixtures in, a
@@ -107,42 +106,5 @@ export const CreatesWithDetailsOnly: Story = {
         creditGrants: [],
       }),
     )
-  },
-}
-
-/** Create shows a live preview beside the steps, prompting for a charge until there is one. */
-export const PreviewFollowsTheDraft: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const preview = canvas.getByRole('complementary', { name: 'Plan preview' })
-
-    await expect(
-      within(preview).getByText('Add a charge and the price customers see', { exact: false }),
-    ).toBeInTheDocument()
-  },
-}
-
-/** Edit is the details step alone; the rail shows the saved plan's own pricing. */
-export const EditKeepsThePreview: Story = {
-  args: {
-    ...(Edit.args ?? {}),
-    savedPreview: (
-      <PlanPreviewCard
-        charges={[
-          {
-            type: PriceType.Fixed,
-            billingModel: BillingModel.FlatFee,
-            amount: '49',
-            currency: 'USD',
-            billingPeriod: BillingPeriod.Monthly,
-            invoiceCadence: InvoiceCadence.Advance,
-          },
-        ]}
-      />
-    ),
-  },
-  play: async ({ canvasElement }) => {
-    const rail = within(canvasElement).getByRole('complementary', { name: 'Plan preview' })
-    await expect(within(rail).getByText('$49.00')).toBeInTheDocument()
   },
 }

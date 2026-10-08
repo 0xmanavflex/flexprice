@@ -29,7 +29,6 @@ import { FormSteps, StepFooter, useFormSteps } from '@ui/compositions/useFormSte
 import { CreditGrantCreateForm } from '@ui/pages/credit-grants/CreditGrantForm'
 import { PriceOverrideForm } from '@ui/pages/charges/PriceOverrideForm'
 import { provenance } from '@ui/provenance'
-import { SubscriptionPreviewCard } from './SubscriptionPreviewCard'
 
 /**
  * Start a subscription: customer, plan, prices, entitlements, credits, review.
@@ -84,10 +83,6 @@ const FALLBACK_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR']
 const ALL_STEPS = [
   { id: 'customer', title: 'Customer' },
   { id: 'plan', title: 'Plan' },
-  { id: 'prices', title: 'Prices' },
-  { id: 'entitlements', title: 'Entitlements' },
-  { id: 'credits', title: 'Credits' },
-  { id: 'review', title: 'Review' },
 ] as const
 
 const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
@@ -330,14 +325,6 @@ export function SubscriptionForm({
     </FormCard>
   )
 
-  const noPlan = (what: string) => (
-    <EmptyState
-      size="inline"
-      title="Choose a plan first"
-      description={`${what} are the plan's, so there is nothing to change until a plan is chosen.`}
-    />
-  )
-
   const content: Record<string, ReactNode> = {
     customer: (
       <form id={FORM_ID} onSubmit={flow.guardSubmit(submitAll)} noValidate>
@@ -345,45 +332,33 @@ export function SubscriptionForm({
       </form>
     ),
     plan: (
-      <form id={FORM_ID} onSubmit={flow.guardSubmit(submitAll)} noValidate>
-        {planStep}
-      </form>
-    ),
-    prices: !values.planId ? (
-      noPlan('Prices')
-    ) : (
-      <PricesStep
-        charges={plan?.charges ?? []}
-        isLoading={plan?.isLoading ?? true}
-        overrides={values.priceOverrides}
-        onChange={(next) => form.setValue('priceOverrides', next, { shouldDirty: true })}
-      />
-    ),
-    entitlements: !values.planId ? (
-      noPlan('Entitlements')
-    ) : (
-      <EntitlementsStep
-        entitlements={plan?.entitlements ?? []}
-        isLoading={plan?.isLoading ?? true}
-        overrides={values.entitlementOverrides}
-        onChange={(next) => form.setValue('entitlementOverrides', next, { shouldDirty: true })}
-      />
-    ),
-    credits: (
-      <CreditsStep
-        grants={values.creditGrants}
-        onChange={(next) => form.setValue('creditGrants', next, { shouldDirty: true })}
-      />
-    ),
-    review: (
-      <form id={FORM_ID} onSubmit={flow.guardSubmit(submitAll)} noValidate>
-        <ReviewStep
-          values={values}
-          customerLabel={customers.find((c) => c.value === values.customerId)?.label}
-          planLabel={plans.find((p) => p.value === values.planId)?.label}
-          onEdit={flow.goTo}
+      <div className="flex flex-col gap-6">
+        <form id={FORM_ID} onSubmit={flow.guardSubmit(submitAll)} noValidate>
+          {planStep}
+        </form>
+        {values.planId ? (
+          <>
+            <PricesStep
+              charges={plan?.charges ?? []}
+              isLoading={plan?.isLoading ?? true}
+              overrides={values.priceOverrides}
+              onChange={(next) => form.setValue('priceOverrides', next, { shouldDirty: true })}
+            />
+            <EntitlementsStep
+              entitlements={plan?.entitlements ?? []}
+              isLoading={plan?.isLoading ?? true}
+              overrides={values.entitlementOverrides}
+              onChange={(next) =>
+                form.setValue('entitlementOverrides', next, { shouldDirty: true })
+              }
+            />
+          </>
+        ) : null}
+        <CreditsStep
+          grants={values.creditGrants}
+          onChange={(next) => form.setValue('creditGrants', next, { shouldDirty: true })}
         />
-      </form>
+      </div>
     ),
   }
 
@@ -403,21 +378,6 @@ export function SubscriptionForm({
       {content[flow.step]}
     </FormSteps>
   )
-  const preview = (
-    <SubscriptionPreviewCard
-      customer={customers.find((c) => c.value === values.customerId)?.label}
-      plan={plans.find((p) => p.value === values.planId)?.label}
-      currency={values.currency}
-      billingPeriod={values.billingPeriod}
-      billingPeriodCount={values.billingPeriodCount}
-      startDate={values.startDate}
-      trialPeriodDays={values.trialPeriodDays}
-      priceOverrides={values.priceOverrides.length}
-      entitlementOverrides={values.entitlementOverrides.length}
-      creditGrants={values.creditGrants.length}
-    />
-  )
-
   if (embedded) {
     return (
       <section className="flex flex-col gap-4">
@@ -441,7 +401,6 @@ export function SubscriptionForm({
         submitError,
       }}
       stepper={{ flow, label: 'Contract steps' }}
-      preview={preview}
     >
       {content[flow.step]}
     </FormPage>
@@ -473,7 +432,7 @@ function PricesStep({
     )
 
   return (
-    <FormCard title="Charges">
+    <FormCard title="Charges and commitments">
       <ul className="divide-y">
         {charges.map((charge) => {
           const override = byId.get(charge.id)
@@ -671,68 +630,6 @@ function CreditsStep({
           </Button>
         )}
       </div>
-    </FormCard>
-  )
-}
-
-function ReviewStep({
-  values,
-  customerLabel,
-  planLabel,
-  onEdit,
-}: {
-  values: CreateSubscription
-  customerLabel: string | undefined
-  planLabel: string | undefined
-  onEdit: (stepId: string) => void
-}) {
-  const rows: { label: string; value: string; step: string }[] = [
-    { label: 'Customer', value: customerLabel ?? '—', step: 'customer' },
-    { label: 'Plan', value: planLabel ?? '—', step: 'plan' },
-    {
-      label: 'Billing',
-      value: `${values.currency.toUpperCase() || '—'} · every ${values.billingPeriodCount} × ${
-        BILLING_PERIOD_LABEL[values.billingPeriod]
-      }`,
-      step: 'plan',
-    },
-    { label: 'Starts', value: values.startDate || 'Now', step: 'plan' },
-    {
-      label: 'Trial',
-      value: values.trialPeriodDays ? `${values.trialPeriodDays} days` : 'None',
-      step: 'plan',
-    },
-    {
-      label: 'Price overrides',
-      value: String(values.priceOverrides.length),
-      step: 'prices',
-    },
-    {
-      label: 'Entitlement overrides',
-      value: String(values.entitlementOverrides.length),
-      step: 'entitlements',
-    },
-    { label: 'Credit grants', value: String(values.creditGrants.length), step: 'credits' },
-  ]
-
-  return (
-    <FormCard title="Review">
-      <dl className="divide-y">
-        {rows.map((row) => (
-          <div
-            key={row.label}
-            className="flex items-center justify-between gap-4 px-5 py-3 text-sm sm:px-6"
-          >
-            <dt className="text-muted-foreground">{row.label}</dt>
-            <dd className="flex items-center gap-3">
-              <span className="font-medium">{row.value}</span>
-              <Button type="button" variant="link" size="sm" onClick={() => onEdit(row.step)}>
-                Edit
-              </Button>
-            </dd>
-          </div>
-        ))}
-      </dl>
     </FormCard>
   )
 }
