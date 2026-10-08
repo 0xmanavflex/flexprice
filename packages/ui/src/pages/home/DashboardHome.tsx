@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { ArrowUpRightIcon, CalendarIcon, Settings2Icon } from 'lucide-react'
+import type { ReactNode } from 'react'
+import { ArrowUpRightIcon, CalendarIcon } from 'lucide-react'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -46,8 +47,8 @@ import type { SegmentMeterRow } from '../shared/SegmentMeter'
  * rather than as whatever the network happened to do.
  *
  * Every mark on it now comes from the shared chart library rather than from a
- * ReUI block adapted in place: `MetricChart` for the event series and the stat
- * strip that switches it, `PillColumns` for the per-day subscription stack,
+ * ReUI block adapted in place: `MetricChart` for the revenue, customer and
+ * usage-ingestion strip and the series it switches between, `PillColumns` for the per-day subscription stack,
  * `HalfDonut` for the invoice gauge, `SegmentMeter` for the per-feature usage
  * rows, `ArcGauge` for key health, and `BlurredEmpty` for the first run. The
  * blocks those components were composed from are declared there; what this file
@@ -59,6 +60,10 @@ import type { SegmentMeterRow } from '../shared/SegmentMeter'
  * plans, which are merely different from one another, and `good`/`warning`/
  * `critical` only for invoice payment state and key health, which are
  * judgements.
+ *
+ * The usage-by-feature meter and the API key gauge are parked: their JSX is
+ * commented out in `DashboardHome` until quota-based metrics land, but the
+ * components stay here, compiled, so they return without a rebuild.
  */
 export const DashboardHomeProvenance = provenance({
   source: 'composition',
@@ -70,7 +75,7 @@ export const DashboardHomeProvenance = provenance({
     'ui/select',
     'compositions/Section',
   ],
-  note: 'Billing overview: event series, revenue, contracts, invoice payment status, metered usage and API keys, drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
+  note: 'Billing overview: revenue, customers and usage ingestion, contracts and invoice payment status (metered usage and API keys parked), drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
 })
 
 /* ---- What the page is told ---------------------------------------------- */
@@ -140,6 +145,26 @@ export interface InvoicesPanel {
   overdue: number
 }
 
+/**
+ * New customers across the window, for the Customers tab.
+ *
+ * Counted by the page from the customers' own creation dates, so the headline
+ * and the series are the same measurement and always agree.
+ */
+export interface CustomersPanel {
+  status: PanelStatus
+  /** Customers created inside the window. `null` when it could not be counted. */
+  newCount: number | null
+  /**
+   * `true` when the page could only see the newest customers and every one of
+   * them fell inside the window — so `newCount` is a floor, not a total, and is
+   * shown with a `+` rather than as an exact figure.
+   */
+  partial: boolean
+  /** New customers per bucket, oldest first. */
+  points: { label: string; customers: number }[]
+}
+
 export interface UsageRow {
   featureId: string
   name: string
@@ -188,10 +213,17 @@ export interface DashboardHomeProps {
   rangeLabel: string
 
   events: EventsPanel
+  customers: CustomersPanel
   subscriptions: SubscriptionsPanel
   invoices: InvoicesPanel
-  usage: UsagePanel
-  api: ApiPanel
+  /**
+   * Usage by feature and API key health. Not rendered at the moment — both
+   * panels are parked until quota-based metrics land (see `DashboardHome`) —
+   * so the page need not fetch them. Kept on the contract so they return
+   * without a props change.
+   */
+  usage?: UsagePanel | undefined
+  api?: ApiPanel | undefined
 
   /** Where a link on the overview leads. No-op by default, so the surface renders in isolation. */
   onNavigate?: (path: string) => void
@@ -223,107 +255,114 @@ function Unavailable({ what, className }: { what: string; className?: string }) 
 
 /* ---- 1. Filters --------------------------------------------------------- */
 
-function FilterRow({
-  rangeOptions,
-  range,
-  onRangeChange,
-  granularityOptions,
-  granularity,
-  onGranularityChange,
-  customerOptions,
-  customer,
-  onCustomerChange,
-  onConfigure,
-}: {
+interface Filter {
+  label: string
+  value: string
+  options: FilterOption[]
+  onChange: (value: string) => void
+  icon?: ReactNode
+}
+
+function FilterSelect({ filter }: { filter: Filter }) {
+  return (
+    <Select
+      value={filter.value}
+      // Base UI's `Select.Value` renders the raw value unless the root can
+      // map it to a label — without this the filters read "7d", "daily",
+      // "all". `chart-16` passes `items` for the same reason.
+      items={filter.options.map((option) => ({ value: option.id, label: option.label }))}
+      // Base UI's Select can clear to `null`; these filters always have a
+      // selection, so a clear is simply ignored rather than widening every
+      // handler in the page to accept an absent filter.
+      onValueChange={(value) => {
+        if (value !== null) filter.onChange(value)
+      }}
+    >
+      <SelectTrigger aria-label={filter.label}>
+        {filter.icon}
+        <SelectValue />
+      </SelectTrigger>
+      <SelectContent align="start" aria-label={filter.label}>
+        {filter.options.map((option) => (
+          <SelectItem key={option.id} value={option.id}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  )
+}
+
+/**
+ * The filter rows.
+ *
+ * The range sits on its own at the top of the page because it is the only
+ * filter every panel obeys — the metrics, the contracts and the invoices are
+ * all cut to the same window. Granularity and customer only shape the metric
+ * chart, so they stay in the row directly above it.
+ *
+ * The design also drew an "+ Add filter" control. It is left out rather than
+ * drawn dead: this console already learned from a global search box that
+ * swallowed what you typed (see `ShellSearch`) that a control which does
+ * nothing is worse than a control that is not there.
+ */
+function RangeFilter(props: {
   rangeOptions: FilterOption[]
   range: string
   onRangeChange: (value: string) => void
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-2">
+      <FilterSelect
+        filter={{
+          label: 'Range',
+          value: props.range,
+          options: props.rangeOptions,
+          onChange: props.onRangeChange,
+          icon: <CalendarIcon aria-hidden className="size-3.5" />,
+        }}
+      />
+    </div>
+  )
+}
+
+function ChartFilters(props: {
   granularityOptions: FilterOption[]
   granularity: string
   onGranularityChange: (value: string) => void
   customerOptions: FilterOption[]
   customer: string
   onCustomerChange: (value: string) => void
-  onConfigure: () => void
 }) {
-  const filters: {
-    label: string
-    value: string
-    options: FilterOption[]
-    onChange: (value: string) => void
-  }[] = [
-    {
-      label: 'Range',
-      value: range,
-      options: rangeOptions,
-      onChange: onRangeChange,
-    },
+  const filters: Filter[] = [
     {
       label: 'Granularity',
-      value: granularity,
-      options: granularityOptions,
-      onChange: onGranularityChange,
+      value: props.granularity,
+      options: props.granularityOptions,
+      onChange: props.onGranularityChange,
     },
     {
       label: 'Customer',
-      value: customer,
-      options: customerOptions,
-      onChange: onCustomerChange,
+      value: props.customer,
+      options: props.customerOptions,
+      onChange: props.onCustomerChange,
     },
   ]
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2">
-      <div className="flex flex-wrap items-center gap-2">
-        {filters.map((filter) => (
-          <Select
-            key={filter.label}
-            value={filter.value}
-            // Base UI's `Select.Value` renders the raw value unless the root can
-            // map it to a label — without this the filters read "7d", "daily",
-            // "all". `chart-16` passes `items` for the same reason.
-            items={filter.options.map((option) => ({ value: option.id, label: option.label }))}
-            // Base UI's Select can clear to `null`; these three always have a
-            // selection, so a clear is simply ignored rather than widening every
-            // handler in the page to accept an absent filter.
-            onValueChange={(value) => {
-              if (value !== null) filter.onChange(value)
-            }}
-          >
-            <SelectTrigger aria-label={filter.label}>
-              {filter.label === 'Range' ? <CalendarIcon aria-hidden className="size-3.5" /> : null}
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent align="start" aria-label={filter.label}>
-              {filter.options.map((option) => (
-                <SelectItem key={option.id} value={option.id}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ))}
-      </div>
-
-      {/*
-       * The design also drew an "+ Add filter" control. It is left out rather
-       * than drawn dead: this console already learned from a global search box
-       * that swallowed what you typed (see `ShellSearch`) that a control which
-       * does nothing is worse than a control that is not there. "Configure"
-       * stays because it has somewhere real to go.
-       */}
-      <Button variant="outline" size="sm" className="h-8 px-3" onClick={onConfigure}>
-        <Settings2Icon aria-hidden />
-        Configure
-      </Button>
+    <div className="flex flex-wrap items-center gap-2">
+      {filters.map((filter) => (
+        <FilterSelect key={filter.label} filter={filter} />
+      ))}
     </div>
   )
 }
 
-/* ---- 2. Events monitoring ----------------------------------------------- */
+/* ---- 2. Key metrics ---------------------------------------------------- */
 
-const METRIC_EVENTS = 'events'
 const METRIC_REVENUE = 'revenue'
+const METRIC_CUSTOMERS = 'customers'
+const METRIC_EVENTS = 'events'
 const METRIC_LAG = 'lag'
 
 /**
@@ -340,47 +379,69 @@ const PLACEHOLDER_SHAPE = [46, 61, 54, 72, 65, 83, 74, 91, 86, 104, 97, 112].map
   value,
 }))
 
-function EventsSection({
+function MetricsSection({
   events,
+  customers,
   rangeLabel,
+  filters,
   onQuickstart,
 }: {
   events: EventsPanel
+  customers: CustomersPanel
   rangeLabel: string
+  /** The chart's own filters (granularity, customer), drawn above it. */
+  filters: ReactNode
   onQuickstart: () => void
 }) {
   // Which metric you are looking at is view state, not data, so it lives here
-  // rather than in the props. `MetricChart` holds none of its own.
-  const [metric, setMetric] = useState(METRIC_EVENTS)
+  // rather than in the props. `MetricChart` holds none of its own. Revenue is
+  // what the overview is opened for, so it is the tab you land on.
+  const [metric, setMetric] = useState(METRIC_REVENUE)
 
-  const ready = events.status === 'ready'
+  const eventsReady = events.status === 'ready'
+  const customersReady = customers.status === 'ready'
+  // The chart is drawn as soon as either source has something to show; the
+  // first-run invitation is for an account with neither.
+  const ready = eventsReady || customersReady
 
   /**
-   * The tab strip is the stat strip.
+   * The tab strip is the stat strip, in the order the overview is read:
+   * Revenue, Customers, Usage ingestion — then Processing lag.
    *
-   * All three metrics the design asked for are here, and two of them have no
-   * series to plot: the usage API prices a window as a whole rather than per
-   * bucket, and processing lag is not measured anywhere in the stack. Both keep
-   * their tab — dropping them would make "not plotted" and "not a thing we
-   * track" look identical — and `caption` below carries the reason.
+   * Two of them have no series to plot: the usage API prices a window as a
+   * whole rather than per bucket, and processing lag is not measured anywhere
+   * in the stack. Both keep their tab — dropping them would make "not plotted"
+   * and "not a thing we track" look identical — and `caption` below carries
+   * the reason.
    */
   const tabs: MetricTab[] = [
-    {
-      id: METRIC_EVENTS,
-      label: 'Events ingested',
-      value: ready && events.total !== null ? compact.format(events.total) : NOTHING,
-      points: ready
-        ? events.points.map((point) => ({ label: point.label, value: point.events }))
-        : [],
-    },
     {
       id: METRIC_REVENUE,
       label: 'Revenue',
       // The server's own subtotal, or nothing. `Money` has no `add`, and
       // summing prices across currencies in the browser would be the wrong
       // answer rendered confidently.
-      value: ready && events.revenue !== null ? <Money value={events.revenue} /> : NOTHING,
+      value: eventsReady && events.revenue !== null ? <Money value={events.revenue} /> : NOTHING,
       points: [],
+    },
+    {
+      id: METRIC_CUSTOMERS,
+      label: 'Customers',
+      value:
+        customersReady && customers.newCount !== null
+          ? `${whole.format(customers.newCount)}${customers.partial ? '+' : ''}`
+          : NOTHING,
+      points: customersReady
+        ? customers.points.map((point) => ({ label: point.label, value: point.customers }))
+        : [],
+    },
+    {
+      id: METRIC_EVENTS,
+      label: 'Usage ingestion',
+      value: eventsReady && events.total !== null ? compact.format(events.total) : NOTHING,
+      points: eventsReady
+        ? events.points.map((point) => ({ label: point.label, value: point.events }))
+        : [],
     },
     {
       /*
@@ -397,14 +458,16 @@ function EventsSection({
   ]
 
   const caption =
-    metric === METRIC_EVENTS
-      ? `Usage events received, ${rangeLabel}.`
-      : metric === METRIC_REVENUE
-        ? 'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.'
-        : undefined
+    metric === METRIC_REVENUE
+      ? 'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.'
+      : metric === METRIC_CUSTOMERS
+        ? `New customers, ${rangeLabel}.`
+        : metric === METRIC_EVENTS
+          ? `Usage events received, ${rangeLabel}.`
+          : undefined
 
   const placeholder: MetricTab[] = tabs.map((tab) =>
-    tab.id === METRIC_EVENTS ? { ...tab, points: PLACEHOLDER_SHAPE } : tab,
+    tab.id === METRIC_REVENUE ? { ...tab, points: PLACEHOLDER_SHAPE } : tab,
   )
 
   const chart = (
@@ -418,8 +481,9 @@ function EventsSection({
   )
 
   return (
-    <section aria-label="Events monitoring" className="flex min-w-0 flex-col gap-3">
-      <h2 className="sr-only">Events monitoring</h2>
+    <section aria-label="Key metrics" className="flex min-w-0 flex-col gap-3">
+      <h2 className="sr-only">Key metrics</h2>
+      {filters}
       {ready ? (
         chart
       ) : (
@@ -442,7 +506,7 @@ function EventsSection({
               ? 'Flexprice could not load events for this window. Try again in a moment.'
               : events.status === 'loading'
                 ? 'Fetching usage analytics for this window.'
-                : 'Send your first usage event and this chart shows ingestion, revenue and processing lag as it happens.'
+                : 'Send your first usage event and this chart shows revenue, customers and usage ingestion as it happens.'
           }
           action={
             events.status === 'empty' ? { label: 'Quickstart', onClick: onQuickstart } : undefined
@@ -455,15 +519,21 @@ function EventsSection({
         >
           <MetricChart
             tabs={placeholder}
-            activeTab={METRIC_EVENTS}
+            activeTab={METRIC_REVENUE}
             onTabChange={() => {}}
             height={240}
           />
         </BlurredEmpty>
       )}
 
-      {ready && events.revenue === null ? (
+      {eventsReady && events.revenue === null ? (
         <Unavailable what="The usage API returned no priced subtotal for this window." />
+      ) : null}
+      {ready && metric === METRIC_CUSTOMERS && customers.status === 'unavailable' ? (
+        <Unavailable what="Customers could not be loaded." />
+      ) : null}
+      {ready && metric === METRIC_EVENTS && events.status === 'unavailable' ? (
+        <Unavailable what="Usage analytics could not be loaded." />
       ) : null}
       {metric === METRIC_LAG ? (
         <Unavailable what="Flexprice does not expose an ingestion-lag metric." />
@@ -616,7 +686,12 @@ function InvoicesCard({
 
 /* ---- 5. Usage by feature ------------------------------------------------ */
 
-function UsageCard({
+/*
+ * Parked: not rendered until quota-based metrics land (see `DashboardHome`).
+ * Exported only so the component stays compiled and type-checked meanwhile;
+ * it is not part of the pages barrel.
+ */
+export function UsageCard({
   usage,
   onViewFeatures,
   className,
@@ -676,7 +751,8 @@ function UsageCard({
  * The tone is the page's judgement, not the gauge's: `ArcGauge` never decides
  * that a reading is bad.
  */
-function ApiCard({ api, onApiKeys }: { api: ApiPanel; onApiKeys: () => void }) {
+// Parked alongside `UsageCard`; exported for the same reason.
+export function ApiCard({ api, onApiKeys }: { api: ApiPanel; onApiKeys: () => void }) {
   const ready = api.status === 'ready' && api.totalKeys > 0
   const healthy = api.activeKeys === api.totalKeys
 
@@ -752,10 +828,9 @@ export function DashboardHome({
   onCustomerChange,
   rangeLabel,
   events,
+  customers,
   subscriptions,
   invoices,
-  usage,
-  api,
   onNavigate,
 }: DashboardHomeProps) {
   const go = (path: string) => onNavigate?.(path)
@@ -765,20 +840,24 @@ export function DashboardHome({
       {/* The visible title lives in the shell's breadcrumb; the outline still needs one. */}
       <h1 className="sr-only">Overview</h1>
 
-      <FilterRow
-        rangeOptions={rangeOptions}
-        range={range}
-        onRangeChange={onRangeChange}
-        granularityOptions={granularityOptions}
-        granularity={granularity}
-        onGranularityChange={onGranularityChange}
-        customerOptions={customerOptions}
-        customer={customer}
-        onCustomerChange={onCustomerChange}
-        onConfigure={() => go('/settings')}
-      />
+      <RangeFilter rangeOptions={rangeOptions} range={range} onRangeChange={onRangeChange} />
 
-      <EventsSection events={events} rangeLabel={rangeLabel} onQuickstart={() => go('/features')} />
+      <MetricsSection
+        events={events}
+        customers={customers}
+        rangeLabel={rangeLabel}
+        filters={
+          <ChartFilters
+            granularityOptions={granularityOptions}
+            granularity={granularity}
+            onGranularityChange={onGranularityChange}
+            customerOptions={customerOptions}
+            customer={customer}
+            onCustomerChange={onCustomerChange}
+          />
+        }
+        onQuickstart={() => go('/features')}
+      />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <SubscriptionsCard
@@ -789,10 +868,16 @@ export function DashboardHome({
         <InvoicesCard invoices={invoices} onViewInvoices={() => go('/invoices')} />
       </div>
 
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <UsageCard usage={usage} onViewFeatures={() => go('/features')} className="xl:col-span-2" />
-        <ApiCard api={api} onApiKeys={() => go('/settings')} />
-      </div>
+      {/*
+       * Usage by feature and the API panel are parked until quota-based
+       * metrics land, when they return in this shape. The components
+       * (`UsageCard`, `ApiCard`) and their panel types are kept intact.
+       *
+       * <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
+       *   <UsageCard usage={usage} onViewFeatures={() => go('/features')} className="xl:col-span-2" />
+       *   <ApiCard api={api} onApiKeys={() => go('/settings')} />
+       * </div>
+       */}
     </div>
   )
 }

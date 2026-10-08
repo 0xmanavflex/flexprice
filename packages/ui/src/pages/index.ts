@@ -13,6 +13,7 @@
 export { DashboardHome, DashboardHomeProvenance } from './home/DashboardHome'
 export type {
   ApiPanel,
+  CustomersPanel,
   DashboardHomeProps,
   EventPoint,
   EventsPanel,

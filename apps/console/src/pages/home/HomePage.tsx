@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import {
-  useApiKeys,
   useCustomers,
   useInvoices,
   useSubscriptions,
@@ -10,21 +9,19 @@ import {
 } from '@fp/query'
 import type { UsageAnalytics } from '@fp/query'
 import {
+  CustomerSortField,
   DEFAULT_INVOICE_QUERY,
   DEFAULT_SUBSCRIPTION_QUERY,
   InvoiceStatus,
-  isActive,
 } from '@fp/domain'
-import type { Invoice, Subscription } from '@fp/domain'
+import type { Customer, Invoice, Subscription } from '@fp/domain'
 import { DashboardHome } from '@fp/ui/pages'
 import type {
-  ApiPanel,
+  CustomersPanel,
   EventsPanel,
   FilterOption,
   InvoicesPanel,
   SubscriptionsPanel,
-  UsagePanel,
-  UsageRow,
 } from '@fp/ui/pages'
 
 /**
@@ -36,13 +33,13 @@ import type {
  * the rule it follows is that a number reaches the screen only if a request
  * returned it.
  *
- * Three panels are read from live queries:
+ * Four panels are read from live queries:
  *
- *   - **Events, revenue and usage by feature** from `useUsageAnalytics`, the
- *     hook this change added over `POST /events/analytics`. It is the only
- *     time-series the platform exposes. It is fetched twice — the window on
- *     screen and the window before it — so the per-feature change is two real
- *     measurements compared rather than a figure invented to look like growth.
+ *   - **Revenue and usage ingestion** from `useUsageAnalytics`, the hook over
+ *     `POST /events/analytics`. It is the only time-series the platform
+ *     exposes.
+ *   - **Customers** from `useCustomers`, newest first, counted and bucketed
+ *     here by creation date.
  *   - **Recent subscriptions** from `useSubscriptions`, bucketed here by start
  *     date. Note the deliberate use of `total` from the *rows*, not from the
  *     page: `SubscriptionPage.total` is the unfiltered server total, so a
@@ -51,9 +48,13 @@ import type {
  *   - **Invoice payment status** from `useInvoices`, bucketed by the domain's
  *     own derived status.
  *
- * And the numbers that are simply not available anywhere — processing lag,
- * request volume, p95 latency, error counts — are rendered as absent by the
- * surface itself, with the reason. See `DashboardHome`.
+ * And the number that is simply not available anywhere — processing lag — is
+ * rendered as absent by the surface itself, with the reason. See
+ * `DashboardHome`.
+ *
+ * Usage by feature and API key health are parked until quota-based metrics
+ * land: the surface no longer renders them, so their queries and shaping are
+ * commented out below rather than fetched for nothing.
  */
 
 const DAY_MS = 86_400_000
@@ -95,7 +96,8 @@ const dayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'sh
  */
 const columnDayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric' })
 const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric' })
-const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
+// Parked with `toUsagePanel` until quota-based metrics land.
+// const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
 /** The most columns the subscription stack is drawn with. See `toSubscriptionsPanel`. */
 const MAX_COLUMNS = 7
@@ -174,10 +176,29 @@ export function HomePage() {
     windowSize: granularity.windowSize,
     ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
   })
-  const priorAnalytics = useUsageAnalytics({
-    window: windows.prior,
-    windowSize: granularity.windowSize,
-    ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
+  /*
+   * Parked with usage by feature until quota-based metrics land: the prior
+   * window only fed the per-feature change.
+   *
+   * const priorAnalytics = useUsageAnalytics({
+   *   window: windows.prior,
+   *   windowSize: granularity.windowSize,
+   *   ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
+   * })
+   */
+
+  /*
+   * Newest first, so once a row falls before the window every row after it is
+   * older still — which makes the count exact, unless the whole page is inside
+   * the window, in which case the panel says the figure is a floor.
+   */
+  const recentCustomers = useCustomers({
+    page: 1,
+    pageSize: 100,
+    search: '',
+    statuses: [],
+    sortBy: CustomerSortField.CreatedAt,
+    sortDirection: 'desc',
   })
 
   /*
@@ -198,17 +219,35 @@ export function HomePage() {
     sortBy: 'issuedAt',
     sortDirection: 'desc',
   })
-  const apiKeys = useApiKeys()
+  // Parked with the API panel until quota-based metrics land.
+  // const apiKeys = useApiKeys()
 
   const eventsPanel = useMemo<EventsPanel>(
     () => toEventsPanel(analytics.data, analytics.isPending, analytics.isError, granularityId),
     [analytics.data, analytics.isPending, analytics.isError, granularityId],
   )
 
-  const usagePanel = useMemo<UsagePanel>(
-    () => toUsagePanel(analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError),
-    [analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError],
+  const customersPanel = useMemo<CustomersPanel>(
+    () =>
+      toCustomersPanel(
+        recentCustomers.data?.customers ?? [],
+        recentCustomers.data?.total ?? null,
+        windows.current,
+        range.days,
+        recentCustomers.isPending,
+        recentCustomers.isError,
+      ),
+    [recentCustomers.data, recentCustomers.isPending, recentCustomers.isError, windows, range.days],
   )
+
+  /*
+   * Parked until quota-based metrics land.
+   *
+   * const usagePanel = useMemo<UsagePanel>(
+   *   () => toUsagePanel(analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError),
+   *   [analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError],
+   * )
+   */
 
   const subscriptionsPanel = useMemo<SubscriptionsPanel>(
     () =>
@@ -233,10 +272,14 @@ export function HomePage() {
     [invoices.data, invoices.isPending, invoices.isError, windows],
   )
 
-  const apiPanel = useMemo<ApiPanel>(
-    () => toApiPanel(apiKeys.data?.keys ?? [], apiKeys.isPending, apiKeys.isError),
-    [apiKeys.data, apiKeys.isPending, apiKeys.isError],
-  )
+  /*
+   * Parked until quota-based metrics land.
+   *
+   * const apiPanel = useMemo<ApiPanel>(
+   *   () => toApiPanel(apiKeys.data?.keys ?? [], apiKeys.isPending, apiKeys.isError),
+   *   [apiKeys.data, apiKeys.isPending, apiKeys.isError],
+   * )
+   */
 
   const customerOptions: FilterOption[] = [
     { id: ALL_CUSTOMERS, label: 'All customers' },
@@ -256,10 +299,9 @@ export function HomePage() {
       onCustomerChange={setCustomerId}
       rangeLabel={range.label.toLowerCase()}
       events={eventsPanel}
+      customers={customersPanel}
       subscriptions={subscriptionsPanel}
       invoices={invoicesPanel}
-      usage={usagePanel}
-      api={apiPanel}
       onNavigate={(path) => void navigate({ to: path, search: {} as never })}
     />
   )
@@ -294,34 +336,71 @@ function toEventsPanel(
   }
 }
 
-function toUsagePanel(
-  data: UsageAnalytics | undefined,
-  prior: UsageAnalytics | undefined,
+/*
+ * Parked until quota-based metrics land, with the usage-by-feature panel.
+ *
+ * function toUsagePanel(
+ *   data: UsageAnalytics | undefined,
+ *   prior: UsageAnalytics | undefined,
+ *   isPending: boolean,
+ *   isError: boolean,
+ * ): UsagePanel {
+ *   if (isError) return { status: 'unavailable', rows: [] }
+ *   if (isPending || data === undefined) return { status: 'loading', rows: [] }
+ *   if (data.features.length === 0) return { status: 'empty', rows: [] }
+ *
+ *   const priorByFeature = new Map(prior?.features.map((row) => [row.featureId, row.usage]) ?? [])
+ *
+ *   /*
+ *    * Both the number and its rendering. The meter ranks features against each
+ *    * other, so it needs `quantity` to measure with; `value` is the same figure
+ *    * carrying its own unit, because "428K" alone is not an answer when the row
+ *    * below it counts tokens.
+ *    *\/
+ *   const rows: UsageRow[] = data.features.slice(0, 5).map((feature) => ({
+ *     featureId: feature.featureId,
+ *     name: feature.name,
+ *     lookupKey: feature.lookupKey,
+ *     quantity: feature.usage,
+ *     value: `${compact.format(feature.usage)} ${feature.unitPlural}`,
+ *     changePercent: change(feature.usage, priorByFeature.get(feature.featureId) ?? 0),
+ *   }))
+ *
+ *   return { status: 'ready', rows }
+ * }
+ */
+
+function toCustomersPanel(
+  rows: Customer[],
+  total: number | null,
+  window: { start: Date; end: Date },
+  days: number,
   isPending: boolean,
   isError: boolean,
-): UsagePanel {
-  if (isError) return { status: 'unavailable', rows: [] }
-  if (isPending || data === undefined) return { status: 'loading', rows: [] }
-  if (data.features.length === 0) return { status: 'empty', rows: [] }
+): CustomersPanel {
+  const blank: CustomersPanel = { status: 'loading', newCount: null, partial: false, points: [] }
+  if (isError) return { ...blank, status: 'unavailable' }
+  if (isPending) return blank
 
-  const priorByFeature = new Map(prior?.features.map((row) => [row.featureId, row.usage]) ?? [])
+  const created = rows
+    .map((row) => row.createdAt)
+    .filter((at): at is Date => at !== null && at >= window.start && at < window.end)
+  if (created.length === 0) return { ...blank, status: 'empty', newCount: 0 }
 
-  /*
-   * Both the number and its rendering. The meter ranks features against each
-   * other, so it needs `quantity` to measure with; `value` is the same figure
-   * carrying its own unit, because "428K" alone is not an answer when the row
-   * below it counts tokens.
-   */
-  const rows: UsageRow[] = data.features.slice(0, 5).map((feature) => ({
-    featureId: feature.featureId,
-    name: feature.name,
-    lookupKey: feature.lookupKey,
-    quantity: feature.usage,
-    value: `${compact.format(feature.usage)} ${feature.unitPlural}`,
-    changePercent: change(feature.usage, priorByFeature.get(feature.featureId) ?? 0),
-  }))
+  // Every row on the page is new and the server holds more: the count is a floor.
+  const partial = created.length === rows.length && total !== null && total > rows.length
 
-  return { status: 'ready', rows }
+  // A point per day, oldest first, so a quiet day is a zero rather than a gap.
+  const points = Array.from({ length: days + 1 }, (_, index) => {
+    const start = dayStart(days - index)
+    const end = new Date(start.getTime() + DAY_MS)
+    return {
+      label: dayLabel.format(start),
+      customers: created.filter((at) => at >= start && at < end).length,
+    }
+  })
+
+  return { status: 'ready', newCount: created.length, partial, points }
 }
 
 function toSubscriptionsPanel(
@@ -425,26 +504,30 @@ function toInvoicesPanel(
   }
 }
 
-function toApiPanel(
-  keys: { status: string; lastUsedAt: Date | null; expiresAt: Date | null }[],
-  isPending: boolean,
-  isError: boolean,
-): ApiPanel {
-  if (isError) return { status: 'unavailable', activeKeys: 0, totalKeys: 0, lastUsedLabel: null }
-  if (isPending) return { status: 'loading', activeKeys: 0, totalKeys: 0, lastUsedLabel: null }
-  if (keys.length === 0) {
-    return { status: 'empty', activeKeys: 0, totalKeys: 0, lastUsedLabel: null }
-  }
-
-  const lastUsed = keys
-    .map((key) => key.lastUsedAt)
-    .filter((at): at is Date => at !== null)
-    .sort((a, b) => b.getTime() - a.getTime())[0]
-
-  return {
-    status: 'ready',
-    activeKeys: keys.filter((key) => isActive(key as never)).length,
-    totalKeys: keys.length,
-    lastUsedLabel: lastUsed !== undefined ? dayLabel.format(lastUsed) : null,
-  }
-}
+/*
+ * Parked until quota-based metrics land, with the API panel.
+ *
+ * function toApiPanel(
+ *   keys: { status: string; lastUsedAt: Date | null; expiresAt: Date | null }[],
+ *   isPending: boolean,
+ *   isError: boolean,
+ * ): ApiPanel {
+ *   if (isError) return { status: 'unavailable', activeKeys: 0, totalKeys: 0, lastUsedLabel: null }
+ *   if (isPending) return { status: 'loading', activeKeys: 0, totalKeys: 0, lastUsedLabel: null }
+ *   if (keys.length === 0) {
+ *     return { status: 'empty', activeKeys: 0, totalKeys: 0, lastUsedLabel: null }
+ *   }
+ *
+ *   const lastUsed = keys
+ *     .map((key) => key.lastUsedAt)
+ *     .filter((at): at is Date => at !== null)
+ *     .sort((a, b) => b.getTime() - a.getTime())[0]
+ *
+ *   return {
+ *     status: 'ready',
+ *     activeKeys: keys.filter((key) => isActive(key as never)).length,
+ *     totalKeys: keys.length,
+ *     lastUsedLabel: lastUsed !== undefined ? dayLabel.format(lastUsed) : null,
+ *   }
+ * }
+ */

@@ -3,11 +3,10 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { money } from '@fp/domain'
 import { DashboardHome } from './DashboardHome'
 import type {
-  ApiPanel,
+  CustomersPanel,
   EventsPanel,
   InvoicesPanel,
   SubscriptionsPanel,
-  UsagePanel,
 } from './DashboardHome'
 
 /**
@@ -17,7 +16,10 @@ import type {
  * fetching it. `Populated` and `FirstRun` are the two the design specified, and
  * `Unavailable` is the one the product actually needs most: what a panel looks
  * like when Flexprice has no answer, which on this surface is a real and
- * permanent condition for processing lag, request volume, latency and errors.
+ * permanent condition for processing lag.
+ *
+ * Usage by feature and the API panel are parked until quota-based metrics land,
+ * so they have no fixtures here.
  *
  * The figures in `Populated` are story fixtures and are internally consistent —
  * the plan counts sum to the total, the invoice buckets sum to the centre
@@ -49,6 +51,17 @@ const events: EventsPanel = {
   revenue: money('184210.00', 'USD'),
 }
 
+// 1 + 0 + 2 + 3 + 1 + 4 + 2 + 1 = 14, the Customers headline.
+const customers: CustomersPanel = {
+  status: 'ready',
+  newCount: 14,
+  partial: false,
+  points: ['22 Sep', ...DAYS].map((label, index) => ({
+    label,
+    customers: [1, 0, 2, 3, 1, 4, 2, 1][index]!,
+  })),
+}
+
 // 11 + 10 + 9 + 8 = 38, the number above the bars.
 const subscriptions: SubscriptionsPanel = {
   status: 'ready',
@@ -74,58 +87,6 @@ const subscriptions: SubscriptionsPanel = {
 // 34 + 15 + 7 = 56.
 const invoices: InvoicesPanel = { status: 'ready', total: 56, paid: 34, open: 15, overdue: 7 }
 
-// `quantity` is what the meters rank the rows by; `value` is the same figure
-// with its unit, which is what a reader sees. They must agree — a row that
-// displays 1.8M while measuring 428K is the exact defect this surface exists
-// to avoid, and the story is where that pairing is asserted.
-const usage: UsagePanel = {
-  status: 'ready',
-  rows: [
-    {
-      featureId: 'f1',
-      name: 'API calls',
-      lookupKey: 'api_calls',
-      quantity: 428_000,
-      value: '428K calls',
-      changePercent: 18,
-    },
-    {
-      featureId: 'f2',
-      name: 'Tokens processed',
-      lookupKey: 'tokens_processed',
-      quantity: 1_800_000,
-      value: '1.8M tokens',
-      changePercent: 4,
-    },
-    {
-      featureId: 'f3',
-      name: 'Weighted tokens',
-      lookupKey: 'weighted_tokens',
-      quantity: 379_000,
-      value: '379K tokens',
-      changePercent: -3,
-    },
-    {
-      featureId: 'f4',
-      name: 'Active users',
-      lookupKey: 'active_users',
-      quantity: 18_400,
-      value: '18.4K users',
-      changePercent: 9,
-    },
-    {
-      featureId: 'f5',
-      name: 'Peak sessions',
-      lookupKey: 'peak_sessions',
-      quantity: 25_600,
-      value: '25.6K sessions',
-      changePercent: -1,
-    },
-  ],
-}
-
-const api: ApiPanel = { status: 'ready', activeKeys: 2, totalKeys: 3, lastUsedLabel: '28 Sep' }
-
 const meta = {
   title: 'Surfaces/DashboardHome',
   component: DashboardHome,
@@ -142,10 +103,9 @@ const meta = {
     onCustomerChange: fn(),
     rangeLabel: 'last 7 days',
     events,
+    customers,
     subscriptions,
     invoices,
-    usage,
-    api,
     onNavigate: fn(),
   },
   // The overview owns its scroll — the shell's content region does not scroll
@@ -167,52 +127,58 @@ export const Populated: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    for (const heading of [
-      'Events monitoring',
-      'Recent contracts',
-      'Invoice payment status',
-      'Usage by feature',
-      'API',
-    ]) {
+    for (const heading of ['Key metrics', 'Recent contracts', 'Invoice payment status']) {
       await expect(canvas.getByRole('heading', { name: heading })).toBeInTheDocument()
     }
 
-    // The stat strip is the tab strip: each metric is a tab that plots itself,
-    // and it reads the totals it was given, compactly.
-    await expect(canvas.getByRole('tab', { name: /Events ingested/ })).toBeInTheDocument()
-    await expect(canvas.getByText('5.1M')).toBeInTheDocument()
+    // Parked until quota-based metrics land.
+    await expect(canvas.queryByRole('heading', { name: 'Usage by feature' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'API' })).toBeNull()
 
-    // The invoice gauge's centre total equals the sum of its three buckets.
-    await expect(canvas.getByText('56')).toBeInTheDocument()
-
-    // A feature row shows its lookup key under the name, as `code.key`, and its
-    // quantity with the unit rather than as a bare number.
-    await expect(canvas.getByText('tokens_processed')).toBeInTheDocument()
-    await expect(canvas.getByText('428K calls')).toBeInTheDocument()
-  },
-}
-
-/**
- * Switching metric switches the plot.
- *
- * Two of the three tabs have no series — the usage API prices a window as a
- * whole, and nothing measures ingestion lag — so this also pins down that
- * selecting them says so rather than drawing a flat line at zero.
- */
-export const SwitchesMetric: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Revenue/ }))
+    // The stat strip is the tab strip, in reading order, and Revenue is the
+    // tab you land on.
+    const tabs = canvas.getAllByRole('tab')
+    await expect(tabs.map((tab) => tab.textContent)).toEqual([
+      expect.stringContaining('Revenue'),
+      expect.stringContaining('Customers'),
+      expect.stringContaining('Usage ingestion'),
+      expect.stringContaining('Processing lag'),
+    ])
+    await expect(canvas.getByRole('tab', { name: /Revenue/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
     await expect(
       canvas.getByText(
         'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.',
       ),
     ).toBeInTheDocument()
+
+    // Each tab reads the totals it was given, compactly.
+    await expect(canvas.getByText('5.1M')).toBeInTheDocument()
+    await expect(canvas.getByText('14')).toBeInTheDocument()
+
+    // The invoice gauge's centre total equals the sum of its three buckets.
+    await expect(canvas.getByText('56')).toBeInTheDocument()
+
+    // No "Configure" shortcut: the filters are the only controls up top.
+    await expect(canvas.queryByRole('button', { name: 'Configure' })).toBeNull()
+  },
+}
+
+/** Switching metric switches the plot. */
+export const SwitchesMetric: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: /Usage ingestion/ }))
+    await expect(canvas.getByText('Usage events received, last 7 days.')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('tab', { name: /Customers/ }))
+    await expect(canvas.getByText('New customers, last 7 days.')).toBeInTheDocument()
   },
 }
 
 /**
- * The numbers that have no endpoint stay absent even when everything else is
+ * The number that has no endpoint stays absent even when everything else is
  * populated — this is the regression guard for the defect that prompted the
  * rebuild, where a plausible figure stood in for one nobody could source.
  */
@@ -226,8 +192,16 @@ export const UnavailableMetricsStayAbsent: Story = {
       canvas.getByText('Flexprice does not expose an ingestion-lag metric.'),
     ).toBeInTheDocument()
 
-    // Processing lag, requests, p95 and errors: four dashes, no invented numbers.
-    await expect(canvas.getAllByText('—')).toHaveLength(4)
+    // Processing lag: one dash, no invented number.
+    await expect(canvas.getAllByText('—')).toHaveLength(1)
+  },
+}
+
+/** A first page that is entirely inside the window is a floor, and says so. */
+export const PartialCustomerCount: Story = {
+  args: { customers: { ...customers, newCount: 100, partial: true } },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('100+')).toBeInTheDocument()
   },
 }
 
@@ -260,22 +234,19 @@ export const LinksToInvoices: Story = {
  * Nothing ingested yet.
  *
  * The full first-run variant: dashes in the stat strip, the invitation over a
- * dimmed chart, greyed bars, and the API panel waiting for a first request.
+ * dimmed chart, and greyed bars.
  */
 export const FirstRun: Story = {
   args: {
     events: { status: 'empty', points: [], total: null, revenue: null },
+    customers: { status: 'empty', newCount: 0, partial: false, points: [] },
     subscriptions: { status: 'empty', total: 0, changePercent: null, days: [], plans: [] },
     invoices: { status: 'empty', total: 0, paid: 0, open: 0, overdue: 0 },
-    usage: { status: 'empty', rows: [] },
-    api: { status: 'empty', activeKeys: 0, totalKeys: 0, lastUsedLabel: null },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
     await expect(canvas.getByText('No events yet')).toBeInTheDocument()
-    await expect(canvas.getByText('Waiting for first request')).toBeInTheDocument()
-    await expect(canvas.getByText('No usage recorded yet')).toBeInTheDocument()
     await expect(
       canvas.getByText('Contracts created in this period appear here, by plan.'),
     ).toBeInTheDocument()
@@ -298,15 +269,14 @@ export const FirstRun: Story = {
 export const Unavailable: Story = {
   args: {
     events: { status: 'unavailable', points: [], total: null, revenue: null },
+    customers: { status: 'unavailable', newCount: null, partial: false, points: [] },
     subscriptions: { status: 'unavailable', total: 0, changePercent: null, days: [], plans: [] },
     invoices: { status: 'unavailable', total: 0, paid: 0, open: 0, overdue: 0 },
-    usage: { status: 'unavailable', rows: [] },
-    api: { status: 'unavailable', activeKeys: 0, totalKeys: 0, lastUsedLabel: null },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await expect(canvas.getByText('Usage analytics unavailable')).toBeInTheDocument()
     await expect(canvas.getByText('Contracts could not be loaded.')).toBeInTheDocument()
     await expect(canvas.getByText('Invoices could not be loaded.')).toBeInTheDocument()
-    await expect(canvas.getByText('API keys could not be loaded.')).toBeInTheDocument()
   },
 }
