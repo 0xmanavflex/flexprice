@@ -98,4 +98,9 @@ export const UNAVAILABLE_COPY: Record<string, { what: string; workaround?: strin
   'developers/webhooks': {
     what: 'Webhooks are how Flexprice tells your systems that something happened — an invoice finalised, a payment failed.',
   },
+  'notifications/wallet-alerts': {
+    what: 'Wallet alerts would warn you across the whole tenant when a customer balance runs low.',
+    workaround:
+      'Alert rules, on the tab beside this one, do work — but they are per-entity, so a wallet is watched one at a time rather than by a tenant-wide rule.',
+  },
 }

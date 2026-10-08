@@ -7,6 +7,7 @@ import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
+import { CostSheetSummaryCard } from './CostSheetSummaryCard'
 
 /**
  * Create or edit a cost sheet's details on one page: Details (name, description) and
@@ -112,6 +113,13 @@ export function CostSheetForm({
       title={isEdit ? `Edit ${defaultValue?.name || 'cost sheet'}` : 'Create cost sheet'}
       trail={trail}
       width="wide"
+      preview={
+        <CostSheetSummaryCard
+          name={form.watch('name') ?? ''}
+          lookupKey={form.watch('lookupKey') ?? ''}
+          description={form.watch('description') ?? ''}
+        />
+      }
       toolbar={{
         mode: mode,
         noun: 'cost sheet',

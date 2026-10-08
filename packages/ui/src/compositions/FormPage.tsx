@@ -33,7 +33,7 @@ export const FormPageProvenance = provenance({
     'compositions/use-form-steps',
     'ui/field',
   ],
-  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, Cancel, primary CTA) with the form beneath it — plus, optionally, a c-stepper-1 style stepper in the toolbar — or the Section surface with the actions at its foot.',
+  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, Cancel, primary CTA) with the form beneath it — plus, each optional, a c-stepper-1 style stepper in the toolbar and a solution-billing-8 style preview rail — or the Section surface with the actions at its foot.',
 })
 
 /** A stepper in the header: the form's `useFormSteps` flow, drawn as the header stepper. */
@@ -66,10 +66,13 @@ export type FormPageProps = FormPageBaseProps &
         footer?: never
         /** Optional. Draws the steps in the toolbar, between the title and the actions; omit for a plain single-page form. */
         stepper?: FormPageStepper | undefined
+        /** Optional. A `FormPreview` rail beside the form; omit and the fields are centred on their own. */
+        preview?: ReactNode | undefined
       }
     | {
         toolbar?: never
         stepper?: never
+        preview?: never
         /** The bar at the foot of the surface: usually `FormActions` or a stepper's footer. */
         footer: ReactNode
       }
@@ -82,6 +85,7 @@ export function FormPage({
   toolbar,
   footer,
   stepper,
+  preview,
   width = 'narrow',
   className,
 }: FormPageProps) {
@@ -96,7 +100,9 @@ export function FormPage({
       toolbarProps.hideSubmit || (flow ? !(flow.isLast || toolbar.mode === 'edit') : false)
     const fields = (
       <FieldSet className="gap-0 pb-6">
-        <FieldGroup className={cn(width === 'narrow' && !stepper && 'mx-auto max-w-3xl')}>
+        <FieldGroup
+          className={cn(width === 'narrow' && !stepper && !preview && 'mx-auto max-w-3xl')}
+        >
           {children}
         </FieldGroup>
       </FieldSet>
@@ -109,7 +115,6 @@ export function FormPage({
           title={title}
           {...toolbarProps}
           hideSubmit={hideSubmit}
-          {...(flow && !flow.isFirst ? { onPrevious: flow.back } : {})}
           center={
             stepper && flow ? (
               <WorkflowStepper
@@ -128,11 +133,18 @@ export function FormPage({
               <AlertDescription>{submitError}</AlertDescription>
             </Alert>
           ) : null}
-          <div className="flex min-w-0 flex-col">
-            {fields}
-            {flow && !stepper?.hideNav ? (
-              <StepNav flow={flow} isSubmitting={Boolean(toolbarProps.isSubmitting)} />
-            ) : null}
+          <div
+            className={cn(
+              preview && 'grid gap-7 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start',
+            )}
+          >
+            <div className="flex min-w-0 flex-col">
+              {fields}
+              {flow && !stepper?.hideNav ? (
+                <StepNav flow={flow} isSubmitting={Boolean(toolbarProps.isSubmitting)} />
+              ) : null}
+            </div>
+            {preview ? <div className="min-w-0 lg:sticky lg:top-0">{preview}</div> : null}
           </div>
         </PageBody>
       </div>

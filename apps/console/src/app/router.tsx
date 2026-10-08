@@ -641,7 +641,6 @@ function FeatureDetailRouteComponent() {
     <FeatureDetailPage
       featureId={featureId}
       onEdit={(id) => void navigate({ to: '/features/$featureId/edit', params: { featureId: id } })}
-      onAddPlan={() => void navigate({ to: '/plans/new' })}
       onNavigateToList={() => void navigate({ to: '/features', search: {} as never })}
     />
   )
@@ -1936,12 +1935,12 @@ const developerRedirects = (
   }),
 )
 
-/** Tags (formerly Labels) live in Settings now; the old path keeps working. */
+/** Labels live in Settings now; the old path keeps working. */
 const labelsRedirect = createRoute({
   getParentRoute: () => shellRoute,
   path: '/labels',
   beforeLoad: () => {
-    throw redirect({ to: '/settings', search: { section: 'tags', tab: 'tags' } })
+    throw redirect({ to: '/settings', search: { section: 'labels', tab: 'labels' } })
   },
 })
 

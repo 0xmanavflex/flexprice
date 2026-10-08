@@ -4,8 +4,6 @@ import {
   useAttemptInvoicePayment,
   useFinalizeInvoice,
   useInvoice,
-  useTenant,
-  useUserInfo,
   useVoidInvoice,
 } from '@fp/query'
 import { InvoiceDetailView, Toaster, toast } from '@fp/ui/pages'
@@ -27,8 +25,6 @@ export function InvoiceDetailPage({
   onOpenCustomer,
 }: InvoiceDetailPageProps) {
   const invoice = useInvoice(invoiceId)
-  const me = useUserInfo()
-  const tenant = useTenant(me.data?.tenantId ?? '')
   const finalize = useFinalizeInvoice()
   const voidInvoice = useVoidInvoice()
   const attempt = useAttemptInvoicePayment()
@@ -66,7 +62,7 @@ export function InvoiceDetailPage({
   return (
     <>
       <InvoiceDetailView
-        invoice={toInvoiceDocument(data, tenant.data)}
+        invoice={toInvoiceDocument(data)}
         onBack={onBack}
         {...(onEdit ? { onEdit } : {})}
         isFinalizing={finalize.isPending}

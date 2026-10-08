@@ -16,31 +16,31 @@ test.beforeEach(async ({ context }) => {
 const isWrite = (method: string, path: RegExp) => (r: { method(): string; url(): string }) =>
   r.method() === method && path.test(new URL(r.url()).pathname)
 
-test.describe('Settings → Tags', () => {
-  test('/labels lands on the Tags tab in Settings', async ({ page }) => {
+test.describe('Settings → Labels', () => {
+  test('/labels lands on the Labels tab in Settings', async ({ page }) => {
     await page.goto('/labels')
-    await expect(page).toHaveURL(/\/settings\?section=tags&tab=tags$/)
-    await expect(page.getByRole('heading', { name: 'Tags' }).first()).toBeVisible()
+    await expect(page).toHaveURL(/\/settings\?section=labels&tab=labels$/)
+    await expect(page.getByRole('heading', { name: 'Labels' }).first()).toBeVisible()
   })
 
-  test('creates a tag in a dialog without leaving Settings', async ({ page }) => {
-    await page.goto('/settings?section=tags&tab=tags')
-    await page.getByRole('button', { name: 'New tag' }).click()
+  test('creates a label in a dialog without leaving Settings', async ({ page }) => {
+    await page.goto('/settings?section=labels&tab=labels')
+    await page.getByRole('button', { name: 'New label' }).click()
 
-    const dialog = page.getByRole('dialog', { name: 'New tag' })
+    const dialog = page.getByRole('dialog', { name: 'New label' })
     await expect(dialog).toBeVisible()
 
-    await dialog.getByRole('button', { name: 'Create tag' }).click()
+    await dialog.getByRole('button', { name: 'Create label' }).click()
     await expect(dialog.getByText('Enter a name')).toBeVisible()
 
     await dialog.getByLabel('Name').fill('EU region')
     await dialog.getByLabel('Lookup key').fill('eu-region')
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/groups$/))
-    await dialog.getByRole('button', { name: 'Create tag' }).click()
+    await dialog.getByRole('button', { name: 'Create label' }).click()
     await request
 
     await expect(dialog).toBeHidden()
-    await expect(page).toHaveURL(/\/settings\?section=tags&tab=tags$/)
+    await expect(page).toHaveURL(/\/settings\?section=labels&tab=labels$/)
   })
 })

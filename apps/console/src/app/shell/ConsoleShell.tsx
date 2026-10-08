@@ -182,6 +182,7 @@ export function ConsoleShell({
         onNavigate={goTo}
         user={user}
         onSettings={() => goTo('settings')}
+        onDocs={() => goTo('docs')}
         {...(onSignOut ? { onSignOut } : {})}
         /*
          * The environment leads the trail, and it is where you change it too — the

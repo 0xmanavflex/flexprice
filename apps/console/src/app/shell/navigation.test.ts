@@ -40,7 +40,7 @@ describe('navEntryForPath', () => {
     ['?section=team&tab=roles', 'settings'],
     ['?section=invoicing&tab=invoices', 'settings'],
     ['?section=webhooks&tab=webhooks', 'webhooks'],
-    ['?section=tags&tab=tags', 'settings-tags'],
+    ['?section=labels&tab=labels', 'settings-labels'],
     ['?section=api-keys&tab=api-keys', 'settings'],
     ['', 'settings'],
   ])('resolves /settings%s to %s', (search, id) => {
@@ -123,11 +123,11 @@ describe('the sidebar layout', () => {
     expect(NAV.map((entry) => entry.label)).toEqual([
       'Home',
       'Customers',
-      'Product catalog',
       'Contracts',
       'Billing',
       'Collections',
       'Revenue',
+      'Product catalog',
       'Developers',
     ])
     expect(FOOTER_NAV.map((entry) => entry.label)).toEqual(['Integrations', 'Documentation'])
@@ -142,7 +142,7 @@ describe('the sidebar layout', () => {
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',
-      'settings-tags',
+      'settings-labels',
       'price-units',
       'groups',
       'api-keys',

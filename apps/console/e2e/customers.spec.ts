@@ -129,7 +129,7 @@ test.describe('a customer detail page', () => {
     await page.getByRole('menuitem', { name: 'Create contract' }).click()
 
     await expect(page).toHaveURL(new RegExp(`/customers/${customerId}/subscriptions/new`))
-    await expect(page.getByRole('button', { name: /Create subscription/ })).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Next' })).toBeVisible()
 
     await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)

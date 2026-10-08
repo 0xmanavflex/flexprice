@@ -14,6 +14,7 @@ import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
+import { CustomerPreviewCard } from './CustomerPreviewCard'
 
 /**
  * Create or edit a customer on its own page: name, ID and email, then the optional rest under More details.
@@ -266,6 +267,22 @@ export function CustomerForm({
       title={isEdit ? `Edit ${customerName || 'customer'}` : 'Create customer'}
       trail={trail}
       width="wide"
+      preview={
+        <CustomerPreviewCard
+          name={form.watch('name')}
+          externalId={form.watch('externalId')}
+          email={form.watch('email')}
+          phone={form.watch('phone')}
+          addressLine1={form.watch('addressLine1')}
+          addressLine2={form.watch('addressLine2')}
+          addressCity={form.watch('addressCity')}
+          addressState={form.watch('addressState')}
+          addressPostalCode={form.watch('addressPostalCode')}
+          addressCountry={form.watch('addressCountry')}
+          timezone={form.watch('timezone')}
+          taxTreatment={form.watch('taxTreatment')}
+        />
+      }
       toolbar={{
         mode: mode,
         noun: 'customer',

@@ -195,35 +195,6 @@ export async function fetchEnvironments(
 }
 
 /**
- * Renames an environment. Only the name is editable: the type is fixed at
- * creation, because turning a sandbox into production would bill whatever it holds.
- */
-export async function updateEnvironment(
-  serverURL: string,
-  token: string,
-  id: string,
-  patch: { name: string },
-): Promise<EnvironmentRecord> {
-  const body = await request(serverURL, `/environments/${encodeURIComponent(id)}`, {
-    method: 'PUT',
-    token,
-    body: { name: patch.name },
-  })
-  const row = isRecord(body) ? body : {}
-
-  return { id: str(row, 'id') || id, name: str(row, 'name') || patch.name, type: str(row, 'type') }
-}
-
-/** Deletes an environment. The API's own failure sentence is kept for the caller. */
-export async function deleteEnvironment(
-  serverURL: string,
-  token: string,
-  id: string,
-): Promise<void> {
-  await request(serverURL, `/environments/${encodeURIComponent(id)}`, { method: 'DELETE', token })
-}
-
-/**
  * Creates an environment.
  *
  * `POST /environments` is undocumented for the same reason the list is — one

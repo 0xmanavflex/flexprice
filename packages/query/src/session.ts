@@ -12,8 +12,6 @@ import {
   type EnvironmentRecord,
   type SessionCredentials,
   createEnvironment,
-  deleteEnvironment,
-  updateEnvironment,
   fetchCurrentUser,
   fetchEnvironments,
   signIn,
@@ -76,10 +74,7 @@ export function toEnvironment(record: EnvironmentRecord): Environment {
   return {
     id: record.id,
     name: record.name,
-    type:
-      record.type === EnvironmentType.Production
-        ? EnvironmentType.Production
-        : EnvironmentType.Sandbox,
+    type: record.type === EnvironmentType.Production ? EnvironmentType.Production : EnvironmentType.Sandbox,
   }
 }
 
@@ -127,44 +122,6 @@ export function useCreateEnvironment(
         throw new ApiError(ErrorKind.Unauthorized, 'Sign in to create an environment.')
       }
       return toEnvironment(await createEnvironment(serverURL, token as string, draft))
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
-    },
-  })
-}
-
-/** Renames an environment. The type is not editable. */
-export function useUpdateEnvironment(
-  token: string | null,
-): UseMutationResult<Environment, Error, { id: string; name: string }> {
-  const serverURL = useFlexpriceServerURL()
-  const queryClient = useQueryClient()
-
-  return useMutation<Environment, Error, { id: string; name: string }>({
-    mutationFn: async ({ id, name }) => {
-      if (!enabledFor(token)) {
-        throw new ApiError(ErrorKind.Unauthorized, 'Sign in to edit an environment.')
-      }
-      return toEnvironment(await updateEnvironment(serverURL, token as string, id, { name }))
-    },
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
-    },
-  })
-}
-
-/** Deletes an environment and refreshes the list. */
-export function useDeleteEnvironment(token: string | null): UseMutationResult<void, Error, string> {
-  const serverURL = useFlexpriceServerURL()
-  const queryClient = useQueryClient()
-
-  return useMutation<void, Error, string>({
-    mutationFn: async (id) => {
-      if (!enabledFor(token)) {
-        throw new ApiError(ErrorKind.Unauthorized, 'Sign in to delete an environment.')
-      }
-      await deleteEnvironment(serverURL, token as string, id)
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })

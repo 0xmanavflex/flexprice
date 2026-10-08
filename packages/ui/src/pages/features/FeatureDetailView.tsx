@@ -19,7 +19,7 @@ import {
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import { ArchiveIcon, CopyIcon, MoreHorizontalIcon, PencilIcon, PlusIcon } from 'lucide-react'
+import { ArchiveIcon, BellIcon, CopyIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -28,6 +28,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
+import { Switch } from '@ui/components/primitives/switch'
 import { DetailHeader } from '../../compositions/DetailHeader'
 import { EditableCard } from '../../compositions/EditableCard'
 import { LoadingRows } from '../../compositions'
@@ -62,8 +63,6 @@ export interface FeatureDetailViewProps {
   onEditConfiguration: () => void
   /** Real save of name/description; rejects to show an inline error. */
   onSave: (changes: Record<string, string>) => Promise<unknown>
-  /** Header action: start a plan that uses this feature. Omitted, the button is not shown. */
-  onAddPlan?: () => void
   /** Header menu: Duplicate. Omitted, the item is not shown. */
   onDuplicate?: () => void
   /** Header menu: delete the feature. Omitted, the item is not shown. */
@@ -85,6 +84,12 @@ export function demoUsagePoints(): MetricPoint[] {
     value: Math.round(3200 + index * 90 + Math.sin(index / 2.2) * 900 + ((index * 37) % 7) * 120),
   }))
 }
+
+const ALERTS = [
+  { id: 'critical', label: 'Critical', hint: 'Above 100% of allowance', dot: 'bg-destructive' },
+  { id: 'warning', label: 'Warning', hint: 'Above 80% of allowance', dot: 'bg-warning' },
+  { id: 'info', label: 'Info', hint: 'Above 50% of allowance', dot: 'bg-info' },
+] as const
 
 /** Builds the ingest cURL from the feature's event name and aggregation. */
 export function buildIngestCurl(feature: Feature): string {
@@ -161,7 +166,9 @@ function allowanceOf(entitlement: Entitlement): string {
 }
 
 function resetsOf(entitlement: Entitlement): string {
-  return entitlement.usageResetPeriod ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod] : '—'
+  return entitlement.usageResetPeriod
+    ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod]
+    : '—'
 }
 
 export function FeatureDetailView({
@@ -170,7 +177,6 @@ export function FeatureDetailView({
   onTabChange,
   onEditConfiguration,
   onSave,
-  onAddPlan,
   onDuplicate,
   onDelete,
   charges = [],
@@ -225,12 +231,6 @@ export function FeatureDetailView({
         }
         actions={
           <>
-            {onAddPlan ? (
-              <Button variant="outline" className="h-8 px-3" onClick={onAddPlan}>
-                <PlusIcon aria-hidden />
-                Add plan
-              </Button>
-            ) : null}
             <Button variant="outline" className="h-8 px-3" onClick={onEditConfiguration}>
               <PencilIcon aria-hidden />
               Edit
@@ -249,6 +249,10 @@ export function FeatureDetailView({
                 <MoreHorizontalIcon aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
+                <DropdownMenuItem onClick={() => onTabChange('information')}>
+                  <BellIcon className="text-muted-foreground" aria-hidden />
+                  Usage alerts
+                </DropdownMenuItem>
                 {onDuplicate ? (
                   <DropdownMenuItem onClick={onDuplicate}>
                     <CopyIcon className="text-muted-foreground" aria-hidden />
@@ -346,13 +350,7 @@ function ChargesTab({
           { id: 'status', label: 'Plan status', value: (row) => statusLabel(row.parentStatus) },
         ]}
         searchText={(row) =>
-          [
-            row.parentName,
-            modelLabel(row.charge),
-            billedLabel(row.charge),
-            priceLabel(row.charge),
-            statusLabel(row.parentStatus),
-          ].join(' ')
+          [row.parentName, modelLabel(row.charge), billedLabel(row.charge), priceLabel(row.charge), statusLabel(row.parentStatus)].join(' ')
         }
         columns={[
           {
@@ -418,10 +416,7 @@ function EntitlementsTab({
   if (rows.length === 0) {
     return (
       <Section title="Entitlements" flush>
-        <SectionEmpty
-          title="No entitlements yet"
-          description="No plan includes this feature yet."
-        />
+        <SectionEmpty title="No entitlements yet" description="No plan includes this feature yet." />
       </Section>
     )
   }
@@ -436,12 +431,7 @@ function EntitlementsTab({
           { id: 'status', label: 'Plan status', value: (row) => statusLabel(row.parentStatus) },
         ]}
         searchText={(row) =>
-          [
-            row.parentName,
-            allowanceOf(row.entitlement),
-            resetsOf(row.entitlement),
-            statusLabel(row.parentStatus),
-          ].join(' ')
+          [row.parentName, allowanceOf(row.entitlement), resetsOf(row.entitlement), statusLabel(row.parentStatus)].join(' ')
         }
         columns={[
           {
@@ -608,6 +598,12 @@ function InformationTab({
   archived: boolean
   onSave: (changes: Record<string, string>) => Promise<unknown>
 }) {
+  const [enabled, setEnabled] = useState<Record<string, boolean>>({
+    critical: true,
+    warning: true,
+    info: false,
+  })
+
   return (
     <div className="grid gap-5 xl:grid-cols-3">
       <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
@@ -713,6 +709,29 @@ function InformationTab({
         ) : null}
       </div>
       <div className="flex min-w-0 flex-col gap-5">
+        {isMetered ? (
+          <Section title="Usage alerts" flush>
+            <ul className="divide-border/50 divide-y">
+              {ALERTS.map((alert) => (
+                <li key={alert.id} className="flex items-center gap-3 px-6 py-3.5">
+                  <span aria-hidden className={`size-2 rounded-full ${alert.dot}`} />
+                  <span className="flex-1">
+                    <span className="block text-sm">{alert.label}</span>
+                    <span className="text-muted-foreground block text-xs">{alert.hint}</span>
+                  </span>
+                  <Switch
+                    checked={enabled[alert.id] ?? false}
+                    onCheckedChange={(next) =>
+                      setEnabled((current) => ({ ...current, [alert.id]: next }))
+                    }
+                    aria-label={`${alert.label} alert`}
+                  />
+                </li>
+              ))}
+            </ul>
+          </Section>
+        ) : null}
+
         <Section title="Metadata">
           <Properties
             columns={2}

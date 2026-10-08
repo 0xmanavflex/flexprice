@@ -166,7 +166,7 @@ export const CountHidesTheAggregationTarget: Story = {
     await expect(await canvas.findByRole('combobox', { name: 'Aggregation' })).toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Event field/)).not.toBeInTheDocument()
 
-    await chooseOption('Aggregation', 'Sum')
+    await chooseOption('Aggregation', 'Sum of a field')
     await expect(await canvas.findByLabelText(/^Event field/)).toBeInTheDocument()
 
     await chooseOption('Aggregation', 'Count of events')

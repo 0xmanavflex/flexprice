@@ -3,12 +3,15 @@ import type { ShellCreateAction } from '@fp/ui/compositions'
 /**
  * What the Create button offers, and where each one goes.
  *
- * Four, not twenty. The test is whether someone starts this flow *cold* —
+ * Six, not twenty. The test is whether someone starts this flow *cold* —
  * without already being on the screen that owns it. Creating a subscription is
  * the clearest case: it begins with a customer in mind and nothing else, and
  * today it costs a navigation to Customers and a search before the work starts.
  * Creating a price, by contrast, only ever happens while editing a plan, so it
  * belongs on the plan and not here.
+ *
+ * `startsGroup` marks where a rule is drawn: what you sell, then who you sell
+ * it to, then the money.
  *
  * ## What a `path` has to be worth
  *
@@ -20,7 +23,8 @@ import type { ShellCreateAction } from '@fp/ui/compositions'
  * that is the same dead end one level up, and it is worse than the menu being
  * short, because it was advertised.
  *
- * Products, plans, groups and cost sheets are created from their own lists.
+ * Group opens its own compact create page (`/groups/new`); cost sheets are
+ * here too and open their own full-page create form.
  */
 export interface CreateAction extends ShellCreateAction {
   /** Where the flow begins. Routed by the app, so this stays plain data. */
@@ -30,7 +34,13 @@ export interface CreateAction extends ShellCreateAction {
 export const CREATE_ACTIONS: CreateAction[] = [
   { id: 'subscription', label: 'New contract', path: '/subscriptions/new' },
   { id: 'customer', label: 'New customer', path: '/customers/new' },
-  { id: 'invoice', label: 'New invoice', path: '/invoices' },
+
+  { id: 'plan', label: 'New plan', path: '/plans/new', startsGroup: true },
+  { id: 'feature', label: 'New product', path: '/features/new' },
+  { id: 'group', label: 'New group', path: '/groups/new' },
+  { id: 'cost-sheet', label: 'New cost sheet', path: '/cost-sheets/new' },
+
+  { id: 'invoice', label: 'New invoice', path: '/invoices', startsGroup: true },
   { id: 'payment', label: 'Record a payment', path: '/payments' },
 ]
 

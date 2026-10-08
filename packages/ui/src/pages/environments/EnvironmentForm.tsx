@@ -24,9 +24,9 @@ import { provenance } from '@ui/provenance'
  *
  * Two fields, and the second one is the whole point. Production and Sandbox
  * are not equivalent picks from a list, so each is a card carrying one line
- * about what it means, side by side. Creating production can be withheld —
- * most tenants arrange it rather than self-serving it. When it is, the card
- * stays selectable, and choosing it disables Create and says "Contact us".
+ * about what it means. Creating production can be withheld — most tenants
+ * arrange it rather than self-serving it. When it is, the option stays visible
+ * and disabled with the reason attached.
  *
  * The chrome is the shared `FormDialog` with a `Composer` footer. It opens over
  * the page the person is already on.
@@ -41,7 +41,7 @@ export const EnvironmentFormProvenance = provenance({
     'ui/field',
     '@reui/alert',
   ],
-  note: 'Reference FormDialog and Composer. The type is a side-by-side pair of cards, not a select. Sandbox is the default; Production, when withheld, swaps Create for a disabled Contact us.',
+  note: 'Reference FormDialog and Composer. The type is a pair of one-line cards, not a select. Sandbox is the default.',
 })
 
 export interface EnvironmentFormProps {
@@ -52,10 +52,11 @@ export interface EnvironmentFormProps {
   isSubmitting?: boolean
   submitError?: string | null
   /**
-   * Whether production can be created here at all. When false, selecting it
-   * disables Create and the button reads "Contact us".
+   * Whether production can be created here at all. When false, the reason is
+   * required — a disabled control with no explanation is just a broken one.
    */
   canCreateProduction?: boolean
+  productionUnavailableReason?: string
 }
 
 const TYPES = [EnvironmentType.Sandbox, EnvironmentType.Production] as const
@@ -68,6 +69,7 @@ export function EnvironmentForm({
   isSubmitting = false,
   submitError = null,
   canCreateProduction = true,
+  productionUnavailableReason,
 }: EnvironmentFormProps) {
   const form = useForm<CreateEnvironment>({
     resolver: standardSchemaResolver(createEnvironmentSchema),
@@ -84,10 +86,13 @@ export function EnvironmentForm({
   const type = form.watch('type')
   const typeError = form.formState.errors.type?.message
 
-  const productionWithheld = type === EnvironmentType.Production && !canCreateProduction
-
   const submit = form.handleSubmit((value) => {
-    if (value.type === EnvironmentType.Production && !canCreateProduction) return
+    if (value.type === EnvironmentType.Production && !canCreateProduction) {
+      form.setError('type', {
+        message: productionUnavailableReason ?? 'Production cannot be created here.',
+      })
+      return
+    }
     onSubmit(value)
   })
 
@@ -98,15 +103,12 @@ export function EnvironmentForm({
         if (!next && isSubmitting) return
         onOpenChange(next)
       }}
-      size="md"
+      size="sm"
       title="Create environment"
     >
       <Composer
-        submitLabel={
-          productionWithheld ? 'Contact us' : isSubmitting ? 'Creating…' : 'Create environment'
-        }
+        submitLabel={isSubmitting ? 'Creating…' : 'Create environment'}
         submitting={isSubmitting}
-        disabled={productionWithheld}
         onCancel={() => onOpenChange(false)}
         onSubmit={() => void submit()}
       >
@@ -146,27 +148,37 @@ export function EnvironmentForm({
               <RadioGroup
                 value={type}
                 onValueChange={(value) => form.setValue('type', value as CreateEnvironment['type'])}
-                className="grid grid-cols-2 gap-3"
+                className="grid gap-3"
               >
-                {TYPES.map((option) => (
-                  <label
-                    key={option}
-                    className={cn(
-                      'flex cursor-pointer flex-col gap-2 rounded-lg border p-4 text-left transition-colors',
-                      type === option
-                        ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
-                        : 'hover:bg-muted/40',
-                    )}
-                  >
-                    <span className="flex items-center justify-between gap-2">
-                      <span className="text-sm font-medium">{ENVIRONMENT_TYPE_LABEL[option]}</span>
-                      <RadioGroupItem value={option} />
-                    </span>
-                    <span className="text-muted-foreground text-[13px]/relaxed">
-                      {ENVIRONMENT_TYPE_DESCRIPTION[option]}
-                    </span>
-                  </label>
-                ))}
+                {TYPES.map((option) => {
+                  const isProduction = option === EnvironmentType.Production
+                  const disabled = isProduction && !canCreateProduction
+
+                  return (
+                    <label
+                      key={option}
+                      className={cn(
+                        'flex cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-colors',
+                        type === option
+                          ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
+                          : 'hover:bg-muted/40',
+                        disabled && 'cursor-not-allowed opacity-60',
+                      )}
+                    >
+                      <RadioGroupItem value={option} disabled={disabled} className="mt-0.5" />
+                      <span className="flex min-w-0 flex-col gap-0.5">
+                        <span className="text-sm font-medium">
+                          {ENVIRONMENT_TYPE_LABEL[option]}
+                        </span>
+                        <span className="text-muted-foreground text-[13px]/relaxed">
+                          {disabled && productionUnavailableReason
+                            ? productionUnavailableReason
+                            : ENVIRONMENT_TYPE_DESCRIPTION[option]}
+                        </span>
+                      </span>
+                    </label>
+                  )
+                })}
               </RadioGroup>
             </fieldset>
             {typeError ? <FieldError>{typeError}</FieldError> : null}

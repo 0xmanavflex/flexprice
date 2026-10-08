@@ -286,7 +286,7 @@ export function ShellNav({ groups, activeItemId, onNavigate }: ShellNavProps) {
       {groups.map((group) => (
         <SidebarGroup
           key={group.id}
-          className={cn(group.pinned && 'mt-2 border-t pt-2')}
+          className={cn(group.pinned && 'mt-auto border-t pt-2')}
           data-pinned={group.pinned ? '' : undefined}
         >
           {group.title ? <SidebarGroupLabel>{group.title}</SidebarGroupLabel> : null}

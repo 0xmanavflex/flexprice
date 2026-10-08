@@ -1,5 +1,9 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { readSelectFilter, selectFilterField, type FlatFilter } from '@ui/compositions/FilterBar'
+import {
+  readSelectFilter,
+  selectFilterField,
+  type FlatFilter,
+} from '@ui/compositions/FilterBar'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -15,8 +19,8 @@ import type { EntityColumn } from './cells'
  * `EntityList` exactly what a list page would. Same toolbar, same header band,
  * same rows, same footer; only the place the state lives is different.
  *
- * `border` draws the frame (a rounded outline) around the table; leave it off
- * when a surrounding Section already provides one.
+ * Bordered, because it sits inside a page of other panels rather than being
+ * the page.
  */
 export const DetailTableProvenance = provenance({
   source: 'composition',
@@ -63,8 +67,6 @@ export interface DetailTableProps<T> {
   compact?: boolean
   /** `false` leaves out the search row, for a short list that needs none. */
   toolbar?: boolean
-  /** Draws a rounded outline around the table. Off when the surrounding Section already frames it. */
-  border?: boolean
   className?: string
 }
 
@@ -91,7 +93,6 @@ export function DetailTable<T extends object>({
   empty,
   compact = false,
   toolbar = true,
-  border = false,
   className,
 }: DetailTableProps<T>) {
   const [search, setSearch] = useState('')
@@ -170,7 +171,7 @@ export function DetailTable<T extends object>({
 
   if (rows.length === 0 && empty) {
     return (
-      <div className={cn(border && 'bg-background rounded-xl border', className)}>
+      <div className={className}>
         {action ? (
           <div className={cn('flex items-center justify-end', compact ? 'px-6 py-3' : 'px-4 pt-4')}>
             {action}
@@ -194,13 +195,7 @@ export function DetailTable<T extends object>({
   }
 
   return (
-    <div
-      className={cn(
-        !compact && 'p-4',
-        border && 'bg-background min-w-0 overflow-x-auto rounded-xl border',
-        className,
-      )}
-    >
+    <div className={cn(!compact && 'p-4', className)}>
       <EntityList<T>
         compact={compact}
         hideToolbar={!toolbar}
@@ -248,9 +243,7 @@ export function DetailTable<T extends object>({
                 onQueryChange: (_query, flat: FlatFilter[]) => {
                   const next: Record<string, string[]> = {}
                   for (const spec of activeSpecs) {
-                    const allowed = new Set(
-                      (choicesById[spec.id] ?? []).map((choice) => choice.value),
-                    )
+                    const allowed = new Set((choicesById[spec.id] ?? []).map((choice) => choice.value))
                     next[spec.id] = readSelectFilter(flat, spec.id, allowed)
                   }
                   setSelected(next)

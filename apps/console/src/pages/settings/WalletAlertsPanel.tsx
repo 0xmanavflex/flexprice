@@ -18,15 +18,7 @@ import {
 import { Field, LoadingRows } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
-import {
-  ActionError,
-  ActionNote,
-  Panel,
-  PanelError,
-  mutationMessage,
-  toFailure,
-  SettingsBlock,
-} from './panelKit'
+import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -34,13 +26,19 @@ import { useDraft } from './useDraft'
  *
  * `GET/PUT/DELETE /settings/wallet_balance_alert_config`.
  *
- * ## One environment-wide default
+ * ## This is not the "Alert rules" tab, and the two must not be merged
  *
- * This is one setting behind a settings key, with no id and no entity. The
- * per-entity alert rules screen that used to sit beside it has been removed
- * from the console; the shared vocabulary (`AlertCondition`,
- * `AlertThresholdType`, the three severities) stays shared so "falls below 80"
- * means one thing across the product.
+ * The Alert rules tab next door is `/alerts/setting`: **per-entity** records,
+ * each with its own id, each watching exactly one wallet, feature or
+ * subscription. This is **one environment-wide default** behind a settings
+ * key, with no id and no entity. They are stored separately, edited
+ * separately, and a change to one is invisible in the other — so a future pass
+ * that notices the two screens look alike and folds them together would
+ * produce the worst kind of bug: a save that appears to work and changes
+ * nothing the user was looking at. The shared vocabulary (`AlertCondition`,
+ * `AlertThresholdType`, the three severities) is shared on purpose, because
+ * "falls below 80" should mean one thing across the product. That shared
+ * vocabulary is the whole of what the two features have in common.
  *
  * ## Why no currency symbol
  *
@@ -120,7 +118,7 @@ function WalletAlertsForm({
       <Panel>
         <SettingsBlock
           title="Wallet balance alerts"
-          description="One setting for every wallet in this environment."
+          description="One setting for every wallet in this environment. These are not the per-wallet rules on the Alert rules tab — changing this does not change those."
           actions={
             <Button
               type="button"
@@ -198,9 +196,7 @@ function WalletAlertsForm({
             <div className="flex w-full flex-wrap items-center justify-end gap-3">
               <ActionError message={saveError} />
               {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-              {!saveError && reset.isSuccess ? (
-                <ActionNote message="Back to the defaults." />
-              ) : null}
+              {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
               <Button type="submit" disabled={busy}>
                 {update.isPending ? 'Saving…' : 'Save changes'}
               </Button>

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
 import { ApiError } from '@fp/query'
-import { ErrorState, InfoHint, LoadingRows, SettingsCard } from '@fp/ui/compositions'
-import { DetailTable, type DetailColumn } from '@fp/ui/pages'
+import { ErrorState, SettingsCard } from '@fp/ui/compositions'
 
 /**
  * The few things every settings panel needs, in one place.
@@ -127,61 +126,36 @@ export function SettingsBlock({
 }
 
 /**
- * The one table every settings page opens on: the shared `DetailTable`,
- * bordered, with the create action on its toolbar. There is no title above it;
- * what the table is for is said by its empty state and by `hint`, a short
- * hover note beside the action.
+ * One list or table region: the title, its line and the primary action sit
+ * above a bordered body that holds the search and the rows.
  */
-export function SettingsTable<T extends object>({
-  label,
-  noun,
-  hint,
-  rows,
-  columns,
-  getRowId,
-  action,
-  isLoading,
-  empty,
+export function TableBlock({
+  title,
+  description,
+  actions,
+  children,
 }: {
-  /** Names the table for assistive tech, e.g. "Members". */
-  label: string
-  noun: string
-  /** One short sentence, shown on hover beside the action. */
-  hint?: string
-  rows: T[]
-  columns: DetailColumn<T>[]
-  getRowId?: (row: T) => string
-  action?: ReactNode
-  isLoading?: boolean
-  empty: ReactNode
+  title: string
+  description?: string
+  actions?: ReactNode
+  children: ReactNode
 }) {
-  const withHint =
-    action || hint ? (
-      <div className="flex items-center gap-2">
-        {hint ? <InfoHint>{hint}</InfoHint> : null}
-        {action}
-      </div>
-    ) : undefined
-
-  if (isLoading) {
-    return (
-      <div className="bg-background rounded-xl border p-4">
-        <LoadingRows rows={3} columns={Math.min(columns.length, 4)} />
-      </div>
-    )
-  }
-
+  const id = `table-block-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
   return (
-    <DetailTable<T>
-      border
-      label={label}
-      noun={noun}
-      rows={rows}
-      columns={columns}
-      {...(getRowId ? { getRowId } : {})}
-      {...(withHint ? { action: withHint } : {})}
-      empty={empty}
-    />
+    <section aria-labelledby={id} className="flex flex-col gap-3">
+      <div className="flex min-h-8 items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 id={id} className="text-sm font-medium">
+            {title}
+          </h2>
+          {description ? <p className="text-muted-foreground text-[13px]">{description}</p> : null}
+        </div>
+        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      </div>
+      <div className="bg-background flex min-w-0 flex-col gap-4 overflow-x-auto rounded-xl border p-4">
+        {children}
+      </div>
+    </section>
   )
 }
 

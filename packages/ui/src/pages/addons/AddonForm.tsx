@@ -6,6 +6,7 @@ import { Textarea } from '@ui/components/primitives/textarea'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
+import { AddonPreviewCard } from './AddonPreviewCard'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -122,6 +123,13 @@ export function AddonForm({
       title={mode === 'create' ? 'Create add-on' : `Edit ${defaultValue?.name || 'add-on'}`}
       trail={trail}
       width="wide"
+      preview={
+        <AddonPreviewCard
+          name={form.watch('name')}
+          lookupKey={form.watch('lookupKey')}
+          description={form.watch('description') ?? ''}
+        />
+      }
       toolbar={{
         mode: mode,
         noun: 'add-on',

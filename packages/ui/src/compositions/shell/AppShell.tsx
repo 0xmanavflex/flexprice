@@ -52,6 +52,8 @@ export interface AppShellProps {
   user: ShellUser
   onProfile?: () => void
   onSettings?: () => void
+  /** Documentation, in the footer account menu beside Settings. */
+  onDocs?: () => void
   onSignOut?: () => void
 
   productName?: string
@@ -93,6 +95,7 @@ export function AppShell({
   user,
   onProfile,
   onSettings,
+  onDocs,
   onSignOut,
   productName = 'Flexprice',
   logo,
@@ -137,8 +140,9 @@ export function AppShell({
               </div>
             </div>
           </SidebarHeader>
+        
 
-          <SidebarContent>
+          <SidebarContent >
             <ShellNav
               groups={navGroups}
               {...(activeItemId === undefined ? {} : { activeItemId })}
@@ -155,6 +159,7 @@ export function AppShell({
               user={user}
               {...(onProfile ? { onProfile } : {})}
               {...(onSettings ? { onSettings } : {})}
+              {...(onDocs ? { onDocs } : {})}
               {...(onSignOut ? { onSignOut } : {})}
             />
           </SidebarFooter>

@@ -34,8 +34,6 @@ export type { FlexpriceProviderProps } from './provider'
 export {
   toEnvironment,
   useCreateEnvironment,
-  useDeleteEnvironment,
-  useUpdateEnvironment,
   useCurrentUser,
   useEnvironmentList,
   useSignIn,

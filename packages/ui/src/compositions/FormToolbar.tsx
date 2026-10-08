@@ -1,12 +1,12 @@
 import type { ReactNode } from 'react'
-import { ArrowLeftIcon, XIcon } from 'lucide-react'
+import { XIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Separator } from '@ui/components/primitives/separator'
 import { provenance } from '@ui/provenance'
 
 /**
- * The bar a create/edit page opens with: close, the title, Cancel (or Previous on a later
- * step) and the one primary action, and, optionally, a stepper centred between them.
+ * The bar a create/edit page opens with: close, the title, Cancel and the one
+ * primary action, and, optionally, a stepper centred between them.
  *
  * The structure of the ReUI `form-3` toolbar (`blocks/form-3/components/
  * invoice-toolbar.tsx`), which is hard-wired to an invoice and cannot be edited
@@ -27,8 +27,6 @@ export interface FormToolbarProps {
   formId: string
   /** Without it there is no way back, so neither close nor Cancel is drawn. */
   onCancel?: (() => void) | undefined
-  /** On a later step of a staged form: Previous takes Cancel's place (the close button still leaves). */
-  onPrevious?: (() => void) | undefined
   isSubmitting?: boolean
   submitLabel?: string
   /** A multi-step form submits only from its last step; earlier steps advance from the step nav instead. */
@@ -43,7 +41,6 @@ export function FormToolbar({
   noun,
   formId,
   onCancel,
-  onPrevious,
   isSubmitting = false,
   submitLabel,
   hideSubmit = false,
@@ -78,12 +75,7 @@ export function FormToolbar({
         </div>
       ) : null}
       <div className="flex shrink-0 items-center justify-end gap-2 md:flex-1">
-        {onPrevious ? (
-          <Button type="button" variant="outline" onClick={onPrevious} disabled={isSubmitting}>
-            <ArrowLeftIcon aria-hidden="true" />
-            Previous
-          </Button>
-        ) : onCancel ? (
+        {onCancel ? (
           <Button
             type="button"
             variant="ghost"

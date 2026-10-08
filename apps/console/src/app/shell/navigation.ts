@@ -5,8 +5,8 @@ import type { ShellCrumb, ShellNavGroup, ShellNavItem } from '@fp/ui/composition
  * The navigation tree.
  *
  * The primary tree follows the revenue lifecycle: who you bill (Customers),
- * what you sell them (Product Catalog), what they signed (Contracts), what you
- * bill and collect, what it earned (Revenue) and how it is wired (Developers),
+ * what they signed (Contracts), what you bill and collect, what it earned
+ * (Revenue), what you sell (Product Catalog) and how it is wired (Developers),
  * then Settings. Integrations and Documentation sit apart, pinned under a rule
  * at the foot of the rail, because nobody works *in* them.
  *
@@ -36,16 +36,6 @@ export interface NavEntry {
 export const NAV: NavEntry[] = [
   { id: 'home', label: 'Home', path: '/' },
   { id: 'customers', label: 'Customers', path: '/customers' },
-  {
-    id: 'catalog',
-    label: 'Product catalog',
-    children: [
-      { id: 'features', label: 'Products', path: '/features' },
-      { id: 'plans', label: 'Plans', path: '/plans' },
-      { id: 'addons', label: 'Add-ons', path: '/addons' },
-      { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },
-    ],
-  },
   { id: 'subscriptions', label: 'Contracts', path: '/subscriptions' },
   {
     id: 'billing',
@@ -61,6 +51,16 @@ export const NAV: NavEntry[] = [
     children: [{ id: 'payments', label: 'Payments', path: '/payments' }],
   },
   { id: 'revenue', label: 'Revenue', path: '/revenue' },
+  {
+    id: 'catalog',
+    label: 'Product catalog',
+    children: [
+      { id: 'features', label: 'Products', path: '/features' },
+      { id: 'plans', label: 'Plans', path: '/plans' },
+      { id: 'addons', label: 'Add-ons', path: '/addons' },
+      { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },
+    ],
+  },
   {
     id: 'developers',
     label: 'Developers',
@@ -95,7 +95,7 @@ export const FOOTER_NAV: NavEntry[] = [
  * Destinations that are real routes but not rows in the rail.
  *
  * Settings itself (reached from the account menu), the pages it lists but which keep their own routes (Discounts, Taxes,
- * Cost Tracking), Tags (a Settings tab), and the pages the tree no longer lists but which are
+ * Cost Tracking), Labels (a Settings tab), and the pages the tree no longer lists but which are
  * still linked to, searched for and reachable by URL. `pathForNavId`,
  * `labelForNavId`, `breadcrumbForPath` and the command palette resolve against
  * them.
@@ -106,10 +106,10 @@ export const SECONDARY: NavEntry[] = [
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
   {
-    id: 'settings-tags',
-    label: 'Tags',
+    id: 'settings-labels',
+    label: 'Labels',
     path: '/settings',
-    query: { section: 'tags', tab: 'tags' },
+    query: { section: 'labels', tab: 'labels' },
   },
   { id: 'price-units', label: 'Price Units', path: '/price-units' },
   { id: 'groups', label: 'Groups', path: '/groups' },

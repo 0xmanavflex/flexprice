@@ -59,7 +59,7 @@ export const PLACEHOLDER_ROUTES = [
   // Elsewhere
   // `/integrations` is a real page — see `integrationsRoute` in router.tsx.
   // `/settings` is a real page now — see `settingsRoute` in router.tsx.
-  // `/labels` redirects to Settings → Tags — see `labelsRedirect` in router.tsx.
+  // `/labels` redirects to Settings → Labels — see `labelsRedirect` in router.tsx.
   {
     path: '/docs',
     title: 'Documentation',

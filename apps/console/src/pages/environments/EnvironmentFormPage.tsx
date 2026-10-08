@@ -31,6 +31,7 @@ export function EnvironmentFormPage({ open, onOpenChange }: EnvironmentFormPageP
       open={open}
       onOpenChange={onOpenChange}
       canCreateProduction={false}
+      productionUnavailableReason="Set up with your account contact."
       isSubmitting={create.isPending}
       submitError={
         create.error ? mutationMessage(create.error, 'The environment could not be created.') : null

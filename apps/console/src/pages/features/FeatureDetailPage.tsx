@@ -15,7 +15,6 @@ import { toSubmitError } from './featureMessages'
 
 export interface FeatureDetailPageProps {
   onEdit: (featureId: string) => void
-  onAddPlan: () => void
   featureId: string
   onNavigateToList: () => void
 }
@@ -26,15 +25,10 @@ export interface FeatureDetailPageProps {
  * Name and description save for real (per value, or together from the header
  * Edit, which opens Information). "Edit configuration" opens the stepped form.
  * Charges and entitlements are the prices and grants that reference this
- * feature. The usage chart is still demo: there is no
+ * feature. The usage chart and usage alerts are still demo: there is no
  * per-feature series wired on this page yet.
  */
-export function FeatureDetailPage({
-  featureId,
-  onNavigateToList,
-  onEdit,
-  onAddPlan,
-}: FeatureDetailPageProps) {
+export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
   const charges = useFeatureCharges(
     feature.data?.type === FeatureType.Metered ? feature.data.meterId : null,
@@ -102,7 +96,6 @@ export function FeatureDetailPage({
         onTabChange={setTab}
         onBack={onNavigateToList}
         onEditConfiguration={() => onEdit(featureId)}
-        onAddPlan={onAddPlan}
         onDuplicate={() => setCloning(true)}
         onDelete={() => setDeleting(true)}
         charges={charges.data ?? []}

@@ -1,9 +1,8 @@
-import { useState, type ReactNode } from 'react'
+import { useState } from 'react'
 import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import {
   CheckCircle2Icon,
   CircleDashedIcon,
-  CopyIcon,
   DownloadIcon,
   MoreHorizontalIcon,
   ReceiptIcon,
@@ -21,11 +20,10 @@ import {
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
 import { Switch } from '@ui/components/primitives/switch'
-import { toast } from 'sonner'
 import { InvoiceStatus } from '@fp/domain'
 import { cn } from '@ui/lib/cn'
 import { DetailShell } from '../../compositions/DetailShell'
-import { DetailTabs, Properties } from '../../compositions/DetailKit'
+import { DetailTabs, Dot, Properties } from '../../compositions/DetailKit'
 import { Section } from '../../compositions/Section'
 import { Pill, Status } from '../shared/cells'
 import {
@@ -50,7 +48,9 @@ export interface InvoiceDetailViewProps {
   onRecordPayment?: () => void
 }
 
-type InvoiceTab = 'overview' | 'payments' | 'credit-notes'
+type InvoiceTab = 'overview' | 'payments' | 'credit-notes' | 'information'
+
+const LINE_DOT = ['bg-chart-1', 'bg-chart-2', 'bg-chart-3', 'bg-chart-4', 'bg-chart-5']
 
 /**
  * One invoice (reference `invoice-detail`): the shared detail header, then the
@@ -75,33 +75,15 @@ export function InvoiceDetailView({
   const totals = invoiceTotals(invoice)
   const money = (value: number) =>
     new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(value)
-  const unitMoney = (value: number) =>
-    new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: invoice.currency,
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 6,
-    }).format(value)
   const isDraft = invoice.status === 'draft'
   const paymentFailed = status?.label === 'Payment failed'
   const canVoid =
     onVoid && (invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue)
   const lines = showZero ? invoice.lines : invoice.lines.filter((line) => line.amount !== 0)
   const title = isDraft ? 'Draft invoice' : (invoice.number ?? invoice.id)
-  const isOverdue = invoice.status === InvoiceStatus.Overdue
-  const canRecordPayment = !isDraft && Boolean(onRecordPayment) && totals.due > 0
   const hasMenu = Boolean(
-    paymentFailed ||
-    (isDraft && (onEdit || onFinalize)) ||
-    canRecordPayment ||
-    onOpenCustomer ||
-    canVoid ||
-    onBack,
+    paymentFailed || (isDraft && onEdit) || onOpenCustomer || canVoid || onBack,
   )
-  const copyLink = () => {
-    void navigator.clipboard?.writeText(window.location.href)
-    toast.success('Link copied')
-  }
 
   return (
     <DetailShell
@@ -109,24 +91,51 @@ export function InvoiceDetailView({
       icon={<ReceiptIcon />}
       title={title}
       id={invoice.id}
-      badges={
+      subtitle={
         <>
+          {onOpenCustomer ? (
+            <button
+              type="button"
+              className="hover:text-foreground underline-offset-2 hover:underline"
+              onClick={onOpenCustomer}
+            >
+              {invoice.billTo.name}
+            </button>
+          ) : (
+            <span>{invoice.billTo.name}</span>
+          )}
+          {invoice.subscriptionLabel ? (
+            <>
+              <Dot />
+              <span className="max-w-56 truncate" title={invoice.subscriptionLabel}>
+                {invoice.subscriptionLabel}
+              </span>
+            </>
+          ) : null}
           {/* The one status on the page. A draft's title already says so. */}
-          {status ? <Pill tone={status.tone}>{status.label}</Pill> : null}
-          <Chip onClick={onOpenCustomer}>{invoice.billTo.name}</Chip>
-          {invoice.subscriptionLabel ? <Chip>{invoice.subscriptionLabel}</Chip> : null}
+          {status ? (
+            <>
+              <Dot />
+              <Pill tone={status.tone}>{status.label}</Pill>
+            </>
+          ) : null}
         </>
       }
       actions={
         <>
           <Button variant="outline" className="h-8 px-3" onClick={onDownload}>
             <DownloadIcon aria-hidden="true" />
-            Download PDF
+            PDF
           </Button>
-          <Button variant="outline" className="h-8 px-3" onClick={copyLink}>
-            <CopyIcon aria-hidden="true" />
-            Copy link
-          </Button>
+          {isDraft ? (
+            <Button className="h-8 px-3.5" onClick={onFinalize} disabled={isFinalizing}>
+              Finalize
+            </Button>
+          ) : onRecordPayment && totals.due > 0 ? (
+            <Button className="h-8 px-3.5" onClick={onRecordPayment}>
+              Record payment
+            </Button>
+          ) : null}
           {hasMenu ? (
             <DropdownMenu>
               <DropdownMenuTrigger
@@ -143,14 +152,6 @@ export function InvoiceDetailView({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-56">
                 <DropdownMenuGroup>
-                  {isDraft && onFinalize ? (
-                    <DropdownMenuItem onClick={onFinalize} disabled={isFinalizing}>
-                      Finalize invoice
-                    </DropdownMenuItem>
-                  ) : null}
-                  {canRecordPayment ? (
-                    <DropdownMenuItem onClick={onRecordPayment}>Record payment</DropdownMenuItem>
-                  ) : null}
                   {paymentFailed ? (
                     <DropdownMenuItem onClick={onRetryPayment}>
                       <RefreshCwIcon className="text-muted-foreground" aria-hidden="true" />
@@ -192,6 +193,7 @@ export function InvoiceDetailView({
           { value: 'overview', label: 'Overview' },
           { value: 'payments', label: 'Payments', count: invoice.payments.length },
           { value: 'credit-notes', label: 'Credit notes', count: invoice.creditNotes.length },
+          { value: 'information', label: 'Information' },
         ]}
       />
 
@@ -203,15 +205,13 @@ export function InvoiceDetailView({
             showZero={showZero}
             onShowZero={setShowZero}
             money={money}
-            unitMoney={unitMoney}
             totals={totals}
             paymentFailed={paymentFailed}
             isDraft={isDraft}
-            isOverdue={isOverdue}
             {...(onRetryPayment ? { onRetryPayment } : {})}
           />
           <div className="flex flex-col gap-5 xl:sticky xl:top-6">
-            <Section title="Activity" flush>
+            <Section title="Timeline" flush>
               <InvoiceTimeline events={invoice.events} />
             </Section>
             <Section title="Related" flush>
@@ -230,20 +230,6 @@ export function InvoiceDetailView({
                   {...(invoice.creditNotes.length ? { onClick: () => setTab('credit-notes') } : {})}
                 />
               </ul>
-            </Section>
-            <Section title="Metadata">
-              <Properties
-                items={[
-                  {
-                    label: 'Invoice ID',
-                    value: <span className="font-mono text-[13px]">{invoice.id}</span>,
-                  },
-                  { label: 'Currency', value: invoice.currency },
-                  ...(invoice.payment
-                    ? [{ label: 'Payment terms', value: invoice.payment.terms }]
-                    : []),
-                ]}
-              />
             </Section>
           </div>
         </div>
@@ -318,6 +304,26 @@ export function InvoiceDetailView({
           )}
         </Section>
       ) : null}
+
+      {tab === 'information' ? (
+        <div className="grid gap-5 xl:grid-cols-3">
+          <Section className="xl:col-span-2" title="Invoice details">
+            <Properties
+              items={[
+                {
+                  label: 'Invoice ID',
+                  value: <span className="font-mono text-[13px]">{invoice.id}</span>,
+                },
+                { label: 'Currency', value: invoice.currency },
+                { label: 'Customer', value: invoice.billTo.name },
+                ...(invoice.payment
+                  ? [{ label: 'Payment terms', value: invoice.payment.terms }]
+                  : []),
+              ]}
+            />
+          </Section>
+        </div>
+      ) : null}
     </DetailShell>
   )
 }
@@ -329,11 +335,9 @@ function InvoiceDocumentArticle({
   showZero,
   onShowZero,
   money,
-  unitMoney,
   totals,
   paymentFailed,
   isDraft,
-  isOverdue,
   onRetryPayment,
 }: {
   invoice: InvoiceDocument
@@ -341,11 +345,9 @@ function InvoiceDocumentArticle({
   showZero: boolean
   onShowZero: (value: boolean) => void
   money: (value: number) => string
-  unitMoney: (value: number) => string
   totals: ReturnType<typeof invoiceTotals>
   paymentFailed: boolean
   isDraft: boolean
-  isOverdue: boolean
   onRetryPayment?: () => void
 }) {
   const note = isDraft
@@ -359,25 +361,11 @@ function InvoiceDocumentArticle({
   const settled = totals.due <= 0 && invoice.paid > 0
   const amountBlock = (
     <div className="space-y-2">
-      <p
-        className={cn(
-          'text-3xl font-medium tracking-tight tabular-nums',
-          isOverdue && !settled && 'text-destructive/80',
-        )}
-      >
+      <p className="text-3xl font-medium tracking-tight tabular-nums">
         {money(settled ? totals.total : totals.due)}
       </p>
-      <p
-        className={cn(
-          'text-[13px]',
-          isOverdue && !settled ? 'text-destructive/70' : 'text-muted-foreground',
-        )}
-      >
-        {settled
-          ? 'Paid in full'
-          : invoice.dueAt
-            ? `${isOverdue ? 'Overdue since' : 'Due'} ${invoice.dueAt}`
-            : null}
+      <p className="text-muted-foreground text-[13px]">
+        {settled ? 'Paid in full' : invoice.dueAt ? `Due ${invoice.dueAt}` : null}
       </p>
     </div>
   )
@@ -392,9 +380,7 @@ function InvoiceDocumentArticle({
       <dt className="text-muted-foreground">Issued</dt>
       <dd className="tabular-nums">{invoice.issuedAt ?? 'On finalize'}</dd>
       <dt className="text-muted-foreground">Due</dt>
-      <dd className={cn('tabular-nums', isOverdue && 'text-destructive/80')}>
-        {invoice.dueAt ?? '—'}
-      </dd>
+      <dd className="tabular-nums">{invoice.dueAt ?? '—'}</dd>
     </dl>
   )
 
@@ -412,9 +398,7 @@ function InvoiceDocumentArticle({
               </span>
               <div className="leading-tight">
                 <p className="text-sm font-medium">{invoice.from.name}</p>
-                {invoice.from.email ? (
-                  <p className="text-muted-foreground text-xs">{invoice.from.email}</p>
-                ) : null}
+                <p className="text-muted-foreground text-xs">{invoice.billTo.email}</p>
               </div>
             </div>
             {meta}
@@ -431,12 +415,6 @@ function InvoiceDocumentArticle({
       )}
 
       <div className="grid gap-6 px-8 py-8 sm:grid-cols-3">
-        {invoice.from ? (
-          <Party
-            heading="Bill from"
-            lines={[invoice.from.name, invoice.from.email, ...addressLines(invoice.from.address)]}
-          />
-        ) : null}
         <Party
           heading="Bill to"
           lines={[
@@ -445,6 +423,12 @@ function InvoiceDocumentArticle({
             ...addressLines(invoice.billTo.address),
           ]}
         />
+        {invoice.from ? (
+          <Party
+            heading="From"
+            lines={[invoice.from.name, ...addressLines(invoice.from.address)]}
+          />
+        ) : null}
         {invoice.payment ? (
           <Party
             heading="Payment"
@@ -468,43 +452,25 @@ function InvoiceDocumentArticle({
             />
           </label>
         </div>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="text-muted-foreground border-b text-left text-xs">
-                <th scope="col" className="py-2 pr-4 font-normal">
-                  Description
-                </th>
-                <th scope="col" className="px-4 py-2 text-right font-normal">
-                  Quantity
-                </th>
-                <th scope="col" className="px-4 py-2 text-right font-normal">
-                  Unit price
-                </th>
-                <th scope="col" className="py-2 pl-4 text-right font-normal">
-                  Amount
-                </th>
-              </tr>
-            </thead>
-            <tbody className="divide-border/50 divide-y">
-              {lines.map((line) => (
-                <tr key={line.id} className="align-top">
-                  <td className="py-4 pr-4">
-                    <p className="font-medium">{line.description}</p>
-                    {line.detail ? (
-                      <p className="text-muted-foreground text-xs">{line.detail}</p>
-                    ) : null}
-                  </td>
-                  <td className="px-4 py-4 text-right tabular-nums">{line.quantity}</td>
-                  <td className="px-4 py-4 text-right tabular-nums">
-                    {line.unitPrice === undefined ? '—' : unitMoney(line.unitPrice)}
-                  </td>
-                  <td className="py-4 pl-4 text-right tabular-nums">{money(line.amount)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+        <ul className="divide-border/50 divide-y">
+          {lines.map((line, index) => (
+            <li key={line.id} className="flex items-start justify-between gap-6 py-4">
+              <div className="min-w-0 space-y-0.5">
+                <p className="flex items-center gap-2 text-sm font-medium">
+                  <span
+                    aria-hidden="true"
+                    className={cn('size-1.5 rounded-full', LINE_DOT[index % LINE_DOT.length])}
+                  />
+                  {line.description}
+                </p>
+                {line.detail ? (
+                  <p className="text-muted-foreground pl-3.5 text-xs">{line.detail}</p>
+                ) : null}
+              </div>
+              <p className="text-sm tabular-nums">{money(line.amount)}</p>
+            </li>
+          ))}
+        </ul>
       </div>
 
       <div className="mx-8 flex justify-end border-t py-6">
@@ -538,22 +504,6 @@ function InvoiceDocumentArticle({
   )
 }
 
-function Chip({ children, onClick }: { children: ReactNode; onClick?: (() => void) | undefined }) {
-  const className =
-    'border-border bg-muted/40 text-muted-foreground inline-flex h-6 max-w-56 items-center truncate rounded-full border px-2.5 text-xs'
-  return onClick ? (
-    <button
-      type="button"
-      className={cn(className, 'hover:text-foreground hover:bg-muted')}
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  ) : (
-    <span className={className}>{children}</span>
-  )
-}
-
 /** Keep the city and region together so a narrow column does not break "San Francisco". */
 function addressLines(address: string): string[] {
   const parts = address.split(/,\s+/).filter(Boolean)
@@ -563,7 +513,7 @@ function addressLines(address: string): string[] {
   return [...parts.slice(0, -2), `${city}, ${region}`]
 }
 
-function Party({ heading, lines }: { heading: string; lines: Array<string | false | undefined> }) {
+function Party({ heading, lines }: { heading: string; lines: Array<string | false> }) {
   return (
     <div className="space-y-1.5 text-[13px]">
       <p className="text-muted-foreground text-[11px] tracking-wider uppercase">{heading}</p>

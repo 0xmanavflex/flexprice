@@ -1790,21 +1790,6 @@ export const handlers = [
     return HttpResponse.json(created, { status: 201 })
   }),
 
-  http.put(`${BASE}/environments/:id`, async ({ request, params }) => {
-    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
-    const row = environments.find((environment) => environment.id === params['id'])
-    if (!row) return HttpResponse.json({ message: 'Environment not found' }, { status: 404 })
-    row.name = readString(body, 'name') || row.name
-    row.updated_at = new Date().toISOString()
-    return HttpResponse.json(row)
-  }),
-  http.delete(`${BASE}/environments/:id`, ({ params }) => {
-    const index = environments.findIndex((environment) => environment.id === params['id'])
-    if (index < 0) return HttpResponse.json({ message: 'Environment not found' }, { status: 404 })
-    environments.splice(index, 1)
-    return new HttpResponse(null, { status: 204 })
-  }),
-
   // The mock demo login. `POST /auth/login` takes `{ email, password }` and, on
   // the live API, returns `{ token, user_id, tenant_id }` — the snake_case keys
   // `toCredentials` in `@fp/api` reads and maps to `{ token, userId, tenantId }`.

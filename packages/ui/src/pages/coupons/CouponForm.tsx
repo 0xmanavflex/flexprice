@@ -4,6 +4,7 @@ import { type EditCoupon, editCouponSchema } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
+import { CouponPreviewCard, type CouponPreviewCardProps } from './CouponPreviewCard'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
 
@@ -19,14 +20,21 @@ import { provenance } from '@ui/provenance'
  */
 export const CouponFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/input', 'compositions/form-card', 'compositions/form-page'],
-  note: 'RHF + the domain schema. A rename — the discount is immutable, shown as context.',
+  composes: [
+    'ui/input',
+    'compositions/form-card',
+    'compositions/form-page',
+    'pages/coupon-preview-card',
+  ],
+  note: 'RHF + the domain schema. A rename — the discount is immutable, shown in the preview and as context.',
 })
 
 export interface CouponFormProps {
   defaultValue: EditCoupon
   /** Read-only context, so the person knows which coupon they are renaming. */
   summary?: { code: string; discount: string }
+  /** The coupon's fixed terms, for the preview beside the form. The name follows the draft. */
+  terms?: Omit<CouponPreviewCardProps, 'name'>
   onSubmit: (coupon: EditCoupon) => void
   onCancel: () => void
   /** Breadcrumb; the last crumb is the page itself. */
@@ -42,6 +50,7 @@ export function CouponForm({
   defaultValue,
   trail,
   summary,
+  terms,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -60,6 +69,7 @@ export function CouponForm({
       title={`Edit ${defaultValue.name || 'coupon'}`}
       trail={trail}
       width="wide"
+      preview={terms ? <CouponPreviewCard {...terms} name={form.watch('name')} /> : undefined}
       toolbar={{
         mode: 'edit',
         formId: FORM_ID,

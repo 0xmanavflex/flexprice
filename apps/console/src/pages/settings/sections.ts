@@ -46,10 +46,12 @@ export interface SettingsTabSpec {
 export interface SettingsSectionSpec {
   id: string
   label: string
+  /** One sentence under the section's title. */
+  description?: string
   tabs: readonly SettingsTabSpec[]
   /**
    * A row that opens a page of its own (Discounts, Taxes, Cost tracking,
-   * Tags) instead of a panel here. It has no tabs and is never the open
+   * Labels) instead of a panel here. It has no tabs and is never the open
    * section.
    */
   href?: string
@@ -65,6 +67,7 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'team',
     label: 'Team',
+    description: 'The people who can sign in, and what they can do.',
     tabs: [
       { id: 'members', label: 'Members' },
       { id: 'roles', label: 'Roles & permissions' },
@@ -74,49 +77,61 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'discounts',
     label: 'Discounts',
+    description: 'Coupons you can apply to contracts and invoices.',
     href: '/coupons',
     tabs: [],
   },
   {
     id: 'taxes',
     label: 'Taxes',
+    description: 'Tax rates applied to invoices.',
     href: '/taxes',
     tabs: [],
   },
   {
     id: 'cost-tracking',
     label: 'Cost tracking',
+    description: 'What each product costs you, for margin reporting.',
     href: '/cost-sheets',
     tabs: [],
   },
   {
     id: 'invoicing',
     label: 'Invoicing',
+    description: 'What goes on every invoice, how it is numbered and when it is finalized.',
     tabs: [{ id: 'invoices', label: 'Invoices' }],
   },
   {
     id: 'subscription',
     label: 'Contract',
+    description: 'What happens to a contract when its invoices go unpaid.',
     tabs: [{ id: 'subscriptions', label: 'Contracts' }],
   },
   {
     id: 'currency',
     label: 'Currency',
+    description: 'Fiat currencies you invoice in, and custom ones like credits.',
     tabs: [{ id: 'currencies', label: 'Currencies' }],
   },
   {
-    id: 'wallet',
-    label: 'Wallet',
-    tabs: [{ id: 'wallet-alerts', label: 'Wallet alerts' }],
+    id: 'alerts',
+    label: 'Alerts',
+    description: 'When Flexprice warns you about wallet balances and usage.',
+    tabs: [
+      { id: 'alert-rules', label: 'Alert rules' },
+      { id: 'wallet-alerts', label: 'Wallet alerts' },
+    ],
   },
   {
-    id: 'tags',
-    label: 'Tags',
-    tabs: [{ id: 'tags', label: 'Tags' }],
+    id: 'labels',
+    label: 'Labels',
+    description: 'Group products and charges for reporting and filters.',
+    tabs: [{ id: 'labels', label: 'Labels' }],
   },
   {
     id: 'customer-experience',
     label: 'Customer experience',
+    description: 'What your customers see in their billing portal, in what order, in your colours.',
     tabs: [
       { id: 'portal', label: 'Portal' },
       { id: 'onboarding', label: 'Onboarding' },
@@ -125,11 +140,13 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'api-keys',
     label: 'API keys',
+    description: 'Keys your servers use to call the Flexprice API.',
     tabs: [{ id: 'api-keys', label: 'API keys' }],
   },
   {
     id: 'service-accounts',
     label: 'Service accounts',
+    description: 'Non-human identities with scoped access.',
     tabs: [{ id: 'service-accounts', label: 'Service accounts' }],
   },
   {

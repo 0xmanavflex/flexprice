@@ -30,7 +30,7 @@ import { MetadataCard } from '@ui/compositions/MetadataCard'
 import { EmptyState } from '@ui/compositions/EmptyState'
 import { LoadingRows } from '@ui/compositions/States'
 import { Money } from '../shared/Money'
-import { EntityHeader, HeaderChip } from '../shared/EntityHeader'
+import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
 import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
 import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
@@ -143,7 +143,8 @@ export function CustomerDetail({
   locale,
 }: CustomerDetailProps) {
   const formatDate = useDateFormat(locale)
-  const since = customer.createdAt ? formatDate(customer.createdAt) : null
+  const since = customer.createdAt ? `Customer since ${formatDate(customer.createdAt)}` : null
+  const subtitle = [customer.email || null, since].filter(Boolean).join(' · ')
   const initials =
     customer.name
       .split(/\s+/)
@@ -165,31 +166,8 @@ export function CustomerDetail({
         trail={[{ label: 'Customers', onClick: onBack }, { label: customer.name }]}
         icon={<span className="text-xs font-medium">{initials}</span>}
         title={customer.name}
-        chips={
-          <>
-            <HeaderChip label="Customer ID" copy={customer.id}>
-              <span className="font-mono">{customer.id}</span>
-            </HeaderChip>
-            {customer.externalId ? (
-              <HeaderChip label="External ID" copy={customer.externalId}>
-                <span className="font-mono">{customer.externalId}</span>
-              </HeaderChip>
-            ) : null}
-            {customer.email ? (
-              <HeaderChip label="Email" copy={customer.email}>
-                {customer.email}
-              </HeaderChip>
-            ) : null}
-            {customer.phone ? <HeaderChip label="Phone">{customer.phone}</HeaderChip> : null}
-            {customer.addressCountry ? (
-              <HeaderChip label="Country">{customer.addressCountry}</HeaderChip>
-            ) : null}
-            {customer.timezone ? (
-              <HeaderChip label="Timezone">{customer.timezone}</HeaderChip>
-            ) : null}
-            {since ? <HeaderChip label="Since">{since}</HeaderChip> : null}
-          </>
-        }
+        {...(subtitle ? { subtitle } : {})}
+        id={customer.externalId || customer.id}
         actions={
           <DropdownMenu>
             <DropdownMenuTrigger

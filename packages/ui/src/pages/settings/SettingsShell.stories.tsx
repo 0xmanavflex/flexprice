@@ -8,6 +8,7 @@ const SECTIONS: SettingsSection[] = [
   {
     id: 'organization',
     label: 'Organization',
+    description: 'Who you are to your customers, and which environments you work in.',
     icon: <Building2 aria-hidden />,
     tabs: [
       { id: 'profile', label: 'Profile' },

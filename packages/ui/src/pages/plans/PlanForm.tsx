@@ -23,6 +23,7 @@ import { provenance } from '@ui/provenance'
 import { ChargeForm, type MeterOption, type PriceUnitOption } from '../charges/ChargeForm'
 import { CreditGrantCreateForm } from '../credit-grants/CreditGrantForm'
 import { EntitlementCreateForm, type FeatureOption } from '../entitlements/EntitlementForm'
+import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
 
 /**
  * Create or edit a plan, on a full page.
@@ -51,7 +52,7 @@ export const PlanFormProvenance = provenance({
     'ui/textarea',
     'ui/button',
   ],
-  note: 'Full-page stepped plan form: details plus staged charges, entitlements and credit grants.',
+  note: 'Full-page stepped plan form: details plus staged charges, entitlements and credit grants, with a live preview beside it (the saved plan’s own pricing on edit).',
 })
 
 /** What a create emits: the plan and the children to write after it. */
@@ -74,6 +75,8 @@ export interface PlanFormProps {
   priceUnits?: PriceUnitOption[]
   /** Features an entitlement can be granted on. */
   features?: FeatureOption[]
+  /** Edit only: the preview of the saved plan, since charges are edited on the plan page. */
+  savedPreview?: ReactNode
   onSubmit: (value: PlanFormValue) => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -102,6 +105,7 @@ export function PlanForm({
   meters = [],
   priceUnits = [],
   features = [],
+  savedPreview,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -292,6 +296,29 @@ export function PlanForm({
         hideSubmit: Boolean(adding),
       }}
       stepper={{ flow, label: 'Plan steps', hideNav: Boolean(adding) }}
+      preview={
+        isEdit ? (
+          savedPreview
+        ) : (
+          <PlanPreviewCard
+            charges={charges}
+            meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}
+            meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+            included={entitlements.map((e, i) =>
+              includedLine({
+                key: `${e.featureId}-${i}`,
+                name: featureName(e.featureId),
+                unit: features.find((f) => f.id === e.featureId)?.unit,
+                featureType: e.featureType,
+                usageLimit: 'usageLimit' in e ? e.usageLimit : undefined,
+                staticValue: 'staticValue' in e ? e.staticValue : undefined,
+                isEnabled: 'isEnabled' in e ? e.isEnabled : undefined,
+              }),
+            )}
+            credits={grants.map((g, i) => creditLine({ ...g, key: `${i}` }))}
+          />
+        )
+      }
     >
       {/* The staged steps hold their own forms, which cannot nest in this one, so
           the plan form is rendered around the details fields only. The toolbar's

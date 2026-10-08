@@ -47,7 +47,7 @@ export function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
   if (publish) return null
   return (
     <nav aria-label="Breadcrumb">
-      <ol className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-sm">
+      <ol className="flex flex-wrap items-center gap-1.5 text-sm text-muted-foreground">
         {trail.map((crumb, index) => {
           const isLast = index === trail.length - 1
           return (
@@ -56,13 +56,13 @@ export function DetailBreadcrumb({ trail }: { trail: DetailCrumb[] }) {
                 <button
                   type="button"
                   onClick={crumb.onClick}
-                  className="hover:text-foreground focus-visible:outline-ring rounded-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2"
+                  className="rounded-sm transition-colors hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
                 >
                   {crumb.label}
                 </button>
               ) : (
                 <span
-                  className={cn(isLast && 'text-foreground font-medium')}
+                  className={cn(isLast && 'font-medium text-foreground')}
                   {...(isLast ? { 'aria-current': 'page' as const } : {})}
                 >
                   {crumb.label}
@@ -87,7 +87,7 @@ export interface DetailShellProps {
   icon?: ReactNode
   /** One line under the title; use `Dot` between facts. */
   subtitle?: ReactNode
-  /** Status and related chips, drawn beside the title. */
+  /** Status and type chips, leading the subtitle line. */
   badges?: ReactNode
   /** The record id, rendered as a copy button on the right. */
   id?: string
@@ -165,14 +165,10 @@ export function DetailShell({
               </span>
             ) : null}
             <div className="min-w-0 space-y-1">
-              <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1.5">
-                <h1 className="truncate text-2xl font-medium tracking-tight">{title}</h1>
-                {badges ? (
-                  <div className="flex flex-wrap items-center gap-1.5">{badges}</div>
-                ) : null}
-              </div>
-              {line ? (
+              <h1 className="truncate text-xl font-medium tracking-tight">{title}</h1>
+              {line || badges ? (
                 <div className="text-muted-foreground flex flex-wrap items-center gap-x-1.5 text-[13px]">
+                  {badges}
                   {line}
                 </div>
               ) : null}
@@ -199,7 +195,7 @@ export function DetailShell({
           detail page can forget it and clip its last tab off a phone. */}
       <div
         className={cn(
-          'mx-auto flex min-h-0 w-full max-w-[var(--shell-max)] flex-1 flex-col gap-6 px-6 pb-10',
+          'mx-auto flex w-full max-w-[var(--shell-max)] min-h-0 flex-1 flex-col gap-6 px-6 pb-10',
           TAB_STRIP,
         )}
       >

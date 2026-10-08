@@ -340,9 +340,9 @@ export function aggregationFormula(
 export const AGGREGATION_LABEL: Record<AggregationType, string> = {
   [AggregationType.Count]: 'Count of events',
   [AggregationType.CountUnique]: 'Count of unique values',
-  [AggregationType.Sum]: 'Sum',
+  [AggregationType.Sum]: 'Sum of a field',
   [AggregationType.SumWithMultiplier]: 'Sum, multiplied',
-  [AggregationType.Avg]: 'Average',
+  [AggregationType.Avg]: 'Average of a field',
   [AggregationType.Max]: 'Maximum value',
   [AggregationType.Latest]: 'Most recent value',
   [AggregationType.WeightedSum]: 'Weighted sum',

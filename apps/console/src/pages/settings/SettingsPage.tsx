@@ -3,7 +3,7 @@ import { EmbeddedPageContext } from '@fp/ui/compositions'
 import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BadgeDollarSignIcon,
-  WalletIcon,
+  BellIcon,
   BotIcon,
   CoinsIcon,
   KeyRoundIcon,
@@ -15,12 +15,13 @@ import {
   TicketPercentIcon,
   UsersIcon,
 } from 'lucide-react'
+import { AlertRulesPanel } from './AlertRulesPanel'
 import { ApiKeysPanel } from './ApiKeysPanel'
 import { AppearancePanel } from './AppearancePanel'
 import { CurrenciesPanel } from './CurrenciesPanel'
 import { EnvironmentsPanel } from './EnvironmentsPanel'
 import { InvoicesPanel } from './InvoicesPanel'
-import { TagsPanel } from './TagsPanel'
+import { LabelsPanel } from './LabelsPanel'
 import { OnboardingPanel } from './OnboardingPanel'
 import { PortalPanel } from './PortalPanel'
 import { MembersPanel } from './MembersPanel'
@@ -69,7 +70,7 @@ export interface SettingsPageProps {
   tabId: string
   /** Writes both ids at once. The route owns the navigation. */
   onNavigate: (sectionId: string, tabId: string) => void
-  /** Opens a row that is a page of its own (Discounts, Taxes, Cost tracking, Tags). */
+  /** Opens a row that is a page of its own (Discounts, Taxes, Cost tracking, Labels). */
   onOpenPage: (href: string) => void
 }
 
@@ -87,8 +88,8 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   invoicing: <ReceiptTextIcon aria-hidden className="size-4" />,
   subscription: <RepeatIcon aria-hidden className="size-4" />,
   currency: <BadgeDollarSignIcon aria-hidden className="size-4" />,
-  wallet: <WalletIcon aria-hidden className="size-4" />,
-  tags: <TagIcon aria-hidden className="size-4" />,
+  alerts: <BellIcon aria-hidden className="size-4" />,
+  labels: <TagIcon aria-hidden className="size-4" />,
   'customer-experience': <SmileIcon aria-hidden className="size-4" />,
   'api-keys': <KeyRoundIcon aria-hidden className="size-4" />,
   'service-accounts': <BotIcon aria-hidden className="size-4" />,
@@ -115,6 +116,7 @@ export function toShellSections(): SettingsSection[] {
     (section) => ({
       id: section.id,
       label: section.label,
+      ...('description' in section ? { description: section.description } : {}),
       ...('hidden' in section ? { hidden: true } : {}),
       ...(SECTION_ICONS[section.id] ? { icon: SECTION_ICONS[section.id] } : {}),
       tabs: section.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
@@ -238,11 +240,13 @@ function SettingsPanel({
       return <ApiKeysPanel />
     case 'service-accounts/service-accounts':
       return <ServiceAccountsPanel />
-    case 'tags/tags':
-      return <TagsPanel onOpenPage={onOpenPage} />
+    case 'labels/labels':
+      return <LabelsPanel onOpenPage={onOpenPage} />
     case 'webhooks/webhooks':
       return <WebhooksPanel />
-    case 'wallet/wallet-alerts':
+    case 'alerts/alert-rules':
+      return <AlertRulesPanel />
+    case 'alerts/wallet-alerts':
       return <WalletAlertsPanel />
     case 'appearance/theme':
       return <AppearancePanel />

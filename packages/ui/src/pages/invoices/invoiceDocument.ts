@@ -5,8 +5,6 @@ export interface InvoiceLine {
   description: string
   detail?: string
   quantity: string
-  /** Per-unit price for display; absent when the quantity is not a plain number. */
-  unitPrice?: number
   amount: number
 }
 
@@ -20,7 +18,7 @@ export interface InvoiceDocument {
   dueAt: string | null
   billTo: { name: string; email: string; address: string }
   /** Absent when the API does not send the issuer or terms; the view then omits the block. */
-  from?: { name: string; address: string; email?: string }
+  from?: { name: string; address: string }
   payment?: { method: string; terms: string }
   /** The API's own figures. When present they replace the sums the view would otherwise compute. */
   totals?: { subtotal: number; total: number; due: number }
@@ -82,37 +80,18 @@ export const DEMO_INVOICE: InvoiceDocument = {
     email: 'billing@orchidledger.com',
     address: '14 Warren Street, Suite 620, New York, NY',
   },
-  from: {
-    name: 'Northwind Systems',
-    address: '500 Howard Street, San Francisco, CA',
-    email: 'billing@northwind.example',
-  },
+  from: { name: 'Northwind Systems', address: '500 Howard Street, San Francisco, CA' },
   payment: { method: 'Visa ending 4242', terms: 'Net 14' },
   lines: [
-    {
-      id: 'l1',
-      description: 'Scale plan',
-      detail: 'May 1 – May 31',
-      quantity: '1',
-      unitPrice: 750,
-      amount: 750,
-    },
+    { id: 'l1', description: 'Scale plan', detail: 'May 1 – May 31', quantity: '1', amount: 750 },
     {
       id: 'l2',
       description: 'API requests',
       detail: '1,204,000 at $0.0001',
       quantity: '1,204,000',
-      unitPrice: 0.0001,
       amount: 120.4,
     },
-    {
-      id: 'l3',
-      description: 'Seats',
-      detail: '12 seats',
-      quantity: '12',
-      unitPrice: 10,
-      amount: 120,
-    },
+    { id: 'l3', description: 'Seats', detail: '12 seats', quantity: '12', amount: 120 },
     { id: 'l4', description: 'Storage', detail: 'No usage this period', quantity: '0', amount: 0 },
   ],
   prepaidCredits: 100,

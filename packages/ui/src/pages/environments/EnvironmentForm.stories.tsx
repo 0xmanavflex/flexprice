@@ -53,18 +53,27 @@ export const SubmitsAValidEnvironment: Story = {
 }
 
 /**
- * Production withheld is still a choice: picking it disables Create and the
- * button says "Contact us", so the person learns what to do instead of hitting
- * a dead radio.
+ * Production withheld is shown, not hidden.
+ *
+ * An option that silently does not exist reads as a bug, and people go looking
+ * for it. Disabled with the reason attached answers the question instead.
  */
 export const ProductionUnavailable: Story = {
-  args: { canCreateProduction: false },
-  play: async ({ args }) => {
+  args: {
+    canCreateProduction: false,
+    productionUnavailableReason: 'Set up with your account contact.',
+  },
+  play: async () => {
     const canvas = dialog()
-    await userEvent.click(canvas.getByRole('radio', { name: /production/i }))
-    const contact = await canvas.findByRole('button', { name: 'Contact us' })
-    await waitFor(() => expect(contact).toBeDisabled())
-    await expect(args.onSubmit).not.toHaveBeenCalled()
+    await expect(canvas.getByRole('radio', { name: /production/i })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
+    // Waited for, not asserted once. The dialog fades in, so at the moment the
+    // radio above resolves its panel can still be at opacity 0 — the text is
+    // in the DOM and laid out, and `toBeVisible` is correctly saying no. A
+    // single assertion here is a race the suite loses on a slower machine.
+    await waitFor(() => expect(canvas.getByText(/account contact/i)).toBeVisible())
   },
 }
 
@@ -83,16 +92,23 @@ export const Failed: Story = {
   },
 }
 
-/** The form refuses what the disabled button only discourages. */
+/**
+ * The form refuses what the control only discourages.
+ *
+ * `aria-disabled` is an announcement, not a lock — the element still takes a
+ * click in some paths, and a value that reached the schema would otherwise be
+ * submitted. So the refusal is in the submit handler too.
+ */
 export const ProductionCannotBeSubmittedWhenWithheld: Story = {
   args: {
     canCreateProduction: false,
+    productionUnavailableReason: 'Set up with your account contact.',
     defaultValue: { name: 'Sneaky', type: 'production' },
   },
   play: async ({ args }) => {
     const canvas = dialog()
-    const contact = await canvas.findByRole('button', { name: 'Contact us' })
-    await waitFor(() => expect(contact).toBeDisabled())
+    await userEvent.click(canvas.getByRole('button', { name: 'Create environment' }))
     await expect(args.onSubmit).not.toHaveBeenCalled()
+    await expect(await canvas.findByRole('alert')).toHaveTextContent(/account contact/i)
   },
 }

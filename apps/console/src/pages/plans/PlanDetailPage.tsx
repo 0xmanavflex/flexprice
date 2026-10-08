@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import {
   type CreateEntitlement,
   type EditEntitlement,
@@ -78,7 +78,6 @@ import {
 } from '@fp/ui/primitives'
 import {
   ArchiveIcon,
-  PlusIcon,
   CopyIcon,
   LayersIcon,
   MoreHorizontalIcon,
@@ -150,8 +149,6 @@ export function PlanDetailPage({
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
 
   const [archiving, setArchiving] = useState(false)
-  // Set by the header's Add entitlement; the tab opens its dialog, then clears it.
-  const [addEntitlement, setAddEntitlement] = useState(false)
 
   if (plan.isPending) {
     return (
@@ -201,18 +198,6 @@ export function PlanDetailPage({
         }
         actions={
           <>
-            <Button
-              variant="outline"
-              className="h-8 px-3"
-              disabled={isArchived}
-              onClick={() => {
-                onTabChange('entitlements')
-                setAddEntitlement(true)
-              }}
-            >
-              <PlusIcon aria-hidden />
-              Add entitlement
-            </Button>
             <Button
               variant="outline"
               className="h-8 px-3"
@@ -283,13 +268,7 @@ export function PlanDetailPage({
       />
 
       {tab === 'overview' ? <ChargesTab planId={planId} readOnly={isArchived} /> : null}
-      {tab === 'entitlements' ? (
-        <EntitlementsTab
-          planId={planId}
-          openAdd={addEntitlement}
-          onAddOpened={() => setAddEntitlement(false)}
-        />
-      ) : null}
+      {tab === 'entitlements' ? <EntitlementsTab planId={planId} /> : null}
       {tab === 'credit-grants' ? <CreditGrantsTab planId={planId} /> : null}
       {tab === 'information' ? (
         <InformationTab
@@ -448,15 +427,7 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
  * the plan's usage price for a metered feature, found by matching the feature's
  * meter to a usage charge; usage beyond the value bills at that price.
  */
-function EntitlementsTab({
-  planId,
-  openAdd,
-  onAddOpened,
-}: {
-  planId: string
-  openAdd: boolean
-  onAddOpened: () => void
-}) {
+function EntitlementsTab({ planId }: { planId: string }) {
   const navigate = useNavigate()
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const charges = usePrices(PriceEntityType.Plan, planId)
@@ -466,12 +437,6 @@ function EntitlementsTab({
   const remove = useDeleteEntitlement()
   const [form, setForm] = useState<'add' | Entitlement | null>(null)
   const [removing, setRemoving] = useState<Entitlement | null>(null)
-
-  useEffect(() => {
-    if (!openAdd) return
-    setForm('add')
-    onAddOpened()
-  }, [openAdd, onAddOpened])
 
   // Only features not already entitled can be added — a feature is granted once.
   const granted = new Set((entitlements.data ?? []).map((e) => e.featureId))
