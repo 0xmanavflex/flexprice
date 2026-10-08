@@ -43,7 +43,9 @@ test.describe('the customers list', () => {
 
     // Only the essentials are on show; no copyable ID chip on a record that has no ID yet.
     await expect(page.getByRole('button', { name: /Copy ID/ })).toHaveCount(0)
-    await expect(page.getByLabel('Phone')).toBeHidden()
+    await expect(page.getByLabel('Address line 1')).toBeHidden()
+    // Phone is not supported on create.
+    await expect(page.getByLabel('Phone')).toHaveCount(0)
 
     await page.getByLabel('Name', { exact: false }).first().fill('Acme Robotics')
     await page.getByLabel('External ID').fill('acme_robotics')
@@ -65,7 +67,7 @@ test.describe('the customers list', () => {
       timeout: 20_000,
     })
 
-    await page.getByLabel('Phone').fill('+1 555 0100')
+    await page.getByLabel('City').fill('London')
 
     const request = page.waitForRequest(isWrite('PUT', /\/v1\/customers$/))
     await page.getByRole('button', { name: 'Save changes' }).click()
@@ -131,7 +133,7 @@ test.describe('a customer detail page', () => {
     await expect(page).toHaveURL(new RegExp(`/customers/${customerId}/subscriptions/new`))
     await expect(page.getByRole('button', { name: 'Next' })).toBeVisible()
 
-    await page.getByRole('button', { name: 'Cancel' }).click()
+    await page.getByRole('button', { name: 'Close form' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)
     await expect(page.getByRole('button', { name: 'Create contract' })).toBeVisible()
   })

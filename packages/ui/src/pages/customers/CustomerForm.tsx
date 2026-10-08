@@ -12,9 +12,9 @@ import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormDisclosure } from '@ui/compositions/FormDisclosure'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
+import { OptionCombobox } from '@ui/compositions/OptionCombobox'
 import { OptionSelect } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
-import { CustomerPreviewCard } from './CustomerPreviewCard'
 
 /**
  * Create or edit a customer on its own page: name, ID and email, then the optional rest under More details.
@@ -29,9 +29,10 @@ export const CustomerFormProvenance = provenance({
     'ui/input',
     'compositions/form-page',
     'compositions/option-select',
+    'compositions/option-combobox',
     'compositions/form-disclosure',
   ],
-  note: 'RHF + the domain schema, one page: name, external ID and email up front, the rest folded under More details, with a live profile rail on create. Create and edit share it. Lineage: compositions/field.',
+  note: 'RHF + the domain schema, one page: name, external ID and email up front, the rest folded under More details, no preview rail. Create and edit share it. Lineage: compositions/field.',
 })
 
 export interface CustomerFormProps {
@@ -49,7 +50,6 @@ export interface CustomerFormProps {
 const FORM_ID = 'customer-form'
 
 const OPTIONAL_FIELDS = [
-  'phone',
   'addressLine1',
   'addressLine2',
   'addressCity',
@@ -59,6 +59,49 @@ const OPTIONAL_FIELDS = [
   'timezone',
   'taxTreatment',
 ] as const satisfies readonly (keyof CreateCustomer)[]
+
+/**
+ * Used when the runtime cannot list its IANA zones (`Intl.supportedValuesOf`
+ * is missing on older engines). A short list of the common ones.
+ */
+const FALLBACK_TIMEZONES = [
+  'UTC',
+  'America/Los_Angeles',
+  'America/Denver',
+  'America/Chicago',
+  'America/New_York',
+  'America/Sao_Paulo',
+  'Europe/London',
+  'Europe/Paris',
+  'Europe/Berlin',
+  'Africa/Johannesburg',
+  'Asia/Dubai',
+  'Asia/Kolkata',
+  'Asia/Singapore',
+  'Asia/Shanghai',
+  'Asia/Tokyo',
+  'Australia/Sydney',
+  'Pacific/Auckland',
+] as const
+
+function listTimezones(): readonly string[] {
+  try {
+    const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }
+    const zones = intl.supportedValuesOf?.('timeZone')
+    if (zones && zones.length > 0) return zones.includes('UTC') ? zones : ['UTC', ...zones]
+  } catch {
+    // fall through to the fixed list
+  }
+  return FALLBACK_TIMEZONES
+}
+
+const TIMEZONES = listTimezones()
+
+/** The IANA zones as options; a saved value the runtime does not know is kept, not dropped. */
+function timezoneOptions(current: string | undefined) {
+  const zones = current && !TIMEZONES.includes(current) ? [current, ...TIMEZONES] : TIMEZONES
+  return zones.map((zone) => ({ value: zone, label: zone }))
+}
 
 const TAX_OPTIONS = Object.values(CustomerTaxTreatment).map((value) => ({
   value,
@@ -129,21 +172,6 @@ export function CustomerForm({
   const addressRows = (
     <>
       <FormRow
-        label="Phone"
-        hint="A contact number for the customer. Optional."
-        error={errors.phone?.message}
-      >
-        {({ id, ...field }) => (
-          <Input
-            id={id}
-            type="tel"
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('phone')}
-          />
-        )}
-      </FormRow>
-      <FormRow
         label="Address line 1"
         hint="Street address printed on invoices."
         error={errors.addressLine1?.message}
@@ -211,11 +239,26 @@ export function CustomerForm({
     <>
       <FormRow
         label="Timezone"
-        hint="An IANA name, e.g. Europe/London."
+        hint="The customer's local time zone, e.g. Europe/London."
         error={errors.timezone?.message}
       >
         {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('timezone')} />
+          <Controller
+            control={form.control}
+            name="timezone"
+            render={({ field: control }) => (
+              <OptionCombobox
+                id={id}
+                {...field}
+                value={control.value || undefined}
+                onValueChange={(value) => control.onChange(value)}
+                options={timezoneOptions(control.value)}
+                placeholder="Search time zones…"
+                emptyText="No matching time zone."
+                disabled={isSubmitting}
+              />
+            )}
+          />
         )}
       </FormRow>
       <FormRow
@@ -251,7 +294,7 @@ export function CustomerForm({
         </FormCard>
         <FormDisclosure
           title="More details"
-          summary="Phone, billing address, timezone and tax treatment. All optional."
+          summary="Billing address, timezone and tax treatment. All optional."
           defaultOpen={isEdit}
           forceOpen={OPTIONAL_FIELDS.some((name) => errors[name])}
         >
@@ -266,23 +309,6 @@ export function CustomerForm({
     <FormPage
       title={isEdit ? `Edit ${customerName || 'customer'}` : 'Create customer'}
       trail={trail}
-      width="wide"
-      preview={
-        <CustomerPreviewCard
-          name={form.watch('name')}
-          externalId={form.watch('externalId')}
-          email={form.watch('email')}
-          phone={form.watch('phone')}
-          addressLine1={form.watch('addressLine1')}
-          addressLine2={form.watch('addressLine2')}
-          addressCity={form.watch('addressCity')}
-          addressState={form.watch('addressState')}
-          addressPostalCode={form.watch('addressPostalCode')}
-          addressCountry={form.watch('addressCountry')}
-          timezone={form.watch('timezone')}
-          taxTreatment={form.watch('taxTreatment')}
-        />
-      }
       toolbar={{
         mode: mode,
         noun: 'customer',
