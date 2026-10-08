@@ -42,7 +42,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Metered by default, with the preview rail beside it. */
+/** Metered by default: Details, then Metering, centred with no preview rail. */
 export const Default: Story = {}
 
 export const Boolean: Story = {
@@ -95,15 +95,48 @@ export const ValidationFromDomain: Story = {
   },
 }
 
-/** The preview rail follows the draft as it is typed. */
-export const PreviewFollowsTheDraft: Story = {
+/** Two sections, centred on their own: what the product is, then how it is metered. */
+export const DetailsThenMetering: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.type(canvas.getByLabelText(/^Name/), 'API calls')
-    const rail = within(canvas.getByRole('complementary', { name: 'Product preview' }))
-    await expect(rail.getByText('API calls')).toBeInTheDocument()
-    await expect(rail.getByText('feat-api-calls')).toBeInTheDocument()
+    await expect(canvas.getByRole('heading', { name: 'Details' })).toBeInTheDocument()
+    await expect(canvas.getByRole('heading', { name: 'Metering' })).toBeInTheDocument()
+    await expect(canvas.queryByRole('complementary')).not.toBeInTheDocument()
+    // No feature-level alerts on the form.
+    await expect(canvas.queryByText(/usage alerts/i)).not.toBeInTheDocument()
+  },
+}
+
+/** A boolean is on or off: no unit, no reporting unit, and no second section. */
+export const BooleanHasNoUnits: Story = {
+  args: { defaultValue: { name: 'SSO', lookupKey: 'sso', type: FeatureType.Boolean } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    await expect(canvas.queryByLabelText(/^Unit/)).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Event name/)).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+
+    await userEvent.click(canvas.getByRole('radio', { name: /Static/ }))
+    await expect(await canvas.findByRole('heading', { name: 'Usage' })).toBeInTheDocument()
+    await expect(canvas.getByLabelText(/^Unit \(singular\)/)).toBeInTheDocument()
+  },
+}
+
+/** Groups are offered under the name people know them by: Label. */
+export const LabelField: Story = {
+  args: {
+    groups: [
+      { value: 'grp_ai', label: 'AI' },
+      { value: 'grp_core', label: 'Core' },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('combobox', { name: 'Label' })).toBeInTheDocument()
+    await expect(canvas.queryByRole('combobox', { name: 'Group' })).not.toBeInTheDocument()
   },
 }
 

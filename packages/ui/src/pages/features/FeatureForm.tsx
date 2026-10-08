@@ -2,13 +2,7 @@ import { get, useFieldArray, useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   AGGREGATION_LABEL,
-  ALERT_CONDITION_LABEL,
-  ALERT_SEVERITY_LABEL,
-  ALERT_SEVERITY_ORDER,
-  ALERT_THRESHOLD_TYPE_LABEL,
   AggregationType,
-  AlertCondition,
-  AlertThresholdType,
   FEATURE_TYPE_LABEL,
   FeatureType,
   ResetUsage,
@@ -16,7 +10,6 @@ import {
   defaultFeatureLookupKey,
   editFeatureSchema,
   needsAggregationTarget,
-  type AlertSeverity,
   type CreateFeature,
   type EditFeature,
   type Feature,
@@ -24,13 +17,11 @@ import {
 import { PlusIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
-import { Switch } from '@ui/components/primitives/switch'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { Field } from '@ui/compositions/Field'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
-import { FeaturePreviewCard } from './FeaturePreviewCard'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { OptionSelect, type Option } from '@ui/compositions/OptionSelect'
 import { provenance } from '@ui/provenance'
@@ -54,7 +45,7 @@ import { provenance } from '@ui/provenance'
  */
 export const FeatureFormProvenance = provenance({
   source: 'composition',
-  composes: ['ui/input', 'ui/textarea', 'ui/switch', 'compositions/field'],
+  composes: ['ui/input', 'ui/textarea', 'compositions/field'],
   note: 'RHF + the domain schemas; replaces a 1,106-line page holding four state slices.',
 })
 
@@ -63,7 +54,7 @@ type FeatureFormProps = {
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
-  /** The groups a feature can be filed under; the field is hidden when there are none. */
+  /** The labels (groups) a feature can be filed under; the field is hidden when there are none. */
   groups?: readonly Option[]
   trail: DetailCrumb[]
 } & (
@@ -81,11 +72,6 @@ type FeatureFormProps = {
 )
 
 export type { FeatureFormProps }
-
-interface ThresholdValues {
-  condition: AlertCondition
-  threshold: string
-}
 
 interface FormValues {
   type: FeatureType
@@ -105,13 +91,6 @@ interface FormValues {
     resetUsage: ResetUsage
   }
   filters: { key: string; valuesText: string }[]
-  alertsOn: boolean
-  alerts: {
-    thresholdType: AlertThresholdType
-    info: ThresholdValues
-    warning: ThresholdValues
-    critical: ThresholdValues
-  }
 }
 
 const FORM_ID = 'feature-form'
@@ -135,18 +114,6 @@ const RESET_OPTIONS: Option[] = [
   { value: ResetUsage.Never, label: 'Never' },
 ]
 
-const CONDITION_OPTIONS: Option[] = Object.values(AlertCondition).map((value) => ({
-  value,
-  label: ALERT_CONDITION_LABEL[value],
-}))
-
-const THRESHOLD_TYPE_OPTIONS: Option[] = Object.values(AlertThresholdType).map((value) => ({
-  value,
-  label: ALERT_THRESHOLD_TYPE_LABEL[value],
-}))
-
-const blankThreshold = (): ThresholdValues => ({ condition: AlertCondition.Above, threshold: '' })
-
 function emptyValues(): FormValues {
   return {
     type: FeatureType.Metered,
@@ -166,13 +133,6 @@ function emptyValues(): FormValues {
       resetUsage: ResetUsage.BillingPeriod,
     },
     filters: [],
-    alertsOn: false,
-    alerts: {
-      thresholdType: AlertThresholdType.Percentage,
-      info: blankThreshold(),
-      warning: { condition: AlertCondition.Above, threshold: '80' },
-      critical: blankThreshold(),
-    },
   }
 }
 
@@ -239,36 +199,29 @@ const splitValues = (text: string): string[] =>
     .map((v) => v.trim())
     .filter(Boolean)
 
-/** The schema candidate: anything hidden or blank is left out rather than sent stale. */
+/** Whether a type has a quantity, and so a unit and a reporting unit. A boolean is on or off. */
+const hasUnits = (type: FeatureType) => type !== FeatureType.Boolean
+
+/**
+ * The schema candidate: anything hidden or blank is left out rather than sent stale.
+ *
+ * Feature-level usage alerts are deliberately not offered here, and nothing is
+ * sent for them, so an edit leaves whatever thresholds the feature already
+ * carries untouched.
+ */
 function normalize(values: FormValues, mode: 'create' | 'edit') {
   const ru = values.reportingUnit
-  const hasReportingUnit = [ru.unitSingular, ru.unitPlural, ru.conversionRate].some(
-    (v) => v.trim() !== '',
-  )
-
-  let alertSettings: unknown
-  if (values.alertsOn) {
-    const severities: Partial<Record<AlertSeverity, ThresholdValues>> = {}
-    for (const severity of ALERT_SEVERITY_ORDER) {
-      const row = values.alerts[severity]
-      if (row.threshold.trim() !== '') severities[severity] = row
-    }
-    alertSettings = {
-      alertEnabled: true,
-      thresholdType: values.alerts.thresholdType,
-      ...severities,
-    }
-  }
+  const units = hasUnits(values.type)
+  const hasReportingUnit =
+    units && [ru.unitSingular, ru.unitPlural, ru.conversionRate].some((v) => v.trim() !== '')
 
   const filters = values.filters.map((f) => ({ key: f.key, values: splitValues(f.valuesText) }))
   const shared = {
     name: values.name,
     description: values.description,
-    unitSingular: values.unitSingular,
-    unitPlural: values.unitPlural,
+    ...(units ? { unitSingular: values.unitSingular, unitPlural: values.unitPlural } : {}),
     ...(values.groupId ? { groupId: values.groupId } : {}),
     ...(hasReportingUnit ? { reportingUnit: ru } : {}),
-    ...(alertSettings ? { alertSettings } : {}),
   }
 
   if (mode === 'edit') {
@@ -324,7 +277,6 @@ export function FeatureForm(props: FeatureFormProps) {
 
   const type = form.watch('type')
   const aggregationType = form.watch('meter.aggregationType')
-  const alertsOn = form.watch('alertsOn')
   const isMetered = type === FeatureType.Metered
 
   const filterPath = isEdit ? 'filters' : 'meter.filters'
@@ -341,8 +293,6 @@ export function FeatureForm(props: FeatureFormProps) {
       }
     },
   })
-
-  const setAlertsOn = (on: boolean) => form.setValue('alertsOn', on, { shouldDirty: true })
 
   const submitAll = form.handleSubmit((values) => {
     // The resolver returns the schema's parsed output, not the form value.
@@ -396,14 +346,14 @@ export function FeatureForm(props: FeatureFormProps) {
         )}
       </FormRow>
       {groups.length > 0 ? (
-        <FormRow label="Group" hint="File the product under a group." error={message('groupId')}>
+        <FormRow label="Label" hint="File the product under a label." error={message('groupId')}>
           {({ id, ...field }) => (
             <OptionSelect
               id={id}
               aria-describedby={field['aria-describedby']}
               value={form.watch('groupId')}
               options={groups}
-              placeholder="No group"
+              placeholder="No label"
               disabled={isSubmitting}
               onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
             />
@@ -597,24 +547,6 @@ export function FeatureForm(props: FeatureFormProps) {
       ) : null}
 
       <FormRow
-        label="Unit (singular)"
-        hint="Shown after a quantity of one, for example call."
-        error={message('unitSingular')}
-      >
-        {({ id, ...field }) => (
-          <Input id={id} placeholder="call" {...field} {...form.register('unitSingular')} />
-        )}
-      </FormRow>
-      <FormRow
-        label="Unit (plural)"
-        hint="Shown after any other quantity, for example calls."
-        error={message('unitPlural')}
-      >
-        {({ id, ...field }) => (
-          <Input id={id} placeholder="calls" {...field} {...form.register('unitPlural')} />
-        )}
-      </FormRow>
-      <FormRow
         label="Reset usage"
         hint="Whether the usage total starts again each period or keeps building up."
       >
@@ -634,30 +566,37 @@ export function FeatureForm(props: FeatureFormProps) {
     </>
   )
 
-  const additionalRows = (
+  /* A boolean is on or off: it has no quantity, so no unit and no reporting unit. */
+  const unitRows = hasUnits(type) ? (
     <>
-      {isMetered ? null : (
-        <FormRow
-          label="Unit (singular)"
-          hint="Shown after a quantity of one, for example call."
-          error={message('unitSingular')}
-        >
-          {({ id, ...field }) => (
-            <Input id={id} placeholder="seat" {...field} {...form.register('unitSingular')} />
-          )}
-        </FormRow>
-      )}
-      {isMetered ? null : (
-        <FormRow
-          label="Unit (plural)"
-          hint="Shown after any other quantity, for example calls."
-          error={message('unitPlural')}
-        >
-          {({ id, ...field }) => (
-            <Input id={id} placeholder="seats" {...field} {...form.register('unitPlural')} />
-          )}
-        </FormRow>
-      )}
+      <FormRow
+        label="Unit (singular)"
+        hint="Shown after a quantity of one, for example call."
+        error={message('unitSingular')}
+      >
+        {({ id, ...field }) => (
+          <Input
+            id={id}
+            placeholder={isMetered ? 'call' : 'seat'}
+            {...field}
+            {...form.register('unitSingular')}
+          />
+        )}
+      </FormRow>
+      <FormRow
+        label="Unit (plural)"
+        hint="Shown after any other quantity, for example calls."
+        error={message('unitPlural')}
+      >
+        {({ id, ...field }) => (
+          <Input
+            id={id}
+            placeholder={isMetered ? 'calls' : 'seats'}
+            {...field}
+            {...form.register('unitPlural')}
+          />
+        )}
+      </FormRow>
       <FormRow
         label="Reporting unit (singular)"
         hint="How usage is displayed in reports: the product unit times a conversion rate. Fill all three or none."
@@ -678,7 +617,7 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
       <FormRow
         label="Conversion rate"
-        hint="How many metered units make one reporting unit."
+        hint="How many product units make one reporting unit."
         error={message('reportingUnit.conversionRate')}
       >
         {({ id, ...field }) => (
@@ -690,95 +629,31 @@ export function FeatureForm(props: FeatureFormProps) {
           />
         )}
       </FormRow>
-      <FormRow
-        label="Usage alerts"
-        hint={
-          isEdit
-            ? 'Turning this on replaces the product’s current alert thresholds.'
-            : 'Notify when usage crosses a threshold.'
-        }
-        error={message('alertSettings.info')}
-      >
-        {({ id, ...field }) => (
-          <Switch
-            id={id}
-            aria-describedby={field['aria-describedby']}
-            checked={alertsOn}
-            onCheckedChange={setAlertsOn}
-          />
-        )}
-      </FormRow>
-
-      {alertsOn ? (
-        <FormRow label="Threshold type" hint="What the alert threshold is measured against.">
-          {({ id, ...field }) => (
-            <OptionSelect
-              id={id}
-              aria-describedby={field['aria-describedby']}
-              value={form.watch('alerts.thresholdType')}
-              options={THRESHOLD_TYPE_OPTIONS}
-              onValueChange={(next) =>
-                form.setValue('alerts.thresholdType', next as AlertThresholdType, {
-                  shouldDirty: true,
-                })
-              }
-            />
-          )}
-        </FormRow>
-      ) : null}
-      {alertsOn
-        ? ALERT_SEVERITY_ORDER.flatMap((severity) => [
-            <FormRow
-              key={`${severity}-condition`}
-              label={`${ALERT_SEVERITY_LABEL[severity]} condition`}
-            >
-              {({ id, ...field }) => (
-                <OptionSelect
-                  id={id}
-                  aria-describedby={field['aria-describedby']}
-                  value={form.watch(`alerts.${severity}.condition`)}
-                  options={CONDITION_OPTIONS}
-                  onValueChange={(next) =>
-                    form.setValue(`alerts.${severity}.condition`, next as AlertCondition, {
-                      shouldDirty: true,
-                    })
-                  }
-                />
-              )}
-            </FormRow>,
-            <FormRow
-              key={`${severity}-threshold`}
-              label={`${ALERT_SEVERITY_LABEL[severity]} threshold`}
-              error={
-                message(`alertSettings.${severity}.threshold`) ??
-                message(`alertSettings.${severity}`)
-              }
-            >
-              {({ id, ...field }) => (
-                <Input
-                  id={id}
-                  inputMode="decimal"
-                  {...field}
-                  {...form.register(`alerts.${severity}.threshold`)}
-                />
-              )}
-            </FormRow>,
-          ])
-        : null}
     </>
-  )
+  ) : null
 
+  /*
+   * Two sections: what the product *is* (Details), then how it is counted
+   * (Metering for a metered product, Usage for a static one). A boolean has
+   * nothing to count, so it is Details alone.
+   */
   const formEl = (
     <form id={FORM_ID} onSubmit={submitAll} noValidate>
-      <fieldset className="min-w-0 border-0 p-0" disabled={isSubmitting}>
+      <fieldset className="flex min-w-0 flex-col gap-6 border-0 p-0" disabled={isSubmitting}>
         <legend className="sr-only">Product</legend>
-        <FormCard title="Product details">
+        <FormCard title="Details">
           {typeRows}
           {detailsRows}
-          {isMetered ? eventRows : null}
-          {isMetered ? aggregationRows : null}
-          {additionalRows}
         </FormCard>
+        {isMetered ? (
+          <FormCard title="Metering">
+            {eventRows}
+            {aggregationRows}
+            {unitRows}
+          </FormCard>
+        ) : unitRows ? (
+          <FormCard title="Usage">{unitRows}</FormCard>
+        ) : null}
       </fieldset>
     </form>
   )
@@ -787,17 +662,6 @@ export function FeatureForm(props: FeatureFormProps) {
     <FormPage
       title={isEdit ? `Edit ${feature?.name ?? 'product'}` : 'Create product'}
       trail={trail}
-      width="wide"
-      preview={
-        <FeaturePreviewCard
-          name={form.watch('name')}
-          lookupKey={form.watch('lookupKey')}
-          type={type}
-          eventName={form.watch('meter.eventName')}
-          aggregationType={aggregationType}
-          resetUsage={form.watch('meter.resetUsage')}
-        />
-      }
       toolbar={{
         mode,
         noun: 'product',
