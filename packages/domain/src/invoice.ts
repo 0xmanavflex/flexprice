@@ -1,6 +1,7 @@
 import { z } from 'zod'
 import type { Money } from './money'
 import type { PaymentStatus } from './payment'
+import type { TenantAddress } from './tenant'
 
 /**
  * What an invoice *is*, to this product.
@@ -189,7 +190,15 @@ export interface InvoiceDetailLine {
   detail: string
   quantity: string
   amount: string
+  /** How the line is priced: metered usage or a fixed charge. `null` when the API does not say. */
+  priceType: InvoiceLinePriceType | null
 }
+
+export const InvoiceLinePriceType = {
+  Usage: 'usage',
+  Fixed: 'fixed',
+} as const
+export type InvoiceLinePriceType = (typeof InvoiceLinePriceType)[keyof typeof InvoiceLinePriceType]
 
 /**
  * The detail read model: the list row plus what the document page adds.
@@ -200,6 +209,11 @@ export interface InvoiceDetailLine {
 export interface InvoiceDetail extends Invoice {
   currency: string
   customerEmail: string
+  /** The customer's billing address as the invoice carries it. Empty fields are `''`. */
+  customerAddress: TenantAddress
+  /** The issuing tenant, for the "Bill from" block. */
+  tenantId: string
+  metadata: Readonly<Record<string, string>>
   description: string
   subscriptionId: string | null
   invoicePdfUrl: string | null

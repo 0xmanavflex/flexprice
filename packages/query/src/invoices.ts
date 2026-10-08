@@ -6,6 +6,7 @@ import {
   type Invoice,
   type InvoiceDetail,
   type InvoiceQuery,
+  InvoiceLinePriceType,
   InvoiceSortField,
   InvoiceStatus,
   deriveInvoiceStatus,
@@ -160,6 +161,20 @@ export function useInvoices(query: InvoiceQuery, options: { enabled?: boolean } 
 
 /** The detail shape this mapper reads; a superset of {@link InvoiceWire}. */
 export interface InvoiceDetailWire extends InvoiceWire {
+  customer?:
+    | {
+        name?: string | undefined
+        email?: string | undefined
+        addressLine1?: string | undefined
+        addressLine2?: string | undefined
+        addressCity?: string | undefined
+        addressState?: string | undefined
+        addressPostalCode?: string | undefined
+        addressCountry?: string | undefined
+      }
+    | undefined
+  tenantId?: string | undefined
+  metadata?: { [key: string]: string } | undefined
   description?: string | undefined
   subscriptionId?: string | undefined
   invoicePdfUrl?: string | undefined
@@ -179,6 +194,7 @@ export interface InvoiceDetailWire extends InvoiceWire {
         meterDisplayName?: string | undefined
         quantity?: string | undefined
         amount?: string | undefined
+        priceType?: string | undefined
         periodStart?: Date | undefined
         periodEnd?: Date | undefined
       }[]
@@ -188,12 +204,31 @@ export interface InvoiceDetailWire extends InvoiceWire {
 const formatDay = (date: Date) =>
   new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date)
 
+/** `USAGE` / `FIXED` on the wire; anything else is not guessed at. */
+function toLinePriceType(value: string | undefined): InvoiceLinePriceType | null {
+  const upper = value?.toUpperCase()
+  if (upper === 'USAGE') return InvoiceLinePriceType.Usage
+  if (upper === 'FIXED') return InvoiceLinePriceType.Fixed
+  return null
+}
+
 export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDetail {
   const base = toInvoice(wire, now)
+  const customer = wire.customer
   return {
     ...base,
     currency: wire.currency ?? '',
-    customerEmail: wire.customer?.email ?? '',
+    customerEmail: customer?.email ?? '',
+    customerAddress: {
+      line1: customer?.addressLine1 ?? '',
+      line2: customer?.addressLine2 ?? '',
+      city: customer?.addressCity ?? '',
+      state: customer?.addressState ?? '',
+      postalCode: customer?.addressPostalCode ?? '',
+      country: customer?.addressCountry ?? '',
+    },
+    tenantId: wire.tenantId ?? '',
+    metadata: wire.metadata ?? {},
     description: wire.description ?? '',
     subscriptionId: wire.subscriptionId || null,
     invoicePdfUrl: wire.invoicePdfUrl || null,
@@ -210,6 +245,7 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
           : '',
       quantity: line.quantity ?? '',
       amount: line.amount ?? '0',
+      priceType: toLinePriceType(line.priceType),
     })),
     finalizedAt: wire.finalizedAt ?? null,
     paidAt: wire.paidAt ?? null,
@@ -289,3 +325,18 @@ export const useVoidInvoice = () =>
 /** Try to collect payment again — `POST /invoices/{id}/payment/attempt`. */
 export const useAttemptInvoicePayment = () =>
   useInvoiceAction((client, id) => client.invoices.attemptInvoicePayment(id))
+
+/**
+ * Recalculate a draft invoice in place — `POST /invoices/{id}/recalculate-v2`.
+ * Replaces the line items and reapplies credits, coupons and taxes; the draft
+ * stays a draft.
+ */
+export const useRecalculateInvoice = () =>
+  useInvoiceAction((client, id) => client.invoices.recalculateInvoiceV2(id))
+
+/**
+ * Send the invoice to the customer — `POST /invoices/{id}/comms/trigger`.
+ * Fires the invoice communication webhook (email, Slack) the tenant has set up.
+ */
+export const useSendInvoice = () =>
+  useInvoiceAction((client, id) => client.invoices.triggerInvoiceCommsWebhook(id))

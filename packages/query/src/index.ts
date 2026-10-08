@@ -53,6 +53,8 @@ export {
   useFinalizeInvoice,
   useInvoice,
   useInvoices,
+  useRecalculateInvoice,
+  useSendInvoice,
   useVoidInvoice,
 } from './invoices'
 export type { InvoiceDetailWire, InvoicePage, InvoiceWire } from './invoices'
@@ -226,6 +228,7 @@ export {
   useCreditNote,
   useCreditNotes,
   useFinalizeCreditNote,
+  useInvoiceCreditNotes,
   useVoidCreditNote,
 } from './creditNotes'
 export type { CreditNoteDetailWire, CreditNotePage, CreditNoteWire } from './creditNotes'
@@ -236,6 +239,7 @@ export {
   toPaymentFilter,
   toRecordPaymentRequest,
   useDeletePayment,
+  useInvoicePayments,
   usePayment,
   usePayments,
   useProcessPayment,

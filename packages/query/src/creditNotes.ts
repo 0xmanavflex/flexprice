@@ -107,6 +107,39 @@ export function useCreditNotes(query: CreditNoteQuery) {
   })
 }
 
+/**
+ * The credit notes issued against one invoice, for its Credit notes tab.
+ *
+ * Asks the API for `invoice_id` and filters the page by it as well, so a
+ * server that ignores the parameter still cannot show another invoice's notes.
+ */
+export async function fetchInvoiceCreditNotes(
+  serverURL: string,
+  auth: AuthSource,
+  invoiceId: string,
+): Promise<CreditNote[]> {
+  const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+  if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to view credit notes.')
+  const body = await listCreditNotes(serverURL, token, environmentId ?? '', {
+    limit: 100,
+    offset: 0,
+    invoiceId,
+  })
+  const items = ((body ?? {}) as { items?: CreditNoteWire[] | null }).items ?? []
+  return items.filter((item) => item.invoice_id === invoiceId).map(toCreditNote)
+}
+
+export function useInvoiceCreditNotes(invoiceId: string) {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+
+  return useQuery({
+    queryKey: queryKeys.creditNotes.list({ invoiceId }),
+    queryFn: () => fetchInvoiceCreditNotes(serverURL, auth, invoiceId),
+    enabled: invoiceId.length > 0,
+  })
+}
+
 /** What `GET /creditnotes/{id}` sends once the SDK has camelCased it. */
 export interface CreditNoteDetailWire {
   id?: string | undefined

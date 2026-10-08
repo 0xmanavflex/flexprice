@@ -128,6 +128,39 @@ export function usePayments(query: PaymentQuery) {
   })
 }
 
+/**
+ * The payments recorded against one invoice, for its Payments tab.
+ *
+ * `GET /payments` takes `destination_id`; the page is also filtered by it, so
+ * a server that ignores the filter still cannot show another invoice's payments.
+ */
+export async function fetchInvoicePayments(
+  client: Flexprice,
+  invoiceId: string,
+): Promise<Payment[]> {
+  const response = await call(() =>
+    client.payments.listPayments({
+      destinationId: invoiceId,
+      destinationType: 'INVOICE',
+      limit: 100,
+      offset: 0,
+    } as never),
+  )
+  return (response.items ?? [])
+    .filter((item) => (item as { destinationId?: string }).destinationId === invoiceId)
+    .map((item) => toPayment(item as PaymentWire))
+}
+
+export function useInvoicePayments(invoiceId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.payments.list({ invoiceId }),
+    queryFn: () => fetchInvoicePayments(client, invoiceId),
+    enabled: invoiceId.length > 0,
+  })
+}
+
 export interface PaymentDetailWire extends PaymentWire {
   destinationId?: string | undefined
   gatewayPaymentId?: string | undefined

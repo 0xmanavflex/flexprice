@@ -29,6 +29,7 @@ export type { Money } from './money'
 
 export {
   DEFAULT_INVOICE_QUERY,
+  InvoiceLinePriceType,
   InvoiceSortField,
   InvoiceStatus,
   createInvoiceSchema,

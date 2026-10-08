@@ -15,6 +15,8 @@ export interface ListCreditNotesParams {
   offset: number
   /** Wire statuses, e.g. `DRAFT`. Empty means all. */
   statuses?: string[]
+  /** Only the credit notes issued against this invoice. */
+  invoiceId?: string
 }
 
 export async function listCreditNotes(
@@ -28,6 +30,7 @@ export async function listCreditNotes(
     offset: String(params.offset),
   })
   for (const status of params.statuses ?? []) search.append('credit_note_status', status)
+  if (params.invoiceId) search.set('invoice_id', params.invoiceId)
   return request(serverURL, `/creditnotes?${search.toString()}`, {
     method: 'GET',
     token,
