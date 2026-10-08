@@ -12,17 +12,12 @@
 
 export { DashboardHome, DashboardHomeProvenance } from './home/DashboardHome'
 export type {
-  ApiPanel,
+  CustomersPanel,
   DashboardHomeProps,
   EventPoint,
   EventsPanel,
   FilterOption,
-  InvoicesPanel,
   PanelStatus,
-  SubscriptionDay,
-  SubscriptionsPanel,
-  UsagePanel,
-  UsageRow,
 } from './home/DashboardHome'
 export { RevenueDashboard, RevenueDashboardProvenance } from './revenue/RevenueDashboard'
 export type { RevenueDashboardProps } from './revenue/RevenueDashboard'

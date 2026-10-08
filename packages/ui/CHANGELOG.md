@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-08 — pages/home/DashboardHome: the overview is three metric tabs (Revenue, Customers, Usage ingestion) on one chart with the filters moved up; the contracts, invoice-status, usage-by-feature and API cards and the Processing lag tab are removed, the usage meter kept commented out; props `subscriptions`/`invoices`/`usage`/`api` replaced by `customers` (design refresh: home)
 - 2026-10-08 — compositions/shell/{ShellAccount,AppShell,ShellNav}: the account menu no longer offers Documentation (`onDocs` removed; the sidebar footer keeps it), and the pinned footer group follows the nav tree with a small gap instead of floating at the rail's bottom (design refresh: sidebar)
 - 2026-10-08 — pages/plans/PlanForm: the Charges, Entitlements and Credit grants steps sit in a bordered FormCard with an Optional badge and no description, like the details step (design refresh: create flow)
 - 2026-10-07 — pages/{addons,customers,features,cost-sheets,plans,coupons} edit forms: the live preview rail now shows on edit as it does on create (always the wide layout); Plan edit takes a `savedPreview` of the plan's saved pricing, Coupon edit takes `terms` for a CouponPreviewCard (design refresh: edit forms match create)

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ArrowUpRightIcon, CalendarIcon, Settings2Icon } from 'lucide-react'
+import { CalendarIcon, Settings2Icon } from 'lucide-react'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -9,19 +9,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
-import { Panel } from '@ui/compositions/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
-import { ArcGauge } from '../shared/ArcGauge'
 import { BlurredEmpty, MetricChart } from '../shared/charts'
 import type { MetricTab } from '../shared/charts'
-import { HalfDonut } from '../shared/HalfDonut'
-import type { DonutSlice } from '../shared/HalfDonut'
 import { Money } from '../shared/Money'
-import { PillColumns } from '../shared/PillColumns'
-import type { PillColumn, PillSeries } from '../shared/PillColumns'
-import { MeterTrack, SegmentMeter } from '../shared/SegmentMeter'
-import type { SegmentMeterRow } from '../shared/SegmentMeter'
 
 /**
  * Home — the console's overview.
@@ -45,32 +37,18 @@ import type { SegmentMeterRow } from '../shared/SegmentMeter'
  * exercise the populated, empty and unavailable states as first-class cases
  * rather than as whatever the network happened to do.
  *
- * Every mark on it now comes from the shared chart library rather than from a
- * ReUI block adapted in place: `MetricChart` for the event series and the stat
- * strip that switches it, `PillColumns` for the per-day subscription stack,
- * `HalfDonut` for the invoice gauge, `SegmentMeter` for the per-feature usage
- * rows, `ArcGauge` for key health, and `BlurredEmpty` for the first run. The
- * blocks those components were composed from are declared there; what this file
- * keeps is the *wiring* — which panel is ready, empty or unavailable, and which
- * numbers are allowed on screen at all.
- *
- * One consequence worth naming: no panel here picks a colour. Each passes a
- * `ChartTone`, and the categorical/status split is honoured — `series-*` for
- * plans, which are merely different from one another, and `good`/`warning`/
- * `critical` only for invoice payment state and key health, which are
- * judgements.
+ * Three primary metrics and nothing under them: Revenue, Customers and Usage
+ * ingestion, each a tab on one `MetricChart` that is also the stat strip.
+ * `BlurredEmpty` carries the first run. What this file keeps is the *wiring* —
+ * which panel is ready, empty or unavailable, and which numbers are allowed on
+ * screen at all. The contracts, invoice, usage-by-feature and API cards that used
+ * to follow were dropped on purpose; the per-feature usage meter is kept below,
+ * commented out, for when quota metrics return.
  */
 export const DashboardHomeProvenance = provenance({
   source: 'composition',
-  composes: [
-    'pages/shared/PillColumns',
-    'pages/shared/HalfDonut',
-    'pages/shared/SegmentMeter',
-    'pages/shared/ArcGauge',
-    'ui/select',
-    'compositions/Section',
-  ],
-  note: 'Billing overview: event series, revenue, contracts, invoice payment status, metered usage and API keys, drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
+  composes: ['ui/select'],
+  note: 'Billing overview: revenue, customers and usage ingestion on one metric chart, drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
 })
 
 /* ---- What the page is told ---------------------------------------------- */
@@ -106,69 +84,12 @@ export interface EventsPanel {
   revenue: MoneyValue | null
 }
 
-/**
- * One column of the subscription stack, split by plan.
- *
- * Usually a day, and named after one. `PillColumns` is a countable mark rather
- * than a dense one, so a window too long for a column per day is bucketed by
- * the page and `label` then names the run it covers ("23–27 Sep"). This
- * component draws whatever columns it is handed; deciding how wide they are is
- * the page's job, because only the page knows the window.
- */
-export interface SubscriptionDay {
-  label: string
-  /** Plan name to count. Only plans present in `plans` are drawn. */
-  byPlan: Record<string, number>
-}
-
-export interface SubscriptionsPanel {
+export interface CustomersPanel {
   status: PanelStatus
-  total: number
-  /** Change against the window before this one. `null` when there is no prior window to compare. */
-  changePercent: number | null
-  /** The columns of the stack, oldest first. */
-  days: SubscriptionDay[]
-  /** Plans that appear in the window, busiest first. Drives both the columns and the legend. */
-  plans: { name: string; count: number }[]
-}
-
-export interface InvoicesPanel {
-  status: PanelStatus
-  total: number
-  paid: number
-  open: number
-  overdue: number
-}
-
-export interface UsageRow {
-  featureId: string
-  name: string
-  /** The feature's lookup key — shown under the name as `code.key`. */
-  lookupKey: string
-  /**
-   * The metered quantity as a number.
-   *
-   * The meter compares features to each other, so it needs the figure and not
-   * only its rendering — "428K calls" and "1.8M tokens" cannot be ranked as
-   * strings.
-   */
-  quantity: number
-  /** The same quantity formatted with its unit, e.g. "428K calls". What is shown. */
-  value: string
-  changePercent: number | null
-}
-
-export interface UsagePanel {
-  status: PanelStatus
-  rows: UsageRow[]
-}
-
-export interface ApiPanel {
-  status: PanelStatus
-  activeKeys: number
-  totalKeys: number
-  /** When a key was last used, already formatted. `null` when none ever has been. */
-  lastUsedLabel: string | null
+  /** Customers on the account. `null` when the API did not say. */
+  total: number | null
+  /** New customers per bucket across the window, oldest first. */
+  points: { label: string; customers: number }[]
 }
 
 export interface DashboardHomeProps {
@@ -188,10 +109,7 @@ export interface DashboardHomeProps {
   rangeLabel: string
 
   events: EventsPanel
-  subscriptions: SubscriptionsPanel
-  invoices: InvoicesPanel
-  usage: UsagePanel
-  api: ApiPanel
+  customers: CustomersPanel
 
   /** Where a link on the overview leads. No-op by default, so the surface renders in isolation. */
   onNavigate?: (path: string) => void
@@ -200,7 +118,6 @@ export interface DashboardHomeProps {
 /* ---- Formatting --------------------------------------------------------- */
 
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
-const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
 
 /** The dash a number takes when there is nothing true to put there. */
 const NOTHING = '—'
@@ -320,11 +237,11 @@ function FilterRow({
   )
 }
 
-/* ---- 2. Events monitoring ----------------------------------------------- */
+/* ---- 2. Overview metrics ------------------------------------------------ */
 
 const METRIC_EVENTS = 'events'
 const METRIC_REVENUE = 'revenue'
-const METRIC_LAG = 'lag'
+const METRIC_CUSTOMERS = 'customers'
 
 /**
  * The shape behind the first-run message.
@@ -342,10 +259,12 @@ const PLACEHOLDER_SHAPE = [46, 61, 54, 72, 65, 83, 74, 91, 86, 104, 97, 112].map
 
 function EventsSection({
   events,
+  customers,
   rangeLabel,
   onQuickstart,
 }: {
   events: EventsPanel
+  customers: CustomersPanel
   rangeLabel: string
   onQuickstart: () => void
 }) {
@@ -353,55 +272,52 @@ function EventsSection({
   // rather than in the props. `MetricChart` holds none of its own.
   const [metric, setMetric] = useState(METRIC_EVENTS)
 
-  const ready = events.status === 'ready'
+  const eventsReady = events.status === 'ready'
+  const customersReady = customers.status === 'ready'
+  const ready = eventsReady || customersReady
 
   /**
-   * The tab strip is the stat strip.
+   * The tab strip is the stat strip, in the order the overview is read:
+   * Revenue, Customers, Usage ingestion.
    *
-   * All three metrics the design asked for are here, and two of them have no
-   * series to plot: the usage API prices a window as a whole rather than per
-   * bucket, and processing lag is not measured anywhere in the stack. Both keep
-   * their tab — dropping them would make "not plotted" and "not a thing we
-   * track" look identical — and `caption` below carries the reason.
+   * Revenue has no series to plot — the usage API prices a window as a whole
+   * rather than per bucket — but it keeps its tab; the figure is the answer and
+   * `caption` below says why there is no line.
    */
   const tabs: MetricTab[] = [
-    {
-      id: METRIC_EVENTS,
-      label: 'Events ingested',
-      value: ready && events.total !== null ? compact.format(events.total) : NOTHING,
-      points: ready
-        ? events.points.map((point) => ({ label: point.label, value: point.events }))
-        : [],
-    },
     {
       id: METRIC_REVENUE,
       label: 'Revenue',
       // The server's own subtotal, or nothing. `Money` has no `add`, and
       // summing prices across currencies in the browser would be the wrong
       // answer rendered confidently.
-      value: ready && events.revenue !== null ? <Money value={events.revenue} /> : NOTHING,
+      value: eventsReady && events.revenue !== null ? <Money value={events.revenue} /> : NOTHING,
       points: [],
     },
     {
-      /*
-       * Processing lag has no endpoint anywhere in the stack — not in
-       * `@fp/query`, not in `@fp/api`, and not in the SDK, which exposes
-       * per-event debugging but no aggregate. It is shown as absent, with the
-       * reason, rather than dropped.
-       */
-      id: METRIC_LAG,
-      label: 'Processing lag',
-      value: NOTHING,
-      points: [],
+      id: METRIC_CUSTOMERS,
+      label: 'Customers',
+      value: customersReady && customers.total !== null ? compact.format(customers.total) : NOTHING,
+      points: customersReady
+        ? customers.points.map((point) => ({ label: point.label, value: point.customers }))
+        : [],
+    },
+    {
+      id: METRIC_EVENTS,
+      label: 'Usage ingestion',
+      value: eventsReady && events.total !== null ? compact.format(events.total) : NOTHING,
+      points: eventsReady
+        ? events.points.map((point) => ({ label: point.label, value: point.events }))
+        : [],
     },
   ]
 
   const caption =
     metric === METRIC_EVENTS
       ? `Usage events received, ${rangeLabel}.`
-      : metric === METRIC_REVENUE
-        ? 'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.'
-        : undefined
+      : metric === METRIC_CUSTOMERS
+        ? `New customers, ${rangeLabel}.`
+        : 'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.'
 
   const placeholder: MetricTab[] = tabs.map((tab) =>
     tab.id === METRIC_EVENTS ? { ...tab, points: PLACEHOLDER_SHAPE } : tab,
@@ -418,8 +334,8 @@ function EventsSection({
   )
 
   return (
-    <section aria-label="Events monitoring" className="flex min-w-0 flex-col gap-3">
-      <h2 className="sr-only">Events monitoring</h2>
+    <section aria-label="Overview metrics" className="flex min-w-0 flex-col gap-3">
+      <h2 className="sr-only">Overview metrics</h2>
       {ready ? (
         chart
       ) : (
@@ -434,7 +350,7 @@ function EventsSection({
             events.status === 'unavailable'
               ? 'Usage analytics unavailable'
               : events.status === 'loading'
-                ? 'Loading events'
+                ? 'Loading overview'
                 : 'No events yet'
           }
           description={
@@ -442,7 +358,7 @@ function EventsSection({
               ? 'Flexprice could not load events for this window. Try again in a moment.'
               : events.status === 'loading'
                 ? 'Fetching usage analytics for this window.'
-                : 'Send your first usage event and this chart shows ingestion, revenue and processing lag as it happens.'
+                : 'Send your first usage event and this chart shows revenue, customers and ingestion as it happens.'
           }
           action={
             events.status === 'empty' ? { label: 'Quickstart', onClick: onQuickstart } : undefined
@@ -462,281 +378,43 @@ function EventsSection({
         </BlurredEmpty>
       )}
 
-      {ready && events.revenue === null ? (
+      {eventsReady && events.revenue === null ? (
         <Unavailable what="The usage API returned no priced subtotal for this window." />
-      ) : null}
-      {metric === METRIC_LAG ? (
-        <Unavailable what="Flexprice does not expose an ingestion-lag metric." />
       ) : null}
     </section>
   )
 }
 
-/* ---- 3. Recent subscriptions -------------------------------------------- */
-
-function SubscriptionsCard({
-  subscriptions,
-  rangeLabel,
-  onViewAll,
-}: {
-  subscriptions: SubscriptionsPanel
-  rangeLabel: string
-  onViewAll: () => void
-}) {
-  const { status, plans, days, total, changePercent } = subscriptions
-  const ready = status === 'ready'
-
-  // Plans are categories, not states, so they take the categorical slots in
-  // order — `PillColumns` hands those out itself when no tone is given.
-  const series: PillSeries[] = plans.map((plan) => ({ id: plan.name, label: plan.name }))
-  const columns: PillColumn[] = days.map((day) => ({ label: day.label, values: day.byPlan }))
-
-  return (
-    <Panel
-      title="Recent contracts"
-      action={
-        <Button variant="outline" size="sm" onClick={onViewAll}>
-          View all
-        </Button>
-      }
-    >
-      <div className="flex flex-1 flex-col gap-6 p-6">
-        <div className="flex items-baseline gap-2">
-          <span
-            className={cn('text-4xl font-medium tabular-nums', !ready && 'text-muted-foreground')}
-          >
-            {ready ? total : 0}
-          </span>
-          <span className="text-muted-foreground text-xs">new contracts</span>
-          {ready && changePercent !== null ? (
-            <span
-              className={cn(
-                'ml-auto text-xs font-medium',
-                changePercent >= 0 ? 'text-success' : 'text-destructive',
-              )}
-            >
-              {changePercent >= 0 ? '+' : ''}
-              {new Intl.NumberFormat(undefined, { maximumFractionDigits: 1 }).format(changePercent)}
-              %{' vs prior period'}
-            </span>
-          ) : null}
-        </div>
-
-        {ready ? (
-          <PillColumns
-            columns={columns}
-            series={series}
-            label={`New contracts by plan, ${rangeLabel}`}
-          />
-        ) : (
-          <>
-            {/* The same matrix with nothing lit — which is what the chart draws
-                for an all-zero window anyway, so the shape never jumps as the
-                data arrives. */}
-            <div className="flex min-h-32 w-full items-end gap-2" aria-hidden>
-              {Array.from({ length: 7 }, (_, column) => (
-                <div key={column} className="flex min-w-0 flex-1 flex-col justify-end gap-1">
-                  {Array.from({ length: 7 }, (_, row) => (
-                    <span key={row} className="bg-muted/70 h-3 rounded" />
-                  ))}
-                </div>
-              ))}
-            </div>
-            {status === 'unavailable' ? (
-              <Unavailable what="Contracts could not be loaded." />
-            ) : (
-              <p className="text-muted-foreground border-t pt-4 text-xs">
-                Contracts created in this period appear here, by plan.
-              </p>
-            )}
-          </>
-        )}
-      </div>
-    </Panel>
-  )
-}
-
-/* ---- 4. Invoice payment status ------------------------------------------ */
-
-/**
- * The half-donut over real invoice counts.
+/*
+ * Quota metrics — usage by feature, kept out of the overview for now.
  *
- * The three slices are the three states the domain actually models — paid, open
- * and overdue. The design labelled them paid/pending/failed, which are wire
- * `payment_status` values that `deriveInvoiceStatus` collapses; using the
- * domain's own vocabulary is what keeps this panel agreeing with the invoice
- * list it links to.
+ * Not rendered: the overview is Revenue, Customers and Usage ingestion only. The
+ * card is left here, commented, so it can return unchanged once quota metrics
+ * have a home. To restore it, bring back `Panel` (compositions/Section),
+ * `SegmentMeter`/`MeterTrack` (pages/shared/SegmentMeter), a `usage: UsagePanel`
+ * prop (status + rows of featureId, name, lookupKey, quantity, value,
+ * changePercent) and the `toUsagePanel` shaping in the console's HomePage.
  *
- * These are states, so they take the status tones rather than the categorical
- * ones. Overdue is `critical` because overdue is bad, not because it was third
- * in the rotation.
+ * function UsageCard({ usage, onViewFeatures, className }) {
+ *   const rows: SegmentMeterRow[] = usage.rows.map((row) => ({
+ *     id: row.featureId,
+ *     label: row.name,
+ *     caption: row.lookupKey,
+ *     value: row.quantity,
+ *     display: row.value,
+ *     changePercent: row.changePercent ?? undefined,
+ *   }))
+ *   return (
+ *     <Panel title="Usage by feature" action={<Button ...>All features</Button>}>
+ *       {usage.status === 'ready' && rows.length > 0 ? (
+ *         <SegmentMeter rows={rows} label="Usage by feature" className="px-6 py-1" />
+ *       ) : (
+ *         <MeterTrack filled={0} segments={40} />
+ *       )}
+ *     </Panel>
+ *   )
+ * }
  */
-function InvoicesCard({
-  invoices,
-  onViewInvoices,
-}: {
-  invoices: InvoicesPanel
-  onViewInvoices: () => void
-}) {
-  const ready = invoices.status === 'ready'
-  const slices: DonutSlice[] = [
-    { id: 'paid', label: 'Paid', value: ready ? invoices.paid : 0, tone: 'good' },
-    { id: 'open', label: 'Open', value: ready ? invoices.open : 0, tone: 'warning' },
-    { id: 'overdue', label: 'Overdue', value: ready ? invoices.overdue : 0, tone: 'critical' },
-  ]
-
-  return (
-    <Panel
-      title="Invoice payment status"
-      action={
-        <Button variant="outline" size="sm" onClick={onViewInvoices}>
-          View invoices
-        </Button>
-      }
-    >
-      {invoices.status === 'unavailable' ? (
-        // Zeroes would be a claim. A window that could not be read gets the
-        // reason instead of a ring and three noughts.
-        <div className="flex flex-1 flex-col justify-center p-6">
-          <Unavailable what="Invoices could not be loaded." />
-        </div>
-      ) : (
-        <div className="flex flex-1 flex-col justify-center p-6">
-          <HalfDonut
-            slices={slices}
-            centerLabel="Invoices"
-            centerValue={ready ? invoices.total : 0}
-            label="Invoice payment status"
-          />
-        </div>
-      )}
-    </Panel>
-  )
-}
-
-/* ---- 5. Usage by feature ------------------------------------------------ */
-
-function UsageCard({
-  usage,
-  onViewFeatures,
-  className,
-}: {
-  usage: UsagePanel
-  onViewFeatures: () => void
-  className?: string
-}) {
-  const rows: SegmentMeterRow[] = usage.rows.map((row) => ({
-    id: row.featureId,
-    label: row.name,
-    caption: row.lookupKey,
-    value: row.quantity,
-    // No `max`: these features have no shared ceiling, so each row is measured
-    // against the busiest one and the panel answers "which feature is carrying
-    // this account" rather than "how full is it".
-    display: row.value,
-    changePercent: row.changePercent ?? undefined,
-  }))
-
-  return (
-    <Panel
-      title="Usage by feature"
-      action={
-        <Button variant="outline" size="sm" onClick={onViewFeatures}>
-          All features
-        </Button>
-      }
-      {...(className !== undefined ? { className } : {})}
-    >
-      {usage.status === 'unavailable' ? (
-        <div className="flex flex-1 flex-col justify-center px-6 py-5">
-          <Unavailable what="Usage analytics could not be loaded." />
-        </div>
-      ) : usage.status === 'ready' && rows.length > 0 ? (
-        <SegmentMeter rows={rows} label="Usage by feature" className="px-6 py-1" />
-      ) : (
-        <div className="grid flex-1 grid-cols-[minmax(0,11rem)_minmax(0,1fr)] content-center items-center gap-6 px-6 py-5">
-          <span className="text-muted-foreground text-[13px]">No usage recorded yet</span>
-          <MeterTrack filled={0} segments={40} />
-        </div>
-      )}
-    </Panel>
-  )
-}
-
-/* ---- 6. API ------------------------------------------------------------- */
-
-/**
- * Key health, as an arc.
- *
- * The design used this gauge for a request success rate; Flexprice exposes no
- * request metrics at all, so it shows a ratio that *is* real — how many of the
- * tenant's API keys are active, against how many exist. The mark is reused, the
- * claim is not, and `max` is a real denominator rather than an invented one.
- *
- * The tone is the page's judgement, not the gauge's: `ArcGauge` never decides
- * that a reading is bad.
- */
-function ApiCard({ api, onApiKeys }: { api: ApiPanel; onApiKeys: () => void }) {
-  const ready = api.status === 'ready' && api.totalKeys > 0
-  const healthy = api.activeKeys === api.totalKeys
-
-  return (
-    <Panel
-      title="API"
-      action={
-        <Button variant="outline" size="sm" onClick={onApiKeys}>
-          API keys
-          <ArrowUpRightIcon aria-hidden />
-        </Button>
-      }
-    >
-      <div className="flex flex-1 flex-col justify-between gap-6 p-6">
-        <div className="flex flex-1 flex-col items-center justify-center gap-3">
-          {api.status === 'unavailable' ? (
-            <Unavailable what="API keys could not be loaded." />
-          ) : ready ? (
-            <ArcGauge
-              value={api.activeKeys}
-              max={api.totalKeys}
-              display={healthy ? 'Healthy' : 'Attention'}
-              caption={`${whole.format(api.activeKeys)} of ${whole.format(api.totalKeys)} keys active`}
-              tone={healthy ? 'good' : 'warning'}
-              label="API keys active"
-            />
-          ) : (
-            <ArcGauge
-              value={0}
-              max={1}
-              display="Waiting for first request"
-              caption="Create an API key to start sending events"
-              label="No API keys yet"
-            />
-          )}
-        </div>
-
-        {/*
-         * Requests, p95 and errors are the three numbers the design asked for and
-         * the three this console cannot get. There is no observability surface in
-         * the API or the SDK — only per-event debugging — so they are shown as
-         * absent with the reason, in the same shape they would take if they
-         * arrived.
-         */}
-        <dl className="grid grid-cols-3 divide-x border-t pt-4 text-center">
-          {[
-            { label: 'Requests', value: NOTHING },
-            { label: 'p95 latency', value: NOTHING },
-            { label: 'Errors', value: NOTHING },
-          ].map((stat) => (
-            <div key={stat.label} className="space-y-1 px-2">
-              <dt className="text-muted-foreground text-xs">{stat.label}</dt>
-              <dd className="text-[15px] font-medium tabular-nums">{stat.value}</dd>
-            </div>
-          ))}
-        </dl>
-      </div>
-    </Panel>
-  )
-}
 
 /* ---- The surface -------------------------------------------------------- */
 
@@ -752,16 +430,13 @@ export function DashboardHome({
   onCustomerChange,
   rangeLabel,
   events,
-  subscriptions,
-  invoices,
-  usage,
-  api,
+  customers,
   onNavigate,
 }: DashboardHomeProps) {
   const go = (path: string) => onNavigate?.(path)
 
   return (
-    <div className="flex flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
+    <div className="flex flex-1 flex-col gap-4 px-10 pt-3 pb-16 2xl:px-14">
       {/* The visible title lives in the shell's breadcrumb; the outline still needs one. */}
       <h1 className="sr-only">Overview</h1>
 
@@ -778,21 +453,12 @@ export function DashboardHome({
         onConfigure={() => go('/settings')}
       />
 
-      <EventsSection events={events} rangeLabel={rangeLabel} onQuickstart={() => go('/features')} />
-
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-        <SubscriptionsCard
-          subscriptions={subscriptions}
-          rangeLabel={rangeLabel}
-          onViewAll={() => go('/subscriptions')}
-        />
-        <InvoicesCard invoices={invoices} onViewInvoices={() => go('/invoices')} />
-      </div>
-
-      <div className="grid grid-cols-1 gap-5 xl:grid-cols-3">
-        <UsageCard usage={usage} onViewFeatures={() => go('/features')} className="xl:col-span-2" />
-        <ApiCard api={api} onApiKeys={() => go('/settings')} />
-      </div>
+      <EventsSection
+        events={events}
+        customers={customers}
+        rangeLabel={rangeLabel}
+        onQuickstart={() => go('/features')}
+      />
     </div>
   )
 }
