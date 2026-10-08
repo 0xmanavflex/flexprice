@@ -122,6 +122,8 @@ const DOT_TONE: Record<PillTone, string> = {
 
 export interface PillProps {
   tone?: PillTone
+  /** `sm` is the quieter chip that sits beside a name; `default` is the column pill. */
+  size?: 'default' | 'sm'
   /** Replaces the dot — a feature type's glyph, say. */
   icon?: ReactNode
   children: ReactNode
@@ -137,11 +139,12 @@ export interface PillProps {
  * dot in it can be found without reading. The label is always spelled out beside
  * the dot, so the tone is never the only thing saying what the status is.
  */
-export function Pill({ tone = 'neutral', icon, children, className }: PillProps) {
+export function Pill({ tone = 'neutral', size = 'default', icon, children, className }: PillProps) {
   return (
     <span
       className={cn(
-        'border-border bg-background text-foreground inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs font-medium whitespace-nowrap shadow-[0_1px_1px_rgba(0,0,0,0.03)] [&_svg]:size-3 [&_svg]:opacity-60',
+        'border-border bg-background text-foreground inline-flex items-center rounded-full border font-medium whitespace-nowrap shadow-[0_1px_1px_rgba(0,0,0,0.03)] [&_svg]:size-3 [&_svg]:opacity-60',
+        size === 'sm' ? 'h-5 gap-1 px-2 text-[11px]' : 'h-6 gap-1.5 px-2.5 text-xs',
         className,
       )}
     >
@@ -217,12 +220,27 @@ export function Formula({ value }: { value: string | null }) {
   )
 }
 
-/** The name cell: medium weight, truncating, with an optional muted sub-label. */
+/**
+ * The type of a list's name column: a step above the table's 14px body, medium
+ * weight. The name is the column a row is found by, so it reads first; the
+ * chips and metadata beside it stay at `text-xs` and below. 15px is the
+ * redesign's agreed name size (2026-10 product-catalog pass), not an ad-hoc one.
+ */
+const NAME_TEXT = 'text-foreground text-[15px] font-medium'
+
+/**
+ * The name cell: the row's name, truncating, with an optional sub-label — a
+ * small chip or muted text — that never outweighs it.
+ */
 export function EntityCell({ name, sub }: { name: string; sub?: ReactNode }) {
   return (
-    <div className="flex min-w-0 items-center gap-2.5">
-      <span className="text-foreground truncate font-medium">{name}</span>
-      {sub ? <span className="text-muted-foreground truncate">{sub}</span> : null}
+    <div className="flex min-w-0 items-center gap-2">
+      <span title={name} className={cn('truncate', NAME_TEXT)}>
+        {name}
+      </span>
+      {sub ? (
+        <span className="text-muted-foreground flex shrink-0 items-center text-xs">{sub}</span>
+      ) : null}
     </div>
   )
 }
@@ -273,7 +291,11 @@ export interface FeatureTypePillProps {
 
 /** A feature type: its coloured glyph, and the type spelled out. */
 export function FeatureTypePill({ type, label }: FeatureTypePillProps) {
-  return <Pill icon={<FeatureTypeGlyph type={type} className="size-3" />}>{label}</Pill>
+  return (
+    <Pill size="sm" icon={<FeatureTypeGlyph type={type} className="size-3" />}>
+      {label}
+    </Pill>
+  )
 }
 
 /** Nothing here — said out loud, rather than left blank. A blank cell reads as
@@ -323,11 +345,13 @@ function InlineTextCell({
   value,
   label,
   muted,
+  primary,
   onSave,
 }: {
   value: string
   label: string
   muted?: boolean | undefined
+  primary?: boolean | undefined
   onSave: (value: string) => void | Promise<void>
 }) {
   const [editing, setEditing] = useState(false)
@@ -384,7 +408,7 @@ function InlineTextCell({
         setEditing(true)
       }}
     >
-      <span className={cn('truncate', muted && 'text-muted-foreground')}>
+      <span className={cn('truncate', primary && NAME_TEXT, muted && 'text-muted-foreground')}>
         {value || <EmDash />}
       </span>
       <PencilIcon
@@ -407,10 +431,13 @@ export function EntityLink({
   label,
   onOpen,
   muted,
+  primary,
 }: {
   label: string
   onOpen: () => void
   muted?: boolean | undefined
+  /** Set in a list's name column: the name type rather than body text. */
+  primary?: boolean | undefined
 }) {
   return (
     <button
@@ -418,6 +445,7 @@ export function EntityLink({
       title={label}
       className={cn(
         'block max-w-full truncate text-left underline-offset-4 hover:underline focus-visible:underline',
+        primary && NAME_TEXT,
         muted && 'text-muted-foreground',
       )}
       onClick={(event) => {
@@ -440,10 +468,17 @@ export function textColumn<T>(
     onEdit?: ((row: T, value: string) => void | Promise<void>) | undefined
     /** Renders the value as a link to the entity it names; the row click is not fired. */
     onOpen?: ((row: T) => void) | undefined
+    /**
+     * Draw the value as the row's name (`EntityCell` type: larger, medium).
+     * Defaults to true for a column whose id is `name`, so every list's Name
+     * column gets the same treatment without each grid opting in.
+     */
+    primary?: boolean | undefined
   },
 ): EntityColumn<T> {
   const onEdit = options?.onEdit
   const onOpen = options?.onOpen
+  const primary = options?.primary ?? id === 'name'
   return {
     id,
     header,
@@ -456,14 +491,23 @@ export function textColumn<T>(
             value={value ?? ''}
             label={header}
             muted={options?.muted}
+            primary={primary}
             onSave={(next) => onEdit(row, next)}
           />
         )
       }
       if (!value) return <EmDash />
       if (onOpen) {
-        return <EntityLink label={value} muted={options?.muted} onOpen={() => onOpen(row)} />
+        return (
+          <EntityLink
+            label={value}
+            muted={options?.muted}
+            primary={primary}
+            onOpen={() => onOpen(row)}
+          />
+        )
       }
+      if (primary && !options?.muted) return <EntityCell name={value} />
       return (
         <span
           title={value}
