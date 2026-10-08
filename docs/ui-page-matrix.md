@@ -36,7 +36,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | groups | `GroupDetailPage` | Detail | DetailShell, DetailTabs, EntityList, MetricRail, Section | AppFailure, CatalogDetailFrame, CatalogStatusBadge, Dot, EditableCard, GroupMembersView, LoadingRows, PageBody |
 | groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | GroupForm |
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |
-| home | `HomePage` | Dashboard | Panel | DashboardHome |
+| home | `HomePage` | Dashboard | — | DashboardHome |
 | integrations | `IntegrationListPage` | List | ConnectorCard | IntegrationsBlock |
 | invoices | `InvoiceDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, Properties, Section | AppFailure, InvoiceDetailView, LoadingRows, PageBody, Toaster |
 | invoices | `InvoiceFormPage` | Form | Field | AppFailure, InvoiceForm, LoadingRows, PageBody |
