@@ -167,6 +167,92 @@ export function usePlanEntitlements(planIds: string[]) {
   })
 }
 
+/** An entitlement, plus the plan or add-on that grants it. */
+export interface FeatureEntitlementLink {
+  entitlement: Entitlement
+  parentName: string
+  parentStatus: string
+}
+
+type NamedParent = { id?: string; name?: string; status?: string }
+
+type GrantWire = EntitlementWire & {
+  plan?: NamedParent
+  addon?: NamedParent
+}
+
+/**
+ * Every plan and add-on entitlement that grants this feature.
+ *
+ * `POST /entitlements/search` takes `featureIds`. The parent name is on
+ * `expand: 'plan,addon'` when the API sends it, and looked up otherwise.
+ */
+export function useFeatureEntitlements(featureId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.entitlements.list({ featureId, scope: 'feature' }),
+    enabled: featureId.length > 0,
+    queryFn: async (): Promise<FeatureEntitlementLink[]> => {
+      const response = await call(() =>
+        client.entitlements.queryEntitlement({
+          featureIds: [featureId],
+          expand: 'plan,addon',
+          limit: 100,
+          offset: 0,
+        } as never),
+      )
+      const items = ((response.items ?? []) as GrantWire[]).filter(
+        (item) =>
+          item.featureId === featureId &&
+          (item.entityType === 'PLAN' || item.entityType === 'ADDON'),
+      )
+
+      const missing = (type: string) => [
+        ...new Set(
+          items
+            .filter((item) => item.entityType === type && item.entityId && !namedGrant(item, type))
+            .map((item) => item.entityId as string),
+        ),
+      ]
+      const planIds = missing('PLAN')
+      const addonIds = missing('ADDON')
+      const [plans, addons] = await Promise.all([
+        planIds.length > 0
+          ? call(() =>
+              client.plans.queryPlan({ planIds, limit: planIds.length, offset: 0 } as never),
+            ).then((page) => (page.items ?? []) as NamedParent[])
+          : [],
+        addonIds.length > 0
+          ? call(() =>
+              client.addons.queryAddon({ addonIds, limit: addonIds.length, offset: 0 } as never),
+            ).then((page) => (page.items ?? []) as NamedParent[])
+          : [],
+      ])
+      const byId = (rows: NamedParent[]) =>
+        new Map(rows.filter((row) => row.id).map((row) => [row.id as string, row]))
+      const planById = byId(plans)
+      const addonById = byId(addons)
+
+      return items.map((item) => {
+        const looked =
+          item.entityType === 'ADDON'
+            ? item.addon ?? (item.entityId ? addonById.get(item.entityId) : undefined)
+            : item.plan ?? (item.entityId ? planById.get(item.entityId) : undefined)
+        return {
+          entitlement: toEntitlement(item),
+          parentName: looked?.name || (item.entityType === 'ADDON' ? 'Untitled add-on' : 'Untitled plan'),
+          parentStatus: looked?.status || 'published',
+        }
+      })
+    },
+  })
+}
+
+function namedGrant(item: GrantWire, type: string): boolean {
+  return type === 'ADDON' ? Boolean(item.addon?.name) : Boolean(item.plan?.name)
+}
+
 /** Grant several entitlements in one call. */
 export function useCreateBulkEntitlements() {
   const client = useFlexprice()

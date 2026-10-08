@@ -1,5 +1,10 @@
 import { useMemo, useState, type ReactNode } from 'react'
-import { statusFilter } from '@ui/compositions/FilterBar'
+import {
+  readSelectFilter,
+  selectFilterField,
+  type FlatFilter,
+} from '@ui/compositions/FilterBar'
+import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { EntityList } from './EntityList'
@@ -51,6 +56,8 @@ export interface DetailTableProps<T> {
   onRowClick?: (row: T) => void
   /** Adds the filter button: rows are narrowed to the chosen values of this field. */
   facet?: { label: string; value: (row: T) => string }
+  /** Several fields in the same filter, when one facet is not enough. */
+  facets?: Array<{ id: string; label: string; value: (row: T) => string }>
   /** What the search matches. Defaults to the visible text of every column plus the row's own string fields. */
   searchText?: (row: T) => string
   pageSize?: number
@@ -80,6 +87,7 @@ export function DetailTable<T extends object>({
   noun = 'records',
   onRowClick,
   facet,
+  facets,
   searchText,
   pageSize: initialPageSize = 10,
   empty,
@@ -88,7 +96,7 @@ export function DetailTable<T extends object>({
   className,
 }: DetailTableProps<T>) {
   const [search, setSearch] = useState('')
-  const [facetValues, setFacetValues] = useState<string[]>([])
+  const [selected, setSelected] = useState<Record<string, string[]>>({})
   const [sortState, setSortState] = useState<{ field: string; direction: 'asc' | 'desc' } | null>(
     null,
   )
@@ -114,18 +122,27 @@ export function DetailTable<T extends object>({
     [columns],
   )
 
-  const choices = useMemo(() => {
-    if (!facet) return []
-    return [...new Set(rows.map((row) => facet.value(row)))]
-      .filter((value) => value.length > 0)
-      .map((value) => ({ value, label: value }))
-  }, [rows, facet])
+  const specs = useMemo(
+    () => facets ?? (facet ? [{ id: 'status', label: facet.label, value: facet.value }] : []),
+    [facets, facet],
+  )
+
+  const choicesById = useMemo(() => {
+    const out: Record<string, { value: string; label: string }[]> = {}
+    for (const spec of specs) {
+      out[spec.id] = [...new Set(rows.map((row) => spec.value(row)))]
+        .filter((value) => value.length > 0)
+        .map((value) => ({ value, label: value }))
+    }
+    return out
+  }, [rows, specs])
 
   const visible = useMemo(() => {
     const needle = search.trim().toLowerCase()
     let next = rows
-    if (facet && facetValues.length > 0) {
-      next = next.filter((row) => facetValues.includes(facet.value(row)))
+    for (const spec of specs) {
+      const chosen = selected[spec.id] ?? []
+      if (chosen.length > 0) next = next.filter((row) => chosen.includes(spec.value(row)))
     }
     if (needle) {
       next = next.filter((row) => {
@@ -150,7 +167,7 @@ export function DetailTable<T extends object>({
       })
     }
     return next
-  }, [rows, columns, search, facet, facetValues, searchText, sortState])
+  }, [rows, columns, search, specs, selected, searchText, sortState])
 
   if (rows.length === 0 && empty) {
     return (
@@ -168,10 +185,12 @@ export function DetailTable<T extends object>({
   const sortable = columns.filter((column) => column.sortBy)
   const start = (page - 1) * pageSize
   const slice = visible.slice(start, start + pageSize)
-  const isFiltered = search.trim().length > 0 || facetValues.length > 0
+  const activeSpecs = specs.filter((spec) => (choicesById[spec.id]?.length ?? 0) > 0)
+  const isFiltered =
+    search.trim().length > 0 || activeSpecs.some((spec) => (selected[spec.id]?.length ?? 0) > 0)
   const reset = () => {
     setSearch('')
-    setFacetValues([])
+    setSelected({})
     setPage(1)
   }
 
@@ -198,17 +217,39 @@ export function DetailTable<T extends object>({
           setPage(1)
         }}
         searchPlaceholder={`Search ${noun}…`}
-        {...(facet && choices.length > 0
+        {...(activeSpecs.length > 0
           ? {
-              filter: statusFilter({
-                values: facetValues,
-                choices,
-                label: facet.label,
-                onChange: (values) => {
-                  setFacetValues(values)
+              filter: {
+                fields: activeSpecs.map((spec) =>
+                  selectFilterField(spec.id, spec.label, choicesById[spec.id] ?? []),
+                ),
+                query: createFilterQuery(
+                  activeSpecs.flatMap((spec) => {
+                    const values = selected[spec.id] ?? []
+                    return values.length > 0
+                      ? [
+                          createFilterRule({
+                            id: spec.id,
+                            path: [spec.id],
+                            operator: 'is_any_of',
+                            value: values,
+                          }),
+                        ]
+                      : []
+                  }),
+                ),
+                activeCount: activeSpecs.filter((spec) => (selected[spec.id]?.length ?? 0) > 0)
+                  .length,
+                onQueryChange: (_query, flat: FlatFilter[]) => {
+                  const next: Record<string, string[]> = {}
+                  for (const spec of activeSpecs) {
+                    const allowed = new Set((choicesById[spec.id] ?? []).map((choice) => choice.value))
+                    next[spec.id] = readSelectFilter(flat, spec.id, allowed)
+                  }
+                  setSelected(next)
                   setPage(1)
                 },
-              }),
+              },
             }
           : {})}
         {...(sortable.length > 0

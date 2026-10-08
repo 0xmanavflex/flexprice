@@ -4,10 +4,19 @@ import { toast } from 'sonner'
 import {
   AGGREGATION_LABEL,
   aggregationFormula,
+  BILLING_MODEL_LABEL,
+  BILLING_PERIOD_LABEL,
+  BillingModel,
+  type BillingPeriod,
+  type Charge,
+  type Entitlement,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   FeatureType,
+  InvoiceCadence,
   needsAggregationTarget,
+  TierMode,
+  USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
 import { ArchiveIcon, BellIcon, CopyIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react'
@@ -22,6 +31,7 @@ import {
 import { Switch } from '@ui/components/primitives/switch'
 import { DetailHeader } from '../../compositions/DetailHeader'
 import { EditableCard } from '../../compositions/EditableCard'
+import { LoadingRows } from '../../compositions'
 import { Section } from '../../compositions/Section'
 import { DetailTabs, Dot, Properties } from '../../compositions/DetailKit'
 import { MetricChart, type MetricPoint } from '../shared/charts'
@@ -29,6 +39,20 @@ import { FEATURE_TYPE_GLYPH, FeatureTypePill, Formula, Status } from '../shared/
 import { DetailTable } from '../shared/DetailTable'
 
 export type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
+
+/** A charge that prices this feature, and the plan or add-on it belongs to. */
+export interface FeatureChargeLink {
+  charge: Charge
+  parentName: string
+  parentStatus: string
+}
+
+/** An entitlement that grants this feature, and the plan or add-on it belongs to. */
+export interface FeatureEntitlementLink {
+  entitlement: Entitlement
+  parentName: string
+  parentStatus: string
+}
 
 export interface FeatureDetailViewProps {
   feature: Feature
@@ -43,6 +67,14 @@ export interface FeatureDetailViewProps {
   onDuplicate?: () => void
   /** Header menu: delete the feature. Omitted, the item is not shown. */
   onDelete?: () => void
+  /** Plans and add-ons that price this feature. */
+  charges?: FeatureChargeLink[]
+  chargesLoading?: boolean
+  chargesError?: string | null
+  /** Plans and add-ons that grant this feature. */
+  entitlements?: FeatureEntitlementLink[]
+  entitlementsLoading?: boolean
+  entitlementsError?: string | null
 }
 
 /** Thirty days of plausible-looking usage. Demo only: no usage read exists for a feature yet. */
@@ -52,63 +84,6 @@ export function demoUsagePoints(): MetricPoint[] {
     value: Math.round(3200 + index * 90 + Math.sin(index / 2.2) * 900 + ((index * 37) % 7) * 120),
   }))
 }
-
-interface DemoCharge {
-  id: string
-  plan: string
-  model: string
-  billed: string
-  price: string
-  allowance: string
-  resets: string
-  active: boolean
-}
-
-/** Demo only: no read exists yet for the charges and entitlements that reference a feature. */
-const DEMO_CHARGES: DemoCharge[] = [
-  {
-    id: 'starter',
-    plan: 'Starter',
-    model: 'Volume tiered',
-    billed: 'Monthly, in arrears',
-    price: '2 tiers, from $0.01 per unit',
-    allowance: '1,000 units',
-    resets: 'Every billing period',
-    active: true,
-  },
-  {
-    id: 'studio',
-    plan: 'Studio',
-    model: 'Package',
-    billed: 'Monthly, in arrears',
-    price: '$250 per 1,000 units',
-    allowance: '25,000 units',
-    resets: 'Every billing period',
-    active: true,
-  },
-  {
-    id: 'pro',
-    plan: 'Pro',
-    model: 'Volume tiered',
-    billed: 'Monthly, in arrears',
-    price: '3 tiers, from $0.0008 per unit',
-    allowance: '1M units',
-    resets: 'Every billing period',
-    active: true,
-  },
-  {
-    id: 'platform',
-    plan: 'Platform',
-    model: 'Package',
-    billed: 'Monthly, in arrears',
-    price: '$2 per 1,000 units',
-    allowance: '10K units',
-    resets: 'Every billing period',
-    active: false,
-  },
-]
-
-const ENTITLEMENT_ROWS = [DEMO_CHARGES[2]!, DEMO_CHARGES[3]!]
 
 const ALERTS = [
   { id: 'critical', label: 'Critical', hint: 'Above 100% of allowance', dot: 'bg-destructive' },
@@ -145,6 +120,57 @@ const mono = (value: string | null | undefined) =>
 
 const muted = (value: string) => <span className="text-muted-foreground">{value}</span>
 
+function statusLabel(status: string): string {
+  if (status === 'published') return 'Published'
+  if (status === 'archived') return 'Archived'
+  return status ? status.charAt(0).toUpperCase() + status.slice(1) : 'Unknown'
+}
+
+/** "Flat fee", "Volume tiered", "Slab tiered", "Package". */
+function modelLabel(charge: Charge): string {
+  if (charge.billingModel === BillingModel.Tiered) {
+    return charge.tierMode === TierMode.Slab ? 'Slab tiered' : 'Volume tiered'
+  }
+  return BILLING_MODEL_LABEL[charge.billingModel]
+}
+
+/** "Monthly, in arrears". */
+function billedLabel(charge: Charge): string {
+  const period = BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? charge.billingPeriod
+  return `${period}, ${charge.invoiceCadence === InvoiceCadence.Advance ? 'in advance' : 'in arrears'}`
+}
+
+function priceLabel(charge: Charge): string {
+  const display = charge.displayAmount || charge.amount
+  switch (charge.billingModel) {
+    case BillingModel.FlatFee:
+      return display || '—'
+    case BillingModel.Package:
+      return `${display || '0'} per ${charge.transformQuantity?.divideBy?.toLocaleString() ?? '?'}`
+    case BillingModel.Tiered: {
+      const count = charge.tiers.length
+      const first = charge.tiers[0]?.unitAmount
+      const from = first ? `, from ${first}` : ''
+      return `${count} tier${count === 1 ? '' : 's'}${from}`
+    }
+  }
+}
+
+function allowanceOf(entitlement: Entitlement): string {
+  if (entitlement.featureType === FeatureType.Metered) {
+    return entitlement.usageLimit == null ? 'Unlimited' : entitlement.usageLimit.toLocaleString()
+  }
+  if (entitlement.featureType === FeatureType.Boolean) return entitlement.isEnabled ? 'Yes' : 'No'
+  if (entitlement.featureType === FeatureType.Static) return entitlement.staticValue ?? '—'
+  return 'Configured'
+}
+
+function resetsOf(entitlement: Entitlement): string {
+  return entitlement.usageResetPeriod
+    ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod]
+    : '—'
+}
+
 export function FeatureDetailView({
   feature,
   tab,
@@ -153,6 +179,12 @@ export function FeatureDetailView({
   onSave,
   onDuplicate,
   onDelete,
+  charges = [],
+  chargesLoading = false,
+  chargesError = null,
+  entitlements = [],
+  entitlementsLoading = false,
+  entitlementsError = null,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
   const Glyph = FEATURE_TYPE_GLYPH[feature.type]
@@ -165,10 +197,18 @@ export function FeatureDetailView({
     ...(isMetered
       ? [
           { value: 'overview', label: 'Overview' },
-          { value: 'charges', label: 'Charges', count: DEMO_CHARGES.length },
+          {
+            value: 'charges',
+            label: 'Charges',
+            ...(chargesLoading ? {} : { count: charges.length }),
+          },
         ]
       : []),
-    { value: 'entitlements', label: 'Entitlements', count: ENTITLEMENT_ROWS.length },
+    {
+      value: 'entitlements',
+      label: 'Entitlements',
+      ...(entitlementsLoading ? {} : { count: entitlements.length }),
+    },
     { value: 'information', label: 'Information' },
   ]
 
@@ -237,66 +277,24 @@ export function FeatureDetailView({
       <DetailTabs tabs={tabs} value={active} onChange={(next) => onTabChange(next as FeatureTab)} />
 
       {active === 'overview' ? (
-        <OverviewTab feature={feature} onSeeCharges={() => onTabChange('charges')} />
+        <OverviewTab
+          feature={feature}
+          charges={charges}
+          chargesLoading={chargesLoading}
+          onSeeCharges={() => onTabChange('charges')}
+        />
       ) : null}
 
       {active === 'charges' ? (
-        <Section title="Charges" flush bare>
-          <DetailTable
-            label="Charges"
-            noun="charges"
-            rows={DEMO_CHARGES}
-            getRowId={(row) => row.id}
-            columns={[
-              {
-                key: 'plan',
-                header: 'Plan / add-on',
-                cell: (row) => <span className="font-medium">{row.plan}</span>,
-              },
-              { key: 'model', header: 'Billing model', cell: (row) => muted(row.model) },
-              { key: 'billed', header: 'Billed', cell: (row) => muted(row.billed) },
-              {
-                key: 'price',
-                header: 'Price',
-                cell: (row) => <span className="tabular-nums">{row.price}</span>,
-              },
-              {
-                key: 'status',
-                header: 'Plan status',
-                cell: (row) => <Status value={row.active ? 'active' : 'archived'} />,
-              },
-            ]}
-          />
-        </Section>
+        <ChargesTab rows={charges} isLoading={chargesLoading} error={chargesError} />
       ) : null}
 
       {active === 'entitlements' ? (
-        <Section title="Entitlements" flush bare={isMetered}>
-          {isMetered ? (
-            <DetailTable
-              label="Entitlements"
-              noun="entitlements"
-              rows={ENTITLEMENT_ROWS}
-              getRowId={(row) => row.id}
-              columns={[
-                {
-                  key: 'plan',
-                  header: 'Plan',
-                  cell: (row) => <span className="font-medium">{row.plan}</span>,
-                },
-                { key: 'allowance', header: 'Allowance', cell: (row) => row.allowance },
-                { key: 'resets', header: 'Usage resets', cell: (row) => muted(row.resets) },
-                {
-                  key: 'status',
-                  header: 'Plan status',
-                  cell: (row) => <Status value={row.active ? 'active' : 'archived'} />,
-                },
-              ]}
-            />
-          ) : (
-            <SectionEmpty title="No plans yet" description="No plan includes this feature yet." />
-          )}
-        </Section>
+        <EntitlementsTab
+          rows={entitlements}
+          isLoading={entitlementsLoading}
+          error={entitlementsError}
+        />
       ) : null}
 
       {active === 'information' ? (
@@ -311,7 +309,176 @@ export function FeatureDetailView({
   )
 }
 
-function OverviewTab({ feature, onSeeCharges }: { feature: Feature; onSeeCharges: () => void }) {
+function ChargesTab({
+  rows,
+  isLoading,
+  error,
+}: {
+  rows: FeatureChargeLink[]
+  isLoading: boolean
+  error: string | null
+}) {
+  if (error) return <p className="text-destructive p-6 text-sm">{error}</p>
+  if (isLoading) {
+    return (
+      <Section title="Charges" flush>
+        <div className="p-4">
+          <LoadingRows />
+        </div>
+      </Section>
+    )
+  }
+  if (rows.length === 0) {
+    return (
+      <Section title="Charges" flush>
+        <SectionEmpty
+          title="No charges yet"
+          description="No plan or add-on prices this feature yet."
+        />
+      </Section>
+    )
+  }
+  return (
+    <Section title="Charges" flush bare>
+      <DetailTable
+        label="Charges"
+        noun="charges"
+        rows={rows}
+        getRowId={(row) => row.charge.id}
+        facets={[
+          { id: 'model', label: 'Billing model', value: (row) => modelLabel(row.charge) },
+          { id: 'status', label: 'Plan status', value: (row) => statusLabel(row.parentStatus) },
+        ]}
+        searchText={(row) =>
+          [row.parentName, modelLabel(row.charge), billedLabel(row.charge), priceLabel(row.charge), statusLabel(row.parentStatus)].join(' ')
+        }
+        columns={[
+          {
+            key: 'plan',
+            header: 'Plan / add-on',
+            sortBy: (row) => row.parentName,
+            text: (row) => row.parentName,
+            cell: (row) => <span className="font-medium">{row.parentName}</span>,
+          },
+          {
+            key: 'model',
+            header: 'Billing model',
+            sortBy: (row) => modelLabel(row.charge),
+            text: (row) => modelLabel(row.charge),
+            cell: (row) => muted(modelLabel(row.charge)),
+          },
+          {
+            key: 'billed',
+            header: 'Billed',
+            sortBy: (row) => billedLabel(row.charge),
+            text: (row) => billedLabel(row.charge),
+            cell: (row) => muted(billedLabel(row.charge)),
+          },
+          {
+            key: 'price',
+            header: 'Price',
+            sortBy: (row) => Number(row.charge.amount) || 0,
+            text: (row) => priceLabel(row.charge),
+            cell: (row) => <span className="tabular-nums">{priceLabel(row.charge)}</span>,
+          },
+          {
+            key: 'status',
+            header: 'Plan status',
+            sortBy: (row) => statusLabel(row.parentStatus),
+            text: (row) => statusLabel(row.parentStatus),
+            cell: (row) => <Status value={statusLabel(row.parentStatus)} />,
+          },
+        ]}
+      />
+    </Section>
+  )
+}
+
+function EntitlementsTab({
+  rows,
+  isLoading,
+  error,
+}: {
+  rows: FeatureEntitlementLink[]
+  isLoading: boolean
+  error: string | null
+}) {
+  if (error) return <p className="text-destructive p-6 text-sm">{error}</p>
+  if (isLoading) {
+    return (
+      <Section title="Entitlements" flush>
+        <div className="p-4">
+          <LoadingRows />
+        </div>
+      </Section>
+    )
+  }
+  if (rows.length === 0) {
+    return (
+      <Section title="Entitlements" flush>
+        <SectionEmpty title="No entitlements yet" description="No plan includes this feature yet." />
+      </Section>
+    )
+  }
+  return (
+    <Section title="Entitlements" flush bare>
+      <DetailTable
+        label="Entitlements"
+        noun="entitlements"
+        rows={rows}
+        getRowId={(row) => row.entitlement.id}
+        facets={[
+          { id: 'status', label: 'Plan status', value: (row) => statusLabel(row.parentStatus) },
+        ]}
+        searchText={(row) =>
+          [row.parentName, allowanceOf(row.entitlement), resetsOf(row.entitlement), statusLabel(row.parentStatus)].join(' ')
+        }
+        columns={[
+          {
+            key: 'plan',
+            header: 'Plan',
+            sortBy: (row) => row.parentName,
+            text: (row) => row.parentName,
+            cell: (row) => <span className="font-medium">{row.parentName}</span>,
+          },
+          {
+            key: 'allowance',
+            header: 'Allowance',
+            sortBy: (row) => allowanceOf(row.entitlement),
+            text: (row) => allowanceOf(row.entitlement),
+            cell: (row) => allowanceOf(row.entitlement),
+          },
+          {
+            key: 'resets',
+            header: 'Usage resets',
+            sortBy: (row) => resetsOf(row.entitlement),
+            text: (row) => resetsOf(row.entitlement),
+            cell: (row) => muted(resetsOf(row.entitlement)),
+          },
+          {
+            key: 'status',
+            header: 'Plan status',
+            sortBy: (row) => statusLabel(row.parentStatus),
+            text: (row) => statusLabel(row.parentStatus),
+            cell: (row) => <Status value={statusLabel(row.parentStatus)} />,
+          },
+        ]}
+      />
+    </Section>
+  )
+}
+
+function OverviewTab({
+  feature,
+  charges,
+  chargesLoading,
+  onSeeCharges,
+}: {
+  feature: Feature
+  charges: FeatureChargeLink[]
+  chargesLoading: boolean
+  onSeeCharges: () => void
+}) {
   const [metric, setMetric] = useState('usage')
   const usage = demoUsagePoints()
   const total = usage.reduce((sum, point) => sum + point.value, 0)
@@ -367,15 +534,27 @@ function OverviewTab({ feature, onSeeCharges }: { feature: Feature; onSeeCharges
           }
         >
           {/* Rows share the height of the panel so both overview panels line up. */}
-          <ul className="divide-border/50 flex flex-1 flex-col divide-y">
-            {DEMO_CHARGES.slice(0, 4).map((row) => (
-              <li key={row.id} className="flex min-h-12 flex-1 items-center gap-4 px-6">
-                <span className="flex-1 text-sm">{row.plan}</span>
-                <span className="text-muted-foreground w-28 text-[13px]">{row.model}</span>
-                <span className="w-56 text-[13px] tabular-nums">{row.price}</span>
-              </li>
-            ))}
-          </ul>
+          {chargesLoading ? (
+            <div className="p-4">
+              <LoadingRows />
+            </div>
+          ) : charges.length === 0 ? (
+            <p className="text-muted-foreground px-6 py-10 text-center text-[13px]">
+              No plan prices this feature yet.
+            </p>
+          ) : (
+            <ul className="divide-border/50 flex flex-1 flex-col divide-y">
+              {charges.slice(0, 4).map((row) => (
+                <li key={row.charge.id} className="flex min-h-12 flex-1 items-center gap-4 px-6">
+                  <span className="flex-1 text-sm">{row.parentName}</span>
+                  <span className="text-muted-foreground w-28 text-[13px]">
+                    {modelLabel(row.charge)}
+                  </span>
+                  <span className="w-56 text-[13px] tabular-nums">{priceLabel(row.charge)}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </Section>
         <TestEventPanel feature={feature} />
       </div>

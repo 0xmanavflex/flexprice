@@ -263,11 +263,12 @@ export {
   toChargeRequest,
   toUpdatePriceRequest,
   useCreateBulkPrices,
+  useFeatureCharges,
   usePrices,
   useTerminatePrice,
   useUpdatePrice,
 } from './prices'
-export type { ChargeWire } from './prices'
+export type { ChargeWire, FeatureChargeLink } from './prices'
 
 export {
   toEntitlement,
@@ -275,11 +276,12 @@ export {
   useCreateBulkEntitlements,
   useDeleteEntitlement,
   useEntitlements,
+  useFeatureEntitlements,
   usePlanEntitlements,
   toUpdateEntitlementRequest,
   useUpdateEntitlement,
 } from './entitlements'
-export type { EntitlementWire } from './entitlements'
+export type { EntitlementWire, FeatureEntitlementLink } from './entitlements'
 
 export {
   toCreditGrant,

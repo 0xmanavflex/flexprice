@@ -312,6 +312,132 @@ export function useUpdatePrice() {
   })
 }
 
+/** A charge, plus the plan, add-on, or cost sheet it prices. */
+export interface FeatureChargeLink {
+  charge: Charge
+  parentName: string
+  parentStatus: string
+}
+
+type NamedParent = { id?: string; name?: string; status?: string }
+
+type PriceWithParent = ChargeWire & {
+  plan?: NamedParent
+  addon?: NamedParent
+  meter?: { id?: string }
+}
+
+/**
+ * Every plan, add-on, and cost-sheet charge that meters this feature.
+ *
+ * A feature does not carry its prices. A metered feature points at a meter, and
+ * the prices that bill that meter are found with `meterIds` on
+ * `POST /prices/search`. Names come back on `expand: 'plan,addon'` when the
+ * API honours it; anything still unnamed is looked up, because a row that
+ * shows a ULID is not a plan.
+ */
+export function useFeatureCharges(meterId: string | null) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.prices.list({ meterId: meterId ?? '', scope: 'feature' }),
+    enabled: Boolean(meterId),
+    queryFn: async (): Promise<FeatureChargeLink[]> => {
+      const id = meterId ?? ''
+      const response = await call(() =>
+        client.prices.queryPrice({
+          meterIds: [id],
+          expand: 'plan,addon,meter',
+          limit: 100,
+          offset: 0,
+        } as never),
+      )
+      const items = ((response.items ?? []) as PriceWithParent[]).filter(
+        (item) => (item.meterId || item.meter?.id) === id,
+      )
+
+      const missing = (type: string) => [
+        ...new Set(
+          items
+            .filter((item) => item.entityType === type && item.entityId && !named(item, type))
+            .map((item) => item.entityId as string),
+        ),
+      ]
+      const planIds = missing('PLAN')
+      const addonIds = missing('ADDON')
+      const sheetIds = [
+        ...new Set(
+          items
+            .filter((item) => item.entityType === 'COSTSHEET' && item.entityId)
+            .map((item) => item.entityId as string),
+        ),
+      ]
+
+      const [plans, addons, sheets] = await Promise.all([
+        planIds.length > 0
+          ? call(() =>
+              client.plans.queryPlan({ planIds, limit: planIds.length, offset: 0 } as never),
+            ).then((page) => (page.items ?? []) as NamedParent[])
+          : [],
+        addonIds.length > 0
+          ? call(() =>
+              client.addons.queryAddon({ addonIds, limit: addonIds.length, offset: 0 } as never),
+            ).then((page) => (page.items ?? []) as NamedParent[])
+          : [],
+        sheetIds.length > 0
+          ? call(() =>
+              client.costs.queryCostsheet({
+                costsheetIDs: sheetIds,
+                queryFilter: { limit: sheetIds.length },
+              } as never),
+            ).then((page) => (page.items ?? []) as NamedParent[])
+          : [],
+      ])
+
+      const byId = (rows: NamedParent[]) =>
+        new Map(rows.filter((row) => row.id).map((row) => [row.id as string, row]))
+      const planById = byId(plans)
+      const addonById = byId(addons)
+      const sheetById = byId(sheets)
+
+      return items
+        .filter((item) => item.entityType === 'PLAN' || item.entityType === 'ADDON' || item.entityType === 'COSTSHEET')
+        .map((item) => {
+          const parent = parentOf(item, planById, addonById, sheetById)
+          return { charge: toCharge(item), parentName: parent.name, parentStatus: parent.status }
+        })
+    },
+  })
+}
+
+function named(item: PriceWithParent, type: string): boolean {
+  if (type === 'PLAN') return Boolean(item.plan?.name)
+  if (type === 'ADDON') return Boolean(item.addon?.name)
+  return false
+}
+
+function parentOf(
+  item: PriceWithParent,
+  plans: Map<string, NamedParent>,
+  addons: Map<string, NamedParent>,
+  sheets: Map<string, NamedParent>,
+): { name: string; status: string } {
+  const looked =
+    item.entityType === 'PLAN'
+      ? item.plan ?? (item.entityId ? plans.get(item.entityId) : undefined)
+      : item.entityType === 'ADDON'
+        ? item.addon ?? (item.entityId ? addons.get(item.entityId) : undefined)
+        : item.entityId
+          ? sheets.get(item.entityId)
+          : undefined
+  const fallback =
+    item.entityType === 'ADDON' ? 'Untitled add-on' : item.entityType === 'COSTSHEET' ? 'Untitled cost sheet' : 'Untitled plan'
+  return {
+    name: looked?.name || item.displayName || fallback,
+    status: looked?.status || 'published',
+  }
+}
+
 /**
  * Terminate a charge.
  *

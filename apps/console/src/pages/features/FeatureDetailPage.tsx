@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { type CloneFeature } from '@fp/domain'
+import { type CloneFeature, FeatureType } from '@fp/domain'
 import {
   ApiError,
   useCloneFeature,
   useDeleteFeature,
   useFeature,
+  useFeatureCharges,
+  useFeatureEntitlements,
   useUpdateFeature,
 } from '@fp/query'
 import { FeatureCloneDialog, FeatureDetailView, type FeatureTab } from '@fp/ui/pages'
@@ -22,11 +24,16 @@ export interface FeatureDetailPageProps {
  *
  * Name and description save for real (per value, or together from the header
  * Edit, which opens Information). "Edit configuration" opens the stepped form.
- * The usage chart, plans-attached list and usage alerts are demo content in the
- * view, labelled as such: V2 has no read hook for any of them yet.
+ * Charges and entitlements are the prices and grants that reference this
+ * feature. The usage chart and usage alerts are still demo: there is no
+ * per-feature series wired on this page yet.
  */
 export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
+  const charges = useFeatureCharges(
+    feature.data?.type === FeatureType.Metered ? feature.data.meterId : null,
+  )
+  const entitlements = useFeatureEntitlements(featureId)
   const [tab, setTab] = useState<FeatureTab>('overview')
   const update = useUpdateFeature()
   const clone = useCloneFeature()
@@ -91,6 +98,12 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
         onEditConfiguration={() => onEdit(featureId)}
         onDuplicate={() => setCloning(true)}
         onDelete={() => setDeleting(true)}
+        charges={charges.data ?? []}
+        chargesLoading={charges.isLoading}
+        chargesError={charges.error ? 'Charges could not be loaded.' : null}
+        entitlements={entitlements.data ?? []}
+        entitlementsLoading={entitlements.isLoading}
+        entitlementsError={entitlements.error ? 'Entitlements could not be loaded.' : null}
         onSave={(changes) =>
           update.mutateAsync({
             id: data.id,
