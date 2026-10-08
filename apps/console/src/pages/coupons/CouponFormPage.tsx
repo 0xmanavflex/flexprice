@@ -75,19 +75,6 @@ export function CouponFormPage(props: CouponFormPageProps) {
     <CouponForm
       defaultValue={{ name: coupon.name }}
       summary={{ code: coupon.code, discount: discountText(coupon) }}
-      terms={{
-        code: coupon.code,
-        type: coupon.type,
-        cadence: coupon.cadence,
-        ...(coupon.percentageOff ? { percentageOff: coupon.percentageOff } : {}),
-        ...(coupon.amountOff
-          ? { amountOff: coupon.amountOff.amount, currency: coupon.amountOff.currency }
-          : {}),
-        ...(coupon.durationInPeriods ? { durationInPeriods: coupon.durationInPeriods } : {}),
-        ...(coupon.maxRedemptions ? { maxRedemptions: coupon.maxRedemptions } : {}),
-        ...(coupon.redeemAfter ? { redeemAfter: coupon.redeemAfter } : {}),
-        ...(coupon.redeemBefore ? { redeemBefore: coupon.redeemBefore } : {}),
-      }}
       trail={[
         { label: 'Coupons', onClick: onNavigateToList },
         { label: coupon.name, onClick: () => props.onDone(coupon.id) },

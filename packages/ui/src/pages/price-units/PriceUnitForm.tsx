@@ -25,7 +25,6 @@ import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
-import { PriceUnitPreviewCard } from './PriceUnitPreviewCard'
 
 /**
  * Create a price unit, on its own page.
@@ -46,7 +45,6 @@ export const PriceUnitFormProvenance = provenance({
     '@reui/number-field',
     'compositions/form-card',
     'compositions/form-page',
-    'pages/price-unit-preview-card',
   ],
   note: 'RHF + the domain schema, in the shared full-page shell. The rate is a ReUI number field.',
 })
@@ -80,24 +78,11 @@ export function PriceUnitForm({
   const errors = form.formState.errors
   const baseCurrency = form.watch('baseCurrency')
   const conversionRate = form.watch('conversionRate')
-  const name = form.watch('name')
-  const code = form.watch('code')
-  const symbol = form.watch('symbol')
 
   return (
     <FormPage
       title="Create price unit"
       trail={trail}
-      width="wide"
-      preview={
-        <PriceUnitPreviewCard
-          name={name}
-          code={code}
-          symbol={symbol}
-          baseCurrency={baseCurrency}
-          conversionRate={typeof conversionRate === 'number' ? conversionRate : null}
-        />
-      }
       toolbar={{
         mode: 'create',
         noun: 'price unit',

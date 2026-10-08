@@ -47,7 +47,7 @@ test.describe('the coupons list', () => {
     await page.goto('/coupons')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
     await page.getByRole('button', { name: 'New coupon' }).first().click()
-    await page.getByRole('button', { name: 'Cancel' }).click()
+    await page.getByRole('button', { name: 'Close form' }).click()
     await expect(page).toHaveURL(/\/coupons(\?.*)?$/)
   })
 

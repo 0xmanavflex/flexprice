@@ -6,14 +6,14 @@ import { Textarea } from '@ui/components/primitives/textarea'
 import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
-import { AddonPreviewCard } from './AddonPreviewCard'
 import { provenance } from '@ui/provenance'
 
 /**
  * Create or edit an add-on's details, on a full page.
  *
  * One page (no stepper): Basics (name, description), Identifier (lookup key),
- * and on create a live preview rail. Charges and entitlements are added on the detail page afterwards.
+ * no preview rail. Charges and entitlements are added on the detail page afterwards.
+ * TODO(checkout-review): a preview returns only on a future checkout review screen.
  *
  * Presentational, like every form here: it takes a default value and emits a
  * validated `CreateAddon`, holding no state of its own beyond the field values
@@ -122,14 +122,6 @@ export function AddonForm({
     <FormPage
       title={mode === 'create' ? 'Create add-on' : `Edit ${defaultValue?.name || 'add-on'}`}
       trail={trail}
-      width="wide"
-      preview={
-        <AddonPreviewCard
-          name={form.watch('name')}
-          lookupKey={form.watch('lookupKey')}
-          description={form.watch('description') ?? ''}
-        />
-      }
       toolbar={{
         mode: mode,
         noun: 'add-on',

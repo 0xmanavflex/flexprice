@@ -27,10 +27,10 @@ type Story = StoryObj<typeof meta>
 
 export const Create: Story = {}
 
-/** Cancel hands control back to the caller. */
-export const CancelReturns: Story = {
+/** The close (X) hands control back to the caller. */
+export const CloseReturns: Story = {
   play: async ({ canvasElement, args }) => {
-    await userEvent.click(within(canvasElement).getByRole('button', { name: /cancel/i }))
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Close form' }))
     await expect(args.onCancel).toHaveBeenCalled()
   },
 }
@@ -119,31 +119,5 @@ export const SubmitsAValidatedDomainValue: Story = {
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Priority support', lookupKey: 'priority_support' }),
     )
-  },
-}
-
-/** The "How it will look" rail follows the draft on create. */
-export const PreviewFollowsTheDraft: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const rail = canvas.getByRole('complementary', { name: 'Add-on preview' })
-
-    await expect(within(rail).getByText('Untitled add-on')).toBeInTheDocument()
-    await userEvent.type(canvas.getByRole('textbox', { name: 'Name' }), 'Priority support')
-    await userEvent.type(canvas.getByRole('textbox', { name: 'Lookup key' }), 'priority_support')
-    await userEvent.type(canvas.getByRole('textbox', { name: 'Description' }), 'Named contact')
-
-    await expect(within(rail).getByText('Priority support')).toBeInTheDocument()
-    await expect(within(rail).getByText('priority_support')).toBeInTheDocument()
-    await expect(within(rail).getByText('Named contact')).toBeInTheDocument()
-  },
-}
-
-/** Edit keeps the same rail as create. */
-export const EditKeepsThePreview: Story = {
-  args: { mode: 'edit', defaultValue: { name: 'Priority support', lookupKey: 'priority_support' } },
-  play: async ({ canvasElement }) => {
-    const rail = within(canvasElement).getByRole('complementary', { name: 'Add-on preview' })
-    await expect(within(rail).getByText('Priority support')).toBeInTheDocument()
   },
 }

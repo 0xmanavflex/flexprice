@@ -50,7 +50,7 @@ test.describe('the tax rates list', () => {
 
   test('cancel returns to the list without saving', async ({ page }) => {
     await page.goto('/taxes/new')
-    await page.getByRole('button', { name: 'Cancel' }).click()
+    await page.getByRole('button', { name: 'Close form' }).click()
     await expect(page).toHaveURL(/\/taxes$/)
   })
 

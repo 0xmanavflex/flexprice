@@ -49,7 +49,7 @@ test.describe('the groups list', () => {
 
   test('cancel returns to the list without saving', async ({ page }) => {
     await page.goto('/groups/new')
-    await page.getByRole('button', { name: 'Cancel' }).click()
+    await page.getByRole('button', { name: 'Close form' }).click()
     await expect(page).toHaveURL(/\/groups$/)
   })
 

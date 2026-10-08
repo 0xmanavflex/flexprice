@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { PlusIcon, Trash2Icon, XIcon } from 'lucide-react'
 import {
   BILLING_PERIOD_LABEL,
   type CreateCharge,
@@ -23,7 +23,6 @@ import { provenance } from '@ui/provenance'
 import { ChargeForm, type MeterOption, type PriceUnitOption } from '../charges/ChargeForm'
 import { CreditGrantCreateForm } from '../credit-grants/CreditGrantForm'
 import { EntitlementCreateForm, type FeatureOption } from '../entitlements/EntitlementForm'
-import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
 
 /**
  * Create or edit a plan, on a full page.
@@ -52,7 +51,7 @@ export const PlanFormProvenance = provenance({
     'ui/textarea',
     'ui/button',
   ],
-  note: 'Full-page stepped plan form: details plus staged charges, entitlements and credit grants, with a live preview beside it (the saved plan’s own pricing on edit).',
+  note: 'Full-page stepped plan form: details plus staged charges, entitlements and credit grants. No preview rail (TODO(checkout-review): a preview returns only on a future checkout review screen).',
 })
 
 /** What a create emits: the plan and the children to write after it. */
@@ -75,8 +74,6 @@ export interface PlanFormProps {
   priceUnits?: PriceUnitOption[]
   /** Features an entitlement can be granted on. */
   features?: FeatureOption[]
-  /** Edit only: the preview of the saved plan, since charges are edited on the plan page. */
-  savedPreview?: ReactNode
   onSubmit: (value: PlanFormValue) => void
   onCancel: () => void
   isSubmitting?: boolean
@@ -105,7 +102,6 @@ export function PlanForm({
   meters = [],
   priceUnits = [],
   features = [],
-  savedPreview,
   onSubmit,
   onCancel,
   isSubmitting = false,
@@ -197,6 +193,7 @@ export function PlanForm({
       addLabel="Add charge"
       adding={adding === 'charges'}
       onAdd={() => setAdding('charges')}
+      onClose={() => setAdding(null)}
       items={charges.map((charge, index) => ({
         key: `${index}`,
         label:
@@ -210,7 +207,6 @@ export function PlanForm({
           meters={meters}
           priceUnits={priceUnits}
           submitLabel="Add charge"
-          onCancel={() => setAdding(null)}
           onSubmit={(charge) => {
             setCharges((rows) => [...rows, charge])
             setAdding(null)
@@ -227,6 +223,7 @@ export function PlanForm({
       addLabel="Add entitlement"
       adding={adding === 'entitlements'}
       onAdd={() => setAdding('entitlements')}
+      onClose={() => setAdding(null)}
       items={entitlements.map((entitlement, index) => ({
         key: entitlement.featureId,
         label: featureName(entitlement.featureId),
@@ -237,7 +234,6 @@ export function PlanForm({
         <EntitlementCreateForm
           features={grantable}
           submitLabel="Add entitlement"
-          onCancel={() => setAdding(null)}
           onSubmit={(entitlement) => {
             setEntitlements((rows) => [...rows, entitlement])
             setAdding(null)
@@ -254,6 +250,7 @@ export function PlanForm({
       addLabel="Add credit grant"
       adding={adding === 'credit-grants'}
       onAdd={() => setAdding('credit-grants')}
+      onClose={() => setAdding(null)}
       items={grants.map((grant, index) => ({
         key: `${index}`,
         label: grant.name,
@@ -263,7 +260,6 @@ export function PlanForm({
       form={
         <CreditGrantCreateForm
           submitLabel="Add credit grant"
-          onCancel={() => setAdding(null)}
           onSubmit={(grant) => {
             setGrants((rows) => [...rows, grant])
             setAdding(null)
@@ -285,7 +281,6 @@ export function PlanForm({
     <FormPage
       title={isEdit ? `Edit ${planName ?? 'plan'}` : 'Create plan'}
       trail={trail}
-      width="wide"
       toolbar={{
         mode,
         noun: 'plan',
@@ -296,29 +291,6 @@ export function PlanForm({
         hideSubmit: Boolean(adding),
       }}
       stepper={{ flow, label: 'Plan steps', hideNav: Boolean(adding) }}
-      preview={
-        isEdit ? (
-          savedPreview
-        ) : (
-          <PlanPreviewCard
-            charges={charges}
-            meterLabel={(id) => meters.find((m) => m.id === id)?.name ?? id}
-            meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-            included={entitlements.map((e, i) =>
-              includedLine({
-                key: `${e.featureId}-${i}`,
-                name: featureName(e.featureId),
-                unit: features.find((f) => f.id === e.featureId)?.unit,
-                featureType: e.featureType,
-                usageLimit: 'usageLimit' in e ? e.usageLimit : undefined,
-                staticValue: 'staticValue' in e ? e.staticValue : undefined,
-                isEnabled: 'isEnabled' in e ? e.isEnabled : undefined,
-              }),
-            )}
-            credits={grants.map((g, i) => creditLine({ ...g, key: `${i}` }))}
-          />
-        )
-      }
     >
       {/* The staged steps hold their own forms, which cannot nest in this one, so
           the plan form is rendered around the details fields only. The toolbar's
@@ -351,6 +323,7 @@ function StagedStep({
   items,
   adding,
   onAdd,
+  onClose,
   form,
 }: {
   title: string
@@ -359,6 +332,8 @@ function StagedStep({
   items: StagedItem[]
   adding: boolean
   onAdd: () => void
+  /** Closes the in-place form without adding; the sub-forms draw no Cancel of their own. */
+  onClose: () => void
   form: ReactNode
 }) {
   return (
@@ -391,7 +366,21 @@ function StagedStep({
       )}
       <div className="px-5 py-4 sm:px-6">
         {adding ? (
-          form
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-sm font-medium">{addLabel}</span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Close ${addLabel.toLowerCase()}`}
+                onClick={onClose}
+              >
+                <XIcon aria-hidden />
+              </Button>
+            </div>
+            {form}
+          </div>
         ) : (
           <Button type="button" variant="outline" className="w-fit" onClick={onAdd}>
             <PlusIcon aria-hidden className="size-4" />

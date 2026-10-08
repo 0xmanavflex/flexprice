@@ -41,7 +41,7 @@ test.describe('price unit create', () => {
 
   test('cancel returns to the list', async ({ page }) => {
     await page.goto('/price-units/new')
-    await page.getByRole('button', { name: 'Cancel' }).click()
+    await page.getByRole('button', { name: 'Close form' }).click()
     await expect(page).toHaveURL(/\/price-units$/)
   })
 })

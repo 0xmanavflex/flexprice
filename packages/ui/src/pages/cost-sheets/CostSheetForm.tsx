@@ -7,11 +7,11 @@ import { FormCard, FormRow } from '@ui/compositions/FormCard'
 import { FormPage } from '@ui/compositions/FormPage'
 import type { DetailCrumb } from '@ui/compositions/DetailShell'
 import { provenance } from '@ui/provenance'
-import { CostSheetSummaryCard } from './CostSheetSummaryCard'
 
 /**
  * Create or edit a cost sheet's details on one page: Details (name, description) and
- * Reference (lookup key) cards, with a compact summary rail on create.
+ * Reference (lookup key) cards. No summary rail.
+ * TODO(checkout-review): a preview returns only on a future checkout review screen.
  *
  * Presentational: it emits a validated `CreateCostSheet` and never imports
  * `@fp/query`. The backend treats a blank field on update as "unchanged", so an
@@ -19,13 +19,7 @@ import { CostSheetSummaryCard } from './CostSheetSummaryCard'
  */
 export const CostSheetFormProvenance = provenance({
   source: 'composition',
-  composes: [
-    'ui/input',
-    'ui/textarea',
-    'compositions/form-card',
-    'compositions/form-page',
-    'pages/cost-sheet-summary-card',
-  ],
+  composes: ['ui/input', 'ui/textarea', 'compositions/form-card', 'compositions/form-page'],
   note: 'RHF + the domain schema. Prices are attached afterwards.',
 })
 
@@ -112,14 +106,6 @@ export function CostSheetForm({
     <FormPage
       title={isEdit ? `Edit ${defaultValue?.name || 'cost sheet'}` : 'Create cost sheet'}
       trail={trail}
-      width="wide"
-      preview={
-        <CostSheetSummaryCard
-          name={form.watch('name') ?? ''}
-          lookupKey={form.watch('lookupKey') ?? ''}
-          description={form.watch('description') ?? ''}
-        />
-      }
       toolbar={{
         mode: mode,
         noun: 'cost sheet',

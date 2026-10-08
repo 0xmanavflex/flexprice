@@ -79,16 +79,3 @@ export const ValidationFromDomain: Story = {
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
-
-/** The rail follows the draft: unit, code and the conversion line. */
-export const PreviewFollowsDraft: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    const rail = within(canvas.getByRole('complementary', { name: /price unit preview/i }))
-    await expect(rail.getByText('Untitled price unit')).toBeInTheDocument()
-    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Credits')
-    await userEvent.type(canvas.getByRole('textbox', { name: /^Code/ }), 'crd')
-    await expect(rail.getByText('Credits')).toBeInTheDocument()
-    await expect(rail.getByText('CRD')).toBeInTheDocument()
-  },
-}
