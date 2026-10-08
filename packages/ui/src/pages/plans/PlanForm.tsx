@@ -193,7 +193,6 @@ export function PlanForm({
   const chargesStep = (
     <StagedStep
       title="Charges"
-      description="What this plan bills: a fixed fee, or usage billed against a metered feature."
       emptyText="No charges added yet."
       addLabel="Add charge"
       adding={adding === 'charges'}
@@ -224,7 +223,6 @@ export function PlanForm({
   const entitlementsStep = (
     <StagedStep
       title="Entitlements"
-      description="What the plan includes of each feature."
       emptyText="No entitlements added yet."
       addLabel="Add entitlement"
       adding={adding === 'entitlements'}
@@ -252,7 +250,6 @@ export function PlanForm({
   const grantsStep = (
     <StagedStep
       title="Credit grants"
-      description="Balances the plan hands its subscribers to spend against usage."
       emptyText="No credit grants added yet."
       addLabel="Add credit grant"
       adding={adding === 'credit-grants'}
@@ -349,7 +346,6 @@ interface StagedItem {
 /** One staged-children step: the drafts so far, and the in-place form to add another. */
 function StagedStep({
   title,
-  description,
   emptyText,
   addLabel,
   items,
@@ -358,7 +354,6 @@ function StagedStep({
   form,
 }: {
   title: string
-  description: string
   emptyText: string
   addLabel: string
   items: StagedItem[]
@@ -367,17 +362,16 @@ function StagedStep({
   form: ReactNode
 }) {
   return (
-    <section aria-label={title} className="flex flex-col gap-4">
-      <div className="flex flex-col gap-1">
-        <h2 className="text-sm font-medium">{title}</h2>
-        <p className="text-muted-foreground text-sm">{description}</p>
-      </div>
+    <FormCard title={title} status="optional">
       {items.length === 0 ? (
-        <p className="text-muted-foreground text-sm">{emptyText}</p>
+        <p className="text-muted-foreground px-5 py-4 text-sm sm:px-6">{emptyText}</p>
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="divide-y">
           {items.map((item) => (
-            <li key={item.key} className="flex items-center justify-between gap-3 px-4 py-2.5">
+            <li
+              key={item.key}
+              className="flex items-center justify-between gap-3 px-5 py-2.5 sm:px-6"
+            >
               <div className="flex min-w-0 flex-col">
                 <span className="truncate text-sm font-medium">{item.label}</span>
                 <span className="text-muted-foreground truncate text-xs">{item.detail}</span>
@@ -395,14 +389,16 @@ function StagedStep({
           ))}
         </ul>
       )}
-      {adding ? (
-        <div className="border-t pt-4">{form}</div>
-      ) : (
-        <Button type="button" variant="outline" className="w-fit" onClick={onAdd}>
-          <PlusIcon aria-hidden className="size-4" />
-          {addLabel}
-        </Button>
-      )}
-    </section>
+      <div className="px-5 py-4 sm:px-6">
+        {adding ? (
+          form
+        ) : (
+          <Button type="button" variant="outline" className="w-fit" onClick={onAdd}>
+            <PlusIcon aria-hidden className="size-4" />
+            {addLabel}
+          </Button>
+        )}
+      </div>
+    </FormCard>
   )
 }

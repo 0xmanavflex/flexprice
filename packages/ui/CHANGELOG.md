@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-08 — pages/plans/PlanForm: the Charges, Entitlements and Credit grants steps sit in a bordered FormCard with an Optional badge and no description, like the details step (design refresh: create flow)
 - 2026-10-07 — pages/{addons,customers,features,cost-sheets,plans,coupons} edit forms: the live preview rail now shows on edit as it does on create (always the wide layout); Plan edit takes a `savedPreview` of the plan's saved pricing, Coupon edit takes `terms` for a CouponPreviewCard (design refresh: edit forms match create)
 - 2026-10-07 — pages/features/FeatureGrid.stories: Populated asserts the "fx COUNT()" chip instead of the retired "Count of events" column (follows the Formula chip change)
 - 2026-10-07 — pages/shared/cells `Formula` + pages/features/FeatureGrid, FeatureDetailView: Aggregation shown as an "fx COUNT()" / "fx SUM(tokens)" chip, replacing the separate type and field columns (design refresh: products)
