@@ -139,8 +139,8 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
-    // Overview is the opening section.
-    await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
+    // Overview opens on the invoices table. Its title is for assistive tech; the table is what is on screen.
+    await expect(canvas.getByRole('region', { name: 'Invoices table' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
   },
 }
@@ -149,9 +149,13 @@ export const Default: Story = {
 export const NavigatesSections: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
+    await expect(canvas.getByRole('button', { name: 'Create contract' })).toBeVisible()
+
     await userEvent.click(canvas.getByRole('tab', { name: /Invoices/ }))
     // The Invoices tab, with the full invoice number, is now on screen.
     await expect(canvas.getByText('INV-2026-01450')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'New invoice' })).toBeVisible()
 
     await userEvent.click(canvas.getByRole('tab', { name: 'Information' }))
     await expect(canvas.getByRole('heading', { name: 'Billing address' })).toBeVisible()
@@ -209,7 +213,7 @@ export const Empty: Story = {
   args: { subscriptions: [], invoices: [] },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
+    await expect(canvas.getByText(/No invoices yet/)).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: /Active contracts/ })).toBeNull()
   },
 }

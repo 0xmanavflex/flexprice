@@ -44,7 +44,7 @@ export interface DetailTableProps<T> {
   getRowId?: (row: T) => string
   /** Names the table for assistive tech, e.g. "Recent invoices"; "table" is added so it never repeats the section's own name. */
   label: string
-  /** A button after the last toolbar control, e.g. "View all". */
+  /** The create button on the right of the toolbar, beside the filter. */
   action?: ReactNode
   /** For "1 - 10 of 24 invoices". */
   noun?: string
@@ -153,7 +153,16 @@ export function DetailTable<T extends object>({
   }, [rows, columns, search, facet, facetValues, searchText, sortState])
 
   if (rows.length === 0 && empty) {
-    return <div className={cn('text-muted-foreground p-6 text-sm', className)}>{empty}</div>
+    return (
+      <div className={className}>
+        {action ? (
+          <div className={cn('flex items-center justify-end', compact ? 'px-6 py-3' : 'px-4 pt-4')}>
+            {action}
+          </div>
+        ) : null}
+        <div className="text-muted-foreground p-6 text-sm">{empty}</div>
+      </div>
+    )
   }
 
   const sortable = columns.filter((column) => column.sortBy)

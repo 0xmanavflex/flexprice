@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { ApiError } from '@fp/query'
-import { ErrorState, Section, SettingsCard } from '@fp/ui/compositions'
+import { ErrorState, SettingsCard } from '@fp/ui/compositions'
 
 /**
  * The few things every settings panel needs, in one place.
@@ -140,16 +140,22 @@ export function TableBlock({
   actions?: ReactNode
   children: ReactNode
 }) {
+  const id = `table-block-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
   return (
-    <Section
-      table
-      title={title}
-      {...(description ? { description } : {})}
-      {...(actions ? { actions } : {})}
-      bodyClassName="flex min-w-0 flex-col gap-4 overflow-x-auto p-4"
-    >
-      {children}
-    </Section>
+    <section aria-labelledby={id} className="flex flex-col gap-3">
+      <div className="flex min-h-8 items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h2 id={id} className="text-sm font-medium">
+            {title}
+          </h2>
+          {description ? <p className="text-muted-foreground text-[13px]">{description}</p> : null}
+        </div>
+        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      </div>
+      <div className="bg-background flex min-w-0 flex-col gap-4 overflow-x-auto rounded-xl border p-4">
+        {children}
+      </div>
+    </section>
   )
 }
 

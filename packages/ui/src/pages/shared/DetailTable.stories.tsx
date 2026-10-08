@@ -53,7 +53,7 @@ export const Default: Story = {
   },
 }
 
-/** An action closes the toolbar, after the last control, in place of a section header button. */
+/** The action sits on the toolbar, to the right of the filter. */
 export const WithAction: Story = {
   args: {
     action: (

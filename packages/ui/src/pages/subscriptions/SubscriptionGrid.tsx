@@ -123,7 +123,7 @@ export interface SubscriptionGridProps {
   onSubscriptionClick?: (subscription: Subscription) => void
   onOpenCustomer?: (customerId: string) => void
   onOpenPlan?: (planId: string) => void
-  /** The primary create action; renders a "New subscription" CTA at the toolbar's end. */
+  /** The primary create action; renders a "New contract" button beside the filter. */
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
@@ -271,7 +271,7 @@ export function SubscriptionGrid({
         onCreate ? (
           <Button onClick={onCreate}>
             <PlusIcon aria-hidden className="size-4" />
-            New subscription
+            New contract
           </Button>
         ) : undefined
       }

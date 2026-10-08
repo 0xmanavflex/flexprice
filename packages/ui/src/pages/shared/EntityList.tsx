@@ -227,7 +227,7 @@ export interface EntityListProps<T> {
   searchPlaceholder?: string | undefined
   filter?: EntityFilter | undefined
   sort?: EntitySort | undefined
-  /** The navy CTA at the end of the toolbar, e.g. "New feature". */
+  /** The create button on the right of the toolbar, beside the filter. */
   primaryAction?: ReactNode
   /** Enables Export CSV in the `⋯` menu, writing to this file name. */
   exportFileName?: string | undefined

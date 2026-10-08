@@ -33,7 +33,10 @@ export interface SectionProps {
   flush?: boolean
   /** No header band: the title stays as a screen-reader heading and the body (a table) leads with its own search. */
   bare?: boolean
-  /** For a table: the title and actions sit above the box instead of in a header band, and the body is a bordered, clipped surface. */
+  /**
+   * For a table: no title row. The name stays for assistive tech, and a create
+   * action belongs on the table toolbar beside the filter, not above the box.
+   */
   table?: boolean
   /** A line under the title. */
   description?: string
@@ -60,19 +63,9 @@ export function Section({
   if (table) {
     return (
       <section aria-labelledby={id} className={cn('flex flex-col gap-3', className)}>
-        <div className="flex min-h-8 items-center justify-between gap-4">
-          <div className="min-w-0">
-            <Heading id={id} className="text-sm font-medium">
-              {title}
-            </Heading>
-            {description ? (
-              <p className="text-muted-foreground text-[13px]">{description}</p>
-            ) : null}
-          </div>
-          {headerAction ? (
-            <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
-          ) : null}
-        </div>
+        <Heading id={id} className="sr-only">
+          {title}
+        </Heading>
         <div className={cn('bg-background overflow-hidden rounded-xl border', bodyClassName)}>
           {children}
         </div>

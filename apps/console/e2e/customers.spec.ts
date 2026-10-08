@@ -133,8 +133,6 @@ test.describe('a customer detail page', () => {
 
     await page.getByRole('button', { name: 'Cancel' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\?tab=subscriptions/)
-    await expect(
-      page.getByRole('heading', { level: 2, name: 'Contracts', exact: true }),
-    ).toBeVisible()
+    await expect(page.getByRole('button', { name: 'Create contract' })).toBeVisible()
   })
 })

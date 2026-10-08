@@ -249,21 +249,18 @@ export function CustomerDetail({
         ) : null}
 
         {tab === 'invoices' ? (
-          <Section
-            table
-            title="Invoices"
-            action={
-              <Button size="sm" className="h-8 px-3">
-                <PlusIcon aria-hidden="true" />
-                New invoice
-              </Button>
-            }
-          >
+          <Section table title="Invoices">
             <InvoiceTable
               invoices={invoices}
               isLoading={invoicesLoading}
               formatDate={formatDate}
               onOpenInvoice={onOpenInvoice}
+              action={
+                <Button size="sm" className="h-8 px-3">
+                  <PlusIcon aria-hidden="true" />
+                  New invoice
+                </Button>
+              }
             />
           </Section>
         ) : null}
@@ -449,20 +446,19 @@ function SubscriptionsTab({
   onOpenPlan: ((planId: string) => void) | undefined
 }) {
   return (
-    <Section
-      table
-      title="Contracts"
-      description="Every contract this customer has had"
-      action={addButton}
-    >
+    <Section table title="Contracts">
       {isLoading ? (
-        <div className="p-4">
-          <LoadingRows />
+        <div>
+          <div className="flex justify-end px-6 py-3">{addButton}</div>
+          <div className="px-4 pb-4">
+            <LoadingRows />
+          </div>
         </div>
       ) : (
         <DetailTable
           compact
           label="Contracts"
+          action={addButton}
           facet={{ label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] }}
           noun="contracts"
           rows={subscriptions}
@@ -545,6 +541,7 @@ function InvoiceTable({
   isLoading,
   formatDate,
   onOpenInvoice,
+  action,
 }: {
   /** The short list on the Overview: no search row and no Period column. */
   compactList?: boolean
@@ -552,11 +549,16 @@ function InvoiceTable({
   isLoading: boolean
   formatDate: FormatDate
   onOpenInvoice: ((invoiceId: string) => void) | undefined
+  /** Sits on the toolbar, to the right of the filter. Omitted on the short overview list. */
+  action?: ReactNode
 }) {
   if (isLoading) {
     return (
-      <div className="p-4">
-        <LoadingRows />
+      <div>
+        {action ? <div className="flex justify-end px-6 py-3">{action}</div> : null}
+        <div className="px-4 pb-4">
+          <LoadingRows />
+        </div>
       </div>
     )
   }
@@ -565,6 +567,7 @@ function InvoiceTable({
       compact
       toolbar={!compactList}
       label="Invoices"
+      {...(action ? { action } : {})}
       facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
       noun="invoices"
       rows={invoices}
