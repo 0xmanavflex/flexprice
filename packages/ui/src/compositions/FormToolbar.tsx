@@ -1,12 +1,17 @@
 import type { ReactNode } from 'react'
-import { XIcon } from 'lucide-react'
+import { ArrowLeftIcon, ArrowRightIcon, XIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Separator } from '@ui/components/primitives/separator'
 import { provenance } from '@ui/provenance'
 
 /**
- * The bar a create/edit page opens with: close, the title, Cancel and the one
+ * The bar a create/edit page opens with: close (X), the title, and the one
  * primary action, and, optionally, a stepper centred between them.
+ *
+ * There is no Cancel button and no footer: the X is the way back. A staged
+ * form swaps the primary for "Next →" until its last step, and shows
+ * "Previous" from the second step on. Secondary actions that belong next to
+ * the primary (an invoice's "Save draft") go in `actions`.
  *
  * The structure of the ReUI `form-3` toolbar (`blocks/form-3/components/
  * invoice-toolbar.tsx`), which is hard-wired to an invoice and cannot be edited
@@ -15,7 +20,7 @@ import { provenance } from '@ui/provenance'
 export const FormToolbarProvenance = provenance({
   source: 'composition',
   composes: ['ui/button', 'ui/separator'],
-  note: 'form-3 toolbar structure: close, divider, title, Cancel and the primary CTA, pinned above the page. Lineage: blocks/form-3.',
+  note: 'form-3 toolbar structure: close, divider, title, optional Previous/Next and the primary CTA, pinned above the page. Lineage: blocks/form-3.',
 })
 
 export interface FormToolbarProps {
@@ -25,14 +30,20 @@ export interface FormToolbarProps {
   noun?: string
   /** `id` of the `<form>` the CTA submits. */
   formId: string
-  /** Without it there is no way back, so neither close nor Cancel is drawn. */
+  /** The way back, drawn as the close (X) button. Without it there is no close. */
   onCancel?: (() => void) | undefined
   isSubmitting?: boolean
   submitLabel?: string
-  /** A multi-step form submits only from its last step; earlier steps advance from the step nav instead. */
+  /** A multi-step form submits only from its last step; earlier steps show Next instead. */
   hideSubmit?: boolean
   /** Centred between the title and the actions, e.g. the stepper; wraps to its own row on narrow screens. */
   center?: ReactNode
+  /** Step back in a staged form. Omit on the first step. */
+  onPrevious?: (() => void) | undefined
+  /** Step forward in a staged form. Omit on the last step. */
+  onNext?: (() => void) | undefined
+  /** Secondary actions drawn before the primary, e.g. "Save draft". */
+  actions?: ReactNode
 }
 
 export function FormToolbar({
@@ -45,6 +56,9 @@ export function FormToolbar({
   submitLabel,
   hideSubmit = false,
   center,
+  onPrevious,
+  onNext,
+  actions,
 }: FormToolbarProps) {
   const label =
     submitLabel ?? (mode === 'create' ? `Create${noun ? ` ${noun}` : ''}` : 'Save changes')
@@ -75,15 +89,22 @@ export function FormToolbar({
         </div>
       ) : null}
       <div className="flex shrink-0 items-center justify-end gap-2 md:flex-1">
-        {onCancel ? (
+        {onPrevious ? (
+          <Button type="button" variant="outline" onClick={onPrevious} disabled={isSubmitting}>
+            <ArrowLeftIcon data-icon="inline-start" aria-hidden="true" />
+            Previous
+          </Button>
+        ) : null}
+        {actions}
+        {onNext ? (
           <Button
             type="button"
-            variant="ghost"
-            className="hidden sm:inline-flex"
-            onClick={onCancel}
+            variant={hideSubmit ? 'default' : 'outline'}
+            onClick={onNext}
             disabled={isSubmitting}
           >
-            Cancel
+            Next
+            <ArrowRightIcon data-icon="inline-end" aria-hidden="true" />
           </Button>
         ) : null}
         {hideSubmit ? null : (

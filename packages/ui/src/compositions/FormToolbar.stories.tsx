@@ -4,8 +4,8 @@ import { FormToolbar } from './FormToolbar'
 
 /**
  * The bar a create page opens with. The CTA sits outside the `<form>`, so it
- * is wired by `formId`; these stories check the label rules and that Cancel
- * and the close button both hand control back.
+ * is wired by `formId`; these stories check the label rules, that the close
+ * button hands control back, and the Previous/Next of a staged form.
  */
 const meta = {
   title: 'Foundation/Compositions/Form toolbar',
@@ -41,12 +41,12 @@ export const Edit: Story = {
   },
 }
 
-export const CancelAndCloseReturn: Story = {
+export const CloseReturns: Story = {
   play: async ({ args, canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Cancel' }))
+    await expect(canvas.queryByRole('button', { name: 'Cancel' })).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: 'Close form' }))
-    await expect(args.onCancel).toHaveBeenCalledTimes(2)
+    await expect(args.onCancel).toHaveBeenCalledTimes(1)
   },
 }
 
@@ -55,13 +55,26 @@ export const Submitting: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('button', { name: 'Saving…' })).toBeDisabled()
-    await expect(canvas.getByRole('button', { name: 'Cancel' })).toBeDisabled()
+    await expect(canvas.getByRole('button', { name: 'Close form' })).toBeDisabled()
+  },
+}
+
+/** A middle step of a staged form: Previous and Next, no Create. */
+export const MiddleStep: Story = {
+  args: { hideSubmit: true, onPrevious: fn(), onNext: fn() },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('button', { name: 'Create group' })).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Previous' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(args.onPrevious).toHaveBeenCalledTimes(1)
+    await expect(args.onNext).toHaveBeenCalledTimes(1)
   },
 }
 
 export const WithoutWayBack: Story = {
   render: ({ onCancel: _onCancel, ...args }) => <FormToolbar {...args} />,
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).queryByRole('button', { name: 'Cancel' })).toBeNull()
+    await expect(within(canvasElement).queryByRole('button', { name: 'Close form' })).toBeNull()
   },
 }

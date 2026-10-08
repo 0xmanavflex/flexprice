@@ -1,17 +1,16 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { Badge } from '@ui/components/reui/badge'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from './FormCard'
 import { FormPage, type FormPageProps } from './FormPage'
-import { FormPreview, PreviewAmount, PreviewRow, PreviewRows, PreviewSection } from './FormPreview'
 import { useFormSteps } from './useFormSteps'
 
 /**
- * One form shell, two optional parts. A simple form passes neither and is a
- * centred set of fields under the pinned toolbar. A staged form passes
- * `stepper` (drawn in the header) and a long one adds `preview` (the live
- * rail). The caller still owns the `<form>`, its schema and its submit handler.
+ * One form shell. A simple form is a centred set of fields under the pinned
+ * toolbar (close, title, Create). A staged form passes `stepper`: the steps
+ * are drawn in the header, and the toolbar shows Previous/Next until the last
+ * step, where Create takes over. There is no footer and no preview rail. The
+ * caller still owns the `<form>`, its schema and its submit handler.
  */
 const meta = {
   title: 'Foundation/Compositions/Form page',
@@ -41,20 +40,6 @@ function Fields() {
   )
 }
 
-function Preview({ name }: { name: string }) {
-  return (
-    <FormPreview title="Summary" badge={<Badge>Draft</Badge>}>
-      <PreviewAmount label="Per month" value="$29.00" hint="Billed in advance" />
-      <PreviewSection title="Plan">
-        <PreviewRows>
-          <PreviewRow label="Name" value={name} />
-          <PreviewRow label="Seats" value="5" />
-        </PreviewRows>
-      </PreviewSection>
-    </FormPreview>
-  )
-}
-
 export const SimpleFields: Story = {
   args: { title: 'Create group', trail, toolbar, children: <Fields /> },
   play: async ({ canvasElement }) => {
@@ -65,7 +50,7 @@ export const SimpleFields: Story = {
   },
 }
 
-function Staged({ withPreview }: { withPreview: boolean }) {
+function Staged() {
   const flow = useFormSteps({
     steps: [
       { id: 'basics', title: 'Basic info', description: 'Name it' },
@@ -80,7 +65,6 @@ function Staged({ withPreview }: { withPreview: boolean }) {
       width="wide"
       toolbar={{ ...toolbar, noun: 'plan' }}
       stepper={{ flow, label: 'Plan steps' }}
-      {...(withPreview ? { preview: <Preview name="Growth" /> } : {})}
     >
       <FormCard title={flow.steps.find((s) => s.id === flow.step)?.title ?? ''}>
         <p className="text-muted-foreground px-6 py-4 text-sm">Fields for the {flow.step} step.</p>
@@ -91,22 +75,16 @@ function Staged({ withPreview }: { withPreview: boolean }) {
 
 export const WithStepper: Story = {
   args: { title: 'Create plan', trail, toolbar, children: null },
-  render: () => <Staged withPreview={false} />,
+  render: () => <Staged />,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByRole('button', { name: 'Create plan' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Previous' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Cancel' })).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: /Next/ }))
+    await expect(canvas.getByRole('button', { name: 'Previous' })).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: /Next/ }))
+    await expect(canvas.queryByRole('button', { name: /Next/ })).toBeNull()
     await expect(canvas.getByRole('button', { name: 'Create plan' })).toBeVisible()
-  },
-}
-
-export const WithStepperAndPreview: Story = {
-  args: { title: 'Create plan', trail, toolbar, children: null },
-  render: () => <Staged withPreview />,
-  play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByRole('complementary', { name: 'Summary' }),
-    ).toBeVisible()
   },
 }

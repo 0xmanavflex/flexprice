@@ -8,7 +8,7 @@ import { FormToolbar, type FormToolbarProps } from './FormToolbar'
 import { usePublishDetailTrail } from './shell/ShellDetailTrail'
 import { PageBody } from './Page'
 import { Section } from './Section'
-import { StepNav, type FormFlow } from './useFormSteps'
+import type { FormFlow } from './useFormSteps'
 import { WorkflowStepper } from './WorkflowStepper'
 
 /**
@@ -33,14 +33,14 @@ export const FormPageProvenance = provenance({
     'compositions/use-form-steps',
     'ui/field',
   ],
-  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, Cancel, primary CTA) with the form beneath it — plus, each optional, a c-stepper-1 style stepper in the toolbar and a solution-billing-8 style preview rail — or the Section surface with the actions at its foot.',
+  note: 'Full-page create/edit shell. Either a toolbar pinned above the page (form-3 style: close, title, primary CTA; Previous/Next for a staged form) with the form beneath it — plus, optionally, a c-stepper-1 style stepper in the toolbar — or the Section surface with the actions at its foot.',
 })
 
 /** A stepper in the header: the form's `useFormSteps` flow, drawn as the header stepper. */
 export interface FormPageStepper {
   flow: FormFlow
   label?: string
-  /** Hide Previous/Next, e.g. while a step's own sub-form is open. */
+  /** Hide Previous/Next (and the submit), e.g. while a step's own sub-form is open. */
   hideNav?: boolean
 }
 
@@ -61,12 +61,16 @@ interface FormPageBaseProps {
 export type FormPageProps = FormPageBaseProps &
   (
     | {
-        /** Pins close, title, Cancel and the CTA above the page; the form cards sit directly beneath. */
+        /** Pins close, title and the CTA above the page; the form cards sit directly beneath. */
         toolbar: FormPageToolbar
         footer?: never
         /** Optional. Draws the steps in the toolbar, between the title and the actions; omit for a plain single-page form. */
         stepper?: FormPageStepper | undefined
-        /** Optional. A `FormPreview` rail beside the form; omit and the fields are centred on their own. */
+        /**
+         * @deprecated Create forms no longer carry a preview rail. A preview
+         * returns only on a future checkout review screen.
+         * TODO(checkout-review): remove once no form passes it.
+         */
         preview?: ReactNode | undefined
       }
     | {
@@ -95,14 +99,16 @@ export function FormPage({
     const { submitError, ...toolbarProps } = toolbar
     const flow = stepper?.flow
     // A staged form submits from its last step (or any step when editing);
-    // before that the step nav advances.
+    // before that the toolbar's Next advances. There is no bottom step nav.
+    const navHidden = Boolean(stepper?.hideNav)
     const hideSubmit =
-      toolbarProps.hideSubmit || (flow ? !(flow.isLast || toolbar.mode === 'edit') : false)
+      toolbarProps.hideSubmit ||
+      (flow ? navHidden || !(flow.isLast || toolbar.mode === 'edit') : false)
+    const onPrevious = flow && !navHidden && !flow.isFirst ? flow.back : undefined
+    const onNext = flow && !navHidden && !flow.isLast ? () => void flow.next() : undefined
     const fields = (
       <FieldSet className="gap-0 pb-6">
-        <FieldGroup
-          className={cn(width === 'narrow' && !stepper && !preview && 'mx-auto max-w-3xl')}
-        >
+        <FieldGroup className={cn(width === 'narrow' && !preview && 'mx-auto w-full max-w-3xl')}>
           {children}
         </FieldGroup>
       </FieldSet>
@@ -115,6 +121,8 @@ export function FormPage({
           title={title}
           {...toolbarProps}
           hideSubmit={hideSubmit}
+          onPrevious={onPrevious}
+          onNext={onNext}
           center={
             stepper && flow ? (
               <WorkflowStepper
@@ -138,12 +146,7 @@ export function FormPage({
               preview && 'grid gap-7 lg:grid-cols-[minmax(0,1fr)_19rem] lg:items-start',
             )}
           >
-            <div className="flex min-w-0 flex-col">
-              {fields}
-              {flow && !stepper?.hideNav ? (
-                <StepNav flow={flow} isSubmitting={Boolean(toolbarProps.isSubmitting)} />
-              ) : null}
-            </div>
+            <div className="flex min-w-0 flex-col">{fields}</div>
             {preview ? <div className="min-w-0 lg:sticky lg:top-0">{preview}</div> : null}
           </div>
         </PageBody>

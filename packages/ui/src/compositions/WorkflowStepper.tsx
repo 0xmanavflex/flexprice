@@ -168,6 +168,10 @@ export function WorkflowStepper({
             >
               <StepperIndicator
                 className={cn(
+                  // The active step reads as an outlined circle with the
+                  // semantic `info` border; `primary` (navy) stays the fill for
+                  // completed steps and is not changed here.
+                  'data-[state=active]:border-info data-[state=active]:bg-background data-[state=active]:text-foreground border-2 border-transparent',
                   step.status !== 'complete' &&
                     index + 1 < currentIndex &&
                     'bg-accent! text-accent-foreground!',

@@ -1,8 +1,5 @@
 import { useCallback, useMemo, useState, type FormEvent, type ReactNode } from 'react'
-import { ArrowLeftIcon, ArrowRightIcon } from 'lucide-react'
-import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { FormActions } from './FormActions'
 import { WorkflowStepper, type WorkflowStep } from './WorkflowStepper'
 
 /**
@@ -23,8 +20,8 @@ import { WorkflowStepper, type WorkflowStep } from './WorkflowStepper'
  */
 export const FormStepsProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/workflow-stepper', 'compositions/form-actions'],
-  note: 'Stepper state + footer for multi-step forms; validates per step, keeps one form.',
+  composes: ['compositions/workflow-stepper'],
+  note: 'Stepper state for multi-step forms; validates per step, keeps one form. Previous/Next live in the form toolbar, never at the foot.',
 })
 
 export interface FormStepDef {
@@ -165,97 +162,5 @@ export function FormSteps({
         {children}
       </WorkflowStepper>
     </>
-  )
-}
-
-/**
- * Previous on the left, Next on the right: the foot of a header-stepper form.
- * The final step has no Next — the toolbar's primary action takes over there.
- */
-export function StepNav({
-  flow,
-  isSubmitting = false,
-}: {
-  flow: FormFlow
-  isSubmitting?: boolean
-}) {
-  return (
-    <div className="flex items-center justify-between gap-3 border-t pt-4">
-      {flow.isFirst ? (
-        <span aria-hidden="true" />
-      ) : (
-        <Button type="button" variant="outline" onClick={flow.back} disabled={isSubmitting}>
-          <ArrowLeftIcon aria-hidden="true" />
-          Previous
-        </Button>
-      )}
-      {flow.isLast ? null : (
-        <Button type="button" onClick={() => void flow.next()} disabled={isSubmitting}>
-          Next
-          <ArrowRightIcon aria-hidden="true" />
-        </Button>
-      )}
-    </div>
-  )
-}
-
-export interface StepFooterProps {
-  flow: FormFlow
-  mode: 'create' | 'edit'
-  noun?: string
-  formId: string
-  onCancel: () => void
-  isSubmitting?: boolean
-  submitError?: string | null | undefined
-}
-
-/**
- * Cancel · Previous · Next, becoming the submit on the last step. In edit mode
- * the submit is available on every step: nothing is gated behind reaching the end.
- */
-export function StepFooter({
-  flow,
-  mode,
-  noun,
-  formId,
-  onCancel,
-  isSubmitting = false,
-  submitError = null,
-}: StepFooterProps) {
-  const showSubmit = flow.isLast || mode === 'edit'
-  const previous = flow.isFirst ? null : (
-    <Button type="button" variant="ghost" onClick={flow.back} disabled={isSubmitting}>
-      Previous
-    </Button>
-  )
-  const advance = flow.isLast ? null : (
-    <Button
-      type="button"
-      variant={showSubmit ? 'outline' : 'default'}
-      onClick={() => void flow.next()}
-      disabled={isSubmitting}
-    >
-      Next
-    </Button>
-  )
-
-  return (
-    <div className="flex flex-col gap-2">
-      <FormActions
-        mode={mode}
-        {...(noun ? { noun } : {})}
-        formId={formId}
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-        between={
-          <>
-            {previous}
-            {advance}
-          </>
-        }
-        {...(showSubmit ? {} : { hideSubmit: true })}
-      />
-    </div>
   )
 }
