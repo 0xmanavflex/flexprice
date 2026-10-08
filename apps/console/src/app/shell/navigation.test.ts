@@ -40,8 +40,8 @@ describe('navEntryForPath', () => {
     ['?section=team&tab=roles', 'settings'],
     ['?section=invoicing&tab=invoices', 'settings'],
     ['?section=webhooks&tab=webhooks', 'webhooks'],
-    ['?section=labels&tab=labels', 'settings-labels'],
-    ['?section=api-keys&tab=api-keys', 'settings'],
+    ['?section=tags&tab=tags', 'settings-tags'],
+
     ['', 'settings'],
   ])('resolves /settings%s to %s', (search, id) => {
     expect(navEntryForPath('/settings', search)).toBe(id)
@@ -150,11 +150,9 @@ describe('the sidebar layout', () => {
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',
-      'settings-labels',
+      'settings-tags',
       'price-units',
       'groups',
-      'api-keys',
-      'service-accounts',
     ])
   })
 

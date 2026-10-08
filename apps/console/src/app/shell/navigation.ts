@@ -65,6 +65,8 @@ export const NAV: NavEntry[] = [
     id: 'developers',
     label: 'Developers',
     children: [
+      { id: 'api-keys', label: 'API keys', path: '/api-keys' },
+      { id: 'service-accounts', label: 'Service accounts', path: '/service-accounts' },
       { id: 'events', label: 'Events debugger', path: '/events' },
       {
         id: 'webhooks',
@@ -95,7 +97,7 @@ export const FOOTER_NAV: NavEntry[] = [
  * Destinations that are real routes but not rows in the rail.
  *
  * Settings itself (reached from the account menu), the pages it lists but which keep their own routes (Discounts, Taxes,
- * Cost Tracking), Labels (a Settings tab), and the pages the tree no longer lists but which are
+ * Cost Tracking), Tags (a Settings tab), and the pages the tree no longer lists but which are
  * still linked to, searched for and reachable by URL. `pathForNavId`,
  * `labelForNavId`, `breadcrumbForPath` and the command palette resolve against
  * them.
@@ -106,15 +108,13 @@ export const SECONDARY: NavEntry[] = [
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
   {
-    id: 'settings-labels',
-    label: 'Labels',
+    id: 'settings-tags',
+    label: 'Tags',
     path: '/settings',
-    query: { section: 'labels', tab: 'labels' },
+    query: { section: 'tags', tab: 'tags' },
   },
   { id: 'price-units', label: 'Price Units', path: '/price-units' },
   { id: 'groups', label: 'Groups', path: '/groups' },
-  { id: 'api-keys', label: 'API Keys', path: '/api-keys' },
-  { id: 'service-accounts', label: 'Service Accounts', path: '/service-accounts' },
 ]
 
 const ALL: NavEntry[] = [...NAV, ...FOOTER_NAV, ...SECONDARY]
@@ -173,7 +173,7 @@ export function labelForNavId(id: string): string | undefined {
 /** A parent, if the entry has one. Drives both the breadcrumb and the counts. */
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
-  // Discounts, Taxes, Cost Tracking and Labels are rows of Settings that keep their own routes.
+  // Discounts, Taxes, Cost Tracking and Tags are rows of Settings that keep their own routes.
   if (id.startsWith('settings-')) return SECONDARY.find((entry) => entry.id === 'settings')
   return [...NAV, ...FOOTER_NAV].find((entry) =>
     (entry.children ?? []).some((child) => child.id === id),
