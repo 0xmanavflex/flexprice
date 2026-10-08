@@ -192,11 +192,17 @@ export function FeatureGrid({
   onDelete,
   onClearFilters,
 }: FeatureGridProps) {
+  /*
+   * Widths are shares, not pixels: `EntityList` scales every column so the set
+   * fills the page. They are kept close to one another on purpose, so a narrow
+   * or wide screen spreads the room evenly instead of handing it all to one
+   * column and leaving the others cramped.
+   */
   const columns = useMemo<EntityColumn<Feature>[]>(
     () => [
       {
         ...textColumn<Feature>('name', 'Name', (row) => row.name, {
-          width: 240,
+          width: 220,
           sortable: true,
           sortValue: FeatureSortField.Name,
           // The column the list is *for*. Hiding it leaves a table of
@@ -210,16 +216,16 @@ export function FeatureGrid({
         // than through `pillColumn`, which takes one spec per row.
         id: 'type',
         header: 'Type',
-        width: 150,
+        width: 120,
         text: (row) => FEATURE_TYPE_LABEL[row.type],
         cell: (row) => <FeatureTypePill type={row.type} label={FEATURE_TYPE_LABEL[row.type]} />,
-        skeleton: <Skeleton className="h-6 w-24 rounded-full" />,
+        skeleton: <Skeleton className="h-5 w-20 rounded-full" />,
       },
-      idColumn<Feature>('eventName', 'Event name', (row) => row.eventName, { width: 190 }),
+      idColumn<Feature>('eventName', 'Event name', (row) => row.eventName, { width: 170 }),
       {
         id: 'aggregation',
         header: 'Aggregation',
-        width: 280,
+        width: 170,
         text: (row) => aggregationFormula(row) ?? '',
         cell: (row) => <Formula value={aggregationFormula(row)} />,
         skeleton: <Skeleton className="h-6 w-32 rounded-md" />,
@@ -227,7 +233,7 @@ export function FeatureGrid({
       {
         id: 'plans',
         header: 'Plans',
-        width: 260,
+        width: 200,
         text: (row) => (linkage?.get(row.id)?.plans ?? []).map((plan) => plan.name).join(', '),
         cell: (row) => {
           const entry = linkage?.get(row.id)
@@ -262,7 +268,7 @@ export function FeatureGrid({
       {
         id: 'entitlements',
         header: 'Entitlements',
-        width: 170,
+        width: 160,
         text: (row) => String(linkage?.get(row.id)?.entitlements ?? 0),
         cell: (row) => {
           const entry = linkage?.get(row.id)
@@ -276,18 +282,23 @@ export function FeatureGrid({
             )
           }
           if (!onCreateEntitlement) return <EmDash />
+          // `xs` (24px, the pill's height) so the action sits on the row's
+          // centre line like the pills around it instead of crowding the cell.
           return (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={(event) => {
-                event.stopPropagation()
-                onCreateEntitlement(row)
-              }}
-            >
-              <PlusIcon aria-hidden />
-              Add entitlement
-            </Button>
+            <div className="flex min-w-0 items-center">
+              <Button
+                variant="outline"
+                size="xs"
+                className="max-w-full"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  onCreateEntitlement(row)
+                }}
+              >
+                <PlusIcon aria-hidden />
+                <span className="truncate">Add entitlement</span>
+              </Button>
+            </div>
           )
         },
         skeleton: <Skeleton className="h-6 w-24 rounded-full" />,
@@ -295,7 +306,7 @@ export function FeatureGrid({
       {
         id: 'subscriptions',
         header: 'Contracts',
-        width: 150,
+        width: 120,
         text: (row) => String(linkage?.get(row.id)?.subscriptions ?? ''),
         cell: (row) => {
           const entry = linkage?.get(row.id)

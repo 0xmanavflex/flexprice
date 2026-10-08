@@ -1,12 +1,11 @@
 import { useMemo, useState } from 'react'
-import { type CloneFeature, DEFAULT_PLAN_QUERY, type Feature, type FeatureQuery } from '@fp/domain'
+import { type CloneFeature, type Feature, type FeatureQuery } from '@fp/domain'
 import {
   ApiError,
   useCloneFeature,
   useDeleteFeature,
   useFeatureLinkage,
   useFeatures,
-  usePlans,
 } from '@fp/query'
 import { FeatureCloneDialog, FeatureGrid, type ProductLinkage } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
@@ -59,22 +58,25 @@ export function FeatureListPage({
   const failure = toFailure(features.error)
   const rows = useMemo(() => features.data?.features ?? [], [features.data])
 
-  // Plans, entitlements and subscriptions per product, for the rows on screen.
-  const rowIds = useMemo(() => rows.map((row) => row.id), [rows])
-  const linked = useFeatureLinkage(rowIds)
-  const plans = usePlans({ ...DEFAULT_PLAN_QUERY, pageSize: 100 }, { enabled: rowIds.length > 0 })
+  /*
+   * Plans, entitlements and subscriptions per product, for the rows on screen.
+   * A plan counts when it grants the product (an entitlement) *or* prices it
+   * (a charge on its meter), and its name is read for exactly the plans found
+   * — not looked up in the first page of plans, which left any plan past it
+   * showing as a raw id.
+   */
+  const linked = useFeatureLinkage(rows)
   const linkage = useMemo(() => {
-    const names = new Map((plans.data?.plans ?? []).map((plan) => [plan.id, plan.name]))
     const out = new Map<string, ProductLinkage>()
     for (const [featureId, entry] of linked.byFeature) {
       out.set(featureId, {
-        plans: entry.planIds.map((id) => ({ id, name: names.get(id) ?? id })),
+        plans: entry.plans,
         entitlements: entry.entitlements,
         subscriptions: entry.subscriptions,
       })
     }
     return out
-  }, [linked.byFeature, plans.data])
+  }, [linked.byFeature])
   const isFiltered = query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0
   const clearFilters = () =>
     onQueryChange({ ...query, search: '', types: [], statuses: [], page: 1 })
@@ -114,7 +116,7 @@ export function FeatureListPage({
           <FeatureGrid
             features={rows}
             linkage={linkage}
-            linkageLoading={linked.isPending || plans.isPending}
+            linkageLoading={linked.isPending}
             onCreateEntitlement={onCreateEntitlement}
             total={features.data?.total ?? 0}
             query={query}
