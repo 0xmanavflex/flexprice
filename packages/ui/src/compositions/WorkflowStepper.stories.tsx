@@ -143,8 +143,11 @@ export const OnlyRealCompletionReadsAsDone: Story = {
     await expect(fill(1)).not.toBe(done)
     await expect(fill(3)).not.toBe(done)
 
-    // Where the user is still stands out, and a locked step still does not.
-    await expect(fill(4)).toBe(done)
+    // Where the user is stands out as an outlined circle, and a locked step
+    // is neither filled nor outlined.
+    const border = (i: number) => getComputedStyle(circles[i] as Element).borderColor
+    await expect(fill(4)).not.toBe(done)
+    await expect(border(4)).not.toBe(border(5))
     await expect(fill(5)).not.toBe(done)
   },
 }

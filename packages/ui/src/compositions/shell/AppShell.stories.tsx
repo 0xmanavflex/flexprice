@@ -304,7 +304,8 @@ export const RailCanBeReopened: Story = {
 
     // And the groups are still reachable, as a menu rather than inline.
     await userEvent.click(canvas.getByRole('button', { name: 'Billing' }))
-    await expect(await screen.findByRole('menuitem', { name: /invoices/i })).toBeVisible()
+    // `waitFor` so the visibility check retries while the menu animates open.
+    await waitFor(() => expect(screen.getByRole('menuitem', { name: /^invoices/i })).toBeVisible())
   },
 }
 
