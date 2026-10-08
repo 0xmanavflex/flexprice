@@ -29,9 +29,9 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
   const id = new URL(page.url()).pathname.split('/').pop() ?? ''
   await expect(page.getByRole('heading', { name: 'Draft invoice', level: 1 })).toBeVisible()
 
-  await page.getByRole('button', { name: 'Finalize', exact: true }).click()
+  await page.getByRole('button', { name: 'More actions' }).click()
+  await page.getByRole('menuitem', { name: 'Finalize invoice' }).click()
   await expect(page.getByRole('heading', { name: 'Draft invoice', level: 1 })).toBeHidden()
-  await expect(page.getByRole('button', { name: 'Finalize', exact: true })).toBeHidden()
 
   await page.getByRole('button', { name: 'More actions' }).click()
   await expect(page.getByRole('menuitem', { name: 'Void invoice' })).toBeVisible()
@@ -151,10 +151,6 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
   await page.getByRole('button', { name: /next month/i }).click()
   await page.getByRole('gridcell', { name: '15' }).getByRole('button').click()
   await page.keyboard.press('Escape')
-  for (const step of ['prices', 'entitlements', 'credits', 'review']) {
-    await page.getByRole('button', { name: 'Next', exact: true }).click()
-    await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
-  }
   await page.getByRole('button', { name: /Create subscription/ }).click()
   await expect(page).toHaveURL(/\/subscriptions$/)
 

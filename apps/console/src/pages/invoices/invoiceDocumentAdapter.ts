@@ -1,4 +1,4 @@
-import { InvoiceStatus, type InvoiceDetail } from '@fp/domain'
+import { formatAddress, InvoiceStatus, type InvoiceDetail, type Tenant } from '@fp/domain'
 import type { InvoiceDocument } from '@fp/ui/pages'
 
 const day = (date: Date | null) =>
@@ -16,11 +16,11 @@ const num = (value: string) => {
  * Maps the invoice read model onto the document the detail view renders.
  *
  * Figures come from the API (`totals`), not from the lines. What the API does
- * not send — issuer, payment method, payments, credit notes — is left out
+ * not send — payment method, payments, credit notes — is left out
  * rather than invented, and the timeline is only the lifecycle moments the
  * invoice actually timestamps.
  */
-export function toInvoiceDocument(invoice: InvoiceDetail): InvoiceDocument {
+export function toInvoiceDocument(invoice: InvoiceDetail, tenant?: Tenant): InvoiceDocument {
   const events: InvoiceDocument['events'] = []
   const push = (title: string, at: Date | null, summary: string, status: 'completed' | 'issue') => {
     if (at) events.unshift({ id: events.length + 1, title, at: day(at) ?? '', status, summary })
@@ -66,13 +66,29 @@ export function toInvoiceDocument(invoice: InvoiceDetail): InvoiceDocument {
     issuedAt: day(invoice.issuedAt),
     dueAt: day(invoice.dueDate),
     billTo: { name: invoice.customerName, email: invoice.customerEmail, address: '' },
-    lines: invoice.lines.map((line) => ({
-      id: line.id,
-      description: line.description,
-      ...(line.detail ? { detail: line.detail } : {}),
-      quantity: line.quantity,
-      amount: num(line.amount),
-    })),
+    ...(tenant
+      ? {
+          from: {
+            name: tenant.name,
+            address: formatAddress(tenant.address).join(', '),
+            ...(tenant.billingEmail ? { email: tenant.billingEmail } : {}),
+          },
+        }
+      : {}),
+    lines: invoice.lines.map((line) => {
+      const quantity = Number(line.quantity.replace(/,/g, ''))
+      return {
+        id: line.id,
+        description: line.description,
+        ...(line.detail ? { detail: line.detail } : {}),
+        quantity: line.quantity,
+        // Display-only: the API's own amount stays the figure of record.
+        ...(Number.isFinite(quantity) && quantity > 0
+          ? { unitPrice: num(line.amount) / quantity }
+          : {}),
+        amount: num(line.amount),
+      }
+    }),
     prepaidCredits: num(invoice.prepaidCredits),
     tax: num(invoice.tax),
     paid: num(invoice.amountPaid),
