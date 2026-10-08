@@ -140,8 +140,9 @@ export function AppShell({
               </div>
             </div>
           </SidebarHeader>
+        
 
-          <SidebarContent className="pt-3">
+          <SidebarContent >
             <ShellNav
               groups={navGroups}
               {...(activeItemId === undefined ? {} : { activeItemId })}
