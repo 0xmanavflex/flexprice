@@ -2,6 +2,17 @@ import type { Preview } from '@storybook/react-vite'
 import '../src/styles.css'
 import './preview.css'
 
+// Under an automated browser (the story test run) switch motion off. Dialogs,
+// popovers and menus fade in; on a slow CI runner `toBeVisible` and axe would
+// catch them half-way and fail a story that is correct. People opening the
+// workbench keep the real animations.
+if (typeof navigator !== 'undefined' && navigator.webdriver) {
+  const style = document.createElement('style')
+  style.textContent =
+    '*, *::before, *::after { animation-duration: 0s !important; animation-delay: 0s !important; transition-duration: 0s !important; transition-delay: 0s !important; scroll-behavior: auto !important; }'
+  document.head.append(style)
+}
+
 const preview: Preview = {
   // Every story also generates a docs page from its props and TSDoc, so the
   // workbench documents the component library, not only exercises it.
