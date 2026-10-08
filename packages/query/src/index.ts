@@ -36,9 +36,10 @@ export {
   useCreateEnvironment,
   useCurrentUser,
   useEnvironmentList,
+  useRenameEnvironment,
   useSignIn,
 } from './session'
-export type { CurrentUser, SessionCredentials } from './session'
+export type { CurrentUser, RenameEnvironment, SessionCredentials } from './session'
 
 export {
   fetchInvoices,

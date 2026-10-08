@@ -85,6 +85,7 @@ import {
   useCreateEnvironment,
   useCurrentUser,
   useEnvironmentList,
+  useRenameEnvironment,
   useSignIn,
 } from './session'
 
@@ -395,5 +396,37 @@ describe('useCreateEnvironment', () => {
 
     expect(invalidated).toEqual([...queryKeys.session.environments()])
     expect(listKey.slice(0, invalidated.length)).toEqual([...invalidated])
+  })
+})
+
+describe('useRenameEnvironment', () => {
+  it('puts the new name to the environment and maps the result', async () => {
+    const seen = stubFetch(json({ id: 'env_9', name: 'EU staging', type: 'production' }))
+    useRenameEnvironment('token-a')
+
+    await expect(
+      lastMutation().mutationFn({ id: 'env_9', name: 'EU staging' } as never),
+    ).resolves.toEqual({ id: 'env_9', name: 'EU staging', type: EnvironmentType.Production })
+
+    expect(seen[0]?.method).toBe('PUT')
+    expect(seen[0]?.url).toBe(`${SERVER}/environments/env_9`)
+    expect(seen[0]?.headers.get('Authorization')).toBe('Bearer token-a')
+  })
+
+  it('refuses while signed out', async () => {
+    const seen = stubFetch(json({}))
+    useRenameEnvironment(null)
+
+    await expect(
+      lastMutation().mutationFn({ id: 'env_9', name: 'EU staging' } as never),
+    ).rejects.toThrow('Sign in to rename an environment.')
+    expect(seen).toHaveLength(0)
+  })
+
+  it('invalidates the environment list', () => {
+    useRenameEnvironment('token-a')
+    lastMutation().onSuccess?.()
+
+    expect(recorded.invalidated[0]).toEqual([...queryKeys.session.environments()])
   })
 })

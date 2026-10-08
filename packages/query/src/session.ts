@@ -15,6 +15,7 @@ import {
   fetchCurrentUser,
   fetchEnvironments,
   signIn,
+  updateEnvironment,
 } from '@fp/api'
 import { EnvironmentType, type CreateEnvironment, type Environment } from '@fp/domain'
 import { queryKeys } from './keys'
@@ -74,7 +75,10 @@ export function toEnvironment(record: EnvironmentRecord): Environment {
   return {
     id: record.id,
     name: record.name,
-    type: record.type === EnvironmentType.Production ? EnvironmentType.Production : EnvironmentType.Sandbox,
+    type:
+      record.type === EnvironmentType.Production
+        ? EnvironmentType.Production
+        : EnvironmentType.Sandbox,
   }
 }
 
@@ -122,6 +126,41 @@ export function useCreateEnvironment(
         throw new ApiError(ErrorKind.Unauthorized, 'Sign in to create an environment.')
       }
       return toEnvironment(await createEnvironment(serverURL, token as string, draft))
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })
+    },
+  })
+}
+
+/** What a rename sends: which environment, and what it is now called. */
+export interface RenameEnvironment {
+  id: string
+  name: string
+}
+
+/**
+ * Renames an environment, then makes the list say so.
+ *
+ * `PUT /environments/{id}` lives beside create in `@fp/api`'s `session.ts`
+ * for the same reason. Only the name is sent: the backend treats the type as
+ * immutable. The list is invalidated rather than patched, like create, so the
+ * switcher shows what the server now holds.
+ *
+ * There is no delete hook because there is no delete route.
+ */
+export function useRenameEnvironment(
+  token: string | null,
+): UseMutationResult<Environment, Error, RenameEnvironment> {
+  const serverURL = useFlexpriceServerURL()
+  const queryClient = useQueryClient()
+
+  return useMutation<Environment, Error, RenameEnvironment>({
+    mutationFn: async ({ id, name }) => {
+      if (!enabledFor(token)) {
+        throw new ApiError(ErrorKind.Unauthorized, 'Sign in to rename an environment.')
+      }
+      return toEnvironment(await updateEnvironment(serverURL, token as string, id, { name }))
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.session.environments() })

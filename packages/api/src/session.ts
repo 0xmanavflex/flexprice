@@ -235,3 +235,38 @@ export async function createEnvironment(
     type: str(row, 'type') || draft.type,
   }
 }
+
+/**
+ * Renames an environment.
+ *
+ * `PUT /environments/{id}` is the third of `environment.go`'s unannotated
+ * handlers, undocumented for the same reason as the list and the create. It
+ * takes `{name, type}` but only the name is mutable — the backend refuses a
+ * type change outright — so this sends the name alone and leaves the type to
+ * the server.
+ *
+ * There is no `DELETE /environments/{id}` route at all (the router registers
+ * list, create, get, update and clone), which is why there is no delete here.
+ *
+ * The response is read with the same tolerance as create: a 2xx that omits a
+ * field echoes back what was sent rather than blanking the switcher row.
+ */
+export async function updateEnvironment(
+  serverURL: string,
+  token: string,
+  id: string,
+  patch: { name: string },
+): Promise<EnvironmentRecord> {
+  const body = await request(serverURL, `/environments/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    token,
+    body: { name: patch.name },
+  })
+  const row = isRecord(body) ? body : {}
+
+  return {
+    id: str(row, 'id') || id,
+    name: str(row, 'name') || patch.name,
+    type: str(row, 'type'),
+  }
+}

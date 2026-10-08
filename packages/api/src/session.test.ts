@@ -1,6 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { ApiError, ErrorKind } from './errors'
-import { createEnvironment, fetchCurrentUser, fetchEnvironments, signIn, signUp } from './session'
+import {
+  createEnvironment,
+  fetchCurrentUser,
+  fetchEnvironments,
+  signIn,
+  signUp,
+  updateEnvironment,
+} from './session'
 
 const SERVER = 'https://api.test.flexprice.io/v1'
 const TOKEN = 'jwt-abc'
@@ -423,5 +430,31 @@ describe('createEnvironment', () => {
 
     await expect(failure).rejects.toMatchObject({ kind: ErrorKind.Invalid, status: 400 })
     await expect(failure).rejects.toThrow('maximum limit of 2 development environment(s)')
+  })
+})
+
+describe('updateEnvironment', () => {
+  it('puts the new name, and only the name, to the environment', async () => {
+    const { seen } = harness(ok({ id: 'env_9', name: 'EU staging', type: 'development' }))
+
+    await expect(
+      updateEnvironment(SERVER, TOKEN, 'env_9', { name: 'EU staging' }),
+    ).resolves.toEqual({ id: 'env_9', name: 'EU staging', type: 'development' })
+
+    expect(seen[0]?.method).toBe('PUT')
+    expect(seen[0]?.url).toBe(`${SERVER}/environments/env_9`)
+    expect(seen[0]?.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`)
+    // The type is immutable server-side; sending it would only risk a refusal.
+    await expect(seen[0]?.json()).resolves.toEqual({ name: 'EU staging' })
+  })
+
+  it('echoes the id and name back when the response omits them', async () => {
+    harness(ok({}))
+
+    await expect(updateEnvironment(SERVER, TOKEN, 'env_9', { name: 'QA' })).resolves.toEqual({
+      id: 'env_9',
+      name: 'QA',
+      type: '',
+    })
   })
 })
