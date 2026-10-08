@@ -119,7 +119,7 @@ export const ChildRowSpansTheSidebar: Story = {
 }
 
 /**
- * A `pinned` group sits at the foot of the sidebar under a rule, and only one
+ * A `pinned` group sits just below the tree, under a rule, and only one
  * section is open across both groups.
  */
 export const PinnedFooter: Story = {

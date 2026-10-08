@@ -123,11 +123,11 @@ describe('the sidebar layout', () => {
     expect(NAV.map((entry) => entry.label)).toEqual([
       'Home',
       'Customers',
+      'Product catalog',
       'Contracts',
       'Billing',
       'Collections',
       'Revenue',
-      'Product catalog',
       'Developers',
     ])
     expect(FOOTER_NAV.map((entry) => entry.label)).toEqual(['Integrations', 'Documentation'])

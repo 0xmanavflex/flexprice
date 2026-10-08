@@ -25,7 +25,6 @@ const meta = {
     user: { name: 'Dinesh K', email: 'dinesh@flexprice.io', organization: 'Flexprice' },
     onProfile: fn(),
     onSettings: fn(),
-    onDocs: fn(),
     onSignOut: fn(),
   },
 } satisfies Meta<typeof ShellAccount>
@@ -44,16 +43,15 @@ export const SignsOut: Story = {
   },
 }
 
-/**
- * Documentation lives here, beside Settings.
- */
-export const OffersDocumentation: Story = {
+/** Settings is the one destination the menu offers; Documentation sits in the sidebar. */
+export const OffersSettings: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /account: dinesh k/i }))
     // `waitFor` so the visibility check retries while the menu animates open.
     await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeVisible())
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Documentation' }))
-    await expect(args.onDocs).toHaveBeenCalledOnce()
+    expect(screen.queryByRole('menuitem', { name: 'Documentation' })).toBeNull()
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Settings' }))
+    await expect(args.onSettings).toHaveBeenCalledOnce()
   },
 }
 

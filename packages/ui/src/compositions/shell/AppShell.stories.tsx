@@ -100,7 +100,6 @@ const meta = {
     onNavigate: fn(),
     user: { name: 'Dinesh K', email: 'dinesh@flexprice.io', organization: 'Flexprice' },
     onSettings: fn(),
-    onDocs: fn(),
     onSignOut: fn(),
     search: {
       items: [{ id: 'page:customers', label: 'Customers', group: 'Pages' }],
@@ -241,16 +240,14 @@ export const SearchOpensADialog: Story = {
 
 /**
  * The account menu is how someone leaves, so it is reachable in one click — and
- * it is where Documentation lives, beside Settings.
+ * it holds Settings, and Documentation stays in the sidebar footer.
  */
 export const AccountMenu: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /account: dinesh k/i }))
     // `waitFor` so the visibility checks retry while the menu animates open.
     await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeVisible())
-    await waitFor(() =>
-      expect(screen.getByRole('menuitem', { name: 'Documentation' })).toBeVisible(),
-    )
+    expect(screen.queryByRole('menuitem', { name: 'Documentation' })).toBeNull()
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
     await expect(args.onSignOut).toHaveBeenCalled()
   },

@@ -1,4 +1,4 @@
-import { BookOpenIcon, LogOutIcon, MoreHorizontalIcon, SettingsIcon, UserIcon } from 'lucide-react'
+import { LogOutIcon, MoreHorizontalIcon, SettingsIcon, UserIcon } from 'lucide-react'
 import { Avatar, AvatarFallback } from '@ui/components/primitives/avatar'
 import {
   DropdownMenu,
@@ -34,25 +34,18 @@ export interface ShellAccountProps {
   user: ShellUser
   onProfile?: () => void
   onSettings?: () => void
-  /** Documentation, beside Settings. */
-  onDocs?: () => void
   onSignOut?: () => void
 }
 
 function initialsOf(user: ShellUser): string {
   const source = user.name.trim() || user.email.trim()
   const parts = source.split(/[\s@._-]+/).filter(Boolean)
-  const letters = parts.length > 1 ? `${parts[0]![0]}${parts[1]![0]}` : (parts[0] ?? '?').slice(0, 2)
+  const letters =
+    parts.length > 1 ? `${parts[0]![0]}${parts[1]![0]}` : (parts[0] ?? '?').slice(0, 2)
   return letters.toUpperCase()
 }
 
-export function ShellAccount({
-  user,
-  onProfile,
-  onSettings,
-  onDocs,
-  onSignOut,
-}: ShellAccountProps) {
+export function ShellAccount({ user, onProfile, onSettings, onSignOut }: ShellAccountProps) {
   const { isMobile } = useSidebar()
   /*
    * A display name that fell back to the email address is not a second fact.
@@ -122,12 +115,6 @@ export function ShellAccount({
                 <DropdownMenuItem onClick={onSettings}>
                   <SettingsIcon className="text-muted-foreground" aria-hidden />
                   Settings
-                </DropdownMenuItem>
-              ) : null}
-              {onDocs ? (
-                <DropdownMenuItem onClick={onDocs}>
-                  <BookOpenIcon className="text-muted-foreground" aria-hidden />
-                  Documentation
                 </DropdownMenuItem>
               ) : null}
             </DropdownMenuGroup>
