@@ -16,25 +16,48 @@ describe('parseSettingsSearch', () => {
   })
 
   it('reads a full pair', () => {
-    expect(parseSettingsSearch({ section: 'service-accounts', tab: 'service-accounts' })).toEqual({
-      section: 'service-accounts',
-      tab: 'service-accounts',
+    expect(parseSettingsSearch({ section: 'customer-experience', tab: 'onboarding' })).toEqual({
+      section: 'customer-experience',
+      tab: 'onboarding',
     })
   })
 
   it('opens a section on its own first tab when no tab is named', () => {
-    expect(parseSettingsSearch({ section: 'alerts' })).toEqual({
-      section: 'alerts',
-      tab: 'alert-rules',
+    expect(parseSettingsSearch({ section: 'customer-experience' })).toEqual({
+      section: 'customer-experience',
+      tab: 'portal',
     })
   })
 
   // The one worth naming: two ids that are each real but do not go together,
   // which is what a half-rewritten link looks like.
   it('falls back when the tab belongs to another section', () => {
-    expect(parseSettingsSearch({ section: 'alerts', tab: 'members' })).toEqual({
+    expect(parseSettingsSearch({ section: 'customer-experience', tab: 'members' })).toEqual({
+      section: 'customer-experience',
+      tab: 'portal',
+    })
+  })
+
+  it('sends the old Labels ids to Tags', () => {
+    expect(parseSettingsSearch({ section: 'labels', tab: 'labels' })).toEqual({
+      section: 'tags',
+      tab: 'tags',
+    })
+  })
+
+  it('opens Wallet alerts on its only tab now that Alert rules is gone', () => {
+    expect(parseSettingsSearch({ section: 'alerts', tab: 'alert-rules' })).toEqual({
       section: 'alerts',
-      tab: 'alert-rules',
+      tab: 'wallet-alerts',
+    })
+  })
+
+  it('no longer has API keys, service accounts or environments as settings panels', () => {
+    expect(parseSettingsSearch({ section: 'api-keys' })).toEqual(DEFAULT_SETTINGS_QUERY)
+    expect(parseSettingsSearch({ section: 'service-accounts' })).toEqual(DEFAULT_SETTINGS_QUERY)
+    expect(parseSettingsSearch({ section: 'organization', tab: 'environments' })).toEqual({
+      section: 'organization',
+      tab: 'profile',
     })
   })
 

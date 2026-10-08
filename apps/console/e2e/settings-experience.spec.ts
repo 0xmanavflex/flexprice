@@ -15,7 +15,7 @@ test.beforeEach(async ({ context }) => {
 
 test('portal: switching a section off saves and survives leaving the tab', async ({ page }) => {
   await page.goto('/settings?section=customer-experience&tab=portal')
-  await expect(page.getByText('Customer portal', { exact: true })).toBeVisible()
+  await expect(page.getByText('Config version', { exact: true })).toBeVisible()
 
   const eye = page.getByRole('button', { name: /visibility$/ }).first()
   await expect(eye).toHaveAttribute('aria-pressed', 'true')

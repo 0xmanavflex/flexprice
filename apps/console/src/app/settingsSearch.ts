@@ -1,5 +1,6 @@
 import {
   DEFAULT_SECTION,
+  SECTION_ALIASES,
   findSettingsSection,
   findSettingsTab,
   firstTabOf,
@@ -55,6 +56,10 @@ function text(value: unknown): string {
 }
 
 export function parseSettingsSearch(raw: Record<string, unknown>): SettingsQuery {
+  // A renamed section (Labels → Tags) lands where it lives now.
+  const alias = SECTION_ALIASES[text(raw['section'])]
+  if (alias) return { section: alias.section, tab: alias.tab }
+
   const section = findSettingsSection(text(raw['section'])) ?? DEFAULT_SECTION
   const tab = findSettingsTab(section, text(raw['tab'])) ?? firstTabOf(section)
 

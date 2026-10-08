@@ -188,6 +188,8 @@ const SettingsPage = lazy(() =>
   import('@/pages/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
 )
 import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from './settingsSearch'
+import { MOVED_SECTIONS } from '@/pages/settings/sections'
+
 const FeatureFormPage = lazy(() =>
   import('@/pages/features/FeatureFormPage').then((m) => ({ default: m.FeatureFormPage })),
 )
@@ -1182,18 +1184,15 @@ function GroupCreateRouteComponent() {
 }
 
 /**
- * Environment create used to be this page. It is a dialog now, opened from the
- * switcher and from Settings, so a bookmark of the old address lands on the
- * list the button lives on.
+ * Environment create used to be this page. Environments are managed from the
+ * shell's environment switcher now (Settings no longer lists them), so a
+ * bookmark of the old address lands on home, where the switcher is.
  */
 const environmentCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/environments/new',
   beforeLoad: () => {
-    throw redirect({
-      to: '/settings',
-      search: { section: 'organization', tab: 'environments' } as never,
-    })
+    throw redirect({ to: '/' })
   },
 })
 
@@ -1852,6 +1851,13 @@ function EventsRouteComponent() {
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings',
+  // API keys and service accounts moved to their own pages under Developers;
+  // an old `?section=api-keys` link follows them there.
+  beforeLoad: ({ location }) => {
+    const raw = (location.search as Record<string, unknown>)['section']
+    const moved = typeof raw === 'string' ? MOVED_SECTIONS[raw] : undefined
+    if (moved) throw redirect({ to: moved, search: {} as never })
+  },
   validateSearch: (search: Record<string, unknown>): SettingsQuery => parseSettingsSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_SETTINGS_QUERY)] },
   component: SettingsRouteComponent,
@@ -1908,10 +1914,9 @@ function SettingsRouteComponent() {
 /**
  * Developer destinations: API keys, service accounts and webhooks.
  *
- * Their panels live in Settings → Developers and are the same components the
- * sidebar's own paths render here, on a plain page under the Developers
- * breadcrumb (the redesign has them as flat lists, not as settings tabs).
- * Settings keeps its copy, so a link to either place works.
+ * API keys and service accounts live only here, on a plain page under the
+ * Developers breadcrumb; `/settings?section=api-keys` redirects to them.
+ * Webhooks also keeps a (hidden) Settings copy, so a link to either works.
  */
 const DeveloperPanels = lazy(() =>
   import('@/pages/settings/DeveloperPanels').then((m) => ({ default: m.DeveloperPanels })),
@@ -1935,12 +1940,12 @@ const developerRedirects = (
   }),
 )
 
-/** Labels live in Settings now; the old path keeps working. */
+/** Labels are Tags now, in Settings; the old path keeps working. */
 const labelsRedirect = createRoute({
   getParentRoute: () => shellRoute,
   path: '/labels',
   beforeLoad: () => {
-    throw redirect({ to: '/settings', search: { section: 'labels', tab: 'labels' } })
+    throw redirect({ to: '/settings', search: { section: 'tags', tab: 'tags' } })
   },
 })
 

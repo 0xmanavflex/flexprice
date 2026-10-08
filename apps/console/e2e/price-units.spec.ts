@@ -87,4 +87,11 @@ test.describe('environment create', () => {
     await expect(dialog).toBeHidden()
     await expect(page).toHaveURL(/\/customers/)
   })
+
+  // Environments are managed from the shell's environment switcher now, not
+  // from Settings, so the old create address lands on home where it lives.
+  test('the old /environments/new address lands on home', async ({ page }) => {
+    await page.goto('/environments/new')
+    await expect(page).toHaveURL((url) => url.pathname === '/')
+  })
 })
