@@ -69,7 +69,7 @@ export const NameIsTheOnlyRequirement: Story = {
 
     await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
-    await expect(await canvas.findByRole('region', { name: 'Charges' })).toBeInTheDocument()
+    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeInTheDocument()
   },
 }
 
