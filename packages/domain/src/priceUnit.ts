@@ -129,15 +129,16 @@ export function emptyPriceUnit(): CreatePriceUnit {
  *
  * A focused set of the common ISO-4217 codes rather than the full table — the
  * base currency is a rate anchor, not a billing currency, so the long tail is
- * noise here. The list can grow when a real one is asked for.
+ * noise here. The list can grow when a real one is asked for. Labels are the
+ * code and its symbol ("USD ($)"), the way a currency picker reads elsewhere.
  */
 export const PRICE_UNIT_CURRENCIES = [
-  { code: 'USD', label: 'USD — US Dollar' },
-  { code: 'EUR', label: 'EUR — Euro' },
-  { code: 'GBP', label: 'GBP — British Pound' },
-  { code: 'INR', label: 'INR — Indian Rupee' },
-  { code: 'AUD', label: 'AUD — Australian Dollar' },
-  { code: 'CAD', label: 'CAD — Canadian Dollar' },
-  { code: 'JPY', label: 'JPY — Japanese Yen' },
-  { code: 'SGD', label: 'SGD — Singapore Dollar' },
+  { code: 'USD', symbol: '$', label: 'USD ($)' },
+  { code: 'EUR', symbol: '€', label: 'EUR (€)' },
+  { code: 'GBP', symbol: '£', label: 'GBP (£)' },
+  { code: 'INR', symbol: '₹', label: 'INR (₹)' },
+  { code: 'AUD', symbol: 'A$', label: 'AUD (A$)' },
+  { code: 'CAD', symbol: 'C$', label: 'CAD (C$)' },
+  { code: 'JPY', symbol: '¥', label: 'JPY (¥)' },
+  { code: 'SGD', symbol: 'S$', label: 'SGD (S$)' },
 ] as const
