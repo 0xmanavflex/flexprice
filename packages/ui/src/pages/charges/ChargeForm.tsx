@@ -84,7 +84,12 @@ export interface ChargeFormProps {
   priceUnits?: PriceUnitOption[]
   currencies?: string[]
   onSubmit: (charge: CreateCharge) => void
-  onCancel?: () => void
+  /**
+   * Not drawn: these forms have no Cancel. The container's own close (the
+   * dialog's X, or the staged step's close) is the way out. Kept so callers
+   * can still pass it.
+   */
+  onCancel?: (() => void) | undefined
   isSubmitting?: boolean
   submitError?: string | null
   /** Overrides the submit label, e.g. "Add charge" when the charge is staged, not saved. */
@@ -122,7 +127,6 @@ export function ChargeForm({
   priceUnits = [],
   currencies = DEFAULT_CURRENCIES,
   onSubmit,
-  onCancel,
   isSubmitting = false,
   submitError = null,
   submitLabel,
@@ -570,7 +574,6 @@ export function ChargeForm({
       <FormActions
         mode={mode}
         noun="charge"
-        onCancel={onCancel}
         isSubmitting={isSubmitting}
         submitError={submitError}
         {...(submitLabel ? { submitLabel } : isEdit ? { submitLabel: 'Save new version' } : {})}

@@ -47,7 +47,12 @@ export interface CreditGrantFormProps<T> {
   isSubmitting?: boolean
   submitError?: string | null
   onSubmit: (grant: T) => void
-  onCancel?: () => void
+  /**
+   * Not drawn: these forms have no Cancel. The container's own close (the
+   * dialog's X, or the staged step's close) is the way out. Kept so callers
+   * can still pass it.
+   */
+  onCancel?: (() => void) | undefined
   submitLabel?: string
 }
 
@@ -70,7 +75,6 @@ export function CreditGrantEditForm({
   isSubmitting = false,
   submitError = null,
   onSubmit,
-  onCancel,
   submitLabel,
 }: CreditGrantFormProps<EditCreditGrant> & { defaultValue: EditCreditGrant }) {
   const form = useForm<EditCreditGrant>({
@@ -122,7 +126,6 @@ export function CreditGrantEditForm({
       </div>
       <FormActions
         mode="edit"
-        onCancel={onCancel}
         isSubmitting={isSubmitting}
         submitError={submitError}
         {...(submitLabel ? { submitLabel } : {})}
@@ -135,7 +138,6 @@ export function CreditGrantCreateForm({
   isSubmitting = false,
   submitError = null,
   onSubmit,
-  onCancel,
   submitLabel,
 }: CreditGrantFormProps<CreateCreditGrant>) {
   const form = useForm<CreateCreditGrant>({
@@ -370,7 +372,6 @@ export function CreditGrantCreateForm({
       <FormActions
         mode="create"
         noun="credit grant"
-        onCancel={onCancel}
         isSubmitting={isSubmitting}
         submitError={submitError}
         {...(submitLabel ? { submitLabel } : {})}

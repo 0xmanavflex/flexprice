@@ -69,7 +69,12 @@ const parseConfig = (text: string): Record<string, unknown> | null => {
 interface SharedProps {
   /** The plan's usage price for a metered feature, shown in the billing note. */
   usagePrice?: string | undefined
-  onCancel?: () => void
+  /**
+   * Not drawn: these forms have no Cancel. The container's own close (the
+   * dialog's X, or the staged step's close) is the way out. Kept so callers
+   * can still pass it.
+   */
+  onCancel?: (() => void) | undefined
   isSubmitting?: boolean
   submitError?: string | null
   submitLabel?: string
@@ -84,7 +89,6 @@ export interface EntitlementCreateFormProps extends SharedProps {
 export function EntitlementCreateForm({
   features,
   onSubmit,
-  onCancel,
   isSubmitting = false,
   submitError = null,
   submitLabel,
@@ -235,7 +239,6 @@ export function EntitlementCreateForm({
       <FormActions
         mode="create"
         noun="entitlement"
-        onCancel={onCancel}
         isSubmitting={isSubmitting}
         submitError={submitError}
         {...(submitLabel ? { submitLabel } : {})}
@@ -254,7 +257,6 @@ export function EntitlementEditForm({
   feature,
   defaultValue,
   onSubmit,
-  onCancel,
   isSubmitting = false,
   submitError = null,
   usagePrice,
@@ -358,12 +360,7 @@ export function EntitlementEditForm({
         </Field>
       ) : null}
 
-      <FormActions
-        mode="edit"
-        onCancel={onCancel}
-        isSubmitting={isSubmitting}
-        submitError={submitError}
-      />
+      <FormActions mode="edit" isSubmitting={isSubmitting} submitError={submitError} />
     </form>
   )
 }

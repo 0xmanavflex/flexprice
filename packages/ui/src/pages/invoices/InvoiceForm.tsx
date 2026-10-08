@@ -8,6 +8,7 @@ import {
   PlusIcon,
   SaveIcon,
   Trash2Icon,
+  XIcon,
 } from 'lucide-react'
 import { z } from 'zod'
 import { type CreateInvoice, createInvoiceSchema, emptyInvoice, sumLineAmounts } from '@fp/domain'
@@ -288,8 +289,24 @@ export function InvoiceForm({
   return (
     <>
       <div className="bg-background flex min-h-0 w-full flex-1 flex-col">
-        <header className="border-border bg-background/95 sticky top-0 z-20 flex min-h-14 w-full shrink-0 items-center justify-between gap-3 border-b px-10 backdrop-blur 2xl:px-14">
+        <header className="border-border bg-background/95 sticky top-0 z-20 flex min-h-14 w-full shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur">
           <div className="flex min-w-0 items-center gap-2">
+            {onCancel ? (
+              <>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="-ms-2 size-8 shrink-0"
+                  aria-label="Close form"
+                  disabled={isSubmitting}
+                  onClick={onCancel}
+                >
+                  <XIcon aria-hidden="true" />
+                </Button>
+                <Separator orientation="vertical" className="my-auto mr-2 h-4 shrink-0" />
+              </>
+            ) : null}
             <h1 className="text-foreground truncate text-base leading-5 font-medium">
               {mode === 'edit' ? 'Edit invoice' : 'New one-off invoice'}
             </h1>
@@ -301,15 +318,6 @@ export function InvoiceForm({
             </Badge>
           </div>
           <div className="flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              className="h-8"
-              disabled={isSubmitting}
-              onClick={onCancel}
-            >
-              Cancel
-            </Button>
             <Button
               type="button"
               variant="outline"

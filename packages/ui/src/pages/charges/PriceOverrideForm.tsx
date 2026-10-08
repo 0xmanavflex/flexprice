@@ -46,7 +46,12 @@ export interface PriceOverrideFormProps {
   /** Existing override when editing; omit to start from the model's empty shape. */
   defaultValue?: PriceOverride
   onSubmit: (override: PriceOverride) => void
-  onCancel?: () => void
+  /**
+   * Not drawn: these forms have no Cancel. The container's own close (the
+   * dialog's X, or the staged step's close) is the way out. Kept so callers
+   * can still pass it.
+   */
+  onCancel?: (() => void) | undefined
   /** Disables the form while a save is in flight. The page owns that flag. */
   isSubmitting?: boolean
   /** Server-side failure, already turned into a sentence by the page. */
@@ -83,7 +88,6 @@ export function PriceOverrideForm({
   priceId,
   defaultValue,
   onSubmit,
-  onCancel,
   isSubmitting = false,
   submitError = null,
   formId,
@@ -131,8 +135,7 @@ export function PriceOverrideForm({
   const tierErrors = (errors as { tiers?: { message?: string } }).tiers
   const tierRowErrors = (index: number) =>
     (errors as { tiers?: { message?: string }[] }).tiers?.[index] as
-      | { upTo?: { message?: string }; unitAmount?: { message?: string } }
-      | undefined
+      { upTo?: { message?: string }; unitAmount?: { message?: string } } | undefined
 
   return (
     <form
@@ -236,20 +239,7 @@ export function PriceOverrideForm({
           </fieldset>
 
           <div className="flex flex-col gap-3">
-            <div className="flex items-center justify-between">
-              <span className="text-sm font-medium">Tiers</span>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={isSubmitting}
-                // The unbounded band must stay last, so a new one is inserted
-                // before it rather than appended after it.
-                onClick={() => insert(fields.length - 1, { upTo: null, unitAmount: '' } as never)}
-              >
-                Add tier
-              </Button>
-            </div>
+            <span className="text-sm font-medium">Tiers</span>
 
             <div className="overflow-hidden rounded-lg border">
               <SimpleTable
@@ -275,7 +265,7 @@ export function PriceOverrideForm({
                             })}
                           />
                           {rowErrors?.upTo ? (
-                            <p role="alert" className="mt-1 text-xs text-destructive">
+                            <p role="alert" className="text-destructive mt-1 text-xs">
                               {rowErrors.upTo.message}
                             </p>
                           ) : null}
@@ -299,7 +289,7 @@ export function PriceOverrideForm({
                             {...form.register(`tiers.${index}.unitAmount` as never)}
                           />
                           {rowErrors?.unitAmount ? (
-                            <p role="alert" className="mt-1 text-xs text-destructive">
+                            <p role="alert" className="text-destructive mt-1 text-xs">
                               {rowErrors.unitAmount.message}
                             </p>
                           ) : null}
@@ -331,7 +321,9 @@ export function PriceOverrideForm({
                         size="sm"
                         // The unbounded band cannot be removed: without it,
                         // usage above the last ceiling is not billed at all.
-                        disabled={isSubmitting || index === fields.length - 1 || fields.length === 1}
+                        disabled={
+                          isSubmitting || index === fields.length - 1 || fields.length === 1
+                        }
                         aria-label={`Remove tier ${index + 1}`}
                         onClick={() => remove(index)}
                       >
@@ -343,8 +335,22 @@ export function PriceOverrideForm({
               />
             </div>
 
+            {/* Below the table, where the next band goes. */}
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="w-fit"
+              disabled={isSubmitting}
+              // The unbounded band must stay last, so a new one is inserted
+              // before it rather than appended after it.
+              onClick={() => insert(fields.length - 1, { upTo: null, unitAmount: '' } as never)}
+            >
+              Add tier
+            </Button>
+
             {tierErrors?.message ? (
-              <p role="alert" className="text-xs text-destructive">
+              <p role="alert" className="text-destructive text-xs">
                 {tierErrors.message}
               </p>
             ) : null}
@@ -353,18 +359,13 @@ export function PriceOverrideForm({
       ) : null}
 
       {submitError ? (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="text-destructive text-sm">
           {submitError}
         </p>
       ) : null}
 
       {hideActions ? null : (
         <div className="flex justify-end gap-2 border-t pt-4">
-          {onCancel ? (
-            <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
-              Cancel
-            </Button>
-          ) : null}
           <Button type="submit" disabled={isSubmitting}>
             {isSubmitting ? 'Saving…' : 'Save override'}
           </Button>
