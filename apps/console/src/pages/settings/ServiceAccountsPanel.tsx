@@ -3,12 +3,10 @@ import {
   type CreateServiceAccount,
   DEFAULT_SERVICE_ACCOUNT_QUERY,
   type Member,
-  type MemberQuery,
   type RenameMember,
   type Role,
   createServiceAccountSchema,
   emptyServiceAccount,
-  matchesMemberQuery,
   memberDisplayName,
   renameMemberSchema,
 } from '@fp/domain'
@@ -19,67 +17,46 @@ import {
   useRoles,
   useServiceAccounts,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
-import {
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@fp/ui/primitives'
+import { ConfirmDialog, EmptyState, Field, FormDialog } from '@fp/ui/compositions'
+import { Button, Input } from '@fp/ui/primitives'
 import { BotIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
   PanelError,
+  SettingsTable,
   WidePanel,
   mutationMessage,
   toFailure,
-  SettingsBlock,
-  TableBlock,
 } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
- * Service accounts — the identities that are not people.
+ * Service accounts — the identities that are not people. Lives under
+ * Developers (`/service-accounts`).
  *
- * The same `/users` endpoints as Members, discriminated by `type`, which is
- * why the two tabs look alike. They differ in three ways that matter and are
+ * The same `/users` endpoints as Team, discriminated by `type`, which is why
+ * the two tables look alike. They differ in three ways that matter and are
  * reflected here: a service account has no email (the field is always empty on
  * the wire, so there is no column for it), it is *renamed* rather than having
  * its profile edited, and at least one role is required at creation — a
  * machine identity with no permissions can authenticate and then do nothing,
  * which is a confusing way to fail.
  *
- * Search is client-side for the same reason as Members: `POST /users/search`
- * accepts a filter and ignores it.
+ * Search is the table's own, client-side, for the same reason as Team:
+ * `POST /users/search` accepts a filter and ignores it.
  */
 export function ServiceAccountsPanel() {
-  const [query, setQuery] = useState<MemberQuery>({
-    ...DEFAULT_SERVICE_ACCOUNT_QUERY,
-    pageSize: 100,
-  })
   const [isCreating, setIsCreating] = useState(false)
   const [renaming, setRenaming] = useState<Member | null>(null)
   const [deleting, setDeleting] = useState<Member | null>(null)
 
-  const accounts = useServiceAccounts(query)
+  const accounts = useServiceAccounts({ ...DEFAULT_SERVICE_ACCOUNT_QUERY, pageSize: 100 })
   const roles = useRoles('service_account')
   const remove = useDeleteServiceAccount()
 
   const failure = toFailure(accounts.error, 'your service accounts')
-  const fetched = accounts.data?.members ?? []
-  const visible = fetched.filter((member) => matchesMemberQuery(member, query))
-  const isFiltered = query.search.trim().length > 0
+  const rows = accounts.data?.members ?? []
 
   if (failure) {
     return (
@@ -89,95 +66,71 @@ export function ServiceAccountsPanel() {
     )
   }
 
+  const create = (
+    <Button size="sm" onClick={() => setIsCreating(true)}>
+      New service account
+    </Button>
+  )
+
   return (
     <WidePanel>
-      <TableBlock
-        title="Service accounts"
-        description="Identities for your systems rather than your people. An API key is issued against one."
-        actions={
-          <Button size="sm" onClick={() => setIsCreating(true)}>
-            New service account
-          </Button>
-        }
-      >
-        <div className="flex flex-col gap-1.5">
-          <Input
-            type="search"
-            aria-label="Search service accounts"
-            placeholder="Search by name"
-            value={query.search}
-            onChange={(event) => setQuery({ ...query, search: event.target.value })}
-          />
-          <p className="text-muted-foreground text-xs">
-            Searches the {fetched.length} account{fetched.length === 1 ? '' : 's'} loaded here — the
-            API ignores the search filter it accepts, so this narrows the page rather than the
-            directory.
-          </p>
-        </div>
-
-        {accounts.isPending ? (
-          <LoadingRows rows={3} columns={3} />
-        ) : visible.length === 0 ? (
+      <h1 className="sr-only">Service accounts</h1>
+      <SettingsTable<Member>
+        label="Service accounts"
+        noun="service accounts"
+        hint="Identities for your systems rather than your people. An API key is issued against one."
+        rows={rows}
+        isLoading={accounts.isPending}
+        getRowId={(account) => account.id}
+        action={create}
+        empty={
           <EmptyState
             size="inline"
             icon={<BotIcon aria-hidden />}
-            title={isFiltered ? 'No service account matches that' : 'No service accounts yet'}
-            description={
-              isFiltered
-                ? 'Nothing in the loaded page matches. Clear the search to see them all.'
-                : 'A service account is how a system of yours holds permissions without borrowing a person’s.'
-            }
-            isFiltered={isFiltered}
-            {...(isFiltered
-              ? {
-                  onClearFilters: (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setQuery({ ...query, search: '' })}
-                    >
-                      Clear search
-                    </Button>
-                  ),
-                }
-              : {})}
+            title="No service accounts yet"
+            description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
+            action={create}
           />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Roles</TableHead>
-                <TableHead>Identifier</TableHead>
-                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((account) => (
-                <TableRow key={account.id}>
-                  <TableCell className="font-medium">{memberDisplayName(account)}</TableCell>
-                  <TableCell>
-                    <RoleList roles={account.roles} catalogue={roles.data ?? []} />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {account.id}
-                  </TableCell>
-                  <TableCell className="w-px text-right whitespace-nowrap">
-                    <span className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
-                        Rename
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
-                        Delete
-                      </Button>
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </TableBlock>
+        }
+        columns={[
+          {
+            key: 'name',
+            header: 'Name',
+            sortBy: (account) => memberDisplayName(account),
+            text: (account) => memberDisplayName(account),
+            cell: (account) => <span className="font-medium">{memberDisplayName(account)}</span>,
+          },
+          {
+            key: 'roles',
+            header: 'Roles',
+            text: (account) => account.roles.join(' '),
+            cell: (account) => <RoleList roles={account.roles} catalogue={roles.data ?? []} />,
+          },
+          {
+            key: 'id',
+            header: 'Identifier',
+            text: (account) => account.id,
+            cell: (account) => (
+              <span className="text-muted-foreground font-mono text-xs">{account.id}</span>
+            ),
+          },
+          {
+            key: 'actions',
+            header: '',
+            width: 160,
+            cell: (account) => (
+              <span className="flex justify-end gap-1">
+                <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
+                  Rename
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
+                  Delete
+                </Button>
+              </span>
+            ),
+          },
+        ]}
+      />
 
       <CreateAccountDialog
         open={isCreating}
@@ -187,7 +140,9 @@ export function ServiceAccountsPanel() {
         }}
       />
 
-      {renaming ? <RenameSection account={renaming} onDone={() => setRenaming(null)} /> : null}
+      {renaming ? (
+        <RenameDialog key={renaming.id} account={renaming} onDone={() => setRenaming(null)} />
+      ) : null}
 
       <ConfirmDialog
         open={deleting !== null}
@@ -212,6 +167,7 @@ export function ServiceAccountsPanel() {
   )
 }
 
+/** Creating one, in a small dialog. Give it only the roles the system needs. */
 function CreateAccountDialog({
   open,
   roles,
@@ -234,65 +190,61 @@ function CreateAccountDialog({
   }, [open, draft, create])
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
+      size="sm"
+      title="New service account"
       onOpenChange={(next) => {
         if (!next && busy) return
         onOpenChange(next)
       }}
     >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>New service account</DialogTitle>
-          <DialogDescription>Give it only the roles the system actually needs.</DialogDescription>
-        </DialogHeader>
-        <form
-          id="create-service-account"
-          className="flex max-h-[min(24rem,50vh)] flex-col gap-4 overflow-y-auto"
-          noValidate
-          onSubmit={draft.handleSubmit((value) =>
-            create.mutate(value, { onSuccess: () => onOpenChange(false) }),
-          )}
+      <form
+        className="flex flex-col gap-4"
+        noValidate
+        onSubmit={draft.handleSubmit((value) =>
+          create.mutate(value, { onSuccess: () => onOpenChange(false) }),
+        )}
+      >
+        <Field
+          label="Name"
+          required
+          {...(draft.error('name') ? { error: draft.error('name') } : {})}
         >
-          <Field
-            label="Name"
-            required
-            {...(draft.error('name') ? { error: draft.error('name') } : {})}
-          >
-            {({ id, ...field }) => (
-              <Input
-                id={id}
-                autoFocus
-                placeholder="usage-ingest"
-                disabled={busy}
-                value={draft.text('name')}
-                onChange={(event) => draft.setText('name', event.target.value)}
-                {...field}
-              />
-            )}
-          </Field>
-
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">
-              Roles <span className="text-destructive">*</span>
-            </span>
-            <RolePicker
-              label="Roles for the new service account"
-              roles={roles}
-              selected={draft.value.roles}
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              autoFocus
+              placeholder="usage-ingest"
               disabled={busy}
-              onChange={(next) => draft.update((current) => ({ ...current, roles: next }))}
+              value={draft.text('name')}
+              onChange={(event) => draft.setText('name', event.target.value)}
+              {...field}
             />
-            {draft.error('roles') ? (
-              <p role="alert" className="text-destructive text-sm">
-                {draft.error('roles')}
-              </p>
-            ) : null}
-          </div>
+          )}
+        </Field>
 
-          <ActionError message={mutationMessage(create.error, 'It could not be created.')} />
-        </form>
-        <DialogFooter>
+        <div className="flex flex-col gap-1.5">
+          <span className="text-sm font-medium">
+            Roles <span className="text-destructive">*</span>
+          </span>
+          <RolePicker
+            label="Roles for the new service account"
+            roles={roles}
+            selected={draft.value.roles}
+            disabled={busy}
+            onChange={(next) => draft.update((current) => ({ ...current, roles: next }))}
+          />
+          {draft.error('roles') ? (
+            <p role="alert" className="text-destructive text-sm">
+              {draft.error('roles')}
+            </p>
+          ) : null}
+        </div>
+
+        <ActionError message={mutationMessage(create.error, 'It could not be created.')} />
+
+        <div className="flex justify-end gap-2">
           <Button
             type="button"
             variant="outline"
@@ -301,12 +253,12 @@ function CreateAccountDialog({
           >
             Cancel
           </Button>
-          <Button type="submit" form="create-service-account" disabled={busy}>
+          <Button type="submit" disabled={busy}>
             {busy ? 'Creating…' : 'Create service account'}
           </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        </div>
+      </form>
+    </FormDialog>
   )
 }
 
@@ -318,15 +270,19 @@ function CreateAccountDialog({
  * can half-succeed, and "the name saved but the roles did not" is a state with
  * nowhere to put it.
  */
-function RenameSection({ account, onDone }: { account: Member; onDone: () => void }) {
+function RenameDialog({ account, onDone }: { account: Member; onDone: () => void }) {
   const rename = useRenameServiceAccount()
   const draft = useDraft<RenameMember>(renameMemberSchema, { name: account.name })
   const busy = rename.isPending
 
   return (
-    <SettingsBlock
+    <FormDialog
+      open
+      size="sm"
       title={`Rename ${memberDisplayName(account)}`}
-      description="Its roles and its keys are untouched."
+      onOpenChange={(next) => {
+        if (!next && !busy) onDone()
+      }}
     >
       <form
         className="flex flex-col gap-4"
@@ -338,6 +294,7 @@ function RenameSection({ account, onDone }: { account: Member; onDone: () => voi
         <Field
           label="Name"
           required
+          hint="Its roles and its keys are untouched."
           {...(draft.error('name') ? { error: draft.error('name') } : {})}
         >
           {({ id, ...field }) => (
@@ -354,15 +311,15 @@ function RenameSection({ account, onDone }: { account: Member; onDone: () => voi
 
         <ActionError message={mutationMessage(rename.error, 'The name could not be saved.')} />
 
-        <div className="flex items-center gap-3">
+        <div className="flex justify-end gap-2">
+          <Button type="button" variant="outline" disabled={busy} onClick={onDone}>
+            Cancel
+          </Button>
           <Button type="submit" disabled={busy}>
             {busy ? 'Saving…' : 'Save name'}
           </Button>
-          <Button type="button" variant="ghost" disabled={busy} onClick={onDone}>
-            Cancel
-          </Button>
         </div>
       </form>
-    </SettingsBlock>
+    </FormDialog>
   )
 }

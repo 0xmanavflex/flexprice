@@ -16,7 +16,6 @@ import {
   EmptyState,
   LoadingRows,
   SettingRow,
-  SettingsCard,
   SettingsFieldGroup,
 } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
@@ -24,6 +23,7 @@ import { useSession } from '@/app/session'
 import {
   ActionError,
   ActionNote,
+  DelayedHint,
   Panel,
   PanelError,
   mutationMessage,
@@ -81,10 +81,7 @@ export function CurrenciesPanel() {
   if (!environmentId) {
     return (
       <Panel>
-        <SettingsBlock
-          title="Currencies"
-          description="Stored per environment, so a sandbox rate cannot reach a real invoice."
-        >
+        <SettingsBlock label="Currencies">
           <EmptyState
             size="inline"
             title="No environment selected"
@@ -271,14 +268,11 @@ function CurrencyForm({
         })}
       >
         <Panel>
-          <SettingsCard
-            title="Fiat currencies"
-            description="The currencies you invoice in. Custom currencies quote a rate in each of these."
-            contentClassName="flex flex-col gap-3 px-5 py-4"
-          >
+          <SettingsBlock label="Fiat currencies">
             {fiats.length === 0 ? (
               <p className="text-muted-foreground text-sm">
-                None yet. Add one before defining a custom currency.
+                No fiat currencies yet. Add the ones you invoice in — usd, eur — before defining a
+                custom currency.
               </p>
             ) : (
               <ul className="flex flex-wrap gap-2">
@@ -319,12 +313,12 @@ function CurrencyForm({
               </ul>
             )}
             <ActionError message={draft.error('defaultFiatCurrency') ?? null} />
-            <div className="flex max-w-md gap-2">
+            <div className="flex max-w-md items-center gap-2">
               <Input
                 id="currency-add-fiat"
                 aria-label="Add a fiat currency"
                 disabled={busy}
-                placeholder="gbp"
+                placeholder="Add a fiat currency, e.g. gbp"
                 autoComplete="off"
                 spellCheck={false}
                 aria-invalid={fiatIssue ? true : undefined}
@@ -342,20 +336,16 @@ function CurrencyForm({
               <Button type="button" variant="outline" disabled={busy} onClick={addFiat}>
                 Add
               </Button>
+              <DelayedHint text="The currencies you invoice in. The settlement currency is what an invoice priced in a custom currency is collected in." />
             </div>
             <ActionError message={fiatIssue} />
-            <p className="text-muted-foreground text-xs">
-              The settlement currency is what an invoice priced in a custom currency is collected
-              in. Three letters, for example usd.
-            </p>
-          </SettingsCard>
+          </SettingsBlock>
 
-          <SettingsCard
-            title="Custom currencies"
-            description="Units no central bank issues, like credits, tokens or minutes."
-            footerClassName="justify-between"
-            footer={
-              <>
+          <SettingsBlock
+            label="Custom currencies"
+            flush
+            actions={
+              <div className="flex w-full flex-wrap items-center justify-between gap-3">
                 <Button
                   type="button"
                   variant="outline"
@@ -384,7 +374,7 @@ function CurrencyForm({
                     {update.isPending ? 'Saving…' : 'Save changes'}
                   </Button>
                 </div>
-              </>
+              </div>
             }
           >
             {currencies.length === 0 ? (
@@ -392,7 +382,7 @@ function CurrencyForm({
                 <EmptyState
                   size="inline"
                   title="No custom currencies"
-                  description="Invoices are denominated in ordinary fiat currency until you define one."
+                  description="A custom currency is a unit no central bank issues — credits, tokens, minutes. Add one to price in it; until then invoices use ordinary fiat currency."
                 />
               </div>
             ) : (
@@ -539,7 +529,7 @@ function CurrencyForm({
                     id="currency-add-code"
                     aria-label="Currency code"
                     disabled={busy}
-                    placeholder="cre"
+                    placeholder="Three letters, e.g. cre — fixed once added"
                     autoComplete="off"
                     spellCheck={false}
                     aria-invalid={codeIssue ? true : undefined}
@@ -556,13 +546,10 @@ function CurrencyForm({
                     Add
                   </Button>
                 </div>
-                <p className="text-muted-foreground text-xs">
-                  Three letters. It cannot be changed after it is added.
-                </p>
                 <ActionError message={codeIssue} />
               </div>
             ) : null}
-          </SettingsCard>
+          </SettingsBlock>
         </Panel>
       </form>
 
@@ -618,17 +605,22 @@ function CurrencyField({
     <SettingRow
       title={title}
       labelFor={id}
-      {...(description ? { description } : {})}
       {...(last ? { last: true } : {})}
-      {...(required
+      {...(required || description
         ? {
             titleAddon: (
-              <span className="text-destructive" aria-hidden="true">
-                *
-              </span>
+              <>
+                {required ? (
+                  <span className="text-destructive" aria-hidden="true">
+                    *
+                  </span>
+                ) : null}
+                {description ? <DelayedHint text={description} /> : null}
+              </>
             ),
           }
         : {})}
+
     >
       <div className="flex w-full flex-col gap-1">
         <Input

@@ -15,10 +15,11 @@ import {
   useUpdateWalletAlertConfig,
   useWalletAlertConfig,
 } from '@fp/query'
-import { Field, LoadingRows } from '@fp/ui/compositions'
-import { Button, Input } from '@fp/ui/primitives'
+import { FormCard, FormRow, LoadingRows } from '@fp/ui/compositions'
+import { Button, Input, Switch } from '@fp/ui/primitives'
+import { InfoIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
+import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -26,19 +27,20 @@ import { useDraft } from './useDraft'
  *
  * `GET/PUT/DELETE /settings/wallet_balance_alert_config`.
  *
- * ## This is not the "Alert rules" tab, and the two must not be merged
+ * ## The layout is the create forms' (`FormCard`, ReUI form-9)
  *
- * The Alert rules tab next door is `/alerts/setting`: **per-entity** records,
- * each with its own id, each watching exactly one wallet, feature or
- * subscription. This is **one environment-wide default** behind a settings
- * key, with no id and no entity. They are stored separately, edited
- * separately, and a change to one is invisible in the other — so a future pass
- * that notices the two screens look alike and folds them together would
- * produce the worst kind of bug: a save that appears to work and changes
- * nothing the user was looking at. The shared vocabulary (`AlertCondition`,
+ * One card, a label column on the left with each field's explanation behind
+ * its (i), the control on the right, dashed rules between rows. The three
+ * thresholds are rows of the same card rather than three boxes of their own,
+ * so the whole setting reads top to bottom as one form.
+ *
+ * ## One environment-wide default, not per-entity rules
+ *
+ * This is one setting behind a settings key, with no id and no entity. The
+ * per-entity alert records (`/alerts/setting`) are a different feature and are
+ * no longer edited from Settings; the shared vocabulary (`AlertCondition`,
  * `AlertThresholdType`, the three severities) is shared on purpose, because
- * "falls below 80" should mean one thing across the product. That shared
- * vocabulary is the whole of what the two features have in common.
+ * "falls below 80" should mean one thing across the product.
  *
  * ## Why no currency symbol
  *
@@ -46,7 +48,7 @@ import { useDraft } from './useDraft'
  * omission. The setting is tenant-wide: it applies to wallets denominated in
  * any currency this account holds, so "below 100" means a hundred of whatever
  * that wallet is counted in. Printing a `$` would be a claim the data does not
- * make. The per-wallet rules that *can* name a currency are the other tab's.
+ * make.
  *
  * ## Saving
  *
@@ -80,6 +82,13 @@ export function WalletAlertsPanel() {
   // Keyed on the environment so switching environments re-seeds the draft
   // rather than leaving the previous environment's thresholds on screen.
   return <WalletAlertsForm key={environmentId} environmentId={environmentId} config={config.data} />
+}
+
+/** What each severity row explains behind its (i). */
+const SEVERITY_HINT: Record<AlertSeverity, string> = {
+  info: 'The earliest, quietest warning. Leave it unset if you only want to hear about real trouble.',
+  warning: 'The balance needs attention soon.',
+  critical: 'The balance is about to run out. Usually the lowest threshold of the three.',
 }
 
 function WalletAlertsForm({
@@ -116,56 +125,45 @@ function WalletAlertsForm({
       })}
     >
       <Panel>
-        <SettingsBlock
-          title="Wallet balance alerts"
-          description="One setting for every wallet in this environment. These are not the per-wallet rules on the Alert rules tab — changing this does not change those."
-          actions={
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={busy}
-              onClick={() => {
-                update.reset()
-                reset.mutate(undefined, { onSuccess: (defaults) => draft.reset(defaults) })
-              }}
-            >
-              {reset.isPending ? 'Resetting…' : 'Reset to defaults'}
-            </Button>
-          }
-        >
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Alerting</span>
-            <div role="group" aria-label="Alerting" className="flex gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                variant={draft.value.alertEnabled ? 'default' : 'outline'}
-                aria-pressed={draft.value.alertEnabled}
-                disabled={busy}
-                onClick={() => draft.update((current) => ({ ...current, alertEnabled: true }))}
-              >
-                On
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={draft.value.alertEnabled ? 'outline' : 'default'}
-                aria-pressed={!draft.value.alertEnabled}
-                disabled={busy}
-                onClick={() => draft.update((current) => ({ ...current, alertEnabled: false }))}
-              >
-                Off
-              </Button>
-            </div>
-            <p className="text-muted-foreground text-xs">
-              A threshold that is set while alerting is off is stored but never fires. Off is the
-              backend&rsquo;s default, thresholds and all.
+        <FormCard>
+          <div className="text-muted-foreground flex items-start gap-2 px-5 py-4 text-[13px] sm:px-6">
+            <InfoIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+            <p>
+              One setting for every wallet in this environment, with up to three escalating
+              thresholds. Each is independent — set only the ones you want to hear about.
             </p>
           </div>
 
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium">Thresholds are</span>
+          <FormRow
+            label="Alerting"
+            hint="A threshold that is set while alerting is off is stored but never fires. Off is the backend’s default."
+          >
+            {(props) => (
+              <div className="flex items-center gap-2">
+                <Switch
+                  id={props.id}
+                  aria-describedby={props['aria-describedby']}
+                  checked={draft.value.alertEnabled}
+                  disabled={busy}
+                  onCheckedChange={(checked) =>
+                    draft.update((current) => ({ ...current, alertEnabled: checked }))
+                  }
+                />
+                <span className="text-muted-foreground text-sm">
+                  {draft.value.alertEnabled ? 'On' : 'Off'}
+                </span>
+              </div>
+            )}
+          </FormRow>
+
+          <FormRow
+            label="Thresholds are"
+            hint={
+              percentage
+                ? 'A share of the wallet’s starting balance, from 0 to 100.'
+                : 'A raw balance. No currency is shown because this covers wallets in every currency you hold — 100 means a hundred of whatever that wallet is counted in.'
+            }
+          >
             <div role="group" aria-label="Threshold type" className="flex gap-1.5">
               {[AlertThresholdType.Absolute, AlertThresholdType.Percentage].map((option) => (
                 <Button
@@ -181,102 +179,101 @@ function WalletAlertsForm({
                 </Button>
               ))}
             </div>
-            <p className="text-muted-foreground text-xs">
-              {percentage
-                ? 'A share of the wallet’s starting balance, from 0 to 100.'
-                : 'A raw balance. No currency is shown because this setting covers wallets in every currency you hold — 100 means a hundred of whatever that wallet is counted in.'}
-            </p>
-          </div>
-        </SettingsBlock>
+          </FormRow>
 
-        <SettingsBlock
-          title="Thresholds"
-          description="Up to three, escalating. Each is independent — set only the ones you want to hear about."
-          actions={
-            <div className="flex w-full flex-wrap items-center justify-end gap-3">
-              <ActionError message={saveError} />
-              {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
-              {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
-              <Button type="submit" disabled={busy}>
-                {update.isPending ? 'Saving…' : 'Save changes'}
-              </Button>
-            </div>
-          }
-        >
-          <div className="grid gap-4 sm:grid-cols-3">
-            {ALERT_SEVERITY_ORDER.map((severity) => {
-              const value = draft.value[severity]
-              const error = draft.error(severity) ?? draft.error(`${severity}.threshold`)
+          {ALERT_SEVERITY_ORDER.map((severity) => {
+            const value = draft.value[severity]
+            const error = draft.error(severity) ?? draft.error(`${severity}.threshold`)
+            const name = ALERT_SEVERITY_LABEL[severity]
 
-              return (
-                <div key={severity} className="flex flex-col gap-2 rounded-lg border p-3">
-                  <div className="flex items-center justify-between gap-2">
-                    <span className="text-sm font-medium">{ALERT_SEVERITY_LABEL[severity]}</span>
+            return (
+              <FormRow
+                key={severity}
+                label={name}
+                hint={SEVERITY_HINT[severity]}
+                {...(error ? { error } : {})}
+              >
+                {value ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <div role="group" aria-label={`${name} condition`} className="flex gap-1.5">
+                      {[AlertCondition.Below, AlertCondition.Above].map((condition) => (
+                        <Button
+                          key={condition}
+                          type="button"
+                          size="sm"
+                          variant={value.condition === condition ? 'default' : 'outline'}
+                          aria-pressed={value.condition === condition}
+                          disabled={busy}
+                          onClick={() => setSeverity(severity, { ...value, condition })}
+                        >
+                          {ALERT_CONDITION_LABEL[condition]}
+                        </Button>
+                      ))}
+                    </div>
+                    <Input
+                      aria-label={`${name} threshold${percentage ? ' (%)' : ''}`}
+                      aria-invalid={error ? true : undefined}
+                      className="w-32"
+                      inputMode="decimal"
+                      value={value.threshold}
+                      disabled={busy}
+                      onChange={(event) =>
+                        setSeverity(severity, { ...value, threshold: event.target.value })
+                      }
+                    />
+                    {percentage ? <span className="text-muted-foreground text-sm">%</span> : null}
                     <Button
                       type="button"
-                      size="xs"
-                      variant={value ? 'secondary' : 'outline'}
-                      aria-pressed={value !== null}
+                      size="sm"
+                      variant="ghost"
+                      aria-label={`Remove the ${name.toLowerCase()} threshold`}
                       disabled={busy}
-                      onClick={() =>
-                        setSeverity(
-                          severity,
-                          value ? null : { condition: AlertCondition.Below, threshold: '0' },
-                        )
-                      }
+                      onClick={() => setSeverity(severity, null)}
                     >
-                      {value ? 'Remove' : 'Add'}
+                      Remove
                     </Button>
                   </div>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      aria-label={`Add a ${name.toLowerCase()} threshold`}
+                      disabled={busy}
+                      onClick={() =>
+                        setSeverity(severity, { condition: AlertCondition.Below, threshold: '0' })
+                      }
+                    >
+                      Add
+                    </Button>
+                    <span className="text-muted-foreground text-sm">Not set — nothing fires.</span>
+                  </div>
+                )}
+              </FormRow>
+            )
+          })}
+        </FormCard>
 
-                  {value ? (
-                    <>
-                      <div
-                        role="group"
-                        aria-label={`${ALERT_SEVERITY_LABEL[severity]} condition`}
-                        className="flex gap-1.5"
-                      >
-                        {[AlertCondition.Below, AlertCondition.Above].map((condition) => (
-                          <Button
-                            key={condition}
-                            type="button"
-                            size="xs"
-                            variant={value.condition === condition ? 'default' : 'outline'}
-                            aria-pressed={value.condition === condition}
-                            disabled={busy}
-                            onClick={() => setSeverity(severity, { ...value, condition })}
-                          >
-                            {ALERT_CONDITION_LABEL[condition]}
-                          </Button>
-                        ))}
-                      </div>
-
-                      <Field
-                        label={`${ALERT_SEVERITY_LABEL[severity]} threshold${percentage ? ' (%)' : ''}`}
-                        {...(error ? { error } : {})}
-                      >
-                        {({ id, ...field }) => (
-                          <Input
-                            id={id}
-                            inputMode="decimal"
-                            value={value.threshold}
-                            disabled={busy}
-                            {...field}
-                            onChange={(event) =>
-                              setSeverity(severity, { ...value, threshold: event.target.value })
-                            }
-                          />
-                        )}
-                      </Field>
-                    </>
-                  ) : (
-                    <p className="text-muted-foreground text-xs">Not set — nothing fires.</p>
-                  )}
-                </div>
-              )
-            })}
-          </div>
-        </SettingsBlock>
+        <div className="flex flex-wrap items-center justify-end gap-3">
+          <ActionError message={saveError} />
+          {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
+          {!saveError && reset.isSuccess ? <ActionNote message="Back to the defaults." /> : null}
+          <Button
+            type="button"
+            variant="ghost"
+            disabled={busy}
+            onClick={() => {
+              update.reset()
+              reset.mutate(undefined, { onSuccess: (defaults) => draft.reset(defaults) })
+            }}
+          >
+            {reset.isPending ? 'Resetting…' : 'Reset to defaults'}
+          </Button>
+          <Button type="submit" disabled={busy}>
+            {update.isPending ? 'Saving…' : 'Save changes'}
+          </Button>
+        </div>
       </Panel>
     </form>
   )

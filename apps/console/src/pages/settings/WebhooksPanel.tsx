@@ -3,7 +3,8 @@ import { EmptyState, LoadingRows } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { WebhookIcon } from 'lucide-react'
 import { useSession } from '@/app/session'
-import { Fact, Panel, PanelError, toFailure, SettingsBlock } from './panelKit'
+import { DelayedHint, Fact, Panel, PanelError, SettingsBlock, toFailure } from './panelKit'
+
 
 /**
  * The way in to this tenant's Svix webhook portal.
@@ -66,10 +67,7 @@ export function WebhooksPanel() {
   if (!svixEnabled) {
     return (
       <Panel>
-        <SettingsBlock
-          title="Webhooks"
-          description="Flexprice delivers webhooks through Svix, which this deployment does not have switched on."
-        >
+        <SettingsBlock label="Webhooks">
           <EmptyState
             size="inline"
             icon={<WebhookIcon aria-hidden />}
@@ -83,10 +81,7 @@ export function WebhooksPanel() {
 
   return (
     <Panel>
-      <SettingsBlock
-        title="Webhooks"
-        description="Endpoints, signing secrets, retries and delivery logs are configured in Svix. This opens that portal, signed in as this environment."
-      >
+      <SettingsBlock label="Webhooks">
         <dl className="grid gap-4 sm:grid-cols-2">
           <Fact label="Svix application">
             <span className="font-mono text-xs">{appId || '—'}</span>
@@ -95,7 +90,7 @@ export function WebhooksPanel() {
         </dl>
 
         <div className="flex flex-col gap-2">
-          <div>
+          <div className="flex items-center gap-2">
             <Button
               type="button"
               disabled={dashboard.isFetching}
@@ -111,11 +106,8 @@ export function WebhooksPanel() {
             >
               Open the Svix webhook portal
             </Button>
+            <DelayedHint text="Endpoints, signing secrets, retries and delivery logs live in Svix. Opens in a new tab with a single-use sign-in link, fetched fresh each time." />
           </div>
-          <p className="text-muted-foreground text-xs">
-            Opens in a new tab. The sign-in link is single use, and this panel fetches a fresh one
-            each time — use the button rather than bookmarking what it opens.
-          </p>
         </div>
       </SettingsBlock>
     </Panel>

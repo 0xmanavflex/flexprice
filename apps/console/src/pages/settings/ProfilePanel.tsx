@@ -1,9 +1,17 @@
 import { useId } from 'react'
 import { type Tenant, type UpdateTenant, toUpdateTenantDraft, updateTenantSchema } from '@fp/domain'
 import { useTenant, useUpdateTenant, useUserInfo } from '@fp/query'
-import { LoadingRows, SettingRow, SettingsCard, SettingsFieldGroup } from '@fp/ui/compositions'
+import { LoadingRows, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
+import {
+  ActionError,
+  ActionNote,
+  Panel,
+  PanelError,
+  SettingsBlock,
+  mutationMessage,
+  toFailure,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -86,10 +94,7 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
       })}
     >
       <Panel>
-        <SettingsCard
-          title="Organisation"
-          description="The name on your invoices, and where Flexprice reaches you."
-        >
+        <SettingsBlock label="Organisation" flush>
           <SettingsFieldGroup
             legend="Organisation"
             description="The name on your invoices, and where Flexprice reaches you."
@@ -130,12 +135,12 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               last
             />
           </SettingsFieldGroup>
-        </SettingsCard>
+        </SettingsBlock>
 
-        <SettingsCard
-          title="Billing address"
-          description="Printed on the invoices Flexprice issues to you. Leave it blank if you have none to give."
-          footer={
+        <SettingsBlock
+          label="Billing address"
+          flush
+          actions={
             <div className="flex w-full flex-wrap items-center justify-end gap-3">
               <ActionError message={saveError} />
               {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
@@ -195,7 +200,8 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
               last
             />
           </SettingsFieldGroup>
-        </SettingsCard>
+        </SettingsBlock>
+
       </Panel>
     </form>
   )

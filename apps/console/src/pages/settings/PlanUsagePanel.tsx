@@ -70,14 +70,15 @@ export function PlanUsagePanel() {
 
   // `usage.period` comes back null on live tenants with an active subscription,
   // so the period is mentioned only when there is one to mention.
-  const planDescription =
+  const period =
     periodStart || periodEnd
-      ? `What Flexprice bills this organisation for. Current period ${formatDate(periodStart)} to ${formatDate(periodEnd)}.`
-      : 'What Flexprice bills this organisation for.'
+      ? `Current period ${formatDate(periodStart)} to ${formatDate(periodEnd)}`
+      : null
 
   return (
     <Panel>
-      <SettingsBlock title="Plan" description={planDescription}>
+      <SettingsBlock label="Plan">
+        {period ? <p className="text-muted-foreground text-xs">{period}</p> : null}
         {plans.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No subscription is attached to this organisation.
@@ -91,7 +92,8 @@ export function PlanUsagePanel() {
         )}
       </SettingsBlock>
 
-      <SettingsBlock title="Usage" description="Where this organisation stands against its entitlements.">
+      <SettingsBlock label="Usage">
+
         {features.length === 0 ? (
           <p className="text-muted-foreground text-sm">
             No metered entitlements are attached to this plan.

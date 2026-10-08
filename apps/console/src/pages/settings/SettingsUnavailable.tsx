@@ -47,7 +47,7 @@ export interface SettingsUnavailableProps {
 
 export function SettingsUnavailable({ tab, what, workaround }: SettingsUnavailableProps) {
   return (
-    <SettingsBlock title={tab.label} description="Not enabled on this deployment.">
+    <SettingsBlock label={tab.label}>
       <EmptyState
         size="inline"
         icon={<PlugZapIcon aria-hidden />}
@@ -74,7 +74,7 @@ export const UNAVAILABLE_COPY: Record<string, { what: string; workaround?: strin
   'team/sso': {
     what: 'Single sign-on would let your team sign in through your own identity provider instead of a Flexprice password.',
     workaround:
-      'Until then, members sign in with an email and password, and you invite them under Members.',
+      'Until then, members sign in with an email and password, and you invite them on the Team tab.',
   },
   'billing/invoices': {
     what: 'These are the defaults every invoice inherits — numbering, due terms, the footer your customers read.',
@@ -100,7 +100,6 @@ export const UNAVAILABLE_COPY: Record<string, { what: string; workaround?: strin
   },
   'notifications/wallet-alerts': {
     what: 'Wallet alerts would warn you across the whole tenant when a customer balance runs low.',
-    workaround:
-      'Alert rules, on the tab beside this one, do work — but they are per-entity, so a wallet is watched one at a time rather than by a tenant-wide rule.',
   },
+
 }

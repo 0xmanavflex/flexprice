@@ -32,7 +32,9 @@ import { useSession } from '@/app/session'
 import {
   ActionError,
   ActionNote,
+  DelayedHint,
   Fact,
+
   Panel,
   PanelError,
   mutationMessage,
@@ -174,8 +176,7 @@ function OnboardingForm({
     >
       <Panel>
         <SettingsBlock
-          title="Customer onboarding"
-          description="Steps Flexprice runs, in order, the first time it sees a new customer. Leave it empty and nothing happens automatically."
+          label="Customer onboarding"
           actions={
             <Button
               type="button"
@@ -200,23 +201,19 @@ function OnboardingForm({
         </SettingsBlock>
 
         {actions.length === 0 ? (
-          <SettingsBlock
-            title="Steps"
-            description="Nothing runs automatically in this environment."
-          >
+          <SettingsBlock label="Steps">
             <EmptyState
               size="inline"
               icon={<WorkflowIcon aria-hidden />}
               title="No onboarding steps"
-              description="Add a step below to have Flexprice open a wallet, start a contract or roll out a price whenever a customer is created."
+              description="Steps run in order the first time Flexprice sees a new customer. Add one below to open a wallet, start a contract or roll out a price automatically."
             />
           </SettingsBlock>
         ) : (
           actions.map((action, index) => (
             <SettingsBlock
               key={`${action.action}-${String(index)}`}
-              title={`${String(index + 1)}. ${ONBOARDING_ACTION_LABEL[action.action]}`}
-              description={STEP_DESCRIPTION[action.action]}
+              label={`${String(index + 1)}. ${ONBOARDING_ACTION_LABEL[action.action]}`}
               actions={
                 <>
                   <Button
@@ -251,6 +248,10 @@ function OnboardingForm({
                 </>
               }
             >
+              <p className="flex items-center gap-1.5 text-sm font-medium">
+                {`${String(index + 1)}. ${ONBOARDING_ACTION_LABEL[action.action]}`}
+                <DelayedHint text={STEP_DESCRIPTION[action.action]} />
+              </p>
               <StepFields
                 action={action}
                 busy={busy}
@@ -262,8 +263,7 @@ function OnboardingForm({
         )}
 
         <SettingsBlock
-          title="Add a step"
-          description="Only these five exist. The backend rejects the whole workflow if it is handed anything else, so there is no free-form option."
+          label="Add a step"
           actions={
             <div className="flex w-full flex-wrap items-center justify-end gap-3">
               <ActionError message={saveError} />

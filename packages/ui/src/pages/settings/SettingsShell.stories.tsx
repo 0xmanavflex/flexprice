@@ -8,7 +8,6 @@ const SECTIONS: SettingsSection[] = [
   {
     id: 'organization',
     label: 'Organization',
-    description: 'Who you are to your customers, and which environments you work in.',
     icon: <Building2 aria-hidden />,
     tabs: [
       { id: 'profile', label: 'Profile' },
@@ -152,7 +151,7 @@ function Controlled({
 }
 
 /**
- * Settings navigation, laid out as the `settings-7` block: a heading, a flat
+ * Settings navigation, laid out as the `settings-7` block: an sr-only heading, a flat
  * vertical rail of sections, then a column holding the active section's tab
  * strip (when it has several pages) and content.
  *

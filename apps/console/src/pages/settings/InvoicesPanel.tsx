@@ -13,7 +13,6 @@ import {
   EmptyState,
   LoadingRows,
   SettingRow,
-  SettingsCard,
   SettingsFieldGroup,
 } from '@fp/ui/compositions'
 import {
@@ -28,7 +27,15 @@ import {
   Switch,
 } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure, SettingsBlock } from './panelKit'
+import {
+  ActionError,
+  ActionNote,
+  Panel,
+  PanelError,
+  SettingsBlock,
+  mutationMessage,
+  toFailure,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -70,10 +77,7 @@ export function InvoicesPanel() {
   if (!environmentId) {
     return (
       <Panel>
-        <SettingsBlock
-          title="Invoice numbering"
-          description="Stored per environment, so production and sandbox never share a sequence."
-        >
+        <SettingsBlock label="Invoice numbering">
           <EmptyState
             size="inline"
             title="No environment selected"
@@ -217,24 +221,27 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
         })}
       >
         <Panel>
-          <SettingsCard
-            title="Invoice numbering"
-            description="The parts an invoice number is built from. Stored per environment, so production and sandbox never share a sequence."
-          >
-            <div className="flex flex-col gap-1 border-b px-5 py-4">
-              <span className="text-muted-foreground text-xs">Example invoice number</span>
-              {preview ? (
-                <code className="font-mono text-lg font-medium tracking-tight">{preview}</code>
-              ) : (
-                <span className="text-muted-foreground text-sm">
-                  Fix the fields below to see an example.
+          <SettingsBlock
+            label="Invoice numbering"
+            flush
+            info={
+              <>
+                <span>Example invoice number</span>
+                {preview ? (
+                  <code className="text-foreground font-mono text-lg font-medium tracking-tight">
+                    {preview}
+                  </code>
+                ) : (
+                  <span>Fix the fields below to see an example.</span>
+                )}
+                <span className="text-xs">
+                  Built from today&rsquo;s date and the start number. The live sequence continues
+                  from wherever this environment has reached; production and sandbox never share
+                  one.
                 </span>
-              )}
-              <span className="text-muted-foreground text-xs">
-                Built from today&rsquo;s date and the start number. The live sequence continues from
-                wherever this environment has reached.
-              </span>
-            </div>
+              </>
+            }
+          >
             <SettingsFieldGroup
               legend="Invoice numbering"
               description="The parts an invoice number is built from."
@@ -335,12 +342,9 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 onChange={(value) => setNumber('suffixLength', value)}
               />
             </SettingsFieldGroup>
-          </SettingsCard>
+          </SettingsBlock>
 
-          <SettingsCard
-            title="Dates and delivery"
-            description="When an invoice falls due, and how long it waits before your customer sees it."
-          >
+          <SettingsBlock label="Dates and delivery" flush>
             <SettingsFieldGroup
               legend="Dates and delivery"
               description="When an invoice falls due, and how long it waits before a customer sees it."
@@ -394,12 +398,12 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 </div>
               </SettingRow>
             </SettingsFieldGroup>
-          </SettingsCard>
+          </SettingsBlock>
 
-          <SettingsCard
-            title="Purchased credits"
-            description="What happens when a customer buys wallet credits."
-            footer={
+          <SettingsBlock
+            label="Purchased credits"
+            flush
+            actions={
               <div className="flex w-full flex-wrap items-center justify-end gap-3">
                 <ActionError message={saveError} />
                 {!saveError && update.isSuccess ? <ActionNote message="Saved." /> : null}
@@ -443,8 +447,9 @@ function InvoiceForm({ environmentId, config }: { environmentId: string; config:
                 />
               </SettingRow>
             </SettingsFieldGroup>
-          </SettingsCard>
+          </SettingsBlock>
         </Panel>
+
       </form>
 
       <ConfirmDialog

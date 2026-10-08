@@ -1,6 +1,9 @@
-import type { ReactNode } from 'react'
+import { type ReactNode, useId } from 'react'
+import { InfoIcon } from 'lucide-react'
 import { ApiError } from '@fp/query'
-import { ErrorState, SettingsCard } from '@fp/ui/compositions'
+import { ErrorState } from '@fp/ui/compositions'
+import { DetailTable, type DetailColumn } from '@fp/ui/pages'
+import { Tooltip, TooltipContent, TooltipTrigger } from '@fp/ui/primitives'
 
 /**
  * The few things every settings panel needs, in one place.
@@ -95,67 +98,153 @@ export function ActionNote({ message }: { message: string | null }) {
 }
 
 /**
- * One settings region, as ReUI's settings card.
+ * One settings region: a bordered surface with no visible header.
  *
- * The same shape as the old section — title, description, an action slot, and
- * the body — drawn with `settings-7`'s card: a bordered header and, when there
- * are actions, the footer bar. Callers keep passing `actions`; they land in
- * that footer.
+ * Settings opens straight onto its content, so there is no titled card above
+ * a form any more. `label` still names the region for assistive tech (an
+ * `sr-only` heading), `info` is the one explanatory block a form may carry at
+ * its top, and `actions` land in the footer bar. `flush` drops the body
+ * padding, for rows that pad themselves (`SettingRow`, `FormRow`).
  */
 export function SettingsBlock({
-  title,
-  description,
+  label,
+  info,
   actions,
+  flush = false,
   children,
 }: {
-  title: string
-  description?: string
+  label: string
+  info?: ReactNode
   actions?: ReactNode
+  flush?: boolean
   children: ReactNode
 }) {
+  const id = useId()
   return (
-    <SettingsCard
-      title={title}
-      {...(description ? { description } : {})}
-      contentClassName="flex min-w-0 flex-col gap-4 overflow-x-auto px-5 py-4"
-      {...(actions ? { footer: actions } : {})}
+    <section
+      aria-labelledby={id}
+      className="bg-background flex min-w-0 flex-col overflow-hidden rounded-xl border"
     >
-      {children}
-    </SettingsCard>
+      <h3 id={id} className="sr-only">
+        {label}
+      </h3>
+      {info ? <InfoBlock>{info}</InfoBlock> : null}
+      <div
+        className={flush ? 'min-w-0' : 'flex min-w-0 flex-col gap-4 overflow-x-auto px-5 py-4'}
+      >
+        {children}
+      </div>
+      {actions ? (
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t px-5 py-3">
+          {actions}
+        </div>
+      ) : null}
+    </section>
   )
 }
 
 /**
- * One list or table region: the title, its line and the primary action sit
- * above a bordered body that holds the search and the rows.
+ * The info block a form-type setting may open with: what the fields add up to,
+ * said once, above them. Not a subtitle — it is part of the form's content.
  */
-export function TableBlock({
-  title,
-  description,
-  actions,
-  children,
-}: {
-  title: string
-  description?: string
-  actions?: ReactNode
-  children: ReactNode
-}) {
-  const id = `table-block-${title.toLowerCase().replace(/[^a-z0-9]+/g, '-')}`
+export function InfoBlock({ children }: { children: ReactNode }) {
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3">
-      <div className="flex min-h-8 items-start justify-between gap-4">
-        <div className="min-w-0">
-          <h2 id={id} className="text-sm font-medium">
-            {title}
-          </h2>
-          {description ? <p className="text-muted-foreground text-[13px]">{description}</p> : null}
-        </div>
-        {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
-      </div>
-      <div className="bg-background flex min-w-0 flex-col gap-4 overflow-x-auto rounded-xl border p-4">
-        {children}
-      </div>
-    </section>
+    <div className="bg-muted/40 text-muted-foreground flex items-start gap-2 border-b px-5 py-3 text-[13px]">
+      <InfoIcon aria-hidden className="mt-0.5 size-3.5 shrink-0" />
+      <div className="flex min-w-0 flex-col gap-1">{children}</div>
+    </div>
+  )
+}
+
+/** How long a hover has to last before a settings hint appears. */
+export const HINT_DELAY_MS = 3000
+
+/**
+ * A one-line explanation, on hover, after a deliberate pause.
+ *
+ * Settings has no subtitles: the empty states do the educating. Where one line
+ * really helps, it waits here — three seconds of hovering, so it never gets in
+ * the way of someone who already knows. With `children` the hint hangs off
+ * them (a button, a label); without, it hangs off a small (i).
+ */
+export function DelayedHint({ text, children }: { text: string; children?: ReactNode }) {
+  return (
+    <Tooltip>
+      <TooltipTrigger
+        delay={HINT_DELAY_MS}
+        render={
+          children ? (
+            <span className="inline-flex" />
+          ) : (
+            <span
+              role="img"
+              aria-label={text}
+              className="text-muted-foreground inline-flex size-4 shrink-0 items-center justify-center"
+            />
+          )
+        }
+      >
+        {children ?? <InfoIcon aria-hidden className="size-3.5" />}
+      </TooltipTrigger>
+      <TooltipContent className="max-w-xs">{text}</TooltipContent>
+    </Tooltip>
+  )
+}
+
+/**
+ * The one table every list-type settings tab opens on: the app's shared
+ * `DetailTable` (itself `EntityList`, the table list pages use), borderless,
+ * with the create action on its toolbar. No title above it; what it is for is
+ * said by `empty` and, on a long hover over the action, by `hint`.
+ */
+export function SettingsTable<T extends object>({
+  label,
+  noun,
+  hint,
+  rows,
+  columns,
+  getRowId,
+  action,
+  isLoading,
+  empty,
+  facet,
+}: {
+  /** Names the table for assistive tech, e.g. "Team". */
+  label: string
+  noun: string
+  /** One short sentence, on a delayed hover over the action. */
+  hint?: string
+  rows: T[]
+  columns: DetailColumn<T>[]
+  getRowId?: (row: T) => string
+  action?: ReactNode
+  isLoading?: boolean
+  /** The first-run state: what this table is for and how to start it. */
+  empty: ReactNode
+  facet?: { label: string; value: (row: T) => string }
+}) {
+  // With no rows the empty state carries the create button itself, so the
+  // toolbar does not offer it a second time above it.
+  const firstRun = !isLoading && rows.length === 0
+  const toolbarAction = firstRun
+    ? undefined
+    : action && hint
+      ? <DelayedHint text={hint}>{action}</DelayedHint>
+      : action
+  return (
+    <DetailTable<T>
+      // Flush with the content column: the settings rail is the frame.
+      className="p-0"
+      label={label}
+      noun={noun}
+      rows={rows}
+      columns={columns}
+      isLoading={isLoading ?? false}
+      {...(getRowId ? { getRowId } : {})}
+      {...(toolbarAction ? { action: toolbarAction } : {})}
+      {...(facet ? { facet } : {})}
+      empty={empty}
+    />
   )
 }
 

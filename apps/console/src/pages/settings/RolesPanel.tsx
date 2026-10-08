@@ -1,9 +1,18 @@
 import type { Role } from '@fp/domain'
-import { grantsEverything } from '@fp/domain'
+import { grantsEverything, summarizePermissions } from '@fp/domain'
 import { useRoles } from '@fp/query'
-import { LoadingRows } from '@fp/ui/compositions'
+import { EmptyState } from '@fp/ui/compositions'
 import { Badge } from '@fp/ui/primitives'
-import { PanelError, WidePanel, toFailure, SettingsBlock } from './panelKit'
+import { ShieldIcon } from 'lucide-react'
+import { PanelError, SettingsTable, WidePanel, toFailure } from './panelKit'
+
+/** One role and who may hold it. */
+interface RoleRow {
+  id: string
+  role: Role
+  forPeople: boolean
+  forMachines: boolean
+}
 
 /**
  * The role catalogue, and what each role can actually do.
@@ -16,13 +25,12 @@ import { PanelError, WidePanel, toFailure, SettingsBlock } from './panelKit'
  * product.
  *
  * Assignment is the part that *is* editable, and it happens where the person
- * is: Members, on the tab beside this one. Saying so is the point of the
- * description — otherwise a reader concludes roles cannot be assigned at all.
+ * is: Team, on the tab beside this one, or the service account's own page.
  *
- * Both audiences are listed, because a service account cannot hold every role
- * a person can (`all_writer` is filtered out of the service-account list live)
- * and a catalogue that showed only one of the two would be quietly wrong on
- * the Service accounts tab.
+ * Both audiences are in the one table, because a service account cannot hold
+ * every role a person can (`all_writer` is filtered out of the service-account
+ * list live) and a catalogue that showed only one of the two would be quietly
+ * wrong about the other.
  */
 export function RolesPanel() {
   const people = useRoles('user')
@@ -44,93 +52,79 @@ export function RolesPanel() {
     )
   }
 
-  if (people.isPending || machines.isPending) {
-    return (
-      <WidePanel>
-        <LoadingRows rows={4} columns={2} />
-      </WidePanel>
-    )
-  }
-
   const peopleRoles = people.data ?? []
   const machineRoles = machines.data ?? []
-  const machineOnly = machineRoles.filter(
-    (role) => !peopleRoles.some((other) => other.id === role.id),
-  )
+  const rows: RoleRow[] = [
+    ...peopleRoles.map((role) => ({
+      id: role.id,
+      role,
+      forPeople: true,
+      forMachines: machineRoles.some((other) => other.id === role.id),
+    })),
+    ...machineRoles
+      .filter((role) => !peopleRoles.some((other) => other.id === role.id))
+      .map((role) => ({ id: role.id, role, forPeople: false, forMachines: true })),
+  ]
 
   return (
     <WidePanel>
-      <SettingsBlock
-        title="Roles"
-        description="Defined by Flexprice, not editable here. Assign them to a person under Members, or to a machine under Service accounts."
-      >
-        {peopleRoles.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
-            This account has no roles defined for people.
-          </p>
-        ) : (
-          <div className="flex flex-col gap-4">
-            {peopleRoles.map((role) => (
-              <RoleCard
-                key={role.id}
-                role={role}
-                forMachines={machineRoles.some((other) => other.id === role.id)}
-              />
-            ))}
-          </div>
-        )}
-      </SettingsBlock>
-
-      {machineOnly.length > 0 ? (
-        <SettingsBlock
-          title="Service-account roles"
-          description="Roles a machine identity may hold but a person may not."
-        >
-          <div className="flex flex-col gap-4">
-            {machineOnly.map((role) => (
-              <RoleCard key={role.id} role={role} forMachines />
-            ))}
-          </div>
-        </SettingsBlock>
-      ) : null}
+      <SettingsTable<RoleRow>
+        label="Roles & permissions"
+        noun="roles"
+        rows={rows}
+        isLoading={people.isPending || machines.isPending}
+        empty={
+          <EmptyState
+            size="inline"
+            icon={<ShieldIcon aria-hidden />}
+            title="No roles are defined for this account"
+            description="Roles come from Flexprice itself, not from this screen. Once they exist you assign them to a person on the Team tab or to a service account under Developers."
+          />
+        }
+        columns={[
+          {
+            key: 'name',
+            header: 'Role',
+            sortBy: (row) => row.role.name || row.id,
+            text: (row) => `${row.role.name} ${row.role.description}`,
+            cell: (row) => (
+              <span className="flex flex-col">
+                <span className="font-medium">{row.role.name || row.id}</span>
+                <code className="text-muted-foreground text-xs">{row.id}</code>
+              </span>
+            ),
+          },
+          {
+            key: 'permissions',
+            header: 'Permissions',
+            width: 420,
+            text: (row) => summarizePermissions(row.role),
+            cell: (row) =>
+              grantsEverything(row.role) ? (
+                <Badge variant="warning-light">Full access</Badge>
+              ) : (
+                <span
+                  className="text-muted-foreground block truncate text-xs"
+                  title={summarizePermissions(row.role)}
+                >
+                  {summarizePermissions(row.role)}
+                </span>
+              ),
+          },
+          {
+            key: 'holders',
+            header: 'Held by',
+            text: (row) =>
+              [row.forPeople ? 'People' : '', row.forMachines ? 'Service accounts' : ''].join(' '),
+            cell: (row) => (
+              <span className="flex flex-wrap gap-1.5">
+                {row.forPeople ? <Badge variant="secondary">People</Badge> : null}
+                {row.forMachines ? <Badge variant="secondary">Service accounts</Badge> : null}
+              </span>
+            ),
+          },
+        ]}
+      />
     </WidePanel>
-  )
-}
-
-function RoleCard({ role, forMachines }: { role: Role; forMachines: boolean }) {
-  const everything = grantsEverything(role)
-
-  return (
-    <div className="flex flex-col gap-2 rounded-lg border p-4">
-      <div className="flex flex-wrap items-center gap-2">
-        <h3 className="text-sm font-medium">{role.name || role.id}</h3>
-        <code className="text-muted-foreground text-xs">{role.id}</code>
-        {everything ? <Badge variant="warning-light">Full access</Badge> : null}
-        {forMachines ? <Badge variant="secondary">Service accounts</Badge> : null}
-      </div>
-
-      {role.description ? (
-        <p className="text-muted-foreground text-sm">{role.description}</p>
-      ) : null}
-
-      {everything ? (
-        <p className="text-sm">Every action on every resource, including managing other members.</p>
-      ) : role.permissions.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No permissions are attached to this role.</p>
-      ) : (
-        <dl className="grid gap-2 sm:grid-cols-2">
-          {role.permissions.map((permission) => (
-            <div key={permission.resource} className="flex flex-col gap-0.5">
-              <dt className="text-xs font-medium">
-                {permission.resource === '*' ? 'All resources' : permission.resource}
-              </dt>
-              <dd className="text-muted-foreground text-xs">
-                {permission.actions.map((action) => (action === '*' ? 'all' : action)).join(', ')}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      )}
-    </div>
   )
 }

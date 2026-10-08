@@ -10,7 +10,6 @@ import {
   EmptyState,
   LoadingRows,
   SettingRow,
-  SettingsCard,
   SettingsFieldGroup,
 } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
@@ -18,6 +17,7 @@ import { useSession } from '@/app/session'
 import {
   ActionError,
   ActionNote,
+  DelayedHint,
   Panel,
   PanelError,
   mutationMessage,
@@ -60,10 +60,7 @@ export function SubscriptionsPanel() {
   if (!environmentId) {
     return (
       <Panel>
-        <SettingsBlock
-          title="Unpaid contracts"
-          description="Stored per environment, so a sandbox experiment cannot cancel a real customer."
-        >
+        <SettingsBlock label="Unpaid contracts">
           <EmptyState
             size="inline"
             title="No environment selected"
@@ -174,10 +171,15 @@ function SubscriptionForm({
         })}
       >
         <Panel>
-          <SettingsCard
-            title="Unpaid contracts"
-            description="Whether Flexprice cancels a contract when its invoices go unpaid, and how long it waits first."
-            footer={
+          <SettingsBlock
+            label="Unpaid contracts"
+            flush
+            info={
+              enabled
+                ? `${Number.isFinite(days) && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'}` : 'Some days'} after an invoice is overdue, the contract is cancelled and stops billing.`
+                : 'Contracts keep running when an invoice is overdue; the invoice stays open in Collections.'
+            }
+            actions={
               <div className="flex w-full flex-wrap items-center justify-between gap-3">
                 <Button
                   type="button"
@@ -206,7 +208,9 @@ function SubscriptionForm({
             >
               <SettingRow
                 title="When an invoice stays unpaid"
-                description="Keeping the contract active is the default. Cancelling a paying customer is something you opt into."
+                titleAddon={
+                  <DelayedHint text="Keeping the contract active is the default. Cancelling a paying customer is something you opt into." />
+                }
               >
                 <div
                   role="group"
@@ -234,7 +238,9 @@ function SubscriptionForm({
               </SettingRow>
               <SettingRow
                 title="Grace period"
-                description="How long non-payment is tolerated before the contract is cancelled. At least one day."
+                titleAddon={
+                  <DelayedHint text="How long non-payment is tolerated before the contract is cancelled. At least one day." />
+                }
                 labelFor="subscription-grace-days"
                 last
               >
@@ -262,12 +268,8 @@ function SubscriptionForm({
                 </div>
               </SettingRow>
             </SettingsFieldGroup>
-            <p className="bg-muted/40 border-t px-5 py-3 text-[13px]">
-              {enabled
-                ? `${Number.isFinite(days) && days > 0 ? `${days} ${days === 1 ? 'day' : 'days'}` : 'Some days'} after an invoice is overdue, the contract is cancelled and stops billing.`
-                : 'Contracts keep running when an invoice is overdue; the invoice stays open in Collections.'}
-            </p>
-          </SettingsCard>
+          </SettingsBlock>
+
         </Panel>
       </form>
 

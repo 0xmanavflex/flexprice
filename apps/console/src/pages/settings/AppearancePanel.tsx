@@ -1,5 +1,5 @@
-import { SettingRow, SettingsCard, SettingsFieldGroup, ThemeToggle } from '@fp/ui/compositions'
-import { Panel } from './panelKit'
+import { SettingRow, SettingsFieldGroup, ThemeToggle } from '@fp/ui/compositions'
+import { Panel, SettingsBlock } from './panelKit'
 
 /**
  * Theme.
@@ -18,23 +18,13 @@ import { Panel } from './panelKit'
 export function AppearancePanel() {
   return (
     <Panel>
-      <SettingsCard
-        title="Theme"
-        description="Light or dark, remembered on this device. The same control sits in the header."
-      >
-        <SettingsFieldGroup
-          legend="Theme"
-          description="Light or dark, remembered on this device."
-        >
-          <SettingRow
-            title="Appearance"
-            description="Switch between light and dark."
-            last
-          >
+      <SettingsBlock label="Theme" flush>
+        <SettingsFieldGroup legend="Theme" description="Light or dark, remembered on this device.">
+          <SettingRow title="Appearance" description="Light or dark, remembered on this device." last>
             <ThemeToggle />
           </SettingRow>
         </SettingsFieldGroup>
-      </SettingsCard>
+      </SettingsBlock>
     </Panel>
   )
 }

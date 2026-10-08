@@ -3,11 +3,9 @@ import {
   DEFAULT_MEMBER_QUERY,
   type InviteMember,
   type Member,
-  type MemberQuery,
   type Role,
   emptyInvite,
   inviteMemberSchema,
-  matchesMemberQuery,
   memberDisplayName,
 } from '@fp/domain'
 import {
@@ -18,7 +16,7 @@ import {
   useUpdateMemberRoles,
   useUserInfo,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field, FormDialog } from '@fp/ui/compositions'
 import {
   Badge,
   Button,
@@ -29,39 +27,32 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@fp/ui/primitives'
 import { UsersIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
   PanelError,
+  SettingsTable,
   WidePanel,
   mutationMessage,
   toFailure,
-  SettingsBlock,
-  TableBlock,
 } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
- * The people in this organisation, and what each of them may do.
+ * Team: the people in this organisation, and what each of them may do.
  *
- * ## Search and role narrowing are client-side, and the screen says so
+ * The section opens straight onto the table — the toolbar (search, Invite) is
+ * the only thing above it.
+ *
+ * ## Search is client-side
  *
  * `POST /users/search` accepts `filters` and `roles` and **silently ignores
  * both**. Verified live: a `contains` filter came back with a row whose name
  * cannot match it. An accepted-and-ignored filter is worse than a rejected one
- * — the list looks filtered and is not — so neither is sent. `matchesMemberQuery`
- * narrows the page that arrived, which means the search reaches the rows on
- * screen and no further, and the caption under the box says exactly that
- * rather than letting someone conclude the organisation has one member named
- * "dana".
+ * — the list looks filtered and is not — so neither is sent. The table's own
+ * search narrows the page that arrived (up to a hundred people).
  *
  * ## Two columns that do not exist
  *
@@ -72,20 +63,17 @@ import { useDraft } from './useDraft'
  * the columns can follow.
  */
 export function MembersPanel() {
-  const [query, setQuery] = useState<MemberQuery>({ ...DEFAULT_MEMBER_QUERY, pageSize: 100 })
   const [isInviting, setIsInviting] = useState(false)
   const [editing, setEditing] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
 
-  const members = useTeamMembers(query)
+  const members = useTeamMembers({ ...DEFAULT_MEMBER_QUERY, pageSize: 100 })
   const roles = useRoles('user')
   const me = useUserInfo()
   const remove = useRemoveMember()
 
-  const failure = toFailure(members.error, 'the members list')
-  const fetched = members.data?.members ?? []
-  const visible = fetched.filter((member) => matchesMemberQuery(member, query))
-  const isFiltered = query.search.trim().length > 0
+  const failure = toFailure(members.error, 'your team')
+  const rows = members.data?.members ?? []
 
   if (failure) {
     return (
@@ -95,113 +83,87 @@ export function MembersPanel() {
     )
   }
 
+  const invite = (
+    <Button size="sm" onClick={() => setIsInviting(true)}>
+      Invite member
+    </Button>
+  )
+
   return (
     <WidePanel>
-      <TableBlock
-        title="Members"
-        description="Everyone who can sign in to this organisation."
-        actions={
-          <Button size="sm" onClick={() => setIsInviting(true)}>
-            Invite member
-          </Button>
-        }
-      >
-        <div className="flex flex-col gap-1.5">
-          <Input
-            type="search"
-            aria-label="Search members"
-            placeholder="Search by name or email"
-            value={query.search}
-            onChange={(event) => setQuery({ ...query, search: event.target.value })}
-          />
-          <p className="text-muted-foreground text-xs">
-            Searches the {fetched.length} member{fetched.length === 1 ? '' : 's'} loaded here. The
-            API accepts a search filter and ignores it, so narrowing is done in the browser rather
-            than pretending to reach the whole directory.
-          </p>
-        </div>
-
-        {members.isPending ? (
-          <LoadingRows rows={4} columns={3} />
-        ) : visible.length === 0 ? (
+      <SettingsTable<Member>
+        label="Team"
+        noun="members"
+        hint="Everyone who can sign in to this organisation, and the roles they hold."
+        rows={rows}
+        isLoading={members.isPending}
+        getRowId={(member) => member.id}
+        action={invite}
+        empty={
           <EmptyState
             size="inline"
             icon={<UsersIcon aria-hidden />}
-            title={isFiltered ? 'No member matches that' : 'No members yet'}
-            description={
-              isFiltered
-                ? 'Nothing in the loaded page matches. Clear the search to see everyone.'
-                : 'Invite someone and they can sign in to this organisation.'
-            }
-            isFiltered={isFiltered}
-            {...(isFiltered
-              ? {
-                  onClearFilters: (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setQuery({ ...query, search: '' })}
-                    >
-                      Clear search
-                    </Button>
-                  ),
-                }
-              : {})}
+            title="Nobody else is on your team yet"
+            description="Invite a teammate by email and choose their roles. They can sign in as soon as the account exists."
+            action={invite}
           />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Roles</TableHead>
-                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">
-                    <span className="flex items-center gap-2">
-                      {memberDisplayName(member)}
-                      {member.id === me.data?.id ? <Badge variant="secondary">You</Badge> : null}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground max-w-40 truncate">
-                    {member.email || '—'}
-                  </TableCell>
-                  <TableCell>
-                    <RoleList roles={member.roles} catalogue={roles.data ?? []} />
-                  </TableCell>
-                  <TableCell className="w-px text-right whitespace-nowrap">
-                    <span className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(member)}>
-                        Edit roles
-                      </Button>
-                      {/*
-                       * Removing yourself locks you out of the console with
-                       * no way back in, so it is not offered. The API would
-                       * allow it.
-                       */}
-                      {member.id === me.data?.id ? null : (
-                        <Button size="sm" variant="ghost" onClick={() => setRemoving(member)}>
-                          Remove
-                        </Button>
-                      )}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        }
+        columns={[
+          {
+            key: 'name',
+            header: 'Name',
+            sortBy: (member) => memberDisplayName(member),
+            text: (member) => memberDisplayName(member),
+            cell: (member) => (
+              <span className="flex items-center gap-2 font-medium">
+                {memberDisplayName(member)}
+                {member.id === me.data?.id ? <Badge variant="secondary">You</Badge> : null}
+              </span>
+            ),
+          },
+          {
+            key: 'email',
+            header: 'Email',
+            sortBy: (member) => member.email,
+            cell: (member) => (
+              <span className="text-muted-foreground truncate">{member.email || '—'}</span>
+            ),
+          },
+          {
+            key: 'roles',
+            header: 'Roles',
+            text: (member) => member.roles.join(' '),
+            cell: (member) => <RoleList roles={member.roles} catalogue={roles.data ?? []} />,
+          },
+          {
+            key: 'actions',
+            header: '',
+            width: 180,
+            cell: (member) => (
+              <span className="flex justify-end gap-1">
+                <Button size="sm" variant="ghost" onClick={() => setEditing(member)}>
+                  Edit roles
+                </Button>
+                {/*
+                 * Removing yourself locks you out of the console with no way
+                 * back in, so it is not offered. The API would allow it.
+                 */}
+                {member.id === me.data?.id ? null : (
+                  <Button size="sm" variant="ghost" onClick={() => setRemoving(member)}>
+                    Remove
+                  </Button>
+                )}
+              </span>
+            ),
+          },
+        ]}
+      />
 
-        {members.data && members.data.total > fetched.length ? (
-          <p className="text-muted-foreground text-xs">
-            Showing {fetched.length} of {members.data.total}.
-          </p>
-        ) : null}
-      </TableBlock>
+      {members.data && members.data.total > rows.length ? (
+        <p className="text-muted-foreground text-xs">
+          Showing {rows.length} of {members.data.total}.
+        </p>
+      ) : null}
 
       <InviteDialog
         open={isInviting}
@@ -212,7 +174,8 @@ export function MembersPanel() {
       />
 
       {editing ? (
-        <EditRolesSection
+        <EditRolesDialog
+          key={editing.id}
           member={editing}
           roles={roles.data ?? []}
           onDone={() => setEditing(null)}
@@ -359,8 +322,12 @@ function InviteDialog({
   )
 }
 
-/** Changing one person's roles. `PUT /users/:id/roles` takes the whole set. */
-function EditRolesSection({
+/**
+ * Changing one person's roles, in a small dialog over the table rather than a
+ * titled card under it. `PUT /users/:id/roles` takes the whole set, so what is
+ * highlighted is exactly what they will hold.
+ */
+function EditRolesDialog({
   member,
   roles,
   onDone,
@@ -373,33 +340,40 @@ function EditRolesSection({
   const [selected, setSelected] = useState<string[]>(member.roles)
 
   const error = mutationMessage(update.error, 'The roles could not be saved.')
+  const name = memberDisplayName(member)
 
   return (
-    <SettingsBlock
-      title={`Roles for ${memberDisplayName(member)}`}
-      description="The whole set is replaced, so what is highlighted here is what they will hold."
+    <FormDialog
+      open
+      size="sm"
+      title={`Roles for ${name}`}
+      onOpenChange={(open) => {
+        if (!open && !update.isPending) onDone()
+      }}
     >
-      <RolePicker
-        label={`Roles for ${memberDisplayName(member)}`}
-        roles={roles}
-        selected={selected}
-        disabled={update.isPending}
-        onChange={setSelected}
-      />
-
-      <ActionError message={error} />
-
-      <div className="flex items-center gap-3">
-        <Button
+      <div className="flex flex-col gap-4">
+        <RolePicker
+          label={`Roles for ${name}`}
+          roles={roles}
+          selected={selected}
           disabled={update.isPending}
-          onClick={() => update.mutate({ id: member.id, roles: selected }, { onSuccess: onDone })}
-        >
-          {update.isPending ? 'Saving…' : 'Save roles'}
-        </Button>
-        <Button variant="ghost" disabled={update.isPending} onClick={onDone}>
-          Cancel
-        </Button>
+          onChange={setSelected}
+        />
+
+        <ActionError message={error} />
+
+        <div className="flex items-center justify-end gap-2">
+          <Button variant="outline" disabled={update.isPending} onClick={onDone}>
+            Cancel
+          </Button>
+          <Button
+            disabled={update.isPending}
+            onClick={() => update.mutate({ id: member.id, roles: selected }, { onSuccess: onDone })}
+          >
+            {update.isPending ? 'Saving…' : 'Save roles'}
+          </Button>
+        </div>
       </div>
-    </SettingsBlock>
+    </FormDialog>
   )
 }

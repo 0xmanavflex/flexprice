@@ -4,9 +4,7 @@ import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BadgeDollarSignIcon,
   BellIcon,
-  BotIcon,
   CoinsIcon,
-  KeyRoundIcon,
   PercentIcon,
   ReceiptTextIcon,
   RepeatIcon,
@@ -15,21 +13,17 @@ import {
   TicketPercentIcon,
   UsersIcon,
 } from 'lucide-react'
-import { AlertRulesPanel } from './AlertRulesPanel'
-import { ApiKeysPanel } from './ApiKeysPanel'
 import { AppearancePanel } from './AppearancePanel'
 import { CurrenciesPanel } from './CurrenciesPanel'
-import { EnvironmentsPanel } from './EnvironmentsPanel'
 import { InvoicesPanel } from './InvoicesPanel'
-import { LabelsPanel } from './LabelsPanel'
 import { OnboardingPanel } from './OnboardingPanel'
 import { PortalPanel } from './PortalPanel'
 import { MembersPanel } from './MembersPanel'
 import { PlanUsagePanel } from './PlanUsagePanel'
 import { ProfilePanel } from './ProfilePanel'
 import { RolesPanel } from './RolesPanel'
-import { ServiceAccountsPanel } from './ServiceAccountsPanel'
 import { SubscriptionsPanel } from './SubscriptionsPanel'
+import { TagsPanel } from './TagsPanel'
 import { WalletAlertsPanel } from './WalletAlertsPanel'
 import { WebhooksPanel } from './WebhooksPanel'
 import { SettingsUnavailable, UNAVAILABLE_COPY } from './SettingsUnavailable'
@@ -70,7 +64,7 @@ export interface SettingsPageProps {
   tabId: string
   /** Writes both ids at once. The route owns the navigation. */
   onNavigate: (sectionId: string, tabId: string) => void
-  /** Opens a row that is a page of its own (Discounts, Taxes, Cost tracking, Labels). */
+  /** Opens a row that is a page of its own (Discounts, Taxes, Cost tracking), or a tag's detail page. */
   onOpenPage: (href: string) => void
 }
 
@@ -89,10 +83,8 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   subscription: <RepeatIcon aria-hidden className="size-4" />,
   currency: <BadgeDollarSignIcon aria-hidden className="size-4" />,
   alerts: <BellIcon aria-hidden className="size-4" />,
-  labels: <TagIcon aria-hidden className="size-4" />,
+  tags: <TagIcon aria-hidden className="size-4" />,
   'customer-experience': <SmileIcon aria-hidden className="size-4" />,
-  'api-keys': <KeyRoundIcon aria-hidden className="size-4" />,
-  'service-accounts': <BotIcon aria-hidden className="size-4" />,
 }
 
 /**
@@ -116,7 +108,6 @@ export function toShellSections(): SettingsSection[] {
     (section) => ({
       id: section.id,
       label: section.label,
-      ...('description' in section ? { description: section.description } : {}),
       ...('hidden' in section ? { hidden: true } : {}),
       ...(SECTION_ICONS[section.id] ? { icon: SECTION_ICONS[section.id] } : {}),
       tabs: section.tabs.map((tab) => ({ id: tab.id, label: tab.label })),
@@ -220,8 +211,6 @@ function SettingsPanel({
       return <ProfilePanel />
     case 'organization/plan':
       return <PlanUsagePanel />
-    case 'organization/environments':
-      return <EnvironmentsPanel />
     case 'team/members':
       return <MembersPanel />
     case 'team/roles':
@@ -236,16 +225,10 @@ function SettingsPanel({
       return <PortalPanel />
     case 'customer-experience/onboarding':
       return <OnboardingPanel />
-    case 'api-keys/api-keys':
-      return <ApiKeysPanel />
-    case 'service-accounts/service-accounts':
-      return <ServiceAccountsPanel />
-    case 'labels/labels':
-      return <LabelsPanel onOpenPage={onOpenPage} />
+    case 'tags/tags':
+      return <TagsPanel onOpenPage={onOpenPage} />
     case 'webhooks/webhooks':
       return <WebhooksPanel />
-    case 'alerts/alert-rules':
-      return <AlertRulesPanel />
     case 'alerts/wallet-alerts':
       return <WalletAlertsPanel />
     case 'appearance/theme':

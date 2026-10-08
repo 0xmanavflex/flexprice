@@ -13,55 +13,39 @@ import {
   isExpired,
 } from '@fp/domain'
 import { DEFAULT_API_KEY_QUERY, useApiKeys, useCreateApiKey, useDeleteApiKey } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
-import {
-  Badge,
-  Button,
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  Input,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@fp/ui/primitives'
-import { KeyRoundIcon } from 'lucide-react'
+import { ConfirmDialog, EmptyState, Field, FormDialog, LoadingRows } from '@fp/ui/compositions'
+import { Badge, Button, Input } from '@fp/ui/primitives'
+import { CheckIcon, CopyIcon, KeyRoundIcon } from 'lucide-react'
 import {
   ActionError,
-  ActionNote,
+  DelayedHint,
   PanelError,
   WidePanel,
   formatDate,
   mutationMessage,
   toFailure,
-  SettingsBlock,
-  TableBlock,
 } from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
- * API keys — list, issue, revoke.
+ * API keys — list, issue, revoke. Lives under Developers (`/api-keys`).
+ *
+ * ## A snippet list, not a data table
+ *
+ * A key is something you look at, copy and occasionally revoke; nobody sorts,
+ * filters or pages through them. So each key is one compact row — name and
+ * dates on the left, the masked key in monospace with a copy button, Revoke —
+ * inside one outline, with no toolbar beyond the create button. Deliberate
+ * deviation from the shared table, by product request.
  *
  * ## The secret exists for one render
  *
  * `POST /secrets/api/keys` returns the key material exactly once and never
  * again; `useCreateApiKey` resolves `{ secret, key }` and the secret is
  * deliberately **not** put in the query cache, so a refetch, a remount or a
- * reload loses it for good. That is the correct behaviour for a credential and
- * it puts a requirement on this screen: the one render it gets has to be
- * unmistakable.
- *
- * So the secret appears in a panel of its own, with a copy button, and with a
- * sentence saying plainly that this is the only time it will be shown. It is
- * dismissed by an explicit "I have saved it", not by a timer and not by
- * navigating — a credential that vanishes because somebody clicked elsewhere
- * is a support ticket.
+ * reload loses it for good. The create dialog turns into the secret's one
+ * render: copy button, a plain sentence saying this is the only time, and an
+ * explicit "I have saved it" to close — not a timer, not a click elsewhere.
  */
 export function ApiKeysPanel() {
   const keys = useApiKeys(DEFAULT_API_KEY_QUERY)
@@ -83,93 +67,51 @@ export function ApiKeysPanel() {
     )
   }
 
+  const createButton = (
+    <Button size="sm" onClick={() => setIsCreating(true)}>
+      Create API key
+    </Button>
+  )
+
   return (
     <WidePanel>
-      {issued ? <IssuedSecret issued={issued} onDismiss={() => setIssued(null)} /> : null}
-
-      <TableBlock
-        title="API keys"
-        description="What your systems authenticate with when they send usage or read billing data."
-        actions={
-          <Button size="sm" onClick={() => setIsCreating(true)}>
-            Create API key
-          </Button>
-        }
-      >
+      <section className="flex flex-col gap-3">
+        <h1 className="sr-only">API keys</h1>
         {keys.isPending ? (
-          <LoadingRows rows={3} columns={4} />
+          <LoadingRows rows={3} columns={3} />
         ) : rows.length === 0 ? (
           <EmptyState
             size="inline"
             icon={<KeyRoundIcon aria-hidden />}
             title="No API keys yet"
-            description="An API key lets your systems send usage and read billing data without a person signing in."
+            description="An API key lets your systems send usage and read billing data without a person signing in. Create one per system so you can revoke it on its own."
+            action={createButton}
           />
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Last used</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            <div className="flex justify-end">
+              <DelayedHint text="What your systems authenticate with when they send usage or read billing data.">
+                {createButton}
+              </DelayedHint>
+            </div>
+            <ul aria-label="API keys" className="bg-background divide-y rounded-xl border">
               {rows.map((key) => (
-                <TableRow key={key.id}>
-                  <TableCell className="whitespace-normal">
-                    <span className="flex flex-col">
-                      <span className="font-medium">{key.name || key.displayId || key.id}</span>
-                      {key.serviceAccountName ? (
-                        <span className="text-muted-foreground text-xs">
-                          {key.serviceAccountName}
-                        </span>
-                      ) : null}
-                    </span>
-                  </TableCell>
-                  <TableCell className="whitespace-normal">
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="secondary">{API_KEY_TYPE_LABEL[key.type]}</Badge>
-                      {key.status === ApiKeyStatus.Published ? null : (
-                        <Badge variant="destructive-light">
-                          {API_KEY_STATUS_LABEL[key.status]}
-                        </Badge>
-                      )}
-                      {isExpired(key) ? <Badge variant="warning-light">Expired</Badge> : null}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(key.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {/* null means never used, which is not the same as unknown. */}
-                    {key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Never'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {key.expiresAt ? formatDate(key.expiresAt) : 'Never'}
-                  </TableCell>
-                  <TableCell className="w-px text-right whitespace-nowrap">
-                    <Button size="sm" variant="ghost" onClick={() => setRevoking(key)}>
-                      Revoke
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                <KeyRow key={key.id} apiKey={key} onRevoke={() => setRevoking(key)} />
               ))}
-            </TableBody>
-          </Table>
+            </ul>
+          </>
         )}
-      </TableBlock>
+      </section>
 
       <CreateKeyDialog
         open={isCreating}
+        issued={issued}
         isPending={create.isPending}
         error={mutationMessage(create.error, 'The key could not be created.')}
-        onOpenChange={(open) => {
-          if (open) return
+        onClose={() => {
+          if (create.isPending) return
           setIsCreating(false)
+          setIssued(null)
           create.reset()
         }}
         onSubmit={(draft) => {
@@ -180,7 +122,6 @@ export function ApiKeysPanel() {
               // putting it in the cache is what would let it outlive the
               // one moment it is meant to be visible.
               setIssued(result)
-              setIsCreating(false)
             })
             .catch(() => {
               // Already surfaced through `create.error`; swallowed so the
@@ -212,68 +153,102 @@ export function ApiKeysPanel() {
   )
 }
 
-/**
- * The one render the secret gets.
- *
- * Read-only input rather than plain text so it can be selected, focused and
- * copied with the keyboard as well as the button; `spellCheck={false}` because
- * a browser underlining a credential in red reads as an error.
- */
-function IssuedSecret({ issued, onDismiss }: { issued: CreatedApiKey; onDismiss: () => void }) {
-  const [copied, setCopied] = useState(false)
+/** The prefix the API keeps, padded so it reads as a key with the rest hidden. */
+function maskedKey(key: ApiKey): string {
+  return `${key.displayId || key.id}${'•'.repeat(12)}`
+}
 
+/** One key: name and dates, the masked key with copy, Revoke. */
+function KeyRow({ apiKey, onRevoke }: { apiKey: ApiKey; onRevoke: () => void }) {
+  const name = apiKey.name || apiKey.displayId || apiKey.id
   return (
-    <SettingsBlock
-      title="Copy this key now"
-      description="This is the only time Flexprice will show it. Closing this panel does not revoke the key — it just means the secret is gone from this screen for good, and a lost key has to be revoked and replaced."
-    >
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-        <Input
-          readOnly
-          spellCheck={false}
-          aria-label={`Secret for ${issued.key.name || 'the new API key'}`}
-          value={issued.secret}
-          className="font-mono text-xs"
-          onFocus={(event) => event.currentTarget.select()}
-        />
-        <Button
-          variant="outline"
-          onClick={() => {
-            void navigator.clipboard
-              .writeText(issued.secret)
-              .then(() => setCopied(true))
-              // Clipboard access can be refused; the field is still selectable,
-              // so the fallback is to say nothing rather than claim success.
-              .catch(() => setCopied(false))
-          }}
-        >
-          {copied ? 'Copied' : 'Copy'}
-        </Button>
+    <li className="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 py-3">
+      <div className="flex min-w-48 flex-1 flex-col gap-0.5">
+        <span className="flex flex-wrap items-center gap-1.5 text-sm font-medium">
+          {name}
+          <Badge variant="secondary" size="sm">
+            {API_KEY_TYPE_LABEL[apiKey.type]}
+          </Badge>
+          {apiKey.status === ApiKeyStatus.Published ? null : (
+            <Badge variant="destructive-light" size="sm">
+              {API_KEY_STATUS_LABEL[apiKey.status]}
+            </Badge>
+          )}
+          {isExpired(apiKey) ? (
+            <Badge variant="warning-light" size="sm">
+              Expired
+            </Badge>
+          ) : null}
+        </span>
+        <span className="text-muted-foreground text-xs">
+          Created {formatDate(apiKey.createdAt)}
+          {apiKey.serviceAccountName ? ` · ${apiKey.serviceAccountName}` : ''}
+          {/* null means never used, which is not the same as unknown. */}
+          {` · Last used ${apiKey.lastUsedAt ? formatDate(apiKey.lastUsedAt) : 'never'}`}
+          {apiKey.expiresAt ? ` · Expires ${formatDate(apiKey.expiresAt)}` : ''}
+        </span>
       </div>
+      <CopySnippet value={apiKey.displayId || apiKey.id} display={maskedKey(apiKey)} label={name} />
+      <Button size="sm" variant="ghost" onClick={onRevoke}>
+        Revoke
+      </Button>
+    </li>
+  )
+}
 
-      <ActionNote message={copied ? 'Copied to your clipboard.' : null} />
-
-      <div>
-        <Button variant="secondary" onClick={onDismiss}>
-          I have saved it
-        </Button>
-      </div>
-    </SettingsBlock>
+/**
+ * A monospace value with a copy button beside it.
+ *
+ * `value` is what is copied, `display` what is shown — for a stored key they
+ * differ (the visible prefix, padded with dots), for a fresh secret they are
+ * the same string.
+ */
+function CopySnippet({
+  value,
+  display,
+  label,
+}: {
+  value: string
+  display?: string
+  label: string
+}) {
+  const [copied, setCopied] = useState(false)
+  return (
+    <span className="bg-muted flex max-w-full min-w-0 items-center gap-1 rounded-md py-0.5 pr-0.5 pl-2.5">
+      <code className="truncate font-mono text-xs">{display ?? value}</code>
+      <Button
+        type="button"
+        size="icon-xs"
+        variant="ghost"
+        aria-label={copied ? `Copied ${label}` : `Copy ${label}`}
+        onClick={() => {
+          void navigator.clipboard
+            .writeText(value)
+            .then(() => setCopied(true))
+            // Clipboard access can be refused; say nothing rather than claim success.
+            .catch(() => setCopied(false))
+        }}
+      >
+        {copied ? <CheckIcon aria-hidden /> : <CopyIcon aria-hidden />}
+      </Button>
+    </span>
   )
 }
 
 function CreateKeyDialog({
   open,
+  issued,
   isPending,
   error,
   onSubmit,
-  onOpenChange,
+  onClose,
 }: {
   open: boolean
+  issued: CreatedApiKey | null
   isPending: boolean
   error: string | null
   onSubmit: (draft: CreateApiKey) => void
-  onOpenChange: (open: boolean) => void
+  onClose: () => void
 }) {
   const draft = useDraft<CreateApiKey>(createApiKeySchema, emptyApiKey())
   const wasOpen = useRef(false)
@@ -296,60 +271,62 @@ function CreateKeyDialog({
   )
 
   return (
-    <Dialog
+    <FormDialog
       open={open}
+      size="sm"
+      title={issued ? 'Copy this key now' : 'New API key'}
       onOpenChange={(next) => {
-        if (!next && isPending) return
-        onOpenChange(next)
+        // The secret is dismissed by "I have saved it", never by a stray click.
+        if (!next && !issued) onClose()
       }}
     >
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle>New API key</DialogTitle>
-          <DialogDescription>Name it after the system that will hold it.</DialogDescription>
-        </DialogHeader>
-        <form
-          id="create-api-key"
-          className="flex flex-col gap-4"
-          noValidate
-          onSubmit={draft.handleSubmit(onSubmit)}
-        >
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field
-              label="Name"
-              required
-              {...(draft.error('name') ? { error: draft.error('name') } : {})}
-            >
-              {({ id, ...field }) => (
-                <Input
-                  id={id}
-                  autoFocus
-                  placeholder="Billing worker"
-                  disabled={isPending}
-                  value={draft.text('name')}
-                  onChange={(event) => draft.setText('name', event.target.value)}
-                  {...field}
-                />
-              )}
-            </Field>
-
-            <Field
-              label="Expires on"
-              hint="Leave blank for a key that never expires."
-              {...(draft.error('expiresAt') ? { error: draft.error('expiresAt') } : {})}
-            >
-              {({ id, ...field }) => (
-                <Input
-                  id={id}
-                  type="date"
-                  disabled={isPending}
-                  value={draft.text('expiresAt')}
-                  onChange={(event) => draft.setText('expiresAt', event.target.value)}
-                  {...field}
-                />
-              )}
-            </Field>
+      {issued ? (
+        <div className="flex flex-col gap-4">
+          <p className="text-muted-foreground text-sm">
+            This is the only time Flexprice will show it. A lost key has to be revoked and
+            replaced.
+          </p>
+          <CopySnippet value={issued.secret} label={issued.key.name || 'the new API key'} />
+          <div className="flex justify-end">
+            <Button onClick={onClose}>I have saved it</Button>
           </div>
+        </div>
+      ) : (
+        <form className="flex flex-col gap-4" noValidate onSubmit={draft.handleSubmit(onSubmit)}>
+          <Field
+            label="Name"
+            required
+            {...(draft.error('name') ? { error: draft.error('name') } : {})}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                autoFocus
+                placeholder="Billing worker"
+                disabled={isPending}
+                value={draft.text('name')}
+                onChange={(event) => draft.setText('name', event.target.value)}
+                {...field}
+              />
+            )}
+          </Field>
+
+          <Field
+            label="Expires on"
+            hint="Leave blank for a key that never expires."
+            {...(draft.error('expiresAt') ? { error: draft.error('expiresAt') } : {})}
+          >
+            {({ id, ...field }) => (
+              <Input
+                id={id}
+                type="date"
+                disabled={isPending}
+                value={draft.text('expiresAt')}
+                onChange={(event) => draft.setText('expiresAt', event.target.value)}
+                {...field}
+              />
+            )}
+          </Field>
 
           <fieldset className="flex flex-col gap-1.5" disabled={isPending}>
             <legend className="text-sm font-medium">Type</legend>
@@ -369,27 +346,23 @@ function CreateKeyDialog({
             </div>
             <p className="text-muted-foreground text-xs">
               {type === ApiKeyType.Publishable
-                ? 'A publishable key is safe to ship in a browser or mobile app. It can only do what a customer may do.'
-                : 'A secret key can do anything your account can. Keep it on a server.'}
+                ? 'Safe to ship in a browser or mobile app. It can only do what a customer may do.'
+                : 'Can do anything your account can. Keep it on a server.'}
             </p>
           </fieldset>
 
           <ActionError message={error} />
+
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" disabled={isPending} onClick={onClose}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isPending}>
+              {isPending ? 'Creating…' : 'Create key'}
+            </Button>
+          </div>
         </form>
-        <DialogFooter>
-          <Button
-            type="button"
-            variant="outline"
-            disabled={isPending}
-            onClick={() => onOpenChange(false)}
-          >
-            Cancel
-          </Button>
-          <Button type="submit" form="create-api-key" disabled={isPending}>
-            {isPending ? 'Creating…' : 'Create key'}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+      )}
+    </FormDialog>
   )
 }

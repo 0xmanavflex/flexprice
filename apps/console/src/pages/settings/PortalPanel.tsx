@@ -36,6 +36,7 @@ import { useSession } from '@/app/session'
 import {
   ActionError,
   ActionNote,
+  DelayedHint,
   Fact,
   Panel,
   PanelError,
@@ -141,8 +142,7 @@ function PortalForm({
     >
       <Panel>
         <SettingsBlock
-          title="Customer portal"
-          description="The sections and tabs a customer sees when they sign in to their own portal. A tab is only reachable if its section is switched on too."
+          label="Customer portal"
           actions={
             <Button
               type="button"
@@ -163,15 +163,15 @@ function PortalForm({
               <span className="font-mono text-xs">{draft.value.version || '—'}</span>
             </Fact>
             <Fact label="Visible to customers">
-              {visible.length === 0 ? 'Nothing — the portal is empty' : visible.join(', ')}
+              <span className="flex items-center gap-1.5">
+                {visible.length === 0 ? 'Nothing — the portal is empty' : visible.join(', ')}
+                <DelayedHint text="Drag to reorder. The eye shows or hides a part of the portal; hiding a section hides all its tabs, and a tab is only reachable if its section is on." />
+              </span>
             </Fact>
           </dl>
         </SettingsBlock>
 
-        <SettingsBlock
-          title="Sections and tabs"
-          description="Drag to reorder. The eye shows or hides a part of the portal; hiding a section hides all its tabs."
-        >
+        <SettingsBlock label="Sections and tabs">
           {sections.length === 0 ? (
             <EmptyState
               size="inline"
@@ -227,8 +227,7 @@ function PortalForm({
         </SettingsBlock>
 
         <SettingsBlock
-          title="Theme"
-          description="The three colours the backend stores. Anything else V1's theme editor offered was never saved, so it is not offered here."
+          label="Theme"
           actions={
             <div className="flex w-full flex-wrap items-center justify-end gap-3">
               <ActionError message={saveError} />
@@ -357,7 +356,7 @@ function SectionRow({
           ids={tabs.map((tab) => tab.id)}
           disabled={busy}
           onReorder={onReorderTabs}
-          className={cx('ml-3 border-l pl-6', !section.enabled && 'opacity-60')}
+          className={cx('ml-3 border-l pl-6', !section.enabled && SUBDUED)}
         >
           {tabs.map((tab) => {
             const label = portalTabLabel(tab.type)
@@ -373,7 +372,7 @@ function SectionRow({
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-3">
                       {tabGrip}
-                      <span className="flex-1 text-sm">
+                      <span className={cx('flex-1 text-sm', !tab.enabled && SUBDUED)}>
                         {label}
                         {tab.type in PORTAL_TAB_TYPE_LABEL ? null : (
                           <span className="text-muted-foreground ml-2 font-mono text-xs">
@@ -390,7 +389,7 @@ function SectionRow({
                     </div>
 
                     {tab.metricCards ? (
-                      <TabSetting label="Cards">
+                      <TabSetting label="Cards" off={!tab.enabled}>
                         <div
                           role="group"
                           aria-label="Metric cards"
@@ -427,7 +426,7 @@ function SectionRow({
                     {tab.usageGraph ? (
                       <>
                         {tab.usageGraph.datePresets.length > 0 ? (
-                          <TabSetting label="Opens on">
+                          <TabSetting label="Opens on" off={!tab.enabled}>
                             <div className="w-56">
                               <OptionSelect
                                 value={tab.usageGraph.defaultPreset ?? undefined}
@@ -445,7 +444,7 @@ function SectionRow({
                             </div>
                           </TabSetting>
                         ) : null}
-                        <TabSetting label="Date range">
+                        <TabSetting label="Date range" off={!tab.enabled}>
                           <CheckboxRow
                             checked={tab.usageGraph.allowCustomDateRange}
                             disabled={busy}
@@ -474,10 +473,27 @@ const presetLabel = (preset: string): string => {
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
+/**
+ * How a part of the portal that is switched off looks: the same treatment for
+ * a hidden section's tabs, a hidden tab and a metric card that is off, so
+ * "this will not be shown" reads the same at every level. The eye stays at
+ * full strength so it is obvious how to turn the row back on.
+ */
+const SUBDUED = 'text-muted-foreground opacity-60 blur-[0.5px]'
+
 /** A quiet label beside a tab's own setting, aligned with the tab's name. */
-function TabSetting({ label, children }: { label: string; children: ReactNode }) {
+function TabSetting({
+  label,
+  off = false,
+  children,
+}: {
+  label: string
+  /** The tab is hidden, so its settings are subdued with it. */
+  off?: boolean
+  children: ReactNode
+}) {
   return (
-    <div className="flex items-center gap-3 pl-9">
+    <div className={cx('flex items-center gap-3 pl-9', off && SUBDUED)}>
       <span className="text-muted-foreground w-20 shrink-0 text-[13px]">{label}</span>
       {children}
     </div>
@@ -504,7 +520,8 @@ function Chip({
       onClick={() => onChange(!on)}
       className={cx(
         'focus-visible:ring-ring/50 rounded-full border px-3 py-1 text-sm outline-none focus-visible:ring-3 disabled:opacity-50',
-        on ? 'bg-muted text-foreground' : 'text-muted-foreground border-dashed',
+        on ? 'bg-muted text-foreground' : cx('border-dashed', SUBDUED),
+
       )}
     >
       {label}
