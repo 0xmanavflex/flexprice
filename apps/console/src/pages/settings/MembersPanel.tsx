@@ -3,11 +3,9 @@ import {
   DEFAULT_MEMBER_QUERY,
   type InviteMember,
   type Member,
-  type MemberQuery,
   type Role,
   emptyInvite,
   inviteMemberSchema,
-  matchesMemberQuery,
   memberDisplayName,
 } from '@fp/domain'
 import {
@@ -18,7 +16,7 @@ import {
   useUpdateMemberRoles,
   useUserInfo,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field } from '@fp/ui/compositions'
 import {
   Badge,
   Button,
@@ -29,12 +27,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@fp/ui/primitives'
 import { UsersIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
@@ -45,7 +37,7 @@ import {
   mutationMessage,
   toFailure,
   SettingsBlock,
-  TableBlock,
+  SettingsTable,
 } from './panelKit'
 import { useDraft } from './useDraft'
 
@@ -72,7 +64,7 @@ import { useDraft } from './useDraft'
  * the columns can follow.
  */
 export function MembersPanel() {
-  const [query, setQuery] = useState<MemberQuery>({ ...DEFAULT_MEMBER_QUERY, pageSize: 100 })
+  const [query] = useState({ ...DEFAULT_MEMBER_QUERY, pageSize: 100 })
   const [isInviting, setIsInviting] = useState(false)
   const [editing, setEditing] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
@@ -84,8 +76,6 @@ export function MembersPanel() {
 
   const failure = toFailure(members.error, 'the members list')
   const fetched = members.data?.members ?? []
-  const visible = fetched.filter((member) => matchesMemberQuery(member, query))
-  const isFiltered = query.search.trim().length > 0
 
   if (failure) {
     return (
@@ -97,111 +87,79 @@ export function MembersPanel() {
 
   return (
     <WidePanel>
-      <TableBlock
-        title="Members"
-        description="Everyone who can sign in to this organisation."
-        actions={
+      <SettingsTable<Member>
+        label="Members"
+        noun="members"
+        hint="Everyone who can sign in to this organisation. Search covers the members loaded here."
+        rows={fetched}
+        isLoading={members.isPending}
+        getRowId={(member) => member.id}
+        action={
           <Button size="sm" onClick={() => setIsInviting(true)}>
             Invite member
           </Button>
         }
-      >
-        <div className="flex flex-col gap-1.5">
-          <Input
-            type="search"
-            aria-label="Search members"
-            placeholder="Search by name or email"
-            value={query.search}
-            onChange={(event) => setQuery({ ...query, search: event.target.value })}
-          />
-          <p className="text-muted-foreground text-xs">
-            Searches the {fetched.length} member{fetched.length === 1 ? '' : 's'} loaded here. The
-            API accepts a search filter and ignores it, so narrowing is done in the browser rather
-            than pretending to reach the whole directory.
-          </p>
-        </div>
-
-        {members.isPending ? (
-          <LoadingRows rows={4} columns={3} />
-        ) : visible.length === 0 ? (
+        empty={
           <EmptyState
             size="inline"
             icon={<UsersIcon aria-hidden />}
-            title={isFiltered ? 'No member matches that' : 'No members yet'}
-            description={
-              isFiltered
-                ? 'Nothing in the loaded page matches. Clear the search to see everyone.'
-                : 'Invite someone and they can sign in to this organisation.'
-            }
-            isFiltered={isFiltered}
-            {...(isFiltered
-              ? {
-                  onClearFilters: (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setQuery({ ...query, search: '' })}
-                    >
-                      Clear search
-                    </Button>
-                  ),
-                }
-              : {})}
+            title="No members yet"
+            description="Invite someone and they can sign in to this organisation."
           />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Roles</TableHead>
-                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((member) => (
-                <TableRow key={member.id}>
-                  <TableCell className="font-medium">
-                    <span className="flex items-center gap-2">
-                      {memberDisplayName(member)}
-                      {member.id === me.data?.id ? <Badge variant="secondary">You</Badge> : null}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground max-w-40 truncate">
-                    {member.email || '—'}
-                  </TableCell>
-                  <TableCell>
-                    <RoleList roles={member.roles} catalogue={roles.data ?? []} />
-                  </TableCell>
-                  <TableCell className="w-px text-right whitespace-nowrap">
-                    <span className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setEditing(member)}>
-                        Edit roles
-                      </Button>
-                      {/*
-                       * Removing yourself locks you out of the console with
-                       * no way back in, so it is not offered. The API would
-                       * allow it.
-                       */}
-                      {member.id === me.data?.id ? null : (
-                        <Button size="sm" variant="ghost" onClick={() => setRemoving(member)}>
-                          Remove
-                        </Button>
-                      )}
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
+        }
+        columns={[
+          {
+            key: 'name',
+            header: 'Name',
+            sortBy: (member) => memberDisplayName(member),
+            text: (member) => `${memberDisplayName(member)} ${member.email}`,
+            cell: (member) => (
+              <span className="flex items-center gap-2 font-medium">
+                {memberDisplayName(member)}
+                {member.id === me.data?.id ? <Badge variant="secondary">You</Badge> : null}
+              </span>
+            ),
+          },
+          {
+            key: 'email',
+            header: 'Email',
+            sortBy: (member) => member.email,
+            cell: (member) => <span className="text-muted-foreground">{member.email || '—'}</span>,
+          },
+          {
+            key: 'roles',
+            header: 'Roles',
+            cell: (member) => <RoleList roles={member.roles} catalogue={roles.data ?? []} />,
+          },
+          {
+            key: 'actions',
+            header: '',
+            width: 160,
+            cell: (member) => (
+              <span className="flex justify-end gap-1">
+                <Button size="sm" variant="ghost" onClick={() => setEditing(member)}>
+                  Edit roles
+                </Button>
+                {/*
+                 * Removing yourself locks you out of the console with no way
+                 * back in, so it is not offered. The API would allow it.
+                 */}
+                {member.id === me.data?.id ? null : (
+                  <Button size="sm" variant="ghost" onClick={() => setRemoving(member)}>
+                    Remove
+                  </Button>
+                )}
+              </span>
+            ),
+          },
+        ]}
+      />
 
-        {members.data && members.data.total > fetched.length ? (
-          <p className="text-muted-foreground text-xs">
-            Showing {fetched.length} of {members.data.total}.
-          </p>
-        ) : null}
-      </TableBlock>
+      {members.data && members.data.total > fetched.length ? (
+        <p className="text-muted-foreground text-xs">
+          Showing {fetched.length} of {members.data.total}.
+        </p>
+      ) : null}
 
       <InviteDialog
         open={isInviting}

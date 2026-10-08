@@ -95,7 +95,7 @@ export const FOOTER_NAV: NavEntry[] = [
  * Destinations that are real routes but not rows in the rail.
  *
  * Settings itself (reached from the account menu), the pages it lists but which keep their own routes (Discounts, Taxes,
- * Cost Tracking), Labels (a Settings tab), and the pages the tree no longer lists but which are
+ * Cost Tracking), Tags (a Settings tab), and the pages the tree no longer lists but which are
  * still linked to, searched for and reachable by URL. `pathForNavId`,
  * `labelForNavId`, `breadcrumbForPath` and the command palette resolve against
  * them.
@@ -106,10 +106,10 @@ export const SECONDARY: NavEntry[] = [
   { id: 'settings-taxes', label: 'Taxes', path: '/taxes' },
   { id: 'settings-cost-tracking', label: 'Cost Tracking', path: '/cost-sheets' },
   {
-    id: 'settings-labels',
-    label: 'Labels',
+    id: 'settings-tags',
+    label: 'Tags',
     path: '/settings',
-    query: { section: 'labels', tab: 'labels' },
+    query: { section: 'tags', tab: 'tags' },
   },
   { id: 'price-units', label: 'Price Units', path: '/price-units' },
   { id: 'groups', label: 'Groups', path: '/groups' },

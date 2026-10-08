@@ -6,8 +6,10 @@ import { Source, provenance } from '@ui/provenance'
 
 /**
  * Settings, laid out as the ReUI `settings-7` block lays out its account
- * settings: a heading, a flat vertical rail of sections on the left, and the
- * active section's content in a column on the right.
+ * settings: a flat vertical rail of sections on the left and the active
+ * section's content in a column on the right. There is no visible page or
+ * section heading: the page opens straight on its table or form, and what a
+ * section is for lives in its empty state and in hover hints.
  *
  * The block itself keeps hard-coded tabs and its own state, so it cannot take
  * Flexprice's sections; this composition reproduces its layout and leaves `components/blocks/settings-7` untouched. Its
@@ -41,8 +43,6 @@ export interface SettingsSection {
   label: string
   /** Shown beside the label in the section rail. */
   icon?: ReactNode
-  /** One sentence under the section's title above its content. */
-  description?: string
   tabs: SettingsTab[]
   /** Reachable and renderable, but not a row in the rail. */
   hidden?: boolean
@@ -76,14 +76,8 @@ export function SettingsShell({
 
   return (
     <div className="flex min-w-0 flex-1 items-start justify-center px-4 py-8 sm:px-6 md:px-10 md:pb-16">
-      <div className="w-full max-w-6xl space-y-8">
-        <header className="px-1">
-          <h1 className="text-xl font-medium tracking-tight">Settings</h1>
-          <p className="text-muted-foreground max-w-2xl text-sm leading-relaxed">
-            Your organization, billing defaults, pricing setup, customer experience and developer
-            access.
-          </p>
-        </header>
+      <div className="w-full max-w-6xl">
+        <h1 className="sr-only">Settings</h1>
 
         <div className="flex w-full flex-col gap-4 lg:flex-row lg:gap-8">
           <nav aria-label="Settings" className="w-full min-w-0 lg:w-56 lg:shrink-0">
@@ -113,14 +107,7 @@ export function SettingsShell({
           </nav>
 
           <div className="flex min-w-0 flex-1 flex-col gap-5">
-            {section ? (
-              <div className="space-y-0.5">
-                <h2 className="text-base font-medium">{section.label}</h2>
-                {section.description ? (
-                  <p className="text-muted-foreground text-sm">{section.description}</p>
-                ) : null}
-              </div>
-            ) : null}
+            {section ? <h2 className="sr-only">{section.label}</h2> : null}
             {tabs.length > 1 ? (
               <div className="min-w-0 overflow-x-auto">
                 <DetailTabs

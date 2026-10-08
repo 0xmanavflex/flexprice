@@ -68,6 +68,25 @@ export const WithAction: Story = {
   },
 }
 
+/** `border` draws its own frame; without it the table is drawn straight onto the page. */
+export const Bordered: Story = {
+  args: { border: true, toolbar: false },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const table = canvas.getByRole('table')
+    await expect(getComputedStyle(table.closest('.rounded-xl') as HTMLElement).borderTopWidth).toBe(
+      '1px',
+    )
+  },
+}
+
+export const Borderless: Story = {
+  args: { border: false, toolbar: false },
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('.rounded-xl.border')).toBeNull()
+  },
+}
+
 export const Empty: Story = {
   args: { rows: [], empty: 'No invoices yet.' },
 }

@@ -22,7 +22,15 @@ export { ApiError, ErrorKind, kindForStatus, readErrorBody, toApiError } from '.
  * therefore from the SDK. See `session.ts` for why they are here and what
  * deletes them.
  */
-export { createEnvironment, fetchCurrentUser, fetchEnvironments, signIn, signUp } from './session'
+export {
+  createEnvironment,
+  deleteEnvironment,
+  fetchCurrentUser,
+  fetchEnvironments,
+  signIn,
+  signUp,
+  updateEnvironment,
+} from './session'
 export type { CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
 
 /**

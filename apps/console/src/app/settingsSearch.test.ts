@@ -23,18 +23,18 @@ describe('parseSettingsSearch', () => {
   })
 
   it('opens a section on its own first tab when no tab is named', () => {
-    expect(parseSettingsSearch({ section: 'alerts' })).toEqual({
-      section: 'alerts',
-      tab: 'alert-rules',
+    expect(parseSettingsSearch({ section: 'customer-experience' })).toEqual({
+      section: 'customer-experience',
+      tab: 'portal',
     })
   })
 
   // The one worth naming: two ids that are each real but do not go together,
   // which is what a half-rewritten link looks like.
   it('falls back when the tab belongs to another section', () => {
-    expect(parseSettingsSearch({ section: 'alerts', tab: 'members' })).toEqual({
-      section: 'alerts',
-      tab: 'alert-rules',
+    expect(parseSettingsSearch({ section: 'customer-experience', tab: 'members' })).toEqual({
+      section: 'customer-experience',
+      tab: 'portal',
     })
   })
 

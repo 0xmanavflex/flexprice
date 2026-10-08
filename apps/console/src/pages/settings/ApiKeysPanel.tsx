@@ -13,7 +13,7 @@ import {
   isExpired,
 } from '@fp/domain'
 import { DEFAULT_API_KEY_QUERY, useApiKeys, useCreateApiKey, useDeleteApiKey } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field } from '@fp/ui/compositions'
 import {
   Badge,
   Button,
@@ -24,12 +24,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@fp/ui/primitives'
 import { KeyRoundIcon } from 'lucide-react'
 import {
@@ -41,7 +35,7 @@ import {
   mutationMessage,
   toFailure,
   SettingsBlock,
-  TableBlock,
+  SettingsTable,
 } from './panelKit'
 import { useDraft } from './useDraft'
 
@@ -87,81 +81,95 @@ export function ApiKeysPanel() {
     <WidePanel>
       {issued ? <IssuedSecret issued={issued} onDismiss={() => setIssued(null)} /> : null}
 
-      <TableBlock
-        title="API keys"
-        description="What your systems authenticate with when they send usage or read billing data."
-        actions={
+      <SettingsTable<ApiKey>
+        label="API keys"
+        noun="API keys"
+        hint="What your systems authenticate with when they send usage or read billing data."
+        rows={rows}
+        isLoading={keys.isPending}
+        getRowId={(key) => key.id}
+        action={
           <Button size="sm" onClick={() => setIsCreating(true)}>
             Create API key
           </Button>
         }
-      >
-        {keys.isPending ? (
-          <LoadingRows rows={3} columns={4} />
-        ) : rows.length === 0 ? (
+        empty={
           <EmptyState
             size="inline"
             icon={<KeyRoundIcon aria-hidden />}
             title="No API keys yet"
             description="An API key lets your systems send usage and read billing data without a person signing in."
           />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Type</TableHead>
-                <TableHead>Created</TableHead>
-                <TableHead>Last used</TableHead>
-                <TableHead>Expires</TableHead>
-                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {rows.map((key) => (
-                <TableRow key={key.id}>
-                  <TableCell className="whitespace-normal">
-                    <span className="flex flex-col">
-                      <span className="font-medium">{key.name || key.displayId || key.id}</span>
-                      {key.serviceAccountName ? (
-                        <span className="text-muted-foreground text-xs">
-                          {key.serviceAccountName}
-                        </span>
-                      ) : null}
-                    </span>
-                  </TableCell>
-                  <TableCell className="whitespace-normal">
-                    <span className="flex flex-wrap items-center gap-1.5">
-                      <Badge variant="secondary">{API_KEY_TYPE_LABEL[key.type]}</Badge>
-                      {key.status === ApiKeyStatus.Published ? null : (
-                        <Badge variant="destructive-light">
-                          {API_KEY_STATUS_LABEL[key.status]}
-                        </Badge>
-                      )}
-                      {isExpired(key) ? <Badge variant="warning-light">Expired</Badge> : null}
-                    </span>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {formatDate(key.createdAt)}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {/* null means never used, which is not the same as unknown. */}
-                    {key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Never'}
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">
-                    {key.expiresAt ? formatDate(key.expiresAt) : 'Never'}
-                  </TableCell>
-                  <TableCell className="w-px text-right whitespace-nowrap">
-                    <Button size="sm" variant="ghost" onClick={() => setRevoking(key)}>
-                      Revoke
-                    </Button>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </TableBlock>
+        }
+        columns={[
+          {
+            key: 'name',
+            header: 'Name',
+            sortBy: (key) => key.name || key.displayId || key.id,
+            text: (key) => `${key.name} ${key.displayId} ${key.serviceAccountName ?? ''}`,
+            cell: (key) => (
+              <span className="flex flex-col">
+                <span className="font-medium">{key.name || key.displayId || key.id}</span>
+                {key.serviceAccountName ? (
+                  <span className="text-muted-foreground text-xs">{key.serviceAccountName}</span>
+                ) : null}
+              </span>
+            ),
+          },
+          {
+            key: 'type',
+            header: 'Type',
+            text: (key) => API_KEY_TYPE_LABEL[key.type],
+            cell: (key) => (
+              <span className="flex flex-wrap items-center gap-1.5">
+                <Badge variant="secondary">{API_KEY_TYPE_LABEL[key.type]}</Badge>
+                {key.status === ApiKeyStatus.Published ? null : (
+                  <Badge variant="destructive-light">{API_KEY_STATUS_LABEL[key.status]}</Badge>
+                )}
+                {isExpired(key) ? <Badge variant="warning-light">Expired</Badge> : null}
+              </span>
+            ),
+          },
+          {
+            key: 'created',
+            header: 'Created',
+            cell: (key) => (
+              <span className="text-muted-foreground">{formatDate(key.createdAt)}</span>
+            ),
+          },
+          {
+            key: 'last-used',
+            header: 'Last used',
+            // null means never used, which is not the same as unknown.
+            cell: (key) => (
+              <span className="text-muted-foreground">
+                {key.lastUsedAt ? formatDate(key.lastUsedAt) : 'Never'}
+              </span>
+            ),
+          },
+          {
+            key: 'expires',
+            header: 'Expires',
+            cell: (key) => (
+              <span className="text-muted-foreground">
+                {key.expiresAt ? formatDate(key.expiresAt) : 'Never'}
+              </span>
+            ),
+          },
+          {
+            key: 'actions',
+            header: '',
+            width: 90,
+            cell: (key) => (
+              <span className="flex justify-end">
+                <Button size="sm" variant="ghost" onClick={() => setRevoking(key)}>
+                  Revoke
+                </Button>
+              </span>
+            ),
+          },
+        ]}
+      />
 
       <CreateKeyDialog
         open={isCreating}

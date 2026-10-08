@@ -8,7 +8,6 @@ import {
   type Role,
   createServiceAccountSchema,
   emptyServiceAccount,
-  matchesMemberQuery,
   memberDisplayName,
   renameMemberSchema,
 } from '@fp/domain'
@@ -19,7 +18,7 @@ import {
   useRoles,
   useServiceAccounts,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, Field } from '@fp/ui/compositions'
 import {
   Button,
   Dialog,
@@ -29,12 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
   Input,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
 } from '@fp/ui/primitives'
 import { BotIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
@@ -45,7 +38,7 @@ import {
   mutationMessage,
   toFailure,
   SettingsBlock,
-  TableBlock,
+  SettingsTable,
 } from './panelKit'
 import { useDraft } from './useDraft'
 
@@ -64,7 +57,7 @@ import { useDraft } from './useDraft'
  * accepts a filter and ignores it.
  */
 export function ServiceAccountsPanel() {
-  const [query, setQuery] = useState<MemberQuery>({
+  const [query] = useState<MemberQuery>({
     ...DEFAULT_SERVICE_ACCOUNT_QUERY,
     pageSize: 100,
   })
@@ -78,8 +71,6 @@ export function ServiceAccountsPanel() {
 
   const failure = toFailure(accounts.error, 'your service accounts')
   const fetched = accounts.data?.members ?? []
-  const visible = fetched.filter((member) => matchesMemberQuery(member, query))
-  const isFiltered = query.search.trim().length > 0
 
   if (failure) {
     return (
@@ -91,93 +82,64 @@ export function ServiceAccountsPanel() {
 
   return (
     <WidePanel>
-      <TableBlock
-        title="Service accounts"
-        description="Identities for your systems rather than your people. An API key is issued against one."
-        actions={
+      <SettingsTable<Member>
+        label="Service accounts"
+        noun="service accounts"
+        hint="Identities for your systems rather than your people. An API key is issued against one. Search covers the accounts loaded here."
+        rows={fetched}
+        isLoading={accounts.isPending}
+        getRowId={(account) => account.id}
+        action={
           <Button size="sm" onClick={() => setIsCreating(true)}>
             New service account
           </Button>
         }
-      >
-        <div className="flex flex-col gap-1.5">
-          <Input
-            type="search"
-            aria-label="Search service accounts"
-            placeholder="Search by name"
-            value={query.search}
-            onChange={(event) => setQuery({ ...query, search: event.target.value })}
-          />
-          <p className="text-muted-foreground text-xs">
-            Searches the {fetched.length} account{fetched.length === 1 ? '' : 's'} loaded here — the
-            API ignores the search filter it accepts, so this narrows the page rather than the
-            directory.
-          </p>
-        </div>
-
-        {accounts.isPending ? (
-          <LoadingRows rows={3} columns={3} />
-        ) : visible.length === 0 ? (
+        empty={
           <EmptyState
             size="inline"
             icon={<BotIcon aria-hidden />}
-            title={isFiltered ? 'No service account matches that' : 'No service accounts yet'}
-            description={
-              isFiltered
-                ? 'Nothing in the loaded page matches. Clear the search to see them all.'
-                : 'A service account is how a system of yours holds permissions without borrowing a person’s.'
-            }
-            isFiltered={isFiltered}
-            {...(isFiltered
-              ? {
-                  onClearFilters: (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setQuery({ ...query, search: '' })}
-                    >
-                      Clear search
-                    </Button>
-                  ),
-                }
-              : {})}
+            title="No service accounts yet"
+            description="A service account is how a system of yours holds permissions without borrowing a person’s."
           />
-        ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Roles</TableHead>
-                <TableHead>Identifier</TableHead>
-                <TableHead className="w-px text-right whitespace-nowrap">Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {visible.map((account) => (
-                <TableRow key={account.id}>
-                  <TableCell className="font-medium">{memberDisplayName(account)}</TableCell>
-                  <TableCell>
-                    <RoleList roles={account.roles} catalogue={roles.data ?? []} />
-                  </TableCell>
-                  <TableCell className="text-muted-foreground font-mono text-xs">
-                    {account.id}
-                  </TableCell>
-                  <TableCell className="w-px text-right whitespace-nowrap">
-                    <span className="flex justify-end gap-1">
-                      <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
-                        Rename
-                      </Button>
-                      <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
-                        Delete
-                      </Button>
-                    </span>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        )}
-      </TableBlock>
+        }
+        columns={[
+          {
+            key: 'name',
+            header: 'Name',
+            sortBy: (account) => memberDisplayName(account),
+            text: (account) => memberDisplayName(account),
+            cell: (account) => <span className="font-medium">{memberDisplayName(account)}</span>,
+          },
+          {
+            key: 'roles',
+            header: 'Roles',
+            cell: (account) => <RoleList roles={account.roles} catalogue={roles.data ?? []} />,
+          },
+          {
+            key: 'id',
+            header: 'Identifier',
+            text: (account) => account.id,
+            cell: (account) => (
+              <span className="text-muted-foreground font-mono text-xs">{account.id}</span>
+            ),
+          },
+          {
+            key: 'actions',
+            header: '',
+            width: 160,
+            cell: (account) => (
+              <span className="flex justify-end gap-1">
+                <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
+                  Rename
+                </Button>
+                <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
+                  Delete
+                </Button>
+              </span>
+            ),
+          },
+        ]}
+      />
 
       <CreateAccountDialog
         open={isCreating}
