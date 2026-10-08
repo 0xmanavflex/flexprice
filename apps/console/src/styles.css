@@ -6,4 +6,22 @@
  */
 @import '@fp/ui/styles.css';
 
-@source "./";
+@source './';
+
+/*
+ * The console runs at 90% of the stock scale — the density the design was
+ * tuned at. Everything sized in rem follows this; the px lengths in the
+ * compiled CSS are converted by `px-to-rem.ts` so they follow too.
+ */
+html {
+  font-size: 90%;
+}
+
+/*
+ * Page width cap. The shared default (1600px) was set for 100% scale; at 90%
+ * it is 1440px on screen and leaves wide gutters on a 1920 display. 1800px
+ * fills a 1920 screen and still centres a column on larger monitors.
+ */
+:root {
+  --shell-max: 1800px;
+}
