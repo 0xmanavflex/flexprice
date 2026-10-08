@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
-import { CatalogDetailFrame, CatalogStatusBadge } from '@fp/ui/pages'
-import { AppFailure, Dot, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
+import { CatalogDetailFrame, CatalogStatusBadge, Pill } from '@fp/ui/pages'
+import { AppFailure, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
 import { CoinsIcon } from 'lucide-react'
 
 export interface PriceUnitDetailPageProps {
@@ -81,19 +81,14 @@ export function PriceUnitDetailPage({
       onBack={onNavigateToList}
       icon={<CoinsIcon />}
       title={data.name}
-      subtitle={
+      badges={
         <>
-          <span>
+          <Pill>
             {baseCurrency && data.conversionRate
               ? `1 ${codeLabel} = ${data.conversionRate} ${baseCurrency}`
               : 'Custom pricing unit'}
-          </span>
-          {data.status === 'archived' ? (
-            <>
-              <Dot />
-              <CatalogStatusBadge status={data.status} />
-            </>
-          ) : null}
+          </Pill>
+          {data.status === 'archived' ? <CatalogStatusBadge status={data.status} /> : null}
         </>
       }
       id={data.code || data.id}

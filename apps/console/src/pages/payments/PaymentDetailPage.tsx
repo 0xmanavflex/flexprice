@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { CreditCardIcon } from 'lucide-react'
 import { PaymentStatus, formatMoney, PAYMENT_STATUS_LABEL } from '@fp/domain'
 import { ApiError, useDeletePayment, usePayment, useProcessPayment } from '@fp/query'
-import { CatalogDetailFrame, EntityLink, PaymentStatusBadge } from '@fp/ui/pages'
+import { CatalogDetailFrame, EntityLink, PaymentStatusBadge, Pill } from '@fp/ui/pages'
 import { AppFailure, ConfirmDialog, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
 
 export interface PaymentDetailPageProps {
@@ -60,7 +60,14 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
       onBack={onBack}
       icon={<CreditCardIcon />}
       title={`Payment ${formatMoney(data.amount)}`}
-      subtitle={[data.methodType, data.gateway].filter(Boolean).join(' · ') || 'Payment'}
+      badges={
+        data.methodType || data.gateway ? (
+          <>
+            {data.methodType ? <Pill>{data.methodType}</Pill> : null}
+            {data.gateway ? <Pill>{data.gateway}</Pill> : null}
+          </>
+        ) : undefined
+      }
       id={data.id}
       {...(canProcess
         ? { primary: { label: 'Process payment', onClick: () => setDialog('process') } }

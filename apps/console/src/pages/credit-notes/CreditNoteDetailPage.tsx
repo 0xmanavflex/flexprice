@@ -9,7 +9,7 @@ import {
   formatMoney,
 } from '@fp/domain'
 import { ApiError, useCreditNote, useFinalizeCreditNote, useVoidCreditNote } from '@fp/query'
-import { CatalogDetailFrame, EntityLink } from '@fp/ui/pages'
+import { CatalogDetailFrame, EntityLink, Pill, Status } from '@fp/ui/pages'
 import { AppFailure, ConfirmDialog, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
 
 export interface CreditNoteDetailPageProps {
@@ -70,7 +70,12 @@ export function CreditNoteDetailPage({
       onBack={onBack}
       icon={<FileMinusIcon />}
       title={`Credit note ${data.number}`}
-      subtitle={`${formatMoney(data.amount)} · ${CREDIT_NOTE_STATUS_LABEL[data.status]}`}
+      badges={
+        <>
+          <Pill>{formatMoney(data.amount)}</Pill>
+          <Status value={CREDIT_NOTE_STATUS_LABEL[data.status]} />
+        </>
+      }
       id={data.id}
       {...(isDraft ? { primary: { label: 'Finalize', onClick: () => setDialog('finalize') } } : {})}
       menuLabel="Credit note actions"

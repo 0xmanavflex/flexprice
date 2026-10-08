@@ -45,11 +45,11 @@ import {
   EntitlementEditForm,
   EntitlementTable,
   type FeatureOption,
+  Pill,
 } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
-  Dot,
   EditableCard,
   FormDialog,
   LoadingRows,
@@ -139,21 +139,15 @@ export function AddonDetailPage({
   const data = addon.data
   const chargeCount = (prices.data ?? []).length
   const entitlementCount = (entitlements.data ?? []).length
-  const subtitle = (
+  const badges = (
     <>
-      <span>
+      <Pill>
         {chargeCount} {chargeCount === 1 ? 'charge' : 'charges'}
-      </span>
-      <Dot />
-      <span>
+      </Pill>
+      <Pill>
         {entitlementCount} {entitlementCount === 1 ? 'entitlement' : 'entitlements'}
-      </span>
-      {data.status === 'archived' ? (
-        <>
-          <Dot />
-          <CatalogStatusBadge status={data.status} />
-        </>
-      ) : null}
+      </Pill>
+      {data.status === 'archived' ? <CatalogStatusBadge status={data.status} /> : null}
     </>
   )
 
@@ -163,7 +157,7 @@ export function AddonDetailPage({
       onBack={onNavigateToList}
       icon={<PuzzleIcon />}
       title={data.name}
-      subtitle={subtitle}
+      badges={badges}
       id={data.lookupKey || data.id}
       onEdit={() => setTab('information')}
       menuLabel="Add-on actions"

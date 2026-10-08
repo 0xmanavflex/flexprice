@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { PriceEntityType } from '@fp/domain'
 import { ApiError, useCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
-import { CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CostMarginCard } from '@fp/ui/pages'
+import {
+  CatalogDetailFrame,
+  CatalogStatusBadge,
+  ChargeTable,
+  CostMarginCard,
+  Pill,
+} from '@fp/ui/pages'
 import {
   AppFailure,
-  Dot,
   EditableCard,
   EmptyState,
   LoadingRows,
@@ -96,17 +101,12 @@ export function CostSheetDetailPage({
       onBack={onNavigateToList}
       icon={<CalculatorIcon />}
       title={data.name}
-      subtitle={
+      badges={
         <>
-          <span>
+          <Pill>
             {count} {count === 1 ? 'price' : 'prices'}
-          </span>
-          {data.status === 'archived' ? (
-            <>
-              <Dot />
-              <CatalogStatusBadge status={data.status} />
-            </>
-          ) : null}
+          </Pill>
+          {data.status === 'archived' ? <CatalogStatusBadge status={data.status} /> : null}
         </>
       }
       id={data.lookupKey || data.id}

@@ -14,11 +14,11 @@ import {
   CouponRedemptionMeter,
   CouponRedemptionsView,
   Money,
+  Pill,
 } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
-  Dot,
   Properties,
   EditableCard,
   LoadingRows,
@@ -98,17 +98,11 @@ export function CouponDetailPage({
       onBack={onBack}
       icon={<TicketPercentIcon />}
       title={record.name}
-      subtitle={
+      badges={
         <>
-          <span>{discountText(record)}</span>
-          <Dot />
-          <span>{cadenceText(record)}</span>
-          {isArchived ? (
-            <>
-              <Dot />
-              <CatalogStatusBadge status={record.status} />
-            </>
-          ) : null}
+          <Pill>{discountText(record)}</Pill>
+          <Pill>{cadenceText(record)}</Pill>
+          {isArchived ? <CatalogStatusBadge status={record.status} /> : null}
         </>
       }
       id={record.code || record.id}

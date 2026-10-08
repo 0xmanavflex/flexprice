@@ -16,7 +16,7 @@ import {
   useSubscriptionEntitlements,
   useSubscriptionLines,
 } from '@fp/query'
-import { CatalogDetailFrame, EntityLink, SubscriptionStatusBadge } from '@fp/ui/pages'
+import { CatalogDetailFrame, EntityLink, Pill, SubscriptionStatusBadge } from '@fp/ui/pages'
 import {
   AppFailure,
   ConfirmDialog,
@@ -104,7 +104,12 @@ export function SubscriptionDetailPage({
       onBack={onNavigateToList}
       icon={<RefreshCwIcon />}
       title={`${data.customerName} on ${data.planName}`}
-      subtitle={`${data.billingPeriodLabel} · ${data.currency || 'No currency'}`}
+      badges={
+        <>
+          <Pill>{data.billingPeriodLabel}</Pill>
+          <Pill>{data.currency || 'No currency'}</Pill>
+        </>
+      }
       id={data.id}
       {...(canActivate
         ? { primary: { label: 'Activate', onClick: () => setDialog('activate') } }

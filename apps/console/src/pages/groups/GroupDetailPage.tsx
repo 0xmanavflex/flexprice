@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
 import { ApiError, useGroup } from '@fp/query'
-import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView } from '@fp/ui/pages'
-import { AppFailure, Dot, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView, Pill } from '@fp/ui/pages'
+import { AppFailure, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { LayersIcon } from 'lucide-react'
 
 export interface GroupDetailPageProps {
@@ -72,13 +72,12 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
       onBack={onNavigateToList}
       icon={<LayersIcon />}
       title={data.name}
-      subtitle={
+      badges={
         <>
-          <span>{noun} group</span>
-          <Dot />
-          <span>
+          <Pill>{noun} group</Pill>
+          <Pill>
             {new Intl.NumberFormat().format(data.entityCount)} {kind}
-          </span>
+          </Pill>
         </>
       }
       id={data.lookupKey || data.id}

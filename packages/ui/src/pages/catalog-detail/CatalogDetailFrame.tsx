@@ -25,11 +25,6 @@ export interface CatalogDetailFrameProps {
   onBack: () => void
   icon: ReactNode
   title: string
-  /**
-   * @deprecated Detail headers no longer have a subtitle line; this is not
-   * rendered. Pass status and type chips through `badges` instead.
-   */
-  subtitle?: ReactNode
   /** Status and type chips, shown in the header's right-hand cluster. */
   badges?: ReactNode
   /** Copyable identifier. */
