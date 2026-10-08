@@ -13,7 +13,6 @@ import { SubscriptionForm } from '@fp/ui/pages'
 export interface SubscriptionFormPageProps {
   /** Set when opened from a customer's own page: the Customer step is dropped. */
   customerId?: string
-  embedded?: boolean
   step?: string
   onStepChange: (id: string) => void
   onCancel: () => void
@@ -23,14 +22,15 @@ export interface SubscriptionFormPageProps {
 const PICKER_PAGE = { page: 1, pageSize: 100 }
 
 /**
- * Create a subscription on its own page, or embedded in a customer's page.
+ * Create a subscription (contract) on its own page.
  *
  * Loads the customers and plans to choose from, then the chosen plan's charges
- * and entitlements so the Prices and Entitlements steps can override them.
+ * and entitlements so the Plan & charges and Benefits steps can override them.
+ * The customer list carries no currency today, so the form's currency falls
+ * back to the plan's; a customer option with `currency` set would seed it.
  */
 export function SubscriptionFormPage({
   customerId,
-  embedded = false,
   step,
   onStepChange,
   onCancel,
@@ -61,7 +61,6 @@ export function SubscriptionFormPage({
     <SubscriptionForm
       customers={customerOptions}
       plans={planOptions}
-      embedded={embedded}
       customerLocked={customerId !== undefined}
       {...(customerId ? { defaultValue: { customerId } } : {})}
       plan={

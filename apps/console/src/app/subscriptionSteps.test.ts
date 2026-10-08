@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { DEFAULT_STEP, furthestOf, parseStep, toStepSearch, toWorkflowSteps } from './subscriptionSteps'
+import {
+  DEFAULT_STEP,
+  furthestOf,
+  parseStep,
+  toStepSearch,
+  toWorkflowSteps,
+} from './subscriptionSteps'
 
 describe('parseStep', () => {
   it('reads a known step', () => {
-    expect(parseStep('prices')).toBe('prices')
+    expect(parseStep('benefits')).toBe('benefits')
   })
 
   // A mistyped URL should start the flow over, not break it.
-  it.each([undefined, null, '', 'nonsense', '3', 'PRICES'])(
+  it.each([undefined, null, '', 'nonsense', '3', 'BENEFITS'])(
     'falls back to the first step for %p',
     (raw) => {
       expect(parseStep(raw)).toBe(DEFAULT_STEP)
@@ -21,11 +27,11 @@ describe('toStepSearch', () => {
   })
 
   it('names any other step', () => {
-    expect(toStepSearch('prices')).toEqual({ step: 'prices' })
+    expect(toStepSearch('benefits')).toEqual({ step: 'benefits' })
   })
 
   it('round-trips', () => {
-    for (const step of ['customer', 'prices', 'review'] as const) {
+    for (const step of ['customer', 'benefits', 'review'] as const) {
       expect(parseStep(toStepSearch(step)['step'])).toBe(step)
     }
   })
@@ -33,30 +39,23 @@ describe('toStepSearch', () => {
 
 describe('toWorkflowSteps', () => {
   it('marks exactly one step current', () => {
-    const steps = toWorkflowSteps('prices')
+    const steps = toWorkflowSteps('benefits')
     expect(steps.filter((s) => s.status === 'current')).toHaveLength(1)
-    expect(steps.find((s) => s.status === 'current')?.id).toBe('prices')
+    expect(steps.find((s) => s.status === 'current')?.id).toBe('benefits')
   })
 
   // You cannot skip ahead: the next step stays locked until this one is done.
   it('locks everything past where the user has actually been', () => {
     const steps = toWorkflowSteps('customer')
-    expect(steps.map((s) => s.status)).toEqual([
-      'current',
-      'locked',
-      'locked',
-      'locked',
-      'locked',
-      'locked',
-    ])
+    expect(steps.map((s) => s.status)).toEqual(['current', 'locked', 'locked', 'locked'])
   })
 
   // Back-navigation is the reason the flow is a route at all.
   it('leaves visited steps revisitable when the user goes back', () => {
-    const steps = toWorkflowSteps('customer', 'prices')
+    const steps = toWorkflowSteps('customer', 'benefits')
     expect(steps.find((s) => s.id === 'plan')?.status).toBe('complete')
-    expect(steps.find((s) => s.id === 'prices')?.status).toBe('upcoming')
-    expect(steps.find((s) => s.id === 'credits')?.status).toBe('locked')
+    expect(steps.find((s) => s.id === 'benefits')?.status).toBe('upcoming')
+    expect(steps.find((s) => s.id === 'review')?.status).toBe('locked')
   })
 
   it('never reports progress behind the current step', () => {
@@ -69,12 +68,12 @@ describe('toWorkflowSteps', () => {
 
 describe('furthestOf', () => {
   it('keeps the later step', () => {
-    expect(furthestOf('customer', 'prices')).toBe('prices')
-    expect(furthestOf('prices', 'customer')).toBe('prices')
+    expect(furthestOf('customer', 'benefits')).toBe('benefits')
+    expect(furthestOf('benefits', 'customer')).toBe('benefits')
   })
 
   // Going back must not re-lock what was already reached.
   it('is stable when both are the same', () => {
-    expect(furthestOf('prices', 'prices')).toBe('prices')
+    expect(furthestOf('benefits', 'benefits')).toBe('benefits')
   })
 })

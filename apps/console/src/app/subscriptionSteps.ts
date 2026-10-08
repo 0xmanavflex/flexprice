@@ -7,15 +7,13 @@ import type { WorkflowStep } from '@fp/ui/compositions'
  * half-finished subscription deep-linkable and navigable with the back button.
  * The stepper renders whatever it is handed.
  *
- * Only `prices` is implemented. The rest are placeholders on purpose: the
- * milestone is proving the composition holds, not building the wizard.
+ * The ids mirror the form's own steps (`SUBSCRIPTION_FORM_STEPS` in
+ * `@fp/ui`): customer, plan & charges, benefits, review.
  */
 export const SUBSCRIPTION_STEPS = [
   { id: 'customer', title: 'Customer' },
-  { id: 'plan', title: 'Plan' },
-  { id: 'prices', title: 'Prices' },
-  { id: 'entitlements', title: 'Entitlements' },
-  { id: 'credits', title: 'Credits' },
+  { id: 'plan', title: 'Plan & charges' },
+  { id: 'benefits', title: 'Benefits' },
   { id: 'review', title: 'Review' },
 ] as const
 

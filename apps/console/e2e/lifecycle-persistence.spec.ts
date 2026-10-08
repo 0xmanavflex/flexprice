@@ -151,11 +151,11 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
   await page.getByRole('button', { name: /next month/i }).click()
   await page.getByRole('gridcell', { name: '15' }).getByRole('button').click()
   await page.keyboard.press('Escape')
-  for (const step of ['prices', 'entitlements', 'credits', 'review']) {
+  for (const step of ['benefits', 'review']) {
     await page.getByRole('button', { name: 'Next', exact: true }).click()
     await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
   }
-  await page.getByRole('button', { name: /Create subscription/ }).click()
+  await page.getByRole('button', { name: 'Create contract' }).click()
   await expect(page).toHaveURL(/\/subscriptions$/)
 
   await page.getByRole('row').nth(1).click()
