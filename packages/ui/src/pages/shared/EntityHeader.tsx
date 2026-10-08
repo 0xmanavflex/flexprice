@@ -54,7 +54,7 @@ export function EntityHeader({
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {id ? (
-            <span className="rounded-md border px-2.5 py-1.5">
+            <span className="px-2.5 py-1.5">
               <CopyId value={id} />
             </span>
           ) : null}
