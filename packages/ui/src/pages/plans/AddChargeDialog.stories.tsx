@@ -104,16 +104,20 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+/** Waits out the dialog's fade-in: `toBeVisible` fails while it is still at opacity 0. */
+const shown = (text: string) =>
+  waitFor(async () => expect(await screen.findByText(text)).toBeVisible())
+
 export const Playground: Story = {}
 
 /** Create opens on the Fixed or Usage choice; Continue reveals the form. */
 export const ChoosesAType: Story = {
   play: async ({ args }) => {
-    await waitFor(async () => expect(await screen.findByText('Add charge')).toBeVisible())
+    await shown('Add charge')
     await userEvent.click(screen.getByRole('radio', { name: /Usage/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
     await waitFor(() => expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull())
-    await expect(await screen.findByText('Metered feature')).toBeVisible()
+    await shown('Metered feature')
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
 }
@@ -133,7 +137,7 @@ export const OpensFromTrigger: Story = {
   play: async ({ canvasElement }) => {
     await expect(screen.queryByText('Add charge')).toBeNull()
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Open charge dialog' }))
-    await expect(await screen.findByText('Add charge')).toBeVisible()
+    await shown('Add charge')
   },
 }
 
@@ -141,7 +145,7 @@ export const OpensFromTrigger: Story = {
 export const EditFixed: Story = {
   args: { mode: 'edit', editingType: PriceType.Fixed },
   play: async () => {
-    await expect(await screen.findByText('Edit charge')).toBeVisible()
+    await shown('Edit charge')
     await expect(screen.queryByRole('button', { name: 'Continue' })).toBeNull()
   },
 }
@@ -157,8 +161,6 @@ export const Submitting: Story = {
 export const SubmitError: Story = {
   args: { mode: 'edit', submitError: 'That charge could not be saved. Try again.' },
   play: async () => {
-    await expect(
-      await screen.findByText('That charge could not be saved. Try again.'),
-    ).toBeVisible()
+    await shown('That charge could not be saved. Try again.')
   },
 }
