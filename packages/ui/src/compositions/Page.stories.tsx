@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
@@ -14,10 +15,45 @@ const meta = {
   component: PageHeader,
   parameters: { layout: 'padded' },
   args: { title: 'Coupons' },
+  argTypes: {
+    title: { control: 'text' },
+    meta: { control: 'text', description: 'Small inline meta under the title.' },
+    action: { control: false },
+    actions: { control: false },
+    menu: { control: false },
+    breadcrumb: { control: false },
+  },
 } satisfies Meta<typeof PageHeader>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = Omit<ComponentProps<typeof PageHeader>, 'meta'> & {
+  meta: string
+  showAction: boolean
+  actionLabel: string
+}
+
+/** Retitle the page, add meta text, and show or relabel the primary action. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    title: 'Coupons',
+    meta: '42 coupons · synced just now',
+    showAction: true,
+    actionLabel: 'New coupon',
+  },
+  argTypes: {
+    showAction: { control: 'boolean' },
+    actionLabel: { control: 'text' },
+  },
+  render: ({ showAction, actionLabel, meta, ...args }) => (
+    <PageHeader
+      {...args}
+      {...(meta ? { meta } : {})}
+      {...(showAction ? { action: <Button>{actionLabel}</Button> } : {})}
+    />
+  ),
+}
 
 export const Header: Story = {
   play: async ({ canvasElement }) => {

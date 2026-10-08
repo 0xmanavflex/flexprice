@@ -17,10 +17,39 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
   args: { mode: 'create', trail, onSubmit: fn(), onCancel: fn() },
+  argTypes: {
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    defaultValue: { control: false },
+    trail: { control: false },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+  },
 } satisfies Meta<typeof CostSheetForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+const editValue = {
+  name: 'Infrastructure',
+  lookupKey: 'infrastructure',
+  description: 'Cloud spend',
+}
+
+/** Flip create/edit, submitting and a server error from the controls. */
+export const Playground: Story = {
+  args: { isSubmitting: false, submitError: '' },
+  render: ({ mode, submitError, ...args }) => (
+    <CostSheetForm
+      key={mode}
+      {...args}
+      mode={mode}
+      submitError={submitError || null}
+      {...(mode === 'edit' ? { defaultValue: editValue } : {})}
+    />
+  ),
+}
 
 export const Create: Story = {}
 

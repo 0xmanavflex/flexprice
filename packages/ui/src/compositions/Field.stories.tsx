@@ -11,10 +11,30 @@ const meta = {
     label: 'Lookup key',
     children: (props) => <Input {...props} />,
   },
+  argTypes: {
+    label: { control: 'text' },
+    hint: {
+      control: 'text',
+      description: 'Shown behind an (i); always in the DOM for screen readers.',
+    },
+    error: { control: 'text', description: 'Any text switches the field into its error state.' },
+    required: { control: 'boolean' },
+    children: { control: false },
+  },
 } satisfies Meta<typeof Field>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Type a hint, an error, or tick required: the label, hint and error stay wired to the input. */
+export const Playground: Story = {
+  args: {
+    label: 'Lookup key',
+    hint: 'Lowercase letters, numbers and underscores.',
+    error: '',
+    required: false,
+  },
+}
 
 export const Default: Story = {}
 

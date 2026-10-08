@@ -1,6 +1,22 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
-import { MetricRail } from './MetricRail'
+import { MetricRail, type DetailMetric } from './MetricRail'
+
+const METRIC_POOL: DetailMetric[] = [
+  { label: 'Active contracts', value: '128', hint: '+12 this month' },
+  { label: 'MRR', value: '$4,210', hint: 'vs last month' },
+  { label: 'Starts at', value: '$29', hint: 'per month' },
+  { label: 'Charges', value: '3' },
+  { label: 'Redemptions', value: '213', hint: 'of 500' },
+  { label: 'Churn', value: '1.8%', hint: 'last 30 days' },
+]
+
+type PlaygroundArgs = ComponentProps<typeof MetricRail> & {
+  count: number
+  sentiment: NonNullable<DetailMetric['sentiment']> | 'none'
+  blank: boolean
+}
 
 /**
  * The metric rail leads a detail page with numbers, not attributes. These
@@ -24,10 +40,44 @@ const meta = {
       { label: 'Charges', value: '3' },
     ],
   },
+  argTypes: {
+    metrics: {
+      control: 'object',
+      description: 'The tiles: label, value, optional hint and sentiment.',
+    },
+    className: { control: false },
+  },
 } satisfies Meta<typeof MetricRail>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Slice the pool from 0 to 6 tiles, blank every value, or put a trend arrow on the hints. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: { metrics: METRIC_POOL, count: 4, sentiment: 'none', blank: false },
+  argTypes: {
+    count: {
+      control: { type: 'range', min: 0, max: 6, step: 1 },
+      description: 'Tiles taken from `metrics`.',
+    },
+    sentiment: {
+      control: 'inline-radio',
+      options: ['none', 'positive', 'negative', 'muted'],
+      description: 'Applied to every tile that has a hint.',
+    },
+    blank: { control: 'boolean', description: 'Every value blank: the rail is omitted entirely.' },
+  },
+  render: ({ metrics, count, sentiment, blank, ...rest }) => (
+    <MetricRail
+      {...rest}
+      metrics={metrics.slice(0, count).map((m) => ({
+        ...m,
+        ...(blank ? { value: '—' } : {}),
+        ...(sentiment !== 'none' && m.hint ? { sentiment } : {}),
+      }))}
+    />
+  ),
+}
 
 export const Default: Story = {}
 

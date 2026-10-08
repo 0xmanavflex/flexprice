@@ -29,6 +29,78 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
+const SERIES_POOL = [
+  { id: 'starter', label: 'Starter' },
+  { id: 'growth', label: 'Growth' },
+  { id: 'scale', label: 'Scale' },
+  { id: 'enterprise', label: 'Enterprise' },
+  { id: 'partner', label: 'Partner' },
+]
+
+const COLUMN_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+
+/** Deterministic grid: column labels cycle the week, values follow a fixed wave scaled by `scale`. */
+function makeColumns(columnCount: number, seriesCount: number, scale: number, allZero: boolean) {
+  return Array.from({ length: columnCount }, (_, column): PillColumn => {
+    const values: Record<string, number> = {}
+    SERIES_POOL.slice(0, seriesCount).forEach((entry, index) => {
+      const wave = ((column * 7 + index * 5) % 11) + 1
+      values[entry.id] = allZero ? 0 : Math.round((wave * scale) / (index + 1))
+    })
+    const base = COLUMN_LABELS[column % COLUMN_LABELS.length] ?? ''
+    return {
+      label: column >= COLUMN_LABELS.length ? `${base} ${Math.floor(column / 7) + 1}` : base,
+      values,
+    }
+  })
+}
+
+interface PlaygroundArgs {
+  columnCount: number
+  seriesCount: number
+  scale: number
+  rows: number
+  allZero: boolean
+  label: string
+}
+
+/** Drag columns from 0 to 14 and series from 1 to 5 to see the empty, normal and crowded states. */
+export const Playground = {
+  args: {
+    columnCount: 7,
+    seriesCount: 3,
+    scale: 2,
+    rows: 7,
+    allZero: false,
+    label: 'New contracts by day and plan',
+  },
+  argTypes: {
+    columnCount: { control: { type: 'range', min: 0, max: 14, step: 1 } },
+    seriesCount: { control: { type: 'range', min: 1, max: SERIES_POOL.length, step: 1 } },
+    scale: {
+      control: { type: 'range', min: 1, max: 20, step: 1 },
+      description: 'Multiplies every value.',
+    },
+    rows: {
+      control: { type: 'range', min: 3, max: 12, step: 1 },
+      description: 'Slabs per column.',
+    },
+    allZero: { control: 'boolean' },
+    label: { control: 'text' },
+  },
+  parameters: {
+    controls: { include: ['columnCount', 'seriesCount', 'scale', 'rows', 'allZero', 'label'] },
+  },
+  render: ({ columnCount, seriesCount, scale, rows, allZero, label }) => (
+    <PillColumns
+      columns={makeColumns(columnCount, seriesCount, scale, allZero)}
+      series={SERIES_POOL.slice(0, seriesCount)}
+      rows={rows}
+      label={label}
+    />
+  ),
+} satisfies StoryObj<PlaygroundArgs>
+
 export const Default: Story = {}
 
 /**

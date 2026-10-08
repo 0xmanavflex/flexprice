@@ -150,6 +150,56 @@ function Controlled({
   )
 }
 
+const tabIds = [...new Set(SECTIONS.flatMap((section) => section.tabs.map((tab) => tab.id)))]
+
+interface PlaygroundArgs {
+  sectionCount: number
+  sectionId: string
+  tabId: string
+  unavailableSection: string
+  longLabels: boolean
+  hideLastSection: boolean
+  onSectionChange: (sectionId: string) => void
+  onTabChange: (tabId: string) => void
+}
+
+/** Wraps the controlled shell with a section list shaped by the playground flags. */
+function PlaygroundShell({
+  sectionCount,
+  sectionId,
+  tabId,
+  unavailableSection,
+  longLabels,
+  hideLastSection,
+  onSectionChange,
+  onTabChange,
+}: PlaygroundArgs) {
+  const sections = SECTIONS.slice(0, sectionCount).map((section, index, all) => ({
+    ...section,
+    label: longLabels ? `${section.label} and every setting that belongs to it` : section.label,
+    hidden: hideLastSection && index === all.length - 1,
+    tabs: section.tabs.map((tab) => ({
+      ...tab,
+      label: longLabels ? `${tab.label} configuration and related options` : tab.label,
+      ...(section.id === unavailableSection ? { unavailable: true } : {}),
+    })),
+  }))
+  const section = sections.find((entry) => entry.id === sectionId) ?? sections[0]
+  const tab = section?.tabs.find((entry) => entry.id === tabId) ?? section?.tabs[0]
+
+  return (
+    <Controlled
+      sections={sections}
+      sectionId={section?.id ?? sectionId}
+      tabId={tab?.id ?? tabId}
+      onSectionChange={onSectionChange}
+      onTabChange={onTabChange}
+    >
+      {null}
+    </Controlled>
+  )
+}
+
 /**
  * Settings navigation, laid out as the `settings-7` block: an sr-only heading, a flat
  * vertical rail of sections, then a column holding the active section's tab
@@ -183,6 +233,48 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Shrink the section list, jump to any section or tab, mark a whole section unavailable, or stress the layout with long labels. */
+export const Playground = {
+  args: {
+    sectionCount: SECTIONS.length,
+    sectionId: 'organization',
+    tabId: 'profile',
+    unavailableSection: 'none',
+    longLabels: false,
+    hideLastSection: false,
+    onSectionChange: fn(),
+    onTabChange: fn(),
+  },
+  argTypes: {
+    sectionCount: { control: { type: 'range', min: 1, max: SECTIONS.length, step: 1 } },
+    sectionId: { control: 'select', options: SECTIONS.map((section) => section.id) },
+    tabId: { control: 'select', options: tabIds },
+    unavailableSection: {
+      control: 'select',
+      options: ['none', ...SECTIONS.map((section) => section.id)],
+    },
+    longLabels: { control: 'boolean' },
+    hideLastSection: { control: 'boolean', description: 'Reachable but not a row in the rail.' },
+    onSectionChange: { control: false },
+    onTabChange: { control: false },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'sectionCount',
+        'sectionId',
+        'tabId',
+        'unavailableSection',
+        'longLabels',
+        'hideLastSection',
+        'onSectionChange',
+        'onTabChange',
+      ],
+    },
+  },
+  render: (args) => <PlaygroundShell {...args} />,
+} satisfies StoryObj<PlaygroundArgs>
 
 /** The rail is flat; the open section's pages are a tab strip above its content. */
 export const Default: Story = {

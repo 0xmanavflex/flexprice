@@ -32,6 +32,19 @@ const meta = {
     },
   },
   args: { mode: 'create', onSubmit: fn(), onCancel: fn() },
+  argTypes: {
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    lockType: { control: 'boolean' },
+    submitLabel: { control: 'text' },
+    currencies: { control: 'object' },
+    defaultValue: { control: false },
+    meters: { control: false },
+    priceUnits: { control: false },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+  },
 } satisfies Meta<typeof ChargeForm>
 
 export default meta
@@ -64,6 +77,20 @@ const usageTiered: CreateCharge = {
     { upTo: 10_000, unitAmount: '0.002', flatAmount: '0' },
     { upTo: null, unitAmount: '0.001' },
   ],
+}
+
+/** Flip create/edit, submitting, a server error and the locked type from the controls. */
+export const Playground: Story = {
+  args: { meters, isSubmitting: false, submitError: '', lockType: false },
+  render: ({ mode, submitError, ...args }) => (
+    <ChargeForm
+      key={`${mode}-${args.lockType}`}
+      {...args}
+      mode={mode}
+      submitError={submitError || null}
+      {...(mode === 'edit' ? { defaultValue: fixedFlatFee } : {})}
+    />
+  ),
 }
 
 /** A fixed charge, opened blank on a flat fee. */

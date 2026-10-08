@@ -12,10 +12,23 @@ const meta = {
     email: 'newhire@acme.com',
     onSubmit: fn(),
   },
+  argTypes: {
+    organisation: { control: 'text' },
+    role: { control: 'text' },
+    email: { control: 'text' },
+    isSubmitting: { control: 'boolean' },
+    error: { control: 'text', description: 'Empty means no error.' },
+    onSubmit: { control: false },
+  },
 } satisfies Meta<typeof AcceptInvitationForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Edit who is inviting, the role, the address, and flip submitting or a failure. */
+export const Playground: Story = {
+  args: { isSubmitting: false, error: '' },
+}
 
 export const Default: Story = {}
 export const Submitting: Story = { args: { isSubmitting: true } }

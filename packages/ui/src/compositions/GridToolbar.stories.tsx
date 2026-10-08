@@ -1,3 +1,4 @@
+import { useEffect, useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
@@ -27,10 +28,75 @@ const meta = {
     ),
     action: <Button size="sm">New coupon</Button>,
   },
+  argTypes: {
+    search: {
+      control: 'text',
+      description: 'The controlled query; a clear button appears once it is non-empty.',
+    },
+    placeholder: { control: 'text' },
+    label: { control: 'text', description: 'Accessible name of the search field.' },
+    heading: { control: 'text', description: 'Compact table heading; empty hides it.' },
+    onSearchChange: { control: false },
+    children: { control: false },
+    action: { control: false },
+  },
 } satisfies Meta<typeof GridToolbar>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = Omit<ComponentProps<typeof GridToolbar>, 'children' | 'action'> & {
+  showFilter: boolean
+  showAction: boolean
+  actionLabel: string
+  width: number
+}
+
+function LiveToolbar({ showFilter, showAction, actionLabel, width, ...args }: PlaygroundArgs) {
+  const [search, setSearch] = useState(args.search)
+  useEffect(() => setSearch(args.search), [args.search])
+  return (
+    <div style={{ width }}>
+      <GridToolbar
+        {...args}
+        search={search}
+        onSearchChange={(value) => {
+          setSearch(value)
+          args.onSearchChange(value)
+        }}
+        {...(showAction ? { action: <Button size="sm">{actionLabel}</Button> } : {})}
+      >
+        {showFilter ? (
+          <Button size="sm" variant="outline">
+            Filter
+          </Button>
+        ) : null}
+      </GridToolbar>
+    </div>
+  )
+}
+
+/** Type in the search (it is live), resize `width` from phone to desktop, and show or hide the filter and create action. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    search: '',
+    placeholder: 'Search…',
+    label: 'Search coupons',
+    heading: 'Coupons',
+    showFilter: true,
+    showAction: true,
+    actionLabel: 'New coupon',
+    width: 900,
+    onSearchChange: fn(),
+  },
+  argTypes: {
+    showFilter: { control: 'boolean' },
+    showAction: { control: 'boolean' },
+    actionLabel: { control: 'text' },
+    width: { control: { type: 'range', min: 280, max: 1200, step: 10 } },
+  },
+  render: (args) => <LiveToolbar {...args} />,
+}
 
 export const Default: Story = {}
 

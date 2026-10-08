@@ -1,7 +1,9 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useEffect, useState } from 'react'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { money } from '@fp/domain'
 import { RevenueDashboard } from './RevenueDashboard'
+import type { RevenueByCustomerRow, RevenuePanelStatus } from './RevenueDashboard'
 import type { MetricTab } from '../shared/charts'
 
 /**
@@ -16,6 +18,16 @@ const meta = {
   title: 'Surfaces/RevenueDashboard',
   component: RevenueDashboard,
   parameters: { layout: 'padded' },
+  argTypes: {
+    rangeLabel: { control: 'text' },
+    chart: { control: 'object' },
+    meteredRevenue: { control: 'object' },
+    mix: { control: 'object' },
+    margin: { control: 'object' },
+    collections: { control: 'object' },
+    byCustomer: { control: 'object' },
+    onNavigate: { control: false },
+  },
 } satisfies Meta<typeof RevenueDashboard>
 
 export default meta
@@ -156,6 +168,197 @@ const ready = {
 }
 
 /* ---- Stories ------------------------------------------------------------- */
+
+const STATUSES: RevenuePanelStatus[] = ['ready', 'loading', 'empty', 'unavailable']
+const CUSTOMER_NAMES = [
+  'Acme Inc',
+  'Globex',
+  'Initech',
+  'Umbrella',
+  'Hooli',
+  'Stark Industries',
+  'Wayne Enterprises',
+  'Wonka',
+]
+
+interface PlaygroundArgs {
+  periodDays: number
+  chartStatus: RevenuePanelStatus
+  tabCount: number
+  activeTab: string
+  hasMeteredRevenue: boolean
+  revenue: string
+  currency: string
+  mixStatus: RevenuePanelStatus
+  sliceCount: number
+  marginStatus: RevenuePanelStatus
+  marginPercent: number
+  collectionsStatus: RevenuePanelStatus
+  paid: number
+  open: number
+  overdue: number
+  byCustomerStatus: RevenuePanelStatus
+  customerRows: number
+  onTabChange: (id: string) => void
+  onNavigate: (path: string) => void
+}
+
+/** Tabs sliced to the chosen period; the headline of each is the total of the points under it. */
+function makeTabs(periodDays: number, tabCount: number): MetricTab[] {
+  return TABS.slice(0, tabCount).map((tab, index) => {
+    const source = [USAGE, EVENTS, INVOICES][index] ?? USAGE
+    const values = source.slice(0, periodDays)
+    const total = sum(values)
+    return {
+      ...tab,
+      value: index === 2 ? String(total) : compact.format(total),
+      points: series(values),
+    }
+  })
+}
+
+function makeCustomerRows(count: number): RevenueByCustomerRow[] {
+  return Array.from({ length: count }, (_, index) => {
+    const net = 48_200 - index * 4_300
+    const cost = 14_100 - index * 900
+    const pct = Math.round(((net - cost) / net) * 1000) / 10
+    const usd = (value: number) => `$${value.toLocaleString('en-US')}.00`
+    return {
+      id: `c${index + 1}`,
+      customer: CUSTOMER_NAMES[index] ?? `Customer ${index + 1}`,
+      plan: ['Scale', 'Growth', 'Starter'][index % 3] ?? 'Scale',
+      netRevenue: usd(net),
+      contract: usd(12_000),
+      usage: usd(net - 12_000),
+      cost: usd(cost),
+      margin: `${pct}%`,
+    }
+  })
+}
+
+/** Holds the active tab so the chart's tabs actually switch. */
+function PlaygroundRevenue(args: PlaygroundArgs) {
+  const [activeTab, setActiveTab] = useState(args.activeTab)
+  useEffect(() => setActiveTab(args.activeTab), [args.activeTab])
+
+  const tabs = makeTabs(args.periodDays, args.tabCount)
+  const current = tabs.some((tab) => tab.id === activeTab) ? activeTab : (tabs[0]?.id ?? activeTab)
+  const mixReady = args.mixStatus === 'ready'
+  const slices = mixReady ? MIX_SLICES.slice(0, args.sliceCount) : []
+  const collectionsReady = args.collectionsStatus === 'ready'
+  const amount = /^-?\d+(\.\d+)?$/.test(args.revenue) ? args.revenue : '0'
+  const rows = args.byCustomerStatus === 'ready' ? makeCustomerRows(args.customerRows) : []
+
+  return (
+    <RevenueDashboard
+      rangeLabel={`last ${args.periodDays} days`}
+      chart={{
+        status: args.chartStatus,
+        tabs: args.chartStatus === 'ready' ? tabs : [],
+        activeTab: current,
+        onTabChange: (id) => {
+          setActiveTab(id)
+          args.onTabChange(id)
+        },
+      }}
+      meteredRevenue={args.hasMeteredRevenue ? money(amount, args.currency) : null}
+      mix={{ status: args.mixStatus, slices, total: sum(slices.map((slice) => slice.value)) }}
+      margin={{
+        status: args.marginStatus,
+        percent: args.marginStatus === 'ready' ? args.marginPercent : null,
+        reason: MARGIN_UNAVAILABLE,
+      }}
+      collections={{
+        status: args.collectionsStatus,
+        paid: collectionsReady ? args.paid : 0,
+        open: collectionsReady ? args.open : 0,
+        overdue: collectionsReady ? args.overdue : 0,
+      }}
+      byCustomer={{
+        status: args.byCustomerStatus,
+        reason: BY_CUSTOMER_UNAVAILABLE,
+        columns: BY_CUSTOMER_GAPS,
+        ...(rows.length > 0 ? { rows } : {}),
+      }}
+      onNavigate={args.onNavigate}
+    />
+  )
+}
+
+/** Flip each panel between ready, loading, empty and unavailable; change the period, tabs, slices and rows. */
+export const Playground = {
+  args: {
+    periodDays: 30,
+    chartStatus: 'ready',
+    tabCount: 3,
+    activeTab: 'usage',
+    hasMeteredRevenue: true,
+    revenue: '9417.32',
+    currency: 'USD',
+    mixStatus: 'ready',
+    sliceCount: 5,
+    marginStatus: 'unavailable',
+    marginPercent: 43,
+    collectionsStatus: 'ready',
+    paid: 52,
+    open: 19,
+    overdue: 6,
+    byCustomerStatus: 'unavailable',
+    customerRows: 5,
+    onTabChange: fn(),
+    onNavigate: fn(),
+  },
+  argTypes: {
+    periodDays: { control: 'select', options: [7, 14, 30] },
+    chartStatus: { control: 'select', options: STATUSES },
+    tabCount: { control: { type: 'range', min: 1, max: TABS.length, step: 1 } },
+    activeTab: { control: 'select', options: TABS.map((tab) => tab.id) },
+    hasMeteredRevenue: {
+      control: 'boolean',
+      description: 'Off means the server sent no subtotal.',
+    },
+    revenue: { control: 'text', description: 'Plain decimal string; invalid reads as 0.' },
+    currency: { control: 'select', options: ['USD', 'EUR', 'GBP', 'INR'] },
+    mixStatus: { control: 'select', options: STATUSES },
+    sliceCount: { control: { type: 'range', min: 0, max: MIX_SLICES.length, step: 1 } },
+    marginStatus: { control: 'select', options: STATUSES },
+    marginPercent: { control: { type: 'range', min: 0, max: 100, step: 1 } },
+    collectionsStatus: { control: 'select', options: STATUSES },
+    paid: { control: { type: 'number', min: 0, max: 500, step: 1 } },
+    open: { control: { type: 'number', min: 0, max: 500, step: 1 } },
+    overdue: { control: { type: 'number', min: 0, max: 500, step: 1 } },
+    byCustomerStatus: { control: 'select', options: STATUSES },
+    customerRows: { control: { type: 'range', min: 0, max: CUSTOMER_NAMES.length, step: 1 } },
+    onTabChange: { control: false },
+    onNavigate: { control: false },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'periodDays',
+        'chartStatus',
+        'tabCount',
+        'activeTab',
+        'hasMeteredRevenue',
+        'revenue',
+        'currency',
+        'mixStatus',
+        'sliceCount',
+        'marginStatus',
+        'marginPercent',
+        'collectionsStatus',
+        'paid',
+        'open',
+        'overdue',
+        'byCustomerStatus',
+        'customerRows',
+        'onTabChange',
+        'onNavigate',
+      ],
+    },
+  },
+  render: (args) => <PlaygroundRevenue {...args} />,
+} satisfies StoryObj<PlaygroundArgs>
 
 export const Default: Story = {
   args: ready,

@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { FeatureType } from '@fp/domain'
@@ -107,4 +108,50 @@ export const CreatesWithDetailsOnly: Story = {
       }),
     )
   },
+}
+
+type PlaygroundArgs = Omit<ComponentProps<typeof PlanForm>, 'defaultValue' | 'trail'> & {
+  name: string
+  lookupKey: string
+  description: string
+}
+
+/** Switch create (stepped) and edit (details only); flip submitting or a server error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  parameters: {
+    controls: { exclude: /^(features|meters|priceUnits|step|on[A-Z].*)$/ },
+  },
+  args: {
+    mode: 'create',
+    planName: 'Pro',
+    name: 'Pro',
+    lookupKey: 'pro',
+    description: 'For growing teams',
+    isSubmitting: false,
+    submitError: '',
+  },
+  argTypes: {
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    planName: { control: 'text', description: 'Shown in the edit title only.' },
+    name: { control: 'text' },
+    lookupKey: { control: 'text' },
+    description: { control: 'text' },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Empty means no server error.' },
+  },
+  render: ({ name, lookupKey, description, submitError, mode, planName, ...rest }) => (
+    <PlanForm
+      key={`${mode}|${name}|${lookupKey}|${description}`}
+      {...rest}
+      mode={mode}
+      trail={
+        mode === 'edit'
+          ? [{ label: 'Plans' }, { label: planName ?? name }, { label: 'Edit' }]
+          : [{ label: 'Plans' }, { label: 'Create plan' }]
+      }
+      {...(mode === 'edit' && planName ? { planName } : {})}
+      defaultValue={{ name, lookupKey, description }}
+      submitError={submitError || null}
+    />
+  ),
 }

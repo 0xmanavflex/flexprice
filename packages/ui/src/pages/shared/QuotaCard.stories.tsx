@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, fn, within } from 'storybook/test'
 import { QuotaCard } from './QuotaCard'
 
 const meta = {
@@ -18,6 +18,21 @@ const meta = {
     overageNote: 'Flexprice does not price a per-feature overage.',
     locale: 'en-GB',
   },
+  argTypes: {
+    feature: { control: 'text' },
+    label: { control: 'text' },
+    unit: { control: 'text' },
+    used: { control: { type: 'number', min: 0, step: 100 } },
+    included: { control: { type: 'number', min: 0, step: 100 } },
+    percentUsed: { control: { type: 'number', min: 0, max: 300, step: 1 } },
+    resetPeriodLabel: { control: 'select', options: ['Monthly', 'Weekly', 'Daily', 'Yearly'] },
+    resetsOn: { control: false },
+    overage: { control: false },
+    overageNote: { control: 'text' },
+    action: { control: false },
+    locale: { control: 'select', options: ['en-GB', 'en-US', 'de-DE', 'fr-FR', 'en-IN'] },
+    className: { control: false },
+  },
   decorators: [
     (Story) => (
       <div className="mx-auto max-w-sm">
@@ -31,6 +46,85 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+interface PlaygroundArgs {
+  feature: string
+  unit: string
+  used: number
+  included: number
+  state: 'limited' | 'unlimited' | 'not-reported'
+  resetPeriodLabel: string
+  showAction: boolean
+  showOverageNote: boolean
+}
+
+/** Pick the entitlement state, then drag used past included to see the over-quota treatment. */
+export const Playground = {
+  args: {
+    feature: 'API calls',
+    unit: 'calls',
+    used: 2000,
+    included: 5000,
+    state: 'limited',
+    resetPeriodLabel: 'Monthly',
+    showAction: true,
+    showOverageNote: true,
+  },
+  argTypes: {
+    feature: { control: 'text' },
+    unit: { control: 'text' },
+    used: { control: { type: 'number', min: 0, step: 100 } },
+    included: { control: { type: 'number', min: 0, step: 100 } },
+    state: { control: 'inline-radio', options: ['limited', 'unlimited', 'not-reported'] },
+    resetPeriodLabel: { control: 'select', options: ['Monthly', 'Weekly', 'Daily', 'Yearly'] },
+    showAction: { control: 'boolean' },
+    showOverageNote: { control: 'boolean' },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'feature',
+        'unit',
+        'used',
+        'included',
+        'state',
+        'resetPeriodLabel',
+        'showAction',
+        'showOverageNote',
+      ],
+    },
+  },
+  render: ({
+    feature,
+    unit,
+    used,
+    included,
+    state,
+    resetPeriodLabel,
+    showAction,
+    showOverageNote,
+  }) => (
+    <div className="mx-auto max-w-sm">
+      <QuotaCard
+        feature={feature}
+        label={`${feature} this period`}
+        unit={unit}
+        used={state === 'not-reported' ? undefined : used}
+        included={state === 'limited' ? included : state === 'unlimited' ? null : undefined}
+        percentUsed={
+          state === 'limited' && included > 0 ? Math.round((used / included) * 100) : undefined
+        }
+        resetPeriodLabel={resetPeriodLabel}
+        resetsOn={state === 'not-reported' ? null : new Date('2026-10-01T00:00:00Z')}
+        overageNote={
+          showOverageNote ? 'Flexprice does not price a per-feature overage.' : undefined
+        }
+        action={showAction ? { label: 'View usage', onClick: fn() } : undefined}
+        locale="en-GB"
+      />
+    </div>
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 /**
  * The six readings, all present except the one nothing sources. The meter's

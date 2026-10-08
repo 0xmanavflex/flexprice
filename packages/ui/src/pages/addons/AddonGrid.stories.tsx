@@ -1,5 +1,7 @@
+import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import type { AddonQuery } from '@fp/domain'
 import { AddonGrid } from './AddonGrid'
 import { addonFixtures, fixtureAddonQuery, manyAddons } from './addonFixtures'
 
@@ -14,10 +16,62 @@ const meta = {
     onQueryChange: fn(),
     locale: 'en-US',
   },
+  argTypes: {
+    addons: { control: false },
+    total: { control: false },
+    query: { control: false },
+    isLoading: { control: 'boolean' },
+    error: { control: false },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE'] },
+    onQueryChange: { control: false },
+    onRetry: { control: false },
+    onAddonClick: { control: false },
+    onCreate: { control: false },
+    onEdit: { control: false },
+    onClearFilters: { control: false },
+  },
 } satisfies Meta<typeof AddonGrid>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = ComponentProps<typeof AddonGrid> & {
+  rows: number
+  hasError: boolean
+  page: number
+  pageSize: number
+}
+
+function AddonGridPlayground({ rows, hasError, page, pageSize, ...args }: PlaygroundArgs) {
+  const [query, setQuery] = useState<AddonQuery>({ ...fixtureAddonQuery, page, pageSize })
+  const start = (query.page - 1) * query.pageSize
+  return (
+    <AddonGrid
+      {...args}
+      addons={manyAddons(rows).slice(start, start + query.pageSize)}
+      total={rows}
+      query={query}
+      onQueryChange={(next) => {
+        setQuery(next)
+        args.onQueryChange(next)
+      }}
+      error={hasError ? 'You do not have access to add-ons in this environment.' : null}
+      onRetry={() => {}}
+    />
+  )
+}
+
+/** Drag `rows` from 0 to 60 to see first-run, a short list and paging. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: { rows: 30, hasError: false, page: 1, pageSize: 10, isLoading: false },
+  argTypes: {
+    rows: { control: { type: 'range', min: 0, max: 60, step: 1 } },
+    hasError: { control: 'boolean' },
+    page: { control: { type: 'number', min: 1, max: 6, step: 1 } },
+    pageSize: { control: 'select', options: [10, 25, 50] },
+  },
+  render: (args) => <AddonGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
+}
 
 export const Default: Story = {}
 

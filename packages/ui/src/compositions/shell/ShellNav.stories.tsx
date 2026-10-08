@@ -1,10 +1,11 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from 'lucide-react'
 import { SidebarProvider } from '@ui/components/primitives/sidebar'
 import { TooltipProvider } from '@ui/components/primitives/tooltip'
 import { ShellNav } from './ShellNav'
-import type { ShellNavGroup } from './types'
+import type { ShellNavGroup, ShellNavItem } from './types'
 
 /**
  * Nested navigation. A group is open because something inside it is active —
@@ -46,6 +47,52 @@ const navGroups: ShellNavGroup[] = [
   },
 ]
 
+const FOOTER_GROUP: ShellNavGroup = {
+  id: 'footer',
+  pinned: true,
+  items: [
+    { id: 'integrations', label: 'Integrations' },
+    {
+      id: 'settings-menu',
+      label: 'Developers',
+      items: [
+        { id: 'api-keys', label: 'API keys' },
+        { id: 'webhooks', label: 'Webhooks' },
+      ],
+    },
+  ],
+}
+
+const NAV_IDS = [
+  'home',
+  'features',
+  'plans',
+  'coupons',
+  'customers',
+  'invoices',
+  'revenue',
+  'settings',
+  'api-keys',
+  'webhooks',
+]
+
+function shapeItem(item: ShellNavItem, showCounts: boolean, showIcons: boolean): ShellNavItem {
+  const { count, icon, items, ...rest } = item
+  return {
+    ...rest,
+    ...(showCounts && count !== undefined ? { count } : {}),
+    ...(showIcons && icon ? { icon } : {}),
+    ...(items ? { items: items.map((child) => shapeItem(child, showCounts, showIcons)) } : {}),
+  }
+}
+
+type PlaygroundArgs = Omit<ComponentProps<typeof ShellNav>, 'groups'> & {
+  showCounts: boolean
+  showIcons: boolean
+  showGroupTitles: boolean
+  showPinnedFooter: boolean
+}
+
 const meta = {
   title: 'Foundation/Compositions/Shell/ShellNav',
   component: ShellNav,
@@ -63,10 +110,45 @@ const meta = {
     activeItemId: 'features',
     onNavigate: fn(),
   },
+  argTypes: {
+    groups: { control: false },
+    activeItemId: { control: 'select', options: NAV_IDS, description: 'Its parent group opens.' },
+    onNavigate: { control: false },
+  },
 } satisfies Meta<typeof ShellNav>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Move the active item to open a different group, and toggle counts, icons, group titles and the pinned footer. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    activeItemId: 'features',
+    showCounts: true,
+    showIcons: true,
+    showGroupTitles: true,
+    showPinnedFooter: false,
+    onNavigate: fn(),
+  },
+  argTypes: {
+    showCounts: { control: 'boolean' },
+    showIcons: { control: 'boolean' },
+    showGroupTitles: { control: 'boolean' },
+    showPinnedFooter: { control: 'boolean', description: 'Adds a pinned group under a rule.' },
+  },
+  render: ({ showCounts, showIcons, showGroupTitles, showPinnedFooter, ...args }) => (
+    <ShellNav
+      {...args}
+      groups={[...navGroups, ...(showPinnedFooter ? [FOOTER_GROUP] : [])].map(
+        ({ title, items, ...group }): ShellNavGroup => ({
+          ...group,
+          ...(showGroupTitles && title ? { title } : {}),
+          items: items.map((item) => shapeItem(item, showCounts, showIcons)),
+        }),
+      )}
+    />
+  ),
+}
 
 export const Default: Story = {}
 

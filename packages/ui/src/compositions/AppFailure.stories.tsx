@@ -7,10 +7,29 @@ const meta = {
   component: AppFailure,
   parameters: { layout: 'fullscreen' },
   args: { title: 'Something went wrong' },
+  argTypes: {
+    title: { control: 'text', description: 'The headline.' },
+    detail: { control: 'text', description: 'One line of context under the headline.' },
+    fix: { control: 'text', description: 'What the reader can do, shown as a distinct block.' },
+    technical: { control: 'text', description: 'The raw error, collapsed under a disclosure.' },
+    onRetry: { control: false },
+    children: { control: false },
+  },
 } satisfies Meta<typeof AppFailure>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Every prop as a control: clear `fix` or `technical` to drop those blocks; the Try again button is wired. */
+export const Playground: Story = {
+  args: {
+    title: 'This page could not be loaded',
+    detail: 'The error was reported and the rest of the console still works.',
+    fix: 'Reload the page, or check that the API URL is reachable.',
+    technical: "TypeError: Cannot read properties of undefined (reading 'items')",
+    onRetry: fn(),
+  },
+}
 
 /** The case that caused this component to exist. */
 export const Misconfigured: Story = {

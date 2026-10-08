@@ -1,0 +1,190 @@
+name: Storybook deploy
+
+# Publishes the Storybook workbench to its own Vercel project — separate from
+# the console's, so the two have independent URLs, protection and history.
+#
+# **It does nothing until the secrets exist, and that is deliberate.** With no
+# credentials the job *skips with a warning* rather than failing: a missing
+# secret says nothing about the change under review, and a red check the author
+# cannot act on is worse than no check.
+#
+# Secrets to add, at Settings → Secrets and variables → Actions:
+#
+#   VERCEL_TOKEN                 Vercel → Account Settings → Tokens (shared with deploy.yml)
+#   VERCEL_ORG_ID                Vercel → Team Settings → General ("Team ID") (shared)
+#   VERCEL_STORYBOOK_PROJECT_ID  Vercel → the *Storybook* project → Settings → General
+#
+# The Storybook project is a second, empty Vercel project (framework "Other").
+# Nothing about its Build or Output settings matters: this workflow builds
+# Storybook itself and uploads the finished static site (Vercel's Build Output
+# API), so the repository's root `vercel.json` — which belongs to the console —
+# is never read for this deploy.
+#
+# No application variables are needed: Storybook runs on fixtures, not an API.
+on:
+  push:
+    branches:
+      - main
+      - feat/v2-foundation
+      - 'ci/**'
+    paths:
+      - 'packages/ui/**'
+      - 'packages/domain/**'
+      - 'scripts/storybook-anatomy.mjs'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/storybook-deploy.yml'
+  pull_request:
+    paths:
+      - 'packages/ui/**'
+      - 'packages/domain/**'
+      - 'scripts/storybook-anatomy.mjs'
+      - 'pnpm-lock.yaml'
+      - '.github/workflows/storybook-deploy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+concurrency:
+  group: storybook-deploy-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Vercel (Storybook)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_STORYBOOK_PROJECT_ID }}
+    steps:
+      - name: Decide whether this can deploy
+        id: gate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          IS_FORK_PR: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name != github.repository }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            reason="the VERCEL_TOKEN repository secret is not set"
+          elif [ -z "$VERCEL_ORG_ID" ]; then
+            reason="the VERCEL_ORG_ID repository secret is not set"
+          elif [ -z "$VERCEL_PROJECT_ID" ]; then
+            reason="the VERCEL_STORYBOOK_PROJECT_ID repository secret is not set"
+          elif [ "$IS_FORK_PR" = "true" ]; then
+            reason="pull requests from forks cannot read secrets"
+          else
+            reason=""
+          fi
+
+          if [ -n "$reason" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Storybook deploy skipped — $reason. The secrets are listed at the top of .github/workflows/storybook-deploy.yml."
+            echo "Storybook deploy skipped — $reason." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          # A push to main is the project's production; everything else is a
+          # preview.
+          if [ "${{ github.event_name }}" = "push" ] && [ "${{ github.ref_name }}" = "main" ]; then
+            echo "environment=production" >> "$GITHUB_OUTPUT"
+            echo "flag=--prod" >> "$GITHUB_OUTPUT"
+          else
+            echo "environment=preview" >> "$GITHUB_OUTPUT"
+            echo "flag=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.enabled == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          HUSKY: 0
+
+      # The Anatomy panel and Page map read a generated file; building from a
+      # stale one would publish a workbench that lies about what a page uses.
+      - name: Check the component map is current
+        if: steps.gate.outputs.enabled == 'true'
+        run: node scripts/storybook-anatomy.mjs --check
+
+      - name: Build Storybook
+        if: steps.gate.outputs.enabled == 'true'
+        run: pnpm --filter @fp/ui build-storybook
+
+      # Vercel's Build Output API: a `.vercel/output` folder is deployed as-is,
+      # with no remote build and no dependence on the project's own settings.
+      - name: Package the static site
+        if: steps.gate.outputs.enabled == 'true'
+        run: |
+          mkdir -p .vercel/output/static
+          cp -R packages/ui/dist/storybook/. .vercel/output/static/
+          cat > .vercel/output/config.json <<'JSON'
+          {
+            "version": 3,
+            "routes": [
+              {
+                "src": "/(.*)",
+                "headers": { "x-robots-tag": "noindex, nofollow" },
+                "continue": true
+              },
+              {
+                "src": "/assets/(.*)",
+                "headers": { "cache-control": "public, max-age=31536000, immutable" },
+                "continue": true
+              },
+              { "handle": "filesystem" }
+            ]
+          }
+          JSON
+
+      # Pinned to a major so a CLI release cannot change the deploy underneath
+      # us. Bump deliberately.
+      - name: Install the Vercel CLI
+        if: steps.gate.outputs.enabled == 'true'
+        run: npm install --global vercel@59
+
+      - name: Deploy
+        id: deploy
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          url=$(vercel deploy --prebuilt ${{ steps.gate.outputs.flag }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Storybook deployed to ${{ steps.gate.outputs.environment }} — $url" >> "$GITHUB_STEP_SUMMARY"
+
+      # Updated in place, so a busy pull request keeps one comment.
+      - name: Comment the preview URL
+        if: steps.gate.outputs.enabled == 'true' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        env:
+          DEPLOY_URL: ${{ steps.deploy.outputs.url }}
+        with:
+          script: |
+            const url = process.env.DEPLOY_URL
+            const marker = '<!-- storybook-preview -->'
+            const body = `${marker}\n**Storybook preview** — ${url}\n\nCommit \`${context.sha.slice(0, 7)}\`.`
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo,
+              issue_number: context.issue.number,
+            })
+            const existing = comments.find((c) => c.body?.includes(marker))
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body })
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body })
+            }

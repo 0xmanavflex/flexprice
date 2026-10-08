@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { MetricChart } from './charts'
@@ -45,6 +45,65 @@ const tabs: MetricTab[] = [
   },
 ]
 
+const allTabs: MetricTab[] = [
+  ...tabs,
+  { id: 'customers', label: 'Customers', value: '1,204', changePercent: 2.2, points: [] },
+  { id: 'payments', label: 'Payments', value: '611', changePercent: -8.4, points: [] },
+  { id: 'wallets', label: 'Wallets', value: '88', points: [] },
+]
+
+/** Deterministic series with `count` buckets, so the playground can grow the x axis. */
+function seriesOf(count: number, base: number, spread: number): MetricPoint[] {
+  return Array.from({ length: count }, (_, index) => ({
+    label: `Day ${index + 1}`,
+    value: Math.round(base + Math.sin(index / 1.7) * spread + index * (spread / 9)),
+  }))
+}
+
+interface PlaygroundArgs {
+  tabCount: number
+  pointCount: number
+  activeTab: string
+  showTrend: boolean
+  height: number
+  caption: string
+}
+
+function PlaygroundChart({
+  tabCount,
+  pointCount,
+  activeTab,
+  showTrend,
+  height,
+  caption,
+  onTabChange,
+}: PlaygroundArgs & { onTabChange: (id: string) => void }) {
+  const [active, setActive] = useState(activeTab)
+  useEffect(() => setActive(activeTab), [activeTab])
+
+  const shown = allTabs.slice(0, tabCount).map((tab, index) => {
+    const { changePercent, ...rest } = tab
+    return {
+      ...rest,
+      points: seriesOf(pointCount, 80 + index * 40, 20 + index * 6),
+      ...(showTrend && changePercent !== undefined ? { changePercent } : {}),
+    }
+  })
+
+  return (
+    <MetricChart
+      tabs={shown}
+      activeTab={active}
+      onTabChange={(id) => {
+        setActive(id)
+        onTabChange(id)
+      }}
+      height={height}
+      caption={caption}
+    />
+  )
+}
+
 const meta = {
   title: 'Foundation/Flexprice/MetricChart',
   component: MetricChart,
@@ -55,12 +114,43 @@ const meta = {
     onTabChange: fn(),
     caption: 'Last 12 days, UTC.',
   },
+  argTypes: {
+    tabs: { control: false },
+    activeTab: { control: 'select', options: allTabs.map((tab) => tab.id) },
+    onTabChange: { control: false },
+    caption: { control: 'text' },
+    height: { control: { type: 'range', min: 120, max: 480, step: 10 } },
+    className: { control: false },
+  },
 } satisfies Meta<typeof MetricChart>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+/** Tabs 1-6, points 0-60 (0 is the no-data state), trend badges and plot height are all live; clicking a tab works. */
+export const Playground = {
+  args: {
+    tabCount: 3,
+    pointCount: 12,
+    activeTab: 'events',
+    showTrend: true,
+    height: 260,
+    caption: 'Last 12 days, UTC.',
+    onTabChange: fn(),
+  },
+  argTypes: {
+    tabCount: { control: { type: 'range', min: 1, max: 6, step: 1 } },
+    pointCount: { control: { type: 'range', min: 0, max: 60, step: 1 } },
+    activeTab: { control: 'select', options: allTabs.map((tab) => tab.id) },
+    showTrend: { control: 'boolean' },
+    height: { control: { type: 'range', min: 120, max: 480, step: 10 } },
+    caption: { control: 'text' },
+    onTabChange: { control: false },
+  },
+  render: (args) => <PlaygroundChart {...args} />,
+} satisfies StoryObj<PlaygroundArgs & { onTabChange: (id: string) => void }>
 
 /**
  * The page owns the selection, so the story plays the page: it holds the state

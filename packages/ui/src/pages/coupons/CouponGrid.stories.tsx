@@ -1,3 +1,4 @@
+import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { CouponGrid } from './CouponGrid'
@@ -14,10 +15,62 @@ const meta = {
     onQueryChange: fn(),
     locale: 'en-US',
   },
+  argTypes: {
+    coupons: { control: false },
+    total: { control: false },
+    query: { control: false },
+    isLoading: { control: 'boolean' },
+    error: { control: false },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE'] },
+    onQueryChange: { control: false },
+    onRetry: { control: false },
+    onCouponClick: { control: false },
+    onCreate: { control: false },
+    onEdit: { control: false },
+    onArchive: { control: false },
+    onClearFilters: { control: false },
+  },
 } satisfies Meta<typeof CouponGrid>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = ComponentProps<typeof CouponGrid> & {
+  rows: number
+  hasError: boolean
+  page: number
+  pageSize: number
+}
+
+function CouponGridPlayground({ rows, hasError, page, pageSize, ...args }: PlaygroundArgs) {
+  const [query, setQuery] = useState(() => ({ ...fixtureCouponQuery, page, pageSize }))
+  const start = (query.page - 1) * query.pageSize
+  return (
+    <CouponGrid
+      {...args}
+      coupons={manyCoupons(rows).slice(start, start + query.pageSize)}
+      total={rows}
+      query={query}
+      onQueryChange={(next) => {
+        setQuery(next)
+        args.onQueryChange(next)
+      }}
+      error={hasError ? 'You do not have access to coupons in this environment.' : null}
+    />
+  )
+}
+
+/** Drag `rows` from 0 to 60 to see first-run, a short list and paging; toggle loading and error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: { rows: 30, hasError: false, page: 1, pageSize: 10, isLoading: false },
+  argTypes: {
+    rows: { control: { type: 'range', min: 0, max: 60, step: 1 } },
+    hasError: { control: 'boolean' },
+    page: { control: { type: 'number', min: 1, max: 6, step: 1 } },
+    pageSize: { control: 'select', options: [10, 25, 50] },
+  },
+  render: (args) => <CouponGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
+}
 
 export const Default: Story = {}
 

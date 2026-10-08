@@ -1,5 +1,6 @@
 import { addons } from 'storybook/manager-api'
 import { create } from 'storybook/theming'
+import './AnatomyPanel'
 
 /**
  * The workbench chrome, in the same teal-on-warm-neutral as the console.

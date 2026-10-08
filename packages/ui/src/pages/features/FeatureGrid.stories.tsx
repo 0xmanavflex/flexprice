@@ -1,5 +1,7 @@
+import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import type { Feature } from '@fp/domain'
 import { FeatureGrid, type ProductLinkage } from './FeatureGrid'
 import { featureFixtures, fixtureFeatureQuery, manyFeatures } from './featureFixtures'
 
@@ -35,10 +37,100 @@ const meta = {
     onQueryChange: fn(),
     locale: 'en-US',
   },
+  argTypes: {
+    features: { control: false },
+    total: { control: false },
+    query: { control: false },
+    isLoading: { control: 'boolean' },
+    error: { control: false },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE'] },
+    onQueryChange: { control: false },
+    onRetry: { control: false },
+    onFeatureClick: { control: false },
+    onCreate: { control: false },
+    onEdit: { control: false },
+    onClone: { control: false },
+    onDelete: { control: false },
+    onClearFilters: { control: false },
+    onCreateEntitlement: { control: false },
+    linkage: { control: false },
+    linkageLoading: { control: 'boolean' },
+  },
 } satisfies Meta<typeof FeatureGrid>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Plans, entitlements and subscriptions derived from the row index, so the columns vary. */
+function makeLinkage(features: Feature[]): Map<string, ProductLinkage> {
+  const plans = ['Starter', 'Growth', 'Scale', 'Enterprise']
+  return new Map(
+    features.map((feature, index) => [
+      feature.id,
+      {
+        plans: plans.slice(0, index % 5).map((name) => ({ id: `plan_${name}`, name })),
+        entitlements: index % 5,
+        subscriptions: (index % 5) * 137,
+      },
+    ]),
+  )
+}
+
+type PlaygroundArgs = ComponentProps<typeof FeatureGrid> & {
+  rows: number
+  showLinkage: boolean
+  hasError: boolean
+  page: number
+  pageSize: number
+}
+
+function FeatureGridPlayground({
+  rows,
+  hasError,
+  page,
+  pageSize,
+  showLinkage,
+  ...args
+}: PlaygroundArgs) {
+  const [query, setQuery] = useState(() => ({ ...fixtureFeatureQuery, page, pageSize }))
+  const start = (query.page - 1) * query.pageSize
+  const visible = manyFeatures(rows).slice(start, start + query.pageSize)
+  return (
+    <FeatureGrid
+      {...args}
+      features={visible}
+      {...(showLinkage ? { linkage: makeLinkage(visible) } : {})}
+      total={rows}
+      query={query}
+      onQueryChange={(next) => {
+        setQuery(next)
+        args.onQueryChange(next)
+      }}
+      error={hasError ? 'You do not have access to products in this environment.' : null}
+    />
+  )
+}
+
+/** Drag `rows` from 0 to 60 to see first-run, a short list and paging; toggle loading and error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    rows: 30,
+    hasError: false,
+    page: 1,
+    pageSize: 10,
+    isLoading: false,
+    showLinkage: true,
+    linkageLoading: false,
+  },
+  argTypes: {
+    rows: { control: { type: 'range', min: 0, max: 60, step: 1 } },
+    hasError: { control: 'boolean' },
+    showLinkage: { control: 'boolean' },
+    page: { control: { type: 'number', min: 1, max: 6, step: 1 } },
+    pageSize: { control: 'select', options: [10, 25, 50] },
+  },
+  render: (args) => <FeatureGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
+}
 
 export const Default: Story = {}
 

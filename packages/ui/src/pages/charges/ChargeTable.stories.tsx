@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import {
@@ -22,6 +23,15 @@ const meta = {
   component: ChargeTable,
   parameters: { layout: 'padded' },
   args: { charges: [], locale: 'en-US' },
+  argTypes: {
+    charges: { control: false },
+    title: { control: 'text' },
+    emptyDescription: { control: 'text' },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE'] },
+    onAdd: { control: false },
+    onEdit: { control: false },
+    onTerminate: { control: false },
+  },
 } satisfies Meta<typeof ChargeTable>
 
 export default meta
@@ -102,6 +112,36 @@ const chargeFixtures: Charge[] = [
   },
 ]
 
+function manyCharges(count: number): Charge[] {
+  return Array.from({ length: count }, (_, index) => {
+    const base = chargeFixtures[index % chargeFixtures.length] as Charge
+    return {
+      ...base,
+      id: `price_gen_${index}`,
+      displayName: base.displayName ? `${base.displayName} ${index + 1}` : '',
+    }
+  })
+}
+
+/** Drag `rows` from 0 to 60: empty state, a short list, a long one. Toggle the row actions. */
+export const Playground: StoryObj<
+  ComponentProps<typeof ChargeTable> & { rows: number; showActions: boolean }
+> = {
+  args: { rows: 6, showActions: true, title: 'Charges' },
+  argTypes: {
+    rows: { control: { type: 'range', min: 0, max: 60, step: 1 } },
+    showActions: { control: 'boolean' },
+  },
+  render: ({ rows, showActions, ...args }) => (
+    <ChargeTable
+      {...args}
+      charges={manyCharges(rows)}
+      {...(showActions ? { onAdd: fn(), onEdit: fn(), onTerminate: fn() } : {})}
+    />
+  ),
+  parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
+}
+
 /** The charges section an add-on shows. */
 export const Default: Story = {
   args: { charges: chargeFixtures },
@@ -126,7 +166,9 @@ export const WithActions: Story = {
     const screen = within(canvasElement.ownerDocument.body)
     await expect(await screen.findByRole('menuitem', { name: 'Terminate' })).toBeInTheDocument()
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
-    await expect(args.onEdit).toHaveBeenCalledWith(expect.objectContaining({ displayName: 'Platform base' }))
+    await expect(args.onEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ displayName: 'Platform base' }),
+    )
   },
 }
 

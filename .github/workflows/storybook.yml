@@ -76,6 +76,11 @@ jobs:
         env:
           HUSKY: 0
 
+      # The Anatomy panel and Page map read a generated file; this fails the
+      # build when it has drifted from the source.
+      - name: Check the component map is current
+        run: node scripts/storybook-anatomy.mjs --check
+
       # A story can pass as a test and still break the static build — an
       # autodocs page that cannot resolve a type, a lazily imported language
       # for the code block. This catches that, and the artifact is a browsable

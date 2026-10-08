@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from 'lucide-react'
@@ -76,6 +77,26 @@ const environmentTrail = (current: ShellEnvironment) => (
   />
 )
 
+const ACTIVE_IDS = [
+  'home',
+  'features',
+  'plans',
+  'coupons',
+  'customers',
+  'invoices',
+  'revenue',
+  'settings',
+]
+
+type PlaygroundArgs = ComponentProps<typeof AppShell> & {
+  environment: 'sandbox' | 'production'
+  showBreadcrumb: boolean
+  showSearch: boolean
+  showCreateMenu: boolean
+  showPinned: boolean
+  showHeaderActions: boolean
+}
+
 const meta = {
   title: 'Foundation/Compositions/AppShell',
   component: AppShell,
@@ -107,10 +128,99 @@ const meta = {
     },
     children: <div className="text-muted-foreground p-6 text-sm">Page content.</div>,
   },
+  argTypes: {
+    activeItemId: {
+      control: 'select',
+      options: ACTIVE_IDS,
+      description: 'The active destination; its group opens.',
+    },
+    productName: { control: 'text', description: 'Shown when the user has no organization.' },
+    user: { control: 'object', description: 'name, email, optional organization and avatarUrl.' },
+    navGroups: { control: 'object' },
+    onNavigate: { control: false },
+    onProfile: { control: false },
+    onSettings: { control: false },
+    onSignOut: { control: false },
+    search: { control: false },
+    logo: { control: false },
+    pinned: { control: false },
+    breadcrumb: { control: false },
+    headerActions: { control: false },
+    children: { control: false },
+  },
 } satisfies Meta<typeof AppShell>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Switch the active page, environment and every optional slot; the sidebar collapses and the groups navigate. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    activeItemId: 'features',
+    productName: 'Flexprice',
+    environment: 'sandbox',
+    showBreadcrumb: true,
+    showSearch: true,
+    showCreateMenu: true,
+    showPinned: false,
+    showHeaderActions: false,
+  },
+  argTypes: {
+    environment: { control: 'inline-radio', options: ['sandbox', 'production'] },
+    showBreadcrumb: { control: 'boolean' },
+    showSearch: { control: 'boolean' },
+    showCreateMenu: { control: 'boolean' },
+    showPinned: { control: 'boolean' },
+    showHeaderActions: { control: 'boolean' },
+  },
+  render: ({
+    environment,
+    showBreadcrumb,
+    showSearch,
+    showCreateMenu,
+    showPinned,
+    showHeaderActions,
+    search,
+    ...args
+  }) => (
+    <AppShell
+      {...args}
+      {...(showSearch && search ? { search } : {})}
+      {...(showBreadcrumb
+        ? { breadcrumb: environmentTrail(environment === 'production' ? production : sandbox) }
+        : {})}
+      {...(showPinned
+        ? {
+            pinned: (
+              <div className="rounded-lg border p-3 text-xs">
+                <p className="font-medium">3 invoices overdue</p>
+                <p className="text-muted-foreground">Oldest is 35 days past due.</p>
+              </div>
+            ),
+          }
+        : {})}
+      headerActions={
+        <>
+          {showHeaderActions ? (
+            <span className="text-muted-foreground rounded-md border px-2 py-1 text-xs">
+              All systems normal
+            </span>
+          ) : null}
+          {showCreateMenu ? (
+            <ShellCreateMenu
+              actions={[
+                { id: 'subscription', label: 'New contract' },
+                { id: 'customer', label: 'New customer' },
+                { id: 'plan', label: 'New plan', startsGroup: true },
+              ]}
+              onCreate={fn()}
+            />
+          ) : null}
+        </>
+      }
+    />
+  ),
+}
 
 export const Default: Story = {}
 

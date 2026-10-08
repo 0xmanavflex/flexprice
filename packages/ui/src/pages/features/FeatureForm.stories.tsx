@@ -1,6 +1,7 @@
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { AggregationType, FeatureType, ResetUsage } from '@fp/domain'
+import { AggregationType, FeatureType, ResetUsage, type CreateFeature } from '@fp/domain'
+import { featureFixtures } from './featureFixtures'
 import { FeatureForm } from './FeatureForm'
 
 /**
@@ -37,10 +38,105 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
   args: { mode: 'create', trail, onSubmit: fn(), onCancel: fn() },
+  argTypes: {
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    groups: { control: false },
+    trail: { control: false },
+    defaultValue: { control: false },
+    feature: { control: false },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+  },
 } satisfies Meta<typeof FeatureForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+const groups = [
+  { value: 'grp_core', label: 'Core platform' },
+  { value: 'grp_ai', label: 'AI usage' },
+]
+
+function createSeed(type: FeatureType): CreateFeature {
+  if (type === FeatureType.Metered) {
+    return {
+      name: 'Tokens',
+      lookupKey: 'tokens',
+      type: FeatureType.Metered,
+      meter: {
+        eventName: 'llm_completion',
+        aggregationType: AggregationType.Sum,
+        field: 'tokens',
+        resetUsage: ResetUsage.BillingPeriod,
+      },
+    }
+  }
+  if (type === FeatureType.Boolean) return { name: 'SSO', lookupKey: 'sso', type }
+  return { name: 'Support tier', lookupKey: 'support-tier', type: FeatureType.Static }
+}
+
+const PLAYGROUND_TYPES = [FeatureType.Metered, FeatureType.Boolean, FeatureType.Static]
+
+interface PlaygroundArgs {
+  mode: 'create' | 'edit'
+  type: FeatureType
+  isSubmitting: boolean
+  submitError: string
+  showGroups: boolean
+}
+
+/** Switch create/edit and the feature type; flip submitting, a server error and the groups field. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    mode: 'create',
+    type: FeatureType.Metered,
+    isSubmitting: false,
+    submitError: '',
+    showGroups: true,
+  },
+  argTypes: {
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    type: { control: 'select', options: PLAYGROUND_TYPES },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text' },
+    showGroups: { control: 'boolean' },
+  },
+  parameters: {
+    a11y: { config: { rules: [{ id: 'scrollable-region-focusable', enabled: false }] } },
+  },
+  render: ({ mode, type, isSubmitting, submitError, showGroups }) => {
+    const shared = {
+      trail: mode === 'edit' ? [{ label: 'Products' }, { label: 'Edit product' }] : trail,
+      isSubmitting,
+      submitError: submitError || null,
+      onCancel: fn(),
+      ...(showGroups ? { groups } : {}),
+    }
+    if (mode === 'edit') {
+      const feature = featureFixtures.find((f) => f.type === type) ?? featureFixtures[0]!
+      return (
+        <FeatureForm
+          key={`edit-${feature.id}`}
+          {...shared}
+          mode="edit"
+          feature={feature}
+          onSubmit={fn()}
+        />
+      )
+    }
+    return (
+      <FeatureForm
+        key={`create-${type}`}
+        {...shared}
+        mode="create"
+        defaultValue={createSeed(type)}
+        onSubmit={fn()}
+      />
+    )
+  },
+}
 
 /** Metered by default: Details, then Metering, centred with no preview rail. */
 export const Default: Story = {}

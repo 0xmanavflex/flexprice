@@ -12,10 +12,58 @@ const meta = {
   component: ForgotPasswordForm,
   parameters: { layout: 'centered' },
   args: { onSubmit: fn(), onBack: fn() },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    sentTo: { control: 'text', description: 'Set an address to show the confirmation screen.' },
+    error: { control: 'text', description: 'Empty means no error.' },
+    onSubmit: { control: false },
+    onBack: { control: false },
+  },
 } satisfies Meta<typeof ForgotPasswordForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+interface PlaygroundArgs {
+  isSubmitting: boolean
+  sentTo: string
+  error: string
+  showBack: boolean
+  onSubmit: () => void
+  onBack: () => void
+}
+
+/** Flip submitting, a failure, or the sent confirmation; hide the back link. */
+export const Playground = {
+  args: {
+    isSubmitting: false,
+    sentTo: '',
+    error: '',
+    showBack: true,
+    onSubmit: fn(),
+    onBack: fn(),
+  },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    sentTo: { control: 'text', description: 'Set an address to show the confirmation screen.' },
+    error: { control: 'text', description: 'Empty means no error.' },
+    showBack: { control: 'boolean', description: 'Offer the back-to-sign-in action.' },
+    onSubmit: { control: false },
+    onBack: { control: false },
+  },
+  parameters: {
+    controls: { include: ['isSubmitting', 'sentTo', 'error', 'showBack', 'onSubmit', 'onBack'] },
+  },
+  render: ({ isSubmitting, sentTo, error, showBack, onSubmit, onBack }) => (
+    <ForgotPasswordForm
+      isSubmitting={isSubmitting}
+      sentTo={sentTo || null}
+      error={error || null}
+      onSubmit={onSubmit}
+      {...(showBack ? { onBack } : {})}
+    />
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 export const Default: Story = {}
 

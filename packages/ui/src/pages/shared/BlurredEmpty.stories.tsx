@@ -26,6 +26,14 @@ const meta = {
   title: 'Foundation/Flexprice/BlurredEmpty',
   component: BlurredEmpty,
   parameters: { layout: 'padded' },
+  argTypes: {
+    title: { control: 'text' },
+    description: { control: 'text' },
+    action: { control: false },
+    secondaryAction: { control: false },
+    children: { control: false },
+    className: { control: false },
+  },
   args: {
     title: 'No events yet',
     description:
@@ -42,6 +50,65 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+interface PlaygroundArgs {
+  title: string
+  description: string
+  showAction: boolean
+  showSecondaryAction: boolean
+  chartHeight: number
+  onAction: () => void
+}
+
+/** Edit the message, toggle either action (clicks log to Actions), and resize the chart behind it. */
+export const Playground = {
+  args: {
+    title: 'No events yet',
+    description:
+      'Send your first usage event and this chart fills in with ingestion as it happens.',
+    showAction: true,
+    showSecondaryAction: true,
+    chartHeight: 220,
+    onAction: fn(),
+  },
+  argTypes: {
+    title: { control: 'text' },
+    description: { control: 'text' },
+    showAction: { control: 'boolean' },
+    showSecondaryAction: { control: 'boolean' },
+    chartHeight: { control: { type: 'range', min: 140, max: 420, step: 10 } },
+    onAction: { control: false },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'title',
+        'description',
+        'showAction',
+        'showSecondaryAction',
+        'chartHeight',
+        'onAction',
+      ],
+    },
+  },
+  render: ({ title, description, showAction, showSecondaryAction, chartHeight, onAction }) => (
+    <BlurredEmpty
+      title={title}
+      description={description}
+      action={showAction ? { label: 'Quickstart', onClick: onAction } : undefined}
+      secondaryAction={
+        showSecondaryAction ? { label: 'Send test event', onClick: onAction } : undefined
+      }
+    >
+      <MetricChart
+        tabs={placeholder}
+        activeTab="events"
+        onTabChange={() => {}}
+        height={chartHeight}
+      />
+    </BlurredEmpty>
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 /**
  * The guarantee this component exists for.

@@ -1,11 +1,14 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { useEffect, useState } from 'react'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { money } from '@fp/domain'
 import { DashboardHome } from './DashboardHome'
 import type {
   CustomersPanel,
+  DashboardHomeProps,
   EventsPanel,
   InvoicesPanel,
+  PanelStatus,
   SubscriptionsPanel,
 } from './DashboardHome'
 
@@ -108,6 +111,23 @@ const meta = {
     invoices,
     onNavigate: fn(),
   },
+  argTypes: {
+    range: { control: 'select', options: RANGE_OPTIONS.map((option) => option.id) },
+    granularity: { control: 'select', options: GRANULARITY_OPTIONS.map((option) => option.id) },
+    customer: { control: 'select', options: CUSTOMER_OPTIONS.map((option) => option.id) },
+    rangeLabel: { control: 'text' },
+    rangeOptions: { control: false },
+    granularityOptions: { control: false },
+    customerOptions: { control: false },
+    events: { control: 'object' },
+    customers: { control: 'object' },
+    subscriptions: { control: 'object' },
+    invoices: { control: 'object' },
+    onRangeChange: { control: false },
+    onGranularityChange: { control: false },
+    onCustomerChange: { control: false },
+    onNavigate: { control: false },
+  },
   // The overview owns its scroll — the shell's content region does not scroll
   // for it — so the story gives it a bounded, scrollable frame to render into.
   decorators: [
@@ -121,6 +141,232 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+const PANEL_STATUSES: PanelStatus[] = ['ready', 'loading', 'empty', 'unavailable']
+const PLAN_POOL = ['Studio', 'Growth', 'Starter', 'Platform']
+
+interface PlaygroundArgs {
+  range: string
+  granularity: string
+  customer: string
+  eventsStatus: PanelStatus
+  customersStatus: PanelStatus
+  subscriptionsStatus: PanelStatus
+  invoicesStatus: PanelStatus
+  dayCount: number
+  eventsPerDay: number
+  revenue: string
+  currency: string
+  newCustomersPerDay: number
+  partialCustomers: boolean
+  plansShown: number
+  contractsPerDay: number
+  paid: number
+  open: number
+  overdue: number
+  onRangeChange: (range: string) => void
+  onGranularityChange: (granularity: string) => void
+  onCustomerChange: (customer: string) => void
+  onNavigate: (path: string) => void
+}
+
+/** Builds all four panels from the playground args; non-ready panels carry no data, as in the real page. */
+function makePanels(
+  args: PlaygroundArgs,
+): Pick<DashboardHomeProps, 'events' | 'customers' | 'subscriptions' | 'invoices'> {
+  const labels = Array.from({ length: args.dayCount }, (_, index) => `Day ${index + 1}`)
+  const plans = PLAN_POOL.slice(0, args.plansShown)
+  const eventsReady = args.eventsStatus === 'ready'
+  const points = eventsReady
+    ? labels.map((label, index) => ({
+        label,
+        events: Math.round(args.eventsPerDay * (0.8 + ((index * 7) % 5) * 0.1)),
+      }))
+    : []
+  const revenueAmount = /^-?\d+(\.\d+)?$/.test(args.revenue) ? args.revenue : '0'
+
+  const days =
+    args.subscriptionsStatus === 'ready' && plans.length > 0
+      ? labels.map((label, index) => ({
+          label,
+          byPlan: Object.fromEntries(
+            plans.map((plan, planIndex) => [
+              plan,
+              (index + planIndex) % (args.contractsPerDay + 1),
+            ]),
+          ),
+        }))
+      : []
+  const planCounts = plans.map((name) => ({
+    name,
+    count: days.reduce((sum, day) => sum + (day.byPlan[name] ?? 0), 0),
+  }))
+  const subscriptionTotal = planCounts.reduce((sum, plan) => sum + plan.count, 0)
+
+  const invoiceReady = args.invoicesStatus === 'ready'
+  const customersReady = args.customersStatus === 'ready'
+  const customerPoints = customersReady
+    ? labels.map((label, index) => ({
+        label,
+        customers: Math.round(args.newCustomersPerDay * (0.5 + ((index * 3) % 4) * 0.25)),
+      }))
+    : []
+
+  return {
+    events: {
+      status: args.eventsStatus,
+      points,
+      total: eventsReady ? points.reduce((sum, point) => sum + point.events, 0) : null,
+      revenue: eventsReady ? money(revenueAmount, args.currency) : null,
+    },
+    customers: {
+      status: args.customersStatus,
+      newCount: customersReady
+        ? customerPoints.reduce((sum, point) => sum + point.customers, 0)
+        : null,
+      partial: customersReady && args.partialCustomers,
+      points: customerPoints,
+    },
+    subscriptions: {
+      status: args.subscriptionsStatus,
+      total: subscriptionTotal,
+      changePercent: subscriptionTotal > 0 ? 12 : null,
+      days,
+      plans: planCounts,
+    },
+    invoices: {
+      status: args.invoicesStatus,
+      total: invoiceReady ? args.paid + args.open + args.overdue : 0,
+      paid: invoiceReady ? args.paid : 0,
+      open: invoiceReady ? args.open : 0,
+      overdue: invoiceReady ? args.overdue : 0,
+    },
+  }
+}
+
+/** Keeps the three filters live so the selects in the page actually change. */
+function PlaygroundHome(args: PlaygroundArgs) {
+  const [range, setRange] = useState(args.range)
+  const [granularity, setGranularity] = useState(args.granularity)
+  const [customer, setCustomer] = useState(args.customer)
+  useEffect(() => setRange(args.range), [args.range])
+  useEffect(() => setGranularity(args.granularity), [args.granularity])
+  useEffect(() => setCustomer(args.customer), [args.customer])
+
+  const rangeLabel = (
+    RANGE_OPTIONS.find((option) => option.id === range)?.label ?? range
+  ).toLowerCase()
+
+  return (
+    <DashboardHome
+      rangeOptions={RANGE_OPTIONS}
+      range={range}
+      onRangeChange={(next) => {
+        setRange(next)
+        args.onRangeChange(next)
+      }}
+      granularityOptions={GRANULARITY_OPTIONS}
+      granularity={granularity}
+      onGranularityChange={(next) => {
+        setGranularity(next)
+        args.onGranularityChange(next)
+      }}
+      customerOptions={CUSTOMER_OPTIONS}
+      customer={customer}
+      onCustomerChange={(next) => {
+        setCustomer(next)
+        args.onCustomerChange(next)
+      }}
+      rangeLabel={rangeLabel}
+      {...makePanels(args)}
+      onNavigate={args.onNavigate}
+    />
+  )
+}
+
+/** Flip each panel between ready, loading, empty and unavailable, and size the data behind them. */
+export const Playground = {
+  args: {
+    range: '7d',
+    granularity: 'daily',
+    customer: 'all',
+    eventsStatus: 'ready',
+    customersStatus: 'ready',
+    subscriptionsStatus: 'ready',
+    invoicesStatus: 'ready',
+    dayCount: 7,
+    eventsPerDay: 750_000,
+    revenue: '184210.00',
+    currency: 'USD',
+    newCustomersPerDay: 2,
+    partialCustomers: false,
+    plansShown: 4,
+    contractsPerDay: 2,
+    paid: 34,
+    open: 15,
+    overdue: 7,
+    onRangeChange: fn(),
+    onGranularityChange: fn(),
+    onCustomerChange: fn(),
+    onNavigate: fn(),
+  },
+  argTypes: {
+    range: { control: 'inline-radio', options: RANGE_OPTIONS.map((option) => option.id) },
+    granularity: {
+      control: 'inline-radio',
+      options: GRANULARITY_OPTIONS.map((option) => option.id),
+    },
+    customer: { control: 'inline-radio', options: CUSTOMER_OPTIONS.map((option) => option.id) },
+    eventsStatus: { control: 'select', options: PANEL_STATUSES },
+    customersStatus: { control: 'select', options: PANEL_STATUSES },
+    subscriptionsStatus: { control: 'select', options: PANEL_STATUSES },
+    invoicesStatus: { control: 'select', options: PANEL_STATUSES },
+    dayCount: { control: { type: 'range', min: 0, max: 30, step: 1 } },
+    eventsPerDay: { control: { type: 'number', min: 0, max: 5_000_000, step: 50_000 } },
+    revenue: { control: 'text', description: 'Plain decimal string; invalid reads as 0.' },
+    currency: { control: 'select', options: ['USD', 'EUR', 'GBP', 'INR'] },
+    newCustomersPerDay: { control: { type: 'range', min: 0, max: 20, step: 1 } },
+    partialCustomers: { control: 'boolean', description: 'Shows the count as a floor, with a +.' },
+    plansShown: { control: { type: 'range', min: 0, max: PLAN_POOL.length, step: 1 } },
+    contractsPerDay: { control: { type: 'range', min: 1, max: 6, step: 1 } },
+    paid: { control: { type: 'number', min: 0, max: 500, step: 1 } },
+    open: { control: { type: 'number', min: 0, max: 500, step: 1 } },
+    overdue: { control: { type: 'number', min: 0, max: 500, step: 1 } },
+    onRangeChange: { control: false },
+    onGranularityChange: { control: false },
+    onCustomerChange: { control: false },
+    onNavigate: { control: false },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'range',
+        'granularity',
+        'customer',
+        'eventsStatus',
+        'customersStatus',
+        'subscriptionsStatus',
+        'invoicesStatus',
+        'dayCount',
+        'eventsPerDay',
+        'revenue',
+        'currency',
+        'newCustomersPerDay',
+        'partialCustomers',
+        'plansShown',
+        'contractsPerDay',
+        'paid',
+        'open',
+        'overdue',
+        'onRangeChange',
+        'onGranularityChange',
+        'onCustomerChange',
+        'onNavigate',
+      ],
+    },
+  },
+  render: (args) => <PlaygroundHome {...args} />,
+} satisfies StoryObj<PlaygroundArgs>
 
 /** Every panel has data. The design, as specified. */
 export const Populated: Story = {

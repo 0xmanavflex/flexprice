@@ -1,6 +1,31 @@
+import { useEffect, useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent } from 'storybook/test'
+import { Button } from '@ui/components/primitives/button'
 import { ConfirmDialog } from './ConfirmDialog'
+
+/** Holds `open` so Cancel and Escape really close it, with a button to reopen; the `open` control still drives it. */
+function Controlled(args: ComponentProps<typeof ConfirmDialog>) {
+  const [open, setOpen] = useState(args.open)
+  useEffect(() => setOpen(args.open), [args.open])
+  return (
+    <>
+      {open ? null : (
+        <Button variant="outline" onClick={() => setOpen(true)}>
+          Reopen dialog
+        </Button>
+      )}
+      <ConfirmDialog
+        {...args}
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next)
+          args.onOpenChange(next)
+        }}
+      />
+    </>
+  )
+}
 
 /**
  * A confirm step for a consequential action. Presentational: the caller owns
@@ -23,10 +48,34 @@ const meta = {
     confirmLabel: 'Archive',
     onConfirm: fn(),
   },
+  argTypes: {
+    open: { control: 'boolean' },
+    title: { control: 'text' },
+    description: { control: 'text' },
+    confirmLabel: { control: 'text' },
+    cancelLabel: { control: 'text' },
+    destructive: { control: 'boolean', description: 'Destructive button weight.' },
+    isPending: { control: 'boolean', description: 'Request in flight: locks both buttons.' },
+    error: { control: 'text', description: 'Inline failure message; empty for none.' },
+    onOpenChange: { control: false },
+    onConfirm: { control: false },
+  },
+  render: (args) => <Controlled {...args} />,
 } satisfies Meta<typeof ConfirmDialog>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Every prop as a control: flip pending/destructive, set an error, close it and reopen. */
+export const Playground: Story = {
+  args: {
+    description: 'It stops being offered at checkout. Existing redemptions are kept.',
+    cancelLabel: 'Cancel',
+    destructive: false,
+    isPending: false,
+    error: '',
+  },
+}
 
 export const Default: Story = {
   play: async () => {

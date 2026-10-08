@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { GroupEntityType } from '@fp/domain'
@@ -63,4 +64,37 @@ export const SubmitError: Story = {
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('alert')).toBeInTheDocument()
   },
+}
+
+type PlaygroundArgs = Omit<ComponentProps<typeof GroupForm>, 'defaultValue'> & {
+  name: string
+  lookupKey: string
+  entityType: GroupEntityType
+}
+
+/** Prefill the draft and flip submitting or a server error; the form remounts when the draft changes. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  parameters: { controls: { exclude: /^(trail|on[A-Z].*)$/ } },
+  args: {
+    name: 'EU region',
+    lookupKey: 'eu-region',
+    entityType: GroupEntityType.Price,
+    isSubmitting: false,
+    submitError: '',
+  },
+  argTypes: {
+    name: { control: 'text' },
+    lookupKey: { control: 'text' },
+    entityType: { control: 'inline-radio', options: Object.values(GroupEntityType) },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Empty means no server error.' },
+  },
+  render: ({ name, lookupKey, entityType, submitError, ...rest }) => (
+    <GroupForm
+      key={`${name}|${lookupKey}|${entityType}`}
+      {...rest}
+      defaultValue={{ name, lookupKey, entityType }}
+      submitError={submitError || null}
+    />
+  ),
 }

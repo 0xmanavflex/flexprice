@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { DetailTable, type DetailColumn } from './DetailTable'
 
@@ -28,6 +28,16 @@ const COLUMNS: DetailColumn<Invoice>[] = [
   },
 ]
 
+/** `count` invoices, deterministic, cycling payment status and growing totals. */
+function makeInvoices(count: number): Invoice[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `inv_${index + 1}`,
+    number: `INV-2026-${String(1000 + index)}`,
+    payment: (['Paid', 'Overdue', 'Unpaid'] as const)[index % 3]!,
+    total: (index + 1) * 125,
+  }))
+}
+
 const meta = {
   title: 'Pages/Shared/DetailTable',
   component: DetailTable<Invoice>,
@@ -38,10 +48,118 @@ const meta = {
     columns: COLUMNS,
     facet: { label: 'Payment', value: (row: Invoice) => row.payment },
   },
+  argTypes: {
+    label: { control: 'text' },
+    noun: { control: 'text' },
+    pageSize: { control: { type: 'number', min: 1, max: 50, step: 1 } },
+    compact: { control: 'boolean' },
+    toolbar: { control: 'boolean' },
+    rows: { control: false },
+    columns: { control: false },
+    facet: { control: false },
+    facets: { control: false },
+    getRowId: { control: false },
+    action: { control: false },
+    onRowClick: { control: false },
+    searchText: { control: false },
+    empty: { control: false },
+    className: { control: false },
+  },
 } satisfies Meta<typeof DetailTable<Invoice>>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+interface PlaygroundArgs {
+  rowCount: number
+  pageSize: number
+  noun: string
+  emptyMessage: string
+  withFacet: boolean
+  withAction: boolean
+  clickableRows: boolean
+  toolbar: boolean
+  compact: boolean
+  onRowClick: () => void
+}
+
+/** Drag rowCount from 0 (empty message) to 50 (several pages); search, filter, sort and paging all work. */
+export const Playground = {
+  args: {
+    rowCount: 14,
+    pageSize: 10,
+    noun: 'invoices',
+    emptyMessage: 'No invoices yet.',
+    withFacet: true,
+    withAction: true,
+    clickableRows: false,
+    toolbar: true,
+    compact: false,
+    onRowClick: fn(),
+  },
+  argTypes: {
+    rowCount: { control: { type: 'range', min: 0, max: 50, step: 1 } },
+    pageSize: { control: { type: 'number', min: 1, max: 50, step: 1 } },
+    noun: { control: 'text' },
+    emptyMessage: { control: 'text' },
+    withFacet: { control: 'boolean' },
+    withAction: { control: 'boolean' },
+    clickableRows: { control: 'boolean' },
+    toolbar: { control: 'boolean' },
+    compact: { control: 'boolean' },
+    onRowClick: { control: false },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'rowCount',
+        'pageSize',
+        'noun',
+        'emptyMessage',
+        'withFacet',
+        'withAction',
+        'clickableRows',
+        'toolbar',
+        'compact',
+        'onRowClick',
+      ],
+    },
+  },
+  render: ({
+    rowCount,
+    pageSize,
+    noun,
+    emptyMessage,
+    withFacet,
+    withAction,
+    clickableRows,
+    toolbar,
+    compact,
+    onRowClick,
+  }) => (
+    <DetailTable<Invoice>
+      label="Invoices"
+      noun={noun}
+      rows={makeInvoices(rowCount)}
+      columns={COLUMNS}
+      pageSize={pageSize}
+      toolbar={toolbar}
+      compact={compact}
+      empty={emptyMessage}
+      {...(withFacet ? { facet: { label: 'Payment', value: (row: Invoice) => row.payment } } : {})}
+      {...(withAction
+        ? {
+            action: (
+              <Button variant="outline" className="h-9 px-3">
+                View all
+              </Button>
+            ),
+          }
+        : {})}
+      {...(clickableRows ? { onRowClick } : {})}
+    />
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 /** The list table inside a bordered panel: search, filter, sort, rows, paging. */
 export const Default: Story = {

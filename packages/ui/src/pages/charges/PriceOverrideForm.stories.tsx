@@ -1,6 +1,7 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { BillingModel, TierMode } from '@fp/domain'
+import { BillingModel, type PriceOverride, TierMode } from '@fp/domain'
 import { PriceOverrideForm } from './PriceOverrideForm'
 
 /**
@@ -18,10 +19,59 @@ const meta = {
   component: PriceOverrideForm,
   parameters: { layout: 'padded' },
   args: { priceId: 'price_01', onSubmit: fn(), onCancel: fn() },
+  argTypes: {
+    priceId: { control: 'text' },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    hideActions: { control: 'boolean' },
+    formId: { control: 'text' },
+    defaultValue: { control: false },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+    onStartedChange: { control: false },
+  },
 } satisfies Meta<typeof PriceOverrideForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+const seeds: Record<string, PriceOverride | undefined> = {
+  blank: undefined,
+  flat: { priceId: 'price_01', billingModel: BillingModel.FlatFee, amount: '49.00' },
+  package: {
+    priceId: 'price_01',
+    billingModel: BillingModel.Package,
+    amount: '10.00',
+    divideBy: 1000,
+  },
+  tiered: {
+    priceId: 'price_01',
+    billingModel: BillingModel.Tiered,
+    tierMode: TierMode.Volume,
+    tiers: [
+      { upTo: 1000, unitAmount: '0.10' },
+      { upTo: 10000, unitAmount: '0.08' },
+      { upTo: null, unitAmount: '0.05' },
+    ],
+  },
+}
+
+/** Pick the starting model, then flip submitting, a server error and the hidden actions. */
+export const Playground: StoryObj<ComponentProps<typeof PriceOverrideForm> & { seed: string }> = {
+  args: { seed: 'blank', isSubmitting: false, submitError: '', hideActions: false },
+  argTypes: { seed: { control: 'select', options: Object.keys(seeds) } },
+  render: ({ seed, submitError, ...args }) => {
+    const defaultValue = seeds[seed]
+    return (
+      <PriceOverrideForm
+        key={seed}
+        {...args}
+        submitError={submitError || null}
+        {...(defaultValue ? { defaultValue } : {})}
+      />
+    )
+  },
+}
 
 /** Opens on a flat fee — the simplest model, and the most common. */
 export const Default: Story = {}

@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import type { DetailItem } from './DetailList'
@@ -26,10 +27,44 @@ const meta = {
   component: DetailList,
   parameters: { layout: 'padded' },
   args: { items },
+  argTypes: {
+    items: { control: 'object', description: 'Label/value pairs; `full` spans both columns.' },
+    columns: { control: 'inline-radio', options: [1, 2] },
+    className: { control: false },
+  },
 } satisfies Meta<typeof DetailList>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Repeats a pool of pairs deterministically, so `count` can grow past the hand-written seven. */
+const makeItems = (count: number, pool: DetailItem[]): DetailItem[] =>
+  pool.length === 0
+    ? []
+    : Array.from({ length: count }, (_, index): DetailItem => {
+        const base = pool[index % pool.length] as DetailItem
+        return index < pool.length
+          ? base
+          : { label: `${base.label} ${Math.floor(index / pool.length) + 1}`, value: base.value }
+      })
+
+type PlaygroundArgs = ComponentProps<typeof DetailList> & { count: number; fullWidthLast: boolean }
+
+/** Drag `count` from 0 to 24 (it cycles the `items` pool), switch columns, toggle whether the last value spans the row. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: { items, count: 7, columns: 2, fullWidthLast: true },
+  argTypes: {
+    count: { control: { type: 'range', min: 0, max: 24, step: 1 } },
+    fullWidthLast: { control: 'boolean' },
+  },
+  render: ({ count, fullWidthLast, items: pool, ...args }) => {
+    const list = makeItems(count, pool).map((item, index, all) => ({
+      ...item,
+      full: index === all.length - 1 ? fullWidthLast : false,
+    }))
+    return <DetailList {...args} items={list} />
+  },
+}
 
 export const TwoColumns: Story = {
   play: async ({ canvasElement }) => {

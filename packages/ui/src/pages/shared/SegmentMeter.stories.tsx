@@ -29,11 +29,38 @@ const rows: SegmentMeterRow[] = [
   { id: 'webhooks', label: 'Webhook deliveries', caption: 'webhook_deliveries', value: 12_800 },
 ]
 
+/** `count` rows from the fixture, cycling past five with numbered names. */
+function makeRows(count: number, quota: number | undefined, showDelta: boolean): SegmentMeterRow[] {
+  return Array.from({ length: count }, (_, index) => {
+    const base = rows[index % rows.length]!
+    const round = Math.floor(index / rows.length)
+    const scale = 1 / (1 + round * 0.4)
+    return {
+      id: `${base.id}_${index}`,
+      label: round === 0 ? base.label : `${base.label} ${round + 1}`,
+      caption: base.caption,
+      value: Math.round(base.value * scale),
+      ...(quota === undefined ? {} : { max: quota }),
+      ...(showDelta && base.changePercent !== undefined
+        ? { changePercent: base.changePercent }
+        : {}),
+    }
+  })
+}
+
 const meta = {
   title: 'Foundation/Flexprice/SegmentMeter',
   component: SegmentMeter,
   parameters: { layout: 'padded' },
   args: { rows, label: 'Usage by feature' },
+  argTypes: {
+    rows: { control: false },
+    segments: { control: { type: 'range', min: 8, max: 80, step: 1 } },
+    label: { control: 'text' },
+    emptyMessage: { control: 'text' },
+    format: { control: false },
+    className: { control: false },
+  },
   decorators: [
     (Story) => (
       <div className="bg-card mx-auto w-full max-w-lg rounded-xl border p-5">
@@ -47,6 +74,46 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+interface PlaygroundArgs {
+  rowCount: number
+  quota: number
+  useQuota: boolean
+  showDelta: boolean
+  segments: number
+  label: string
+  emptyMessage: string
+}
+
+/** Drag rowCount from 0 (empty state) to 15; tick useQuota to measure each row against a ceiling. */
+export const Playground = {
+  args: {
+    rowCount: 5,
+    quota: 1_500_000,
+    useQuota: false,
+    showDelta: true,
+    segments: 48,
+    label: 'Usage by feature',
+    emptyMessage: 'Nothing to show for this period',
+  },
+  argTypes: {
+    rowCount: { control: { type: 'range', min: 0, max: 15, step: 1 } },
+    quota: { control: { type: 'number', min: 1, step: 100_000 } },
+    useQuota: { control: 'boolean' },
+    showDelta: { control: 'boolean' },
+    segments: { control: { type: 'range', min: 8, max: 80, step: 1 } },
+    label: { control: 'text' },
+    emptyMessage: { control: 'text' },
+  },
+  parameters: {
+    controls: {
+      include: ['rowCount', 'quota', 'useQuota', 'showDelta', 'segments', 'label', 'emptyMessage'],
+    },
+  },
+  render: ({ rowCount, quota, useQuota, showDelta, ...rest }) => (
+    <SegmentMeter {...rest} rows={makeRows(rowCount, useQuota ? quota : undefined, showDelta)} />
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 /**
  * The figure behind the approximation is reachable without a mouse: every track

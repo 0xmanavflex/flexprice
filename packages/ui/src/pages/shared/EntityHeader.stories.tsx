@@ -1,0 +1,200 @@
+import type { Meta, StoryObj } from '@storybook/react-vite'
+import { BracesIcon, GaugeIcon, HashIcon, ToggleRightIcon } from 'lucide-react'
+import { FeatureType } from '@fp/domain'
+import { expect, fn, userEvent, within } from 'storybook/test'
+import { Button } from '@ui/components/primitives/button'
+import { CatalogStatusBadge, FeatureTypeBadge, type CatalogStatus } from './StatusBadge'
+import { EntityHeader } from './EntityHeader'
+import { RowActionsMenu } from './RowActionsMenu'
+
+const TYPE_ICON = {
+  [FeatureType.Metered]: GaugeIcon,
+  [FeatureType.Static]: HashIcon,
+  [FeatureType.Boolean]: ToggleRightIcon,
+  [FeatureType.Config]: BracesIcon,
+} as const
+
+const meta = {
+  title: 'Foundation/Flexprice/EntityHeader',
+  component: EntityHeader,
+  parameters: { layout: 'fullscreen' },
+  args: {
+    trail: [{ label: 'Features', onClick: fn() }, { label: 'API calls' }],
+    icon: <GaugeIcon aria-hidden className="size-5" />,
+    title: 'API calls',
+    id: 'feat_01HZX3API',
+    email: 'billing@acme.test',
+    badges: (
+      <>
+        <FeatureTypeBadge type={FeatureType.Metered} />
+        <CatalogStatusBadge status="published" />
+      </>
+    ),
+    primary: <Button variant="outline">Edit feature</Button>,
+    actions: (
+      <RowActionsMenu label="API calls" onEdit={fn()} onRemove={fn()} removeLabel="Archive" />
+    ),
+  },
+  argTypes: {
+    title: { control: 'text' },
+    id: { control: 'text' },
+    email: { control: 'text' },
+    trail: { control: 'object' },
+    icon: { control: false },
+    badges: { control: false },
+    primary: { control: false },
+    actions: { control: false },
+  },
+} satisfies Meta<typeof EntityHeader>
+
+export default meta
+type Story = StoryObj<typeof meta>
+
+interface PlaygroundArgs {
+  parent: string
+  title: string
+  id: string
+  email: string
+  type: FeatureType
+  status: CatalogStatus
+  showBadges: boolean
+  showId: boolean
+  showEmail: boolean
+  showPrimary: boolean
+  showActions: boolean
+  onBack: () => void
+}
+
+/** Every slot as a control: names, type (tile icon and type chip), status chip, id and email chips, primary action and More menu. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    parent: 'Features',
+    title: 'API calls',
+    id: 'feat_01HZX3API',
+    email: 'billing@acme.test',
+    type: FeatureType.Metered,
+    status: 'published',
+    showBadges: true,
+    showId: true,
+    showEmail: false,
+    showPrimary: true,
+    showActions: true,
+    onBack: fn(),
+  },
+  argTypes: {
+    parent: { control: 'text' },
+    title: { control: 'text' },
+    id: { control: 'text' },
+    email: { control: 'text' },
+    type: { control: 'select', options: Object.values(FeatureType) },
+    status: { control: 'inline-radio', options: ['published', 'archived'] },
+    showBadges: { control: 'boolean' },
+    showId: { control: 'boolean' },
+    showEmail: { control: 'boolean' },
+    showPrimary: { control: 'boolean' },
+    showActions: { control: 'boolean' },
+    onBack: { control: false },
+  },
+  render: (args) => {
+    const Icon = TYPE_ICON[args.type]
+    return (
+      <EntityHeader
+        trail={[{ label: args.parent, onClick: args.onBack }, { label: args.title }]}
+        icon={<Icon aria-hidden className="size-5" />}
+        title={args.title}
+        {...(args.showId && args.id ? { id: args.id } : {})}
+        {...(args.showEmail && args.email ? { email: args.email } : {})}
+        {...(args.showBadges
+          ? {
+              badges: (
+                <>
+                  <FeatureTypeBadge type={args.type} />
+                  <CatalogStatusBadge status={args.status} />
+                </>
+              ),
+            }
+          : {})}
+        {...(args.showPrimary ? { primary: <Button variant="outline">Edit feature</Button> } : {})}
+        {...(args.showActions
+          ? {
+              actions: (
+                <RowActionsMenu
+                  label={args.title}
+                  onEdit={fn()}
+                  onRemove={fn()}
+                  removeLabel="Archive"
+                />
+              ),
+            }
+          : {})}
+      />
+    )
+  },
+}
+
+/** Tile and name on the left; primary action, chips, copyable id and the More menu on the right. */
+export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { level: 1, name: 'API calls' })).toBeVisible()
+    await expect(canvas.getByText('Published')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Copy ID feat_01HZX3API' })).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Edit feature' })).toBeVisible()
+  },
+}
+
+/** Bare (outside the console shell) the page draws the trail itself, and the parent is a way back. */
+export const TrailGoesBack: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Features' }))
+    await expect(args.trail[0]?.onClick).toHaveBeenCalled()
+    await expect(canvas.getByText('API calls', { selector: 'span' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    )
+  },
+}
+
+/** Only the required slots: no chips, id, email or actions. */
+export const Minimal: Story = {
+  render: (args) => <EntityHeader trail={args.trail} icon={args.icon} title={args.title} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { level: 1, name: 'API calls' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: /Copy ID/ })).not.toBeInTheDocument()
+  },
+}
+
+/** An archived record: the badge says so. */
+export const Archived: Story = {
+  args: { badges: <CatalogStatusBadge status="archived" /> },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('Archived')).toBeVisible()
+  },
+}
+
+/** A very long name truncates inside its column instead of pushing the actions off screen. */
+export const LongTitle: Story = {
+  decorators: [
+    (Story) => (
+      <div className="max-w-xl">
+        <Story />
+      </div>
+    ),
+  ],
+  args: {
+    title:
+      'Gigabytes of cold storage retained beyond the contractual window for enterprise tenants',
+    trail: [{ label: 'Features', onClick: fn() }, { label: 'Cold storage retention' }],
+  },
+}
+
+/** Other record kinds use the same tile with their own glyph. */
+export const OtherGlyphs: Story = {
+  args: {
+    icon: <BracesIcon aria-hidden className="size-5" />,
+    title: 'Enterprise plan',
+    trail: [{ label: 'Plans', onClick: fn() }, { label: 'Enterprise plan' }],
+  },
+}

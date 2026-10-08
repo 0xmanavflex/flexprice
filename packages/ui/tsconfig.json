@@ -12,6 +12,7 @@
     }
   },
   "include": [
-    "src/**/*"
+    "src/**/*",
+    "src/design-system/anatomy.generated.json"
   ]
 }

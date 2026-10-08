@@ -21,9 +21,12 @@ const preview: Preview = {
       storySort: {
         order: [
           'Design System',
-          ['Introduction', 'Colors', 'Typography', 'Radius', 'Elevation'],
-          'Foundation',
+          ['Introduction', 'Page map', 'Colors', 'Typography', 'Radius', 'Elevation'],
+          // Whole pages first — the place to start when asking "what is on this
+          // screen", before dropping into the parts they are made of.
+          'Pages',
           'Surfaces',
+          'Foundation',
         ],
       },
     },

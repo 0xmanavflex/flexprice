@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { CreditGrantCreateForm, CreditGrantEditForm } from './CreditGrantForm'
@@ -19,10 +20,44 @@ const meta = {
   parameters: { layout: 'padded' },
   decorators: [inSection],
   args: { onSubmit: fn(), onCancel: fn() },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    submitLabel: { control: 'text' },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+  },
 } satisfies Meta<typeof CreditGrantCreateForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Switch create/edit, submitting, a server error and the submit label from the controls. */
+export const Playground: StoryObj<
+  ComponentProps<typeof CreditGrantCreateForm> & { mode: 'create' | 'edit' }
+> = {
+  args: { mode: 'create', isSubmitting: false, submitError: '', submitLabel: '' },
+  argTypes: { mode: { control: 'inline-radio', options: ['create', 'edit'] } },
+  render: ({ mode, submitError, submitLabel, onSubmit: _onSubmit, ...args }) =>
+    mode === 'edit' ? (
+      <CreditGrantEditForm
+        key="edit"
+        {...args}
+        onSubmit={fn()}
+        defaultValue={{ name: 'Welcome credits' }}
+        submitError={submitError || null}
+        {...(submitLabel ? { submitLabel } : {})}
+      />
+    ) : (
+      <CreditGrantCreateForm
+        key="create"
+        {...args}
+        onSubmit={fn()}
+        submitError={submitError || null}
+        {...(submitLabel ? { submitLabel } : {})}
+      />
+    ),
+}
 
 export const Default: Story = {}
 

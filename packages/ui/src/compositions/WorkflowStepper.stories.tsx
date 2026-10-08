@@ -1,3 +1,4 @@
+import { useEffect, useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { WorkflowStepper, type WorkflowStep } from './WorkflowStepper'
@@ -36,6 +37,41 @@ const steps = (currentId: string): WorkflowStep[] => {
   }))
 }
 
+const STEP_IDS = ['customer', 'plan', 'prices', 'entitlements', 'credits', 'review']
+
+type PlaygroundArgs = Omit<ComponentProps<typeof WorkflowStepper>, 'steps' | 'children'> & {
+  stepCount: number
+  showContent: boolean
+}
+
+/** Statuses are derived from the current step, so clicking a reachable step moves everything. */
+function LiveStepper({
+  stepCount,
+  showContent,
+  currentStep,
+  onStepChange,
+  ...rest
+}: PlaygroundArgs) {
+  const [current, setCurrent] = useState(currentStep)
+  useEffect(() => setCurrent(currentStep), [currentStep])
+  const all = steps(STEP_IDS.includes(current) ? current : 'customer')
+  const shown = all.slice(0, stepCount)
+  const active = shown.some((s) => s.id === current) ? current : (shown[shown.length - 1]?.id ?? '')
+  return (
+    <WorkflowStepper
+      {...rest}
+      steps={shown.map((s) => ({ ...s, status: s.id === active ? 'current' : s.status }))}
+      currentStep={active}
+      onStepChange={(id) => {
+        setCurrent(id)
+        onStepChange(id)
+      }}
+    >
+      {showContent ? <div className="rounded-lg border p-6">Step content goes here.</div> : null}
+    </WorkflowStepper>
+  )
+}
+
 const meta = {
   title: 'Foundation/Compositions/WorkflowStepper',
   component: WorkflowStepper,
@@ -46,10 +82,38 @@ const meta = {
     onStepChange: fn(),
     children: <div className="rounded-lg border p-6">Step content goes here.</div>,
   },
+  argTypes: {
+    currentStep: { control: 'select', options: STEP_IDS },
+    variant: { control: 'inline-radio', options: ['inline', 'header'] },
+    'aria-label': { control: 'text' },
+    steps: {
+      control: 'object',
+      description: 'Each step: id, title, status (complete, current, upcoming, locked).',
+    },
+    onStepChange: { control: false },
+    children: { control: false },
+  },
 } satisfies Meta<typeof WorkflowStepper>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Pick the current step and variant; statuses follow, and clicking a reachable step navigates. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    currentStep: 'prices',
+    stepCount: 6,
+    variant: 'inline',
+    showContent: true,
+    'aria-label': 'Create plan',
+    onStepChange: fn(),
+  },
+  argTypes: {
+    stepCount: { control: { type: 'range', min: 2, max: 6, step: 1 } },
+    showContent: { control: 'boolean' },
+  },
+  render: (args) => <LiveStepper {...args} />,
+}
 
 export const Default: Story = {}
 

@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
@@ -8,10 +9,58 @@ const meta = {
   component: EmptyState,
   parameters: { layout: 'padded' },
   args: { title: 'No features yet' },
+  argTypes: {
+    title: { control: 'text' },
+    description: { control: 'text' },
+    size: { control: 'inline-radio', options: ['page', 'inline'] },
+    isFiltered: {
+      control: 'boolean',
+      description: 'A filter caused the emptiness: offers clearing it.',
+    },
+    action: { control: false },
+    secondaryAction: { control: false },
+    onClearFilters: { control: false },
+    icon: { control: false },
+    guides: { control: false },
+  },
 } satisfies Meta<typeof EmptyState>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = ComponentProps<typeof EmptyState> & {
+  showAction: boolean
+  showSecondaryAction: boolean
+  showClearFilters: boolean
+}
+
+/** Switch page/inline size, flip `isFiltered`, and show or hide each action slot. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    title: 'No features yet',
+    description: 'Features describe what your customers are entitled to and what you meter.',
+    size: 'page',
+    isFiltered: false,
+    showAction: true,
+    showSecondaryAction: false,
+    showClearFilters: true,
+  },
+  argTypes: {
+    showAction: { control: 'boolean' },
+    showSecondaryAction: { control: 'boolean' },
+    showClearFilters: { control: 'boolean', description: 'Only used when `isFiltered` is on.' },
+  },
+  render: ({ showAction, showSecondaryAction, showClearFilters, ...args }) => (
+    <EmptyState
+      {...args}
+      action={showAction ? <Button>New feature</Button> : undefined}
+      secondaryAction={showSecondaryAction ? <Button variant="outline">Import</Button> : undefined}
+      onClearFilters={
+        showClearFilters ? <Button variant="outline">Clear filters</Button> : undefined
+      }
+    />
+  ),
+}
 
 /** Nothing created yet: invite the first one. */
 export const NothingYet: Story = {

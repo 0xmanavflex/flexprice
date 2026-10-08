@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import { useTable } from '@tanstack/react-table'
@@ -18,21 +18,31 @@ interface Row {
 const data: Row[] = Array.from({ length: 25 }, (_, index) => ({ name: `Coupon ${index + 1}` }))
 const columns = [{ id: 'name', accessorFn: (row: Row) => row.name, header: 'Name' }] as never
 
-function GridFooterHarness(args: GridFooterProps) {
+function GridFooterHarness({ total = 64, ...args }: GridFooterProps & { total?: number }) {
   const [pagination, setPagination] = useState({ pageIndex: 0, pageSize: args.pageSize })
+  const [fit, setFit] = useState(args.fitToWindow)
+  useEffect(() => setFit(args.fitToWindow), [args.fitToWindow])
   const table = useTable({
     features: dataGridFeatures,
     data,
     columns,
     manualPagination: true,
-    rowCount: 64,
+    rowCount: total,
     state: { pagination },
     onPaginationChange: setPagination,
   } as never)
 
   return (
-    <DataGrid table={table as never} recordCount={64}>
-      <GridFooter {...args} pageSize={pagination.pageSize} />
+    <DataGrid table={table as never} recordCount={total}>
+      <GridFooter
+        {...args}
+        fitToWindow={fit}
+        onFitToWindowChange={(next) => {
+          setFit(next)
+          args.onFitToWindowChange(next)
+        }}
+        pageSize={pagination.pageSize}
+      />
     </DataGrid>
   )
 }
@@ -48,10 +58,34 @@ const meta = {
     pageSize: 25,
     noun: 'coupons',
   },
+  argTypes: {
+    fitToWindow: { control: 'boolean' },
+    pageSize: {
+      control: 'select',
+      options: [10, 25, 50, 100],
+      description: 'Initial rows per page.',
+    },
+    noun: {
+      control: 'text',
+      description: 'Names the records in the range: "1 - 25 of 64 coupons".',
+    },
+    onFitToWindowChange: { control: false },
+    children: { control: false },
+  },
 } satisfies Meta<typeof GridFooter>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Drag `total` from 0 to 500, change the page size and noun, and press Fit to window; pages and range follow. */
+export const Playground: StoryObj<GridFooterProps & { total: number }> = {
+  args: { fitToWindow: false, pageSize: 25, noun: 'coupons', total: 64, onFitToWindowChange: fn() },
+  argTypes: {
+    total: { control: { type: 'range', min: 0, max: 500, step: 1 } },
+  },
+  // `pageSize` seeds the table's own state, so remount when it is changed.
+  render: (args) => <GridFooterHarness key={args.pageSize} {...args} />,
+}
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {

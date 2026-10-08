@@ -32,6 +32,110 @@ type Story = StoryObj<typeof meta>
 
 const TONES: PillTone[] = ['neutral', 'success', 'info', 'warning', 'danger']
 
+interface PlaygroundArgs {
+  name: string
+  id: string
+  statusLabel: string
+  statusTone: PillTone
+  amount: string
+  currency: string
+  seats: number
+  created: string
+  locale: string
+  absentValues: boolean
+}
+
+/** Edit one row's values and watch every column helper re-render it; tick absentValues to see the em dash everywhere. */
+export const Playground = {
+  args: {
+    name: 'Enterprise onboarding',
+    id: '01JF8Z3K7Q9W2E4R6T8Y0U1I2O',
+    statusLabel: 'Published',
+    statusTone: 'success',
+    amount: '1249.50',
+    currency: 'USD',
+    seats: 12500,
+    created: '2026-03-04',
+    locale: 'en-US',
+    absentValues: false,
+  },
+  argTypes: {
+    name: { control: 'text' },
+    id: { control: 'text' },
+    statusLabel: { control: 'text' },
+    statusTone: { control: 'select', options: TONES },
+    amount: { control: 'text', description: 'Plain decimal string; invalid input reads as 0.' },
+    currency: { control: 'select', options: ['USD', 'EUR', 'GBP', 'INR', 'JPY'] },
+    seats: { control: { type: 'number', min: 0, step: 100 } },
+    created: {
+      control: 'text',
+      description: 'ISO date, e.g. 2026-03-04. Invalid reads as absent.',
+    },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE', 'fr-FR', 'en-IN'] },
+    absentValues: { control: 'boolean' },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'name',
+        'id',
+        'statusLabel',
+        'statusTone',
+        'amount',
+        'currency',
+        'seats',
+        'created',
+        'locale',
+        'absentValues',
+      ],
+    },
+  },
+  render: ({
+    name,
+    id,
+    statusLabel,
+    statusTone,
+    amount,
+    currency,
+    seats,
+    created,
+    locale,
+    absentValues,
+  }) => {
+    const parsed = new Date(`${created}T00:00:00Z`)
+    const row: Row = {
+      id,
+      name,
+      lookup: name.toLowerCase().replace(/\s+/g, '_'),
+      amount: money(/^-?\d+(\.\d+)?$/.test(amount) ? amount : '0', currency),
+      seats,
+      created: Number.isNaN(parsed.getTime()) ? null : parsed,
+    }
+    const columns = [
+      textColumn<Row>('name', 'Name', (r) => (absentValues ? null : r.name)),
+      idColumn<Row>('id', 'Identifier', (r) => r.id),
+      pillColumn<Row>('status', 'Status', () =>
+        absentValues ? null : { label: statusLabel, tone: statusTone },
+      ),
+      moneyColumn<Row>('amount', 'Amount', (r) => (absentValues ? null : r.amount), { locale }),
+      numberColumn<Row>('seats', 'Seats', (r) => (absentValues ? null : r.seats), { locale }),
+      dateColumn<Row>('created', 'Created', (r) => (absentValues ? null : r.created), { locale }),
+    ]
+    return (
+      <dl className="grid max-w-md grid-cols-[10rem_1fr] items-center gap-y-3 text-sm">
+        {columns.map((column) => (
+          <div key={column.id} className="contents">
+            <dt className="text-muted-foreground text-[11px] tracking-[0.08em] uppercase">
+              {column.header}
+            </dt>
+            <dd className="min-w-0">{column.cell(row)}</dd>
+          </div>
+        ))}
+      </dl>
+    )
+  },
+} satisfies StoryObj<PlaygroundArgs>
+
 export const Pills: Story = {
   render: () => (
     <div className="flex flex-col gap-6">
@@ -133,9 +237,9 @@ export const ColumnHelpers: Story = {
     expect(textColumn<Row>('name', 'Name', (row) => row.name).text?.(ROW)).toBe(
       'Enterprise onboarding',
     )
-    expect(numberColumn<Row>('seats', 'Seats', (row) => row.seats, { locale: 'en-US' }).text?.(ROW)).toBe(
-      '12,500',
-    )
+    expect(
+      numberColumn<Row>('seats', 'Seats', (row) => row.seats, { locale: 'en-US' }).text?.(ROW),
+    ).toBe('12,500')
     expect(textColumn<Row>('missing', 'Never set', () => null).text?.(ROW)).toBe('')
   },
 }
@@ -152,7 +256,9 @@ export const LongValuesClip: Story = {
       <div className="min-w-0 border-r p-4">
         {idColumn<Row>('id', 'Identifier', (row) => row.id).cell(ROW)}
       </div>
-      <div className="min-w-0 p-4">{textColumn<Row>('name', 'Name', (row) => row.name).cell(ROW)}</div>
+      <div className="min-w-0 p-4">
+        {textColumn<Row>('name', 'Name', (row) => row.name).cell(ROW)}
+      </div>
     </div>
   ),
   play: async ({ canvasElement }) => {

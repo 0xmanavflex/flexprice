@@ -1,6 +1,6 @@
 # CI
 
-Eight workflows, each answering one question, so a red check names the problem
+Nine workflows, each answering one question, so a red check names the problem
 before you open it.
 
 | Workflow | Gates | Roughly |
@@ -13,6 +13,7 @@ before you open it.
 | `build.yml` | The production bundle, and its size in the summary | 2–4 min |
 | `sast.yml` | Semgrep. Soft-fail in phase 1 | 2–5 min |
 | `deploy.yml` | Vercel. **Skips until its secrets exist** | — |
+| `storybook-deploy.yml` | Publishes Storybook to its own Vercel project. **Skips until its secrets exist** | 4–8 min |
 
 They were split rather than left as one job because the failures have different
 owners. A failing lint and a failing accessibility check are not the same
@@ -54,6 +55,23 @@ cannot act on is worse than no check at all.
 Application config — every `VITE_*` variable — belongs in the Vercel project's
 own Environment Variables, not here. `vercel pull` fetches it at build time so
 the bundle is built with exactly what Vercel would use.
+
+## Deploying Storybook
+
+`storybook-deploy.yml` publishes the workbench to a **second Vercel project**, so it has its own URL, protection and history. It builds Storybook in the runner and uploads the finished static site (Vercel's Build Output API), so none of the Vercel project's build settings matter and the console's root `vercel.json` is never read. A push to `main` is production; a pull request gets a preview and a comment with its URL.
+
+1. In Vercel, create an empty project (framework **Other**, no Git connection needed) and copy its **Project ID**.
+2. Add the repository secrets below. `VERCEL_TOKEN` and `VERCEL_ORG_ID` are the same values `deploy.yml` uses.
+
+| Secret | Where to find it |
+| --- | --- |
+| `VERCEL_TOKEN` | Vercel → Account Settings → Tokens (shared) |
+| `VERCEL_ORG_ID` | Vercel → Team Settings → General ("Team ID") (shared) |
+| `VERCEL_STORYBOOK_PROJECT_ID` | Vercel → the Storybook project → Settings → General |
+
+3. Optional: turn on Deployment Protection (Vercel SSO) and attach a custom domain in the Storybook project.
+
+No application variables are needed — Storybook runs on fixtures. Until the secrets exist the job skips with a warning. The build first checks that `packages/ui/src/design-system/anatomy.generated.json` is current; after adding, removing or moving a component, page or story, run `pnpm ui:anatomy` and commit the result.
 
 ## What to do once it deploys
 

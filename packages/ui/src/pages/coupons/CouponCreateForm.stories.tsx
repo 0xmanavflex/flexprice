@@ -17,10 +17,29 @@ const meta = {
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
   args: { trail, onSubmit: fn(), onCancel: fn() },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    defaultValue: { control: false },
+    trail: { control: false },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+  },
 } satisfies Meta<typeof CouponCreateForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Flip submitting and a server error from the controls. */
+export const Playground: Story = {
+  args: { isSubmitting: false, submitError: '' },
+  render: ({ submitError, ...args }) => (
+    <CouponCreateForm {...args} submitError={submitError || null} />
+  ),
+  parameters: {
+    a11y: { config: { rules: [{ id: 'scrollable-region-focusable', enabled: false }] } },
+  },
+}
 
 export const Default: Story = {}
 

@@ -14,10 +14,118 @@ const meta = {
   component: SignInScreen,
   parameters: { layout: 'fullscreen' },
   args: { onSubmit: fn() },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    error: { control: 'text', description: 'Empty means no error.' },
+    hint: { control: 'text' },
+    defaultValues: { control: 'object', description: 'Read once on mount.' },
+    alternatives: { control: false },
+    onSubmit: { control: false },
+    onForgotPassword: { control: false },
+    onProvider: { control: false },
+    onSignUp: { control: false },
+    onTerms: { control: false },
+    onPrivacy: { control: false },
+  },
 } satisfies Meta<typeof SignInScreen>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+interface PlaygroundArgs {
+  isSubmitting: boolean
+  error: string
+  hint: string
+  showForgotPassword: boolean
+  showProviders: boolean
+  showSignUp: boolean
+  showLegal: boolean
+  onSubmit: () => void
+  onForgotPassword: () => void
+  onProvider: (providerId: string) => void
+  onSignUp: () => void
+  onTerms: () => void
+  onPrivacy: () => void
+}
+
+/** Flip submitting, a failure or a notice, and light up each optional part of the page. */
+export const Playground = {
+  args: {
+    isSubmitting: false,
+    error: '',
+    hint: '',
+    showForgotPassword: true,
+    showProviders: false,
+    showSignUp: false,
+    showLegal: false,
+    onSubmit: fn(),
+    onForgotPassword: fn(),
+    onProvider: fn(),
+    onSignUp: fn(),
+    onTerms: fn(),
+    onPrivacy: fn(),
+  },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    error: { control: 'text', description: 'Empty means no error.' },
+    hint: { control: 'text', description: 'Notice above the form; empty hides it.' },
+    showForgotPassword: { control: 'boolean' },
+    showProviders: { control: 'boolean', description: 'Wire the social provider buttons.' },
+    showSignUp: { control: 'boolean' },
+    showLegal: { control: 'boolean', description: 'Wire the terms and privacy links.' },
+    onSubmit: { control: false },
+    onForgotPassword: { control: false },
+    onProvider: { control: false },
+    onSignUp: { control: false },
+    onTerms: { control: false },
+    onPrivacy: { control: false },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'isSubmitting',
+        'error',
+        'hint',
+        'showForgotPassword',
+        'showProviders',
+        'showSignUp',
+        'showLegal',
+        'onSubmit',
+        'onForgotPassword',
+        'onProvider',
+        'onSignUp',
+        'onTerms',
+        'onPrivacy',
+      ],
+    },
+  },
+  render: ({
+    isSubmitting,
+    error,
+    hint,
+    showForgotPassword,
+    showProviders,
+    showSignUp,
+    showLegal,
+    onSubmit,
+    onForgotPassword,
+    onProvider,
+    onSignUp,
+    onTerms,
+    onPrivacy,
+  }) => (
+    <SignInScreen
+      isSubmitting={isSubmitting}
+      error={error || null}
+      onSubmit={onSubmit}
+      {...(hint ? { hint } : {})}
+      {...(showForgotPassword ? { onForgotPassword } : {})}
+      {...(showProviders ? { onProvider } : {})}
+      {...(showSignUp ? { onSignUp } : {})}
+      {...(showLegal ? { onTerms, onPrivacy } : {})}
+    />
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 export const Default: Story = {}
 

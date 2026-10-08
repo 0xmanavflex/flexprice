@@ -20,15 +20,31 @@ const CURRENCIES = [
   { value: 'inr', label: 'INR — Indian rupee' },
 ]
 
-function Demo() {
+interface DemoProps {
+  /** Names the trigger, the dialog ("New thing") and the submit label ("Create thing"). */
+  noun?: string
+  mode?: 'create' | 'edit'
+  size?: 'sm' | 'md' | 'lg'
+  isSubmitting?: boolean
+  /** Shown above the actions; empty for none. */
+  submitError?: string
+}
+
+function Demo({
+  noun = 'thing',
+  mode = 'create',
+  size = 'md',
+  isSubmitting = false,
+  submitError = 'Could not save.',
+}: DemoProps) {
   const [open, setOpen] = useState(false)
   const [period, setPeriod] = useState('')
   const [currency, setCurrency] = useState('')
   const [date, setDate] = useState('')
   return (
     <>
-      <Button onClick={() => setOpen(true)}>New thing</Button>
-      <FormDialog open={open} onOpenChange={setOpen} title="New thing">
+      <Button onClick={() => setOpen(true)}>{`New ${noun}`}</Button>
+      <FormDialog open={open} onOpenChange={setOpen} title={`New ${noun}`} size={size}>
         <form className="flex flex-col gap-5" onSubmit={(e) => e.preventDefault()}>
           <Field label="Name" required>
             {(p) => <Input {...p} />}
@@ -52,10 +68,11 @@ function Demo() {
             {(p) => <DateInput {...p} value={date} onValueChange={setDate} />}
           </Field>
           <FormActions
-            mode="create"
-            noun="thing"
+            mode={mode}
+            noun={noun}
             onCancel={() => setOpen(false)}
-            submitError="Could not save."
+            isSubmitting={isSubmitting}
+            submitError={submitError}
           />
         </form>
       </FormDialog>
@@ -67,10 +84,22 @@ const meta = {
   title: 'Foundation/Compositions/Form kit',
   component: Demo,
   parameters: { layout: 'centered' },
+  argTypes: {
+    noun: { control: 'text' },
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text' },
+  },
 } satisfies Meta<typeof Demo>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Press the trigger, then vary noun, mode, dialog size, submitting and the error: every field kit part is inside. */
+export const Playground: Story = {
+  args: { noun: 'thing', mode: 'create', size: 'md', isSubmitting: false, submitError: '' },
+}
 
 export const CreateDialog: Story = {
   play: async ({ canvasElement }) => {

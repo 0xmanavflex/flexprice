@@ -20,10 +20,45 @@ const meta = {
     onSubmit: fn(),
     onCancel: fn(),
   },
+  argTypes: {
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    customerName: { control: 'text', description: 'Edit page title; edit mode only.' },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    defaultValue: { control: false },
+    trail: { control: false },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+  },
 } satisfies Meta<typeof CustomerForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Flip create/edit, submitting and a server error from the controls. */
+export const Playground: Story = {
+  args: { isSubmitting: false, submitError: '', customerName: 'Acme Corp' },
+  render: ({ mode, customerName, submitError, ...args }) =>
+    mode === 'edit' ? (
+      <CustomerForm
+        key="edit"
+        {...args}
+        mode="edit"
+        customerName={customerName ?? 'Acme Corp'}
+        trail={[{ label: 'Customers' }, { label: customerName ?? 'Acme Corp' }, { label: 'Edit' }]}
+        submitError={submitError || null}
+        defaultValue={{ externalId: 'acme', name: 'Acme Corp', email: 'billing@acme.test' }}
+      />
+    ) : (
+      <CustomerForm
+        key="create"
+        {...args}
+        mode="create"
+        trail={[{ label: 'Customers' }, { label: 'Create customer' }]}
+        submitError={submitError || null}
+      />
+    ),
+}
 
 export const Create: Story = {
   play: async ({ canvasElement, args }) => {

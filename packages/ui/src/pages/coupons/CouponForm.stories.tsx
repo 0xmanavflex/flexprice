@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { CouponForm } from './CouponForm'
@@ -26,10 +27,35 @@ const meta = {
     onSubmit: fn(),
     onCancel: fn(),
   },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    defaultValue: { control: false },
+    summary: { control: false },
+    trail: { control: false },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+  },
 } satisfies Meta<typeof CouponForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Edit the coupon name; toggle the read-only summary, submitting and a server error. */
+export const Playground: StoryObj<
+  ComponentProps<typeof CouponForm> & { name: string; showSummary: boolean }
+> = {
+  args: { name: 'Launch 20% off', showSummary: true, submitError: '' },
+  render: ({ name, showSummary, submitError, ...args }) => (
+    <CouponForm
+      key={name}
+      {...args}
+      defaultValue={{ name }}
+      submitError={submitError || null}
+      {...(showSummary ? { summary: { code: 'LAUNCH20', discount: '20% off' } } : {})}
+    />
+  ),
+}
 
 export const Default: Story = {}
 

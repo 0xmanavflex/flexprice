@@ -14,6 +14,14 @@ const invoices: DonutSlice[] = [
   { id: 'overdue', label: 'Overdue', value: 31, tone: 'critical' },
 ]
 
+const unitFormats = {
+  integer: (value: number) => new Intl.NumberFormat('en-US').format(value),
+  currency: (value: number) =>
+    new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value),
+  compact: (value: number) =>
+    new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 }).format(value),
+} as const
+
 const meta = {
   title: 'Foundation/Flexprice/HalfDonut',
   component: HalfDonut,
@@ -23,6 +31,14 @@ const meta = {
     centerLabel: 'Invoices',
     centerValue: '539',
     label: 'Invoice payment status',
+  },
+  argTypes: {
+    slices: { control: false },
+    centerLabel: { control: 'text' },
+    centerValue: { control: 'text' },
+    label: { control: 'text' },
+    format: { control: false },
+    className: { control: false },
   },
   decorators: [
     (Story) => (
@@ -37,6 +53,65 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+interface PlaygroundArgs {
+  paid: number
+  open: number
+  overdue: number
+  statusTones: boolean
+  valueFormat: keyof typeof unitFormats
+  centerLabel: string
+  label: string
+}
+
+/** Drive the three slice values, switch status vs categorical tones, and change the number format. Set all to 0 for the empty ring. */
+export const Playground = {
+  args: {
+    paid: 412,
+    open: 96,
+    overdue: 31,
+    statusTones: true,
+    valueFormat: 'integer',
+    centerLabel: 'Invoices',
+    label: 'Invoice payment status',
+  },
+  argTypes: {
+    paid: { control: { type: 'number', min: 0, step: 10 } },
+    open: { control: { type: 'number', min: 0, step: 10 } },
+    overdue: { control: { type: 'number', min: 0, step: 10 } },
+    statusTones: { control: 'boolean', description: 'Status tones vs categorical series tones.' },
+    valueFormat: { control: 'inline-radio', options: Object.keys(unitFormats) },
+    centerLabel: { control: 'text' },
+    label: { control: 'text' },
+  },
+  parameters: {
+    controls: {
+      include: ['paid', 'open', 'overdue', 'statusTones', 'valueFormat', 'centerLabel', 'label'],
+    },
+  },
+  render: ({ paid, open, overdue, statusTones, valueFormat, centerLabel, label }) => {
+    const format = unitFormats[valueFormat]
+    const slices: DonutSlice[] = [
+      { id: 'paid', label: 'Paid', value: paid, tone: statusTones ? 'good' : 'series-1' },
+      { id: 'open', label: 'Open', value: open, tone: statusTones ? 'warning' : 'series-2' },
+      {
+        id: 'overdue',
+        label: 'Overdue',
+        value: overdue,
+        tone: statusTones ? 'critical' : 'series-3',
+      },
+    ]
+    return (
+      <HalfDonut
+        slices={slices}
+        centerLabel={centerLabel}
+        centerValue={format(paid + open + overdue)}
+        format={format}
+        label={label}
+      />
+    )
+  },
+} satisfies StoryObj<PlaygroundArgs>
 
 /** The footer is the legend: every slice is named and counted in text. */
 export const FooterIsTheLegend: Story = {
@@ -110,7 +185,12 @@ export const LongLabelsTruncate: Story = {
     centerLabel: 'Events',
     centerValue: '19.1M',
     slices: [
-      { id: 'api', label: 'API calls per authenticated tenant', value: 13_200_000, tone: 'series-1' },
+      {
+        id: 'api',
+        label: 'API calls per authenticated tenant',
+        value: 13_200_000,
+        tone: 'series-1',
+      },
       { id: 'tokens', label: 'Tokens processed by the model', value: 3_200_000, tone: 'series-2' },
       { id: 'other', label: 'Other metered features', value: 2_700_000, tone: 'neutral' },
     ],

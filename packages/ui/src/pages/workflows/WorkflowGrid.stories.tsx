@@ -1,6 +1,12 @@
+import { type ComponentProps, useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
-import { DEFAULT_WORKFLOW_QUERY, type WorkflowRun, WorkflowStatus } from '@fp/domain'
+import {
+  DEFAULT_WORKFLOW_QUERY,
+  type WorkflowQuery,
+  type WorkflowRun,
+  WorkflowStatus,
+} from '@fp/domain'
 import { WorkflowGrid, formatDuration } from './WorkflowGrid'
 
 function fixtures(): WorkflowRun[] {
@@ -33,6 +39,15 @@ function fixtures(): WorkflowRun[] {
       durationMs: null,
     },
   ]
+}
+
+/** A deterministic page-worth of runs: the fixtures, cycled with unique ids. */
+function manyRuns(count: number): WorkflowRun[] {
+  const base = fixtures()
+  return Array.from({ length: count }, (_, index) => {
+    const item = base[index % base.length] as WorkflowRun
+    return { ...item, id: `run_page_${index}`, workflowId: `${item.workflowId}-${index}` }
+  })
 }
 
 const meta = {
@@ -90,4 +105,74 @@ export const DurationUnits: Story = {
       within(canvasElement).getByText('850 ms · 12.5 s · 3 min · 1.5 hr'),
     ).toBeInTheDocument()
   },
+}
+
+/** Overrides every row's status so one state can be inspected across a long list. */
+function withStatus<T extends { status: unknown }>(items: T[], status: string): T[] {
+  return status === 'mixed' ? items : items.map((item) => ({ ...item, status }) as T)
+}
+
+type PlaygroundArgs = Omit<
+  ComponentProps<typeof WorkflowGrid>,
+  'runs' | 'total' | 'query' | 'onQueryChange' | 'error'
+> & {
+  /** How many records the server holds, 0 to 60. */
+  rows: number
+  /** The page shown, 1-based. */
+  page: number
+  pageSize: number
+  /** Forces every row to one status; mixed keeps the fixture spread. */
+  status: 'mixed' | WorkflowStatus
+  /** Shows the error state instead of the list. */
+  hasError: boolean
+}
+
+function WorkflowGridPlayground({
+  rows,
+  page,
+  pageSize,
+  status,
+  hasError,
+  ...rest
+}: PlaygroundArgs) {
+  const [query, setQuery] = useState<WorkflowQuery>({ ...DEFAULT_WORKFLOW_QUERY, page, pageSize })
+  const all = useMemo(() => withStatus(manyRuns(rows), status), [rows, status])
+  const lastPage = Math.max(1, Math.ceil(all.length / query.pageSize))
+  const current = Math.min(query.page, lastPage)
+  const start = (current - 1) * query.pageSize
+  return (
+    <WorkflowGrid
+      locale="en-US"
+      {...rest}
+      runs={all.slice(start, start + query.pageSize)}
+      total={all.length}
+      query={{ ...query, page: current }}
+      onQueryChange={setQuery}
+      error={hasError ? 'You do not have access to workflows in this environment.' : null}
+    />
+  )
+}
+
+/** Drag rows from 0 to 60 to walk empty, one page, and a long list; flip loading and error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  parameters: { controls: { exclude: /^(runs|total|query|error|on[A-Z].*)$/ } },
+  args: {
+    rows: 30,
+    page: 1,
+    pageSize: 10,
+    status: 'mixed',
+    isLoading: false,
+    hasError: false,
+    onRetry: fn(),
+    onRefresh: fn(),
+  },
+  argTypes: {
+    rows: { control: { type: 'number', min: 0, max: 60, step: 1 } },
+    page: { control: { type: 'number', min: 1, max: 6, step: 1 } },
+    pageSize: { control: 'select', options: [10, 25, 50] },
+    status: { control: 'select', options: ['mixed', ...Object.values(WorkflowStatus)] },
+    isLoading: { control: 'boolean' },
+    hasError: { control: 'boolean' },
+  },
+  render: (args) => <WorkflowGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
 }

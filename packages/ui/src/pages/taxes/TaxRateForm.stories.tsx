@@ -1,4 +1,4 @@
-import { emptyTaxRate } from '@fp/domain'
+import { TAX_RATE_SCOPE_LABEL, TaxRateScope, TaxRateStatus, emptyTaxRate } from '@fp/domain'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { TaxRateCreateForm, TaxRateEditForm } from './TaxRateForm'
@@ -71,4 +71,80 @@ export const SubmitError: Story = {
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('alert')).toBeInTheDocument()
   },
+}
+
+interface PlaygroundArgs {
+  mode: 'create' | 'edit'
+  name: string
+  code: string
+  description: string
+  /** Create only: the value and scope are fixed once the rate exists. */
+  percentageValue: string
+  scope: TaxRateScope
+  /** Edit only: archive or restore. */
+  status: TaxRateStatus
+  isSubmitting: boolean
+  submitError: string
+  onSubmit: (value: unknown) => void
+  onCancel: () => void
+}
+
+/** Switch between create (value and scope) and edit (rename, recode, archive); flip submitting or a server error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  parameters: { controls: { exclude: /^on[A-Z].*$/ } },
+  args: {
+    mode: 'create',
+    name: 'VAT standard',
+    code: 'VAT20',
+    description: '',
+    percentageValue: '20',
+    scope: TaxRateScope.External,
+    status: TaxRateStatus.Published,
+    isSubmitting: false,
+    submitError: '',
+    onSubmit: fn(),
+    onCancel: fn(),
+  },
+  argTypes: {
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    name: { control: 'text' },
+    code: { control: 'text' },
+    description: { control: 'text' },
+    percentageValue: { control: 'text' },
+    scope: {
+      options: Object.values(TaxRateScope),
+      control: { type: 'select', labels: TAX_RATE_SCOPE_LABEL },
+    },
+    status: { control: 'inline-radio', options: Object.values(TaxRateStatus) },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Empty means no server error.' },
+  },
+  render: ({
+    mode,
+    name,
+    code,
+    description,
+    percentageValue,
+    scope,
+    status,
+    submitError,
+    ...rest
+  }) =>
+    mode === 'edit' ? (
+      <TaxRateEditForm
+        key={`edit|${name}|${code}|${description}|${status}`}
+        {...rest}
+        trail={[{ label: 'Tax rates' }, { label: name || 'Tax rate' }, { label: 'Edit' }]}
+        defaultValue={{ name, code, description, status }}
+        submitError={submitError || null}
+      />
+    ) : (
+      <TaxRateCreateForm
+        key={`create|${name}|${code}|${description}|${percentageValue}|${scope}`}
+        {...rest}
+        trail={[{ label: 'Tax rates' }, { label: 'Create tax rate' }]}
+        defaultValue={{ name, code, description, percentageValue, scope }}
+        submitError={submitError || null}
+      />
+    ),
 }

@@ -1,6 +1,7 @@
+import type { ComponentProps } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
-import { FeatureType } from '@fp/domain'
+import { type EditEntitlement, FeatureType } from '@fp/domain'
 import { EntitlementCreateForm, EntitlementEditForm } from './EntitlementForm'
 
 /**
@@ -27,10 +28,76 @@ const meta = {
   parameters: { layout: 'padded' },
   decorators: [inSection],
   args: { features, onSubmit: fn(), onCancel: fn() },
+  argTypes: {
+    features: { control: false },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    submitLabel: { control: 'text' },
+    usagePrice: {
+      control: 'text',
+      description: "The plan's usage price, shown in the billing note.",
+    },
+    onSubmit: { control: false },
+    onCancel: { control: false },
+  },
 } satisfies Meta<typeof EntitlementCreateForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+const editDefaults: Record<FeatureType, EditEntitlement> = {
+  [FeatureType.Metered]: { usageLimit: 1000, isSoftLimit: false },
+  [FeatureType.Boolean]: { isEnabled: true },
+  [FeatureType.Static]: { staticValue: '25' },
+  [FeatureType.Config]: { configValue: { days: 90 } },
+}
+
+/** Switch create/edit and the edited feature's type; flip submitting, a server error and the usage price. */
+export const Playground: StoryObj<
+  ComponentProps<typeof EntitlementCreateForm> & {
+    mode: 'create' | 'edit'
+    featureType: FeatureType
+  }
+> = {
+  args: {
+    mode: 'create',
+    featureType: FeatureType.Metered,
+    isSubmitting: false,
+    submitError: '',
+    submitLabel: '',
+    usagePrice: '',
+  },
+  argTypes: {
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    featureType: {
+      control: 'select',
+      options: Object.values(FeatureType),
+      description: 'Edit mode only: which feature is being edited.',
+    },
+  },
+  render: ({ mode, featureType, submitError, submitLabel, usagePrice, ...args }) => {
+    const shared = {
+      ...(submitLabel ? { submitLabel } : {}),
+      ...(usagePrice ? { usagePrice } : {}),
+      submitError: submitError || null,
+    }
+    if (mode === 'edit') {
+      const feature = features.find((f) => f.type === featureType) ?? features[0]!
+      return (
+        <EntitlementEditForm
+          key={`edit-${featureType}`}
+          feature={feature}
+          defaultValue={editDefaults[featureType]}
+          onSubmit={fn()}
+          {...(args.onCancel ? { onCancel: args.onCancel } : {})}
+          isSubmitting={args.isSubmitting ?? false}
+          {...shared}
+        />
+      )
+    }
+    return <EntitlementCreateForm key="create" {...args} {...shared} />
+  },
+}
 
 export const Create: Story = {}
 

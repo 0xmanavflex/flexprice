@@ -1,7 +1,21 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { CreditCardIcon, ReceiptIcon, RepeatIcon, UserPlusIcon } from 'lucide-react'
-import { ShellCreateMenu } from './ShellCreateMenu'
+import { CreditCardIcon, PackageIcon, ReceiptIcon, RepeatIcon, UserPlusIcon } from 'lucide-react'
+import { ShellCreateMenu, type ShellCreateAction } from './ShellCreateMenu'
+
+const ACTION_POOL: ShellCreateAction[] = [
+  { id: 'subscription', label: 'New contract', icon: <RepeatIcon className="size-4" /> },
+  { id: 'customer', label: 'New customer', icon: <UserPlusIcon className="size-4" /> },
+  { id: 'invoice', label: 'New invoice', icon: <ReceiptIcon className="size-4" /> },
+  { id: 'payment', label: 'Record a payment', icon: <CreditCardIcon className="size-4" /> },
+  { id: 'plan', label: 'New plan', icon: <PackageIcon className="size-4" /> },
+]
+
+type PlaygroundArgs = Omit<ComponentProps<typeof ShellCreateMenu>, 'actions'> & {
+  actionCount: number
+  groupBreak: boolean
+}
 
 const meta = {
   title: 'Foundation/Compositions/ShellCreateMenu',
@@ -21,10 +35,37 @@ const meta = {
     ],
     onCreate: fn(),
   },
+  argTypes: {
+    label: { control: 'text', description: 'The trigger button text.' },
+    actions: { control: false },
+    onCreate: { control: false },
+  },
 } satisfies Meta<typeof ShellCreateMenu>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Take 0 to 5 flows, relabel the button, and split the menu before the last flow. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: { label: 'Create', actionCount: 3, groupBreak: true, onCreate: fn() },
+  argTypes: {
+    actionCount: {
+      control: { type: 'range', min: 0, max: 5, step: 1 },
+      description: '0 renders no button at all.',
+    },
+    groupBreak: { control: 'boolean', description: 'Starts a new group at the last flow.' },
+    onCreate: { control: false },
+  },
+  render: ({ actionCount, groupBreak, ...args }) => (
+    <ShellCreateMenu
+      {...args}
+      actions={ACTION_POOL.slice(0, actionCount).map((action, i, all) => ({
+        ...action,
+        ...(groupBreak && i === all.length - 1 && i > 0 ? { startsGroup: true } : {}),
+      }))}
+    />
+  ),
+}
 
 export const Default: Story = {}
 

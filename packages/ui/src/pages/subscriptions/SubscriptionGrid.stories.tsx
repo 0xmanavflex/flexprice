@@ -1,3 +1,4 @@
+import { type ComponentProps, useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import {
@@ -85,6 +86,20 @@ function subscriptionFixtures(): Subscription[] {
       createdAt: new Date('2023-12-01T00:00:00Z'),
     },
   ]
+}
+
+/** A deterministic page-worth of subscriptions: the fixtures, cycled with unique ids. */
+function manySubscriptions(count: number): Subscription[] {
+  const base = subscriptionFixtures()
+  return Array.from({ length: count }, (_, index) => {
+    const item = base[index % base.length] as Subscription
+    return {
+      ...item,
+      id: `sub_page_${index}`,
+      customerId: `cus_page_${index}`,
+      customerName: `${item.customerName} ${index}`,
+    }
+  })
 }
 
 export const Default: Story = {}
@@ -189,4 +204,81 @@ export const PaginationReportsDomainQuery: Story = {
     expect(reported).toMatchObject({ page: 2 })
     expect(Object.keys(reported).sort()).toEqual(Object.keys(DEFAULT_SUBSCRIPTION_QUERY).sort())
   },
+}
+
+/** Overrides every row's status so one state can be inspected across a long list. */
+function withStatus<T extends { status: unknown }>(items: T[], status: string): T[] {
+  return status === 'mixed' ? items : items.map((item) => ({ ...item, status }) as T)
+}
+
+type PlaygroundArgs = Omit<
+  ComponentProps<typeof SubscriptionGrid>,
+  'subscriptions' | 'total' | 'query' | 'onQueryChange' | 'error'
+> & {
+  /** How many records the server holds, 0 to 60. */
+  rows: number
+  /** The page shown, 1-based. */
+  page: number
+  pageSize: number
+  /** Forces every row to one status; mixed keeps the fixture spread. */
+  status: 'mixed' | SubscriptionStatus
+  /** Shows the error state instead of the list. */
+  hasError: boolean
+}
+
+function SubscriptionGridPlayground({
+  rows,
+  page,
+  pageSize,
+  status,
+  hasError,
+  ...rest
+}: PlaygroundArgs) {
+  const [query, setQuery] = useState<SubscriptionQuery>({
+    ...DEFAULT_SUBSCRIPTION_QUERY,
+    page,
+    pageSize,
+  })
+  const all = useMemo(() => withStatus(manySubscriptions(rows), status), [rows, status])
+  const lastPage = Math.max(1, Math.ceil(all.length / query.pageSize))
+  const current = Math.min(query.page, lastPage)
+  const start = (current - 1) * query.pageSize
+  return (
+    <SubscriptionGrid
+      locale="en-US"
+      {...rest}
+      subscriptions={all.slice(start, start + query.pageSize)}
+      total={all.length}
+      query={{ ...query, page: current }}
+      onQueryChange={setQuery}
+      error={hasError ? 'You do not have access to contracts in this environment.' : null}
+    />
+  )
+}
+
+/** Drag rows from 0 to 60 to walk empty, one page, and a long list; flip loading and error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  parameters: { controls: { exclude: /^(subscriptions|total|query|error|on[A-Z].*)$/ } },
+  args: {
+    rows: 30,
+    page: 1,
+    pageSize: 10,
+    status: 'mixed',
+    isLoading: false,
+    hasError: false,
+    onRetry: fn(),
+    onCreate: fn(),
+    onSubscriptionClick: fn(),
+    onOpenCustomer: fn(),
+    onOpenPlan: fn(),
+  },
+  argTypes: {
+    rows: { control: { type: 'number', min: 0, max: 60, step: 1 } },
+    page: { control: { type: 'number', min: 1, max: 6, step: 1 } },
+    pageSize: { control: 'select', options: [10, 25, 50] },
+    status: { control: 'select', options: ['mixed', ...Object.values(SubscriptionStatus)] },
+    isLoading: { control: 'boolean' },
+    hasError: { control: 'boolean' },
+  },
+  render: (args) => <SubscriptionGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
 }

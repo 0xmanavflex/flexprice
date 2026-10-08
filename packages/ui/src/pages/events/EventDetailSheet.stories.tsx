@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
 import { EventDetailSheet } from './EventDetailSheet'
@@ -19,10 +20,57 @@ const meta = {
       properties: { endpoint: '/v1/search', tokens: 412 },
     },
   },
+  argTypes: {
+    event: { control: 'object' },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE'] },
+    onClose: { control: false },
+  },
 } satisfies Meta<typeof EventDetailSheet>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = ComponentProps<typeof EventDetailSheet> & {
+  open: boolean
+  eventName: string
+  matched: boolean
+  hasTimestamp: boolean
+  propertyCount: number
+}
+
+/** Deterministic: the same count always gives the same properties. */
+function makeProperties(count: number): Record<string, unknown> {
+  return Object.fromEntries(
+    Array.from({ length: count }, (_, index) => [`property_${index + 1}`, index * 7 + 1]),
+  )
+}
+
+/** Open or close the sheet; toggle a matched customer, a timestamp and how many properties it carries. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: { open: true, eventName: 'api_call', matched: true, hasTimestamp: true, propertyCount: 4 },
+  argTypes: {
+    event: { control: false },
+    propertyCount: { control: { type: 'range', min: 0, max: 40, step: 1 } },
+  },
+  render: ({ open, eventName, matched, hasTimestamp, propertyCount, ...args }) => (
+    <EventDetailSheet
+      {...args}
+      event={
+        open
+          ? {
+              id: 'evt_playground',
+              eventName,
+              externalCustomerId: 'acme-corp',
+              customerId: matched ? 'cust_01' : '',
+              source: matched ? 'sdk' : '',
+              timestamp: hasTimestamp ? new Date('2026-09-01T10:15:30Z') : null,
+              properties: makeProperties(propertyCount),
+            }
+          : null
+      }
+    />
+  ),
+}
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {

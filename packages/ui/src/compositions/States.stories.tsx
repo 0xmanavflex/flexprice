@@ -4,7 +4,7 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { EmptyState } from './EmptyState'
 import { GridToolbar } from './GridToolbar'
-import { ListState } from './States'
+import { ListState, type ListStateProps } from './States'
 
 /**
  * Every state a list can be in, as stories — which is the point of designing
@@ -92,6 +92,62 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = Omit<ListStateProps, 'error' | 'children' | 'createAction'> & {
+  errorKind: 'none' | 'retryable' | 'denied'
+  rows: number
+  showCreateAction: boolean
+}
+
+/** Flip loading, empty, filtered and error, or drag `rows` to see the list fill; error beats loading. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    isLoading: false,
+    isEmpty: false,
+    isFiltered: false,
+    errorKind: 'none',
+    rows: 5,
+    showCreateAction: true,
+    emptyTitle: 'No features yet',
+    emptyDescription: 'Features describe what you meter and what customers are entitled to.',
+    onRetry: fn(),
+    onClearFilters: fn(),
+  },
+  argTypes: {
+    isLoading: { control: 'boolean' },
+    isEmpty: { control: 'boolean', description: 'The query succeeded and returned nothing.' },
+    isFiltered: {
+      control: 'boolean',
+      description: 'With `isEmpty`: a filter caused it, so offer to clear.',
+    },
+    errorKind: { control: 'inline-radio', options: ['none', 'retryable', 'denied'] },
+    rows: {
+      control: { type: 'range', min: 0, max: 30, step: 1 },
+      description: 'Rows in the stand-in grid.',
+    },
+    showCreateAction: { control: 'boolean' },
+    emptyTitle: { control: 'text' },
+    emptyDescription: { control: 'text' },
+    onRetry: { control: false },
+    onClearFilters: { control: false },
+  },
+  render: ({ errorKind, rows, showCreateAction, isEmpty, ...args }) => (
+    <ListState
+      {...args}
+      isEmpty={isEmpty}
+      error={
+        errorKind === 'none'
+          ? null
+          : errorKind === 'retryable'
+            ? { message: 'Could not reach Flexprice.', canRetry: true }
+            : { message: 'You do not have access to features here.', canRetry: false }
+      }
+      {...(showCreateAction ? { createAction: <Button size="sm">New feature</Button> } : {})}
+    >
+      <FakeGrid rows={isEmpty ? 0 : rows} />
+    </ListState>
+  ),
+}
 
 export const Content: Story = {}
 

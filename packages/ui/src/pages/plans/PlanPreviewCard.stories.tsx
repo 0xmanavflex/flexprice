@@ -156,3 +156,87 @@ export const ReadsLikeTheRedesign: Story = {
     await expect(card.getByText('2,000 / mo')).toBeInTheDocument()
   },
 }
+
+const INCLUDED_POOL = [
+  { name: 'AI Tokens', featureType: FeatureType.Metered, usageLimit: 10_000 },
+  { name: 'Video Minutes', featureType: FeatureType.Metered, usageLimit: 50_000 },
+  { name: 'Compute Minutes', featureType: FeatureType.Metered, usageLimit: null },
+  { name: 'SSO', featureType: FeatureType.Boolean, isEnabled: true },
+  { name: 'Audit log', featureType: FeatureType.Boolean, isEnabled: true },
+  { name: 'Priority support', featureType: FeatureType.Boolean, isEnabled: false },
+] as const
+
+interface PlaygroundArgs {
+  /** The base fee; 0 leaves it out, and with no usage the card shows its empty prompt. */
+  fixedAmount: number
+  currency: string
+  billingPeriod: BillingPeriod
+  usage: 'none' | 'tiered' | 'package'
+  /** 0 hides the trial line. */
+  trialDays: number
+  includedCount: number
+  creditCount: number
+  recurringCredits: boolean
+}
+
+/** Every line of the customer-facing card is driven from these controls. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    fixedAmount: 29,
+    currency: 'USD',
+    billingPeriod: BillingPeriod.Monthly,
+    usage: 'tiered',
+    trialDays: 14,
+    includedCount: 3,
+    creditCount: 2,
+    recurringCredits: true,
+  },
+  argTypes: {
+    fixedAmount: { control: { type: 'number', min: 0, max: 10_000, step: 1 } },
+    currency: { control: 'select', options: ['USD', 'EUR', 'GBP', 'INR'] },
+    billingPeriod: { control: 'select', options: Object.values(BillingPeriod) },
+    usage: { control: 'inline-radio', options: ['none', 'tiered', 'package'] },
+    trialDays: { control: { type: 'number', min: 0, max: 90, step: 1 } },
+    includedCount: { control: { type: 'number', min: 0, max: INCLUDED_POOL.length, step: 1 } },
+    creditCount: { control: { type: 'number', min: 0, max: 4, step: 1 } },
+    recurringCredits: { control: 'boolean' },
+  },
+  render: ({
+    fixedAmount,
+    currency,
+    billingPeriod,
+    usage,
+    trialDays,
+    includedCount,
+    creditCount,
+    recurringCredits,
+  }) => {
+    const charges: CreateCharge[] = [
+      ...(fixedAmount > 0
+        ? [{ ...base, amount: String(fixedAmount), currency, billingPeriod }]
+        : []),
+      ...(usage === 'tiered' ? [{ ...tieredUsage, currency }] : []),
+      ...(usage === 'package' ? [{ ...packageUsage, currency }] : []),
+    ]
+    return (
+      <PlanPreviewCard
+        charges={charges}
+        trialDays={trialDays}
+        meterLabel={(id) => (id === 'meter_api' ? 'API calls' : 'Tokens')}
+        included={INCLUDED_POOL.slice(0, includedCount).map((item, index) =>
+          includedLine({ key: `inc_${index}`, ...item }),
+        )}
+        credits={Array.from({ length: creditCount }, (_, index) =>
+          creditLine({
+            key: `credit_${index}`,
+            name: `Credit grant ${index + 1}`,
+            credits: 1000 * (index + 1),
+            cadence: recurringCredits ? CreditGrantCadence.Recurring : CreditGrantCadence.OneTime,
+            period: recurringCredits ? CreditGrantPeriod.Monthly : null,
+          }),
+        )}
+        locale="en-US"
+      />
+    )
+  },
+}

@@ -8,10 +8,25 @@ import { ShellBreadcrumb } from './ShellBreadcrumb'
  */
 const onCatalog = fn()
 
+const CRUMB_POOL = ['Sandbox', 'Product Catalog', 'Features', 'Feature detail']
+
+type PlaygroundArgs = {
+  depth: number
+  currentPage: string
+  environment: 'sandbox' | 'production'
+  showMark: boolean
+  linkParents: boolean
+  width: number
+  onCrumbClick: () => void
+}
+
 const meta = {
   title: 'Foundation/Compositions/Shell/ShellBreadcrumb',
   component: ShellBreadcrumb,
   parameters: { layout: 'padded' },
+  argTypes: {
+    trail: { control: 'object', description: 'Crumbs: label, optional mark, onClick, content.' },
+  },
   args: {
     trail: [
       {
@@ -26,6 +41,58 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Deepen the trail, mark the environment, make parents links, and squeeze the width to see labels drop. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    depth: 3,
+    currentPage: 'Features',
+    environment: 'sandbox',
+    showMark: true,
+    linkParents: true,
+    width: 640,
+    onCrumbClick: fn(),
+  },
+  argTypes: {
+    depth: { control: { type: 'range', min: 1, max: 4, step: 1 } },
+    currentPage: { control: 'text', description: 'Label of the last (current) crumb.' },
+    environment: { control: 'inline-radio', options: ['sandbox', 'production'] },
+    showMark: { control: 'boolean', description: 'The dot beside the first crumb.' },
+    linkParents: {
+      control: 'boolean',
+      description: 'Parents get an `onClick`; the current page never does.',
+    },
+    width: { control: { type: 'range', min: 200, max: 900, step: 20 } },
+    onCrumbClick: { control: false },
+  },
+  render: ({ depth, currentPage, environment, showMark, linkParents, width, onCrumbClick }) => {
+    const labels = [...CRUMB_POOL.slice(0, depth - 1), currentPage || 'Current page'].slice(-depth)
+    return (
+      <div style={{ width }}>
+        <ShellBreadcrumb
+          trail={labels.map((label, i) => ({
+            label,
+            ...(i === 0 && showMark
+              ? {
+                  mark: (
+                    <span
+                      aria-hidden
+                      className={
+                        environment === 'production'
+                          ? 'bg-destructive size-2 rounded-full'
+                          : 'bg-muted-foreground/50 size-2 rounded-full'
+                      }
+                    />
+                  ),
+                }
+              : {}),
+            ...(linkParents && i < labels.length - 1 ? { onClick: onCrumbClick } : {}),
+          }))}
+        />
+      </div>
+    )
+  },
+}
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {

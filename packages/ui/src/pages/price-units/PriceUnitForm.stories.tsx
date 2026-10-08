@@ -1,6 +1,7 @@
+import type { ComponentProps } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import type { CreatePriceUnit } from '@fp/domain'
+import { type CreatePriceUnit, PRICE_UNIT_CURRENCIES } from '@fp/domain'
 import { PriceUnitForm } from './PriceUnitForm'
 
 /**
@@ -78,4 +79,59 @@ export const ValidationFromDomain: Story = {
     await expect(await canvas.findByText('Enter a name')).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
+}
+
+type PlaygroundArgs = Omit<ComponentProps<typeof PriceUnitForm>, 'defaultValue'> & {
+  /** Off opens the blank create form; on seeds the fields below. */
+  prefilled: boolean
+  name: string
+  code: string
+  symbol: string
+  baseCurrency: string
+  conversionRate: number
+}
+
+/** Create only (the API has no update); prefill the draft and flip submitting or a server error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  parameters: { controls: { exclude: /^(trail|on[A-Z].*)$/ } },
+  args: {
+    prefilled: true,
+    name: credits.name,
+    code: credits.code,
+    symbol: credits.symbol,
+    baseCurrency: credits.baseCurrency,
+    conversionRate: credits.conversionRate,
+    isSubmitting: false,
+    submitError: '',
+  },
+  argTypes: {
+    prefilled: { control: 'boolean' },
+    name: { control: 'text' },
+    code: { control: 'text' },
+    symbol: { control: 'text' },
+    baseCurrency: {
+      control: 'select',
+      options: PRICE_UNIT_CURRENCIES.map((currency) => currency.code),
+    },
+    conversionRate: { control: { type: 'number', min: 0.0001, max: 1000, step: 0.01 } },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Empty means no server error.' },
+  },
+  render: ({
+    prefilled,
+    name,
+    code,
+    symbol,
+    baseCurrency,
+    conversionRate,
+    submitError,
+    ...rest
+  }) => (
+    <PriceUnitForm
+      key={`${prefilled}|${name}|${code}|${symbol}|${baseCurrency}|${conversionRate}`}
+      {...rest}
+      {...(prefilled ? { defaultValue: { name, code, symbol, baseCurrency, conversionRate } } : {})}
+      submitError={submitError || null}
+    />
+  ),
 }

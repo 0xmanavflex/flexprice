@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import {
@@ -20,6 +21,12 @@ const meta = {
   component: CreditGrantTable,
   parameters: { layout: 'padded' },
   args: { grants: [] },
+  argTypes: {
+    grants: { control: false },
+    onAdd: { control: false },
+    onEdit: { control: false },
+    onDelete: { control: false },
+  },
 } satisfies Meta<typeof CreditGrantTable>
 
 export default meta
@@ -72,6 +79,31 @@ const grantFixtures: CreditGrant[] = [
     createdAt: new Date('2026-01-14T00:00:00Z'),
   },
 ]
+
+function manyGrants(count: number): CreditGrant[] {
+  return Array.from({ length: count }, (_, index) => {
+    const base = grantFixtures[index % grantFixtures.length] as CreditGrant
+    return { ...base, id: `cg_gen_${index}`, name: `${base.name} ${index + 1}`, priority: index }
+  })
+}
+
+/** Drag `rows` from 0 to 60: empty state, a short list, a long one. Toggle the row actions. */
+export const Playground: StoryObj<
+  ComponentProps<typeof CreditGrantTable> & { rows: number; showActions: boolean }
+> = {
+  args: { rows: 5, showActions: true },
+  argTypes: {
+    rows: { control: { type: 'range', min: 0, max: 60, step: 1 } },
+    showActions: { control: 'boolean' },
+  },
+  render: ({ rows, showActions }) => (
+    <CreditGrantTable
+      grants={manyGrants(rows)}
+      {...(showActions ? { onAdd: fn(), onEdit: fn(), onDelete: fn() } : {})}
+    />
+  ),
+  parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
+}
 
 /** The read-only table the Credit Grants tab shows. */
 export const Default: Story = {

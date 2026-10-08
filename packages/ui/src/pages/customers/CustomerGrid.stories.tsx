@@ -1,3 +1,4 @@
+import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import {
@@ -26,10 +27,62 @@ const meta = {
     onQueryChange: fn(),
     locale: 'en-US',
   },
+  argTypes: {
+    customers: { control: false },
+    total: { control: false },
+    query: { control: false },
+    isLoading: { control: 'boolean' },
+    error: { control: false },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE'] },
+    onQueryChange: { control: false },
+    onRetry: { control: false },
+    onCustomerClick: { control: false },
+    onCreate: { control: false },
+    onEdit: { control: false },
+    onDelete: { control: false },
+    onClearFilters: { control: false },
+  },
 } satisfies Meta<typeof CustomerGrid>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = ComponentProps<typeof CustomerGrid> & {
+  rows: number
+  hasError: boolean
+  page: number
+  pageSize: number
+}
+
+function CustomerGridPlayground({ rows, hasError, page, pageSize, ...args }: PlaygroundArgs) {
+  const [query, setQuery] = useState(() => ({ ...DEFAULT_CUSTOMER_QUERY, page, pageSize }))
+  const start = (query.page - 1) * query.pageSize
+  return (
+    <CustomerGrid
+      {...args}
+      customers={manyCustomers(rows).slice(start, start + query.pageSize)}
+      total={rows}
+      query={query}
+      onQueryChange={(next) => {
+        setQuery(next)
+        args.onQueryChange(next)
+      }}
+      error={hasError ? 'You do not have access to customers in this environment.' : null}
+    />
+  )
+}
+
+/** Drag `rows` from 0 to 60 to see first-run, a short list and paging; toggle loading and error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: { rows: 30, hasError: false, page: 1, pageSize: 10, isLoading: false },
+  argTypes: {
+    rows: { control: { type: 'range', min: 0, max: 60, step: 1 } },
+    hasError: { control: 'boolean' },
+    page: { control: { type: 'number', min: 1, max: 6, step: 1 } },
+    pageSize: { control: 'select', options: [10, 25, 50] },
+  },
+  render: (args) => <CustomerGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
+}
 
 /** Fixed dates, so a story renders identically today and next March. */
 function customerFixtures(): Customer[] {
@@ -77,6 +130,14 @@ function customerFixtures(): Customer[] {
       updatedAt: new Date('2026-02-02T00:00:00Z'),
     },
   ]
+}
+
+function manyCustomers(count: number): Customer[] {
+  const base = customerFixtures()
+  return Array.from({ length: count }, (_, index) => {
+    const customer = base[index % base.length] as Customer
+    return { ...customer, id: `cus_page_${index}`, name: `${customer.name} ${index + 1}` }
+  })
 }
 
 export const Default: Story = {}

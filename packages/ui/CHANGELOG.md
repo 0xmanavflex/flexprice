@@ -8,6 +8,11 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-08 — .github/workflows/storybook-deploy.yml: Storybook is built and published to its own Vercel project (production on main, a preview per pull request, with a PR comment); it skips with a warning until the Vercel secrets exist (a separately hosted component workbench for developers)
+- 2026-10-08 — .storybook/AnatomyPanel + design-system/PageMap: an "Anatomy" panel on every story shows the components it is built from and the console pages that use them, and Design System/Page map lists every page with the kit it names; both read src/design-system/anatomy.generated.json from scripts/storybook-anatomy.mjs, which storybook.yml checks is current (see which UI a page uses without opening the source)
+- 2026-10-08 — src/page-stories/*: composed Pages/* stories (Home, Customers, Plans, Features, Invoices, Subscriptions, Coupons, Settings) render whole pages inside the app shell, driven by controls for rows, status, loading and error (let a developer play with a full page)
+- 2026-10-08 — compositions, compositions/shell, pages/**: first stories for roughly 60 components that had none (cards, dialogs, forms, detail views, shell pieces, selects, steppers) (every component is now reachable and tested in Storybook)
+- 2026-10-08 — compositions, compositions/shell, pages/**: roughly 110 existing stories gain argTypes and a Playground, so props, row counts, status, loading and error are live controls (dynamic stories for developer play; named state stories and their play tests are unchanged)
 - 2026-10-08 — pages/plans/PlanForm: the Charges, Entitlements and Credit grants steps sit in a bordered FormCard with an Optional badge and no description, like the details step (design refresh: create flow)
 - 2026-10-07 — pages/{addons,customers,features,cost-sheets,plans,coupons} edit forms: the live preview rail now shows on edit as it does on create (always the wide layout); Plan edit takes a `savedPreview` of the plan's saved pricing, Coupon edit takes `terms` for a CouponPreviewCard (design refresh: edit forms match create)
 - 2026-10-07 — pages/features/FeatureGrid.stories: Populated asserts the "fx COUNT()" chip instead of the retired "Count of events" column (follows the Formula chip change)

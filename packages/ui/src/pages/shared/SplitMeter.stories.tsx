@@ -11,6 +11,8 @@ const parts: SplitMeterPart[] = [
 
 const money = (value: number) => `$${(value / 1000).toFixed(1)}k`
 
+const statusTones = ['good', 'warning', 'critical'] as const
+
 const meta = {
   title: 'Foundation/Flexprice/SplitMeter',
   component: SplitMeter,
@@ -21,6 +23,16 @@ const meta = {
     value: '$84.9k',
     format: money,
     label: 'Revenue by kind',
+  },
+  argTypes: {
+    parts: { control: false },
+    total: { control: { type: 'number', min: 0, step: 5000 } },
+    segments: { control: { type: 'range', min: 8, max: 80, step: 1 } },
+    title: { control: 'text' },
+    value: { control: 'text' },
+    label: { control: 'text' },
+    format: { control: false },
+    className: { control: false },
   },
   decorators: [
     (Story) => (
@@ -35,6 +47,79 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+interface PlaygroundArgs {
+  recurring: number
+  usage: number
+  oneOff: number
+  hasCeiling: boolean
+  ceiling: number
+  statusTones: boolean
+  segments: number
+  title: string
+  label: string
+}
+
+/** Drive each part, add a ceiling to see unfilled track, or switch to status tones. */
+export const Playground = {
+  args: {
+    recurring: 51_000,
+    usage: 26_500,
+    oneOff: 7_400,
+    hasCeiling: false,
+    ceiling: 120_000,
+    statusTones: false,
+    segments: 48,
+    title: 'Revenue by kind',
+    label: 'Revenue by kind',
+  },
+  argTypes: {
+    recurring: { control: { type: 'number', min: 0, step: 1000 } },
+    usage: { control: { type: 'number', min: 0, step: 1000 } },
+    oneOff: { control: { type: 'number', min: 0, step: 1000 } },
+    hasCeiling: { control: 'boolean' },
+    ceiling: { control: { type: 'number', min: 0, step: 5000 } },
+    statusTones: { control: 'boolean' },
+    segments: { control: { type: 'range', min: 8, max: 80, step: 1 } },
+    title: { control: 'text' },
+    label: { control: 'text' },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'recurring',
+        'usage',
+        'oneOff',
+        'hasCeiling',
+        'ceiling',
+        'statusTones',
+        'segments',
+        'title',
+        'label',
+      ],
+    },
+  },
+  render: ({ recurring, usage, oneOff, hasCeiling, ceiling, statusTones: status, ...rest }) => {
+    const values = [recurring, usage, oneOff]
+    const labels = ['Recurring', 'Usage', 'One-off']
+    const list: SplitMeterPart[] = values.map((value, index) => ({
+      id: `part-${index}`,
+      label: labels[index]!,
+      value,
+      ...(status ? { tone: statusTones[index]! } : {}),
+    }))
+    const sum = values.reduce((acc, value) => acc + value, 0)
+    return (
+      <SplitMeter
+        {...rest}
+        parts={list}
+        total={hasCeiling ? ceiling : undefined}
+        value={money(sum)}
+        format={money}
+      />
+    )
+  },
+} satisfies StoryObj<PlaygroundArgs>
 
 /** Several tones in one track, so the legend is not optional. */
 export const LegendNamesEveryPart: Story = {

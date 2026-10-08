@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { type Entitlement, EntitlementEntityType, FeatureType, UsageResetPeriod } from '@fp/domain'
@@ -13,6 +14,14 @@ const meta = {
   component: EntitlementTable,
   parameters: { layout: 'padded' },
   args: { entitlements: [] },
+  argTypes: {
+    entitlements: { control: false },
+    title: { control: 'text' },
+    onAdd: { control: false },
+    onEdit: { control: false },
+    onDelete: { control: false },
+    onOpenFeature: { control: false },
+  },
 } satisfies Meta<typeof EntitlementTable>
 
 export default meta
@@ -64,6 +73,37 @@ const entitlementFixtures: Entitlement[] = [
     configValue: { days: 90 },
   },
 ]
+
+function manyEntitlements(count: number): Entitlement[] {
+  return Array.from({ length: count }, (_, index) => {
+    const source = entitlementFixtures[index % entitlementFixtures.length] as Entitlement
+    return {
+      ...source,
+      id: `ent_gen_${index}`,
+      featureId: `${source.featureId}_${index}`,
+      featureName: `${source.featureName} ${index + 1}`,
+    }
+  })
+}
+
+/** Drag `rows` from 0 to 60: empty state, a short list, a long one. Toggle the row actions. */
+export const Playground: StoryObj<
+  ComponentProps<typeof EntitlementTable> & { rows: number; showActions: boolean }
+> = {
+  args: { rows: 5, showActions: true, title: 'Entitlements' },
+  argTypes: {
+    rows: { control: { type: 'range', min: 0, max: 60, step: 1 } },
+    showActions: { control: 'boolean' },
+  },
+  render: ({ rows, showActions, ...args }) => (
+    <EntitlementTable
+      {...args}
+      entitlements={manyEntitlements(rows)}
+      {...(showActions ? { onAdd: fn(), onEdit: fn(), onDelete: fn(), onOpenFeature: fn() } : {})}
+    />
+  ),
+  parameters: { a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } } },
+}
 
 /** The entitlements section. */
 export const Default: Story = {

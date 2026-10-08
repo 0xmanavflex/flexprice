@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { BookOpenIcon, RocketIcon, WrenchIcon } from 'lucide-react'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
@@ -92,6 +92,190 @@ const meta = {
 
 export default meta
 type Story = StoryObj<WidgetList>
+
+interface PlaygroundArgs {
+  rowCount: number
+  pageSize: number
+  noun: string
+  isLoading: boolean
+  hasError: boolean
+  showFirstRunEmpty: boolean
+  selectable: boolean
+  showRowActions: boolean
+  clickableRows: boolean
+  showSort: boolean
+  showExport: boolean
+  compact: boolean
+  hideToolbar: boolean
+  onRowClick: () => void
+  onRowAction: () => void
+  onRetry: () => void
+}
+
+/** A client-side harness around the real table: search, sort and paging all work against `rowCount` fixture rows. */
+function PlaygroundList({
+  rowCount,
+  pageSize: initialPageSize,
+  noun,
+  isLoading,
+  hasError,
+  showFirstRunEmpty,
+  selectable,
+  showRowActions,
+  clickableRows,
+  showSort,
+  showExport,
+  compact,
+  hideToolbar,
+  onRowClick,
+  onRowAction,
+  onRetry,
+}: PlaygroundArgs) {
+  const [search, setSearch] = useState('')
+  const [page, setPage] = useState(1)
+  const [pageSize, setPageSize] = useState(initialPageSize)
+  const [sort, setSort] = useState<{ field: string; direction: 'asc' | 'desc' }>({
+    field: 'created',
+    direction: 'asc',
+  })
+
+  const matches = useMemo(() => {
+    const needle = search.trim().toLowerCase()
+    const all = widgets(rowCount).filter(
+      (row) => !needle || `${row.name} ${row.lookup}`.toLowerCase().includes(needle),
+    )
+    const sign = sort.direction === 'asc' ? 1 : -1
+    return [...all].sort((a, b) =>
+      sort.field === 'name'
+        ? sign * a.name.localeCompare(b.name)
+        : sign * (a.created.getTime() - b.created.getTime()),
+    )
+  }, [rowCount, search, sort])
+
+  const start = (page - 1) * pageSize
+  const rows = matches.slice(start, start + pageSize)
+
+  return (
+    <WidgetEntityList
+      label="Widgets"
+      noun={noun}
+      columns={COLUMNS}
+      getRowId={(row) => row.id}
+      rows={isLoading || hasError ? [] : rows}
+      total={isLoading || hasError ? 0 : matches.length}
+      page={page}
+      pageSize={pageSize}
+      onPaginationChange={(nextPage, nextSize) => {
+        setPage(nextPage)
+        setPageSize(nextSize)
+      }}
+      search={search}
+      onSearchChange={(value) => {
+        setSearch(value)
+        setPage(1)
+      }}
+      isLoading={isLoading}
+      error={hasError ? 'Could not reach Flexprice.' : null}
+      onRetry={onRetry}
+      isFiltered={search.trim().length > 0}
+      onClearFilters={() => setSearch('')}
+      selectable={selectable}
+      compact={compact}
+      hideToolbar={hideToolbar}
+      {...(showFirstRunEmpty
+        ? {
+            empty: {
+              title: `No ${noun} yet`,
+              description: 'Create one to start measuring.',
+              actions: <Button>New widget</Button>,
+            },
+          }
+        : {})}
+      {...(showRowActions ? { rowActions: () => [{ label: 'Open', onSelect: onRowAction }] } : {})}
+      {...(clickableRows ? { onRowClick } : {})}
+      {...(showExport ? { exportFileName: 'widgets' } : {})}
+      {...(showSort
+        ? {
+            sort: {
+              options: [
+                { value: 'name', label: 'Name' },
+                { value: 'created', label: 'Created' },
+              ],
+              field: sort.field,
+              direction: sort.direction,
+              onChange: (field: string, direction: 'asc' | 'desc') => {
+                setSort({ field, direction })
+                setPage(1)
+              },
+            },
+          }
+        : {})}
+    />
+  )
+}
+
+/** Drag rowCount from 0 (first-run empty state) to 120; loading, error, selection, row actions, sort and paging are all live. */
+export const Playground = {
+  args: {
+    rowCount: 42,
+    pageSize: 10,
+    noun: 'widgets',
+    isLoading: false,
+    hasError: false,
+    showFirstRunEmpty: true,
+    selectable: false,
+    showRowActions: true,
+    clickableRows: false,
+    showSort: true,
+    showExport: true,
+    compact: false,
+    hideToolbar: false,
+    onRowClick: fn(),
+    onRowAction: fn(),
+    onRetry: fn(),
+  },
+  argTypes: {
+    rowCount: { control: { type: 'range', min: 0, max: 120, step: 1 } },
+    pageSize: { control: 'select', options: [5, 10, 25, 50] },
+    noun: { control: 'text' },
+    isLoading: { control: 'boolean' },
+    hasError: { control: 'boolean' },
+    showFirstRunEmpty: { control: 'boolean', description: 'Custom empty copy when rowCount is 0.' },
+    selectable: { control: 'boolean' },
+    showRowActions: { control: 'boolean' },
+    clickableRows: { control: 'boolean' },
+    showSort: { control: 'boolean' },
+    showExport: { control: 'boolean' },
+    compact: { control: 'boolean' },
+    hideToolbar: { control: 'boolean' },
+    onRowClick: { control: false },
+    onRowAction: { control: false },
+    onRetry: { control: false },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'rowCount',
+        'pageSize',
+        'noun',
+        'isLoading',
+        'hasError',
+        'showFirstRunEmpty',
+        'selectable',
+        'showRowActions',
+        'clickableRows',
+        'showSort',
+        'showExport',
+        'compact',
+        'hideToolbar',
+        'onRowClick',
+        'onRowAction',
+        'onRetry',
+      ],
+    },
+  },
+  render: (args) => <PlaygroundList {...args} />,
+} satisfies StoryObj<PlaygroundArgs>
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {

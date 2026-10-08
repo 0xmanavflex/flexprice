@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { ShellSearch } from './ShellSearch'
@@ -23,10 +24,53 @@ const meta = {
     onSelect: fn(),
     placeholder: 'Search…',
   },
+  argTypes: {
+    items: {
+      control: 'object',
+      description: 'Always-available destinations: id, label, group, optional hint.',
+    },
+    results: { control: 'object', description: 'Server results shown beneath `items`.' },
+    isSearching: { control: 'boolean', description: 'Shows the searching state in the dialog.' },
+    placeholder: { control: 'text' },
+    onSelect: { control: false },
+    onTermChange: { control: false },
+  },
 } satisfies Meta<typeof ShellSearch>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = ComponentProps<typeof ShellSearch> & { enabled: boolean }
+
+/** Open the dialog and type; edit `items` and `results`, flip `isSearching`, or switch `enabled` off for the unavailable state. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    enabled: true,
+    isSearching: false,
+    placeholder: 'Search…',
+    items: [
+      { id: 'page:customers', label: 'Customers', group: 'Pages' },
+      { id: 'page:plans', label: 'Plans', group: 'Pages' },
+      { id: 'page:invoices', label: 'Invoices', group: 'Pages', hint: 'Billing' },
+      { id: 'action:new-plan', label: 'New plan', group: 'Actions' },
+    ],
+    results: [
+      { id: 'customer:acme', label: 'Acme Corp', group: 'Customers', hint: 'billing@acme.io' },
+      { id: 'customer:globex', label: 'Globex', group: 'Customers', hint: 'ap@globex.com' },
+    ],
+    onSelect: fn(),
+    onTermChange: fn(),
+  },
+  argTypes: {
+    enabled: {
+      control: 'boolean',
+      description: 'Off omits `onSelect`: search is not available yet.',
+    },
+  },
+  render: ({ enabled, onSelect, ...args }) => (
+    <ShellSearch {...args} {...(enabled && onSelect ? { onSelect } : {})} />
+  ),
+}
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {

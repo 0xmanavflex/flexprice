@@ -11,6 +11,11 @@ const meta = {
     hint: 'Stable identifier the API uses. Lowercase letters, numbers and underscores.',
     children: 'Lookup key',
   },
+  argTypes: {
+    hint: { control: 'text', description: 'Revealed behind the (i) beside the label.' },
+    children: { control: 'text', description: 'The label text.' },
+    htmlFor: { control: false },
+  },
   render: (args) => (
     <div className="flex w-72 flex-col gap-2">
       <LabelWithHint {...args} />
@@ -21,5 +26,10 @@ const meta = {
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Edit the label and hint text; hover or focus the (i) to read the hint. */
+export const Playground: Story = {
+  args: { children: 'Lookup key', hint: 'Stable identifier the API uses.' },
+}
 
 export const Default: Story = {}

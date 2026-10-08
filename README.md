@@ -91,6 +91,14 @@ Storybook runs at:
 http://localhost:6006
 ```
 
+Besides the components, Storybook has **Pages/** stories (whole console pages with
+live controls), a **Design System → Page map** listing which kit components each
+page uses, and an **Anatomy** panel on every story. The panel reads
+`packages/ui/src/design-system/anatomy.generated.json`; `storybook` and
+`build-storybook` regenerate it, or run `pnpm ui:anatomy` yourself and commit the
+result. The workbench is published by `.github/workflows/storybook-deploy.yml`
+(setup in `.github/workflows/README.md`).
+
 ### Running without an account
 
 For local development, you can use the bundled mock data:

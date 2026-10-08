@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { SidebarProvider } from '@ui/components/primitives/sidebar'
@@ -27,10 +28,48 @@ const meta = {
     onSettings: fn(),
     onSignOut: fn(),
   },
+  argTypes: {
+    user: { control: 'object', description: 'name, email, optional organization and avatarUrl.' },
+    onProfile: { control: false },
+    onSettings: { control: false },
+    onSignOut: { control: false },
+  },
 } satisfies Meta<typeof ShellAccount>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = ComponentProps<typeof ShellAccount> & {
+  showProfile: boolean
+  showSettings: boolean
+  showSignOut: boolean
+}
+
+/** Edit the user, and drop any menu item by switching its handler off. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    user: { name: 'Dinesh K', email: 'dinesh@flexprice.io', organization: 'Flexprice' },
+    showProfile: true,
+    showSettings: true,
+    showSignOut: true,
+    onProfile: fn(),
+    onSettings: fn(),
+    onSignOut: fn(),
+  },
+  argTypes: {
+    showProfile: { control: 'boolean' },
+    showSettings: { control: 'boolean' },
+    showSignOut: { control: 'boolean' },
+  },
+  render: ({ showProfile, showSettings, showSignOut, onProfile, onSettings, onSignOut, user }) => (
+    <ShellAccount
+      user={user}
+      {...(showProfile && onProfile ? { onProfile } : {})}
+      {...(showSettings && onSettings ? { onSettings } : {})}
+      {...(showSignOut && onSignOut ? { onSignOut } : {})}
+    />
+  ),
+}
 
 export const Default: Story = {}
 

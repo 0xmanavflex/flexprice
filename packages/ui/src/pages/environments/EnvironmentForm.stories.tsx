@@ -1,5 +1,7 @@
+import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { EnvironmentType } from '@fp/domain'
 import { EnvironmentForm } from './EnvironmentForm'
 
 /** The dialog portals to the document, so the play functions read from there. */
@@ -11,12 +13,63 @@ const meta = {
     onOpenChange: fn(),
     onSubmit: fn(),
   },
+  argTypes: {
+    open: { control: 'boolean' },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text', description: 'Server-side failure; empty means none.' },
+    canCreateProduction: { control: 'boolean' },
+    contactHref: { control: 'text', description: 'Slack link shown when production is withheld.' },
+    defaultValue: { control: false },
+    onOpenChange: { control: false },
+    onSubmit: { control: false },
+  },
 } satisfies Meta<typeof EnvironmentForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 const dialog = () => within(document.body)
+
+type PlaygroundArgs = ComponentProps<typeof EnvironmentForm> & {
+  startName: string
+  startType: EnvironmentType
+}
+
+function PlaygroundDialog({ startName, startType, submitError, ...args }: PlaygroundArgs) {
+  const [open, setOpen] = useState(args.open)
+  return (
+    <EnvironmentForm
+      {...args}
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        args.onOpenChange(next)
+      }}
+      defaultValue={{ name: startName, type: startType }}
+      submitError={submitError || null}
+    />
+  )
+}
+
+/** Open or close the dialog, pick the starting type, withhold production (select it to see the contact note), submit or fail. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    open: true,
+    startName: '',
+    startType: EnvironmentType.Sandbox,
+    isSubmitting: false,
+    submitError: '',
+    canCreateProduction: true,
+    contactHref: 'https://example.com/slack',
+  },
+  argTypes: {
+    startName: { control: 'text' },
+    startType: { control: 'inline-radio', options: Object.values(EnvironmentType) },
+  },
+  render: (args) => (
+    <PlaygroundDialog key={`${args.open}-${args.startName}-${args.startType}`} {...args} />
+  ),
+}
 
 export const Default: Story = {}
 

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
@@ -39,10 +39,41 @@ const meta = {
     query: emptyFilterQuery(),
     onQueryChange: fn(),
   },
+  argTypes: {
+    variant: { control: 'inline-radio', options: ['basic', 'advanced'] },
+    size: { control: 'inline-radio', options: ['sm', 'default'] },
+    advancedMode: { control: 'inline-radio', options: ['popover', 'inline'] },
+    advancedAlign: { control: 'inline-radio', options: ['start', 'center', 'end'] },
+    showClear: { control: 'boolean' },
+    fields: { control: false },
+    query: { control: false },
+    onQueryChange: { control: false },
+    trigger: { control: false },
+  },
 } satisfies Meta<typeof FilterBar>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+/** Switch chrome (basic chips / advanced builder), size and clear button; the query is held in state so edits stick. */
+export const Playground: Story = {
+  args: { variant: 'basic', size: 'default', showClear: true },
+  render: (args) => <PlaygroundBar {...args} />,
+}
+
+function PlaygroundBar(args: ComponentProps<typeof FilterBar>) {
+  const [query, setQuery] = useState<FilterQuery>(emptyFilterQuery())
+  return (
+    <FilterBar
+      {...args}
+      query={query}
+      onQueryChange={(next, flat) => {
+        setQuery(next)
+        args.onQueryChange(next, flat)
+      }}
+    />
+  )
+}
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {
@@ -84,7 +115,12 @@ function ControlledStatusFilter() {
   const options = new Set(fields[0]?.options?.map((option) => option.value))
   const query: FilterQuery = statuses.length
     ? createFilterQuery([
-        createFilterRule({ id: 'status', path: ['status'], operator: 'is_any_of', value: statuses }),
+        createFilterRule({
+          id: 'status',
+          path: ['status'],
+          operator: 'is_any_of',
+          value: statuses,
+        }),
       ])
     : emptyFilterQuery()
   return (
@@ -153,6 +189,8 @@ export const SelectsConditionAndValue: Story = {
     // reachable), and the chip now reads the value back.
     await userEvent.click(activeOption)
     await expect(screen.getByRole('option', { name: /^scheduled$/i })).toBeInTheDocument()
-    await expect(canvasElement.querySelector('[data-slot="filter-chip"]')).toHaveTextContent(/active/i)
+    await expect(canvasElement.querySelector('[data-slot="filter-chip"]')).toHaveTextContent(
+      /active/i,
+    )
   },
 }

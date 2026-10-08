@@ -7,12 +7,52 @@ const meta = {
   component: UsageMeter,
   parameters: { layout: 'padded' },
   args: { label: 'API calls', used: 4200, limit: 10000, unit: 'calls', locale: 'en-US' },
+  argTypes: {
+    label: { control: 'text' },
+    used: { control: { type: 'number', min: 0, step: 100 } },
+    limit: { control: { type: 'number', min: 0, step: 100 }, description: 'null is unlimited.' },
+    unit: { control: 'text' },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE', 'fr-FR', 'en-IN'] },
+  },
 } satisfies Meta<typeof UsageMeter>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+interface PlaygroundArgs {
+  label: string
+  used: number
+  limit: number
+  unlimited: boolean
+  unit: string
+  locale: string
+}
+
+/** Drag used past the limit, set the limit to 0, or tick unlimited to see each state. */
+export const Playground = {
+  args: {
+    label: 'API calls',
+    used: 4200,
+    limit: 10000,
+    unlimited: false,
+    unit: 'calls',
+    locale: 'en-US',
+  },
+  argTypes: {
+    label: { control: 'text' },
+    used: { control: { type: 'number', min: 0, step: 100 } },
+    limit: { control: { type: 'number', min: 0, step: 100 } },
+    unlimited: { control: 'boolean', description: 'Sets limit to null.' },
+    unit: { control: 'text' },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE', 'fr-FR', 'en-IN'] },
+  },
+  parameters: { controls: { include: ['label', 'used', 'limit', 'unlimited', 'unit', 'locale'] } },
+  render: ({ unlimited, limit, ...rest }) => (
+    <UsageMeter {...rest} limit={unlimited ? null : limit} />
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 export const NearLimit: Story = { args: { used: 9600 } }
 

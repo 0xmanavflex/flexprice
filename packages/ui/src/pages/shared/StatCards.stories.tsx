@@ -2,6 +2,21 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { StatCards } from './StatCards'
 
+const STAT_LABELS = [
+  'Coupons',
+  'Published',
+  'Archived',
+  'Redeemed',
+  'Expired',
+  'Scheduled',
+  'Draft',
+  'Paused',
+  'Flagged',
+  'Reviewed',
+  'Pending',
+  'Closed',
+]
+
 const meta = {
   title: 'Surfaces/StatCards',
   component: StatCards,
@@ -14,10 +29,58 @@ const meta = {
     ],
     locale: 'en-US',
   },
+  argTypes: {
+    stats: { control: 'object' },
+    isLoading: { control: 'boolean' },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE', 'fr-FR', 'en-IN'] },
+  },
 } satisfies Meta<typeof StatCards>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+interface PlaygroundArgs {
+  count: number
+  scale: number
+  notCounted: boolean
+  withHints: boolean
+  isLoading: boolean
+  locale: string
+}
+
+/** Drag count 0-12 to grow the strip, scale the numbers, or flip to not-counted and loading. */
+export const Playground = {
+  args: {
+    count: 6,
+    scale: 1000,
+    notCounted: false,
+    withHints: true,
+    isLoading: false,
+    locale: 'en-US',
+  },
+  argTypes: {
+    count: { control: { type: 'range', min: 0, max: 12, step: 1 } },
+    scale: { control: { type: 'number', min: 1, max: 1_000_000, step: 100 } },
+    notCounted: { control: 'boolean', description: 'Every value undefined, shown as a dash.' },
+    withHints: { control: 'boolean' },
+    isLoading: { control: 'boolean' },
+    locale: { control: 'select', options: ['en-US', 'en-GB', 'de-DE', 'fr-FR', 'en-IN'] },
+  },
+  parameters: {
+    controls: { include: ['count', 'scale', 'notCounted', 'withHints', 'isLoading', 'locale'] },
+  },
+  render: ({ count, scale, notCounted, withHints, isLoading, locale }) => (
+    <StatCards
+      isLoading={isLoading}
+      locale={locale}
+      stats={Array.from({ length: count }, (_, index) => ({
+        label: STAT_LABELS[index]!,
+        value: notCounted ? undefined : (count - index) * scale + index * 7,
+        ...(withHints ? { hint: `${index + 1} this week` } : {}),
+      }))}
+    />
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {

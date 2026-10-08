@@ -1,3 +1,4 @@
+import { useEffect, useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { SidebarProvider } from '@ui/components/primitives/sidebar'
@@ -26,6 +27,51 @@ const eight: ShellEnvironment[] = [
   { id: 'migration', name: 'Migration rehearsal', kind: 'sandbox' },
   { id: 'scratch', name: 'Scratch', kind: 'sandbox' },
 ]
+
+type PlaygroundArgs = Omit<
+  ComponentProps<typeof EnvironmentSwitcher>,
+  'current' | 'environments' | 'onCreate' | 'onRename' | 'onDelete'
+> & {
+  environmentCount: number
+  currentId: string
+  showCreate: boolean
+  showRename: boolean
+  showDelete: boolean
+  onCreate: () => void
+  onRename: (id: string) => void
+  onDelete: (id: string) => void
+}
+
+function LiveSwitcher({
+  environmentCount,
+  currentId,
+  showCreate,
+  showRename,
+  showDelete,
+  onCreate,
+  onRename,
+  onDelete,
+  onChange,
+}: PlaygroundArgs) {
+  const environments = eight.slice(0, environmentCount)
+  const [id, setId] = useState(currentId)
+  // Follow the `currentId` control; picking from the menu still switches in between.
+  useEffect(() => setId(currentId), [currentId])
+  const current = environments.find((e) => e.id === id) ?? environments[0] ?? eight[0]!
+  return (
+    <EnvironmentSwitcher
+      current={current}
+      environments={environments}
+      onChange={(next) => {
+        setId(next)
+        onChange(next)
+      }}
+      {...(showCreate ? { onCreate } : {})}
+      {...(showRename ? { onRename } : {})}
+      {...(showDelete ? { onDelete } : {})}
+    />
+  )
+}
 
 const meta = {
   title: 'Foundation/Compositions/EnvironmentSwitcher',
@@ -59,6 +105,14 @@ const meta = {
     environments: two,
     onChange: fn(),
   },
+  argTypes: {
+    current: { control: 'object' },
+    environments: { control: 'object', description: 'id, name and kind (production or sandbox).' },
+    onChange: { control: false },
+    onCreate: { control: false },
+    onRename: { control: false },
+    onDelete: { control: false },
+  },
 } satisfies Meta<typeof EnvironmentSwitcher>
 
 export default meta
@@ -69,6 +123,32 @@ export const Sandbox: Story = {
   play: async ({ canvasElement }) => {
     await expect(canvasElement.querySelector('.bg-warning')).not.toBeNull()
   },
+}
+
+/** Grow the list from 1 to 8 environments, pick the current one, and toggle create and the row actions. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    environmentCount: 4,
+    currentId: 'dev',
+    showCreate: true,
+    showRename: true,
+    showDelete: true,
+    onChange: fn(),
+    onCreate: fn(),
+    onRename: fn(),
+    onDelete: fn(),
+  },
+  argTypes: {
+    environmentCount: { control: { type: 'range', min: 1, max: 8, step: 1 } },
+    currentId: { control: 'select', options: eight.map((e) => e.id) },
+    showCreate: { control: 'boolean', description: 'Off omits `onCreate`, so no menu item.' },
+    showRename: { control: 'boolean', description: 'Off omits `onRename`, so no pencil on rows.' },
+    showDelete: { control: 'boolean', description: 'Off omits `onDelete`, so no delete on rows.' },
+    onCreate: { control: false },
+    onRename: { control: false },
+    onDelete: { control: false },
+  },
+  render: (args) => <LiveSwitcher {...args} />,
 }
 
 /**

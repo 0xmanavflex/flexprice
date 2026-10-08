@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
+import { Button } from '@ui/components/primitives/button'
 import { SignInForm } from './SignInForm'
 
 const meta = {
@@ -7,10 +8,90 @@ const meta = {
   component: SignInForm,
   parameters: { layout: 'centered' },
   args: { onSubmit: fn(), onForgotPassword: fn() },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    error: { control: 'text', description: 'Empty means no error.' },
+    defaultValues: { control: 'object', description: 'Read once on mount.' },
+    alternatives: { control: false },
+    onSubmit: { control: false },
+    onForgotPassword: { control: false },
+  },
 } satisfies Meta<typeof SignInForm>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+interface PlaygroundArgs {
+  isSubmitting: boolean
+  error: string
+  showForgotPassword: boolean
+  showAlternatives: boolean
+  prefillEmail: string
+  onSubmit: () => void
+  onForgotPassword: () => void
+}
+
+/** Flip submitting or a failure, prefill the email, and toggle the forgot-password link and alternatives. */
+export const Playground = {
+  args: {
+    isSubmitting: false,
+    error: '',
+    showForgotPassword: true,
+    showAlternatives: false,
+    prefillEmail: '',
+    onSubmit: fn(),
+    onForgotPassword: fn(),
+  },
+  argTypes: {
+    isSubmitting: { control: 'boolean' },
+    error: { control: 'text', description: 'Empty means no error.' },
+    showForgotPassword: { control: 'boolean' },
+    showAlternatives: { control: 'boolean', description: 'Renders a single-sign-on button.' },
+    prefillEmail: { control: 'text', description: 'Seeds the email on mount.' },
+    onSubmit: { control: false },
+    onForgotPassword: { control: false },
+  },
+  parameters: {
+    controls: {
+      include: [
+        'isSubmitting',
+        'error',
+        'showForgotPassword',
+        'showAlternatives',
+        'prefillEmail',
+        'onSubmit',
+        'onForgotPassword',
+      ],
+    },
+  },
+  render: ({
+    isSubmitting,
+    error,
+    showForgotPassword,
+    showAlternatives,
+    prefillEmail,
+    onSubmit,
+    onForgotPassword,
+  }) => (
+    <SignInForm
+      key={prefillEmail}
+      isSubmitting={isSubmitting}
+      error={error || null}
+      onSubmit={onSubmit}
+      {...(showForgotPassword ? { onForgotPassword } : {})}
+      {...(prefillEmail ? { defaultValues: { email: prefillEmail } } : {})}
+      {...(showAlternatives
+        ? {
+            alternatives: (
+              <Button type="button" variant="outline" className="w-full">
+                Continue with single sign-on
+              </Button>
+            ),
+          }
+        : {})}
+    />
+  ),
+} satisfies StoryObj<PlaygroundArgs>
 
 export const Default: Story = {}
 

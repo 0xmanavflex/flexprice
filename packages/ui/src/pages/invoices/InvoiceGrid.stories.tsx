@@ -1,6 +1,7 @@
+import { type ComponentProps, useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
-import { InvoiceStatus } from '@fp/domain'
+import { DEFAULT_INVOICE_QUERY, type InvoiceQuery, InvoiceStatus } from '@fp/domain'
 import { InvoiceGrid } from './InvoiceGrid'
 import { fixtureQuery, invoiceFixtures, manyInvoices } from './invoiceFixtures'
 
@@ -173,4 +174,76 @@ export const PaginationReportsDomainQuery: Story = {
     expect(reported).toMatchObject({ page: 2 })
     expect(Object.keys(reported).sort()).toEqual(Object.keys(fixtureQuery).sort())
   },
+}
+
+/** Overrides every row's status so one state can be inspected across a long list. */
+function withStatus<T extends { status: unknown }>(items: T[], status: string): T[] {
+  return status === 'mixed' ? items : items.map((item) => ({ ...item, status }) as T)
+}
+
+type PlaygroundArgs = Omit<
+  ComponentProps<typeof InvoiceGrid>,
+  'invoices' | 'total' | 'query' | 'onQueryChange' | 'error'
+> & {
+  /** How many records the server holds, 0 to 60. */
+  rows: number
+  /** The page shown, 1-based. */
+  page: number
+  pageSize: number
+  /** Forces every row to one status; mixed keeps the fixture spread. */
+  status: 'mixed' | InvoiceStatus
+  /** Shows the error state instead of the list. */
+  hasError: boolean
+}
+
+function InvoiceGridPlayground({
+  rows,
+  page,
+  pageSize,
+  status,
+  hasError,
+  ...rest
+}: PlaygroundArgs) {
+  const [query, setQuery] = useState<InvoiceQuery>({ ...DEFAULT_INVOICE_QUERY, page, pageSize })
+  const all = useMemo(() => withStatus(manyInvoices(rows), status), [rows, status])
+  const lastPage = Math.max(1, Math.ceil(all.length / query.pageSize))
+  const current = Math.min(query.page, lastPage)
+  const start = (current - 1) * query.pageSize
+  return (
+    <InvoiceGrid
+      locale="en-US"
+      {...rest}
+      invoices={all.slice(start, start + query.pageSize)}
+      total={all.length}
+      query={{ ...query, page: current }}
+      onQueryChange={setQuery}
+      error={hasError ? 'You do not have access to invoices in this environment.' : null}
+    />
+  )
+}
+
+/** Drag rows from 0 to 60 to walk empty, one page, and a long list; flip loading and error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  parameters: { controls: { exclude: /^(invoices|total|query|error|on[A-Z].*)$/ } },
+  args: {
+    rows: 30,
+    page: 1,
+    pageSize: 10,
+    status: 'mixed',
+    isLoading: false,
+    hasError: false,
+    onRetry: fn(),
+    onCreate: fn(),
+    onInvoiceClick: fn(),
+    onOpenCustomer: fn(),
+  },
+  argTypes: {
+    rows: { control: { type: 'number', min: 0, max: 60, step: 1 } },
+    page: { control: { type: 'number', min: 1, max: 6, step: 1 } },
+    pageSize: { control: 'select', options: [10, 25, 50] },
+    status: { control: 'select', options: ['mixed', ...Object.values(InvoiceStatus)] },
+    isLoading: { control: 'boolean' },
+    hasError: { control: 'boolean' },
+  },
+  render: (args) => <InvoiceGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
 }

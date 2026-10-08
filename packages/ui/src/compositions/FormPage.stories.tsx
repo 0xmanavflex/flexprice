@@ -40,6 +40,89 @@ function Fields() {
   )
 }
 
+interface PlaygroundArgs {
+  title: string
+  width: 'wide' | 'narrow'
+  mode: 'create' | 'edit'
+  noun: string
+  isSubmitting: boolean
+  submitError: string
+  withStepper: boolean
+  stepCount: number
+  unlockAll: boolean
+  fieldCount: number
+}
+
+function PlaygroundPage({
+  title,
+  width,
+  mode,
+  noun,
+  isSubmitting,
+  submitError,
+  withStepper,
+  stepCount,
+  unlockAll,
+  fieldCount,
+}: PlaygroundArgs) {
+  const flow = useFormSteps({
+    steps: Array.from({ length: stepCount }, (_, index) => ({
+      id: `step-${index + 1}`,
+      title: `Step ${index + 1}`,
+      description: `Part ${index + 1} of ${stepCount}`,
+    })),
+    unlockAll,
+  })
+  return (
+    <FormPage
+      title={title}
+      trail={trail}
+      width={width}
+      toolbar={{ ...toolbar, mode, noun, isSubmitting, submitError: submitError || null }}
+      {...(withStepper ? { stepper: { flow, label: 'Form steps' } } : {})}
+    >
+      <FormCard
+        title={withStepper ? (flow.steps.find((s) => s.id === flow.step)?.title ?? '') : ''}
+      >
+        {Array.from({ length: fieldCount }, (_, index) => (
+          <FormRow key={index} label={`Field ${index + 1}`}>
+            {({ id, ...field }) => <Input id={id} {...field} />}
+          </FormRow>
+        ))}
+      </FormCard>
+    </FormPage>
+  )
+}
+
+/** Toggle the stepper (2-6 steps), switch width and mode, add fields, set submitting or an error. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    title: 'Create plan',
+    width: 'narrow',
+    mode: 'create',
+    noun: 'plan',
+    isSubmitting: false,
+    submitError: '',
+    withStepper: false,
+    stepCount: 3,
+    unlockAll: false,
+    fieldCount: 2,
+  },
+  argTypes: {
+    title: { control: 'text' },
+    width: { control: 'inline-radio', options: ['narrow', 'wide'] },
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    noun: { control: 'text', description: 'Names the create label: "Create plan".' },
+    isSubmitting: { control: 'boolean' },
+    submitError: { control: 'text' },
+    withStepper: { control: 'boolean' },
+    stepCount: { control: { type: 'range', min: 2, max: 6, step: 1 } },
+    unlockAll: { control: 'boolean', description: 'Edit mode: every step reachable.' },
+    fieldCount: { control: { type: 'range', min: 1, max: 12, step: 1 } },
+  },
+  render: (args) => <PlaygroundPage {...args} />,
+}
+
 export const SimpleFields: Story = {
   args: { title: 'Create group', trail, toolbar, children: <Fields /> },
   play: async ({ canvasElement }) => {

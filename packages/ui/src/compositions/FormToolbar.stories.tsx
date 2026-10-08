@@ -1,3 +1,4 @@
+import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { FormToolbar } from './FormToolbar'
@@ -18,10 +19,43 @@ const meta = {
     formId: 'demo-form',
     onCancel: fn(),
   },
+  argTypes: {
+    title: { control: 'text' },
+    mode: { control: 'inline-radio', options: ['create', 'edit'] },
+    noun: { control: 'text', description: 'Names the create label: "Create group".' },
+    formId: { control: 'text', description: 'The `id` of the `<form>` the CTA submits.' },
+    isSubmitting: { control: 'boolean' },
+    submitLabel: { control: 'text', description: 'Overrides the derived label.' },
+    hideSubmit: { control: 'boolean', description: 'Earlier steps of a multi-step form.' },
+    onCancel: { control: false },
+    center: { control: false },
+  },
 } satisfies Meta<typeof FormToolbar>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+type PlaygroundArgs = ComponentProps<typeof FormToolbar> & { hasWayBack: boolean }
+
+/** Switch create/edit, set the noun or a custom label, submit, hide the CTA, or remove the way back. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    title: 'Create group',
+    mode: 'create',
+    noun: 'group',
+    formId: 'demo-form',
+    isSubmitting: false,
+    hideSubmit: false,
+    hasWayBack: true,
+    onCancel: fn(),
+  },
+  argTypes: {
+    hasWayBack: { control: 'boolean', description: 'Off drops Cancel and the close button.' },
+  },
+  render: ({ hasWayBack, onCancel, ...args }) => (
+    <FormToolbar {...args} onCancel={hasWayBack ? onCancel : undefined} />
+  ),
+}
 
 export const Create: Story = {
   play: async ({ canvasElement }) => {

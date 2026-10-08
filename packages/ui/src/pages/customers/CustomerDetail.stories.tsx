@@ -10,7 +10,7 @@ import {
   SubscriptionStatus,
   money,
 } from '@fp/domain'
-import { CustomerDetail, type CustomerTab } from './CustomerDetail'
+import { CUSTOMER_TABS, CustomerDetail, type CustomerTab } from './CustomerDetail'
 
 const CUSTOMER: CustomerDetailModel = {
   id: 'cus_01M3H9ACME',
@@ -90,6 +90,8 @@ function Harness({
   onBack,
   onEdit,
   onUpdateField,
+  subscriptionsLoading = false,
+  invoicesLoading = false,
   initialTab = 'overview',
 }: {
   customer?: CustomerDetailModel
@@ -99,6 +101,8 @@ function Harness({
   onBack?: () => void
   onEdit?: () => void
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
+  subscriptionsLoading?: boolean
+  invoicesLoading?: boolean
   initialTab?: CustomerTab
 }) {
   const [tab, setTab] = useState<CustomerTab>(initialTab)
@@ -110,6 +114,8 @@ function Harness({
         invoices={invoices}
         tab={tab}
         onTabChange={setTab}
+        subscriptionsLoading={subscriptionsLoading}
+        invoicesLoading={invoicesLoading}
         onBack={onBack ?? (() => {})}
         onCreateSubscription={() => onCreateSubscription?.()}
         onCreateInvoice={() => {}}
@@ -131,10 +137,114 @@ const meta = {
   component: Harness,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
+  argTypes: {
+    initialTab: { control: 'select', options: CUSTOMER_TABS },
+    subscriptionsLoading: { control: 'boolean' },
+    invoicesLoading: { control: 'boolean' },
+    customer: { control: false },
+    subscriptions: { control: false },
+    invoices: { control: false },
+    onCreateSubscription: { control: false },
+    onBack: { control: false },
+    onEdit: { control: false },
+    onUpdateField: { control: false },
+  },
 } satisfies Meta<typeof Harness>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+const DAY_MS = 86_400_000
+
+/** Deterministic: the same count and status always give the same list. */
+function makeSubscriptions(count: number, status: SubscriptionStatus): Subscription[] {
+  const base = SUBSCRIPTIONS[0] as Subscription
+  return Array.from({ length: count }, (_, index) => ({
+    ...base,
+    id: `sub_gen_${index}`,
+    planId: `plan_${index}`,
+    planName: `${['Starter', 'Growth', 'Scale', 'Enterprise'][index % 4]} ${index + 1}`,
+    status,
+  }))
+}
+
+/** Deterministic: amounts and dates are derived from the index. */
+function makeInvoices(count: number, status: InvoiceStatus): Invoice[] {
+  const base = new Date('2026-09-01T00:00:00Z').getTime()
+  return Array.from({ length: count }, (_, index) => {
+    const amount = (((index * 137) % 900) + 50).toFixed(2)
+    const paid = status === InvoiceStatus.Paid
+    return {
+      id: `inv_gen_${index}`,
+      number: `INV-2026-${String(1000 + index).padStart(5, '0')}`,
+      customerId: CUSTOMER.id,
+      customerName: CUSTOMER.name,
+      status,
+      paymentStatus: paid ? PaymentStatus.Succeeded : null,
+      total: money(amount, 'USD'),
+      amountDue: money(amount, 'USD'),
+      amountRemaining: money(paid ? '0' : amount, 'USD'),
+      dueDate: new Date(base - index * 30 * DAY_MS),
+      issuedAt:
+        status === InvoiceStatus.Draft ? null : new Date(base - index * 30 * DAY_MS - 14 * DAY_MS),
+      periodStart: new Date(base - (index + 1) * 30 * DAY_MS),
+      periodEnd: new Date(base - index * 30 * DAY_MS),
+    }
+  })
+}
+
+interface PlaygroundArgs {
+  initialTab: CustomerTab
+  customerName: string
+  subscriptionCount: number
+  subscriptionStatus: SubscriptionStatus
+  invoiceCount: number
+  invoiceStatus: InvoiceStatus
+  subscriptionsLoading: boolean
+  invoicesLoading: boolean
+  editable: boolean
+}
+
+/** Pick the tab, the customer, how many contracts and invoices they have and in which status. */
+export const Playground: StoryObj<PlaygroundArgs> = {
+  args: {
+    initialTab: 'overview',
+    customerName: 'Acme Robotics',
+    subscriptionCount: 2,
+    subscriptionStatus: SubscriptionStatus.Active,
+    invoiceCount: 8,
+    invoiceStatus: InvoiceStatus.Paid,
+    subscriptionsLoading: false,
+    invoicesLoading: false,
+    editable: true,
+  },
+  argTypes: {
+    initialTab: { control: 'select', options: CUSTOMER_TABS },
+    customerName: { control: 'text' },
+    subscriptionCount: { control: { type: 'range', min: 0, max: 12, step: 1 } },
+    subscriptionStatus: { control: 'select', options: Object.values(SubscriptionStatus) },
+    invoiceCount: { control: { type: 'range', min: 0, max: 40, step: 1 } },
+    invoiceStatus: { control: 'select', options: Object.values(InvoiceStatus) },
+    subscriptionsLoading: { control: 'boolean' },
+    invoicesLoading: { control: 'boolean' },
+    editable: {
+      control: 'boolean',
+      description: 'Wires the inline edit and billing-details actions.',
+    },
+  },
+  render: (a) => (
+    <Harness
+      key={a.initialTab}
+      customer={{ ...CUSTOMER, name: a.customerName }}
+      subscriptions={makeSubscriptions(a.subscriptionCount, a.subscriptionStatus)}
+      invoices={makeInvoices(a.invoiceCount, a.invoiceStatus)}
+      subscriptionsLoading={a.subscriptionsLoading}
+      invoicesLoading={a.invoicesLoading}
+      initialTab={a.initialTab}
+      {...(a.editable ? { onEdit: fn(), onUpdateField: fn(async () => undefined) } : {})}
+    />
+  ),
+}
 
 export const Default: Story = {
   play: async ({ canvasElement }) => {

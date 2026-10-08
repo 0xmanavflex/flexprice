@@ -1,3 +1,4 @@
+import { useEffect, useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { FitToWindow } from './FitToWindow'
@@ -6,10 +7,33 @@ const meta = {
   title: 'Foundation/Compositions/FitToWindow',
   component: FitToWindow,
   args: { pressed: false, onPressedChange: fn() },
+  argTypes: {
+    pressed: { control: 'boolean' },
+    onPressedChange: { control: false },
+  },
 } satisfies Meta<typeof FitToWindow>
 
 export default meta
 type Story = StoryObj<typeof meta>
+
+function LiveToggle(args: ComponentProps<typeof FitToWindow>) {
+  const [pressed, setPressed] = useState(args.pressed)
+  useEffect(() => setPressed(args.pressed), [args.pressed])
+  return (
+    <FitToWindow
+      pressed={pressed}
+      onPressedChange={(next) => {
+        setPressed(next)
+        args.onPressedChange(next)
+      }}
+    />
+  )
+}
+
+/** Click the toggle or flip `pressed`; the state is `aria-pressed`, the name never changes. */
+export const Playground: Story = {
+  render: (args) => <LiveToggle {...args} />,
+}
 
 export const Off: Story = {}
 export const On: Story = { args: { pressed: true } }

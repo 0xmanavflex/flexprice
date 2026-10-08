@@ -2,6 +2,18 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { ArcGauge } from './ArcGauge'
 
+const tones = [
+  'series-1',
+  'series-2',
+  'series-3',
+  'series-4',
+  'series-5',
+  'good',
+  'warning',
+  'critical',
+  'neutral',
+] as const
+
 const meta = {
   title: 'Foundation/Flexprice/ArcGauge',
   component: ArcGauge,
@@ -11,6 +23,16 @@ const meta = {
     max: 40,
     caption: 'API keys active',
     label: 'API key health',
+  },
+  argTypes: {
+    value: { control: { type: 'number', min: 0, step: 1 }, description: 'The current reading.' },
+    max: { control: { type: 'number', min: 0, step: 1 }, description: 'What a full arc means.' },
+    tone: { control: 'select', options: tones },
+    segments: { control: { type: 'range', min: 8, max: 80, step: 1 } },
+    caption: { control: 'text' },
+    label: { control: 'text' },
+    display: { control: false },
+    className: { control: false },
   },
   decorators: [
     (Story) => (
@@ -25,6 +47,11 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
+
+/** Every prop as a control: drag value past max, set max to 0, change tone and tick count. */
+export const Playground: Story = {
+  args: { value: 28, max: 40, tone: 'good', segments: 40 },
+}
 
 /**
  * The reading is text, not only a shape — and it is announced once, not twice:
