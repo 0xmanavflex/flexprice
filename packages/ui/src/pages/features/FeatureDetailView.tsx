@@ -2,8 +2,7 @@ import { useState } from 'react'
 import { SectionEmpty } from '@ui/compositions/SectionEmpty'
 import { toast } from 'sonner'
 import {
-  AGGREGATION_LABEL,
-  aggregationFormula,
+  type AggregationType,
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
   BillingModel,
@@ -19,7 +18,14 @@ import {
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import { ArchiveIcon, BellIcon, CopyIcon, MoreHorizontalIcon, PencilIcon } from 'lucide-react'
+import {
+  ArchiveIcon,
+  ChevronRightIcon,
+  CopyIcon,
+  MoreHorizontalIcon,
+  PencilIcon,
+  PlusIcon,
+} from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import {
   DropdownMenu,
@@ -28,14 +34,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { Switch } from '@ui/components/primitives/switch'
 import { DetailHeader } from '../../compositions/DetailHeader'
 import { EditableCard } from '../../compositions/EditableCard'
 import { LoadingRows } from '../../compositions'
+import { MetadataCard } from '../../compositions/MetadataCard'
 import { Section } from '../../compositions/Section'
 import { DetailTabs, Dot, Properties } from '../../compositions/DetailKit'
 import { MetricChart, type MetricPoint } from '../shared/charts'
-import { FEATURE_TYPE_GLYPH, FeatureTypePill, Formula, Status } from '../shared/cells'
+import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
 
 export type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
@@ -75,6 +81,12 @@ export interface FeatureDetailViewProps {
   entitlements?: FeatureEntitlementLink[]
   entitlementsLoading?: boolean
   entitlementsError?: string | null
+  /** Charges tab CTA: price this feature on a plan. Omitted, no button is shown. */
+  onAddPlan?: () => void
+  /** Entitlements tab CTA: grant this feature on a plan. Omitted, no button is shown. */
+  onAddEntitlement?: () => void
+  /** Saves the whole metadata map. Omitted, the Metadata section is read-only. */
+  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
 }
 
 /** Thirty days of plausible-looking usage. Demo only: no usage read exists for a feature yet. */
@@ -85,11 +97,21 @@ export function demoUsagePoints(): MetricPoint[] {
   }))
 }
 
-const ALERTS = [
-  { id: 'critical', label: 'Critical', hint: 'Above 100% of allowance', dot: 'bg-destructive' },
-  { id: 'warning', label: 'Warning', hint: 'Above 80% of allowance', dot: 'bg-warning' },
-  { id: 'info', label: 'Info', hint: 'Above 50% of allowance', dot: 'bg-info' },
-] as const
+/**
+ * The aggregation, named for what it is and nothing more: "Sum", not "Sum of
+ * a field" or `SUM(tokens)`. The field and the unit are shown beside it as
+ * their own values, so the label does not need to restate them.
+ */
+const AGGREGATION_TYPE_NAME: Record<AggregationType, string> = {
+  COUNT: 'Count',
+  COUNT_UNIQUE: 'Count unique',
+  SUM: 'Sum',
+  SUM_WITH_MULTIPLIER: 'Sum with multiplier',
+  AVG: 'Average',
+  MAX: 'Max',
+  LATEST: 'Latest',
+  WEIGHTED_SUM: 'Weighted sum',
+}
 
 /** Builds the ingest cURL from the feature's event name and aggregation. */
 export function buildIngestCurl(feature: Feature): string {
@@ -166,9 +188,7 @@ function allowanceOf(entitlement: Entitlement): string {
 }
 
 function resetsOf(entitlement: Entitlement): string {
-  return entitlement.usageResetPeriod
-    ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod]
-    : '—'
+  return entitlement.usageResetPeriod ? USAGE_RESET_PERIOD_LABEL[entitlement.usageResetPeriod] : '—'
 }
 
 export function FeatureDetailView({
@@ -185,6 +205,9 @@ export function FeatureDetailView({
   entitlements = [],
   entitlementsLoading = false,
   entitlementsError = null,
+  onAddPlan,
+  onAddEntitlement,
+  onSaveMetadata,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
   const Glyph = FEATURE_TYPE_GLYPH[feature.type]
@@ -249,10 +272,6 @@ export function FeatureDetailView({
                 <MoreHorizontalIcon aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-52">
-                <DropdownMenuItem onClick={() => onTabChange('information')}>
-                  <BellIcon className="text-muted-foreground" aria-hidden />
-                  Usage alerts
-                </DropdownMenuItem>
                 {onDuplicate ? (
                   <DropdownMenuItem onClick={onDuplicate}>
                     <CopyIcon className="text-muted-foreground" aria-hidden />
@@ -286,7 +305,12 @@ export function FeatureDetailView({
       ) : null}
 
       {active === 'charges' ? (
-        <ChargesTab rows={charges} isLoading={chargesLoading} error={chargesError} />
+        <ChargesTab
+          rows={charges}
+          isLoading={chargesLoading}
+          error={chargesError}
+          {...(onAddPlan ? { onAdd: onAddPlan } : {})}
+        />
       ) : null}
 
       {active === 'entitlements' ? (
@@ -294,6 +318,7 @@ export function FeatureDetailView({
           rows={entitlements}
           isLoading={entitlementsLoading}
           error={entitlementsError}
+          {...(onAddEntitlement ? { onAdd: onAddEntitlement } : {})}
         />
       ) : null}
 
@@ -303,9 +328,20 @@ export function FeatureDetailView({
           isMetered={isMetered}
           archived={archived}
           onSave={onSave}
+          {...(onSaveMetadata ? { onSaveMetadata } : {})}
         />
       ) : null}
     </div>
+  )
+}
+
+/** A tab's create button: the same small outline button in the empty state and the toolbar. */
+function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button variant="outline" size="sm" onClick={onClick}>
+      <PlusIcon aria-hidden />
+      {label}
+    </Button>
   )
 }
 
@@ -313,11 +349,14 @@ function ChargesTab({
   rows,
   isLoading,
   error,
+  onAdd,
 }: {
   rows: FeatureChargeLink[]
   isLoading: boolean
   error: string | null
+  onAdd?: () => void
 }) {
+  const add = onAdd ? <AddButton label="Add plan" onClick={onAdd} /> : undefined
   if (error) return <p className="text-destructive p-6 text-sm">{error}</p>
   if (isLoading) {
     return (
@@ -334,15 +373,18 @@ function ChargesTab({
         <SectionEmpty
           title="No charges yet"
           description="No plan or add-on prices this feature yet."
+          action={add}
         />
       </Section>
     )
   }
   return (
-    <Section title="Charges" flush bare>
+    <Section table title="Charges">
       <DetailTable
+        compact
         label="Charges"
         noun="charges"
+        action={add}
         rows={rows}
         getRowId={(row) => row.charge.id}
         facets={[
@@ -350,12 +392,19 @@ function ChargesTab({
           { id: 'status', label: 'Plan status', value: (row) => statusLabel(row.parentStatus) },
         ]}
         searchText={(row) =>
-          [row.parentName, modelLabel(row.charge), billedLabel(row.charge), priceLabel(row.charge), statusLabel(row.parentStatus)].join(' ')
+          [
+            row.parentName,
+            modelLabel(row.charge),
+            billedLabel(row.charge),
+            priceLabel(row.charge),
+            statusLabel(row.parentStatus),
+          ].join(' ')
         }
         columns={[
           {
             key: 'plan',
             header: 'Plan / add-on',
+            width: 200,
             sortBy: (row) => row.parentName,
             text: (row) => row.parentName,
             cell: (row) => <span className="font-medium">{row.parentName}</span>,
@@ -363,6 +412,7 @@ function ChargesTab({
           {
             key: 'model',
             header: 'Billing model',
+            width: 130,
             sortBy: (row) => modelLabel(row.charge),
             text: (row) => modelLabel(row.charge),
             cell: (row) => muted(modelLabel(row.charge)),
@@ -370,6 +420,7 @@ function ChargesTab({
           {
             key: 'billed',
             header: 'Billed',
+            width: 150,
             sortBy: (row) => billedLabel(row.charge),
             text: (row) => billedLabel(row.charge),
             cell: (row) => muted(billedLabel(row.charge)),
@@ -377,6 +428,7 @@ function ChargesTab({
           {
             key: 'price',
             header: 'Price',
+            width: 130,
             sortBy: (row) => Number(row.charge.amount) || 0,
             text: (row) => priceLabel(row.charge),
             cell: (row) => <span className="tabular-nums">{priceLabel(row.charge)}</span>,
@@ -384,6 +436,7 @@ function ChargesTab({
           {
             key: 'status',
             header: 'Plan status',
+            width: 110,
             sortBy: (row) => statusLabel(row.parentStatus),
             text: (row) => statusLabel(row.parentStatus),
             cell: (row) => <Status value={statusLabel(row.parentStatus)} />,
@@ -398,11 +451,14 @@ function EntitlementsTab({
   rows,
   isLoading,
   error,
+  onAdd,
 }: {
   rows: FeatureEntitlementLink[]
   isLoading: boolean
   error: string | null
+  onAdd?: () => void
 }) {
+  const add = onAdd ? <AddButton label="Add entitlement" onClick={onAdd} /> : undefined
   if (error) return <p className="text-destructive p-6 text-sm">{error}</p>
   if (isLoading) {
     return (
@@ -416,27 +472,39 @@ function EntitlementsTab({
   if (rows.length === 0) {
     return (
       <Section title="Entitlements" flush>
-        <SectionEmpty title="No entitlements yet" description="No plan includes this feature yet." />
+        <SectionEmpty
+          title="No entitlements yet"
+          description="No plan includes this feature yet."
+          action={add}
+        />
       </Section>
     )
   }
   return (
-    <Section title="Entitlements" flush bare>
+    <Section table title="Entitlements">
       <DetailTable
+        compact
         label="Entitlements"
         noun="entitlements"
+        action={add}
         rows={rows}
         getRowId={(row) => row.entitlement.id}
         facets={[
           { id: 'status', label: 'Plan status', value: (row) => statusLabel(row.parentStatus) },
         ]}
         searchText={(row) =>
-          [row.parentName, allowanceOf(row.entitlement), resetsOf(row.entitlement), statusLabel(row.parentStatus)].join(' ')
+          [
+            row.parentName,
+            allowanceOf(row.entitlement),
+            resetsOf(row.entitlement),
+            statusLabel(row.parentStatus),
+          ].join(' ')
         }
         columns={[
           {
             key: 'plan',
             header: 'Plan',
+            width: 200,
             sortBy: (row) => row.parentName,
             text: (row) => row.parentName,
             cell: (row) => <span className="font-medium">{row.parentName}</span>,
@@ -444,13 +512,15 @@ function EntitlementsTab({
           {
             key: 'allowance',
             header: 'Allowance',
+            width: 130,
             sortBy: (row) => allowanceOf(row.entitlement),
             text: (row) => allowanceOf(row.entitlement),
-            cell: (row) => allowanceOf(row.entitlement),
+            cell: (row) => <span className="tabular-nums">{allowanceOf(row.entitlement)}</span>,
           },
           {
             key: 'resets',
             header: 'Usage resets',
+            width: 130,
             sortBy: (row) => resetsOf(row.entitlement),
             text: (row) => resetsOf(row.entitlement),
             cell: (row) => muted(resetsOf(row.entitlement)),
@@ -458,6 +528,7 @@ function EntitlementsTab({
           {
             key: 'status',
             header: 'Plan status',
+            width: 110,
             sortBy: (row) => statusLabel(row.parentStatus),
             text: (row) => statusLabel(row.parentStatus),
             cell: (row) => <Status value={statusLabel(row.parentStatus)} />,
@@ -587,23 +658,72 @@ function TestEventPanel({ feature }: { feature: Feature }) {
   )
 }
 
+/**
+ * The meter's event filters, one row per event property.
+ *
+ * Collapsed, a row is the property name and how many values it lets through;
+ * expanded, it lists those values. A native `<details>` does the disclosure, so
+ * keyboard and screen-reader behaviour come for free.
+ */
+function EventProperties({ filters }: { filters: { key: string; values: string[] }[] }) {
+  if (filters.length === 0) {
+    return (
+      <p className="text-muted-foreground text-[13px]">No event filters: every event counts.</p>
+    )
+  }
+  return (
+    <ul className="divide-border/60 flex flex-col divide-y rounded-lg border">
+      {filters.map((filter) => (
+        <li key={filter.key}>
+          <details className="group">
+            <summary className="hover:bg-muted/40 flex cursor-pointer list-none items-center gap-2 px-4 py-2.5 text-sm [&::-webkit-details-marker]:hidden">
+              <ChevronRightIcon
+                aria-hidden
+                className="text-muted-foreground size-4 shrink-0 transition-transform group-open:rotate-90"
+              />
+              <span className="min-w-0 flex-1 truncate font-mono text-[13px]">{filter.key}</span>
+              <span className="text-muted-foreground shrink-0 text-xs">
+                {filter.values.length} {filter.values.length === 1 ? 'value' : 'values'}
+              </span>
+            </summary>
+            <div className="flex flex-wrap gap-1.5 px-4 ps-10 pt-1 pb-3">
+              {filter.values.map((value) => (
+                <span
+                  key={value}
+                  className="bg-muted/70 text-muted-foreground rounded-md px-2 py-0.5 font-mono text-xs"
+                >
+                  {value}
+                </span>
+              ))}
+            </div>
+          </details>
+        </li>
+      ))}
+    </ul>
+  )
+}
+
+/** The user-defined unit: "call / calls", or the one name when only one is set. */
+function unitLabel(feature: Feature): string {
+  const { unitSingular: one, unitPlural: many } = feature
+  if (!one && !many) return '—'
+  if (!one || !many || one === many) return many || one
+  return `${one} / ${many}`
+}
+
 function InformationTab({
   feature,
   isMetered,
   archived,
   onSave,
+  onSaveMetadata,
 }: {
   feature: Feature
   isMetered: boolean
   archived: boolean
   onSave: (changes: Record<string, string>) => Promise<unknown>
+  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
 }) {
-  const [enabled, setEnabled] = useState<Record<string, boolean>>({
-    critical: true,
-    warning: true,
-    info: false,
-  })
-
   return (
     <div className="grid gap-5 xl:grid-cols-3">
       <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
@@ -666,73 +786,27 @@ function InformationTab({
                 {
                   label: 'Aggregation',
                   value: feature.aggregationType ? (
-                    <span className="flex flex-wrap items-center gap-2">
-                      <Formula value={aggregationFormula(feature)} />
-                      <span className="text-muted-foreground">
-                        {AGGREGATION_LABEL[feature.aggregationType]}
-                      </span>
-                    </span>
+                    <Pill size="sm">{AGGREGATION_TYPE_NAME[feature.aggregationType]}</Pill>
                   ) : (
                     '—'
                   ),
                 },
                 ...(feature.aggregationField
-                  ? [{ label: 'Value property', value: mono(feature.aggregationField) }]
+                  ? [{ label: 'Field', value: mono(feature.aggregationField) }]
                   : []),
-                {
-                  label: 'Unit',
-                  value:
-                    feature.unitSingular || feature.unitPlural
-                      ? `${feature.unitSingular || '—'} / ${feature.unitPlural || '—'}`
-                      : '—',
-                },
+                { label: 'Unit', value: unitLabel(feature) },
               ]}
             />
-            {feature.meterFilters && feature.meterFilters.length > 0 ? (
-              <div className="mt-6 space-y-2 border-t pt-5">
-                <p className="text-muted-foreground text-xs">Event filters</p>
-                <div className="flex flex-wrap gap-1.5">
-                  {feature.meterFilters.flatMap((filter) =>
-                    filter.values.map((value) => (
-                      <span
-                        key={`${filter.key}-${value}`}
-                        className="bg-muted/70 text-muted-foreground rounded-md px-2 py-0.5 font-mono text-xs"
-                      >
-                        {filter.key} = {value}
-                      </span>
-                    )),
-                  )}
-                </div>
-              </div>
-            ) : null}
+            <div className="mt-6 space-y-2 border-t pt-5">
+              <p className="text-muted-foreground text-xs">Event properties</p>
+              <EventProperties filters={feature.meterFilters ?? []} />
+            </div>
           </Section>
         ) : null}
       </div>
       <div className="flex min-w-0 flex-col gap-5">
-        {isMetered ? (
-          <Section title="Usage alerts" flush>
-            <ul className="divide-border/50 divide-y">
-              {ALERTS.map((alert) => (
-                <li key={alert.id} className="flex items-center gap-3 px-6 py-3.5">
-                  <span aria-hidden className={`size-2 rounded-full ${alert.dot}`} />
-                  <span className="flex-1">
-                    <span className="block text-sm">{alert.label}</span>
-                    <span className="text-muted-foreground block text-xs">{alert.hint}</span>
-                  </span>
-                  <Switch
-                    checked={enabled[alert.id] ?? false}
-                    onCheckedChange={(next) =>
-                      setEnabled((current) => ({ ...current, [alert.id]: next }))
-                    }
-                    aria-label={`${alert.label} alert`}
-                  />
-                </li>
-              ))}
-            </ul>
-          </Section>
-        ) : null}
-
-        <Section title="Metadata">
+        {/* The ids people copy into API calls stay in view above the free-form fields. */}
+        <Section title="Identifiers">
           <Properties
             columns={2}
             items={[
@@ -741,6 +815,10 @@ function InformationTab({
             ]}
           />
         </Section>
+        <MetadataCard
+          metadata={feature.metadata ?? {}}
+          {...(onSaveMetadata && !archived ? { onSave: onSaveMetadata } : {})}
+        />
       </div>
     </div>
   )

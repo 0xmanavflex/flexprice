@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useNavigate } from '@tanstack/react-router'
 import { type CloneFeature, FeatureType } from '@fp/domain'
 import {
   ApiError,
@@ -25,11 +26,12 @@ export interface FeatureDetailPageProps {
  * Name and description save for real (per value, or together from the header
  * Edit, which opens Information). "Edit configuration" opens the stepped form.
  * Charges and entitlements are the prices and grants that reference this
- * feature. The usage chart and usage alerts are still demo: there is no
- * per-feature series wired on this page yet.
+ * feature; both are added on a plan, so their CTAs go to the plan flows. The
+ * usage chart is still demo: there is no per-feature series wired here yet.
  */
 export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: FeatureDetailPageProps) {
   const feature = useFeature(featureId)
+  const navigate = useNavigate()
   const charges = useFeatureCharges(
     feature.data?.type === FeatureType.Metered ? feature.data.meterId : null,
   )
@@ -104,6 +106,14 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
         entitlements={entitlements.data ?? []}
         entitlementsLoading={entitlements.isLoading}
         entitlementsError={entitlements.error ? 'Entitlements could not be loaded.' : null}
+        // A charge is priced on a plan: start a new one.
+        onAddPlan={() => void navigate({ to: '/plans/new' })}
+        // An entitlement is granted on a plan: pick the plan from the list,
+        // as the product list's "Add entitlement" does.
+        onAddEntitlement={() => void navigate({ to: '/plans', search: {} as never })}
+        onSaveMetadata={(metadata) =>
+          update.mutateAsync({ id: data.id, draft: { name: data.name, metadata } })
+        }
         onSave={(changes) =>
           update.mutateAsync({
             id: data.id,

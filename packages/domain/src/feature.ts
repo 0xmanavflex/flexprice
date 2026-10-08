@@ -245,6 +245,8 @@ export const editFeatureSchema = z
     alertSettings: alertSettingConfigSchema.optional(),
     /** Metered features only. */
     filters: z.array(meterFilterSchema).optional(),
+    /** The whole key/value map; replaces what the feature carried. */
+    metadata: z.record(z.string(), z.string()).optional(),
   })
   .superRefine(refineUnitPair)
 
@@ -297,6 +299,8 @@ export interface Feature {
   /** The meter's aggregation target and options, for prefilling an edit. */
   aggregationField?: string | null
   aggregationGroupBy?: string | null
+  /** Free-form key/value fields, as the API returns them. */
+  metadata?: Readonly<Record<string, string>>
   createdAt: Date | null
   updatedAt: Date | null
 }

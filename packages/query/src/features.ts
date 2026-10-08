@@ -50,6 +50,7 @@ export interface FeatureWire {
   updatedAt?: Date | undefined
   meterId?: string | undefined
   groupId?: string | undefined
+  metadata?: Record<string, string> | null | undefined
   reportingUnit?:
     | {
         unitSingular?: string | undefined
@@ -119,6 +120,7 @@ export function toFeature(wire: FeatureWire): Feature {
       .map((f) => ({ key: f.key ?? '', values: f.values ?? [] })),
     aggregationField: wire.meter?.aggregation?.field ? wire.meter.aggregation.field : null,
     aggregationGroupBy: wire.meter?.aggregation?.groupBy ? wire.meter.aggregation.groupBy : null,
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -236,6 +238,7 @@ export function toUpdateFeatureRequest(draft: EditFeature): Record<string, unkno
     ...(draft.reportingUnit ? { reportingUnit: toReportingUnitRequest(draft.reportingUnit) } : {}),
     ...(draft.groupId ? { groupId: draft.groupId } : {}),
     ...(draft.alertSettings ? { alertSettings: toAlertConfigRequest(draft.alertSettings) } : {}),
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
     // The API rejects `filters: []` on update ("Filters cannot be empty") and
     // merges what it is given into the meter's existing filters, so an empty
     // list is "nothing to change" and is left out.
