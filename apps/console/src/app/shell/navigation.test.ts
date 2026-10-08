@@ -120,14 +120,22 @@ describe('the sidebar layout', () => {
   })
 
   it('lists the top level in the order of the design', () => {
+    // Children of the two money groups, so a reorder cannot quietly move a page.
+    expect(NAV.find((entry) => entry.id === 'billing')?.children?.map((c) => c.label)).toEqual([
+      'Invoices',
+      'Credit notes',
+    ])
+    expect(NAV.find((entry) => entry.id === 'collections')?.children?.map((c) => c.label)).toEqual([
+      'Payments',
+    ])
     expect(NAV.map((entry) => entry.label)).toEqual([
       'Home',
       'Customers',
+      'Product catalog',
       'Contracts',
       'Billing',
       'Collections',
       'Revenue',
-      'Product catalog',
       'Developers',
     ])
     expect(FOOTER_NAV.map((entry) => entry.label)).toEqual(['Integrations', 'Documentation'])

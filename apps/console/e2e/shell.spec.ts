@@ -98,6 +98,46 @@ test.describe('the shell', () => {
     await expect(page).toHaveURL(atPath('/integrations'))
     await shell.go('Documentation')
     await expect(page).toHaveURL(atPath('/docs'))
+
+    // Documentation has one home: the footer, not the account menu as well.
+    await page.getByRole('button', { name: /^account:/i }).click()
+    await expect(page.getByRole('menuitem', { name: 'Settings' })).toBeVisible()
+    await expect(page.getByRole('menuitem', { name: 'Documentation' })).toHaveCount(0)
+  })
+
+  test('the Create menu opens the create flows, not the lists', async ({ page }) => {
+    const shell = new ShellPage(page)
+    await shell.goto('/')
+
+    await page.getByRole('button', { name: 'Create something new' }).click()
+    await expect(page.getByRole('menuitem')).toHaveText([
+      'New contract',
+      'New customer',
+      'New invoice',
+      'Record a payment',
+    ])
+    await page.getByRole('menuitem', { name: 'New invoice' }).click()
+    await expect(page).toHaveURL(atPath('/invoices/new'))
+
+    await page.getByRole('button', { name: 'Create something new' }).click()
+    await page.getByRole('menuitem', { name: 'Record a payment' }).click()
+    await expect(page).toHaveURL(atPath('/payments/new'))
+  })
+
+  test('renames an environment from the switcher', async ({ page }) => {
+    const shell = new ShellPage(page)
+    await shell.goto('/customers')
+    await expect(shell.environment).not.toContainText('Loading environments')
+    const before = await shell.currentEnvironment()
+
+    await shell.environment.click()
+    await page.getByRole('menuitem', { name: `Rename ${before}` }).click()
+    const dialog = page.getByRole('dialog', { name: 'Rename environment' })
+    await dialog.getByRole('textbox', { name: 'Name' }).fill(`${before} renamed`)
+    await dialog.getByRole('button', { name: 'Save' }).click()
+
+    await expect(dialog).toBeHidden()
+    await expect(shell.environment).toContainText(`${before} renamed`)
   })
 
   test('a Product Catalogue parent routes to its first child rather than a dead end', async ({

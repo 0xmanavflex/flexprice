@@ -73,10 +73,11 @@ test.describe('price unit edit', () => {
 })
 
 test.describe('environment create', () => {
-  test('opens as a dialog from Settings and closes on cancel', async ({ page }) => {
-    await page.goto('/settings?section=organization&tab=environments')
-    await page.getByRole('button', { name: 'New environment' }).click()
-    await expect(page).toHaveURL(/\/settings/)
+  test('opens as a dialog from the environment switcher and closes on cancel', async ({ page }) => {
+    await page.goto('/customers')
+    await page.getByRole('button', { name: /Change environment/ }).click()
+    await page.getByRole('menuitem', { name: 'New environment' }).click()
+    await expect(page).toHaveURL(/\/customers/)
 
     const dialog = page.getByRole('dialog', { name: 'Create environment' })
     await expect(dialog).toBeVisible()
@@ -84,6 +85,6 @@ test.describe('environment create', () => {
 
     await dialog.getByRole('button', { name: 'Cancel' }).click()
     await expect(dialog).toBeHidden()
-    await expect(page).toHaveURL(/\/settings/)
+    await expect(page).toHaveURL(/\/customers/)
   })
 })

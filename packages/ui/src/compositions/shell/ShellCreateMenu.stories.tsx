@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { ReceiptIcon, RepeatIcon, UserPlusIcon } from 'lucide-react'
+import { CreditCardIcon, ReceiptIcon, RepeatIcon, UserPlusIcon } from 'lucide-react'
 import { ShellCreateMenu } from './ShellCreateMenu'
 
 const meta = {
@@ -16,12 +16,8 @@ const meta = {
     actions: [
       { id: 'subscription', label: 'New contract', icon: <RepeatIcon className="size-4" /> },
       { id: 'customer', label: 'New customer', icon: <UserPlusIcon className="size-4" /> },
-      {
-        id: 'invoice',
-        label: 'New invoice',
-        icon: <ReceiptIcon className="size-4" />,
-        startsGroup: true,
-      },
+      { id: 'invoice', label: 'New invoice', icon: <ReceiptIcon className="size-4" /> },
+      { id: 'payment', label: 'Record a payment', icon: <CreditCardIcon className="size-4" /> },
     ],
     onCreate: fn(),
   },
@@ -41,7 +37,10 @@ export const ListsTheFlows: Story = {
       'New contract',
       'New customer',
       'New invoice',
+      'Record a payment',
     ])
+    // One flat list: no rule between the flows.
+    await expect(screen.queryByRole('separator')).not.toBeInTheDocument()
   },
 }
 

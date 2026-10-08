@@ -3,8 +3,6 @@ import {
   BarChart3Icon,
   BookOpenIcon,
   CreditCardIcon,
-  FileTextIcon,
-  LayersIcon,
   ReceiptIcon,
   RepeatIcon,
   UserPlusIcon,
@@ -14,8 +12,6 @@ import {
   HouseIcon,
   Layers2Icon,
   LandmarkIcon,
-  CalculatorIcon,
-  FolderTreeIcon,
   UsersIcon,
   FileSignatureIcon,
   HandCoinsIcon,
@@ -33,6 +29,7 @@ import {
   type ShellUser,
 } from '@fp/ui/compositions'
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
+import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenameFormPage'
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { searchableDestinations, useGlobalSearch } from './useGlobalSearch'
 import {
@@ -75,12 +72,8 @@ const ICONS: Record<string, ReactNode> = {
 const CREATE_ICONS: Record<string, ReactNode> = {
   subscription: <RepeatIcon className="size-4" />,
   customer: <UserPlusIcon className="size-4" />,
-  plan: <LayersIcon className="size-4" />,
-  feature: <FileTextIcon className="size-4" />,
   invoice: <ReceiptIcon className="size-4" />,
   payment: <CreditCardIcon className="size-4" />,
-  group: <FolderTreeIcon className="size-4" />,
-  'cost-sheet': <CalculatorIcon className="size-4" />,
 }
 
 export interface ConsoleShellProps {
@@ -125,6 +118,7 @@ export function ConsoleShell({
   const openGroup = groupForNavId(activeItemId)
   const [detailTrail, setDetailTrail] = useState<ShellDetailCrumb[] | null>(null)
   const [creatingEnvironment, setCreatingEnvironment] = useState(false)
+  const [renamingEnvironment, setRenamingEnvironment] = useState<ShellEnvironment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const destinations = useMemo(() => searchableDestinations(), [])
   const found = useGlobalSearch(searchTerm)
@@ -182,15 +176,16 @@ export function ConsoleShell({
         onNavigate={goTo}
         user={user}
         onSettings={() => goTo('settings')}
-        onDocs={() => goTo('docs')}
         {...(onSignOut ? { onSignOut } : {})}
         /*
          * The environment leads the trail, and it is where you change it too — the
          * switcher moved out of the sidebar and became this first crumb. The one
          * place people look while working is the top of the page they are working
          * on, so the most consequential control in the product lives there and
-         * nowhere else. Production is marked; sandbox is amber rather than absent,
-         * because a two-state signal beats colour-versus-nothing.
+         * nowhere else — including managing environments: create and rename are
+         * in the switcher itself, not on a Settings page. Production is marked
+         * green and sandbox yellow, because a two-state signal beats
+         * colour-versus-nothing.
          */
         breadcrumb={
           <ShellBreadcrumb
@@ -203,7 +198,14 @@ export function ConsoleShell({
                     environments={environments}
                     onChange={onEnvironmentChange}
                     onCreate={() => setCreatingEnvironment(true)}
-                    onManage={() => goTo('settings')}
+                    onRename={(id) =>
+                      setRenamingEnvironment(environments.find((e) => e.id === id) ?? null)
+                    }
+                    /*
+                     * No `onDelete`: the API has no route to delete an
+                     * environment (list, create, get, update and clone only),
+                     * so offering one would be a control that cannot work.
+                     */
                   />
                 ),
               },
@@ -245,6 +247,10 @@ export function ConsoleShell({
         {children}
       </AppShell>
       <EnvironmentFormPage open={creatingEnvironment} onOpenChange={setCreatingEnvironment} />
+      <EnvironmentRenameFormPage
+        environment={renamingEnvironment}
+        onClose={() => setRenamingEnvironment(null)}
+      />
     </ShellDetailTrailProvider>
   )
 }

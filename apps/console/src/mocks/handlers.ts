@@ -1789,6 +1789,17 @@ export const handlers = [
     environments.push(created)
     return HttpResponse.json(created, { status: 201 })
   }),
+  // Rename, from the switcher. Mutates in place for the same reason create
+  // appends: the console refetches the list straight after.
+  http.put(`${BASE}/environments/:id`, async ({ params, request }) => {
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const row = environments.find((environment) => environment['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Not found' }, { status: 404 })
+    const name = readString(body, 'name')
+    if (name) row['name'] = name
+    row['updated_at'] = new Date().toISOString()
+    return HttpResponse.json(row)
+  }),
 
   // The mock demo login. `POST /auth/login` takes `{ email, password }` and, on
   // the live API, returns `{ token, user_id, tenant_id }` — the snake_case keys

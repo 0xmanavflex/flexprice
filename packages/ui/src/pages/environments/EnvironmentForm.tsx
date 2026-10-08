@@ -1,9 +1,9 @@
 import { useEffect, useRef } from 'react'
+import { InfoIcon } from 'lucide-react'
 import { LabelWithHint } from '@ui/compositions/LabelWithHint'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
-  ENVIRONMENT_TYPE_DESCRIPTION,
   ENVIRONMENT_TYPE_LABEL,
   EnvironmentType,
   type CreateEnvironment,
@@ -12,21 +12,25 @@ import {
 } from '@fp/domain'
 import { Composer } from '@ui/compositions/DetailKit'
 import { FormDialog } from '@ui/compositions/FormDialog'
+import { buttonVariants } from '@ui/components/primitives/button'
 import { Field, FieldError, FieldGroup } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
-import { Alert, AlertDescription } from '@ui/components/reui/alert'
+import { Alert, AlertAction, AlertDescription } from '@ui/components/reui/alert'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
 /**
  * Create an environment, in a dialog.
  *
- * Two fields, and the second one is the whole point. Production and Sandbox
- * are not equivalent picks from a list, so each is a card carrying one line
- * about what it means. Creating production can be withheld — most tenants
- * arrange it rather than self-serving it. When it is, the option stays visible
- * and disabled with the reason attached.
+ * Two fields, and the second one is the whole point. Sandbox and Production are
+ * not equivalent picks from a list, so they sit side by side as two small cards,
+ * each with a two-line explainer of what it means, and the Create button below.
+ *
+ * Production is self-serve for almost nobody, so when it cannot be created here
+ * the card stays selectable — choosing it is how someone asks for it — but
+ * "Create environment" is disabled and a short "contact us" note with a Slack
+ * link takes its place as the way forward.
  *
  * The chrome is the shared `FormDialog` with a `Composer` footer. It opens over
  * the page the person is already on.
@@ -36,12 +40,13 @@ export const EnvironmentFormProvenance = provenance({
   composes: [
     'compositions/form-dialog',
     'compositions/detail-kit',
+    'ui/button',
     'ui/input',
     'ui/radio-group',
     'ui/field',
     '@reui/alert',
   ],
-  note: 'Reference FormDialog and Composer. The type is a pair of one-line cards, not a select. Sandbox is the default.',
+  note: 'Reference FormDialog and Composer. The type is a pair of side-by-side cards, not a select. Sandbox is the default.',
 })
 
 export interface EnvironmentFormProps {
@@ -52,11 +57,19 @@ export interface EnvironmentFormProps {
   isSubmitting?: boolean
   submitError?: string | null
   /**
-   * Whether production can be created here at all. When false, the reason is
-   * required — a disabled control with no explanation is just a broken one.
+   * Whether production can be created here at all. When false, the Production
+   * card is still selectable, but selecting it disables create and shows the
+   * contact note instead.
    */
   canCreateProduction?: boolean
-  productionUnavailableReason?: string
+  /** Where "Contact us" goes when production cannot be self-served. */
+  contactHref?: string
+}
+
+/** Two lines at most each: what the environment is for, and what it costs to get wrong. */
+const EXPLAINER: Record<CreateEnvironment['type'], string> = {
+  [EnvironmentType.Sandbox]: 'For testing with fake data. Nothing is charged.',
+  [EnvironmentType.Production]: 'Real customers and real money. Changes go live.',
 }
 
 const TYPES = [EnvironmentType.Sandbox, EnvironmentType.Production] as const
@@ -69,7 +82,7 @@ export function EnvironmentForm({
   isSubmitting = false,
   submitError = null,
   canCreateProduction = true,
-  productionUnavailableReason,
+  contactHref,
 }: EnvironmentFormProps) {
   const form = useForm<CreateEnvironment>({
     resolver: standardSchemaResolver(createEnvironmentSchema),
@@ -85,14 +98,12 @@ export function EnvironmentForm({
 
   const type = form.watch('type')
   const typeError = form.formState.errors.type?.message
+  const productionWithheld = type === EnvironmentType.Production && !canCreateProduction
 
   const submit = form.handleSubmit((value) => {
-    if (value.type === EnvironmentType.Production && !canCreateProduction) {
-      form.setError('type', {
-        message: productionUnavailableReason ?? 'Production cannot be created here.',
-      })
-      return
-    }
+    // The disabled button is the lock; this is the bolt behind it, for a
+    // submit that arrives by Enter in the name field.
+    if (value.type === EnvironmentType.Production && !canCreateProduction) return
     onSubmit(value)
   })
 
@@ -109,6 +120,7 @@ export function EnvironmentForm({
       <Composer
         submitLabel={isSubmitting ? 'Creating…' : 'Create environment'}
         submitting={isSubmitting}
+        disabled={productionWithheld}
         onCancel={() => onOpenChange(false)}
         onSubmit={() => void submit()}
       >
@@ -148,42 +160,55 @@ export function EnvironmentForm({
               <RadioGroup
                 value={type}
                 onValueChange={(value) => form.setValue('type', value as CreateEnvironment['type'])}
-                className="grid gap-3"
+                className="grid grid-cols-2 gap-3"
               >
-                {TYPES.map((option) => {
-                  const isProduction = option === EnvironmentType.Production
-                  const disabled = isProduction && !canCreateProduction
-
-                  return (
-                    <label
-                      key={option}
-                      className={cn(
-                        'flex cursor-pointer items-start gap-3 rounded-lg border p-4 text-left transition-colors',
-                        type === option
-                          ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
-                          : 'hover:bg-muted/40',
-                        disabled && 'cursor-not-allowed opacity-60',
-                      )}
-                    >
-                      <RadioGroupItem value={option} disabled={disabled} className="mt-0.5" />
-                      <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="text-sm font-medium">
-                          {ENVIRONMENT_TYPE_LABEL[option]}
-                        </span>
-                        <span className="text-muted-foreground text-[13px]/relaxed">
-                          {disabled && productionUnavailableReason
-                            ? productionUnavailableReason
-                            : ENVIRONMENT_TYPE_DESCRIPTION[option]}
-                        </span>
+                {TYPES.map((option) => (
+                  <label
+                    key={option}
+                    className={cn(
+                      'flex cursor-pointer items-start gap-2.5 rounded-lg border p-3 text-left transition-colors',
+                      type === option
+                        ? 'border-primary/60 bg-primary/4 ring-primary/20 ring-2'
+                        : 'hover:bg-muted/40',
+                    )}
+                  >
+                    <RadioGroupItem value={option} className="mt-0.5" />
+                    <span className="flex min-w-0 flex-col gap-0.5">
+                      <span className="text-sm font-medium">{ENVIRONMENT_TYPE_LABEL[option]}</span>
+                      <span className="text-muted-foreground line-clamp-2 text-xs/relaxed">
+                        {EXPLAINER[option]}
                       </span>
-                    </label>
-                  )
-                })}
+                    </span>
+                  </label>
+                ))}
               </RadioGroup>
             </fieldset>
             {typeError ? <FieldError>{typeError}</FieldError> : null}
           </Field>
         </FieldGroup>
+
+        {productionWithheld ? (
+          // TODO(checkout): production becomes a paid upgrade. Replace this
+          // contact note with the checkout flow and enable create once paid.
+          <Alert>
+            <InfoIcon aria-hidden className="text-muted-foreground" />
+            <AlertDescription>
+              Production is set up with our team. Contact us and we will enable it for you.
+            </AlertDescription>
+            {contactHref ? (
+              <AlertAction>
+                <a
+                  href={contactHref}
+                  target="_blank"
+                  rel="noreferrer"
+                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
+                >
+                  Contact us on Slack
+                </a>
+              </AlertAction>
+            ) : null}
+          </Alert>
+        ) : null}
 
         {submitError ? (
           <Alert variant="destructive">

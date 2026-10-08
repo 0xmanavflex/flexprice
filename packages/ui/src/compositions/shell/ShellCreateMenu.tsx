@@ -21,8 +21,8 @@ import { provenance } from '@ui/provenance'
  * to Customers, finding the customer, and finding the button.
  *
  * Deliberately short: this lists the flows people actually start cold, and the
- * rest stay on the screen that owns them. Items are grouped (what you sell, who
- * you sell it to, the money) with a separator between groups.
+ * rest stay on the screen that owns them. The console passes one flat list;
+ * `startsGroup` remains for a caller that genuinely needs a rule between items.
  */
 export const ShellCreateMenuProvenance = provenance({
   source: 'composition',

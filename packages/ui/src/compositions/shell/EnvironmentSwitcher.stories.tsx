@@ -64,10 +64,15 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-export const Sandbox: Story = {}
+/** A sandbox is marked yellow: the warning token. */
+export const Sandbox: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(canvasElement.querySelector('.bg-warning')).not.toBeNull()
+  },
+}
 
 /**
- * Production is marked, and not only by colour.
+ * Production is marked green and a sandbox yellow — and not only by colour.
  *
  * Editing a live plan must not look identical to editing a sandbox one, and
  * the marker has to survive someone who cannot distinguish the colour.
@@ -80,12 +85,15 @@ export const Production: Story = {
     await expect(
       canvas.getByRole('button', { name: /environment: production, production/i }),
     ).toBeInTheDocument()
+    // Green for production: the success token, never the destructive one.
+    await expect(canvasElement.querySelector('.bg-success')).not.toBeNull()
+    await expect(canvasElement.querySelector('.bg-destructive')).toBeNull()
   },
 }
 
 /**
  * The switcher is the first crumb of the header's trail: the environment's
- * name beside its mark, opening a menu with the create and manage actions.
+ * name beside its mark, opening a menu with the create action.
  */
 export const InBreadcrumb: Story = {
   args: { current: two[0]!, onCreate: fn() },
@@ -148,27 +156,74 @@ export const ReportsTheChoice: Story = {
   },
 }
 
-/** The two management actions, below a rule. */
+/**
+ * Environments are managed from here: "New environment" below a rule, and
+ * no "Manage environments" link out to Settings.
+ */
 export const WithManagementActions: Story = {
-  args: { onCreate: fn(), onManage: fn() },
+  args: { onCreate: fn(), onRename: fn(), onDelete: fn() },
   play: async ({ canvasElement, args }) => {
     await userEvent.click(
       within(canvasElement).getByRole('button', { name: /change environment/i }),
     )
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'New environment' }))
+    await expect(
+      await screen.findByRole('menuitem', { name: 'New environment' }),
+    ).toBeInTheDocument()
+    await expect(
+      screen.queryByRole('menuitem', { name: /manage environments/i }),
+    ).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'New environment' }))
     await expect(args.onCreate).toHaveBeenCalled()
+  },
+}
+
+/**
+ * The pencil on a row renames that environment, and does not switch to it.
+ *
+ * It is a sibling menu item, not a button nested in the row, so choosing it
+ * reports a rename and never a change.
+ */
+export const RenamesFromTheRow: Story = {
+  args: { current: two[1]!, onRename: fn(), onDelete: fn() },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: /change environment/i }),
+    )
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Rename Production' }))
+    await expect(args.onRename).toHaveBeenCalledWith('prod')
+    await expect(args.onChange).not.toHaveBeenCalled()
+  },
+}
+
+/**
+ * Delete is offered on the other rows, never on the current one: deleting the
+ * environment you are standing in would leave the console pointed at nothing.
+ */
+export const DeletesFromTheRow: Story = {
+  args: { current: two[1]!, onRename: fn(), onDelete: fn() },
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(
+      within(canvasElement).getByRole('button', { name: /change environment/i }),
+    )
+    await expect(
+      await screen.findByRole('menuitem', { name: 'Rename Sandbox' }),
+    ).toBeInTheDocument()
+    await expect(screen.queryByRole('menuitem', { name: 'Delete Sandbox' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitem', { name: 'Delete Production' }))
+    await expect(args.onDelete).toHaveBeenCalledWith('prod')
+    await expect(args.onChange).not.toHaveBeenCalled()
   },
 }
 
 /**
  * A long list does not bury create.
  *
- * The environments scroll inside their cap; create and manage sit below that
- * scroll area, so "New environment" is reachable without scrolling to the end of
- * eight environments first — the whole point of pinning them.
+ * The environments scroll inside their cap; create sits below that scroll
+ * area, so "New environment" is reachable without scrolling to the end of
+ * eight environments first — the whole point of pinning it.
  */
 export const ManyWithPinnedActions: Story = {
-  args: { environments: eight, current: eight[3]!, onCreate: fn(), onManage: fn() },
+  args: { environments: eight, current: eight[3]!, onCreate: fn(), onRename: fn() },
   play: async ({ canvasElement, args }) => {
     await userEvent.click(
       within(canvasElement).getByRole('button', { name: /change environment/i }),
@@ -184,7 +239,8 @@ export const ManyWithPinnedActions: Story = {
  * Without a handler there is no menu item.
  *
  * A "New environment" that opens nothing is worse than its absence: it costs a
- * click to learn the product cannot do the thing it just offered.
+ * click to learn the product cannot do the thing it just offered. The same
+ * holds for the row actions.
  */
 export const NoManagementActions: Story = {
   play: async ({ canvasElement }) => {
@@ -192,6 +248,10 @@ export const NoManagementActions: Story = {
       within(canvasElement).getByRole('button', { name: /change environment/i }),
     )
     await screen.findByRole('menuitem', { name: 'Sandbox' })
-    await expect(screen.queryByRole('menuitem', { name: 'New environment' })).not.toBeInTheDocument()
+    await expect(
+      screen.queryByRole('menuitem', { name: 'New environment' }),
+    ).not.toBeInTheDocument()
+    await expect(screen.queryByRole('menuitem', { name: /^rename/i })).not.toBeInTheDocument()
+    await expect(screen.queryByRole('menuitem', { name: /^delete/i })).not.toBeInTheDocument()
   },
 }

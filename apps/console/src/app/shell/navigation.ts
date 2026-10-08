@@ -5,9 +5,9 @@ import type { ShellCrumb, ShellNavGroup, ShellNavItem } from '@fp/ui/composition
  * The navigation tree.
  *
  * The primary tree follows the revenue lifecycle: who you bill (Customers),
- * what they signed (Contracts), what you bill and collect, what it earned
- * (Revenue), what you sell (Product Catalog) and how it is wired (Developers),
- * then Settings. Integrations and Documentation sit apart, pinned under a rule
+ * what you sell them (Product catalog), what they signed (Contracts), what you
+ * bill and collect, what it earned (Revenue), and how it is wired
+ * (Developers). Integrations and Documentation sit apart, pinned under a rule
  * at the foot of the rail, because nobody works *in* them.
  *
  * Destinations the design marks v2.1 (Reports, Revenue's sub-reports, Billing &
@@ -36,6 +36,16 @@ export interface NavEntry {
 export const NAV: NavEntry[] = [
   { id: 'home', label: 'Home', path: '/' },
   { id: 'customers', label: 'Customers', path: '/customers' },
+  {
+    id: 'catalog',
+    label: 'Product catalog',
+    children: [
+      { id: 'features', label: 'Products', path: '/features' },
+      { id: 'plans', label: 'Plans', path: '/plans' },
+      { id: 'addons', label: 'Add-ons', path: '/addons' },
+      { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },
+    ],
+  },
   { id: 'subscriptions', label: 'Contracts', path: '/subscriptions' },
   {
     id: 'billing',
@@ -51,16 +61,6 @@ export const NAV: NavEntry[] = [
     children: [{ id: 'payments', label: 'Payments', path: '/payments' }],
   },
   { id: 'revenue', label: 'Revenue', path: '/revenue' },
-  {
-    id: 'catalog',
-    label: 'Product catalog',
-    children: [
-      { id: 'features', label: 'Products', path: '/features' },
-      { id: 'plans', label: 'Plans', path: '/plans' },
-      { id: 'addons', label: 'Add-ons', path: '/addons' },
-      { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },
-    ],
-  },
   {
     id: 'developers',
     label: 'Developers',

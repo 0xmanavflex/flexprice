@@ -8,6 +8,15 @@ import { mutationMessage } from '../settings/panelKit'
 /** The token the mocked build signs every request with — the same one `useEnvironments` uses. */
 const MOCK_TOKEN = 'mock-session-token'
 
+/**
+ * Where "Contact us" goes when someone asks for a production environment.
+ *
+ * The Flexprice community Slack, as linked from the V1 dashboard and the docs.
+ * TODO(checkout): production becomes a self-serve paid upgrade; this link is
+ * replaced by the checkout flow then.
+ */
+export const PRODUCTION_CONTACT_HREF = 'https://flexpricecommunity.slack.com'
+
 export interface EnvironmentFormPageProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -16,7 +25,7 @@ export interface EnvironmentFormPageProps {
 /**
  * Create an environment in a dialog over the current page.
  *
- * Opened from the switcher and from Settings. It stays open on failure with the
+ * Opened from the environment switcher. It stays open on failure with the
  * API's own sentence under the fields (a tenant limit is a real 400), and on
  * success switches the console into what was just made — but only when the
  * response named it, since switching to an unknown id would 403 everything.
@@ -31,7 +40,7 @@ export function EnvironmentFormPage({ open, onOpenChange }: EnvironmentFormPageP
       open={open}
       onOpenChange={onOpenChange}
       canCreateProduction={false}
-      productionUnavailableReason="Set up with your account contact."
+      contactHref={PRODUCTION_CONTACT_HREF}
       isSubmitting={create.isPending}
       submitError={
         create.error ? mutationMessage(create.error, 'The environment could not be created.') : null

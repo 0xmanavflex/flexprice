@@ -100,7 +100,6 @@ const meta = {
     onNavigate: fn(),
     user: { name: 'Dinesh K', email: 'dinesh@flexprice.io', organization: 'Flexprice' },
     onSettings: fn(),
-    onDocs: fn(),
     onSignOut: fn(),
     search: {
       items: [{ id: 'page:customers', label: 'Customers', group: 'Pages' }],
@@ -240,17 +239,16 @@ export const SearchOpensADialog: Story = {
 }
 
 /**
- * The account menu is how someone leaves, so it is reachable in one click — and
- * it is where Documentation lives, beside Settings.
+ * The account menu is how someone leaves, so it is reachable in one click.
+ * Documentation is not in it: its one home is the sidebar footer.
  */
 export const AccountMenu: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /account: dinesh k/i }))
     // `waitFor` so the visibility checks retry while the menu animates open.
     await waitFor(() => expect(screen.getByRole('menuitem', { name: 'Settings' })).toBeVisible())
-    await waitFor(() =>
-      expect(screen.getByRole('menuitem', { name: 'Documentation' })).toBeVisible(),
-    )
+    // Documentation lives in the sidebar footer only, not here as well.
+    await expect(screen.queryByRole('menuitem', { name: 'Documentation' })).not.toBeInTheDocument()
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Sign out' }))
     await expect(args.onSignOut).toHaveBeenCalled()
   },
@@ -349,7 +347,8 @@ export const CreateMenu: Story = {
         actions={[
           { id: 'subscription', label: 'New contract' },
           { id: 'customer', label: 'New customer' },
-          { id: 'plan', label: 'New plan', startsGroup: true },
+          { id: 'invoice', label: 'New invoice' },
+          { id: 'payment', label: 'Record a payment' },
         ]}
         onCreate={fn()}
       />

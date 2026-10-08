@@ -205,6 +205,11 @@ export { AcceptInvitationForm, AcceptInvitationFormProvenance } from './auth/Acc
 export type { AcceptInvitationFormProps } from './auth/AcceptInvitationForm'
 export { EnvironmentForm, EnvironmentFormProvenance } from './environments/EnvironmentForm'
 export type { EnvironmentFormProps } from './environments/EnvironmentForm'
+export {
+  EnvironmentRenameForm,
+  EnvironmentRenameFormProvenance,
+} from './environments/EnvironmentRenameForm'
+export type { EnvironmentRenameFormProps } from './environments/EnvironmentRenameForm'
 export { SettingsShell, SettingsShellProvenance } from './settings/SettingsShell'
 export type { SettingsSection, SettingsShellProps, SettingsTab } from './settings/SettingsShell'
 

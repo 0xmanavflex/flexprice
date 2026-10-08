@@ -53,27 +53,53 @@ export const SubmitsAValidEnvironment: Story = {
 }
 
 /**
- * Production withheld is shown, not hidden.
+ * Sandbox and Production sit side by side as two small cards, each with its
+ * explainer.
+ */
+export const SideBySideCards: Story = {
+  play: async () => {
+    const canvas = dialog()
+    await expect(canvas.getByRole('radio', { name: /sandbox/i })).toBeInTheDocument()
+    await expect(canvas.getByRole('radio', { name: /production/i })).toBeInTheDocument()
+    await expect(canvas.getByText(/nothing is charged/i)).toBeInTheDocument()
+    await expect(canvas.getByText(/real customers/i)).toBeInTheDocument()
+  },
+}
+
+/**
+ * Production withheld: still selectable, but create is disabled.
  *
- * An option that silently does not exist reads as a bug, and people go looking
- * for it. Disabled with the reason attached answers the question instead.
+ * Choosing Production is how someone asks for it, so the card is not greyed
+ * out. What changes is the way forward — "Create environment" is disabled and
+ * a short contact note with a Slack link takes its place.
  */
 export const ProductionUnavailable: Story = {
   args: {
     canCreateProduction: false,
-    productionUnavailableReason: 'Set up with your account contact.',
+    contactHref: 'https://example.com/slack',
   },
   play: async () => {
     const canvas = dialog()
-    await expect(canvas.getByRole('radio', { name: /production/i })).toHaveAttribute(
-      'aria-disabled',
-      'true',
+    const production = canvas.getByRole('radio', { name: /production/i })
+    await expect(production).not.toHaveAttribute('aria-disabled', 'true')
+    await expect(canvas.getByRole('button', { name: 'Create environment' })).toBeEnabled()
+
+    await userEvent.click(production)
+    await waitFor(() => expect(production).toBeChecked())
+    await expect(canvas.getByRole('button', { name: 'Create environment' })).toBeDisabled()
+    // Waited for, not asserted once: the dialog fades in, and `toBeVisible`
+    // correctly says no while its panel is still at opacity 0.
+    await waitFor(() => expect(canvas.getByText(/set up with our team/i)).toBeVisible())
+    await expect(canvas.getByRole('link', { name: /slack/i })).toHaveAttribute(
+      'href',
+      'https://example.com/slack',
     )
-    // Waited for, not asserted once. The dialog fades in, so at the moment the
-    // radio above resolves its panel can still be at opacity 0 — the text is
-    // in the DOM and laid out, and `toBeVisible` is correctly saying no. A
-    // single assertion here is a race the suite loses on a slower machine.
-    await waitFor(() => expect(canvas.getByText(/account contact/i)).toBeVisible())
+
+    // Back to Sandbox, and create is available again.
+    await userEvent.click(canvas.getByRole('radio', { name: /sandbox/i }))
+    await waitFor(() =>
+      expect(canvas.getByRole('button', { name: 'Create environment' })).toBeEnabled(),
+    )
   },
 }
 
@@ -93,22 +119,20 @@ export const Failed: Story = {
 }
 
 /**
- * The form refuses what the control only discourages.
+ * The form refuses what the button only discourages.
  *
- * `aria-disabled` is an announcement, not a lock — the element still takes a
- * click in some paths, and a value that reached the schema would otherwise be
- * submitted. So the refusal is in the submit handler too.
+ * A submit can also arrive by Enter in the name field, so the refusal is in the
+ * submit handler too, not only on the disabled button.
  */
 export const ProductionCannotBeSubmittedWhenWithheld: Story = {
   args: {
     canCreateProduction: false,
-    productionUnavailableReason: 'Set up with your account contact.',
     defaultValue: { name: 'Sneaky', type: 'production' },
   },
   play: async ({ args }) => {
     const canvas = dialog()
-    await userEvent.click(canvas.getByRole('button', { name: 'Create environment' }))
+    await userEvent.type(canvas.getByRole('textbox', { name: /name/i }), '{Enter}')
     await expect(args.onSubmit).not.toHaveBeenCalled()
-    await expect(await canvas.findByRole('alert')).toHaveTextContent(/account contact/i)
+    await expect(canvas.getByRole('button', { name: 'Create environment' })).toBeDisabled()
   },
 }
