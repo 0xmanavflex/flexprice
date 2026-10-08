@@ -19,8 +19,10 @@ import type { EntityColumn } from './cells'
  * `EntityList` exactly what a list page would. Same toolbar, same header band,
  * same rows, same footer; only the place the state lives is different.
  *
- * Bordered, because it sits inside a page of other panels rather than being
- * the page.
+ * Borderless by default, because it usually sits inside a `Section` that
+ * already frames it. `border` draws `EntityList`'s own outline instead, for a
+ * table with nothing around it (a settings tab that is a table and nothing
+ * else).
  */
 export const DetailTableProvenance = provenance({
   source: 'composition',
@@ -67,6 +69,10 @@ export interface DetailTableProps<T> {
   compact?: boolean
   /** `false` leaves out the search row, for a short list that needs none. */
   toolbar?: boolean
+  /** Draws a rounded outline around the rows. Off when a surrounding `Section` already frames it. */
+  border?: boolean
+  /** Skeleton rows while the set is still loading; `empty` waits until it has arrived. */
+  isLoading?: boolean
   className?: string
 }
 
@@ -93,6 +99,8 @@ export function DetailTable<T extends object>({
   empty,
   compact = false,
   toolbar = true,
+  border = false,
+  isLoading = false,
   className,
 }: DetailTableProps<T>) {
   const [search, setSearch] = useState('')
@@ -169,7 +177,7 @@ export function DetailTable<T extends object>({
     return next
   }, [rows, columns, search, specs, selected, searchText, sortState])
 
-  if (rows.length === 0 && empty) {
+  if (rows.length === 0 && empty && !isLoading) {
     return (
       <div className={className}>
         {action ? (
@@ -177,7 +185,14 @@ export function DetailTable<T extends object>({
             {action}
           </div>
         ) : null}
-        <div className="text-muted-foreground p-6 text-sm">{empty}</div>
+        <div
+          className={cn(
+            'text-muted-foreground p-6 text-sm',
+            border && 'bg-background rounded-xl border',
+          )}
+        >
+          {empty}
+        </div>
       </div>
     )
   }
@@ -198,6 +213,8 @@ export function DetailTable<T extends object>({
     <div className={cn(!compact && 'p-4', className)}>
       <EntityList<T>
         compact={compact}
+        border={border}
+        isLoading={isLoading}
         hideToolbar={!toolbar}
         label={`${label} table`}
         noun={noun}

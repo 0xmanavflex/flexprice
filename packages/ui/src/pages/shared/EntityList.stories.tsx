@@ -356,6 +356,15 @@ export const FirstRun: Story = {
 
 export const Loading: Story = { args: { rows: [], total: 0, isLoading: true } }
 
+/** `border`: the same rows inside a rounded outline; the toolbar stays outside it. */
+export const Bordered: Story = {
+  args: { border: true },
+  play: async ({ canvasElement }) => {
+    const frame = canvasElement.querySelector('[data-slot="entity-list-frame"]')
+    await expect(frame).toHaveAttribute('data-border')
+  },
+}
+
 export const Failed: Story = {
   args: { rows: [], total: 0, error: 'Could not reach Flexprice.', onRetry: fn() },
   play: async ({ canvasElement, args }) => {

@@ -54,6 +54,8 @@ export type {
   EntityRowAction,
   EntitySort,
 } from './shared/EntityList'
+export { DetailTable, DetailTableProvenance } from './shared/DetailTable'
+export type { DetailColumn, DetailTableProps } from './shared/DetailTable'
 export {
   CellsProvenance,
   EmDash,

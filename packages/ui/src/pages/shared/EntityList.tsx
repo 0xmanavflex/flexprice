@@ -79,10 +79,14 @@ import type { EntityColumn } from './cells'
  *
  * The shape of it:
  *
- *   **Borderless.** No card, no outer box. The table runs the full width of
- *   the page content, and the page's own margins are the only frame it needs.
- *   A box around a table that already has a header band and row rules is three
- *   nested rectangles saying the same thing.
+ *   **Borderless by default.** No card, no outer box. The table runs the full
+ *   width of the page content, and the page's own margins are the only frame it
+ *   needs. A box around a table that already has a header band and row rules is
+ *   three nested rectangles saying the same thing. `border` is the one switch:
+ *   it draws a rounded outline around the rows (not the toolbar) for a table
+ *   that sits among other panels with no `Section` of its own around it. It is
+ *   the same table either way — list pages, detail tables and settings tables
+ *   all render through here.
  *
  *   **The page scrolls, not the table.** Sticky headers are off. A table with
  *   its own vertical scrollbar inside a page that also scrolls gives you two
@@ -106,7 +110,7 @@ import type { EntityColumn } from './cells'
 export const EntityListProvenance = provenance({
   source: 'composition',
   composes: ['@reui/data-grid', '@reui/filters', 'ui/select'],
-  note: 'The one list table: borderless, 44px header, 60px rows, auto-width columns, pin-on-overflow. Lineage: @reui/empty-state-3.',
+  note: 'The one list table: borderless (or bordered via `border`), 44px header, 60px rows, auto-width columns, pin-on-overflow. Lineage: @reui/empty-state-3.',
 })
 
 /* ------------------------------------------------------------------ *
@@ -259,6 +263,11 @@ export interface EntityListProps<T> {
   compact?: boolean | undefined
   /** Leaves out the search and filter row: a short list that needs none. */
   hideToolbar?: boolean | undefined
+  /**
+   * Draws a rounded outline around the rows and footer. Off (the list-page
+   * look) by default; on for a table that has no surrounding `Section`.
+   */
+  border?: boolean | undefined
   className?: string
 }
 
@@ -406,6 +415,7 @@ export function EntityList<T extends object>({
   headingAs: Heading = 'h1',
   compact = false,
   hideToolbar = false,
+  border = false,
   className,
 }: EntityListProps<T>) {
   /* --- column visibility, owned here so the ⋯ menu has something to toggle --- */
@@ -849,7 +859,15 @@ export function EntityList<T extends object>({
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
           stops an overflowing table pushing the page itself wider. */}
-      <div ref={frameRef} data-slot="entity-list-frame" className="w-full min-w-0">
+      <div
+        ref={frameRef}
+        data-slot="entity-list-frame"
+        data-border={border ? '' : undefined}
+        className={cn(
+          'w-full min-w-0',
+          border && 'bg-background overflow-hidden rounded-xl border',
+        )}
+      >
         {showFirstRun && empty ? (
           <GuidedEmptyState
             title={empty.title}
@@ -900,7 +918,11 @@ export function EntityList<T extends object>({
                 'bg-muted/60 [&>th]:px-4 [&>th]:border-0',
                 compact
                   ? '[&>th]:h-9'
-                  : '[&>th]:h-11 [&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
+                  : cn(
+                      '[&>th]:h-11',
+                      // Inside a frame the outline already rounds the corners.
+                      !border && '[&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
+                    ),
               ),
               /*
                * Every cell clips (`overflow-hidden`): `table-fixed` fixes the
@@ -925,7 +947,10 @@ export function EntityList<T extends object>({
               </div>
               {total > 0 && (!compact || total > pageSize) ? (
                 <div
-                  className={cn('border-border/60 border-t', compact ? 'px-6 py-3' : 'px-4 pt-4')}
+                  className={cn(
+                    'border-border/60 border-t',
+                    compact ? 'px-6 py-3' : border ? 'px-4 py-3' : 'px-4 pt-4',
+                  )}
                 >
                   <DataGridPagination
                     sizes={PAGE_SIZES}

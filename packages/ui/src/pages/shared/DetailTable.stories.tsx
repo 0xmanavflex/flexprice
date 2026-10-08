@@ -71,3 +71,20 @@ export const WithAction: Story = {
 export const Empty: Story = {
   args: { rows: [], empty: 'No invoices yet.' },
 }
+
+/** `border`: the same table with its own outline, for a table with no Section around it. */
+export const Bordered: Story = {
+  args: { border: true },
+  play: async ({ canvasElement }) => {
+    const frame = canvasElement.querySelector('[data-slot="entity-list-frame"]')
+    await expect(frame).toHaveAttribute('data-border')
+  },
+}
+
+/** Borderless (the default): the outline is the surrounding Section's job. */
+export const Borderless: Story = {
+  play: async ({ canvasElement }) => {
+    const frame = canvasElement.querySelector('[data-slot="entity-list-frame"]')
+    await expect(frame).not.toHaveAttribute('data-border')
+  },
+}
