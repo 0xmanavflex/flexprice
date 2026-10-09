@@ -7,7 +7,12 @@ export function ThemeShortcut() {
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key.toLowerCase() !== 'd' || !(event.metaKey || event.ctrlKey)) return
+      // Autofill and some extensions dispatch keydown events with no `key`.
+      if (
+        (event.key as string | undefined)?.toLowerCase() !== 'd' ||
+        !(event.metaKey || event.ctrlKey)
+      )
+        return
       if (event.altKey || event.shiftKey) return
       // Claimed over the browser's "bookmark this page".
       event.preventDefault()

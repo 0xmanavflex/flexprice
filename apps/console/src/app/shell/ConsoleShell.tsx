@@ -15,6 +15,7 @@ import {
   UsersIcon,
   FileSignatureIcon,
   HandCoinsIcon,
+  SettingsIcon,
 } from 'lucide-react'
 import {
   AppShell,
@@ -25,6 +26,7 @@ import {
   type ShellCrumb,
   type ShellDetailCrumb,
   type ShellEnvironment,
+  type ShellSearchItem,
   type ShellUser,
 } from '@fp/ui/compositions'
 import { EnvironmentFormPage } from '@/pages/environments/EnvironmentFormPage'
@@ -72,6 +74,33 @@ const CREATE_ICONS: Record<string, ReactNode> = {
   payment: <CreditCardIcon className="size-4" />,
 }
 
+/** Record results carry the icon of the sidebar section they live in. */
+const RECORD_ICONS: Record<string, ReactNode> = {
+  customer: ICONS.customers,
+  plan: ICONS.catalog,
+  feature: ICONS.catalog,
+  invoice: ICONS.billing,
+}
+
+/**
+ * The sidebar's glyph for a search row: a page takes its section's icon (a
+ * child like Invoices takes Billing's), an action takes its Create-menu icon,
+ * and a record takes the icon of the section it belongs to.
+ */
+function withSearchIcon(item: ShellSearchItem): ShellSearchItem {
+  const [kind = '', key = ''] = item.id.split(':')
+  let icon: ReactNode
+  if (kind === 'page') {
+    const section = parentForNavId(key)?.id ?? key
+    icon = ICONS[section] ?? <SettingsIcon className="size-4" />
+  } else if (kind === 'action') {
+    icon = CREATE_ICONS[key]
+  } else {
+    icon = RECORD_ICONS[kind]
+  }
+  return icon ? { ...item, icon } : item
+}
+
 export interface ConsoleShellProps {
   pathname: string
   /** The query string (`?section=team`), so a Settings tab can be the active row. */
@@ -117,6 +146,8 @@ export function ConsoleShell({
   const [searchTerm, setSearchTerm] = useState('')
   const destinations = useMemo(() => searchableDestinations(), [])
   const found = useGlobalSearch(searchTerm)
+  const searchItems = useMemo(() => destinations.items.map(withSearchIcon), [destinations])
+  const searchResults = useMemo(() => found.results.map(withSearchIcon), [found.results])
 
   const goTo = (id: string) => {
     const href = hrefForNavId(id)
@@ -225,8 +256,8 @@ export function ConsoleShell({
           </>
         }
         search={{
-          items: destinations.items,
-          results: found.results,
+          items: searchItems,
+          results: searchResults,
           isSearching: found.isSearching,
           onTermChange: setSearchTerm,
           onSelect: (item) => {

@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { FileSignatureIcon, PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
+import { PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
@@ -69,7 +69,7 @@ export interface CustomerDetailProps {
   onBack: () => void
   /** Adds "Create invoice" to the header menu and a "New invoice" button on the Invoices tab; omitted, neither is shown. */
   onCreateInvoice?: () => void
-  /** Adds "Create contract" to the header menu and a button on the Contracts tab; omitted, neither is shown. */
+  /** Adds a "Create contract" button to the Contracts tab table; omitted, it is not shown. */
   onCreateContract?: () => void
   /** Open the stepped Edit page: address and billing configuration. */
   onEdit?: () => void
@@ -149,16 +149,6 @@ export function CustomerDetail({
       .join('') || '?'
 
   const menu: DetailMenuItem[] = [
-    ...(onCreateContract
-      ? [
-          {
-            id: 'create-contract',
-            label: 'Create contract',
-            icon: <FileSignatureIcon className="text-muted-foreground" aria-hidden="true" />,
-            onSelect: onCreateContract,
-          },
-        ]
-      : []),
     ...(onCreateInvoice
       ? [
           {

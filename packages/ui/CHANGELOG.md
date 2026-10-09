@@ -8,7 +8,10 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
-- 2026-10-09 — pages/customers/CustomerDetail: the Contracts tab table gets a "Create contract" action (and the header More menu a matching item) through a new `onCreateContract` prop; the console opens the customer's own create-contract form (design review: customer contracts)
+- 2026-10-09 — apps/console shell/ConsoleShell: global search rows carry the sidebar's icons (a page takes its section's, a record the icon of its table, an action its Create-menu icon) under per-table headings such as Customers (user request)
+- 2026-10-09 — compositions/shell/{ShellSearch,ThemeShortcut}: the ⌘K and ⌘D shortcuts ignore keydown events with no `key` (browser autofill, extensions) instead of throwing `toLowerCase` of undefined (production console error)
+- 2026-10-09 — apps/console main: a `vite:preloadError` handler reloads the page once when a tab left open across a deploy asks for a chunk that no longer exists (production console error)
+- 2026-10-09 — pages/customers/CustomerDetail: the Contracts tab table gets a "Create contract" action through a new `onCreateContract` prop; the console opens the customer's own create-contract form (design review: customer contracts)
 - 2026-10-09 — compositions/DetailKit `DetailMoreMenu` + pages/shared/EntityHeader `menu`, and every entity detail view (customers, plans, features, add-ons, coupons, cost sheets, groups, price units, invoices, credit notes, payments, contracts): the header keeps only the ID and badges, and every action (Edit, Create invoice, Create contract, Download PDF, Copy link) lives in one More menu; button heights in the header are uniform (design review: headers)
 - 2026-10-09 — compositions/shell/{AppShell,ShellNav}: sidebar counts removed, the small Flexprice icon (assets/flexprice-icon.png, from the v1 mark) tops the sidebar, the theme switcher leaves the sidebar header, and the footer gap below documentation is padding (design review: app shell)
 - 2026-10-09 — pages/settings/AppearanceSettings: a Linear-style Appearance page (Light, Dark, System previews) is the new home of the theme setting; the Roles & permissions and Sign-in tabs and the Teams top tab bar are gone (design review: settings)

@@ -105,7 +105,11 @@ export function ShellSearch({
     if (!available) return
 
     function onKeyDown(event: globalThis.KeyboardEvent) {
-      if (event.key.toLowerCase() === 'k' && (event.metaKey || event.ctrlKey)) {
+      // Autofill and some extensions dispatch keydown events with no `key`.
+      if (
+        (event.key as string | undefined)?.toLowerCase() === 'k' &&
+        (event.metaKey || event.ctrlKey)
+      ) {
         event.preventDefault()
         setOpen(true)
         return

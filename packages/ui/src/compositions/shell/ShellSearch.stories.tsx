@@ -1,5 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { FileSignatureIcon, UsersIcon } from 'lucide-react'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { ShellSearch } from './ShellSearch'
 
@@ -88,6 +89,59 @@ export const OpensADialogAndReports: Story = {
     await expect(args.onSelect).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'page:customers' }),
     )
+  },
+}
+
+/**
+ * Rows from one table sit under that table's heading, each with the sidebar's
+ * icon for it: customers under "Customers" with the Customers glyph, pages
+ * under "Pages" with their section's glyph.
+ */
+export const GroupsRowsWithIcons: Story = {
+  args: {
+    items: [
+      {
+        id: 'page:subscriptions',
+        label: 'Contracts',
+        group: 'Pages',
+        icon: <FileSignatureIcon data-testid="page-icon" />,
+      },
+    ],
+    results: [
+      {
+        id: 'customer:acme',
+        label: 'Acme Corp',
+        group: 'Customers',
+        hint: 'billing@acme.io',
+        icon: <UsersIcon data-testid="customer-icon" />,
+      },
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Search' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByRole('combobox', { name: 'Search' }), 'c')
+
+    const heading = await dialog.findByText('Customers', { selector: 'div' })
+    const row = dialog.getByRole('option', { name: /Acme Corp/ })
+    await expect(
+      heading.compareDocumentPosition(row) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await expect(within(row).getByTestId('customer-icon')).toBeInTheDocument()
+    await expect(
+      within(dialog.getByRole('option', { name: /Contracts/ })).getByTestId('page-icon'),
+    ).toBeInTheDocument()
+  },
+}
+
+/** Autofill and some extensions dispatch keydown events with no `key`; the shortcut ignores them. */
+export const IgnoresKeylessKeydown: Story = {
+  play: async ({ canvasElement }) => {
+    const event = new KeyboardEvent('keydown', { ctrlKey: true })
+    Object.defineProperty(event, 'key', { value: undefined })
+    window.dispatchEvent(event)
+    await expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    await expect(within(canvasElement).getByRole('button', { name: 'Search' })).toBeVisible()
   },
 }
 

@@ -13,6 +13,23 @@ const container = document.getElementById('root')
 if (!container) throw new Error('#root is missing from index.html')
 
 /**
+ * A tab left open across a deploy asks for chunks whose hashed names no longer
+ * exist; the host answers with index.html and the dynamic import fails. Reload
+ * once to pick up the new build. The flag stops a loop if the chunk is truly gone.
+ */
+window.addEventListener('vite:preloadError', (event) => {
+  const key = 'fp:chunk-reload'
+  try {
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+  } catch {
+    return
+  }
+  event.preventDefault()
+  window.location.reload()
+})
+
+/**
  * Start the mock API before rendering, when asked.
  *
  * Dynamically imported so neither MSW nor the fixture corpus reaches a
