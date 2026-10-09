@@ -1,16 +1,20 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  type AddContractCharge,
   BILLING_PERIOD_LABEL,
   type BillingPeriod,
   type CancelSubscription,
   type CreateSubscription,
   type CreditGrant,
+  type EditContractCharge,
+  type EndContractCharge,
   type Money,
   type Subscription,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
+  type SubscriptionLineSource,
   type SubscriptionQuery,
   type SubscriptionSchedule,
   SubscriptionScheduleType,
@@ -100,6 +104,7 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
 export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail {
   return {
     ...toSubscription(wire),
+    billingPeriod: (wire.billingPeriod as BillingPeriod | undefined) ?? null,
     billingPeriodCount: wire.billingPeriodCount ?? 1,
     cancelAt: wire.cancelAt ?? null,
     cancelAtPeriodEnd: wire.cancelAtPeriodEnd ?? false,
@@ -131,12 +136,20 @@ export interface SubscriptionLineWire {
   planDisplayName?: string | undefined
   meterDisplayName?: string | undefined
   priceType?: string | undefined
+  entityType?: string | undefined
+  priceId?: string | undefined
   quantity?: string | undefined
   billingPeriod?: string | undefined
   currency?: string | undefined
   price?: { amount?: string | undefined; currency?: string | undefined } | undefined
   startDate?: Date | undefined
   endDate?: Date | undefined
+}
+
+const LINE_SOURCE: Record<string, SubscriptionLineSource> = {
+  plan: 'plan',
+  addon: 'addon',
+  subscription: 'contract',
 }
 
 export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): SubscriptionLine {
@@ -149,6 +162,8 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
     amount: moneyOr(wire.price?.amount, wire.price?.currency || wire.currency),
     startDate: wire.startDate ?? null,
     endDate: wire.endDate ?? null,
+    source: LINE_SOURCE[wire.entityType ?? ''] ?? 'plan',
+    priceId: wire.priceId ?? '',
   }
 }
 
@@ -427,6 +442,99 @@ export function useActivateSubscription() {
   return useMutation({
     mutationFn: ({ id, startDate }: { id: string; startDate: Date }) =>
       call(() => client.subscriptions.activateSubscription(id, { startDate })),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** A date input's `YYYY-MM-DD` as the instant the API takes; empty means "now" and is left out. */
+const effectiveFrom = (day: string) => (day ? `${day}T00:00:00Z` : undefined)
+
+/** A new fixed recurring charge on one contract, priced inline — `POST /subscriptions/{id}/lineitems`. */
+export function toCreateLineItemRequest(
+  draft: AddContractCharge,
+  billingPeriod: BillingPeriod,
+): Record<string, unknown> {
+  return {
+    displayName: draft.name.trim(),
+    quantity: Number(draft.quantity) || 1,
+    ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
+    price: {
+      type: 'FIXED',
+      billingModel: 'FLAT_FEE',
+      billingPeriod,
+      invoiceCadence: 'ADVANCE',
+      priceUnitType: 'FIAT',
+      amount: draft.amount.trim(),
+      displayName: draft.name.trim(),
+    },
+  }
+}
+
+export function toUpdateLineItemRequest(draft: EditContractCharge): Record<string, unknown> {
+  const from = effectiveFrom(draft.effectiveFrom)
+  return { amount: draft.amount.trim(), ...(from ? { effectiveFrom: from } : {}) }
+}
+
+export function toDeleteLineItemRequest(draft: EndContractCharge): Record<string, unknown> {
+  const from = effectiveFrom(draft.effectiveFrom)
+  return from ? { effectiveFrom: from } : {}
+}
+
+/** Add a charge to one contract — only this contract changes. */
+export function useCreateSubscriptionLineItem() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      id,
+      billingPeriod,
+      draft,
+    }: {
+      id: string
+      billingPeriod: BillingPeriod
+      draft: AddContractCharge
+    }) =>
+      call(() =>
+        client.subscriptions.createSubscriptionLineItem(
+          id,
+          toCreateLineItemRequest(draft, billingPeriod) as never,
+        ),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** Change a charge's price on one contract — `PUT /subscriptions/lineitems/{lineItemId}`. */
+export function useUpdateSubscriptionLineItem() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ lineItemId, draft }: { lineItemId: string; draft: EditContractCharge }) =>
+      call(() =>
+        client.subscriptions.updateSubscriptionLineItem(
+          lineItemId,
+          toUpdateLineItemRequest(draft) as never,
+        ),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** End a charge on one contract — `DELETE /subscriptions/lineitems/{lineItemId}`. */
+export function useDeleteSubscriptionLineItem() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ lineItemId, draft }: { lineItemId: string; draft: EndContractCharge }) =>
+      call(() =>
+        client.subscriptions.deleteSubscriptionLineItem(
+          lineItemId,
+          toDeleteLineItemRequest(draft) as never,
+        ),
+      ),
     onSuccess: () => invalidateSubscription(queryClient),
   })
 }

@@ -1439,6 +1439,47 @@ function recordWalletCredit(
   })
 }
 
+const contractLineStore = new Map<string, Record<string, unknown>[]>()
+
+/** Per-contract line items the detail mock serves, so charge edits stick until reload. */
+function contractLines(id: string, row: Record<string, unknown>): Record<string, unknown>[] {
+  const existing = contractLineStore.get(id)
+  if (existing) return existing
+  const currency = String(row['currency'] ?? 'USD')
+  const lines: Record<string, unknown>[] = [
+    {
+      id: `${id}_line_1`,
+      display_name: 'Platform fee',
+      price_type: 'FIXED',
+      entity_type: 'plan',
+      quantity: '1',
+      billing_period: 'MONTHLY',
+      currency,
+      price: { amount: '99.00', currency },
+    },
+    {
+      id: `${id}_line_2`,
+      display_name: 'API usage',
+      price_type: 'USAGE',
+      entity_type: 'plan',
+      quantity: '0',
+      billing_period: 'MONTHLY',
+      currency,
+      price: { amount: '0.002', currency },
+    },
+  ]
+  contractLineStore.set(id, lines)
+  return lines
+}
+
+function findContractLine(lineId: string): Record<string, unknown> | undefined {
+  for (const lines of contractLineStore.values()) {
+    const found = lines.find((line) => line['id'] === lineId)
+    if (found) return found
+  }
+  return undefined
+}
+
 async function readBody(request: Request): Promise<Record<string, unknown>> {
   return ((await request.json().catch(() => ({}))) ?? {}) as Record<string, unknown>
 }
@@ -2978,30 +3019,42 @@ export const handlers = [
       (item) => readString(item, 'id') === params['id'],
     )
     if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    return HttpResponse.json({ ...row, line_items: contractLines(String(row['id']), row) })
+  }),
+  http.post(`${BASE}/subscriptions/:id/lineitems`, async ({ request, params }) => {
+    const id = String(params['id'])
+    const row = sourceFor('subscriptions').items.find((item) => readString(item, 'id') === id)
+    if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    const body = await readBody(request)
+    const price = (body['price'] ?? {}) as Record<string, unknown>
     const currency = String(row['currency'] ?? 'USD')
-    return HttpResponse.json({
-      ...row,
-      line_items: [
-        {
-          id: `${String(row['id'])}_line_1`,
-          display_name: 'Platform fee',
-          price_type: 'FIXED',
-          quantity: '1',
-          billing_period: 'MONTHLY',
-          currency,
-          price: { amount: '99.00', currency },
-        },
-        {
-          id: `${String(row['id'])}_line_2`,
-          display_name: 'API usage',
-          price_type: 'USAGE',
-          quantity: '0',
-          billing_period: 'MONTHLY',
-          currency,
-          price: { amount: '0.002', currency },
-        },
-      ],
-    })
+    const line = {
+      id: `${id}_line_${contractLines(id, row).length + 1}`,
+      display_name: body['display_name'],
+      price_type: 'FIXED',
+      entity_type: 'subscription',
+      quantity: String(body['quantity'] ?? 1),
+      billing_period: price['billing_period'] ?? 'MONTHLY',
+      currency,
+      price: { amount: price['amount'], currency },
+      start_date: body['start_date'] ?? new Date().toISOString(),
+    }
+    contractLines(id, row).push(line)
+    return HttpResponse.json(line)
+  }),
+  http.put(`${BASE}/subscriptions/lineitems/:lineId`, async ({ request, params }) => {
+    const line = findContractLine(String(params['lineId']))
+    if (!line) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    const body = await readBody(request)
+    line['price'] = { ...(line['price'] as object), amount: body['amount'] }
+    return HttpResponse.json(line)
+  }),
+  http.delete(`${BASE}/subscriptions/lineitems/:lineId`, async ({ request, params }) => {
+    const line = findContractLine(String(params['lineId']))
+    if (!line) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    const body = await readBody(request)
+    line['end_date'] = body['effective_from'] ?? new Date().toISOString()
+    return HttpResponse.json(line)
   }),
   http.post(`${BASE}/subscriptions/:id/cancel`, async ({ request, params }) => {
     const body = await readBody(request)

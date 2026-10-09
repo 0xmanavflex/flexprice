@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import {
   CircleAlertIcon,
+  PlusIcon,
   CirclePauseIcon,
   ClockIcon,
   InfoIcon,
@@ -16,7 +17,10 @@ import {
   SUBSCRIPTION_SCHEDULE_LABEL,
   SubscriptionStatus,
   formatMoney,
+  type AddContractCharge,
   type CreditGrant,
+  type EditContractCharge,
+  type EndContractCharge,
   type Invoice,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
@@ -45,8 +49,10 @@ import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
 import { LoadingRows } from '../../compositions/feedback/States'
 import { DetailTable } from '../shared/DetailTable'
 import { EntityLink } from '../shared/cells'
+import { RowActionsMenu } from '../shared/RowActionsMenu'
 import { InvoiceStatusBadge } from '../shared/StatusBadge'
 import type { InvoiceActivity } from '../billing/invoices/invoiceDocument'
+import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
 export const SubscriptionDetailViewProvenance = provenance({
@@ -88,6 +94,16 @@ export interface SubscriptionDetailViewProps {
   /** Incomplete contracts only: the More item and the banner button. */
   onActivate?: () => void
   onCancel?: () => void
+  /**
+   * Charge editing on the Pricing tab. Each handler returns when the request has
+   * finished; a rejection keeps the dialog open and shows the error. Leave all
+   * three out for a read-only Pricing tab.
+   */
+  onAddCharge?: ((draft: AddContractCharge) => Promise<void> | void) | undefined
+  onEditCharge?:
+    ((line: SubscriptionLine, draft: EditContractCharge) => Promise<void> | void) | undefined
+  onEndCharge?:
+    ((line: SubscriptionLine, draft: EndContractCharge) => Promise<void> | void) | undefined
 }
 
 type SubscriptionTab = 'overview' | 'pricing' | 'usage' | 'invoices' | 'entitlements'
@@ -96,6 +112,15 @@ const day = (date: Date | null | undefined) =>
   date
     ? new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' }).format(date)
     : '—'
+
+const LINE_SOURCE_LABEL: Record<SubscriptionLine['source'], string> = {
+  plan: 'From plan',
+  addon: 'Add-on',
+  contract: 'Contract only',
+}
+
+const isEnded = (line: SubscriptionLine) =>
+  line.endDate !== null && line.endDate.getTime() <= Date.now()
 
 const words = (value: string) => value.replaceAll('_', ' ').toLowerCase()
 
@@ -121,8 +146,14 @@ export function SubscriptionDetailView({
   onOpenInvoice,
   onActivate,
   onCancel,
+  onAddCharge,
+  onEditCharge,
+  onEndCharge,
 }: SubscriptionDetailViewProps) {
   const [tab, setTab] = useState<SubscriptionTab>('overview')
+  const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
   const s = subscription
   const isCancelled = s.status === SubscriptionStatus.Cancelled
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
@@ -137,7 +168,28 @@ export function SubscriptionDetailView({
       : (s.cancelAt ?? s.currentPeriodEnd)
   const endLabel = isCancelled ? 'Ended' : isCancelling ? 'Ends' : 'Renews'
 
+  const canEditCharges = !isCancelled && !isCancelling
+
+  const closeDialog = () => {
+    setDialog(null)
+    setSaveError(null)
+  }
+  const run = async (action: Promise<void> | void) => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await action
+      setDialog(null)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'The change could not be saved.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
   const usageData = usage.data
+  const latestInvoice =
+    invoices.data?.find((invoice) => invoice.id === s.latestInvoice?.id) ?? invoices.data?.[0]
   const entitlementCount = (entitlements.data?.length ?? 0) + (creditGrants.data?.length ?? 0)
 
   const related: RelatedItem[] = [
@@ -263,99 +315,265 @@ export function SubscriptionDetailView({
           />
 
           {tab === 'overview' ? (
-            <Section title="Details">
-              <Properties
-                items={[
-                  {
-                    label: 'Customer',
-                    value: onOpenCustomer ? (
-                      <EntityLink label={s.customerName} onOpen={onOpenCustomer} />
-                    ) : (
-                      s.customerName
-                    ),
-                  },
-                  {
-                    label: 'Plan',
-                    value: onOpenPlan ? (
-                      <EntityLink label={s.planName} onOpen={onOpenPlan} />
-                    ) : (
-                      s.planName
-                    ),
-                  },
-                  {
-                    label: 'Billing',
-                    value:
-                      s.billingPeriodCount > 1
-                        ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
-                        : s.billingPeriodLabel,
-                  },
-                  { label: 'Started', value: day(s.startDate) },
-                  {
-                    label: 'Current period',
-                    value: `${day(s.currentPeriodStart)} – ${day(s.currentPeriodEnd)}`,
-                  },
-                  ...(s.trialStart || s.trialEnd
-                    ? [{ label: 'Trial', value: `${day(s.trialStart)} – ${day(s.trialEnd)}` }]
-                    : []),
-                  ...(s.endDate ? [{ label: 'Ends', value: day(s.endDate) }] : []),
-                  {
-                    label: 'Collection',
-                    value: s.collectionMethod ? words(s.collectionMethod) : '—',
-                  },
-                  { label: 'Payment terms', value: s.paymentTerms ? words(s.paymentTerms) : '—' },
-                  { label: 'Timezone', value: s.timezone || '—' },
-                  ...(s.lookupKey
-                    ? [
+            <>
+              <PartSection
+                title="Charges"
+                part={lines}
+                failure="Charges could not be loaded"
+                emptyTitle="No charges"
+                emptyDescription="This contract has no priced lines."
+                isEmpty={(rows) => rows.length === 0}
+                action={
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-3"
+                    onClick={() => setTab('pricing')}
+                  >
+                    {onAddCharge && canEditCharges ? 'Manage pricing' : 'View pricing'}
+                  </Button>
+                }
+              >
+                {(rows) => {
+                  const live = rows.filter((line) => !isEnded(line))
+                  return (
+                    <DetailTable<SubscriptionLine>
+                      label="Charges"
+                      noun="charges"
+                      rows={live.slice(0, 5)}
+                      toolbar={false}
+                      columns={[
+                        { key: 'name', header: 'Charge', cell: (line) => line.name },
                         {
-                          label: 'Lookup key',
-                          value: <span className="font-mono text-xs">{s.lookupKey}</span>,
+                          key: 'source',
+                          header: 'Source',
+                          cell: (line) => <LineSourceBadge line={line} />,
                         },
-                      ]
-                    : []),
-                  {
-                    label: 'Commitment',
-                    value: s.commitmentAmount ? formatMoney(s.commitmentAmount) : 'None',
-                  },
-                ]}
-              />
-            </Section>
+                        {
+                          key: 'period',
+                          header: 'Billed',
+                          cell: (line) => line.billingPeriodLabel,
+                        },
+                        {
+                          key: 'amount',
+                          header: 'Price',
+                          cell: (line) => (
+                            <span className="tabular-nums">{formatMoney(line.amount)}</span>
+                          ),
+                        },
+                      ]}
+                    />
+                  )
+                }}
+              </PartSection>
+
+              <div className="grid items-start gap-6 lg:grid-cols-2">
+                <Section title="Contract">
+                  <Properties
+                    columns={2}
+                    items={[
+                      {
+                        label: 'Customer',
+                        value: onOpenCustomer ? (
+                          <EntityLink label={s.customerName} onOpen={onOpenCustomer} />
+                        ) : (
+                          s.customerName
+                        ),
+                      },
+                      {
+                        label: 'Plan',
+                        value: onOpenPlan ? (
+                          <EntityLink label={s.planName} onOpen={onOpenPlan} />
+                        ) : (
+                          s.planName
+                        ),
+                      },
+                      { label: 'Started', value: day(s.startDate) },
+                      {
+                        label: 'Current period',
+                        value: `${day(s.currentPeriodStart)} – ${day(s.currentPeriodEnd)}`,
+                      },
+                      ...(s.trialStart || s.trialEnd
+                        ? [{ label: 'Trial', value: `${day(s.trialStart)} – ${day(s.trialEnd)}` }]
+                        : []),
+                      ...(s.endDate ? [{ label: 'Ends', value: day(s.endDate) }] : []),
+                      ...(s.lookupKey
+                        ? [
+                            {
+                              label: 'Lookup key',
+                              value: <span className="font-mono text-xs">{s.lookupKey}</span>,
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                </Section>
+                <Section title="Billing & collection">
+                  <Properties
+                    columns={2}
+                    items={[
+                      {
+                        label: 'Billing',
+                        value:
+                          s.billingPeriodCount > 1
+                            ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
+                            : s.billingPeriodLabel,
+                      },
+                      {
+                        label: 'Collection',
+                        value: s.collectionMethod ? words(s.collectionMethod) : '—',
+                      },
+                      {
+                        label: 'Payment terms',
+                        value: s.paymentTerms ? words(s.paymentTerms) : '—',
+                      },
+                      { label: 'Timezone', value: s.timezone || '—' },
+                      {
+                        label: 'Commitment',
+                        value: s.commitmentAmount ? formatMoney(s.commitmentAmount) : 'None',
+                      },
+                    ]}
+                  />
+                </Section>
+              </div>
+
+              {latestInvoice ? (
+                <Section
+                  title="Latest invoice"
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3"
+                      onClick={() => setTab('invoices')}
+                    >
+                      All invoices
+                    </Button>
+                  }
+                >
+                  <Properties
+                    columns={4}
+                    items={[
+                      {
+                        label: 'Invoice',
+                        value: onOpenInvoice ? (
+                          <EntityLink
+                            label={latestInvoice.number}
+                            onOpen={() => onOpenInvoice(latestInvoice.id)}
+                          />
+                        ) : (
+                          latestInvoice.number
+                        ),
+                      },
+                      {
+                        label: 'Status',
+                        value: <InvoiceStatusBadge status={latestInvoice.status} />,
+                      },
+                      { label: 'Total', value: formatMoney(latestInvoice.total) },
+                      { label: 'Due', value: day(latestInvoice.dueDate) },
+                    ]}
+                  />
+                </Section>
+              ) : null}
+            </>
           ) : null}
 
           {tab === 'pricing' ? (
-            <PartSection
-              title="Pricing"
-              part={lines}
-              failure="Pricing could not be loaded"
-              emptyTitle="No priced lines"
-              emptyDescription="This contract has no priced lines."
-              isEmpty={(rows) => rows.length === 0}
-            >
-              {(rows) => (
-                <DetailTable<SubscriptionLine>
-                  label="Pricing"
-                  noun="lines"
-                  rows={rows}
-                  toolbar={false}
-                  columns={[
-                    { key: 'name', header: 'Charge', cell: (line) => line.name },
-                    {
-                      key: 'kind',
-                      header: 'Type',
-                      cell: (line) => (line.kind === 'usage' ? 'Usage' : 'Fixed'),
-                    },
-                    { key: 'quantity', header: 'Quantity', cell: (line) => line.quantity || '—' },
-                    { key: 'period', header: 'Billed', cell: (line) => line.billingPeriodLabel },
-                    {
-                      key: 'amount',
-                      header: 'Price',
-                      cell: (line) => (
-                        <span className="tabular-nums">{formatMoney(line.amount)}</span>
+            <>
+              <PartSection
+                title="Pricing"
+                part={lines}
+                failure="Pricing could not be loaded"
+                emptyTitle="No priced lines"
+                emptyDescription="This contract has no priced lines."
+                isEmpty={(rows) => rows.length === 0}
+                {...(onAddCharge && canEditCharges
+                  ? {
+                      action: (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-8 px-3"
+                          onClick={() => setDialog({ mode: 'add' })}
+                        >
+                          <PlusIcon aria-hidden="true" />
+                          Add charge
+                        </Button>
                       ),
-                    },
-                  ]}
-                />
-              )}
-            </PartSection>
+                    }
+                  : {})}
+              >
+                {(rows) => (
+                  <DetailTable<SubscriptionLine>
+                    label="Pricing"
+                    noun="lines"
+                    rows={rows}
+                    toolbar={false}
+                    columns={[
+                      { key: 'name', header: 'Charge', cell: (line) => line.name },
+                      {
+                        key: 'source',
+                        header: 'Source',
+                        cell: (line) => <LineSourceBadge line={line} />,
+                      },
+                      {
+                        key: 'kind',
+                        header: 'Type',
+                        cell: (line) => (line.kind === 'usage' ? 'Usage' : 'Fixed'),
+                      },
+                      {
+                        key: 'quantity',
+                        header: 'Quantity',
+                        cell: (line) => line.quantity || '—',
+                      },
+                      { key: 'period', header: 'Billed', cell: (line) => line.billingPeriodLabel },
+                      {
+                        key: 'amount',
+                        header: 'Price',
+                        cell: (line) => (
+                          <span className="tabular-nums">{formatMoney(line.amount)}</span>
+                        ),
+                      },
+                      ...(canEditCharges && (onEditCharge || onEndCharge)
+                        ? [
+                            {
+                              key: 'actions',
+                              header: 'Actions',
+                              width: 48,
+                              cell: (line: SubscriptionLine) =>
+                                isEnded(line) ? null : (
+                                  <RowActionsMenu
+                                    label={line.name}
+                                    {...(onEditCharge
+                                      ? { onEdit: () => setDialog({ mode: 'edit', line }) }
+                                      : {})}
+                                    {...(onEndCharge
+                                      ? { onRemove: () => setDialog({ mode: 'end', line }) }
+                                      : {})}
+                                    removeLabel="End charge"
+                                  />
+                                ),
+                            },
+                          ]
+                        : []),
+                    ]}
+                  />
+                )}
+              </PartSection>
+              {lines.data?.some((line) => line.source === 'plan') ? (
+                <p className="text-muted-foreground flex flex-wrap items-center gap-x-1 px-1 text-[13px]">
+                  Charges marked From plan are shared by every contract on {s.planName}. Editing
+                  them here changes this contract only.
+                  {onOpenPlan ? (
+                    <>
+                      {' '}
+                      To change them for everyone,{' '}
+                      <EntityLink label="edit the plan" onOpen={onOpenPlan} />.
+                    </>
+                  ) : null}
+                </p>
+              ) : null}
+            </>
           ) : null}
 
           {tab === 'usage' ? (
@@ -603,6 +821,16 @@ export function SubscriptionDetailView({
           <RelatedCard items={related} />
         </div>
       </div>
+      <ContractChargeDialog
+        state={dialog}
+        onClose={closeDialog}
+        currency={s.currency}
+        isSubmitting={saving}
+        submitError={saveError}
+        onAdd={(draft) => void run(onAddCharge?.(draft))}
+        onEdit={(line, draft) => void run(onEditCharge?.(line, draft))}
+        onEnd={(line, draft) => void run(onEndCharge?.(line, draft))}
+      />
     </DetailShell>
   )
 }
@@ -699,6 +927,24 @@ function Banners({
   return <div className="flex flex-col gap-3">{banners}</div>
 }
 
+/** Where a charge comes from; an ended charge also says when it ended. */
+function LineSourceBadge({ line }: { line: SubscriptionLine }) {
+  return (
+    <span className="flex items-center gap-2">
+      <Badge
+        variant={line.source === 'contract' ? 'info-outline' : 'outline'}
+        size="sm"
+        radius="full"
+      >
+        {LINE_SOURCE_LABEL[line.source]}
+      </Badge>
+      {isEnded(line) ? (
+        <span className="text-muted-foreground text-xs">Ended {day(line.endDate)}</span>
+      ) : null}
+    </span>
+  )
+}
+
 /** A titled section whose body is one part of the page: loading, failed, empty, or the data. */
 function PartSection<T>({
   title,
@@ -708,6 +954,7 @@ function PartSection<T>({
   emptyDescription,
   isEmpty,
   padded = false,
+  action,
   children,
 }: {
   title: string
@@ -718,19 +965,20 @@ function PartSection<T>({
   isEmpty: (data: T) => boolean
   /** The body is not a table, so it keeps the section's own inset. */
   padded?: boolean
+  action?: ReactNode
   children: (data: T) => ReactNode
 }) {
   const { data } = part
   if (part.isLoading || (!data && !part.isError)) {
     return (
-      <Section title={title}>
+      <Section title={title} action={action}>
         <LoadingRows />
       </Section>
     )
   }
   if (part.isError || !data) {
     return (
-      <Section title={title} flush>
+      <Section title={title} flush action={action}>
         <SectionEmpty
           title={failure}
           description="The rest of the page still works."
@@ -747,15 +995,17 @@ function PartSection<T>({
   }
   if (isEmpty(data)) {
     return (
-      <Section title={title} flush>
+      <Section title={title} flush action={action}>
         <SectionEmpty title={emptyTitle} description={emptyDescription} />
       </Section>
     )
   }
   return padded ? (
-    <Section title={title}>{children(data)}</Section>
+    <Section title={title} action={action}>
+      {children(data)}
+    </Section>
   ) : (
-    <Section title={title} flush bare>
+    <Section title={title} flush bare={!action} action={action}>
       {children(data)}
     </Section>
   )

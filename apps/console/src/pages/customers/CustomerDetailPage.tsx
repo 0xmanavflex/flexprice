@@ -121,6 +121,13 @@ export function CustomerDetailPage({
       onOpenPlan={(planId) =>
         void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
       }
+      onOpenContract={(subscriptionId) =>
+        void navigate({
+          to: '/subscriptions/$subscriptionId',
+          params: { subscriptionId },
+          search: {} as never,
+        })
+      }
       onUpdateField={(patch) =>
         update.mutateAsync({
           id: customer.data.id,

@@ -1,10 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import {
+  toCreateLineItemRequest,
+  toDeleteLineItemRequest,
   toPendingSchedules,
   toSubscriptionDetail,
   toSubscriptionEntitlement,
   toSubscriptionLine,
   toSubscriptionUsage,
+  toUpdateLineItemRequest,
 } from './subscriptions'
 
 describe('subscription detail mappers', () => {
@@ -111,5 +114,46 @@ describe('toPendingSchedules', () => {
     ])
     expect(schedules.map((s) => s.id)).toEqual(['s1'])
     expect(schedules[0]?.canBeCancelled).toBe(true)
+  })
+
+  it('marks where a charge comes from', () => {
+    expect(toSubscriptionLine({ entityType: 'plan' }).source).toBe('plan')
+    expect(toSubscriptionLine({ entityType: 'addon' }).source).toBe('addon')
+    expect(toSubscriptionLine({ entityType: 'subscription' }).source).toBe('contract')
+    expect(toSubscriptionLine({}).source).toBe('plan')
+  })
+
+  it('prices a new contract charge inline in the contract billing period', () => {
+    expect(
+      toCreateLineItemRequest(
+        { name: ' Onboarding ', amount: '250.00', quantity: '2', startDate: '2026-11-01' },
+        'MONTHLY',
+      ),
+    ).toEqual({
+      displayName: 'Onboarding',
+      quantity: 2,
+      startDate: new Date('2026-11-01T00:00:00Z'),
+      price: {
+        type: 'FIXED',
+        billingModel: 'FLAT_FEE',
+        billingPeriod: 'MONTHLY',
+        invoiceCadence: 'ADVANCE',
+        priceUnitType: 'FIAT',
+        amount: '250.00',
+        displayName: 'Onboarding',
+      },
+    })
+  })
+
+  it('leaves the effective date out when the change is immediate', () => {
+    expect(toUpdateLineItemRequest({ amount: '120', effectiveFrom: '' })).toEqual({ amount: '120' })
+    expect(toUpdateLineItemRequest({ amount: '120', effectiveFrom: '2026-12-01' })).toEqual({
+      amount: '120',
+      effectiveFrom: '2026-12-01T00:00:00Z',
+    })
+    expect(toDeleteLineItemRequest({ effectiveFrom: '' })).toEqual({})
+    expect(toDeleteLineItemRequest({ effectiveFrom: '2026-12-01' })).toEqual({
+      effectiveFrom: '2026-12-01T00:00:00Z',
+    })
   })
 })

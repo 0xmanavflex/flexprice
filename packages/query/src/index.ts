@@ -203,7 +203,9 @@ export type {
 export {
   fetchSubscriptions,
   toCancelSubscriptionRequest,
+  toCreateLineItemRequest,
   toCreateSubscriptionRequest,
+  toDeleteLineItemRequest,
   toPendingSchedules,
   toSubscription,
   toSubscriptionDetail,
@@ -211,9 +213,12 @@ export {
   toSubscriptionFilter,
   toSubscriptionLine,
   toSubscriptionUsage,
+  toUpdateLineItemRequest,
   useActivateSubscription,
   useCancelSubscription,
   useCreateSubscription,
+  useCreateSubscriptionLineItem,
+  useDeleteSubscriptionLineItem,
   useSubscription,
   useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
@@ -222,6 +227,7 @@ export {
   useSubscriptionSchedules,
   useSubscriptionUsage,
   useSubscriptions,
+  useUpdateSubscriptionLineItem,
 } from './subscriptions'
 export type {
   SubscriptionPage,

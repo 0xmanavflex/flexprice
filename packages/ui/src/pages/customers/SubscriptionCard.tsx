@@ -69,7 +69,9 @@ export function SubscriptionCard({
     <article className={cn('bg-background flex flex-col rounded-xl border', className)}>
       <div className="flex items-start justify-between gap-3 px-5 pt-4">
         <button type="button" onClick={onOpen} className="min-w-0 space-y-1 text-left">
-          <span className="block truncate text-sm font-medium hover:underline">{s.planName}</span>
+          <span className="block truncate text-sm font-medium hover:underline">
+            {s.planName} contract
+          </span>
           <span className="text-muted-foreground flex items-center gap-1.5 text-xs">
             <span
               aria-hidden="true"
@@ -91,7 +93,7 @@ export function SubscriptionCard({
                 variant="ghost"
                 size="icon"
                 className="text-muted-foreground -mr-2 size-8"
-                aria-label={`Actions for ${s.planName}`}
+                aria-label={`Actions for ${s.planName} contract`}
               />
             }
           >
@@ -99,7 +101,7 @@ export function SubscriptionCard({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={onOpen}>View contracts</DropdownMenuItem>
+              <DropdownMenuItem onClick={onOpen}>View contract</DropdownMenuItem>
               <DropdownMenuItem onClick={() => void navigator.clipboard?.writeText(s.id)}>
                 <CopyIcon className="text-muted-foreground" aria-hidden="true" />
                 Copy contract ID

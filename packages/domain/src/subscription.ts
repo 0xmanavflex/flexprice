@@ -159,6 +159,8 @@ export function emptySubscription(): CreateSubscription {
 
 /** The detail read model: the list row plus what the detail page adds. */
 export interface SubscriptionDetail extends Subscription {
+  /** The API's billing period, which a new charge on this contract must match. */
+  billingPeriod: BillingPeriod | null
   billingPeriodCount: number
   cancelAt: Date | null
   cancelAtPeriodEnd: boolean
@@ -232,6 +234,30 @@ export interface SubscriptionLine {
   amount: Money
   startDate: Date | null
   endDate: Date | null
+  /** Where the charge comes from: the plan (shared by every contract on it), an add-on, or this contract alone. */
+  source: SubscriptionLineSource
+  priceId: string
+}
+
+export type SubscriptionLineSource = 'plan' | 'addon' | 'contract'
+
+/** A new fixed recurring charge on one contract. `startDate` empty means now. */
+export interface AddContractCharge {
+  name: string
+  amount: string
+  quantity: string
+  startDate: string
+}
+
+/** A new unit price for one charge. `effectiveFrom` empty means now. */
+export interface EditContractCharge {
+  amount: string
+  effectiveFrom: string
+}
+
+/** End a charge. `effectiveFrom` empty means now. */
+export interface EndContractCharge {
+  effectiveFrom: string
 }
 
 /** One feature the subscription entitles the customer to. */

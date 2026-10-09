@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-09 — pages/subscriptions/SubscriptionDetailView + ContractChargeDialog: charges on a contract can be added, repriced and ended from the Pricing tab; each row says whether it comes from the plan or only this contract, and plan charges link to the Plan page for shared changes; the Overview tab leads with a Charges summary, then Contract and Billing & collection, then the latest invoice; a section with an action now shows its header (user request)
+- 2026-10-09 — pages/customers/CustomerDetail + SubscriptionCard: the Contracts tab and the Overview cards lead with the contract and open it; the plan is a secondary link (user request)
 - 2026-10-09 — pages/subscriptions/SubscriptionDetailView: the contract detail page is read-only and complete: lifecycle and pending-change banners, a summary row, five tabs (Overview, Pricing, Usage, Invoices, Entitlements and credits), and an Activity, Metadata and Related rail; every action lives in the More menu except the Incomplete banner's Activate; no Pause or Resume (user request)
 - 2026-10-09 — pages/auth/SignInScreen: the sign-in header shows the new Flexprice mark, the same image as the sidebar, in place of the letter tile (user request)
 - 2026-10-09 — apps/console pages/settings: Organization (Profile and Plan & usage, where the tenant's name, address and details are edited) is a row in the Settings rail, right after Team; it was reachable only by URL (user request)

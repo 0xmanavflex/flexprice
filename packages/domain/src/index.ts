@@ -259,6 +259,9 @@ export {
   emptySubscription,
 } from './subscription'
 export type {
+  AddContractCharge,
+  EditContractCharge,
+  EndContractCharge,
   CancelSubscription,
   CreateSubscription,
   Subscription,
@@ -266,6 +269,7 @@ export type {
   SubscriptionDetail,
   SubscriptionEntitlement,
   SubscriptionLine,
+  SubscriptionLineSource,
   SubscriptionQuery,
   SubscriptionSchedule,
   SubscriptionUsage,

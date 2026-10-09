@@ -84,6 +84,8 @@ export interface CustomerDetailProps {
   /** Open an invoice from a row action. */
   onOpenInvoice?: (invoiceId: string) => void
   onOpenPlan?: (planId: string) => void
+  /** Open one contract's own page, from a Contracts row or a running-contract card. Omitted, rows are not links. */
+  onOpenContract?: (subscriptionId: string) => void
   subscriptionsLoading?: boolean
   invoicesLoading?: boolean
   /**
@@ -132,6 +134,7 @@ export function CustomerDetail({
   onUpdateMetadata,
   onOpenInvoice,
   onOpenPlan,
+  onOpenContract,
   subscriptionsLoading = false,
   invoicesLoading = false,
   usage,
@@ -208,6 +211,7 @@ export function CustomerDetail({
             subscriptions={subscriptions}
             subscriptionsLoading={subscriptionsLoading}
             onViewSubscriptions={() => onTabChange('subscriptions')}
+            onOpenContract={onOpenContract}
             invoices={invoices}
             invoicesLoading={invoicesLoading}
             formatDate={formatDate}
@@ -221,6 +225,7 @@ export function CustomerDetail({
             isLoading={subscriptionsLoading}
             formatDate={formatDate}
             onOpenPlan={onOpenPlan}
+            onOpenContract={onOpenContract}
             onCreateContract={onCreateContract}
           />
         ) : null}
@@ -344,6 +349,7 @@ function OverviewTab({
   subscriptions,
   subscriptionsLoading,
   onViewSubscriptions,
+  onOpenContract,
   invoices,
   invoicesLoading,
   formatDate,
@@ -352,6 +358,7 @@ function OverviewTab({
   subscriptions: Subscription[]
   subscriptionsLoading: boolean
   onViewSubscriptions: () => void
+  onOpenContract: ((subscriptionId: string) => void) | undefined
   invoices: Invoice[]
   invoicesLoading: boolean
   formatDate: FormatDate
@@ -372,7 +379,7 @@ function OverviewTab({
                   key={s.id}
                   subscription={s}
                   formatDate={formatDate}
-                  onOpen={onViewSubscriptions}
+                  onOpen={onOpenContract ? () => onOpenContract(s.id) : onViewSubscriptions}
                   className={shown.length % 2 === 1 && index === 0 ? 'md:col-span-2' : ''}
                 />
               ))}
@@ -418,12 +425,14 @@ function SubscriptionsTab({
   isLoading,
   formatDate,
   onOpenPlan,
+  onOpenContract,
   onCreateContract,
 }: {
   subscriptions: Subscription[]
   isLoading: boolean
   formatDate: FormatDate
   onOpenPlan: ((planId: string) => void) | undefined
+  onOpenContract: ((subscriptionId: string) => void) | undefined
   onCreateContract: (() => void) | undefined
 }) {
   return (
@@ -442,16 +451,27 @@ function SubscriptionsTab({
           getRowId={(s) => s.id}
           columns={[
             {
+              key: 'contract',
+              header: 'Contract',
+              sortBy: (s) => s.id,
+              cell: (s) =>
+                onOpenContract ? (
+                  <span className="font-mono text-xs font-medium">
+                    <EntityLink label={s.id} onOpen={() => onOpenContract(s.id)} />
+                  </span>
+                ) : (
+                  <span className="font-mono text-xs font-medium">{s.id}</span>
+                ),
+            },
+            {
               key: 'plan',
               header: 'Plan',
               sortBy: (s) => s.planName,
               cell: (s) =>
                 onOpenPlan ? (
-                  <span className="font-medium">
-                    <EntityLink label={s.planName} onOpen={() => onOpenPlan(s.planId)} />
-                  </span>
+                  <EntityLink label={s.planName} onOpen={() => onOpenPlan(s.planId)} />
                 ) : (
-                  <span className="font-medium">{s.planName}</span>
+                  <Muted>{s.planName}</Muted>
                 ),
             },
             {
@@ -478,18 +498,9 @@ function SubscriptionsTab({
                 </Muted>
               ),
             },
-            {
-              key: 'fixed',
-              header: 'Fixed amount',
-              cell: () => <Muted>—</Muted>,
-            },
-            {
-              key: 'id',
-              header: 'ID',
-              cell: (s) => <span className="text-muted-foreground font-mono text-xs">{s.id}</span>,
-            },
           ]}
           empty="No contracts yet."
+          {...(onOpenContract ? { onRowClick: (s: Subscription) => onOpenContract(s.id) } : {})}
           {...(onCreateContract
             ? {
                 action: (

@@ -301,6 +301,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ContractChargeDialog",
         "CustomerTaxSection",
         "CustomerWalletView",
         "EnvironmentForm",
@@ -336,6 +337,19 @@
       ],
       "usedBy": [],
       "story": "./src/compositions/layout/ContextualSection.stories.tsx"
+    },
+    "ContractChargeDialog": {
+      "file": "src/pages/subscriptions/ContractChargeDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "Field",
+        "FormDialog"
+      ],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
+      "story": null
     },
     "CopyChip": {
       "file": "src/compositions/detail/DetailKit.tsx",
@@ -1184,6 +1198,7 @@
       "usedBy": [
         "AcceptInvitationForm",
         "ChargeForm",
+        "ContractChargeDialog",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
@@ -1431,6 +1446,7 @@
       ],
       "usedBy": [
         "AddChargeDialog",
+        "ContractChargeDialog",
         "CustomerTaxSection",
         "CustomerWalletView",
         "EnvironmentForm",
@@ -2516,7 +2532,8 @@
         "EntitlementTable",
         "PlanChargesView",
         "PlanCreditGrantsView",
-        "PlanEntitlementsView"
+        "PlanEntitlementsView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/RowActionsMenu.stories.tsx"
     },
@@ -2833,6 +2850,7 @@
       "layer": "surface",
       "composes": [
         "AccountActivityRail",
+        "ContractChargeDialog",
         "DetailMoreMenu",
         "DetailShell",
         "DetailTable",
@@ -2843,6 +2861,7 @@
         "MetadataCard",
         "Properties",
         "RelatedCard",
+        "RowActionsMenu",
         "Section",
         "SectionEmpty",
         "SubscriptionStatusBadge",

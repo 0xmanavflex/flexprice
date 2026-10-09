@@ -4,6 +4,8 @@ import {
   ApiError,
   useActivateSubscription,
   useCancelSubscription,
+  useCreateSubscriptionLineItem,
+  useDeleteSubscriptionLineItem,
   useSubscription,
   useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
@@ -11,6 +13,7 @@ import {
   useSubscriptionLines,
   useSubscriptionSchedules,
   useSubscriptionUsage,
+  useUpdateSubscriptionLineItem,
 } from '@fp/query'
 import { SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
 import {
@@ -76,6 +79,9 @@ export function SubscriptionDetailPage({
   const schedules = useSubscriptionSchedules(subscriptionId)
   const cancel = useCancelSubscription()
   const activate = useActivateSubscription()
+  const addLine = useCreateSubscriptionLineItem()
+  const editLine = useUpdateSubscriptionLineItem()
+  const endLine = useDeleteSubscriptionLineItem()
 
   const [dialog, setDialog] = useState<'cancel' | 'activate' | null>(null)
   const [cancellationType, setCancellationType] =
@@ -132,6 +138,17 @@ export function SubscriptionDetailPage({
           ? { onActivate: () => setDialog('activate') }
           : {})}
         onCancel={() => setDialog('cancel')}
+        onAddCharge={async (draft) => {
+          if (!data.billingPeriod)
+            throw new Error('This contract has no billing period to charge on.')
+          await addLine.mutateAsync({ id: data.id, billingPeriod: data.billingPeriod, draft })
+        }}
+        onEditCharge={async (line, draft) => {
+          await editLine.mutateAsync({ lineItemId: line.id, draft })
+        }}
+        onEndCharge={async (line, draft) => {
+          await endLine.mutateAsync({ lineItemId: line.id, draft })
+        }}
       />
       <ConfirmDialog
         open={dialog === 'cancel'}

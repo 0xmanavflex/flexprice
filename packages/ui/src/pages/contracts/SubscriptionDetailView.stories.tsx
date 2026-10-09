@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import {
   CreditGrantCadence,
   CreditGrantExpiryType,
@@ -43,6 +43,7 @@ const SUBSCRIPTION: SubscriptionDetail = {
   currentPeriodEnd: date('2026-11-01'),
   startDate: date('2026-03-01'),
   createdAt: date('2026-02-27'),
+  billingPeriod: 'MONTHLY',
   billingPeriodCount: 1,
   cancelAt: null,
   cancelAtPeriodEnd: false,
@@ -69,6 +70,8 @@ const LINES: SubscriptionLine[] = [
     amount: money('1500', 'USD'),
     startDate: null,
     endDate: null,
+    source: 'plan',
+    priceId: 'price_platform',
   },
   {
     id: 'line_2',
@@ -79,6 +82,20 @@ const LINES: SubscriptionLine[] = [
     amount: money('0.002', 'USD'),
     startDate: null,
     endDate: null,
+    source: 'plan',
+    priceId: 'price_api',
+  },
+  {
+    id: 'line_3',
+    name: 'Onboarding',
+    kind: 'fixed',
+    quantity: '1',
+    billingPeriodLabel: 'Monthly',
+    amount: money('250', 'USD'),
+    startDate: null,
+    endDate: null,
+    source: 'contract',
+    priceId: 'price_onboarding',
   },
 ]
 
@@ -233,6 +250,9 @@ const BASE: SubscriptionDetailViewProps = {
   onOpenInvoice: fn(),
   onActivate: fn(),
   onCancel: fn(),
+  onAddCharge: fn(),
+  onEditCharge: fn(),
+  onEndCharge: fn(),
 }
 
 const withSubscription = (patch: Partial<SubscriptionDetail>): SubscriptionDetailViewProps => ({
@@ -372,6 +392,143 @@ export const PricingTab: Story = {
     await userEvent.click(canvas.getByRole('tab', { name: /Pricing/ }))
     await expect(await canvas.findByText('Platform fee')).toBeVisible()
     await expect(canvas.getByText('$1,500.00')).toBeVisible()
+    // Each charge says where it comes from, and a plan charge says editing it here is local.
+    await expect(canvas.getAllByText('From plan')).toHaveLength(2)
+    await expect(canvas.getByText('Contract only')).toBeVisible()
+    await expect(canvas.getByText(/shared by every contract on Scale/)).toBeVisible()
+  },
+}
+
+const openPricing = async (canvasElement: HTMLElement) => {
+  const canvas = within(canvasElement)
+  const tab = canvas.getByRole('tab', { name: /Pricing/ })
+  await userEvent.click(tab)
+  await waitFor(() => expect(tab).toHaveAttribute('aria-selected', 'true'))
+  await canvas.findByText('Platform fee')
+  return canvas
+}
+
+/** Overview leads with the charges, then the contract and billing facts, then the latest invoice. */
+export const OverviewSummary: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Contract' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Billing & collection' })).toBeVisible()
+    await expect(canvas.getByText('Platform fee')).toBeVisible()
+    // The charges summary hands off to the Pricing tab.
+    await userEvent.click(canvas.getByRole('button', { name: /pricing/i }))
+    await waitFor(() =>
+      expect(canvas.getByRole('tab', { name: /Pricing/ })).toHaveAttribute('aria-selected', 'true'),
+    )
+  },
+}
+
+/** "Edit the plan" is the way to change a plan charge for everyone. */
+export const EditPlanLink: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'edit the plan' }))
+    await expect(args.onOpenPlan).toHaveBeenCalledOnce()
+  },
+}
+
+/** Add a fixed charge to this contract only. */
+export const AddCharge: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    // Empty fields are refused with a message, not sent.
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(await dialog.findByText('Enter a name.')).toBeVisible()
+    await expect(args.onAddCharge).not.toHaveBeenCalled()
+    await userEvent.type(dialog.getByLabelText('Name'), 'Premium support')
+    await userEvent.type(dialog.getByLabelText(/^Price/), '400')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(args.onAddCharge).toHaveBeenCalledWith({
+      name: 'Premium support',
+      amount: '400',
+      quantity: '1',
+      startDate: '',
+    })
+  },
+}
+
+/** Change one charge's price; the dialog starts from the current price. */
+export const EditPrice: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(
+      dialog.getByText(/Only this contract changes; the plan keeps its price/),
+    ).toBeVisible()
+    const price = dialog.getByLabelText(/^New price/)
+    await expect(price).toHaveValue('1500')
+    await userEvent.clear(price)
+    await userEvent.type(price, '1400')
+    await userEvent.type(dialog.getByLabelText('Effective from'), '2026-11-01')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save price' }))
+    await expect(args.onEditCharge).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'line_1' }),
+      { amount: '1400', effectiveFrom: '2026-11-01' },
+    )
+  },
+}
+
+/** End a charge from a date; a contract-only charge needs no warning about the plan. */
+export const EndCharge: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Onboarding' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'End charge' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(dialog.queryByText(/It comes from the plan/)).toBeNull()
+    await userEvent.click(dialog.getByRole('button', { name: 'End charge' }))
+    await expect(args.onEndCharge).toHaveBeenCalledWith(expect.objectContaining({ id: 'line_3' }), {
+      effectiveFrom: '',
+    })
+  },
+}
+
+/** A failed save keeps the dialog open with the reason. */
+export const ChargeSaveFails: Story = {
+  parameters: menuA11y,
+  args: { onEndCharge: () => Promise.reject(new Error('Line item already ended')) },
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Onboarding' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'End charge' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'End charge' }))
+    await expect(await dialog.findByText('Line item already ended')).toBeVisible()
+  },
+}
+
+/** A cancelled contract cannot be edited. */
+export const CancelledPricingIsReadOnly: Story = {
+  args: withSubscription({
+    status: SubscriptionStatus.Cancelled,
+    cancelledAt: date('2026-09-30'),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: /^Actions for/ })).toBeNull()
+  },
+}
+
+/** Without handlers the Pricing tab is read-only. */
+export const PricingWithoutEditing: Story = {
+  args: { onAddCharge: undefined, onEditCharge: undefined, onEndCharge: undefined },
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
   },
 }
 

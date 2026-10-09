@@ -88,6 +88,8 @@ function Harness({
   invoices = INVOICES,
   onCreateInvoice,
   onCreateContract,
+  onOpenContract,
+  onOpenPlan,
   onBack,
   onEdit,
   onUpdateField,
@@ -100,6 +102,8 @@ function Harness({
   invoices?: Invoice[]
   onCreateInvoice?: () => void
   onCreateContract?: () => void
+  onOpenContract?: (subscriptionId: string) => void
+  onOpenPlan?: (planId: string) => void
   onBack?: () => void
   onEdit?: () => void
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
@@ -121,6 +125,8 @@ function Harness({
         onBack={onBack ?? (() => {})}
         onCreateInvoice={() => onCreateInvoice?.()}
         onCreateContract={() => onCreateContract?.()}
+        {...(onOpenContract ? { onOpenContract } : {})}
+        {...(onOpenPlan ? { onOpenPlan } : {})}
         {...(onEdit ? { onEdit } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
       />
@@ -154,6 +160,8 @@ const meta = {
     invoices: { control: false },
     onCreateInvoice: { control: false },
     onCreateContract: { control: false },
+    onOpenContract: { control: false },
+    onOpenPlan: { control: false },
     onBack: { control: false },
     onEdit: { control: false },
     onUpdateField: { control: false },
@@ -292,6 +300,20 @@ export const CreatesContractFromTable: Story = {
     await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
     await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
     await expect(args.onCreateContract).toHaveBeenCalledOnce()
+  },
+}
+
+/** The table leads with the contract, and the contract (not the plan) is what a row opens. */
+export const OpensContractFromTable: Story = {
+  args: { onOpenContract: fn(), onOpenPlan: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
+    const headers = canvas.getAllByRole('columnheader').map((header) => header.textContent)
+    await expect(headers.indexOf('Contract')).toBeLessThan(headers.indexOf('Plan'))
+    await userEvent.click(canvas.getByRole('button', { name: SUBSCRIPTIONS[0]?.id ?? '' }))
+    await expect(args.onOpenContract).toHaveBeenCalledWith(SUBSCRIPTIONS[0]?.id)
+    await expect(args.onOpenPlan).not.toHaveBeenCalled()
   },
 }
 
