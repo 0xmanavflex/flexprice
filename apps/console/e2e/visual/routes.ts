@@ -278,7 +278,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: `/subscriptions/${SUBSCRIPTION}`,
     reference: 'pages/billing.tsx',
     pattern: 'detail',
-    ready: { heading: 'Contract' },
+    ready: { heading: 'Related' },
   },
   {
     name: 'subscription-new',

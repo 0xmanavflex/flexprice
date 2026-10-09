@@ -249,8 +249,10 @@ export {
   DEFAULT_SUBSCRIPTION_QUERY,
   SUBSCRIPTION_BILLING_PERIODS,
   SUBSCRIPTION_CANCELLATION_TYPES,
+  SUBSCRIPTION_SCHEDULE_LABEL,
   SUBSCRIPTION_SORT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
+  SubscriptionScheduleType,
   SubscriptionSortField,
   SubscriptionStatus,
   createSubscriptionSchema,
@@ -265,6 +267,9 @@ export type {
   SubscriptionEntitlement,
   SubscriptionLine,
   SubscriptionQuery,
+  SubscriptionSchedule,
+  SubscriptionUsage,
+  SubscriptionUsageCharge,
 } from './subscription'
 
 export {

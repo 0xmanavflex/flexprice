@@ -15,7 +15,8 @@
       "composes": [],
       "usedBy": [
         "CustomerDetail",
-        "InvoiceDetailView"
+        "InvoiceDetailView",
+        "SubscriptionDetailView"
       ],
       "story": null
     },
@@ -727,7 +728,8 @@
       "usedBy": [
         "CatalogDetailFrame",
         "EntityHeader",
-        "FeatureDetailView"
+        "FeatureDetailView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/DetailKit.stories.tsx"
     },
@@ -740,7 +742,8 @@
       ],
       "usedBy": [
         "CatalogDetailFrame",
-        "InvoiceDetailView"
+        "InvoiceDetailView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/DetailShell.stories.tsx"
     },
@@ -774,7 +777,8 @@
         "InvoiceDetailView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
-        "RevenueDashboard"
+        "RevenueDashboard",
+        "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/DetailTable.stories.tsx"
     },
@@ -787,7 +791,8 @@
         "CustomerDetail",
         "FeatureDetailView",
         "InvoiceDetailView",
-        "SettingsShell"
+        "SettingsShell",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/DetailKit.stories.tsx"
     },
@@ -961,7 +966,8 @@
       ],
       "usedBy": [
         "CustomerDetail",
-        "EntitlementTable"
+        "EntitlementTable",
+        "SubscriptionDetailView"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -1774,7 +1780,9 @@
       "composes": [
         "Pill"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
     },
     "InvoiceSummary": {
@@ -1854,7 +1862,8 @@
         "CustomerWalletView",
         "FeatureDetailView",
         "InvoiceDetailView",
-        "PlanChargesView"
+        "PlanChargesView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/States.stories.tsx"
     },
@@ -1888,7 +1897,8 @@
       "usedBy": [
         "CustomerDetail",
         "FeatureDetailView",
-        "InvoiceDetailView"
+        "InvoiceDetailView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/MetadataCard.stories.tsx"
     },
@@ -2428,7 +2438,8 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "FeatureDetailView"
+        "FeatureDetailView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/DetailKit.stories.tsx"
     },
@@ -2460,7 +2471,8 @@
         "Section"
       ],
       "usedBy": [
-        "InvoiceDetailView"
+        "InvoiceDetailView",
+        "SubscriptionDetailView"
       ],
       "story": null
     },
@@ -2542,6 +2554,7 @@
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "RelatedCard",
+        "SubscriptionDetailView",
         "WebhookEndpointDetail",
         "WebhookEventCatalog"
       ],
@@ -2559,7 +2572,8 @@
         "InvoiceDetailView",
         "PlanChargesView",
         "PlanCreditGrantsView",
-        "PlanEntitlementsView"
+        "PlanEntitlementsView",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/SectionEmpty.stories.tsx"
     },
@@ -2814,6 +2828,29 @@
       ],
       "story": "./src/pages/customers/SubscriptionCard.stories.tsx"
     },
+    "SubscriptionDetailView": {
+      "file": "src/pages/subscriptions/SubscriptionDetailView.tsx",
+      "layer": "surface",
+      "composes": [
+        "AccountActivityRail",
+        "DetailMoreMenu",
+        "DetailShell",
+        "DetailTable",
+        "DetailTabs",
+        "EntityLink",
+        "InvoiceStatusBadge",
+        "LoadingRows",
+        "MetadataCard",
+        "Properties",
+        "RelatedCard",
+        "Section",
+        "SectionEmpty",
+        "SubscriptionStatusBadge",
+        "SummaryRow"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/subscriptions/SubscriptionDetailView.stories.tsx"
+    },
     "SubscriptionForm": {
       "file": "src/pages/subscriptions/SubscriptionForm.tsx",
       "layer": "surface",
@@ -2846,7 +2883,9 @@
       "composes": [
         "GlyphBadge"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
       "story": "./src/pages/subscriptions/SubscriptionStatusBadge.stories.tsx"
     },
     "SummaryRow": {
@@ -2855,7 +2894,8 @@
       "composes": [],
       "usedBy": [
         "DetailStats",
-        "MetricRail"
+        "MetricRail",
+        "SubscriptionDetailView"
       ],
       "story": "./src/compositions/DetailKit.stories.tsx"
     },
@@ -4434,6 +4474,13 @@
         "UsageMeter"
       ]
     },
+    "./src/pages/subscriptions/SubscriptionDetailView.stories.tsx": {
+      "title": "Renews",
+      "component": "SubscriptionDetailView",
+      "uses": [
+        "SubscriptionDetailView"
+      ]
+    },
     "./src/pages/subscriptions/SubscriptionForm.stories.tsx": {
       "title": "Surfaces/SubscriptionForm",
       "component": null,
@@ -5086,17 +5133,12 @@
       "route": "/subscriptions/$subscriptionId",
       "uses": [
         "AppFailure",
-        "CatalogDetailFrame",
         "ConfirmDialog",
         "DateInput",
-        "EditableCard",
-        "EntityLink",
         "LoadingRows",
         "OptionSelect",
         "PageBody",
-        "Pill",
-        "SimpleTable",
-        "SubscriptionStatusBadge"
+        "SubscriptionDetailView"
       ]
     },
     "SubscriptionFormPage": {

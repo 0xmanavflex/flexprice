@@ -55,7 +55,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | revenue | `RevenuePage` | Dashboard | EntityList, Panel | RevenueDashboard |
 | settings | `SettingsPage` | Settings | DetailTabs, EmptyState | EmbeddedPageContext, SettingsSection, SettingsShell |
 | subscriptions | `CustomerSubscriptionFormPage` | Form | — | AppFailure, LoadingRows, PageBody |
-| subscriptions | `SubscriptionDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section, SimpleTable | AppFailure, CatalogDetailFrame, DateInput, EditableCard, EntityLink, Input, LoadingRows, OptionSelect, PageBody, Pill, SubscriptionStatusBadge |
+| subscriptions | `SubscriptionDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, Properties, Section | AppFailure, DateInput, Input, LoadingRows, OptionSelect, PageBody, SubscriptionDetailView, SubscriptionPart |
 | subscriptions | `SubscriptionFormPage` | Form | ChoiceCards, EmptyState, Field, FormActions, FormCard, FormPage, Section, SimpleTable, WorkflowStepper | SubscriptionForm |
 | subscriptions | `SubscriptionListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, SubscriptionGrid |
 | taxes | `TaxFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, TaxRateCreateForm, TaxRateEditForm |

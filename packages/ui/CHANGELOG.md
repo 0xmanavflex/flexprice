@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-09 — pages/subscriptions/SubscriptionDetailView: the contract detail page is read-only and complete: lifecycle and pending-change banners, a summary row, five tabs (Overview, Pricing, Usage, Invoices, Entitlements and credits), and an Activity, Metadata and Related rail; every action lives in the More menu except the Incomplete banner's Activate; no Pause or Resume (user request)
+- 2026-10-09 — pages/auth/SignInScreen: the sign-in header shows the new Flexprice mark, the same image as the sidebar, in place of the letter tile (user request)
 - 2026-10-09 — apps/console pages/settings: Organization (Profile and Plan & usage, where the tenant's name, address and details are edited) is a row in the Settings rail, right after Team; it was reachable only by URL (user request)
 - 2026-10-09 — assets/flexprice-icon.png + compositions/shell/AppShell: the sidebar's Flexprice mark is the new logo (white mark on the dark blue gradient), resized to 256px (user request)
 - 2026-10-09 — apps/console shell/ConsoleShell: global search rows carry the sidebar's icons (a page takes its section's, a record the icon of its table, an action its Create-menu icon) under per-table headings such as Customers (user request)

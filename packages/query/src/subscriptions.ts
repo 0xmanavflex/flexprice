@@ -5,16 +5,22 @@ import {
   type BillingPeriod,
   type CancelSubscription,
   type CreateSubscription,
+  type CreditGrant,
+  type Money,
   type Subscription,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
   type SubscriptionQuery,
+  type SubscriptionSchedule,
+  SubscriptionScheduleType,
   SubscriptionSortField,
   SubscriptionStatus,
+  type SubscriptionUsage,
   moneyOr,
 } from '@fp/domain'
-import { toCreditGrantTerms } from './creditGrants'
+import { type CreditGrantWire, toCreditGrant, toCreditGrantTerms } from './creditGrants'
+import { type InvoiceWire, toInvoice } from './invoices'
 import { queryKeys } from './keys'
 import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice } from './provider'
@@ -57,6 +63,11 @@ export interface SubscriptionWire {
   paymentTerms?: string | undefined
   collectionMethod?: string | undefined
   metadata?: Record<string, string> | undefined
+  trialStart?: Date | undefined
+  timezone?: string | undefined
+  lookupKey?: string | undefined
+  commitmentAmount?: string | undefined
+  latestInvoice?: { id?: string | undefined; invoiceNumber?: string | undefined } | undefined
 }
 
 const SUBSCRIPTION_STATUSES = new Set<string>(Object.values(SubscriptionStatus))
@@ -98,6 +109,19 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
     paymentTerms: wire.paymentTerms ?? '',
     collectionMethod: wire.collectionMethod ?? '',
     metadata: wire.metadata ?? {},
+    trialStart: wire.trialStart ?? null,
+    timezone: wire.timezone ?? '',
+    lookupKey: wire.lookupKey ?? '',
+    commitmentAmount:
+      wire.commitmentAmount && Number(wire.commitmentAmount) > 0
+        ? moneyOr(wire.commitmentAmount, wire.currency)
+        : null,
+    latestInvoice: wire.latestInvoice?.id
+      ? {
+          id: wire.latestInvoice.id,
+          number: wire.latestInvoice.invoiceNumber || wire.latestInvoice.id,
+        }
+      : null,
   }
 }
 
@@ -322,18 +346,36 @@ export function useSubscription(id: string) {
   })
 }
 
-/** The priced lines — `GET /subscriptions/{id}`, the only read that carries them. */
-export function useSubscriptionLines(id: string) {
+/**
+ * The priced lines and the credit grants share one read, `GET /subscriptions/{id}`,
+ * so both hooks use one query key and each selects its own part.
+ */
+function useSubscriptionFull<T>(
+  id: string,
+  select: (response: { lineItems?: unknown; creditGrants?: unknown }) => T,
+) {
   const client = useFlexprice()
 
   return useQuery({
     queryKey: queryKeys.subscriptions.lines(id),
-    queryFn: async () => {
-      const response = await call(() => client.subscriptions.getSubscription(id))
-      return ((response.lineItems ?? []) as SubscriptionLineWire[]).map(toSubscriptionLine)
-    },
+    queryFn: () => call(() => client.subscriptions.getSubscription(id)),
+    select,
     enabled: id.length > 0,
   })
+}
+
+/** The priced lines — `GET /subscriptions/{id}`, the only read that carries them. */
+export function useSubscriptionLines(id: string) {
+  return useSubscriptionFull(id, (response) =>
+    ((response.lineItems ?? []) as SubscriptionLineWire[]).map(toSubscriptionLine),
+  )
+}
+
+/** The credit grants this contract was given, from the same read as the lines. */
+export function useSubscriptionCreditGrants(id: string) {
+  return useSubscriptionFull(id, (response): CreditGrant[] =>
+    ((response.creditGrants ?? []) as CreditGrantWire[]).map(toCreditGrant),
+  )
 }
 
 /** What the subscription includes — `GET /subscriptions/{id}/entitlements`. */
@@ -386,5 +428,134 @@ export function useActivateSubscription() {
     mutationFn: ({ id, startDate }: { id: string; startDate: Date }) =>
       call(() => client.subscriptions.activateSubscription(id, { startDate })),
     onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/** A number from the usage endpoint as exact money, without exponent notation. */
+function moneyFromNumber(amount: number | undefined, currency: string | undefined): Money {
+  const text = Number.isFinite(amount) ? (amount as number).toFixed(8).replace(/\.?0+$/, '') : '0'
+  return moneyOr(text === '' || text === '-' ? '0' : text, currency)
+}
+
+export interface SubscriptionUsageWire {
+  amount?: number | undefined
+  currency?: string | undefined
+  startTime?: Date | undefined
+  endTime?: Date | undefined
+  commitmentAmount?: number | undefined
+  commitmentUtilized?: number | undefined
+  overageAmount?: number | undefined
+  hasOverage?: boolean | undefined
+  charges?:
+    | Array<{
+        amount?: number | undefined
+        currency?: string | undefined
+        isOverage?: boolean | undefined
+        meterDisplayName?: string | undefined
+        meterId?: string | undefined
+        quantity?: number | undefined
+        subscriptionLineItemId?: string | undefined
+      }>
+    | undefined
+}
+
+export function toSubscriptionUsage(wire: SubscriptionUsageWire): SubscriptionUsage {
+  const currency = wire.currency
+  const optional = (value: number | undefined) =>
+    value && value > 0 ? moneyFromNumber(value, currency) : null
+  return {
+    periodStart: wire.startTime ?? null,
+    periodEnd: wire.endTime ?? null,
+    total: moneyFromNumber(wire.amount, currency),
+    commitment: optional(wire.commitmentAmount),
+    commitmentUtilized: wire.commitmentAmount
+      ? moneyFromNumber(wire.commitmentUtilized, currency)
+      : null,
+    overage: optional(wire.overageAmount),
+    hasOverage: wire.hasOverage ?? false,
+    charges: (wire.charges ?? []).map((charge, index) => ({
+      id: charge.subscriptionLineItemId || charge.meterId || `charge_${index}`,
+      name: charge.meterDisplayName || 'Usage',
+      quantity: charge.quantity ?? 0,
+      amount: moneyFromNumber(charge.amount, charge.currency || currency),
+      isOverage: charge.isOverage ?? false,
+    })),
+  }
+}
+
+/** This period's consumption — `POST /subscriptions/usage`. */
+export function useSubscriptionUsage(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.usage(id),
+    queryFn: async () => {
+      const response = await call(() =>
+        client.subscriptions.getSubscriptionUsage({ subscriptionId: id } as never),
+      )
+      return toSubscriptionUsage(response as SubscriptionUsageWire)
+    },
+    enabled: id.length > 0,
+  })
+}
+
+export interface SubscriptionScheduleWire {
+  id?: string | undefined
+  scheduleType?: string | undefined
+  scheduledAt?: Date | undefined
+  status?: string | undefined
+  canBeCancelled?: boolean | undefined
+  daysUntilExecution?: number | undefined
+}
+
+/** Only changes still waiting to run are shown; executed or cancelled ones are history. */
+export function toPendingSchedules(wires: SubscriptionScheduleWire[]): SubscriptionSchedule[] {
+  const types = new Set<string>(Object.values(SubscriptionScheduleType))
+  return wires
+    .filter(
+      (wire) => (wire.status ?? 'pending') === 'pending' && types.has(wire.scheduleType ?? ''),
+    )
+    .map((wire) => ({
+      id: wire.id ?? '',
+      type: wire.scheduleType as SubscriptionScheduleType,
+      scheduledAt: wire.scheduledAt ?? null,
+      daysUntilExecution: wire.daysUntilExecution ?? null,
+      canBeCancelled: wire.canBeCancelled ?? false,
+    }))
+}
+
+/** Changes queued for a future date — `GET /subscriptions/{id}/schedules`. */
+export function useSubscriptionSchedules(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.schedules(id),
+    queryFn: async () => {
+      const response = await call(() => client.subscriptions.listSubscriptionSchedules(id))
+      return toPendingSchedules((response.schedules ?? []) as SubscriptionScheduleWire[])
+    },
+    enabled: id.length > 0,
+  })
+}
+
+/** The invoices this contract produced, newest first — the invoice search filtered by `subscription_id`. */
+export function useSubscriptionInvoices(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.invoices(id),
+    queryFn: async () => {
+      const response = await call(() =>
+        client.invoices.queryInvoice({
+          subscriptionId: id,
+          skipLineItems: true,
+          limit: 50,
+          offset: 0,
+          sort: [{ field: 'created_at', direction: 'desc' }],
+        } as never),
+      )
+      return (response.items ?? []).map((item) => toInvoice(item as InvoiceWire))
+    },
+    enabled: id.length > 0,
   })
 }

@@ -161,6 +161,15 @@ export type {
 export { SubscriptionGrid, SubscriptionGridProvenance } from './subscriptions/SubscriptionGrid'
 export type { SubscriptionGridProps } from './subscriptions/SubscriptionGrid'
 export {
+  SubscriptionDetailView,
+  SubscriptionDetailViewProvenance,
+} from './subscriptions/SubscriptionDetailView'
+export type {
+  SubscriptionActivity,
+  SubscriptionDetailViewProps,
+  SubscriptionPart,
+} from './subscriptions/SubscriptionDetailView'
+export {
   SubscriptionStatusBadge,
   SubscriptionStatusBadgeProvenance,
 } from './subscriptions/SubscriptionStatusBadge'

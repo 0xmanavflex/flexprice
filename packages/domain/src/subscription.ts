@@ -168,6 +168,57 @@ export interface SubscriptionDetail extends Subscription {
   paymentTerms: string
   collectionMethod: string
   metadata: Record<string, string>
+  trialStart: Date | null
+  timezone: string
+  /** The caller's own key for this contract, when it set one. */
+  lookupKey: string
+  /** The minimum spend the contract commits to per period; null when it has none. */
+  commitmentAmount: Money | null
+  /** The most recent invoice, as a link target. */
+  latestInvoice: { id: string; number: string } | null
+}
+
+/** One metered charge in the current period's usage. */
+export interface SubscriptionUsageCharge {
+  id: string
+  name: string
+  /** Units consumed this period. */
+  quantity: number
+  amount: Money
+  isOverage: boolean
+}
+
+/** What the subscription has consumed and cost so far this period. */
+export interface SubscriptionUsage {
+  periodStart: Date | null
+  periodEnd: Date | null
+  total: Money
+  commitment: Money | null
+  commitmentUtilized: Money | null
+  overage: Money | null
+  hasOverage: boolean
+  charges: SubscriptionUsageCharge[]
+}
+
+export const SubscriptionScheduleType = {
+  PlanChange: 'plan_change',
+  Cancellation: 'cancellation',
+} as const
+export type SubscriptionScheduleType =
+  (typeof SubscriptionScheduleType)[keyof typeof SubscriptionScheduleType]
+
+export const SUBSCRIPTION_SCHEDULE_LABEL: Record<SubscriptionScheduleType, string> = {
+  [SubscriptionScheduleType.PlanChange]: 'Plan change',
+  [SubscriptionScheduleType.Cancellation]: 'Cancellation',
+}
+
+/** A change queued for a future date, such as a plan change or a cancellation. */
+export interface SubscriptionSchedule {
+  id: string
+  type: SubscriptionScheduleType
+  scheduledAt: Date | null
+  daysUntilExecution: number | null
+  canBeCancelled: boolean
 }
 
 /** One billed line on a subscription — a fixed charge or a metered one. */

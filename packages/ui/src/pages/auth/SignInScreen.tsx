@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { KeyRoundIcon } from 'lucide-react'
+import flexpriceIcon from '@ui/assets/flexprice-icon.png'
 import { WaveDots } from '@ui/components/blocks/auth-11/components/wave-dots'
 import { Google } from '@ui/components/ui/svgs/google'
 import { Button } from '@ui/components/primitives/button'
@@ -79,12 +80,7 @@ export function SignInScreen({
     <div className="bg-background grid min-h-svh lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
       <section className="flex min-w-0 flex-col px-6 py-8 sm:px-10">
         <div className="flex items-center gap-2">
-          <span
-            aria-hidden="true"
-            className="bg-primary text-primary-foreground flex size-7 items-center justify-center rounded-md text-sm font-medium"
-          >
-            F
-          </span>
+          <img src={flexpriceIcon} alt="" aria-hidden className="size-7 shrink-0 rounded-md" />
           <span className="text-[15px] font-medium tracking-tight">Flexprice</span>
         </div>
 

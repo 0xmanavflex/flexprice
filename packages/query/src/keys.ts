@@ -30,6 +30,10 @@ export const queryKeys = {
       ['subscriptions', 'list', filter] as const,
     detail: (id: string) => ['subscriptions', 'detail', id] as const,
     lines: (id: string) => ['subscriptions', 'lines', id] as const,
+    usage: (id: string) => ['subscriptions', 'usage', id] as const,
+    schedules: (id: string) => ['subscriptions', 'schedules', id] as const,
+    invoices: (id: string, filter: Readonly<Record<string, unknown>> = {}) =>
+      ['subscriptions', 'invoices', id, filter] as const,
     entitlements: (id: string) => ['subscriptions', 'entitlements', id] as const,
   },
   counts: {

@@ -204,20 +204,31 @@ export {
   fetchSubscriptions,
   toCancelSubscriptionRequest,
   toCreateSubscriptionRequest,
+  toPendingSchedules,
   toSubscription,
   toSubscriptionDetail,
   toSubscriptionEntitlement,
   toSubscriptionFilter,
   toSubscriptionLine,
+  toSubscriptionUsage,
   useActivateSubscription,
   useCancelSubscription,
   useCreateSubscription,
   useSubscription,
+  useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
+  useSubscriptionInvoices,
   useSubscriptionLines,
+  useSubscriptionSchedules,
+  useSubscriptionUsage,
   useSubscriptions,
 } from './subscriptions'
-export type { SubscriptionPage, SubscriptionWire } from './subscriptions'
+export type {
+  SubscriptionPage,
+  SubscriptionScheduleWire,
+  SubscriptionUsageWire,
+  SubscriptionWire,
+} from './subscriptions'
 
 export {
   fetchCreditNotes,

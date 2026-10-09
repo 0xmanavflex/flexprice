@@ -545,6 +545,9 @@ function SubscriptionDetailRouteComponent() {
       onOpenPlan={(planId) =>
         void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
       }
+      onOpenInvoice={(invoiceId) =>
+        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
+      }
     />
   )
 }

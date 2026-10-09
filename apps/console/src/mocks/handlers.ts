@@ -37,6 +37,9 @@ interface SearchBody {
   filters?: { field?: string; operator?: string; value?: { string?: string } }[]
   subscription_ids?: string[]
   subscriptionIds?: string[]
+  /** How the contract detail page scopes the invoice search to one contract. */
+  subscription_id?: string
+  subscriptionId?: string
   feature_ids?: string[]
   featureIds?: string[]
   /** How the charges/entitlements searches scope to one plan (or add-on). */
@@ -126,6 +129,23 @@ function page(source: Corpus, body: SearchBody) {
     )
     const customerId = customer ? readString(customer, 'id') : ''
     rows = rows.filter((row) => readString(row, 'customer_id') === customerId)
+  }
+
+  // A contract's invoices. The captured invoices point at the captured
+  // subscriptions, not the synthetic ones the console lists, so a row also
+  // counts when it belongs to the contract's customer — the mock stays scoped
+  // (an unknown contract scopes to nothing) and the tab has rows to show.
+  const subscriptionId = body.subscription_id ?? body.subscriptionId
+  if (subscriptionId) {
+    const subscription = (corpus.subscriptions as Corpus).items.find(
+      (row) => readString(row, 'id') === subscriptionId,
+    )
+    const customerId = subscription ? readString(subscription, 'customer_id') : ''
+    rows = rows.filter(
+      (row) =>
+        readString(row, 'subscription_id') === subscriptionId ||
+        (customerId !== '' && readString(row, 'customer_id') === customerId),
+    )
   }
 
   const sort = body.sort?.[0]
@@ -2910,6 +2930,31 @@ export const handlers = [
     sourceFor('invoices').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })
   }),
+  // This period's consumption. Authored: an in-progress period with a commitment.
+  http.post(`${BASE}/subscriptions/usage`, () =>
+    HttpResponse.json({
+      amount: 184.5,
+      currency: 'usd',
+      start_time: '2026-10-01T00:00:00Z',
+      end_time: '2026-11-01T00:00:00Z',
+      commitment_amount: 250,
+      commitment_utilized: 184.5,
+      overage_amount: 0,
+      has_overage: false,
+      charges: [
+        {
+          subscription_line_item_id: 'line_usage',
+          meter_display_name: 'API calls',
+          quantity: 92250,
+          amount: 184.5,
+          currency: 'usd',
+          is_overage: false,
+        },
+      ],
+    }),
+  ),
+  // Nothing queued by default; the page renders no banner.
+  http.get(`${BASE}/subscriptions/:id/schedules`, () => HttpResponse.json({ schedules: [] })),
   http.get(`${BASE}/subscriptions/:id/entitlements`, () =>
     HttpResponse.json({
       features: [
