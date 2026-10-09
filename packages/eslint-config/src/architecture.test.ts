@@ -111,7 +111,7 @@ describe('apps compose through the door', () => {
 
 describe('block-grade primitives live behind one seam', () => {
   it('lets the page grids import the data grid', async () => {
-    expect(await lintAt('packages/ui/src/pages/coupons/CouponGrid.tsx', IMPORTS.dataGrid)).toEqual([])
+    expect(await lintAt('packages/ui/src/pages/settings/discounts/CouponGrid.tsx', IMPORTS.dataGrid)).toEqual([])
   })
 
   it('lets FilterBar import the filter builder', async () => {
