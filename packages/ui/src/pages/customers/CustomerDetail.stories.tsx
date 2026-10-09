@@ -87,6 +87,7 @@ function Harness({
   subscriptions = SUBSCRIPTIONS,
   invoices = INVOICES,
   onCreateInvoice,
+  onCreateContract,
   onBack,
   onEdit,
   onUpdateField,
@@ -98,6 +99,7 @@ function Harness({
   subscriptions?: Subscription[]
   invoices?: Invoice[]
   onCreateInvoice?: () => void
+  onCreateContract?: () => void
   onBack?: () => void
   onEdit?: () => void
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
@@ -118,6 +120,7 @@ function Harness({
         invoicesLoading={invoicesLoading}
         onBack={onBack ?? (() => {})}
         onCreateInvoice={() => onCreateInvoice?.()}
+        onCreateContract={() => onCreateContract?.()}
         {...(onEdit ? { onEdit } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
       />
@@ -150,6 +153,7 @@ const meta = {
     subscriptions: { control: false },
     invoices: { control: false },
     onCreateInvoice: { control: false },
+    onCreateContract: { control: false },
     onBack: { control: false },
     onEdit: { control: false },
     onUpdateField: { control: false },
@@ -266,8 +270,7 @@ export const NavigatesSections: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
-    // Contract creation lives elsewhere: no Create contract button on the page.
-    await expect(canvas.queryByRole('button', { name: 'Create contract' })).not.toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Create contract' })).toBeVisible()
 
     await userEvent.click(canvas.getByRole('tab', { name: /Invoices/ }))
     // The Invoices tab, with the full invoice number, is now on screen.
@@ -278,6 +281,17 @@ export const NavigatesSections: Story = {
     await expect(canvas.getByRole('heading', { name: 'Billing address' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByText('America/Los_Angeles')).toBeInTheDocument()
+  },
+}
+
+/** The Contracts table carries its own Create contract action; the detail view only hands off. */
+export const CreatesContractFromTable: Story = {
+  args: { onCreateContract: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await expect(args.onCreateContract).toHaveBeenCalledOnce()
   },
 }
 

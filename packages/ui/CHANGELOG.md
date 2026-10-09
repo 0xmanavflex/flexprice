@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-09 — pages/customers/CustomerDetail: the Contracts tab table gets a "Create contract" action (and the header More menu a matching item) through a new `onCreateContract` prop; the console opens the customer's own create-contract form (design review: customer contracts)
 - 2026-10-09 — compositions/DetailKit `DetailMoreMenu` + pages/shared/EntityHeader `menu`, and every entity detail view (customers, plans, features, add-ons, coupons, cost sheets, groups, price units, invoices, credit notes, payments, contracts): the header keeps only the ID and badges, and every action (Edit, Create invoice, Create contract, Download PDF, Copy link) lives in one More menu; button heights in the header are uniform (design review: headers)
 - 2026-10-09 — compositions/shell/{AppShell,ShellNav}: sidebar counts removed, the small Flexprice icon (assets/flexprice-icon.png, from the v1 mark) tops the sidebar, the theme switcher leaves the sidebar header, and the footer gap below documentation is padding (design review: app shell)
 - 2026-10-09 — pages/settings/AppearanceSettings: a Linear-style Appearance page (Light, Dark, System previews) is the new home of the theme setting; the Roles & permissions and Sign-in tabs and the Teams top tab bar are gone (design review: settings)

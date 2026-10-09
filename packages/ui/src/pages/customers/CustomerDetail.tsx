@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
+import { FileSignatureIcon, PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
@@ -69,6 +69,8 @@ export interface CustomerDetailProps {
   onBack: () => void
   /** Adds "Create invoice" to the header menu and a "New invoice" button on the Invoices tab; omitted, neither is shown. */
   onCreateInvoice?: () => void
+  /** Adds "Create contract" to the header menu and a button on the Contracts tab; omitted, neither is shown. */
+  onCreateContract?: () => void
   /** Open the stepped Edit page: address and billing configuration. */
   onEdit?: () => void
   /**
@@ -124,6 +126,7 @@ export function CustomerDetail({
   onTabChange,
   onBack,
   onCreateInvoice,
+  onCreateContract,
   onEdit,
   onUpdateField,
   onUpdateMetadata,
@@ -146,6 +149,16 @@ export function CustomerDetail({
       .join('') || '?'
 
   const menu: DetailMenuItem[] = [
+    ...(onCreateContract
+      ? [
+          {
+            id: 'create-contract',
+            label: 'Create contract',
+            icon: <FileSignatureIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: onCreateContract,
+          },
+        ]
+      : []),
     ...(onCreateInvoice
       ? [
           {
@@ -218,6 +231,7 @@ export function CustomerDetail({
             isLoading={subscriptionsLoading}
             formatDate={formatDate}
             onOpenPlan={onOpenPlan}
+            onCreateContract={onCreateContract}
           />
         ) : null}
 
@@ -414,11 +428,13 @@ function SubscriptionsTab({
   isLoading,
   formatDate,
   onOpenPlan,
+  onCreateContract,
 }: {
   subscriptions: Subscription[]
   isLoading: boolean
   formatDate: FormatDate
   onOpenPlan: ((planId: string) => void) | undefined
+  onCreateContract: (() => void) | undefined
 }) {
   return (
     <Section table title="Contracts">
@@ -484,6 +500,16 @@ function SubscriptionsTab({
             },
           ]}
           empty="No contracts yet."
+          {...(onCreateContract
+            ? {
+                action: (
+                  <Button size="sm" className="h-8 px-3" onClick={onCreateContract}>
+                    <PlusIcon aria-hidden="true" />
+                    Create contract
+                  </Button>
+                ),
+              }
+            : {})}
         />
       )}
     </Section>
