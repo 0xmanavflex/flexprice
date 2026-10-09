@@ -1,5 +1,49 @@
-import { Fragment, useEffect, useMemo, useState, type KeyboardEvent, type ReactNode } from 'react'
-import { SearchIcon } from 'lucide-react'
+import {
+  Fragment,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+  type ReactNode,
+} from 'react'
+import {
+  ActivityIcon,
+  BarChart3Icon,
+  BlocksIcon,
+  BookOpenIcon,
+  BotIcon,
+  BoxIcon,
+  CalculatorIcon,
+  CirclePlusIcon,
+  CodeXmlIcon,
+  CoinsIcon,
+  CreditCardIcon,
+  DownloadIcon,
+  FileMinusIcon,
+  FileSignatureIcon,
+  FileTextIcon,
+  GalleryHorizontalEndIcon,
+  HandCoinsIcon,
+  HouseIcon,
+  KeyRoundIcon,
+  LandmarkIcon,
+  LayersIcon,
+  PercentIcon,
+  PlusIcon,
+  ReceiptIcon,
+  RefreshCwIcon,
+  RepeatIcon,
+  SearchIcon,
+  SettingsIcon,
+  TagIcon,
+  TicketPercentIcon,
+  UserPlusIcon,
+  UsersIcon,
+  WebhookIcon,
+  WorkflowIcon,
+  type LucideIcon,
+} from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import {
   Dialog,
@@ -53,7 +97,7 @@ export interface ShellSearchItem {
   label: string
   /** The heading the row sits under: Pages, Actions, Customers… */
   group: string
-  /** A quiet second line or trailing hint — an email, a status. */
+  /** A quiet second line under the label — an email, a parent, a status. */
   hint?: string
   icon?: ReactNode
   /** Extra words that should match without being shown. */
@@ -72,7 +116,69 @@ export interface ShellSearchProps {
   placeholder?: string
 }
 
-const MAX_STATIC = 8
+/** How many destinations to show before anyone has typed. Enough to fill the palette. */
+const MAX_STATIC = 12
+
+/** The mark on a row. Pages use the rail glyphs; a record uses the glyph of its list. */
+const PAGE_GLYPHS: Record<string, LucideIcon> = {
+  home: HouseIcon,
+  customers: UsersIcon,
+  features: BoxIcon,
+  plans: LayersIcon,
+  addons: CirclePlusIcon,
+  'pricing-widget': GalleryHorizontalEndIcon,
+  subscriptions: FileSignatureIcon,
+  invoices: ReceiptIcon,
+  'credit-notes': FileMinusIcon,
+  payments: HandCoinsIcon,
+  revenue: BarChart3Icon,
+  'api-keys': KeyRoundIcon,
+  'service-accounts': BotIcon,
+  events: ActivityIcon,
+  webhooks: WebhookIcon,
+  'usage-syncs': RefreshCwIcon,
+  exports: DownloadIcon,
+  workflows: WorkflowIcon,
+  developers: CodeXmlIcon,
+  billing: LandmarkIcon,
+  integrations: BlocksIcon,
+  docs: BookOpenIcon,
+  settings: SettingsIcon,
+  'settings-discounts': TicketPercentIcon,
+  'settings-taxes': PercentIcon,
+  'settings-cost-tracking': CalculatorIcon,
+  'settings-tags': TagIcon,
+  'price-units': CoinsIcon,
+  groups: UsersIcon,
+}
+
+const ACTION_GLYPHS: Record<string, LucideIcon> = {
+  subscription: RepeatIcon,
+  customer: UserPlusIcon,
+  invoice: ReceiptIcon,
+  payment: CreditCardIcon,
+}
+
+const RECORD_GLYPHS: Record<string, LucideIcon> = {
+  customer: UsersIcon,
+  plan: LayersIcon,
+  feature: BoxIcon,
+  invoice: ReceiptIcon,
+}
+
+function glyphFor(item: ShellSearchItem): LucideIcon {
+  if (item.id.startsWith('page:')) return PAGE_GLYPHS[item.id.slice('page:'.length)] ?? FileTextIcon
+  if (item.id.startsWith('action:')) {
+    return ACTION_GLYPHS[item.id.slice('action:'.length)] ?? PlusIcon
+  }
+  const kind = item.id.split(':')[0] ?? ''
+  return RECORD_GLYPHS[kind] ?? FileTextIcon
+}
+
+function SearchGlyph({ item }: { item: ShellSearchItem }) {
+  const Glyph = glyphFor(item)
+  return <Glyph />
+}
 
 // The default names the *scope*, not just "Search": the list toolbars each say
 // "Search plans…", so the header's own search has to say it reaches wider.
@@ -87,6 +193,7 @@ export function ShellSearch({
   const [open, setOpen] = useState(false)
   const [term, setTerm] = useState('')
   const [active, setActive] = useState(0)
+  const listRef = useRef<HTMLDivElement>(null)
   const available = onSelect !== undefined
 
   const changeTerm = (next: string) => {
@@ -152,6 +259,11 @@ export function ShellSearch({
     return order.map((group) => ({ group, rows: byGroup.get(group)! }))
   }, [visible])
 
+  useEffect(() => {
+    const node = listRef.current?.querySelector('[aria-selected="true"]')
+    if (node instanceof HTMLElement) node.scrollIntoView({ block: 'nearest' })
+  }, [active, visible])
+
   const choose = (item: ShellSearchItem) => {
     onSelect?.(item)
     changeOpen(false)
@@ -192,7 +304,13 @@ export function ShellSearch({
       </Button>
 
       <Dialog open={open} onOpenChange={changeOpen}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-xl gap-0 p-0 **:data-[slot=dialog-close]:hidden">
+        {/*
+         * The shared dialog caps every popup at `sm:max-w-sm`. A search that
+         * wide is a menu, not a place to look through pages and records, so
+         * this one overrides it: a wide panel, set high on the page the way a
+         * command palette sits, with room for a two-line row.
+         */}
+        <DialogContent className="top-[10vh] w-[calc(100%-2rem)] max-w-none translate-y-0 gap-0 overflow-hidden p-0 shadow-2xl sm:max-w-3xl **:data-[slot=dialog-close]:hidden">
           {available ? (
             <>
               <DialogHeader className="sr-only">
@@ -201,8 +319,11 @@ export function ShellSearch({
                   Search pages, customers, plans, features and invoices.
                 </DialogDescription>
               </DialogHeader>
-              <div role="search" className="flex items-center gap-3 border-b px-4">
-                <SearchIcon aria-hidden className="pointer-events-none size-4 opacity-60" />
+              <div role="search" className="flex items-center gap-3 border-b px-5">
+                <SearchIcon
+                  aria-hidden
+                  className="text-muted-foreground pointer-events-none size-5"
+                />
                 <Input
                   type="text"
                   name="q"
@@ -219,51 +340,64 @@ export function ShellSearch({
                   value={term}
                   onChange={(event) => changeTerm(event.target.value)}
                   onKeyDown={onInputKeyDown}
-                  className="h-12 border-none p-0 shadow-none outline-none focus-visible:ring-0"
+                  className="h-14 border-none p-0 text-base shadow-none outline-none focus-visible:ring-0"
                 />
-                <Kbd className="shrink-0">Esc</Kbd>
+                <Kbd className="shrink-0">esc</Kbd>
               </div>
               <div
+                ref={listRef}
                 id="shell-search-list"
                 role="listbox"
                 aria-label="Results"
-                className="max-h-80 overflow-y-auto p-2"
+                className="max-h-[min(32rem,calc(100dvh-16rem))] overflow-y-auto p-2"
               >
                 {visible.length === 0 ? (
-                  <p className="text-muted-foreground px-3 py-6 text-center text-sm">
+                  <p className="text-muted-foreground px-3 py-16 text-center text-sm">
                     {isSearching ? 'Searching…' : `No results for “${term.trim()}”.`}
                   </p>
                 ) : (
                   groups.map(({ group, rows }) => (
                     <Fragment key={group}>
-                      <div className="text-muted-foreground px-3 pt-2 pb-1 text-xs font-medium">
+                      <div className="text-muted-foreground px-3 pt-3 pb-1.5 text-xs font-medium">
                         {group}
                       </div>
                       {rows.map((item) => {
                         const index = visible.indexOf(item)
+                        const selected = index === active
                         return (
                           <div
                             key={`${group}-${item.id}`}
                             id={`shell-search-${item.id}`}
                             role="option"
-                            aria-selected={index === active}
+                            aria-selected={selected}
                             onMouseMove={() => setActive(index)}
                             onClick={() => choose(item)}
                             className={cn(
-                              'flex h-9 cursor-pointer items-center gap-2.5 rounded-lg px-3 text-sm',
-                              index === active && 'bg-muted',
+                              'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5',
+                              selected && 'bg-accent',
                             )}
                           >
-                            {item.icon ? (
-                              <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center [&_svg]:size-4">
-                                {item.icon}
-                              </span>
-                            ) : null}
-                            <span className="min-w-0 flex-1 truncate">{item.label}</span>
-                            {item.hint ? (
-                              <span className="text-muted-foreground max-w-[45%] truncate text-xs">
-                                {item.hint}
-                              </span>
+                            <span
+                              aria-hidden
+                              className={cn(
+                                'text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border [&_svg]:size-4',
+                                selected ? 'bg-background' : 'bg-muted',
+                              )}
+                            >
+                              {item.icon ?? <SearchGlyph item={item} />}
+                            </span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block truncate text-sm">{item.label}</span>
+                              {item.hint ? (
+                                <span className="text-muted-foreground block truncate text-xs">
+                                  {item.hint}
+                                </span>
+                              ) : null}
+                            </span>
+                            {selected ? (
+                              <Kbd aria-hidden className="shrink-0">
+                                ↵
+                              </Kbd>
                             ) : null}
                           </div>
                         )
@@ -274,6 +408,21 @@ export function ShellSearch({
                 {isSearching && visible.length > 0 ? (
                   <p className="text-muted-foreground px-3 py-2 text-xs">Searching…</p>
                 ) : null}
+              </div>
+              <div className="text-muted-foreground flex items-center gap-4 border-t px-5 py-2.5 text-xs">
+                <span className="inline-flex items-center gap-1.5">
+                  <Kbd>↑</Kbd>
+                  <Kbd>↓</Kbd>
+                  Move
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Kbd>↵</Kbd>
+                  Open
+                </span>
+                <span className="ml-auto inline-flex items-center gap-1.5">
+                  <Kbd>esc</Kbd>
+                  Close
+                </span>
               </div>
             </>
           ) : (
