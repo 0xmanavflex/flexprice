@@ -80,6 +80,7 @@ export function moneyOr(
 export function formatMoney(value: Money, locale?: string): string {
   return new Intl.NumberFormat(locale, {
     style: 'currency',
+    currencyDisplay: 'narrowSymbol',
     currency: value.currency,
     // ES2023 (Intl.NumberFormat v3) accepts a string here and formats the exact
     // decimal — which is the entire point of this module, and is covered by a
@@ -129,8 +130,10 @@ export function compareMoney(a: Money, b: Money): number {
 
   const magnitude =
     compareDigits(left.whole, right.whole) ||
-    compareDigits(left.fraction.padEnd(right.fraction.length, '0'),
-                  right.fraction.padEnd(left.fraction.length, '0'))
+    compareDigits(
+      left.fraction.padEnd(right.fraction.length, '0'),
+      right.fraction.padEnd(left.fraction.length, '0'),
+    )
 
   return left.negative ? -magnitude : magnitude
 }

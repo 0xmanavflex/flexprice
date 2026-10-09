@@ -171,7 +171,11 @@ function optionLabel(options: readonly SelectOption[], value: string) {
 function formatMoney(value: number, currency: string) {
   const code = currency.trim().toUpperCase()
   if (!/^[A-Z]{3}$/.test(code)) return '—'
-  return new Intl.NumberFormat('en-US', { style: 'currency', currency: code }).format(value)
+  return new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currencyDisplay: 'narrowSymbol',
+    currency: code,
+  }).format(value)
 }
 
 function lineAmount(line: Line): string | null {

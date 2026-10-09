@@ -120,10 +120,15 @@ export function InvoiceDetailView({
   const [showZero, setShowZero] = useState(false)
   const totals = invoiceTotals(invoice)
   const money = (value: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: invoice.currency }).format(value)
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currencyDisplay: 'narrowSymbol',
+      currency: invoice.currency,
+    }).format(value)
   const unitMoney = (value: number) =>
     new Intl.NumberFormat('en-US', {
       style: 'currency',
+      currencyDisplay: 'narrowSymbol',
       currency: invoice.currency,
       maximumFractionDigits: 6,
     }).format(value)

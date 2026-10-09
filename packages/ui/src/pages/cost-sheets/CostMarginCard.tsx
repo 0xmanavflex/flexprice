@@ -11,7 +11,11 @@ export const DEMO_COST_MARGIN: CostMargin = { currency: 'USD', revenue: 12400, c
 
 export function CostMarginCard({ margin = DEMO_COST_MARGIN }: { margin?: CostMargin }) {
   const fmt = (value: number) =>
-    new Intl.NumberFormat('en-US', { style: 'currency', currency: margin.currency }).format(value)
+    new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currencyDisplay: 'narrowSymbol',
+      currency: margin.currency,
+    }).format(value)
   const profit = margin.revenue - margin.cost
   const pct = margin.revenue > 0 ? (profit / margin.revenue) * 100 : 0
   return (

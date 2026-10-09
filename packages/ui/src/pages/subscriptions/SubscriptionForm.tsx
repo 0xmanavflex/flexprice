@@ -486,6 +486,7 @@ function money(amount: string | undefined, currency: string): string {
   try {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
+      currencyDisplay: 'narrowSymbol',
       currency: code,
       maximumFractionDigits: 8,
     }).format(value)

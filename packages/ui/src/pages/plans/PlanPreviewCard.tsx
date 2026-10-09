@@ -121,6 +121,7 @@ export function money(amount: number, currency: string, locale?: string): string
     const wholeCents = Math.abs(amount * 100 - Math.round(amount * 100)) < 1e-9
     return new Intl.NumberFormat(locale, {
       style: 'currency',
+      currencyDisplay: 'narrowSymbol',
       currency,
       ...(wholeCents ? {} : { minimumFractionDigits: 2, maximumFractionDigits: 6 }),
     }).format(amount)

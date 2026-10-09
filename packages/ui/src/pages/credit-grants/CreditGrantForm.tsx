@@ -159,9 +159,11 @@ export function CreditGrantCreateForm({
   const rateNumber = Number(rate)
   const dollarValue =
     creditsNumber > 0 && rateNumber > 0
-      ? new Intl.NumberFormat(undefined, { style: 'currency', currency: 'USD' }).format(
-          creditsNumber * rateNumber,
-        )
+      ? new Intl.NumberFormat(undefined, {
+          style: 'currency',
+          currencyDisplay: 'narrowSymbol',
+          currency: 'USD',
+        }).format(creditsNumber * rateNumber)
       : null
 
   const expiry =

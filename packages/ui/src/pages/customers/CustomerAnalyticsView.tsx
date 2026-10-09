@@ -42,7 +42,11 @@ export interface CustomerAnalyticsViewProps {
 }
 
 const usd = (n: number) =>
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(n)
+  new Intl.NumberFormat('en-US', {
+    style: 'currency',
+    currencyDisplay: 'narrowSymbol',
+    currency: 'USD',
+  }).format(n)
 
 const Muted = ({ children }: { children: React.ReactNode }) => (
   <span className="text-muted-foreground">{children}</span>
