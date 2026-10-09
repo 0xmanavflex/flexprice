@@ -189,7 +189,7 @@ export async function fetchCustomerSubscriptions(
   client: Flexprice,
   externalId: string,
 ): Promise<Subscription[]> {
-  const response = (await call(() => client.customers.getSubscriptionsForCustomer(externalId))) as {
+  const response = (await call(() => client.customers.getSubscriptionsForCustomer(externalId, 'plan'))) as {
     items?: unknown[]
   }
   return (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
