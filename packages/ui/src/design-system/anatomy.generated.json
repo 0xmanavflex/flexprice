@@ -339,7 +339,7 @@
       "story": "./src/compositions/layout/ContextualSection.stories.tsx"
     },
     "ContractChargeDialog": {
-      "file": "src/pages/subscriptions/ContractChargeDialog.tsx",
+      "file": "src/pages/contracts/ContractChargeDialog.tsx",
       "layer": "surface",
       "composes": [
         "Composer",
