@@ -3,7 +3,7 @@ import { expect, within } from 'storybook/test'
 import { CostMarginCard } from './CostMarginCard'
 
 const meta = {
-  title: 'Surfaces/CostMarginCard',
+  title: 'App/Settings/Cost sheets/Cost margin card',
   component: CostMarginCard,
   parameters: { layout: 'padded' },
   decorators: [

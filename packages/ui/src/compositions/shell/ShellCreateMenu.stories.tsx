@@ -18,7 +18,7 @@ type PlaygroundArgs = Omit<ComponentProps<typeof ShellCreateMenu>, 'actions'> & 
 }
 
 const meta = {
-  title: 'Foundation/Compositions/ShellCreateMenu',
+  title: 'Building blocks/Shell/ShellCreateMenu',
   component: ShellCreateMenu,
   parameters: {
     a11y: {

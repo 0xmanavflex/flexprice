@@ -5,7 +5,7 @@ import { ThemeProvider } from '@ui/compositions/shell'
 import { ThemeChoiceCards, ThemePreferenceCards, type ThemeChoice } from './AppearanceSettings'
 
 const meta = {
-  title: 'Pages/Settings/Appearance',
+  title: 'App/Settings/Settings/Appearance',
   component: ThemeChoiceCards,
   tags: ['!autodocs'],
   args: { value: 'system', onValueChange: fn(), label: 'Interface theme', disabled: false },

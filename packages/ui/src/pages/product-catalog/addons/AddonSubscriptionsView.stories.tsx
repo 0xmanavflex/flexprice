@@ -21,7 +21,7 @@ function makeSubscribers(count: number, status: StatusMix): AddonSubscriber[] {
 }
 
 const meta = {
-  title: 'Surfaces/AddonSubscriptionsView',
+  title: 'App/Product catalog/Add-ons/Add-on contracts',
   component: AddonSubscriptionsView,
   parameters: { layout: 'padded' },
 } satisfies Meta<typeof AddonSubscriptionsView>

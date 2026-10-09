@@ -15,7 +15,7 @@ import type { MetricTab } from '../shared/charts'
  * numbers can never be in.
  */
 const meta = {
-  title: 'Surfaces/RevenueDashboard',
+  title: 'App/Revenue/Revenue dashboard',
   component: RevenueDashboard,
   parameters: { layout: 'padded' },
   argTypes: {

@@ -4,7 +4,7 @@ import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { InlineField, type InlineFieldProps } from './InlineField'
 
 const meta = {
-  title: 'Foundation/Compositions/InlineField',
+  title: 'Building blocks/Forms/InlineField',
   component: InlineField,
   parameters: { layout: 'padded' },
   args: {

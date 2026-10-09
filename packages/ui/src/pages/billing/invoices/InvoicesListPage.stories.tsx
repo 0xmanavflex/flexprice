@@ -84,7 +84,7 @@ function InvoicesListBody({
 }
 
 const meta = {
-  title: 'Pages/Billing/Invoices list',
+  title: 'App/Billing/Invoices/Invoice list',
   component: InvoicesListPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

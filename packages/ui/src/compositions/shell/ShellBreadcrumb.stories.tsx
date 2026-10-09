@@ -21,7 +21,7 @@ type PlaygroundArgs = {
 }
 
 const meta = {
-  title: 'Foundation/Compositions/Shell/ShellBreadcrumb',
+  title: 'Building blocks/Shell/ShellBreadcrumb',
   component: ShellBreadcrumb,
   parameters: { layout: 'padded' },
   argTypes: {

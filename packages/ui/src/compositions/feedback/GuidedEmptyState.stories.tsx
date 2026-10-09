@@ -37,7 +37,7 @@ const allGuides: GuideCard[] = [
 ]
 
 const meta = {
-  title: 'Foundation/Compositions/GuidedEmptyState',
+  title: 'Building blocks/Feedback & states/GuidedEmptyState',
   component: GuidedEmptyState,
   parameters: { layout: 'padded' },
   args: {

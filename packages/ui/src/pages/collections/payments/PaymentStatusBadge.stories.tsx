@@ -4,7 +4,7 @@ import { PAYMENT_STATUS_LABEL, PaymentStatus } from '@fp/domain'
 import { PaymentStatusBadge } from './PaymentStatusBadge'
 
 const meta = {
-  title: 'Surfaces/PaymentStatusBadge',
+  title: 'App/Collections/Payments/Payment status badge',
   component: PaymentStatusBadge,
   parameters: { layout: 'centered' },
   argTypes: {

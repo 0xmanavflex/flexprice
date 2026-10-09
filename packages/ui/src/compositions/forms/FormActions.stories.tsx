@@ -44,7 +44,7 @@ function FormActionsDemo({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/FormActions',
+  title: 'Building blocks/Forms/FormActions',
   component: FormActions,
   parameters: { layout: 'padded' },
   argTypes: {

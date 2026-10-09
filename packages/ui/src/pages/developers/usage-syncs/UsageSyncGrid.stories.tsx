@@ -75,7 +75,7 @@ function manyUsageSyncs(count: number): UsageSync[] {
 }
 
 const meta = {
-  title: 'Surfaces/UsageSyncGrid',
+  title: 'App/Developers/Usage sync/Usage sync table',
   component: UsageSyncGrid,
   parameters: { layout: 'padded' },
   args: {

@@ -24,7 +24,7 @@ const linkage = new Map<string, ProductLinkage>([
 ])
 
 const meta = {
-  title: 'Surfaces/FeatureGrid',
+  title: 'App/Product catalog/Products/Product table',
   component: FeatureGrid,
   parameters: { layout: 'padded' },
   args: {

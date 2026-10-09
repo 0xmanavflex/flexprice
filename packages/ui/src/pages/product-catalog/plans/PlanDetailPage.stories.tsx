@@ -228,7 +228,7 @@ function PlanDetailPage({
 }
 
 const meta = {
-  title: 'Pages/Catalog/Plan detail',
+  title: 'App/Product catalog/Plans/Plan detail',
   component: PlanDetailPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

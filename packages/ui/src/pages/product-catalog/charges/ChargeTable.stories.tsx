@@ -19,7 +19,7 @@ import { ChargeTable } from './ChargeTable'
  * intent reported out. No network.
  */
 const meta = {
-  title: 'Surfaces/ChargeTable',
+  title: 'App/Product catalog/Charges/Charge table',
   component: ChargeTable,
   parameters: { layout: 'padded' },
   args: { charges: [], locale: 'en-US' },

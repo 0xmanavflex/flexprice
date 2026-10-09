@@ -23,7 +23,7 @@ const items: DetailItem[] = [
  * reads the pairing. `columns` is the only decision.
  */
 const meta = {
-  title: 'Foundation/Compositions/DetailList',
+  title: 'Building blocks/Tables & lists/DetailList',
   component: DetailList,
   parameters: { layout: 'padded' },
   args: { items },

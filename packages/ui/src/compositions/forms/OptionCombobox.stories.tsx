@@ -51,7 +51,7 @@ function Controlled({ value: initial, onValueChange, label = 'Currency', ...prop
 }
 
 const meta = {
-  title: 'Foundation/Compositions/OptionCombobox',
+  title: 'Building blocks/Forms/OptionCombobox',
   component: OptionCombobox,
   parameters: {
     layout: 'centered',

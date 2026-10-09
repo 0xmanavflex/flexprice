@@ -74,7 +74,7 @@ function LiveSwitcher({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/EnvironmentSwitcher',
+  title: 'Building blocks/Shell/EnvironmentSwitcher',
   component: EnvironmentSwitcher,
   decorators: [
     (Story) => (

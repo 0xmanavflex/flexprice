@@ -81,7 +81,7 @@ function Demo({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/Form kit',
+  title: 'Building blocks/Forms/FormKit',
   component: Demo,
   parameters: { layout: 'centered' },
   argTypes: {

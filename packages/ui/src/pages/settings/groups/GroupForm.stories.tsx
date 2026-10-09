@@ -15,7 +15,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/GroupForm',
+  title: 'App/Settings/Groups/Group form',
   component: GroupForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

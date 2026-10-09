@@ -5,7 +5,7 @@ import { type UsageSync, money } from '@fp/domain'
 import { UsageSyncDetailSheet } from './UsageSyncDetailSheet'
 
 const meta = {
-  title: 'Surfaces/UsageSyncDetailSheet',
+  title: 'App/Developers/Usage sync/Usage sync detail sheet',
   component: UsageSyncDetailSheet,
   parameters: { layout: 'fullscreen' },
   args: {

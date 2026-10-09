@@ -3,7 +3,7 @@ import { expect, within } from 'storybook/test'
 import { UsageMeter } from './UsageMeter'
 
 const meta = {
-  title: 'Foundation/Flexprice/UsageMeter',
+  title: 'Building blocks/Charts & metrics/UsageMeter',
   component: UsageMeter,
   parameters: { layout: 'padded' },
   args: { label: 'API calls', used: 4200, limit: 10000, unit: 'calls', locale: 'en-US' },

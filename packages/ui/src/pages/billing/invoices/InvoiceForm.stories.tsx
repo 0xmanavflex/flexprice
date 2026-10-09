@@ -45,7 +45,7 @@ const withHeight: Decorator = (Story) => (
 
 /** The ReUI Form 3 invoice creator, for a one-off invoice (create) or a draft (edit). */
 const meta = {
-  title: 'Surfaces/InvoiceForm',
+  title: 'App/Billing/Invoices/Invoice form',
   component: InvoiceForm,
   parameters: {
     layout: 'fullscreen',

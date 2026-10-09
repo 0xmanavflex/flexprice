@@ -17,7 +17,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/PriceUnitForm',
+  title: 'App/Settings/Price units/Price unit form',
   component: PriceUnitForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

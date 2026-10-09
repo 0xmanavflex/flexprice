@@ -4,7 +4,7 @@ import { WebhookEventCatalog } from './WebhookEventCatalog'
 import { DEMO_WEBHOOK_EVENT_TYPES } from './webhookFixtures'
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookEventCatalog',
+  title: 'App/Developers/Webhooks/Event catalog',
   component: WebhookEventCatalog,
   parameters: { layout: 'padded' },
   args: { eventTypes: DEMO_WEBHOOK_EVENT_TYPES },

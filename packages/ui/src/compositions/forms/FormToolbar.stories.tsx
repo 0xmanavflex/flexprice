@@ -9,7 +9,7 @@ import { FormToolbar } from './FormToolbar'
  * button hands control back, and the Previous/Next of a staged form.
  */
 const meta = {
-  title: 'Foundation/Compositions/Form toolbar',
+  title: 'Building blocks/Forms/FormToolbar',
   component: FormToolbar,
   parameters: { layout: 'fullscreen' },
   args: {

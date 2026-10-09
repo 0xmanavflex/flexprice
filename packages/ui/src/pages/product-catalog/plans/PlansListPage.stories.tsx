@@ -78,7 +78,7 @@ function PlansListBody({ rows, status, isLoading, hasError, initialSearch }: Pla
 }
 
 const meta = {
-  title: 'Pages/Catalog/Plans list',
+  title: 'App/Product catalog/Plans/Plan list',
   component: PlansListPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

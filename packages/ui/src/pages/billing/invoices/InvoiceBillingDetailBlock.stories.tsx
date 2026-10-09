@@ -2,7 +2,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { InvoiceBillingDetailBlock } from './InvoiceBillingDetailBlock'
 
 const meta = {
-  title: 'Surfaces/InvoiceBillingDetailBlock',
+  title: 'App/Billing/Invoices/Billing details block',
   component: InvoiceBillingDetailBlock,
   parameters: {
     layout: 'fullscreen',

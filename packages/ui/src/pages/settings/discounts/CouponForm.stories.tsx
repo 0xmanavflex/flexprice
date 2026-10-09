@@ -17,7 +17,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/CouponForm',
+  title: 'App/Settings/Discounts/Discount form',
   component: CouponForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

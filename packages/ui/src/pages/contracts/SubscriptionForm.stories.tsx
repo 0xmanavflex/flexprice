@@ -132,7 +132,7 @@ const withHeight: Decorator = (Story) => (
 
 /** Start a contract in four steps: customer, plan and charges, benefits (entitlements, credit grants, commitments) and review. */
 const meta = {
-  title: 'Surfaces/SubscriptionForm',
+  title: 'App/Contracts/Contract form',
   component: SubscriptionFormPlayground,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

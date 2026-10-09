@@ -6,7 +6,7 @@ import { EnvironmentForm } from './EnvironmentForm'
 
 /** The dialog portals to the document, so the play functions read from there. */
 const meta = {
-  title: 'Flexprice/EnvironmentForm',
+  title: 'App/Settings/Environments/Environment form',
   component: EnvironmentForm,
   args: {
     open: true,

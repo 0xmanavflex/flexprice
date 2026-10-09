@@ -21,7 +21,7 @@ function Controlled(args: ComponentProps<typeof Toolbar>) {
 }
 
 const meta = {
-  title: 'Foundation/Compositions/Toolbar',
+  title: 'Building blocks/Tables & lists/Toolbar',
   component: Toolbar,
   parameters: { layout: 'padded' },
   args: {

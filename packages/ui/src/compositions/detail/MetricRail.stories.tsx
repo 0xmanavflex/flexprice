@@ -24,7 +24,7 @@ type PlaygroundArgs = ComponentProps<typeof MetricRail> & {
  * a coupon's redemptions.
  */
 const meta = {
-  title: 'Foundation/Compositions/MetricRail',
+  title: 'Building blocks/Detail pages/MetricRail',
   component: MetricRail,
   parameters: { layout: 'padded' },
   args: {

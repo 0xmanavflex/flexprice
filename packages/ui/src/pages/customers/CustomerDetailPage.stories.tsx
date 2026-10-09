@@ -151,7 +151,7 @@ function CustomerDetailPage({
 }
 
 const meta = {
-  title: 'Pages/Customers/Customer detail',
+  title: 'App/Customers/Customer detail',
   component: CustomerDetailPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

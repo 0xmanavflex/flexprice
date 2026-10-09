@@ -22,7 +22,7 @@ function MembersPlayground({ kind, count }: PlaygroundArgs) {
 }
 
 const meta = {
-  title: 'Surfaces/GroupMembersView',
+  title: 'App/Settings/Groups/Group members',
   component: GroupMembersView,
   parameters: { layout: 'padded' },
   args: { kind: 'features' },

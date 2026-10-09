@@ -98,7 +98,7 @@ function ContextualSectionDemo({ rows, formOpen, onCreate, onBack, ...props }: P
 }
 
 const meta = {
-  title: 'Foundation/Compositions/ContextualSection',
+  title: 'Building blocks/Layout/ContextualSection',
   component: ContextualSection,
   parameters: { layout: 'padded' },
   argTypes: {

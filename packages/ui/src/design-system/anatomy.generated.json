@@ -3219,21 +3219,21 @@
   },
   "stories": {
     "./src/compositions/charts/ChartBox.stories.tsx": {
-      "title": "Foundation/Compositions/ChartBox",
+      "title": "Building blocks/Charts & metrics/ChartBox",
       "component": "ChartBox",
       "uses": [
         "ChartBox"
       ]
     },
     "./src/compositions/detail/DetailHeader.stories.tsx": {
-      "title": "Foundation/Compositions/DetailHeader",
+      "title": "Building blocks/Detail pages/DetailHeader",
       "component": "DetailHeader",
       "uses": [
         "DetailHeader"
       ]
     },
     "./src/compositions/detail/DetailKit.stories.tsx": {
-      "title": "Foundation/Compositions/DetailKit",
+      "title": "Building blocks/Detail pages/DetailKit",
       "component": null,
       "uses": [
         "ChoiceCards",
@@ -3251,49 +3251,49 @@
       ]
     },
     "./src/compositions/detail/DetailShell.stories.tsx": {
-      "title": "Foundation/Compositions/DetailShell",
+      "title": "Building blocks/Detail pages/DetailShell",
       "component": "DetailShell",
       "uses": [
         "DetailShell"
       ]
     },
     "./src/compositions/detail/DetailStats.stories.tsx": {
-      "title": "Foundation/Compositions/DetailStats",
+      "title": "Building blocks/Detail pages/DetailStats",
       "component": "DetailStats",
       "uses": [
         "DetailStats"
       ]
     },
     "./src/compositions/detail/MetadataCard.stories.tsx": {
-      "title": "Foundation/Compositions/MetadataCard",
+      "title": "Building blocks/Detail pages/MetadataCard",
       "component": "MetadataCard",
       "uses": [
         "MetadataCard"
       ]
     },
     "./src/compositions/detail/MetricRail.stories.tsx": {
-      "title": "Foundation/Compositions/MetricRail",
+      "title": "Building blocks/Detail pages/MetricRail",
       "component": "MetricRail",
       "uses": [
         "MetricRail"
       ]
     },
     "./src/compositions/feedback/AppFailure.stories.tsx": {
-      "title": "Foundation/Compositions/AppFailure",
+      "title": "Building blocks/Feedback & states/AppFailure",
       "component": "AppFailure",
       "uses": [
         "AppFailure"
       ]
     },
     "./src/compositions/feedback/ConfirmDialog.stories.tsx": {
-      "title": "Foundation/Compositions/ConfirmDialog",
+      "title": "Building blocks/Feedback & states/ConfirmDialog",
       "component": "ConfirmDialog",
       "uses": [
         "ConfirmDialog"
       ]
     },
     "./src/compositions/feedback/EmptyState.stories.tsx": {
-      "title": "Foundation/Compositions/EmptyState",
+      "title": "Building blocks/Feedback & states/EmptyState",
       "component": "EmptyState",
       "uses": [
         "EmptyState",
@@ -3310,14 +3310,14 @@
       ]
     },
     "./src/compositions/feedback/SectionEmpty.stories.tsx": {
-      "title": "Foundation/Compositions/SectionEmpty",
+      "title": "Building blocks/Feedback & states/SectionEmpty",
       "component": "SectionEmpty",
       "uses": [
         "SectionEmpty"
       ]
     },
     "./src/compositions/feedback/States.stories.tsx": {
-      "title": "Foundation/Compositions/ListState",
+      "title": "Building blocks/Feedback & states/States",
       "component": "ListState",
       "uses": [
         "EmptyState",
@@ -3326,14 +3326,14 @@
       ]
     },
     "./src/compositions/forms/CheckboxRow.stories.tsx": {
-      "title": "Foundation/Compositions/CheckboxRow",
+      "title": "Building blocks/Forms/CheckboxRow",
       "component": "CheckboxRow",
       "uses": [
         "CheckboxRow"
       ]
     },
     "./src/compositions/forms/DateInput.stories.tsx": {
-      "title": "Foundation/Compositions/DateInput",
+      "title": "Building blocks/Forms/DateInput",
       "component": "DateInput",
       "uses": [
         "DateInput",
@@ -3341,35 +3341,35 @@
       ]
     },
     "./src/compositions/forms/EditableCard.stories.tsx": {
-      "title": "Foundation/Compositions/EditableCard",
+      "title": "Building blocks/Forms/EditableCard",
       "component": "EditableCard",
       "uses": [
         "EditableCard"
       ]
     },
     "./src/compositions/forms/EditableFields.stories.tsx": {
-      "title": "Compositions/EditableFields",
+      "title": "Building blocks/Forms/EditableFields",
       "component": null,
       "uses": [
         "EditableFields"
       ]
     },
     "./src/compositions/forms/Field.stories.tsx": {
-      "title": "Foundation/Compositions/Field",
+      "title": "Building blocks/Forms/Field",
       "component": "Field",
       "uses": [
         "Field"
       ]
     },
     "./src/compositions/forms/FormActions.stories.tsx": {
-      "title": "Foundation/Compositions/FormActions",
+      "title": "Building blocks/Forms/FormActions",
       "component": "FormActions",
       "uses": [
         "FormActions"
       ]
     },
     "./src/compositions/forms/FormCard.stories.tsx": {
-      "title": "Foundation/Compositions/FormCard",
+      "title": "Building blocks/Forms/FormCard",
       "component": "FormCard",
       "uses": [
         "DateInput",
@@ -3379,7 +3379,7 @@
       ]
     },
     "./src/compositions/forms/FormDialog.stories.tsx": {
-      "title": "Foundation/Compositions/FormDialog",
+      "title": "Building blocks/Forms/FormDialog",
       "component": "FormDialog",
       "uses": [
         "Composer",
@@ -3389,14 +3389,14 @@
       ]
     },
     "./src/compositions/forms/FormDisclosure.stories.tsx": {
-      "title": "Foundation/Compositions/FormDisclosure",
+      "title": "Building blocks/Forms/FormDisclosure",
       "component": "FormDisclosure",
       "uses": [
         "FormDisclosure"
       ]
     },
     "./src/compositions/forms/FormKit.stories.tsx": {
-      "title": "Foundation/Compositions/Form kit",
+      "title": "Building blocks/Forms/FormKit",
       "component": null,
       "uses": [
         "DateInput",
@@ -3408,7 +3408,7 @@
       ]
     },
     "./src/compositions/forms/FormPage.stories.tsx": {
-      "title": "Foundation/Compositions/Form page",
+      "title": "Building blocks/Forms/FormPage",
       "component": "FormPage",
       "uses": [
         "FormCard",
@@ -3417,7 +3417,7 @@
       ]
     },
     "./src/compositions/forms/FormPreview.stories.tsx": {
-      "title": "Foundation/Compositions/Form preview",
+      "title": "Building blocks/Forms/FormPreview",
       "component": "FormPreview",
       "uses": [
         "FormPreview",
@@ -3436,63 +3436,63 @@
       ]
     },
     "./src/compositions/forms/FormToolbar.stories.tsx": {
-      "title": "Foundation/Compositions/Form toolbar",
+      "title": "Building blocks/Forms/FormToolbar",
       "component": "FormToolbar",
       "uses": [
         "FormToolbar"
       ]
     },
     "./src/compositions/forms/InfoHint.stories.tsx": {
-      "title": "Foundation/Compositions/InfoHint",
+      "title": "Building blocks/Forms/InfoHint",
       "component": "InfoHint",
       "uses": [
         "InfoHint"
       ]
     },
     "./src/compositions/forms/InlineField.stories.tsx": {
-      "title": "Foundation/Compositions/InlineField",
+      "title": "Building blocks/Forms/InlineField",
       "component": "InlineField",
       "uses": [
         "InlineField"
       ]
     },
     "./src/compositions/forms/LabelWithHint.stories.tsx": {
-      "title": "Foundation/Compositions/LabelWithHint",
+      "title": "Building blocks/Forms/LabelWithHint",
       "component": "LabelWithHint",
       "uses": [
         "LabelWithHint"
       ]
     },
     "./src/compositions/forms/OptionCombobox.stories.tsx": {
-      "title": "Foundation/Compositions/OptionCombobox",
+      "title": "Building blocks/Forms/OptionCombobox",
       "component": "OptionCombobox",
       "uses": [
         "OptionCombobox"
       ]
     },
     "./src/compositions/forms/OptionSelect.stories.tsx": {
-      "title": "Foundation/Compositions/OptionSelect",
+      "title": "Building blocks/Forms/OptionSelect",
       "component": "OptionSelect",
       "uses": [
         "OptionSelect"
       ]
     },
     "./src/compositions/forms/WorkflowStepper.stories.tsx": {
-      "title": "Foundation/Compositions/WorkflowStepper",
+      "title": "Building blocks/Forms/WorkflowStepper",
       "component": "WorkflowStepper",
       "uses": [
         "WorkflowStepper"
       ]
     },
     "./src/compositions/layout/ConnectorCard.stories.tsx": {
-      "title": "Foundation/Compositions/ConnectorCard",
+      "title": "Building blocks/Layout/ConnectorCard",
       "component": "ConnectorCard",
       "uses": [
         "ConnectorCard"
       ]
     },
     "./src/compositions/layout/ContextualSection.stories.tsx": {
-      "title": "Foundation/Compositions/ContextualSection",
+      "title": "Building blocks/Layout/ContextualSection",
       "component": "ContextualSection",
       "uses": [
         "ContextualSection",
@@ -3501,14 +3501,14 @@
       ]
     },
     "./src/compositions/layout/FitToWindow.stories.tsx": {
-      "title": "Foundation/Compositions/FitToWindow",
+      "title": "Building blocks/Layout/FitToWindow",
       "component": "FitToWindow",
       "uses": [
         "FitToWindow"
       ]
     },
     "./src/compositions/layout/Page.stories.tsx": {
-      "title": "Foundation/Compositions/Page",
+      "title": "Building blocks/Layout/Page",
       "component": "PageHeader",
       "uses": [
         "GridToolbar",
@@ -3518,14 +3518,14 @@
       ]
     },
     "./src/compositions/layout/ResourceNavigation.stories.tsx": {
-      "title": "Foundation/Compositions/ResourceNavigation",
+      "title": "Building blocks/Layout/ResourceNavigation",
       "component": null,
       "uses": [
         "ResourceNavigation"
       ]
     },
     "./src/compositions/layout/Section.stories.tsx": {
-      "title": "Foundation/Compositions/Section",
+      "title": "Building blocks/Layout/Section",
       "component": "Section",
       "uses": [
         "Panel",
@@ -3544,35 +3544,35 @@
       ]
     },
     "./src/compositions/shell/EnvironmentSwitcher.stories.tsx": {
-      "title": "Foundation/Compositions/EnvironmentSwitcher",
+      "title": "Building blocks/Shell/EnvironmentSwitcher",
       "component": "EnvironmentSwitcher",
       "uses": [
         "EnvironmentSwitcher"
       ]
     },
     "./src/compositions/shell/ShellAccount.stories.tsx": {
-      "title": "Foundation/Compositions/Shell/ShellAccount",
+      "title": "Building blocks/Shell/ShellAccount",
       "component": "ShellAccount",
       "uses": [
         "ShellAccount"
       ]
     },
     "./src/compositions/shell/ShellBreadcrumb.stories.tsx": {
-      "title": "Foundation/Compositions/Shell/ShellBreadcrumb",
+      "title": "Building blocks/Shell/ShellBreadcrumb",
       "component": "ShellBreadcrumb",
       "uses": [
         "ShellBreadcrumb"
       ]
     },
     "./src/compositions/shell/ShellCreateMenu.stories.tsx": {
-      "title": "Foundation/Compositions/ShellCreateMenu",
+      "title": "Building blocks/Shell/ShellCreateMenu",
       "component": "ShellCreateMenu",
       "uses": [
         "ShellCreateMenu"
       ]
     },
     "./src/compositions/shell/ShellDetailTrail.stories.tsx": {
-      "title": "Foundation/Compositions/Shell/ShellDetailTrail",
+      "title": "Building blocks/Shell/ShellDetailTrail",
       "component": "ShellDetailTrailProvider",
       "uses": [
         "DetailBreadcrumb",
@@ -3588,28 +3588,28 @@
       ]
     },
     "./src/compositions/shell/ShellPromoCard.stories.tsx": {
-      "title": "Foundation/Compositions/Shell/ShellPromoCard",
+      "title": "Building blocks/Shell/ShellPromoCard",
       "component": "ShellPromoCard",
       "uses": [
         "ShellPromoCard"
       ]
     },
     "./src/compositions/shell/ShellSearch.stories.tsx": {
-      "title": "Foundation/Compositions/Shell/ShellSearch",
+      "title": "Building blocks/Shell/ShellSearch",
       "component": "ShellSearch",
       "uses": [
         "ShellSearch"
       ]
     },
     "./src/compositions/shell/ThemeProvider.stories.tsx": {
-      "title": "Foundation/Compositions/Shell/ThemeProvider",
+      "title": "Building blocks/Shell/ThemeProvider",
       "component": "ThemeProvider",
       "uses": [
         "ThemeProvider"
       ]
     },
     "./src/compositions/shell/ThemeShortcut.stories.tsx": {
-      "title": "Foundation/Compositions/Shell/ThemeShortcut",
+      "title": "Building blocks/Shell/ThemeShortcut",
       "component": "ThemeShortcut",
       "uses": [
         "ThemeProvider",
@@ -3617,7 +3617,7 @@
       ]
     },
     "./src/compositions/shell/ThemeToggle.stories.tsx": {
-      "title": "Foundation/Compositions/ThemeToggle",
+      "title": "Building blocks/Shell/ThemeToggle",
       "component": "ThemeToggle",
       "uses": [
         "ThemeProvider",
@@ -3625,28 +3625,28 @@
       ]
     },
     "./src/compositions/tables/DetailList.stories.tsx": {
-      "title": "Foundation/Compositions/DetailList",
+      "title": "Building blocks/Tables & lists/DetailList",
       "component": "DetailList",
       "uses": [
         "DetailList"
       ]
     },
     "./src/compositions/tables/FilterBar.stories.tsx": {
-      "title": "Foundation/Compositions/FilterBar",
+      "title": "Building blocks/Tables & lists/FilterBar",
       "component": "FilterBar",
       "uses": [
         "FilterBar"
       ]
     },
     "./src/compositions/tables/GridFooter.stories.tsx": {
-      "title": "Foundation/Compositions/GridFooter",
+      "title": "Building blocks/Tables & lists/GridFooter",
       "component": "GridFooter",
       "uses": [
         "GridFooter"
       ]
     },
     "./src/compositions/tables/GridToolbar.stories.tsx": {
-      "title": "Foundation/Compositions/GridToolbar",
+      "title": "Building blocks/Tables & lists/GridToolbar",
       "component": "GridToolbar",
       "uses": [
         "GridToolbar",
@@ -3654,7 +3654,7 @@
       ]
     },
     "./src/compositions/tables/SortableList.stories.tsx": {
-      "title": "Foundation/Compositions/SortableList",
+      "title": "Building blocks/Tables & lists/SortableList",
       "component": "SortableList",
       "uses": [
         "SortableItem",
@@ -3662,14 +3662,14 @@
       ]
     },
     "./src/compositions/tables/SortMenu.stories.tsx": {
-      "title": "Foundation/Compositions/SortMenu",
+      "title": "Building blocks/Tables & lists/SortMenu",
       "component": "SortMenu",
       "uses": [
         "SortMenu"
       ]
     },
     "./src/compositions/tables/Toolbar.stories.tsx": {
-      "title": "Foundation/Compositions/Toolbar",
+      "title": "Building blocks/Tables & lists/Toolbar",
       "component": "Toolbar",
       "uses": [
         "Toolbar"
@@ -3681,71 +3681,71 @@
       "uses": []
     },
     "./src/design-system/PageMap.stories.tsx": {
-      "title": "Design System/Page map",
+      "title": "Design system/Page map",
       "component": null,
       "uses": []
     },
     "./src/design-system/Radius.stories.tsx": {
-      "title": "Design System/Radius & Elevation",
+      "title": "Design system/Radius & elevation",
       "component": null,
       "uses": []
     },
     "./src/design-system/Typography.stories.tsx": {
-      "title": "Design System/Typography",
+      "title": "Design system/Typography",
       "component": null,
       "uses": []
     },
     "./src/pages/auth/AcceptInvitationForm.stories.tsx": {
-      "title": "Surfaces/AcceptInvitationForm",
+      "title": "App/Sign-in/Accept invitation form",
       "component": "AcceptInvitationForm",
       "uses": [
         "AcceptInvitationForm"
       ]
     },
     "./src/pages/auth/ForgotPasswordForm.stories.tsx": {
-      "title": "Surfaces/ForgotPasswordForm",
+      "title": "App/Sign-in/Forgot password form",
       "component": "ForgotPasswordForm",
       "uses": [
         "ForgotPasswordForm"
       ]
     },
     "./src/pages/auth/SignInForm.stories.tsx": {
-      "title": "Surfaces/SignInForm",
+      "title": "App/Sign-in/Sign-in form",
       "component": "SignInForm",
       "uses": [
         "SignInForm"
       ]
     },
     "./src/pages/auth/SignInScreen.stories.tsx": {
-      "title": "Surfaces/SignInScreen",
+      "title": "App/Sign-in/Sign-in screen",
       "component": "SignInScreen",
       "uses": [
         "SignInScreen"
       ]
     },
     "./src/pages/billing/credit-notes/CreditNoteForm.stories.tsx": {
-      "title": "Surfaces/CreditNoteForm",
+      "title": "App/Billing/Credit notes/Credit note form",
       "component": "CreditNoteForm",
       "uses": [
         "CreditNoteForm"
       ]
     },
     "./src/pages/billing/credit-notes/CreditNoteGrid.stories.tsx": {
-      "title": "Surfaces/CreditNoteGrid",
+      "title": "App/Billing/Credit notes/Credit note table",
       "component": "CreditNoteGrid",
       "uses": [
         "CreditNoteGrid"
       ]
     },
     "./src/pages/billing/invoices/InvoiceBillingDetailBlock.stories.tsx": {
-      "title": "Surfaces/InvoiceBillingDetailBlock",
+      "title": "App/Billing/Invoices/Billing details block",
       "component": "InvoiceBillingDetailBlock",
       "uses": [
         "InvoiceBillingDetailBlock"
       ]
     },
     "./src/pages/billing/invoices/InvoiceDetailPage.stories.tsx": {
-      "title": "Pages/Billing/Invoice detail",
+      "title": "App/Billing/Invoices/Invoice detail",
       "component": null,
       "uses": [
         "AppFailure",
@@ -3756,28 +3756,28 @@
       ]
     },
     "./src/pages/billing/invoices/InvoiceDetailView.stories.tsx": {
-      "title": "Surfaces/InvoiceDetailView",
+      "title": "App/Billing/Invoices/Invoice detail view",
       "component": null,
       "uses": [
         "InvoiceDetailView"
       ]
     },
     "./src/pages/billing/invoices/InvoiceForm.stories.tsx": {
-      "title": "Surfaces/InvoiceForm",
+      "title": "App/Billing/Invoices/Invoice form",
       "component": "InvoiceForm",
       "uses": [
         "InvoiceForm"
       ]
     },
     "./src/pages/billing/invoices/InvoiceGrid.stories.tsx": {
-      "title": "Surfaces/InvoiceGrid",
+      "title": "App/Billing/Invoices/Invoice table",
       "component": "InvoiceGrid",
       "uses": [
         "InvoiceGrid"
       ]
     },
     "./src/pages/billing/invoices/InvoicesListPage.stories.tsx": {
-      "title": "Pages/Billing/Invoices list",
+      "title": "App/Billing/Invoices/Invoice list",
       "component": null,
       "uses": [
         "InvoiceGrid",
@@ -3787,28 +3787,28 @@
       ]
     },
     "./src/pages/collections/payments/CollectionsSummary.stories.tsx": {
-      "title": "Surfaces/CollectionsSummary",
+      "title": "App/Collections/Payments/Collections summary",
       "component": "CollectionsSummary",
       "uses": [
         "CollectionsSummary"
       ]
     },
     "./src/pages/collections/payments/PaymentForm.stories.tsx": {
-      "title": "Surfaces/PaymentForm",
+      "title": "App/Collections/Payments/Payment form",
       "component": "PaymentForm",
       "uses": [
         "PaymentForm"
       ]
     },
     "./src/pages/collections/payments/PaymentGrid.stories.tsx": {
-      "title": "Surfaces/PaymentGrid",
+      "title": "App/Collections/Payments/Payment table",
       "component": "PaymentGrid",
       "uses": [
         "PaymentGrid"
       ]
     },
     "./src/pages/collections/payments/PaymentStatusBadge.stories.tsx": {
-      "title": "Surfaces/PaymentStatusBadge",
+      "title": "App/Collections/Payments/Payment status badge",
       "component": "PaymentStatusBadge",
       "uses": [
         "PaymentStatusBadge"
@@ -3822,21 +3822,21 @@
       ]
     },
     "./src/pages/contracts/SubscriptionForm.stories.tsx": {
-      "title": "Surfaces/SubscriptionForm",
+      "title": "App/Contracts/Contract form",
       "component": null,
       "uses": [
         "SubscriptionForm"
       ]
     },
     "./src/pages/contracts/SubscriptionGrid.stories.tsx": {
-      "title": "Surfaces/SubscriptionGrid",
+      "title": "App/Contracts/Contract table",
       "component": "SubscriptionGrid",
       "uses": [
         "SubscriptionGrid"
       ]
     },
     "./src/pages/contracts/SubscriptionsListPage.stories.tsx": {
-      "title": "Pages/Billing/Subscriptions list",
+      "title": "App/Contracts/Contract list",
       "component": null,
       "uses": [
         "ListState",
@@ -3846,28 +3846,28 @@
       ]
     },
     "./src/pages/contracts/SubscriptionStatusBadge.stories.tsx": {
-      "title": "Surfaces/SubscriptionStatusBadge",
+      "title": "App/Contracts/Contract status badge",
       "component": "SubscriptionStatusBadge",
       "uses": [
         "SubscriptionStatusBadge"
       ]
     },
     "./src/pages/customers/CustomerAnalyticsView.stories.tsx": {
-      "title": "Surfaces/CustomerAnalyticsView",
+      "title": "App/Customers/Customer analytics",
       "component": "CustomerAnalyticsView",
       "uses": [
         "CustomerAnalyticsView"
       ]
     },
     "./src/pages/customers/CustomerDetail.stories.tsx": {
-      "title": "Surfaces/CustomerDetail",
+      "title": "App/Customers/Customer detail view",
       "component": null,
       "uses": [
         "CustomerDetail"
       ]
     },
     "./src/pages/customers/CustomerDetailPage.stories.tsx": {
-      "title": "Pages/Customers/Customer detail",
+      "title": "App/Customers/Customer detail",
       "component": null,
       "uses": [
         "AppFailure",
@@ -3878,28 +3878,28 @@
       ]
     },
     "./src/pages/customers/CustomerEventsGrid.stories.tsx": {
-      "title": "Surfaces/CustomerEventsGrid",
+      "title": "App/Customers/Customer events",
       "component": "CustomerEventsGrid",
       "uses": [
         "CustomerEventsGrid"
       ]
     },
     "./src/pages/customers/CustomerForm.stories.tsx": {
-      "title": "Surfaces/CustomerForm",
+      "title": "App/Customers/Customer form",
       "component": "CustomerForm",
       "uses": [
         "CustomerForm"
       ]
     },
     "./src/pages/customers/CustomerGrid.stories.tsx": {
-      "title": "Surfaces/CustomerGrid",
+      "title": "App/Customers/Customer table",
       "component": "CustomerGrid",
       "uses": [
         "CustomerGrid"
       ]
     },
     "./src/pages/customers/CustomersListPage.stories.tsx": {
-      "title": "Pages/Customers/Customers list",
+      "title": "App/Customers/Customer list",
       "component": null,
       "uses": [
         "CustomerGrid",
@@ -3909,77 +3909,77 @@
       ]
     },
     "./src/pages/customers/CustomerTaxSection.stories.tsx": {
-      "title": "Surfaces/CustomerTaxSection",
+      "title": "App/Customers/Customer tax section",
       "component": "CustomerTaxSection",
       "uses": [
         "CustomerTaxSection"
       ]
     },
     "./src/pages/customers/CustomerWalletView.stories.tsx": {
-      "title": "Surfaces/CustomerWalletView",
+      "title": "App/Customers/Customer wallet",
       "component": "CustomerWalletView",
       "uses": [
         "CustomerWalletView"
       ]
     },
     "./src/pages/customers/SubscriptionCard.stories.tsx": {
-      "title": "Pages/Customers/SubscriptionCard",
+      "title": "App/Customers/Contract card",
       "component": "SubscriptionCard",
       "uses": [
         "SubscriptionCard"
       ]
     },
     "./src/pages/developers/events/EventDetailSheet.stories.tsx": {
-      "title": "Surfaces/EventDetailSheet",
+      "title": "App/Developers/Events/Event detail sheet",
       "component": "EventDetailSheet",
       "uses": [
         "EventDetailSheet"
       ]
     },
     "./src/pages/developers/events/EventGrid.stories.tsx": {
-      "title": "Surfaces/EventGrid",
+      "title": "App/Developers/Events/Event table",
       "component": "EventGrid",
       "uses": [
         "EventGrid"
       ]
     },
     "./src/pages/developers/exports/DataExportGrid.stories.tsx": {
-      "title": "Surfaces/DataExportGrid",
+      "title": "App/Developers/Exports/Export table",
       "component": "DataExportGrid",
       "uses": [
         "DataExportGrid"
       ]
     },
     "./src/pages/developers/usage-syncs/UsageSyncDetailSheet.stories.tsx": {
-      "title": "Surfaces/UsageSyncDetailSheet",
+      "title": "App/Developers/Usage sync/Usage sync detail sheet",
       "component": "UsageSyncDetailSheet",
       "uses": [
         "UsageSyncDetailSheet"
       ]
     },
     "./src/pages/developers/usage-syncs/UsageSyncGrid.stories.tsx": {
-      "title": "Surfaces/UsageSyncGrid",
+      "title": "App/Developers/Usage sync/Usage sync table",
       "component": "UsageSyncGrid",
       "uses": [
         "UsageSyncGrid"
       ]
     },
     "./src/pages/developers/webhooks/WebhookActivity.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookActivity",
+      "title": "App/Developers/Webhooks/Activity",
       "component": "WebhookActivity",
       "uses": [
         "WebhookActivity"
       ]
     },
     "./src/pages/developers/webhooks/WebhookAttemptList.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookAttemptList",
+      "title": "App/Developers/Webhooks/Attempt list",
       "component": "WebhookAttemptList",
       "uses": [
         "WebhookAttemptList"
       ]
     },
     "./src/pages/developers/webhooks/WebhookEndpointDetail.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookEndpointDetail",
+      "title": "App/Developers/Webhooks/Endpoint detail",
       "component": "WebhookEndpointDetail",
       "uses": [
         "WebhookAttemptList",
@@ -3987,63 +3987,63 @@
       ]
     },
     "./src/pages/developers/webhooks/WebhookEndpointForm.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookEndpointForm",
+      "title": "App/Developers/Webhooks/Endpoint form",
       "component": "WebhookEndpointForm",
       "uses": [
         "WebhookEndpointForm"
       ]
     },
     "./src/pages/developers/webhooks/WebhookEndpointGrid.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookEndpointGrid",
+      "title": "App/Developers/Webhooks/Endpoint table",
       "component": "WebhookEndpointGrid",
       "uses": [
         "WebhookEndpointGrid"
       ]
     },
     "./src/pages/developers/webhooks/WebhookEventCatalog.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookEventCatalog",
+      "title": "App/Developers/Webhooks/Event catalog",
       "component": "WebhookEventCatalog",
       "uses": [
         "WebhookEventCatalog"
       ]
     },
     "./src/pages/developers/webhooks/WebhookEventTypePicker.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookEventTypePicker",
+      "title": "App/Developers/Webhooks/Event type picker",
       "component": "WebhookEventTypePicker",
       "uses": [
         "WebhookEventTypePicker"
       ]
     },
     "./src/pages/developers/webhooks/WebhookMessageLog.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookMessageLog",
+      "title": "App/Developers/Webhooks/Message log",
       "component": "WebhookMessageLog",
       "uses": [
         "WebhookMessageLog"
       ]
     },
     "./src/pages/developers/webhooks/WebhookMessageSheet.stories.tsx": {
-      "title": "Surfaces/Webhooks/WebhookMessageSheet",
+      "title": "App/Developers/Webhooks/Message sheet",
       "component": "WebhookMessageSheet",
       "uses": [
         "WebhookMessageSheet"
       ]
     },
     "./src/pages/developers/workflows/WorkflowGrid.stories.tsx": {
-      "title": "Surfaces/WorkflowGrid",
+      "title": "App/Developers/Workflows/Workflow table",
       "component": "WorkflowGrid",
       "uses": [
         "WorkflowGrid"
       ]
     },
     "./src/pages/home/DashboardHome.stories.tsx": {
-      "title": "Surfaces/DashboardHome",
+      "title": "App/Home/Home dashboard",
       "component": "DashboardHome",
       "uses": [
         "DashboardHome"
       ]
     },
     "./src/pages/home/HomePage.stories.tsx": {
-      "title": "Pages/Home/Dashboard",
+      "title": "App/Home/Home",
       "component": null,
       "uses": [
         "DashboardHome",
@@ -4051,35 +4051,35 @@
       ]
     },
     "./src/pages/integrations/IntegrationsBlock.stories.tsx": {
-      "title": "Surfaces/IntegrationsBlock",
+      "title": "App/Integrations/Integrations",
       "component": "IntegrationsBlock",
       "uses": [
         "IntegrationsBlock"
       ]
     },
     "./src/pages/product-catalog/addons/AddonForm.stories.tsx": {
-      "title": "Surfaces/AddonForm",
+      "title": "App/Product catalog/Add-ons/Add-on form",
       "component": "AddonForm",
       "uses": [
         "AddonForm"
       ]
     },
     "./src/pages/product-catalog/addons/AddonGrid.stories.tsx": {
-      "title": "Surfaces/AddonGrid",
+      "title": "App/Product catalog/Add-ons/Add-on table",
       "component": "AddonGrid",
       "uses": [
         "AddonGrid"
       ]
     },
     "./src/pages/product-catalog/addons/AddonSubscriptionsView.stories.tsx": {
-      "title": "Surfaces/AddonSubscriptionsView",
+      "title": "App/Product catalog/Add-ons/Add-on contracts",
       "component": "AddonSubscriptionsView",
       "uses": [
         "AddonSubscriptionsView"
       ]
     },
     "./src/pages/product-catalog/catalog-detail/CatalogDetailFrame.stories.tsx": {
-      "title": "Surfaces/CatalogDetailFrame",
+      "title": "App/Product catalog/Catalog detail frame",
       "component": "CatalogDetailFrame",
       "uses": [
         "CatalogDetailFrame",
@@ -4087,35 +4087,35 @@
       ]
     },
     "./src/pages/product-catalog/charges/ChargeForm.stories.tsx": {
-      "title": "Surfaces/ChargeForm",
+      "title": "App/Product catalog/Charges/Charge form",
       "component": "ChargeForm",
       "uses": [
         "ChargeForm"
       ]
     },
     "./src/pages/product-catalog/charges/ChargeTable.stories.tsx": {
-      "title": "Surfaces/ChargeTable",
+      "title": "App/Product catalog/Charges/Charge table",
       "component": "ChargeTable",
       "uses": [
         "ChargeTable"
       ]
     },
     "./src/pages/product-catalog/charges/PriceOverrideForm.stories.tsx": {
-      "title": "Surfaces/PriceOverrideForm",
+      "title": "App/Product catalog/Charges/Price override form",
       "component": "PriceOverrideForm",
       "uses": [
         "PriceOverrideForm"
       ]
     },
     "./src/pages/product-catalog/charges/TierTable.stories.tsx": {
-      "title": "Surfaces/TierTable",
+      "title": "App/Product catalog/Charges/Tier table",
       "component": "TierTable",
       "uses": [
         "TierTable"
       ]
     },
     "./src/pages/product-catalog/credit-grants/CreditGrantForm.stories.tsx": {
-      "title": "Surfaces/CreditGrantForm",
+      "title": "App/Product catalog/Credit grants/Credit grant form",
       "component": "CreditGrantCreateForm",
       "uses": [
         "CreditGrantCreateForm",
@@ -4123,14 +4123,14 @@
       ]
     },
     "./src/pages/product-catalog/credit-grants/CreditGrantTable.stories.tsx": {
-      "title": "Surfaces/CreditGrantTable",
+      "title": "App/Product catalog/Credit grants/Credit grant table",
       "component": "CreditGrantTable",
       "uses": [
         "CreditGrantTable"
       ]
     },
     "./src/pages/product-catalog/entitlements/EntitlementForm.stories.tsx": {
-      "title": "Surfaces/EntitlementForm",
+      "title": "App/Product catalog/Entitlements/Entitlement form",
       "component": "EntitlementCreateForm",
       "uses": [
         "EntitlementCreateForm",
@@ -4138,49 +4138,49 @@
       ]
     },
     "./src/pages/product-catalog/entitlements/EntitlementTable.stories.tsx": {
-      "title": "Surfaces/EntitlementTable",
+      "title": "App/Product catalog/Entitlements/Entitlement table",
       "component": "EntitlementTable",
       "uses": [
         "EntitlementTable"
       ]
     },
     "./src/pages/product-catalog/entitlements/MeteredEntitlementFields.stories.tsx": {
-      "title": "Surfaces/MeteredEntitlementFields",
+      "title": "App/Product catalog/Entitlements/Metered entitlement fields",
       "component": null,
       "uses": [
         "MeteredEntitlementFields"
       ]
     },
     "./src/pages/product-catalog/plans/AddChargeDialog.stories.tsx": {
-      "title": "Surfaces/AddChargeDialog",
+      "title": "App/Product catalog/Plans/Add charge dialog",
       "component": null,
       "uses": [
         "AddChargeDialog"
       ]
     },
     "./src/pages/product-catalog/plans/PlanChargesView.stories.tsx": {
-      "title": "Surfaces/PlanChargesView",
+      "title": "App/Product catalog/Plans/Plan charges",
       "component": null,
       "uses": [
         "PlanChargesView"
       ]
     },
     "./src/pages/product-catalog/plans/PlanCreditGrantsView.stories.tsx": {
-      "title": "Surfaces/PlanCreditGrantsView",
+      "title": "App/Product catalog/Plans/Plan credit grants",
       "component": "PlanCreditGrantsView",
       "uses": [
         "PlanCreditGrantsView"
       ]
     },
     "./src/pages/product-catalog/plans/PlanCustomerPreview.stories.tsx": {
-      "title": "Surfaces/PlanCustomerPreview",
+      "title": "App/Product catalog/Plans/Plan customer preview",
       "component": null,
       "uses": [
         "PlanCustomerPreview"
       ]
     },
     "./src/pages/product-catalog/plans/PlanDetailPage.stories.tsx": {
-      "title": "Pages/Catalog/Plan detail",
+      "title": "App/Product catalog/Plans/Plan detail",
       "component": null,
       "uses": [
         "AppFailure",
@@ -4201,35 +4201,35 @@
       ]
     },
     "./src/pages/product-catalog/plans/PlanEntitlementsView.stories.tsx": {
-      "title": "Surfaces/PlanEntitlementsView",
+      "title": "App/Product catalog/Plans/Plan entitlements",
       "component": null,
       "uses": [
         "PlanEntitlementsView"
       ]
     },
     "./src/pages/product-catalog/plans/PlanForm.stories.tsx": {
-      "title": "Surfaces/PlanForm",
+      "title": "App/Product catalog/Plans/Plan form",
       "component": "PlanForm",
       "uses": [
         "PlanForm"
       ]
     },
     "./src/pages/product-catalog/plans/PlanGrid.stories.tsx": {
-      "title": "Surfaces/PlanGrid",
+      "title": "App/Product catalog/Plans/Plan table",
       "component": "PlanGrid",
       "uses": [
         "PlanGrid"
       ]
     },
     "./src/pages/product-catalog/plans/PlanPreviewCard.stories.tsx": {
-      "title": "Surfaces/PlanPreviewCard",
+      "title": "App/Product catalog/Plans/Plan preview card",
       "component": "PlanPreviewCard",
       "uses": [
         "PlanPreviewCard"
       ]
     },
     "./src/pages/product-catalog/plans/PlansListPage.stories.tsx": {
-      "title": "Pages/Catalog/Plans list",
+      "title": "App/Product catalog/Plans/Plan list",
       "component": null,
       "uses": [
         "ListState",
@@ -4239,21 +4239,21 @@
       ]
     },
     "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx": {
-      "title": "Surfaces/PricingCatalogBlock",
+      "title": "App/Product catalog/Pricing widgets/Pricing widget",
       "component": null,
       "uses": [
         "PricingCatalogBlock"
       ]
     },
     "./src/pages/product-catalog/products/FeatureCloneDialog.stories.tsx": {
-      "title": "Surfaces/FeatureCloneDialog",
+      "title": "App/Product catalog/Products/Clone product dialog",
       "component": null,
       "uses": [
         "FeatureCloneDialog"
       ]
     },
     "./src/pages/product-catalog/products/FeatureDetailPage.stories.tsx": {
-      "title": "Pages/Catalog/Feature detail",
+      "title": "App/Product catalog/Products/Product detail",
       "component": null,
       "uses": [
         "AppFailure",
@@ -4264,28 +4264,28 @@
       ]
     },
     "./src/pages/product-catalog/products/FeatureDetailView.stories.tsx": {
-      "title": "Surfaces/FeatureDetailView",
+      "title": "App/Product catalog/Products/Product detail view",
       "component": null,
       "uses": [
         "FeatureDetailView"
       ]
     },
     "./src/pages/product-catalog/products/FeatureForm.stories.tsx": {
-      "title": "Surfaces/FeatureForm",
+      "title": "App/Product catalog/Products/Product form",
       "component": "FeatureForm",
       "uses": [
         "FeatureForm"
       ]
     },
     "./src/pages/product-catalog/products/FeatureGrid.stories.tsx": {
-      "title": "Surfaces/FeatureGrid",
+      "title": "App/Product catalog/Products/Product table",
       "component": "FeatureGrid",
       "uses": [
         "FeatureGrid"
       ]
     },
     "./src/pages/product-catalog/products/FeaturesListPage.stories.tsx": {
-      "title": "Pages/Catalog/Features list",
+      "title": "App/Product catalog/Products/Product list",
       "component": null,
       "uses": [
         "FeatureGrid",
@@ -4295,70 +4295,70 @@
       ]
     },
     "./src/pages/revenue/RevenueDashboard.stories.tsx": {
-      "title": "Surfaces/RevenueDashboard",
+      "title": "App/Revenue/Revenue dashboard",
       "component": "RevenueDashboard",
       "uses": [
         "RevenueDashboard"
       ]
     },
     "./src/pages/settings/cost-sheets/CostMarginCard.stories.tsx": {
-      "title": "Surfaces/CostMarginCard",
+      "title": "App/Settings/Cost sheets/Cost margin card",
       "component": "CostMarginCard",
       "uses": [
         "CostMarginCard"
       ]
     },
     "./src/pages/settings/cost-sheets/CostSheetForm.stories.tsx": {
-      "title": "Surfaces/CostSheetForm",
+      "title": "App/Settings/Cost sheets/Cost sheet form",
       "component": "CostSheetForm",
       "uses": [
         "CostSheetForm"
       ]
     },
     "./src/pages/settings/cost-sheets/CostSheetGrid.stories.tsx": {
-      "title": "Surfaces/CostSheetGrid",
+      "title": "App/Settings/Cost sheets/Cost sheet table",
       "component": "CostSheetGrid",
       "uses": [
         "CostSheetGrid"
       ]
     },
     "./src/pages/settings/discounts/CouponCreateForm.stories.tsx": {
-      "title": "Surfaces/CouponCreateForm",
+      "title": "App/Settings/Discounts/Create discount",
       "component": "CouponCreateForm",
       "uses": [
         "CouponCreateForm"
       ]
     },
     "./src/pages/settings/discounts/CouponForm.stories.tsx": {
-      "title": "Surfaces/CouponForm",
+      "title": "App/Settings/Discounts/Discount form",
       "component": "CouponForm",
       "uses": [
         "CouponForm"
       ]
     },
     "./src/pages/settings/discounts/CouponGrid.stories.tsx": {
-      "title": "Surfaces/CouponGrid",
+      "title": "App/Settings/Discounts/Discount table",
       "component": "CouponGrid",
       "uses": [
         "CouponGrid"
       ]
     },
     "./src/pages/settings/discounts/CouponRedemptionMeter.stories.tsx": {
-      "title": "Surfaces/CouponRedemptionMeter",
+      "title": "App/Settings/Discounts/Redemption meter",
       "component": "CouponRedemptionMeter",
       "uses": [
         "CouponRedemptionMeter"
       ]
     },
     "./src/pages/settings/discounts/CouponRedemptionsView.stories.tsx": {
-      "title": "Surfaces/CouponRedemptionsView",
+      "title": "App/Settings/Discounts/Discount redemptions",
       "component": "CouponRedemptionsView",
       "uses": [
         "CouponRedemptionsView"
       ]
     },
     "./src/pages/settings/discounts/CouponsListPage.stories.tsx": {
-      "title": "Pages/Catalog/Coupons list",
+      "title": "App/Settings/Discounts/Discount list",
       "component": null,
       "uses": [
         "CouponGrid",
@@ -4368,56 +4368,56 @@
       ]
     },
     "./src/pages/settings/environments/EnvironmentForm.stories.tsx": {
-      "title": "Flexprice/EnvironmentForm",
+      "title": "App/Settings/Environments/Environment form",
       "component": "EnvironmentForm",
       "uses": [
         "EnvironmentForm"
       ]
     },
     "./src/pages/settings/environments/EnvironmentRenameForm.stories.tsx": {
-      "title": "Flexprice/EnvironmentRenameForm",
+      "title": "App/Settings/Environments/Rename environment form",
       "component": "EnvironmentRenameForm",
       "uses": [
         "EnvironmentRenameForm"
       ]
     },
     "./src/pages/settings/groups/GroupForm.stories.tsx": {
-      "title": "Surfaces/GroupForm",
+      "title": "App/Settings/Groups/Group form",
       "component": "GroupForm",
       "uses": [
         "GroupForm"
       ]
     },
     "./src/pages/settings/groups/GroupGrid.stories.tsx": {
-      "title": "Surfaces/GroupGrid",
+      "title": "App/Settings/Groups/Group table",
       "component": "GroupGrid",
       "uses": [
         "GroupGrid"
       ]
     },
     "./src/pages/settings/groups/GroupMembersView.stories.tsx": {
-      "title": "Surfaces/GroupMembersView",
+      "title": "App/Settings/Groups/Group members",
       "component": "GroupMembersView",
       "uses": [
         "GroupMembersView"
       ]
     },
     "./src/pages/settings/price-units/PriceUnitForm.stories.tsx": {
-      "title": "Surfaces/PriceUnitForm",
+      "title": "App/Settings/Price units/Price unit form",
       "component": "PriceUnitForm",
       "uses": [
         "PriceUnitForm"
       ]
     },
     "./src/pages/settings/price-units/PriceUnitGrid.stories.tsx": {
-      "title": "Surfaces/PriceUnitGrid",
+      "title": "App/Settings/Price units/Price unit table",
       "component": "PriceUnitGrid",
       "uses": [
         "PriceUnitGrid"
       ]
     },
     "./src/pages/settings/settings/AppearanceSettings.stories.tsx": {
-      "title": "Pages/Settings/Appearance",
+      "title": "App/Settings/Settings/Appearance",
       "component": "ThemeChoiceCards",
       "uses": [
         "ThemeChoiceCards",
@@ -4426,7 +4426,7 @@
       ]
     },
     "./src/pages/settings/settings/SettingsPage.stories.tsx": {
-      "title": "Pages/Settings/Settings",
+      "title": "App/Settings/Settings/Settings",
       "component": null,
       "uses": [
         "ErrorState",
@@ -4439,14 +4439,14 @@
       ]
     },
     "./src/pages/settings/settings/SettingsShell.stories.tsx": {
-      "title": "Surfaces/SettingsShell",
+      "title": "App/Settings/Settings/Settings shell",
       "component": "SettingsShell",
       "uses": [
         "SettingsShell"
       ]
     },
     "./src/pages/settings/taxes/TaxRateForm.stories.tsx": {
-      "title": "Surfaces/TaxRateForm",
+      "title": "App/Settings/Taxes/Tax rate form",
       "component": "TaxRateCreateForm",
       "uses": [
         "TaxRateCreateForm",
@@ -4454,21 +4454,21 @@
       ]
     },
     "./src/pages/settings/taxes/TaxRateGrid.stories.tsx": {
-      "title": "Surfaces/TaxRateGrid",
+      "title": "App/Settings/Taxes/Tax rate table",
       "component": "TaxRateGrid",
       "uses": [
         "TaxRateGrid"
       ]
     },
     "./src/pages/shared/ArcGauge.stories.tsx": {
-      "title": "Foundation/Flexprice/ArcGauge",
+      "title": "Building blocks/Charts & metrics/ArcGauge",
       "component": "ArcGauge",
       "uses": [
         "ArcGauge"
       ]
     },
     "./src/pages/shared/BlurredEmpty.stories.tsx": {
-      "title": "Foundation/Flexprice/BlurredEmpty",
+      "title": "Building blocks/Feedback & states/BlurredEmpty",
       "component": "BlurredEmpty",
       "uses": [
         "BlurredEmpty",
@@ -4476,7 +4476,7 @@
       ]
     },
     "./src/pages/shared/cells.stories.tsx": {
-      "title": "Foundation/Flexprice/Cells",
+      "title": "Building blocks/Tables & lists/Cells",
       "component": null,
       "uses": [
         "EmDash",
@@ -4485,14 +4485,14 @@
       ]
     },
     "./src/pages/shared/DetailTable.stories.tsx": {
-      "title": "Pages/Shared/DetailTable",
+      "title": "Building blocks/Tables & lists/DetailTable",
       "component": "DetailTable",
       "uses": [
         "DetailTable"
       ]
     },
     "./src/pages/shared/EntityHeader.stories.tsx": {
-      "title": "Foundation/Flexprice/EntityHeader",
+      "title": "Building blocks/Detail pages/EntityHeader",
       "component": "EntityHeader",
       "uses": [
         "CatalogStatusBadge",
@@ -4501,21 +4501,21 @@
       ]
     },
     "./src/pages/shared/EntityList.stories.tsx": {
-      "title": "Foundation/Flexprice/EntityList",
+      "title": "Building blocks/Tables & lists/EntityList",
       "component": null,
       "uses": [
         "EntityList"
       ]
     },
     "./src/pages/shared/HalfDonut.stories.tsx": {
-      "title": "Foundation/Flexprice/HalfDonut",
+      "title": "Building blocks/Charts & metrics/HalfDonut",
       "component": "HalfDonut",
       "uses": [
         "HalfDonut"
       ]
     },
     "./src/pages/shared/Metric.stories.tsx": {
-      "title": "Foundation/Flexprice/Metric",
+      "title": "Building blocks/Charts & metrics/Metric",
       "component": "Metric",
       "uses": [
         "Metric",
@@ -4523,63 +4523,63 @@
       ]
     },
     "./src/pages/shared/MetricChart.stories.tsx": {
-      "title": "Foundation/Flexprice/MetricChart",
+      "title": "Building blocks/Charts & metrics/MetricChart",
       "component": "MetricChart",
       "uses": [
         "MetricChart"
       ]
     },
     "./src/pages/shared/Money.stories.tsx": {
-      "title": "Foundation/Flexprice/Money",
+      "title": "Building blocks/Charts & metrics/Money",
       "component": "Money",
       "uses": [
         "Money"
       ]
     },
     "./src/pages/shared/PillColumns.stories.tsx": {
-      "title": "Foundation/Flexprice/PillColumns",
+      "title": "Building blocks/Charts & metrics/PillColumns",
       "component": "PillColumns",
       "uses": [
         "PillColumns"
       ]
     },
     "./src/pages/shared/QuotaCard.stories.tsx": {
-      "title": "Foundation/Flexprice/QuotaCard",
+      "title": "Building blocks/Charts & metrics/QuotaCard",
       "component": "QuotaCard",
       "uses": [
         "QuotaCard"
       ]
     },
     "./src/pages/shared/RowActionsMenu.stories.tsx": {
-      "title": "Foundation/Flexprice/RowActionsMenu",
+      "title": "Building blocks/Tables & lists/RowActionsMenu",
       "component": "RowActionsMenu",
       "uses": [
         "RowActionsMenu"
       ]
     },
     "./src/pages/shared/SegmentMeter.stories.tsx": {
-      "title": "Foundation/Flexprice/SegmentMeter",
+      "title": "Building blocks/Charts & metrics/SegmentMeter",
       "component": "SegmentMeter",
       "uses": [
         "SegmentMeter"
       ]
     },
     "./src/pages/shared/SplitMeter.stories.tsx": {
-      "title": "Foundation/Flexprice/SplitMeter",
+      "title": "Building blocks/Charts & metrics/SplitMeter",
       "component": "SplitMeter",
       "uses": [
         "SplitMeter"
       ]
     },
     "./src/pages/shared/StatCards.stories.tsx": {
-      "title": "Surfaces/StatCards",
+      "title": "Building blocks/Charts & metrics/StatCards",
       "component": "StatCards",
       "uses": [
         "StatCards"
       ]
     },
     "./src/pages/shared/StatusBadge.stories.tsx": {
-      "title": "Foundation/Flexprice/InvoiceStatusBadge",
+      "title": "Building blocks/Charts & metrics/StatusBadge",
       "component": "InvoiceStatusBadge",
       "uses": [
         "CatalogStatusBadge",
@@ -4589,14 +4589,14 @@
       ]
     },
     "./src/pages/shared/TrendBadge.stories.tsx": {
-      "title": "Foundation/Flexprice/TrendBadge",
+      "title": "Building blocks/Charts & metrics/TrendBadge",
       "component": "TrendBadge",
       "uses": [
         "TrendBadge"
       ]
     },
     "./src/pages/shared/UsageMeter.stories.tsx": {
-      "title": "Foundation/Flexprice/UsageMeter",
+      "title": "Building blocks/Charts & metrics/UsageMeter",
       "component": "UsageMeter",
       "uses": [
         "UsageMeter"

@@ -10,7 +10,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/CustomerForm',
+  title: 'App/Customers/Customer form',
   component: CustomerForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

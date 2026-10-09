@@ -17,7 +17,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/PlanForm',
+  title: 'App/Product catalog/Plans/Plan form',
   component: PlanForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

@@ -113,7 +113,7 @@ function FeatureDetailPage({
 }
 
 const meta = {
-  title: 'Pages/Catalog/Feature detail',
+  title: 'App/Product catalog/Products/Product detail',
   component: FeatureDetailPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

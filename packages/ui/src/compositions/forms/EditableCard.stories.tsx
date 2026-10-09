@@ -65,7 +65,7 @@ function EditableCardDemo({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/EditableCard',
+  title: 'Building blocks/Forms/EditableCard',
   component: EditableCard,
   parameters: {
     layout: 'padded',

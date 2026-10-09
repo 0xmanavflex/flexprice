@@ -26,7 +26,7 @@ const fields: FilterField[] = [
 ]
 
 const meta = {
-  title: 'Foundation/Compositions/FilterBar',
+  title: 'Building blocks/Tables & lists/FilterBar',
   component: FilterBar,
   parameters: {
     layout: 'padded',

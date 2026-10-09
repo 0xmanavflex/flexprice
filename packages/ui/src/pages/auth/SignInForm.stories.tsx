@@ -4,7 +4,7 @@ import { Button } from '@ui/components/primitives/button'
 import { SignInForm } from './SignInForm'
 
 const meta = {
-  title: 'Surfaces/SignInForm',
+  title: 'App/Sign-in/Sign-in form',
   component: SignInForm,
   parameters: { layout: 'centered' },
   args: { onSubmit: fn(), onForgotPassword: fn() },

@@ -278,7 +278,7 @@ function SettingsPage({
 }
 
 const meta = {
-  title: 'Pages/Settings/Settings',
+  title: 'App/Settings/Settings/Settings',
   component: SettingsPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

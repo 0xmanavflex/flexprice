@@ -66,7 +66,7 @@ function DetailHeaderDemo({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/DetailHeader',
+  title: 'Building blocks/Detail pages/DetailHeader',
   component: DetailHeader,
   parameters: { layout: 'padded' },
   argTypes: {

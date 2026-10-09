@@ -72,7 +72,7 @@ const page: Decorator = (Story) => (
 
 /** The pricing widget: plan tiles from the catalogue and the embed snippet. Drag plan count to 0 for the empty state, or toggle loading. */
 const meta = {
-  title: 'Surfaces/PricingCatalogBlock',
+  title: 'App/Product catalog/Pricing widgets/Pricing widget',
   component: CatalogPlayground,
   parameters: { layout: 'fullscreen', a11y: { config: { rules: planTileRules } } },
   decorators: [page],

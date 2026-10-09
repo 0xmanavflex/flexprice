@@ -229,7 +229,7 @@ function ColorSystem() {
 }
 
 const meta = {
-  title: 'Design System/Colors',
+  title: 'Design system/Colors',
   component: ColorSystem,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof ColorSystem>

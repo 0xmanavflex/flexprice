@@ -62,7 +62,7 @@ function FormDialogDemo({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/FormDialog',
+  title: 'Building blocks/Forms/FormDialog',
   component: FormDialog,
   parameters: {
     layout: 'padded',

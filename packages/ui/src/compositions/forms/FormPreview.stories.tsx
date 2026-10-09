@@ -10,7 +10,7 @@ import { FormPreview, PreviewAmount, PreviewRow, PreviewRows, PreviewSection } f
  * Props in, markup out; each form feeds it from its own draft.
  */
 const meta = {
-  title: 'Foundation/Compositions/Form preview',
+  title: 'Building blocks/Forms/FormPreview',
   component: FormPreview,
   parameters: { layout: 'centered' },
   decorators: [

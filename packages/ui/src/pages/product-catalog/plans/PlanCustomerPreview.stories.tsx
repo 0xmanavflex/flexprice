@@ -48,7 +48,7 @@ function PreviewPlayground({
 
 /** What customers see for a saved plan: the shared pricing card, driven by counts of charges, entitlements and grants. */
 const meta = {
-  title: 'Surfaces/PlanCustomerPreview',
+  title: 'App/Product catalog/Plans/Plan customer preview',
   component: PreviewPlayground,
   parameters: { layout: 'centered' },
   args: {

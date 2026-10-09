@@ -51,7 +51,7 @@ function manyRuns(count: number): WorkflowRun[] {
 }
 
 const meta = {
-  title: 'Surfaces/WorkflowGrid',
+  title: 'App/Developers/Workflows/Workflow table',
   component: WorkflowGrid,
   parameters: { layout: 'padded' },
   args: {

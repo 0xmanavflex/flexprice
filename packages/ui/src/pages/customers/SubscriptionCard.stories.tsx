@@ -20,7 +20,7 @@ const base: Subscription = {
 }
 
 const meta = {
-  title: 'Pages/Customers/SubscriptionCard',
+  title: 'App/Customers/Contract card',
   component: SubscriptionCard,
   parameters: {
     layout: 'padded',

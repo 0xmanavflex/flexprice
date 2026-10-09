@@ -73,7 +73,7 @@ function FakeGrid({ rows, onClearFilters }: { rows: number; onClearFilters?: () 
 }
 
 const meta = {
-  title: 'Foundation/Compositions/ListState',
+  title: 'Building blocks/Feedback & states/States',
   component: ListState,
   parameters: { layout: 'padded' },
   args: {

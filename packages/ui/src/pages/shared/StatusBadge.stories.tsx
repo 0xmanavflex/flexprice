@@ -6,7 +6,7 @@ import { CatalogStatusBadge, FeatureTypeBadge, GlyphBadge, InvoiceStatusBadge } 
 import type { CatalogStatus } from './StatusBadge'
 
 const meta = {
-  title: 'Foundation/Flexprice/InvoiceStatusBadge',
+  title: 'Building blocks/Charts & metrics/StatusBadge',
   component: InvoiceStatusBadge,
   parameters: { layout: 'centered' },
   args: { status: InvoiceStatus.Open },

@@ -48,7 +48,7 @@ function GridFooterHarness({ total = 64, ...args }: GridFooterProps & { total?: 
 }
 
 const meta = {
-  title: 'Foundation/Compositions/GridFooter',
+  title: 'Building blocks/Tables & lists/GridFooter',
   component: GridFooter,
   parameters: { layout: 'padded' },
   render: (args) => <GridFooterHarness {...args} />,

@@ -4,7 +4,7 @@ import { ThemeProvider } from './ThemeProvider'
 import { ThemeToggle } from './ThemeToggle'
 
 const meta = {
-  title: 'Foundation/Compositions/ThemeToggle',
+  title: 'Building blocks/Shell/ThemeToggle',
   component: ThemeToggle,
   decorators: [
     (Story) => (

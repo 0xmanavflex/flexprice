@@ -4,7 +4,7 @@ import { WebhookEndpointGrid } from './WebhookEndpointGrid'
 import { DEMO_WEBHOOK_ENDPOINTS, DEMO_WEBHOOK_STATS } from './webhookFixtures'
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookEndpointGrid',
+  title: 'App/Developers/Webhooks/Endpoint table',
   component: WebhookEndpointGrid,
   parameters: { layout: 'padded' },
   args: {

@@ -4,7 +4,7 @@ import { WebhookMessageSheet } from './WebhookMessageSheet'
 import { DEMO_WEBHOOK_ATTEMPTS, DEMO_WEBHOOK_MESSAGES } from './webhookFixtures'
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookMessageSheet',
+  title: 'App/Developers/Webhooks/Message sheet',
   component: WebhookMessageSheet,
   parameters: { layout: 'fullscreen' },
   args: {

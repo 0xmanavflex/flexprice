@@ -38,7 +38,7 @@ function EntitlementsPlayground({
 
 /** A plan's entitlements table. Drag rows from 0 to 40 to see the empty state, a short table and a long one. */
 const meta = {
-  title: 'Surfaces/PlanEntitlementsView',
+  title: 'App/Product catalog/Plans/Plan entitlements',
   component: EntitlementsPlayground,
   parameters: { layout: 'padded' },
   args: {

@@ -23,7 +23,7 @@ const unitFormats = {
 } as const
 
 const meta = {
-  title: 'Foundation/Flexprice/HalfDonut',
+  title: 'Building blocks/Charts & metrics/HalfDonut',
   component: HalfDonut,
   parameters: { layout: 'padded' },
   args: {

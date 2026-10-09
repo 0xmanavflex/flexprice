@@ -20,7 +20,7 @@ async function popupClosed(role: 'menu' | 'listbox') {
 }
 
 const meta = {
-  title: 'Surfaces/PlanGrid',
+  title: 'App/Product catalog/Plans/Plan table',
   component: PlanGrid,
   parameters: { layout: 'padded' },
   args: {

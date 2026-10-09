@@ -94,7 +94,7 @@ function FeaturesListBody({
 }
 
 const meta = {
-  title: 'Pages/Catalog/Features list',
+  title: 'App/Product catalog/Products/Product list',
   component: FeaturesListPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

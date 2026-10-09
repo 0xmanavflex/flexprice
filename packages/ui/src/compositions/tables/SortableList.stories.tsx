@@ -41,7 +41,7 @@ function Demo({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/SortableList',
+  title: 'Building blocks/Tables & lists/SortableList',
   component: SortableList,
   parameters: { layout: 'padded' },
   args: { ids: ['usage', 'invoices', 'wallet'], onReorder: fn(), children: null },

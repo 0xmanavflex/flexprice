@@ -10,7 +10,7 @@ import {
 import { SubscriptionGrid } from './SubscriptionGrid'
 
 const meta = {
-  title: 'Surfaces/SubscriptionGrid',
+  title: 'App/Contracts/Contract table',
   component: SubscriptionGrid,
   parameters: { layout: 'padded' },
   args: {

@@ -12,7 +12,7 @@ import { GridToolbar } from './GridToolbar'
  * disagree about what is shown.
  */
 const meta = {
-  title: 'Foundation/Compositions/GridToolbar',
+  title: 'Building blocks/Tables & lists/GridToolbar',
   component: GridToolbar,
   parameters: { layout: 'padded' },
   args: {

@@ -15,7 +15,7 @@ const tones = [
 ] as const
 
 const meta = {
-  title: 'Foundation/Flexprice/ArcGauge',
+  title: 'Building blocks/Charts & metrics/ArcGauge',
   component: ArcGauge,
   parameters: { layout: 'padded' },
   args: {

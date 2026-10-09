@@ -209,7 +209,7 @@ function PageMap({ view: initialView, query: initialQuery, hideCommon }: PageMap
 }
 
 const meta = {
-  title: 'Design System/Page map',
+  title: 'Design system/Page map',
   component: PageMap,
   tags: ['!autodocs'],
   parameters: { layout: 'fullscreen' },

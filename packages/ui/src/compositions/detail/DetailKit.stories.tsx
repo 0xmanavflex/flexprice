@@ -26,7 +26,7 @@ import { FormDialogBodyContext } from '../forms/formDialogContext'
  * a playground; the stories below are named for the piece they exercise.
  */
 const meta = {
-  title: 'Foundation/Compositions/DetailKit',
+  title: 'Building blocks/Detail pages/DetailKit',
   parameters: { layout: 'padded' },
 } satisfies Meta
 

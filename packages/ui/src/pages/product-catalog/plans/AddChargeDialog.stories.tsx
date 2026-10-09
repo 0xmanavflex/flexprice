@@ -61,7 +61,7 @@ function DialogPlayground({
  * Submitting disables the form, so it stands in for a disabled state.
  */
 const meta = {
-  title: 'Surfaces/AddChargeDialog',
+  title: 'App/Product catalog/Plans/Add charge dialog',
   component: DialogPlayground,
   parameters: {
     layout: 'centered',

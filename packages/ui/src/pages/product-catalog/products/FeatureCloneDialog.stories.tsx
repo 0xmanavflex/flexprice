@@ -49,7 +49,7 @@ function FeatureCloneDialogHarness({
 
 /** The dialog portals to the document, so the play functions read from `screen`. */
 const meta = {
-  title: 'Surfaces/FeatureCloneDialog',
+  title: 'App/Product catalog/Products/Clone product dialog',
   component: FeatureCloneDialogHarness,
   parameters: { layout: 'padded' },
   argTypes: {

@@ -122,7 +122,7 @@ function TypeSystem() {
 }
 
 const meta = {
-  title: 'Design System/Typography',
+  title: 'Design system/Typography',
   component: TypeSystem,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof TypeSystem>

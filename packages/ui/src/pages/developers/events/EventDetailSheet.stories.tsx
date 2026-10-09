@@ -4,7 +4,7 @@ import { expect, fn, within } from 'storybook/test'
 import { EventDetailSheet } from './EventDetailSheet'
 
 const meta = {
-  title: 'Surfaces/EventDetailSheet',
+  title: 'App/Developers/Events/Event detail sheet',
   component: EventDetailSheet,
   parameters: { layout: 'fullscreen' },
   args: {

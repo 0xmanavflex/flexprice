@@ -4,7 +4,7 @@ import { Input } from '@ui/components/primitives/input'
 import { Field } from './Field'
 
 const meta = {
-  title: 'Foundation/Compositions/Field',
+  title: 'Building blocks/Forms/Field',
   component: Field,
   parameters: { layout: 'padded' },
   args: {

@@ -85,7 +85,7 @@ function CouponsListBody({
 }
 
 const meta = {
-  title: 'Pages/Catalog/Coupons list',
+  title: 'App/Settings/Discounts/Discount list',
   component: CouponsListPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

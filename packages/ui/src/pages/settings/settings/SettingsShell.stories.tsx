@@ -209,7 +209,7 @@ function PlaygroundShell({
  * on a real screen they live in the URL.
  */
 const meta = {
-  title: 'Surfaces/SettingsShell',
+  title: 'App/Settings/Settings/Settings shell',
   component: SettingsShell,
   parameters: {
     layout: 'fullscreen',

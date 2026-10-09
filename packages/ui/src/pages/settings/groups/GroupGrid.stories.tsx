@@ -81,7 +81,7 @@ function manyGroups(count: number): Group[] {
 }
 
 const meta = {
-  title: 'Surfaces/GroupGrid',
+  title: 'App/Settings/Groups/Group table',
   component: GroupGrid,
   parameters: { layout: 'padded' },
   args: {

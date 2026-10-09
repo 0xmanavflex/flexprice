@@ -3,7 +3,7 @@ import { expect, within } from 'storybook/test'
 import { CouponRedemptionMeter } from './CouponRedemptionMeter'
 
 const meta = {
-  title: 'Surfaces/CouponRedemptionMeter',
+  title: 'App/Settings/Discounts/Redemption meter',
   component: CouponRedemptionMeter,
   parameters: { layout: 'padded' },
   decorators: [

@@ -3,7 +3,7 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { AppFailure } from './AppFailure'
 
 const meta = {
-  title: 'Foundation/Compositions/AppFailure',
+  title: 'Building blocks/Feedback & states/AppFailure',
   component: AppFailure,
   parameters: { layout: 'fullscreen' },
   args: { title: 'Something went wrong' },

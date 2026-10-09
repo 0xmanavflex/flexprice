@@ -94,7 +94,7 @@ const subscriptions: SubscriptionsPanel = {
 const invoices: InvoicesPanel = { status: 'ready', total: 56, paid: 34, open: 15, overdue: 7 }
 
 const meta = {
-  title: 'Surfaces/DashboardHome',
+  title: 'App/Home/Home dashboard',
   component: DashboardHome,
   parameters: { layout: 'fullscreen' },
   args: {

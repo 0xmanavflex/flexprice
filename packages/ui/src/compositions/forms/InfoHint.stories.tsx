@@ -4,7 +4,7 @@ import { Input } from '@ui/components/primitives/input'
 import { InfoHint } from './InfoHint'
 
 const meta = {
-  title: 'Foundation/Compositions/InfoHint',
+  title: 'Building blocks/Forms/InfoHint',
   component: InfoHint,
   parameters: {
     layout: 'centered',

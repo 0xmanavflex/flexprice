@@ -32,7 +32,7 @@ function Controlled(args: ComponentProps<typeof ConfirmDialog>) {
  * `open` and what confirming does, so every state here is reached by props.
  */
 const meta = {
-  title: 'Foundation/Compositions/ConfirmDialog',
+  title: 'Building blocks/Feedback & states/ConfirmDialog',
   component: ConfirmDialog,
   parameters: {
     layout: 'padded',

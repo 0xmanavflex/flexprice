@@ -98,7 +98,7 @@ type PlaygroundArgs = ComponentProps<typeof AppShell> & {
 }
 
 const meta = {
-  title: 'Foundation/Compositions/AppShell',
+  title: 'Building blocks/Shell/AppShell',
   component: AppShell,
   parameters: {
     layout: 'fullscreen',

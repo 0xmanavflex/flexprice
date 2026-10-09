@@ -34,7 +34,7 @@ const withHeight: Decorator = (Story) => (
 
 /** Record a payment against an invoice, on the same full-page shell as the other create forms. */
 const meta = {
-  title: 'Surfaces/PaymentForm',
+  title: 'App/Collections/Payments/Payment form',
   component: PaymentForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

@@ -71,7 +71,7 @@ function RowsDemo({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/FormCard',
+  title: 'Building blocks/Forms/FormCard',
   component: FormCard,
   parameters: {
     layout: 'padded',

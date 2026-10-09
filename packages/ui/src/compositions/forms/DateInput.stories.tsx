@@ -32,7 +32,7 @@ function DateInputDemo({ label, hasError, value, onValueChange, ...rest }: Playg
 }
 
 const meta = {
-  title: 'Foundation/Compositions/DateInput',
+  title: 'Building blocks/Forms/DateInput',
   component: DateInput,
   parameters: {
     layout: 'padded',

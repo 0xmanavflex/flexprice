@@ -58,7 +58,7 @@ function manyCreditNotes(count: number): CreditNote[] {
 }
 
 const meta = {
-  title: 'Surfaces/CreditNoteGrid',
+  title: 'App/Billing/Credit notes/Credit note table',
   component: CreditNoteGrid,
   parameters: { layout: 'padded' },
   args: {

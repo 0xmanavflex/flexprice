@@ -31,7 +31,7 @@ function Frame(props: CatalogDetailFrameProps) {
 }
 
 const meta = {
-  title: 'Surfaces/CatalogDetailFrame',
+  title: 'App/Product catalog/Catalog detail frame',
   component: CatalogDetailFrame,
   parameters: { layout: 'fullscreen' },
   render: (args) => <Frame {...args} />,

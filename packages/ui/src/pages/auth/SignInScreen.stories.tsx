@@ -10,7 +10,7 @@ import { SignInScreen } from './SignInScreen'
  * neither.
  */
 const meta = {
-  title: 'Surfaces/SignInScreen',
+  title: 'App/Sign-in/Sign-in screen',
   component: SignInScreen,
   parameters: { layout: 'fullscreen' },
   args: { onSubmit: fn() },

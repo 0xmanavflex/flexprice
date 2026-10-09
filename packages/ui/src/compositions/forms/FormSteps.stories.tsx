@@ -135,7 +135,7 @@ function FlowDemo({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/FormSteps',
+  title: 'Building blocks/Forms/FormSteps',
   component: FormSteps,
   parameters: { layout: 'padded' },
 } satisfies Meta<typeof FormSteps>

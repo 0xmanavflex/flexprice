@@ -23,7 +23,7 @@ import {
  * already one for it.
  */
 const meta = {
-  title: 'Foundation/Flexprice/Cells',
+  title: 'Building blocks/Tables & lists/Cells',
   parameters: { layout: 'padded' },
 } satisfies Meta
 

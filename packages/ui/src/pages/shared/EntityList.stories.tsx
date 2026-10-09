@@ -72,7 +72,7 @@ type WidgetList = EntityListProps<Widget>
 const WidgetEntityList = EntityList<Widget>
 
 const meta = {
-  title: 'Foundation/Flexprice/EntityList',
+  title: 'Building blocks/Tables & lists/EntityList',
   component: WidgetEntityList,
   parameters: { layout: 'padded' },
   args: {

@@ -4,7 +4,7 @@ import { WebhookEndpointForm } from './WebhookEndpointForm'
 import { DEMO_WEBHOOK_EVENT_TYPES } from './webhookFixtures'
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookEndpointForm',
+  title: 'App/Developers/Webhooks/Endpoint form',
   component: WebhookEndpointForm,
   parameters: { layout: 'fullscreen' },
   args: {

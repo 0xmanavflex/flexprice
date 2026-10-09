@@ -6,7 +6,7 @@ import { AddonGrid } from './AddonGrid'
 import { addonFixtures, fixtureAddonQuery, manyAddons } from './addonFixtures'
 
 const meta = {
-  title: 'Surfaces/AddonGrid',
+  title: 'App/Product catalog/Add-ons/Add-on table',
   component: AddonGrid,
   parameters: { layout: 'padded' },
   args: {

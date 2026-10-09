@@ -13,7 +13,7 @@ import { PlanCreditGrantsView } from './PlanCreditGrantsView'
 
 /** The Credit grants tab of a plan: titled card, Add grant, grant table. */
 const meta = {
-  title: 'Surfaces/PlanCreditGrantsView',
+  title: 'App/Product catalog/Plans/Plan credit grants',
   component: PlanCreditGrantsView,
   parameters: { layout: 'padded' },
   args: { grants: [], onAdd: fn(), onEdit: fn(), onDelete: fn() },

@@ -6,7 +6,7 @@ import { Panel, Section } from './Section'
 import { SimpleTable } from '../detail/DetailKit'
 
 const meta = {
-  title: 'Foundation/Compositions/Section',
+  title: 'Building blocks/Layout/Section',
   component: Section,
   parameters: { layout: 'padded' },
   args: {

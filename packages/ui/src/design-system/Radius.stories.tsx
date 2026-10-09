@@ -96,7 +96,7 @@ function RadiusAndElevation() {
 }
 
 const meta = {
-  title: 'Design System/Radius & Elevation',
+  title: 'Design system/Radius & elevation',
   component: RadiusAndElevation,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof RadiusAndElevation>

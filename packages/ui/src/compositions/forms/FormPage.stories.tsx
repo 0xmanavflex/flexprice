@@ -13,7 +13,7 @@ import { useFormSteps } from './useFormSteps'
  * caller still owns the `<form>`, its schema and its submit handler.
  */
 const meta = {
-  title: 'Foundation/Compositions/Form page',
+  title: 'Building blocks/Forms/FormPage',
   component: FormPage,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof FormPage>

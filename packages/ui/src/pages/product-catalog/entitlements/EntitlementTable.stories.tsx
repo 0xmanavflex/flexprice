@@ -10,7 +10,7 @@ import { EntitlementTable } from './EntitlementTable'
  * static value as itself, a config one as "Configured". No network.
  */
 const meta = {
-  title: 'Surfaces/EntitlementTable',
+  title: 'App/Product catalog/Entitlements/Entitlement table',
   component: EntitlementTable,
   parameters: { layout: 'padded' },
   args: { entitlements: [] },

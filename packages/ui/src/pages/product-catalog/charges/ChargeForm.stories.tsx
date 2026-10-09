@@ -16,7 +16,7 @@ import { ChargeForm } from './ChargeForm'
  * saved as a new version. Fixtures in, a validated `CreateCharge` out.
  */
 const meta = {
-  title: 'Surfaces/ChargeForm',
+  title: 'App/Product catalog/Charges/Charge form',
   component: ChargeForm,
   parameters: {
     layout: 'padded',

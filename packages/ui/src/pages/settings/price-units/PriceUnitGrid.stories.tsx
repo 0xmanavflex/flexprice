@@ -6,7 +6,7 @@ import { PriceUnitGrid } from './PriceUnitGrid'
 import { fixturePriceUnitQuery, manyPriceUnits, priceUnitFixtures } from './priceUnitFixtures'
 
 const meta = {
-  title: 'Surfaces/PriceUnitGrid',
+  title: 'App/Settings/Price units/Price unit table',
   component: PriceUnitGrid,
   parameters: { layout: 'padded' },
   args: {

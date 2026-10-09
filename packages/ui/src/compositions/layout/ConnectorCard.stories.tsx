@@ -38,7 +38,7 @@ function ConnectorCardDemo(props: ConnectorCardProps) {
 }
 
 const meta = {
-  title: 'Foundation/Compositions/ConnectorCard',
+  title: 'Building blocks/Layout/ConnectorCard',
   component: ConnectorCard,
   parameters: { layout: 'padded' },
   argTypes: {

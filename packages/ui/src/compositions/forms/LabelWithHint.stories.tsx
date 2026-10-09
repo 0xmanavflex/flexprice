@@ -3,7 +3,7 @@ import { Input } from '@ui/components/primitives/input'
 import { LabelWithHint } from './LabelWithHint'
 
 const meta = {
-  title: 'Foundation/Compositions/LabelWithHint',
+  title: 'Building blocks/Forms/LabelWithHint',
   component: LabelWithHint,
   parameters: { layout: 'padded' },
   args: {

@@ -4,7 +4,7 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { FitToWindow } from './FitToWindow'
 
 const meta = {
-  title: 'Foundation/Compositions/FitToWindow',
+  title: 'Building blocks/Layout/FitToWindow',
   component: FitToWindow,
   args: { pressed: false, onPressedChange: fn() },
   argTypes: {

@@ -7,7 +7,7 @@ import { EmptyState, ListOfferProvider } from './EmptyState'
 import { PageBody } from '../layout/Page'
 
 const meta = {
-  title: 'Foundation/Compositions/EmptyState',
+  title: 'Building blocks/Feedback & states/EmptyState',
   component: EmptyState,
   parameters: { layout: 'padded' },
   args: { title: 'No features yet' },

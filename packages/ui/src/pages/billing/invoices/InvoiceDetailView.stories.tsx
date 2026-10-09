@@ -111,7 +111,7 @@ function InvoiceDetailPlayground({
 
 /** One invoice as a document, with Payments and Credit notes tabs and an Activity, Metadata, Related rail. */
 const meta = {
-  title: 'Surfaces/InvoiceDetailView',
+  title: 'App/Billing/Invoices/Invoice detail view',
   component: InvoiceDetailPlayground,
   parameters: { layout: 'fullscreen' },
   args: {

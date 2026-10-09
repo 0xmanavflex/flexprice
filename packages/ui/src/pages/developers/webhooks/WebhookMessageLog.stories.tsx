@@ -4,7 +4,7 @@ import { WebhookMessageLog } from './WebhookMessageLog'
 import { DEMO_WEBHOOK_EVENT_TYPES, DEMO_WEBHOOK_MESSAGES } from './webhookFixtures'
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookMessageLog',
+  title: 'App/Developers/Webhooks/Message log',
   component: WebhookMessageLog,
   parameters: { layout: 'padded' },
   args: {

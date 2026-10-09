@@ -4,7 +4,7 @@ import { WebhookActivity } from './WebhookActivity'
 import { DEMO_WEBHOOK_ACTIVITY } from './webhookFixtures'
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookActivity',
+  title: 'App/Developers/Webhooks/Activity',
   component: WebhookActivity,
   parameters: { layout: 'padded' },
   args: { points: DEMO_WEBHOOK_ACTIVITY, locale: 'en-US' },

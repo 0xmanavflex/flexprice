@@ -4,7 +4,7 @@ import { money, formatMoney } from '@fp/domain'
 import { CollectionsSummary } from './CollectionsSummary'
 
 const meta = {
-  title: 'Surfaces/CollectionsSummary',
+  title: 'App/Collections/Payments/Collections summary',
   component: CollectionsSummary,
   parameters: { layout: 'padded' },
   args: {

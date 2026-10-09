@@ -17,7 +17,7 @@ import { CreditGrantTable } from './CreditGrantTable'
  * something with the period it refreshes on beside it. No network.
  */
 const meta = {
-  title: 'Surfaces/CreditGrantTable',
+  title: 'App/Product catalog/Credit grants/Credit grant table',
   component: CreditGrantTable,
   parameters: { layout: 'padded' },
   args: { grants: [] },

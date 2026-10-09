@@ -5,7 +5,7 @@ import { WebhookEventTypePicker } from './WebhookEventTypePicker'
 import { DEMO_WEBHOOK_EVENT_TYPES } from './webhookFixtures'
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookEventTypePicker',
+  title: 'App/Developers/Webhooks/Event type picker',
   component: WebhookEventTypePicker,
   parameters: { layout: 'padded' },
   args: { eventTypes: DEMO_WEBHOOK_EVENT_TYPES, selected: [], onChange: fn() },

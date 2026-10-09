@@ -39,7 +39,7 @@ function menuItems(): DetailMenuItem[] {
 }
 
 const meta = {
-  title: 'Foundation/Flexprice/EntityHeader',
+  title: 'Building blocks/Detail pages/EntityHeader',
   component: EntityHeader,
   parameters: {
     layout: 'fullscreen',

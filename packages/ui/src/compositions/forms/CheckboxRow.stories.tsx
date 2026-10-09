@@ -10,7 +10,7 @@ function Controlled(args: ComponentProps<typeof CheckboxRow>) {
 }
 
 const meta = {
-  title: 'Foundation/Compositions/CheckboxRow',
+  title: 'Building blocks/Forms/CheckboxRow',
   component: CheckboxRow,
   parameters: { layout: 'padded' },
   args: { checked: true, onCheckedChange: () => undefined, children: 'Show the date range' },

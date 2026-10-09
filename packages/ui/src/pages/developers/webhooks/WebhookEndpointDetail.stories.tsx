@@ -33,7 +33,7 @@ function Attempts() {
 }
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookEndpointDetail',
+  title: 'App/Developers/Webhooks/Endpoint detail',
   component: WebhookEndpointDetail,
   parameters: { layout: 'fullscreen' },
   args: {

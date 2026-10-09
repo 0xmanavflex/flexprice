@@ -125,7 +125,7 @@ function CustomersListBody({
 }
 
 const meta = {
-  title: 'Pages/Customers/Customers list',
+  title: 'App/Customers/Customer list',
   component: CustomersListPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

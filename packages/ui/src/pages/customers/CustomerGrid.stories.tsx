@@ -17,7 +17,7 @@ import { CustomerGrid } from './CustomerGrid'
  * either true or obviously false.
  */
 const meta = {
-  title: 'Surfaces/CustomerGrid',
+  title: 'App/Customers/Customer table',
   component: CustomerGrid,
   parameters: { layout: 'padded' },
   args: {

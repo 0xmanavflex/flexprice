@@ -73,7 +73,7 @@ function LiveStepper({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/WorkflowStepper',
+  title: 'Building blocks/Forms/WorkflowStepper',
   component: WorkflowStepper,
   parameters: { layout: 'padded' },
   args: {

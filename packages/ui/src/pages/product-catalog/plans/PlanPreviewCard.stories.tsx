@@ -17,7 +17,7 @@ import { PlanPreviewCard, creditLine, includedLine } from './PlanPreviewCard'
  * No provider, no network.
  */
 const meta = {
-  title: 'Surfaces/PlanPreviewCard',
+  title: 'App/Product catalog/Plans/Plan preview card',
   component: PlanPreviewCard,
   parameters: { layout: 'centered' },
 } satisfies Meta<typeof PlanPreviewCard>

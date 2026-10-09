@@ -69,7 +69,7 @@ function manyCostSheets(count: number): CostSheet[] {
 }
 
 const meta = {
-  title: 'Surfaces/CostSheetGrid',
+  title: 'App/Settings/Cost sheets/Cost sheet table',
   component: CostSheetGrid,
   parameters: { layout: 'padded' },
   args: {

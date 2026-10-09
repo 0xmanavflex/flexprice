@@ -14,7 +14,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/TaxRateForm',
+  title: 'App/Settings/Taxes/Tax rate form',
   component: TaxRateCreateForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

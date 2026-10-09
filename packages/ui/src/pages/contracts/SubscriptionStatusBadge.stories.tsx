@@ -5,7 +5,7 @@ import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
 /** A subscription's lifecycle as the shared status pill; only Incomplete is destructive. */
 const meta = {
-  title: 'Surfaces/SubscriptionStatusBadge',
+  title: 'App/Contracts/Contract status badge',
   component: SubscriptionStatusBadge,
   parameters: { layout: 'centered' },
   args: { status: SubscriptionStatus.Active },

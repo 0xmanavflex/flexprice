@@ -11,7 +11,7 @@ import { ShellDetailTrailProvider, type ShellDetailCrumb } from './ShellDetailTr
  * is the page's end. Bare, with no provider, the page draws its own trail.
  */
 const meta = {
-  title: 'Foundation/Compositions/Shell/ShellDetailTrail',
+  title: 'Building blocks/Shell/ShellDetailTrail',
   component: ShellDetailTrailProvider,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof ShellDetailTrailProvider>

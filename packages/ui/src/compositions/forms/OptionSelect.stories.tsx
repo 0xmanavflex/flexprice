@@ -59,7 +59,7 @@ function Controlled({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/OptionSelect',
+  title: 'Building blocks/Forms/OptionSelect',
   component: OptionSelect,
   parameters: {
     layout: 'centered',

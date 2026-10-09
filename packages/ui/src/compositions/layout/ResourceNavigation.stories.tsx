@@ -48,7 +48,7 @@ function Harness({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/ResourceNavigation',
+  title: 'Building blocks/Layout/ResourceNavigation',
   component: Harness,
   parameters: { layout: 'padded' },
   argTypes: {

@@ -18,7 +18,7 @@ function makeRedemptions(count: number): CouponRedemption[] {
 }
 
 const meta = {
-  title: 'Surfaces/CouponRedemptionsView',
+  title: 'App/Settings/Discounts/Discount redemptions',
   component: CouponRedemptionsView,
   parameters: { layout: 'padded' },
 } satisfies Meta<typeof CouponRedemptionsView>

@@ -5,7 +5,7 @@ import { CouponGrid } from './CouponGrid'
 import { couponFixtures, fixtureCouponQuery, manyCoupons } from './couponFixtures'
 
 const meta = {
-  title: 'Surfaces/CouponGrid',
+  title: 'App/Settings/Discounts/Discount table',
   component: CouponGrid,
   parameters: { layout: 'padded' },
   args: {

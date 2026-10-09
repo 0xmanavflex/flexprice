@@ -4,7 +4,7 @@ import { EnvironmentRenameForm } from './EnvironmentRenameForm'
 
 /** The dialog portals to the document, so the play functions read from there. */
 const meta = {
-  title: 'Flexprice/EnvironmentRenameForm',
+  title: 'App/Settings/Environments/Rename environment form',
   component: EnvironmentRenameForm,
   args: {
     open: true,

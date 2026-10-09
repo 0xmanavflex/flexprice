@@ -242,7 +242,7 @@ const withSubscription = (patch: Partial<SubscriptionDetail>): SubscriptionDetai
 
 /** One contract, read-only: lifecycle banners, a summary row, five tabs and an Activity, Metadata, Related rail. */
 const meta = {
-  title: 'Surfaces/SubscriptionDetailView',
+  title: 'App/Contracts/Contract detail',
   component: SubscriptionDetailView,
   parameters: { layout: 'fullscreen' },
   args: BASE,

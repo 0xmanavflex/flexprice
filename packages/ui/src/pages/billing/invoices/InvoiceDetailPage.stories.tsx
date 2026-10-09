@@ -114,7 +114,7 @@ function InvoiceDetailPage(props: InvoiceDetailPageProps) {
 }
 
 const meta = {
-  title: 'Pages/Billing/Invoice detail',
+  title: 'App/Billing/Invoices/Invoice detail',
   component: InvoiceDetailPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

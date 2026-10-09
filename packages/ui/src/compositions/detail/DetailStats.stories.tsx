@@ -17,7 +17,7 @@ const FIGURES: DetailStat[] = [
 ]
 
 const meta = {
-  title: 'Foundation/Compositions/DetailStats',
+  title: 'Building blocks/Detail pages/DetailStats',
   component: DetailStats,
   parameters: { layout: 'padded' },
   argTypes: {

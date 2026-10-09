@@ -38,7 +38,7 @@ function Harness({ onSave, fields = DEFAULT_FIELDS, startEditing = false }: Harn
 }
 
 const meta = {
-  title: 'Compositions/EditableFields',
+  title: 'Building blocks/Forms/EditableFields',
   component: Harness,
   args: { onSave: fn() },
   argTypes: {

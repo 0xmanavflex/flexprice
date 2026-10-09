@@ -3,7 +3,7 @@ import { Input } from '@ui/components/primitives/input'
 import { FormDisclosure } from './FormDisclosure'
 
 const meta = {
-  title: 'Foundation/Compositions/FormDisclosure',
+  title: 'Building blocks/Forms/FormDisclosure',
   component: FormDisclosure,
   parameters: { layout: 'padded' },
   args: {

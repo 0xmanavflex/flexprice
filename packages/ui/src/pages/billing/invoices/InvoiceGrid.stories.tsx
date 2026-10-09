@@ -14,7 +14,7 @@ import { fixtureQuery, invoiceFixtures, manyInvoices } from './invoiceFixtures'
  * than the one the redesign drew.
  */
 const meta = {
-  title: 'Surfaces/InvoiceGrid',
+  title: 'App/Billing/Invoices/Invoice table',
   component: InvoiceGrid,
   parameters: { layout: 'padded' },
   args: {

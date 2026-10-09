@@ -115,7 +115,7 @@ function SubscriptionsListBody({
 }
 
 const meta = {
-  title: 'Pages/Billing/Subscriptions list',
+  title: 'App/Contracts/Contract list',
   component: SubscriptionsListPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

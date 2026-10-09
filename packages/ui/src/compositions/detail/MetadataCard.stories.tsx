@@ -4,7 +4,7 @@ import { fn } from 'storybook/test'
 import { MetadataCard } from './MetadataCard'
 
 const meta = {
-  title: 'Foundation/Compositions/MetadataCard',
+  title: 'Building blocks/Detail pages/MetadataCard',
   component: MetadataCard,
   parameters: { layout: 'padded' },
   args: {

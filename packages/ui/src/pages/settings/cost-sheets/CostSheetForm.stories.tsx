@@ -12,7 +12,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/CostSheetForm',
+  title: 'App/Settings/Cost sheets/Cost sheet form',
   component: CostSheetForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

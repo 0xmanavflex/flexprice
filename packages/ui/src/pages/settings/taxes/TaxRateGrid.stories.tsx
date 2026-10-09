@@ -11,7 +11,7 @@ import {
 import { TaxRateGrid } from './TaxRateGrid'
 
 const meta = {
-  title: 'Surfaces/TaxRateGrid',
+  title: 'App/Settings/Taxes/Tax rate table',
   component: TaxRateGrid,
   parameters: { layout: 'padded' },
   args: {

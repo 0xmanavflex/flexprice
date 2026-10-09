@@ -15,7 +15,7 @@ const inSection: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/CreditGrantForm',
+  title: 'App/Product catalog/Credit grants/Credit grant form',
   component: CreditGrantCreateForm,
   parameters: { layout: 'padded' },
   decorators: [inSection],

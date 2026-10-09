@@ -11,7 +11,7 @@ import { TierTable } from './TierTable'
  * by construction rather than validated after the fact.
  */
 const meta = {
-  title: 'Surfaces/TierTable',
+  title: 'App/Product catalog/Charges/Tier table',
   component: TierTable,
   parameters: { layout: 'padded' },
   // Default args so each story can override with `render`; the controlled

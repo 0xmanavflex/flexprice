@@ -72,7 +72,7 @@ function ChartBoxPlayground({
 }
 
 const meta = {
-  title: 'Foundation/Compositions/ChartBox',
+  title: 'Building blocks/Charts & metrics/ChartBox',
   component: ChartBox,
   parameters: { layout: 'padded' },
   argTypes: {

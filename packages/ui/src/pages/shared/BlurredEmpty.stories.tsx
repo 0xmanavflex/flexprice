@@ -23,7 +23,7 @@ const placeholder: MetricTab[] = [
 ]
 
 const meta = {
-  title: 'Foundation/Flexprice/BlurredEmpty',
+  title: 'Building blocks/Feedback & states/BlurredEmpty',
   component: BlurredEmpty,
   parameters: { layout: 'padded' },
   argTypes: {

@@ -18,7 +18,7 @@ function makeEvents(count: number): CustomerEvent[] {
 }
 
 const meta = {
-  title: 'Surfaces/CustomerEventsGrid',
+  title: 'App/Customers/Customer events',
   component: CustomerEventsGrid,
   parameters: { layout: 'padded' },
   args: { events: DEMO_CUSTOMER_EVENTS },

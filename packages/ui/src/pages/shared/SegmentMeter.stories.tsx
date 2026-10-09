@@ -49,7 +49,7 @@ function makeRows(count: number, quota: number | undefined, showDelta: boolean):
 }
 
 const meta = {
-  title: 'Foundation/Flexprice/SegmentMeter',
+  title: 'Building blocks/Charts & metrics/SegmentMeter',
   component: SegmentMeter,
   parameters: { layout: 'padded' },
   args: { rows, label: 'Usage by feature' },

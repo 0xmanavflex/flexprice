@@ -31,7 +31,7 @@ function Controlled(args: SortMenuProps<string>) {
 }
 
 const meta = {
-  title: 'Foundation/Compositions/SortMenu',
+  title: 'Building blocks/Tables & lists/SortMenu',
   component: SortMenu,
   parameters: {
     a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },

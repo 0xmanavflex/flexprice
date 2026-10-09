@@ -29,7 +29,7 @@ function Probe() {
  * props, so there are no controls; the story is the keypress.
  */
 const meta = {
-  title: 'Foundation/Compositions/Shell/ThemeShortcut',
+  title: 'Building blocks/Shell/ThemeShortcut',
   component: ThemeShortcut,
   parameters: { layout: 'padded' },
   decorators: [

@@ -46,7 +46,7 @@ function ChargesPlayground({
 
 /** A plan's charges, grouped into fixed and usage bands. Drag the counts from 0 to 20 to see empty, short and long lists. */
 const meta = {
-  title: 'Surfaces/PlanChargesView',
+  title: 'App/Product catalog/Plans/Plan charges',
   component: ChargesPlayground,
   parameters: { layout: 'padded' },
   args: {

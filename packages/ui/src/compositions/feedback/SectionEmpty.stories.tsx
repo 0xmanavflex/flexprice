@@ -5,7 +5,7 @@ import { Button } from '@ui/components/primitives/button'
 import { SectionEmpty } from './SectionEmpty'
 
 const meta = {
-  title: 'Foundation/Compositions/SectionEmpty',
+  title: 'Building blocks/Feedback & states/SectionEmpty',
   component: SectionEmpty,
   parameters: { layout: 'padded' },
   args: {

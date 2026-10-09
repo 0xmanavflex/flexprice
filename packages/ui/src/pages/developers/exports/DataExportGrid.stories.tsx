@@ -49,7 +49,7 @@ function manyExports(count: number): DataExport[] {
 }
 
 const meta = {
-  title: 'Surfaces/DataExportGrid',
+  title: 'App/Developers/Exports/Export table',
   component: DataExportGrid,
   parameters: { layout: 'padded' },
   args: {

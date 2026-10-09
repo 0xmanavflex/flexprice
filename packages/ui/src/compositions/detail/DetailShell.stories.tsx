@@ -13,7 +13,7 @@ import type { DetailMetric } from './MetricRail'
  * (primary action, status chips, id copy chip, More menu), a metric rail, and the body.
  */
 const meta = {
-  title: 'Foundation/Compositions/DetailShell',
+  title: 'Building blocks/Detail pages/DetailShell',
   component: DetailShell,
   parameters: { layout: 'fullscreen' },
   args: {

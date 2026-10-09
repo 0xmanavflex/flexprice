@@ -11,7 +11,7 @@ import {
 import { PaymentGrid } from './PaymentGrid'
 
 const meta = {
-  title: 'Surfaces/PaymentGrid',
+  title: 'App/Collections/Payments/Payment table',
   component: PaymentGrid,
   parameters: { layout: 'padded' },
   args: {

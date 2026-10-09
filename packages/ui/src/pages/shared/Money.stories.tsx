@@ -7,7 +7,7 @@ const currencies = ['USD', 'EUR', 'GBP', 'INR', 'JPY', 'CHF', 'BRL', 'AED']
 const locales = ['en-US', 'en-GB', 'de-DE', 'fr-FR', 'en-IN', 'ja-JP', 'pt-BR']
 
 const meta = {
-  title: 'Foundation/Flexprice/Money',
+  title: 'Building blocks/Charts & metrics/Money',
   component: Money,
   parameters: { layout: 'centered' },
   args: { value: money('1234.56', 'USD'), locale: 'en-US' },

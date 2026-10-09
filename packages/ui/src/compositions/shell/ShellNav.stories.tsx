@@ -92,7 +92,7 @@ type PlaygroundArgs = Omit<ComponentProps<typeof ShellNav>, 'groups'> & {
 }
 
 const meta = {
-  title: 'Foundation/Compositions/Shell/ShellNav',
+  title: 'Building blocks/Shell/ShellNav',
   component: ShellNav,
   decorators: [
     (Story) => (

@@ -23,7 +23,7 @@ const inSection: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/EntitlementForm',
+  title: 'App/Product catalog/Entitlements/Entitlement form',
   component: EntitlementCreateForm,
   parameters: { layout: 'padded' },
   decorators: [inSection],

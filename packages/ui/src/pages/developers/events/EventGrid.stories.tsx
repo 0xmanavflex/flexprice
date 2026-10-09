@@ -40,7 +40,7 @@ function manyEvents(count: number): RawEvent[] {
 }
 
 const meta = {
-  title: 'Surfaces/EventGrid',
+  title: 'App/Developers/Events/Event table',
   component: EventGrid,
   parameters: { layout: 'padded' },
   args: {

@@ -40,7 +40,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/CreditNoteForm',
+  title: 'App/Billing/Credit notes/Credit note form',
   component: CreditNoteForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],

@@ -51,7 +51,7 @@ function MeteredFieldsHarness({
 
 /** The metered half of the entitlement dialog, wired to local state. */
 const meta = {
-  title: 'Surfaces/MeteredEntitlementFields',
+  title: 'App/Product catalog/Entitlements/Metered entitlement fields',
   component: MeteredFieldsHarness,
   parameters: { layout: 'padded' },
   decorators: [

@@ -4,7 +4,7 @@ import { WebhookAttemptList } from './WebhookAttemptList'
 import { DEMO_WEBHOOK_MESSAGES } from './webhookFixtures'
 
 const meta = {
-  title: 'Surfaces/Webhooks/WebhookAttemptList',
+  title: 'App/Developers/Webhooks/Attempt list',
   component: WebhookAttemptList,
   parameters: { layout: 'padded' },
   args: {

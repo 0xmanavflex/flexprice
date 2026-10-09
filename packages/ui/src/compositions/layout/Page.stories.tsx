@@ -11,7 +11,7 @@ import { PageBody, PageHeader, PageToolbar } from './Page'
  * shape in `FullLayout`.
  */
 const meta = {
-  title: 'Foundation/Compositions/Page',
+  title: 'Building blocks/Layout/Page',
   component: PageHeader,
   parameters: { layout: 'padded' },
   args: { title: 'Coupons' },

@@ -137,7 +137,7 @@ function HomePage(args: HomePageProps) {
 }
 
 const meta = {
-  title: 'Pages/Home/Dashboard',
+  title: 'App/Home/Home',
   component: HomePage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,

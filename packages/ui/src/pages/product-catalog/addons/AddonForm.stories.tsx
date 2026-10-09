@@ -15,7 +15,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/AddonForm',
+  title: 'App/Product catalog/Add-ons/Add-on form',
   component: AddonForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
