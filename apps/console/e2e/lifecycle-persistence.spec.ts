@@ -98,7 +98,7 @@ test('cancelling a contract at period end is reflected on the detail', async ({ 
   await page.getByRole('button', { name: 'Contract actions' }).click()
   await page.getByRole('menuitem', { name: 'Cancel contract' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Cancel contract' }).click()
-  await expect(page.getByText('Cancels at period end')).toBeVisible()
+  await expect(page.getByText(/This contract ends on .* and will not renew/)).toBeVisible()
 })
 
 async function createInvoice(page: Page, finalizeNow: boolean) {
