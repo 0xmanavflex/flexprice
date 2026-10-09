@@ -1456,6 +1456,8 @@ function contractLines(id: string, row: Record<string, unknown>): Record<string,
       billing_period: 'MONTHLY',
       currency,
       price: { amount: '99.00', currency },
+      // The real API emits Go's zero time for an open-ended line.
+      end_date: '0001-01-01T00:00:00Z',
     },
     {
       id: `${id}_line_2`,
@@ -1466,6 +1468,7 @@ function contractLines(id: string, row: Record<string, unknown>): Record<string,
       billing_period: 'MONTHLY',
       currency,
       price: { amount: '0.002', currency },
+      end_date: '0001-01-01T00:00:00Z',
     },
   ]
   contractLineStore.set(id, lines)
@@ -3045,6 +3048,7 @@ export const handlers = [
       currency,
       price: { amount: price['amount'], currency },
       start_date: body['start_date'] ?? new Date().toISOString(),
+      end_date: '0001-01-01T00:00:00Z',
     }
     contractLines(id, row).push(line)
     return HttpResponse.json(line)

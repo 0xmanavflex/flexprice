@@ -53,6 +53,17 @@ describe('subscription detail mappers', () => {
   })
 })
 
+describe('unset Go times', () => {
+  it('maps the zero time to null so open-ended charges are not treated as ended', () => {
+    const zero = new Date('0001-01-01T00:00:00Z')
+    const line = toSubscriptionLine({ startDate: zero, endDate: zero })
+    expect(line.startDate).toBeNull()
+    expect(line.endDate).toBeNull()
+    const real = new Date('2026-01-01T00:00:00Z')
+    expect(toSubscriptionLine({ startDate: real, endDate: real }).endDate).toEqual(real)
+  })
+})
+
 describe('subscription detail additions', () => {
   it('reads commitment, trial start and latest invoice', () => {
     const detail = toSubscriptionDetail({

@@ -424,6 +424,19 @@ export const OverviewSummary: Story = {
   },
 }
 
+/** The Overview charges carry the same row actions as Pricing, and show the quantity. */
+export const OverviewChargeActions: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('Platform fee')
+    await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    await expect(await screen.findByRole('dialog')).toBeVisible()
+  },
+}
+
 /** "Edit the plan" is the way to change a plan charge for everyone. */
 export const EditPlanLink: Story = {
   play: async ({ canvasElement, args }) => {

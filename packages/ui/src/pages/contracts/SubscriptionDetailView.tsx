@@ -47,7 +47,7 @@ import { RelatedCard, type RelatedItem } from '../../compositions/detail/Related
 import { Section } from '../../compositions/layout/Section'
 import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
 import { LoadingRows } from '../../compositions/feedback/States'
-import { DetailTable } from '../shared/DetailTable'
+import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 import { EntityLink } from '../shared/cells'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 import { InvoiceStatusBadge } from '../shared/StatusBadge'
@@ -169,6 +169,26 @@ export function SubscriptionDetailView({
   const endLabel = isCancelled ? 'Ended' : isCancelling ? 'Ends' : 'Renews'
 
   const canEditCharges = !isCancelled && !isCancelling
+
+  const chargeActionColumns: DetailColumn<SubscriptionLine>[] =
+    canEditCharges && (onEditCharge || onEndCharge)
+      ? [
+          {
+            key: 'actions',
+            header: 'Actions',
+            width: 48,
+            cell: (line) =>
+              isEnded(line) ? null : (
+                <RowActionsMenu
+                  label={line.name}
+                  {...(onEditCharge ? { onEdit: () => setDialog({ mode: 'edit', line }) } : {})}
+                  {...(onEndCharge ? { onRemove: () => setDialog({ mode: 'end', line }) } : {})}
+                  removeLabel="End charge"
+                />
+              ),
+          },
+        ]
+      : []
 
   const closeDialog = () => {
     setDialog(null)
@@ -350,6 +370,11 @@ export function SubscriptionDetailView({
                           cell: (line) => <LineSourceBadge line={line} />,
                         },
                         {
+                          key: 'quantity',
+                          header: 'Quantity',
+                          cell: (line) => line.quantity || '—',
+                        },
+                        {
                           key: 'period',
                           header: 'Billed',
                           cell: (line) => line.billingPeriodLabel,
@@ -361,6 +386,7 @@ export function SubscriptionDetailView({
                             <span className="tabular-nums">{formatMoney(line.amount)}</span>
                           ),
                         },
+                        ...chargeActionColumns,
                       ]}
                     />
                   )
@@ -534,28 +560,7 @@ export function SubscriptionDetailView({
                           <span className="tabular-nums">{formatMoney(line.amount)}</span>
                         ),
                       },
-                      ...(canEditCharges && (onEditCharge || onEndCharge)
-                        ? [
-                            {
-                              key: 'actions',
-                              header: 'Actions',
-                              width: 48,
-                              cell: (line: SubscriptionLine) =>
-                                isEnded(line) ? null : (
-                                  <RowActionsMenu
-                                    label={line.name}
-                                    {...(onEditCharge
-                                      ? { onEdit: () => setDialog({ mode: 'edit', line }) }
-                                      : {})}
-                                    {...(onEndCharge
-                                      ? { onRemove: () => setDialog({ mode: 'end', line }) }
-                                      : {})}
-                                    removeLabel="End charge"
-                                  />
-                                ),
-                            },
-                          ]
-                        : []),
+                      ...chargeActionColumns,
                     ]}
                   />
                 )}

@@ -76,6 +76,11 @@ export interface SubscriptionWire {
 
 const SUBSCRIPTION_STATUSES = new Set<string>(Object.values(SubscriptionStatus))
 
+/** The API serialises an unset Go time as `0001-01-01T00:00:00Z`; that means "no date", not "ended long ago". */
+function realDate(value: Date | undefined | null): Date | null {
+  return value && value.getUTCFullYear() > 1 ? value : null
+}
+
 export function toSubscription(wire: SubscriptionWire): Subscription {
   // Known statuses pass through; everything else — the API's `draft`, and any
   // value this build has not learned — collapses to Incomplete, the state a
@@ -96,7 +101,7 @@ export function toSubscription(wire: SubscriptionWire): Subscription {
     billingPeriodLabel: BILLING_PERIOD_LABEL[(wire.billingPeriod ?? '') as BillingPeriod] ?? '—',
     currentPeriodStart: wire.currentPeriodStart ?? null,
     currentPeriodEnd: wire.currentPeriodEnd ?? null,
-    startDate: wire.startDate ?? null,
+    startDate: realDate(wire.startDate),
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -106,15 +111,15 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
     ...toSubscription(wire),
     billingPeriod: (wire.billingPeriod as BillingPeriod | undefined) ?? null,
     billingPeriodCount: wire.billingPeriodCount ?? 1,
-    cancelAt: wire.cancelAt ?? null,
+    cancelAt: realDate(wire.cancelAt),
     cancelAtPeriodEnd: wire.cancelAtPeriodEnd ?? false,
-    cancelledAt: wire.cancelledAt ?? null,
-    endDate: wire.endDate ?? null,
-    trialEnd: wire.trialEnd ?? null,
+    cancelledAt: realDate(wire.cancelledAt),
+    endDate: realDate(wire.endDate),
+    trialEnd: realDate(wire.trialEnd),
     paymentTerms: wire.paymentTerms ?? '',
     collectionMethod: wire.collectionMethod ?? '',
     metadata: wire.metadata ?? {},
-    trialStart: wire.trialStart ?? null,
+    trialStart: realDate(wire.trialStart),
     timezone: wire.timezone ?? '',
     lookupKey: wire.lookupKey ?? '',
     commitmentAmount:
@@ -160,8 +165,8 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
     quantity: wire.quantity ?? '',
     billingPeriodLabel: BILLING_PERIOD_LABEL[(wire.billingPeriod ?? '') as BillingPeriod] ?? '—',
     amount: moneyOr(wire.price?.amount, wire.price?.currency || wire.currency),
-    startDate: wire.startDate ?? null,
-    endDate: wire.endDate ?? null,
+    startDate: realDate(wire.startDate),
+    endDate: realDate(wire.endDate),
     source: LINE_SOURCE[wire.entityType ?? ''] ?? 'plan',
     priceId: wire.priceId ?? '',
   }
