@@ -296,10 +296,9 @@ function FilterSelect({ filter }: { filter: Filter }) {
 /**
  * The filter rows.
  *
- * The range sits on its own at the top of the page because it is the only
- * filter every panel obeys — the metrics, the contracts and the invoices are
- * all cut to the same window. Granularity and customer only shape the metric
- * chart, so they stay in the row directly above it.
+ * One row: granularity and customer on the left, the range pinned to the
+ * right end. The range still cuts every panel on the page — the metrics, the
+ * contracts and the invoices — to the same window.
  *
  * The design also drew an "+ Add filter" control. It is left out rather than
  * drawn dead: this console already learned from a global search box that
@@ -312,17 +311,15 @@ function RangeFilter(props: {
   onRangeChange: (value: string) => void
 }) {
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <FilterSelect
-        filter={{
-          label: 'Range',
-          value: props.range,
-          options: props.rangeOptions,
-          onChange: props.onRangeChange,
-          icon: <CalendarIcon aria-hidden className="size-3.5" />,
-        }}
-      />
-    </div>
+    <FilterSelect
+      filter={{
+        label: 'Range',
+        value: props.range,
+        options: props.rangeOptions,
+        onChange: props.onRangeChange,
+        icon: <CalendarIcon aria-hidden className="size-3.5" />,
+      }}
+    />
   )
 }
 
@@ -333,6 +330,8 @@ function ChartFilters(props: {
   customerOptions: FilterOption[]
   customer: string
   onCustomerChange: (value: string) => void
+  /** The range picker, pinned to the right end of the same row. */
+  range: ReactNode
 }) {
   const filters: Filter[] = [
     {
@@ -354,6 +353,7 @@ function ChartFilters(props: {
       {filters.map((filter) => (
         <FilterSelect key={filter.label} filter={filter} />
       ))}
+      <div className="ml-auto">{props.range}</div>
     </div>
   )
 }
@@ -840,8 +840,6 @@ export function DashboardHome({
       {/* The visible title lives in the shell's breadcrumb; the outline still needs one. */}
       <h1 className="sr-only">Overview</h1>
 
-      <RangeFilter rangeOptions={rangeOptions} range={range} onRangeChange={onRangeChange} />
-
       <MetricsSection
         events={events}
         customers={customers}
@@ -854,6 +852,13 @@ export function DashboardHome({
             customerOptions={customerOptions}
             customer={customer}
             onCustomerChange={onCustomerChange}
+            range={
+              <RangeFilter
+                rangeOptions={rangeOptions}
+                range={range}
+                onRangeChange={onRangeChange}
+              />
+            }
           />
         }
         onQuickstart={() => go('/features')}
