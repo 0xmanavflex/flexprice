@@ -49,8 +49,9 @@ export const PLACEHOLDER_ROUTES = [
   // `/revenue` is a real page now — see `revenueRoute` in router.tsx.
 
   // Developers
-  // `/api-keys`, `/service-accounts`, `/webhooks` are real: each lands on its
-  // Settings → Developers panel (see `developerRedirects` in router.tsx).
+  // `/api-keys`, `/service-accounts` are real: each lands on its Developers
+  // panel (see `developerRedirects` in router.tsx).
+  // `/webhooks` is a real page — see `webhooksRoute` in router.tsx.
   // `/events` is a real page — see `eventsRoute` in router.tsx.
   // `/exports` is a real page — see `exportsRoute` in router.tsx.
   // `/usage-syncs` is a real page — see `usageSyncsRoute` in router.tsx.

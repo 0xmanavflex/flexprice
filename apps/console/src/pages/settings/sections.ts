@@ -124,12 +124,6 @@ export const SETTINGS_SECTIONS = [
     ],
   },
   {
-    id: 'webhooks',
-    label: 'Webhooks',
-    hidden: true,
-    tabs: [{ id: 'webhooks', label: 'Webhooks' }],
-  },
-  {
     id: 'organization',
     label: 'Organization',
     hidden: true,
@@ -163,6 +157,7 @@ export const SECTION_ALIASES: Readonly<Record<string, { section: string; tab: st
 export const MOVED_SECTIONS: Readonly<Record<string, string>> = {
   'api-keys': '/api-keys',
   'service-accounts': '/service-accounts',
+  webhooks: '/webhooks',
 }
 
 /** The section a bad or absent `?section=` falls back to. */

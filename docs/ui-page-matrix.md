@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-52 route pages.
+55 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -61,4 +61,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | taxes | `TaxFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, TaxRateCreateForm, TaxRateEditForm |
 | taxes | `TaxListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, TaxRateGrid |
 | usage-syncs | `UsageSyncListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | ListState, PageBody, UsageSyncDetailSheet, UsageSyncGrid |
+| webhooks | `WebhookEndpointCreatePage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | WebhookEndpointForm |
+| webhooks | `WebhookEndpointDetailPage` | Detail | ConfirmDialog, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, Section, SimpleTable, SortMenu | AppFailure, LoadingRows, WebhookAttemptList, WebhookEndpointDetail |
+| webhooks | `WebhooksPage` | Other | ConfirmDialog, EmptyState, EntityList, FilterBar, ResourceNavigation, Section, SortMenu | PageBody, WebhookActivity, WebhookEndpointGrid, WebhookEventCatalog, WebhookMessageLog |
 | workflows | `WorkflowListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | ListState, PageBody, WorkflowGrid |

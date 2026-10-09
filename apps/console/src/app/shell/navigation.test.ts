@@ -26,6 +26,9 @@ describe('navEntryForPath', () => {
     ['/taxes', 'settings-taxes'],
     ['/cost-sheets', 'settings-cost-tracking'],
     ['/pricing-widget', 'pricing-widget'],
+    ['/webhooks', 'webhooks'],
+    ['/webhooks/ep_2mVxQ7nB8yL4cZ1kR0aT3sW9', 'webhooks'],
+    ['/webhooks/new', 'webhooks'],
   ])('resolves %s to %s', (path, id) => {
     expect(navEntryForPath(path)).toBe(id)
   })
@@ -39,7 +42,6 @@ describe('navEntryForPath', () => {
   it.each([
     ['?section=team&tab=roles', 'settings'],
     ['?section=invoicing&tab=invoices', 'settings'],
-    ['?section=webhooks&tab=webhooks', 'webhooks'],
     ['?section=tags&tab=tags', 'settings-tags'],
 
     ['', 'settings'],
@@ -158,7 +160,8 @@ describe('the sidebar layout', () => {
 
   it('links a Settings tab with the search that selects it', () => {
     expect(hrefForNavId('settings')).toBe('/settings')
-    expect(hrefForNavId('webhooks')).toBe('/settings?section=webhooks&tab=webhooks')
+    expect(hrefForNavId('settings-tags')).toBe('/settings?section=tags&tab=tags')
+    expect(hrefForNavId('webhooks')).toBe('/webhooks')
     expect(hrefForNavId('plans')).toBe('/plans')
     expect(hrefForNavId('billing')).toBeUndefined()
   })

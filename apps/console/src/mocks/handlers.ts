@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw'
 import { type Corpus, corpus } from '@fp/query/fixtures'
+import { svixHandlers } from './svixHandlers'
 
 /**
  * Mock handlers over the captured-and-expanded corpus.
@@ -1764,6 +1765,9 @@ function sourceFor(key: string): Corpus {
 }
 
 export const handlers = [
+  // The Svix API behind the webhook portal — see `svixHandlers.ts`.
+  ...svixHandlers,
+
   // Environments. Unlike the create handlers further down — which echo the
   // record back and leave the corpus alone — this one appends, because the
   // console switches to what you just created and then refetches the list. An

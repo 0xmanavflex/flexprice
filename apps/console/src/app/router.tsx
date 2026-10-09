@@ -189,6 +189,25 @@ const SettingsPage = lazy(() =>
 )
 import { DEFAULT_SETTINGS_QUERY, type SettingsQuery, parseSettingsSearch } from './settingsSearch'
 import { MOVED_SECTIONS } from '@/pages/settings/sections'
+const WebhooksPage = lazy(() =>
+  import('@/pages/webhooks/WebhooksPage').then((m) => ({ default: m.WebhooksPage })),
+)
+const WebhookEndpointCreatePage = lazy(() =>
+  import('@/pages/webhooks/WebhookEndpointCreatePage').then((m) => ({
+    default: m.WebhookEndpointCreatePage,
+  })),
+)
+const WebhookEndpointDetailPage = lazy(() =>
+  import('@/pages/webhooks/WebhookEndpointDetailPage').then((m) => ({
+    default: m.WebhookEndpointDetailPage,
+  })),
+)
+import {
+  type WebhookEndpointSearch,
+  type WebhookHubSearch,
+  parseWebhookEndpointSearch,
+  parseWebhookHubSearch,
+} from './webhookSearch'
 
 const FeatureFormPage = lazy(() =>
   import('@/pages/features/FeatureFormPage').then((m) => ({ default: m.FeatureFormPage })),
@@ -1912,11 +1931,11 @@ function SettingsRouteComponent() {
 }
 
 /**
- * Developer destinations: API keys, service accounts and webhooks.
+ * Developer destinations: API keys and service accounts.
  *
- * API keys and service accounts live only here, on a plain page under the
- * Developers breadcrumb; `/settings?section=api-keys` redirects to them.
- * Webhooks also keeps a (hidden) Settings copy, so a link to either works.
+ * Both live only here, on a plain page under the Developers breadcrumb;
+ * `/settings?section=api-keys` redirects to them. Webhooks has its own routes
+ * below.
  */
 const DeveloperPanels = lazy(() =>
   import('@/pages/settings/DeveloperPanels').then((m) => ({ default: m.DeveloperPanels })),
@@ -1926,7 +1945,6 @@ const developerRedirects = (
   [
     ['/api-keys', 'api-keys'],
     ['/service-accounts', 'service-accounts'],
-    ['/webhooks', 'webhooks'],
   ] as const
 ).map(([path, panel]) =>
   createRoute({
@@ -1939,6 +1957,101 @@ const developerRedirects = (
     ),
   }),
 )
+
+/**
+ * Webhooks: the Svix consumer app portal (V1's `WebhookDashboard`), on three
+ * routes — the hub (`?tab=` endpoints / catalog / logs / activity), add
+ * endpoint, and one endpoint (`?tab=` overview / testing / advanced). `?msg=`
+ * opens a message's sheet over either. The old Settings tab redirects here
+ * (`MOVED_SECTIONS`).
+ */
+const webhooksRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/webhooks',
+  validateSearch: (search: Record<string, unknown>): WebhookHubSearch =>
+    parseWebhookHubSearch(search),
+  search: { middlewares: [stripSearchParams({ tab: 'endpoints' })] },
+  component: WebhooksRouteComponent,
+})
+
+function WebhooksRouteComponent() {
+  const { tab, msg } = webhooksRoute.useSearch()
+  const navigate = useNavigate()
+
+  return (
+    <WebhooksPage
+      tab={tab}
+      onTabChange={(next) =>
+        void navigate({ to: '/webhooks', search: { tab: next }, replace: true })
+      }
+      messageId={msg}
+      onMessageChange={(next) =>
+        void navigate({ to: '/webhooks', search: { tab, ...(next ? { msg: next } : {}) } })
+      }
+      onOpenEndpoint={(endpointId) =>
+        void navigate({ to: '/webhooks/$endpointId', params: { endpointId }, search: {} as never })
+      }
+      onCreate={() => void navigate({ to: '/webhooks/new' })}
+    />
+  )
+}
+
+const webhookCreateRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/webhooks/new',
+  component: WebhookCreateRouteComponent,
+})
+
+function WebhookCreateRouteComponent() {
+  const navigate = useNavigate()
+  return (
+    <WebhookEndpointCreatePage
+      onCancel={() => void navigate({ to: '/webhooks', search: {} as never })}
+      onCreated={(endpointId) =>
+        void navigate({ to: '/webhooks/$endpointId', params: { endpointId }, search: {} as never })
+      }
+    />
+  )
+}
+
+const webhookEndpointRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/webhooks/$endpointId',
+  validateSearch: (search: Record<string, unknown>): WebhookEndpointSearch =>
+    parseWebhookEndpointSearch(search),
+  search: { middlewares: [stripSearchParams({ tab: 'overview' })] },
+  component: WebhookEndpointRouteComponent,
+})
+
+function WebhookEndpointRouteComponent() {
+  const { endpointId } = webhookEndpointRoute.useParams()
+  const { tab, msg } = webhookEndpointRoute.useSearch()
+  const navigate = useNavigate()
+
+  return (
+    <WebhookEndpointDetailPage
+      endpointId={endpointId}
+      tab={tab}
+      onTabChange={(next) =>
+        void navigate({
+          to: '/webhooks/$endpointId',
+          params: { endpointId },
+          search: { tab: next },
+          replace: true,
+        })
+      }
+      messageId={msg}
+      onMessageChange={(next) =>
+        void navigate({
+          to: '/webhooks/$endpointId',
+          params: { endpointId },
+          search: { tab, ...(next ? { msg: next } : {}) },
+        })
+      }
+      onBack={() => void navigate({ to: '/webhooks', search: {} as never })}
+    />
+  )
+}
 
 /** Labels are Tags now, in Settings; the old path keeps working. */
 const labelsRedirect = createRoute({
@@ -2010,6 +2123,9 @@ export const routeTree = rootRoute.addChildren([
     subscriptionCreateRoute,
     subscriptionDetailRoute,
     ...developerRedirects,
+    webhooksRoute,
+    webhookCreateRoute,
+    webhookEndpointRoute,
     labelsRedirect,
     ...placeholderRoutes,
   ]),

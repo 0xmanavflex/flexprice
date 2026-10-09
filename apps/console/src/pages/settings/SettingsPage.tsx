@@ -25,7 +25,6 @@ import { RolesPanel } from './RolesPanel'
 import { SubscriptionsPanel } from './SubscriptionsPanel'
 import { TagsPanel } from './TagsPanel'
 import { WalletAlertsPanel } from './WalletAlertsPanel'
-import { WebhooksPanel } from './WebhooksPanel'
 import { SettingsUnavailable, UNAVAILABLE_COPY } from './SettingsUnavailable'
 import {
   RAIL_SECTIONS,
@@ -227,8 +226,6 @@ function SettingsPanel({
       return <OnboardingPanel />
     case 'tags/tags':
       return <TagsPanel onOpenPage={onOpenPage} />
-    case 'webhooks/webhooks':
-      return <WebhooksPanel />
     case 'alerts/wallet-alerts':
       return <WalletAlertsPanel />
     case 'appearance/theme':

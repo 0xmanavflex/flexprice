@@ -95,11 +95,7 @@ export const UNAVAILABLE_COPY: Record<string, { what: string; workaround?: strin
   'customer-experience/onboarding': {
     what: 'Onboarding automation would decide what happens to a customer between signing up and their first invoice.',
   },
-  'developers/webhooks': {
-    what: 'Webhooks are how Flexprice tells your systems that something happened — an invoice finalised, a payment failed.',
-  },
   'notifications/wallet-alerts': {
     what: 'Wallet alerts would warn you across the whole tenant when a customer balance runs low.',
   },
-
 }

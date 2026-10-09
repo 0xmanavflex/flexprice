@@ -15,8 +15,8 @@ import type { ShellCrumb, ShellNavGroup, ShellNavItem } from '@fp/ui/composition
  * label.
  *
  * Paths are one flat segment each. A row that is a tab of the Settings page
- * (Webhooks) carries the `query` that selects it, so it highlights and
- * deep-links like any other row.
+ * (Tags) carries the `query` that selects it, so it highlights and deep-links
+ * like any other row.
  *
  * Icons are attached by the app rather than declared here, so this module stays
  * free of JSX and can be tested as data.
@@ -68,12 +68,7 @@ export const NAV: NavEntry[] = [
       { id: 'api-keys', label: 'API keys', path: '/api-keys' },
       { id: 'service-accounts', label: 'Service accounts', path: '/service-accounts' },
       { id: 'events', label: 'Events debugger', path: '/events' },
-      {
-        id: 'webhooks',
-        label: 'Webhooks',
-        path: '/settings',
-        query: { section: 'webhooks', tab: 'webhooks' },
-      },
+      { id: 'webhooks', label: 'Webhooks', path: '/webhooks' },
       { id: 'usage-syncs', label: 'Usage sync', path: '/usage-syncs' },
       { id: 'exports', label: 'Exports', path: '/exports' },
       { id: 'workflows', label: 'Workflows', path: '/workflows' },
