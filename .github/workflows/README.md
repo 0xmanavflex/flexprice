@@ -1,6 +1,6 @@
 # CI
 
-Ten workflows, each answering one question, so a red check names the problem
+Eleven workflows, each answering one question, so a red check names the problem
 before you open it.
 
 | Workflow | Gates | Roughly |
@@ -15,6 +15,7 @@ before you open it.
 | `deploy.yml` | Vercel. **Skips until its secrets exist** | — |
 | `storybook-deploy.yml` | Publishes Storybook to its own Vercel project. **Skips until its secrets exist** | 4–8 min |
 | `deploy-develop.yml` | Deploys the `develop` branch to its own Vercel project. **Skips until `VERCEL_DEVELOP_PROJECT_ID` exists** | — |
+| `storybook-deploy-develop.yml` | Publishes the `develop` branch's Storybook to its own Vercel project. **Skips until `VERCEL_STORYBOOK_DEVELOP_PROJECT_ID` exists** | 4–8 min |
 
 They were split rather than left as one job because the failures have different
 owners. A failing lint and a failing accessibility check are not the same
@@ -95,3 +96,5 @@ Every check above also runs on pushes to `develop` (and on pull requests into it
 1. In Vercel, create a project for the develop environment and copy its **Project ID**.
 2. Add the repository secret `VERCEL_DEVELOP_PROJECT_ID`. `VERCEL_TOKEN` and `VERCEL_ORG_ID` are the ones `deploy.yml` already uses.
 3. Set the develop project's own Environment Variables (every `VITE_*`), so it points at the develop API.
+
+`storybook-deploy-develop.yml` publishes `develop`'s Storybook to a separate Vercel project (empty, framework **Other**) whose ID goes in `VERCEL_STORYBOOK_DEVELOP_PROJECT_ID`. The production Storybook (`storybook-deploy.yml`) deploys from `main` only.
