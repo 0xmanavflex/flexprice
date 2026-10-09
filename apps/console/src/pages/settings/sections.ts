@@ -65,10 +65,8 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'organization',
     label: 'Organization',
-    tabs: [
-      { id: 'profile', label: 'Profile' },
-      { id: 'plan', label: 'Plan & usage' },
-    ],
+    // One page, no tab bar: only the organisation's profile.
+    tabs: [{ id: 'profile', label: 'Profile' }],
   },
   {
     id: 'discounts',

@@ -1218,8 +1218,8 @@ const tenantBilling = {
       },
     ],
     // Null here is legitimate: a live tenant on an active monthly plan came
-    // back with no period at all, which is why `PlanUsagePanel` omits the line
-    // rather than printing an epoch. The demo carries one so the populated
+    // back with no period at all, so a reader must omit the line rather than
+    // print an epoch. The demo carries one so the populated
     // branch is the one on screen.
     period: { start_time: TENANT_BILLING_PERIOD_START, end_time: TENANT_BILLING_PERIOD_END },
   },
@@ -2199,8 +2199,7 @@ export const handlers = [
    *
    * `@flexprice/sdk@2.1.30` requests `GET /v1/tenant/billing` — singular — and
    * the deployed route is `GET /v1/tenants/billing`. So the singular path
-   * answers 404 here too, exactly as it does live (same `text/plain` body), and
-   * the Plan & usage panel renders the unavailable state naming the typo.
+   * answers 404 here too, exactly as it does live (same `text/plain` body).
    *
    * Serving the data from the singular path instead would make the mocked build
    * the only place this screen has ever worked, and would quietly delete the

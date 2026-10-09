@@ -408,7 +408,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/settings?section=organization&tab=profile',
     reference: 'pages/settings.tsx',
     pattern: 'settings',
-    ready: { text: 'Plan & usage' },
+    ready: { text: 'Billing email' },
   },
   {
     name: 'settings-team',

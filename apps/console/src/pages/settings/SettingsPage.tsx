@@ -21,7 +21,6 @@ import { InvoicesPanel } from './InvoicesPanel'
 import { OnboardingPanel } from './OnboardingPanel'
 import { PortalPanel } from './PortalPanel'
 import { MembersPanel } from './MembersPanel'
-import { PlanUsagePanel } from './PlanUsagePanel'
 import { ProfilePanel } from './ProfilePanel'
 import { SubscriptionsPanel } from './SubscriptionsPanel'
 import { TagsPanel } from './TagsPanel'
@@ -211,8 +210,6 @@ function SettingsPanel({
   switch (key) {
     case 'organization/profile':
       return <ProfilePanel />
-    case 'organization/plan':
-      return <PlanUsagePanel />
     case 'team/members':
       return <MembersPanel />
     case 'invoicing/invoices':
