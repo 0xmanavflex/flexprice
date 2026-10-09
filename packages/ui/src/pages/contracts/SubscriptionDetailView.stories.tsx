@@ -72,6 +72,7 @@ const LINES: SubscriptionLine[] = [
     endDate: null,
     source: 'plan',
     priceId: 'price_platform',
+    amountEditable: true,
   },
   {
     id: 'line_2',
@@ -84,6 +85,7 @@ const LINES: SubscriptionLine[] = [
     endDate: null,
     source: 'plan',
     priceId: 'price_api',
+    amountEditable: false,
   },
   {
     id: 'line_3',
@@ -96,6 +98,7 @@ const LINES: SubscriptionLine[] = [
     endDate: null,
     source: 'contract',
     priceId: 'price_onboarding',
+    amountEditable: true,
   },
 ]
 
@@ -253,6 +256,26 @@ const BASE: SubscriptionDetailViewProps = {
   onAddCharge: fn(),
   onEditCharge: fn(),
   onEndCharge: fn(),
+  onPreviewQuantity: fn(async () => ({
+    lines: [
+      {
+        id: 'line_1',
+        action: 'ended',
+        quantity: '1',
+        startDate: null,
+        endDate: date('2026-10-15'),
+      },
+      {
+        id: 'line_1b',
+        action: 'created',
+        quantity: '5',
+        startDate: date('2026-10-15'),
+        endDate: null,
+      },
+    ],
+    invoices: [{ action: 'created', status: 'draft', amountDue: money('600', 'USD') }],
+  })),
+  onChangeQuantity: fn(),
 }
 
 const withSubscription = (patch: Partial<SubscriptionDetail>): SubscriptionDetailViewProps => ({
@@ -490,6 +513,67 @@ export const EditPrice: Story = {
       expect.objectContaining({ id: 'line_1' }),
       { amount: '1400', effectiveFrom: '2026-11-01' },
     )
+  },
+}
+
+/** Quantity is changed in two steps: the form, then the API's preview, then confirm. */
+export const ChangeQuantity: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change quantity' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    // Nothing changed yet: the form refuses to continue.
+    await userEvent.click(dialog.getByRole('button', { name: 'Preview change' }))
+    await expect(await dialog.findByText(/Change the quantity or the price/)).toBeVisible()
+    await expect(args.onPreviewQuantity).not.toHaveBeenCalled()
+
+    const quantity = dialog.getByLabelText('Quantity')
+    await userEvent.clear(quantity)
+    await userEvent.type(quantity, '5')
+    await userEvent.click(dialog.getByRole('button', { name: 'Preview change' }))
+    await expect(args.onPreviewQuantity).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'line_1' }),
+      { quantity: '5', amount: '1500', effectiveDate: '' },
+    )
+    // The preview is shown before anything is saved.
+    await expect(await dialog.findByText('New line · quantity 5')).toBeVisible()
+    await expect(args.onChangeQuantity).not.toHaveBeenCalled()
+    await userEvent.click(dialog.getByRole('button', { name: 'Confirm change' }))
+    await expect(args.onChangeQuantity).toHaveBeenCalledOnce()
+  },
+}
+
+/** Usage charges are repriced, not given a quantity. */
+export const UsageChargeHasNoQuantityChange: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for API requests' }))
+    await screen.findByRole('menuitem', { name: 'Edit' })
+    await expect(screen.queryByRole('menuitem', { name: 'Change quantity' })).toBeNull()
+  },
+}
+
+/** A preview the API rejects keeps the form open with the reason. */
+export const QuantityPreviewFails: Story = {
+  parameters: menuA11y,
+  args: {
+    onPreviewQuantity: () =>
+      Promise.reject(new Error('effective_date must be before the line item end date')),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change quantity' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    const quantity = dialog.getByLabelText('Quantity')
+    await userEvent.clear(quantity)
+    await userEvent.type(quantity, '3')
+    await userEvent.click(dialog.getByRole('button', { name: 'Preview change' }))
+    await expect(await dialog.findByText(/effective_date must be before/)).toBeVisible()
+    await expect(dialog.getByRole('button', { name: 'Preview change' })).toBeVisible()
   },
 }
 

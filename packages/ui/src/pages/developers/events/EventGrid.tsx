@@ -129,7 +129,9 @@ export function EventGrid({
         header: 'Event',
         cell: (row) =>
           row.eventName ? (
-            <code className="text-foreground/80 block truncate font-mono text-xs">{row.eventName}</code>
+            <code className="text-foreground/80 block truncate font-mono text-xs">
+              {row.eventName}
+            </code>
           ) : (
             <EmDash />
           ),
@@ -171,7 +173,12 @@ export function EventGrid({
   const filterRules: FilterNode[] = []
   if (query.customer) {
     filterRules.push(
-      createFilterRule({ id: 'customer', path: ['customer'], operator: 'is', value: query.customer }),
+      createFilterRule({
+        id: 'customer',
+        path: ['customer'],
+        operator: 'is',
+        value: query.customer,
+      }),
     )
   }
   if (query.source) {
@@ -216,7 +223,8 @@ export function EventGrid({
         query: createFilterQuery(filterRules),
         activeCount: (query.customer ? 1 : 0) + (query.source ? 1 : 0),
         onQueryChange: (_next, flat: FlatFilter[]) => {
-          const read = (field: string) => String(flat.find((e) => e.field === field)?.values?.[0] ?? '').trim()
+          const read = (field: string) =>
+            String(flat.find((e) => e.field === field)?.values?.[0] ?? '').trim()
           onQueryChange({ ...query, customer: read('customer'), source: read('source'), page: 1 })
         },
       }}

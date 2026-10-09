@@ -257,9 +257,13 @@ export {
   SubscriptionStatus,
   createSubscriptionSchema,
   emptySubscription,
+  validateLineChange,
 } from './subscription'
 export type {
   AddContractCharge,
+  ChangeLineQuantity,
+  LineChangeError,
+  LineChangePreview,
   EditContractCharge,
   EndContractCharge,
   CancelSubscription,

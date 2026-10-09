@@ -237,11 +237,12 @@ export function useFeatureEntitlements(featureId: string) {
       return items.map((item) => {
         const looked =
           item.entityType === 'ADDON'
-            ? item.addon ?? (item.entityId ? addonById.get(item.entityId) : undefined)
-            : item.plan ?? (item.entityId ? planById.get(item.entityId) : undefined)
+            ? (item.addon ?? (item.entityId ? addonById.get(item.entityId) : undefined))
+            : (item.plan ?? (item.entityId ? planById.get(item.entityId) : undefined))
         return {
           entitlement: toEntitlement(item),
-          parentName: looked?.name || (item.entityType === 'ADDON' ? 'Untitled add-on' : 'Untitled plan'),
+          parentName:
+            looked?.name || (item.entityType === 'ADDON' ? 'Untitled add-on' : 'Untitled plan'),
           parentStatus: looked?.status || 'published',
         }
       })

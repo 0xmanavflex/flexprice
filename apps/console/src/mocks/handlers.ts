@@ -1455,7 +1455,7 @@ function contractLines(id: string, row: Record<string, unknown>): Record<string,
       quantity: '1',
       billing_period: 'MONTHLY',
       currency,
-      price: { amount: '99.00', currency },
+      price: { amount: '99.00', currency, billing_model: 'FLAT_FEE' },
       // The real API emits Go's zero time for an open-ended line.
       end_date: '0001-01-01T00:00:00Z',
     },
@@ -3046,12 +3046,57 @@ export const handlers = [
       quantity: String(body['quantity'] ?? 1),
       billing_period: price['billing_period'] ?? 'MONTHLY',
       currency,
-      price: { amount: price['amount'], currency },
+      price: { amount: price['amount'], currency, billing_model: 'FLAT_FEE' },
       start_date: body['start_date'] ?? new Date().toISOString(),
       end_date: '0001-01-01T00:00:00Z',
     }
     contractLines(id, row).push(line)
     return HttpResponse.json(line)
+  }),
+  http.post(`${BASE}/subscriptions/:id/modify/:mode`, async ({ request, params }) => {
+    const id = String(params['id'])
+    const mode = String(params['mode'])
+    const row = sourceFor('subscriptions').items.find((item) => readString(item, 'id') === id)
+    if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    const body = await readBody(request)
+    const change = ((
+      body['line_item_change_params'] as { line_items?: Record<string, unknown>[] } | undefined
+    )?.line_items ?? [])[0]
+    const line = change ? findContractLine(String(change['id'])) : undefined
+    if (!change || !line) {
+      return HttpResponse.json({ error: { message: 'line item not found' } }, { status: 400 })
+    }
+    const at = String(change['effective_date'] ?? new Date().toISOString())
+    const quantity = String(change['quantity'] ?? line['quantity'])
+    const price = line['price'] as Record<string, unknown>
+    const amount = String(change['amount'] ?? price['amount'])
+    const currency = String(row['currency'] ?? 'USD')
+    const created: Record<string, unknown> = {
+      ...line,
+      id: `${String(line['id'])}_v2`,
+      quantity,
+      start_date: at,
+    }
+    if (mode === 'execute') {
+      line['end_date'] = at
+      created['price'] = { ...price, amount }
+      contractLines(id, row).push(created)
+    }
+    return HttpResponse.json({
+      changed_resources: {
+        line_items: [
+          { id: line['id'], change_action: 'ended', quantity: line['quantity'], end_date: at },
+          { id: created['id'], change_action: 'created', quantity, start_date: at },
+        ],
+        invoices: [
+          {
+            action: 'created',
+            status: 'draft',
+            invoice: { amount_due: String(Number(quantity) * Number(amount)), currency },
+          },
+        ],
+      },
+    })
   }),
   http.put(`${BASE}/subscriptions/lineitems/:lineId`, async ({ request, params }) => {
     const line = findContractLine(String(params['lineId']))

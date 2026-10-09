@@ -5,6 +5,8 @@ import {
   toPendingSchedules,
   toSubscriptionDetail,
   toSubscriptionEntitlement,
+  toLineChangePreview,
+  toLineItemChangeRequest,
   toSubscriptionLine,
   toSubscriptionUsage,
   toUpdateLineItemRequest,
@@ -166,5 +168,56 @@ describe('toPendingSchedules', () => {
     expect(toDeleteLineItemRequest({ effectiveFrom: '2026-12-01' })).toEqual({
       effectiveFrom: '2026-12-01T00:00:00Z',
     })
+  })
+})
+
+describe('line item change', () => {
+  const line = {
+    id: 'li_1',
+    quantity: '2',
+    amount: { amount: '100', currency: 'USD' },
+    amountEditable: true,
+  }
+
+  it('sends only what changed, with the date as a Date', () => {
+    const request = toLineItemChangeRequest(line, {
+      quantity: '5',
+      amount: '100',
+      effectiveDate: '2026-10-15',
+    }) as { type: string; lineItemChangeParams: { lineItems: Record<string, unknown>[] } }
+    expect(request.type).toBe('line_item_change')
+    expect(request.lineItemChangeParams.lineItems).toEqual([
+      { id: 'li_1', quantity: '5', effectiveDate: new Date('2026-10-15T00:00:00Z') },
+    ])
+  })
+
+  it('never sends a price for a charge whose price cannot change', () => {
+    const request = toLineItemChangeRequest(
+      { ...line, amountEditable: false },
+      { quantity: '', amount: '250', effectiveDate: '' },
+    ) as { lineItemChangeParams: { lineItems: Record<string, unknown>[] } }
+    expect(request.lineItemChangeParams.lineItems).toEqual([{ id: 'li_1' }])
+  })
+
+  it('reads a preview into changed lines and invoices', () => {
+    const preview = toLineChangePreview({
+      changedResources: {
+        lineItems: [{ id: 'li_2', changeAction: 'created', quantity: '5' }],
+        invoices: [
+          { action: 'created', status: 'draft', invoice: { amountDue: '60', currency: 'usd' } },
+        ],
+      },
+    })
+    expect(preview.lines[0]).toMatchObject({ action: 'created', quantity: '5' })
+    expect(preview.invoices[0]?.amountDue?.amount).toBe('60')
+  })
+
+  it('marks only flat-fee, non-custom fixed prices as editable', () => {
+    const editable = (priceType: string, billingModel: string, priceUnitType: string) =>
+      toSubscriptionLine({ priceType, price: { billingModel, priceUnitType } }).amountEditable
+    expect(editable('FIXED', 'FLAT_FEE', 'FIAT')).toBe(true)
+    expect(editable('FIXED', 'FLAT_FEE', 'CUSTOM')).toBe(false)
+    expect(editable('FIXED', 'PACKAGE', 'FIAT')).toBe(false)
+    expect(editable('USAGE', 'FLAT_FEE', 'FIAT')).toBe(false)
   })
 })

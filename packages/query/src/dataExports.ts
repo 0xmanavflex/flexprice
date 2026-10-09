@@ -23,7 +23,9 @@ export interface DataExportWire {
   entityType?: string | undefined
   interval?: string | undefined
   enabled?: boolean | undefined
-  jobConfig?: { bucket?: string | undefined; region?: string | undefined; keyPrefix?: string | undefined } | undefined
+  jobConfig?:
+    | { bucket?: string | undefined; region?: string | undefined; keyPrefix?: string | undefined }
+    | undefined
   createdAt?: Date | undefined
 }
 

@@ -18,10 +18,12 @@ import {
   SubscriptionStatus,
   formatMoney,
   type AddContractCharge,
+  type ChangeLineQuantity,
   type CreditGrant,
   type EditContractCharge,
   type EndContractCharge,
   type Invoice,
+  type LineChangePreview,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
@@ -52,6 +54,7 @@ import { EntityLink } from '../shared/cells'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 import { InvoiceStatusBadge } from '../shared/StatusBadge'
 import type { InvoiceActivity } from '../billing/invoices/invoiceDocument'
+import { ContractQuantityDialog } from './ContractQuantityDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
 
@@ -104,6 +107,14 @@ export interface SubscriptionDetailViewProps {
     ((line: SubscriptionLine, draft: EditContractCharge) => Promise<void> | void) | undefined
   onEndCharge?:
     ((line: SubscriptionLine, draft: EndContractCharge) => Promise<void> | void) | undefined
+  /**
+   * Quantity (and flat-fee price) changes on fixed charges. Both are needed: the
+   * change is always previewed before it is confirmed.
+   */
+  onPreviewQuantity?:
+    ((line: SubscriptionLine, draft: ChangeLineQuantity) => Promise<LineChangePreview>) | undefined
+  onChangeQuantity?:
+    ((line: SubscriptionLine, draft: ChangeLineQuantity) => Promise<void> | void) | undefined
 }
 
 type SubscriptionTab = 'overview' | 'pricing' | 'usage' | 'invoices' | 'entitlements'
@@ -149,10 +160,13 @@ export function SubscriptionDetailView({
   onAddCharge,
   onEditCharge,
   onEndCharge,
+  onPreviewQuantity,
+  onChangeQuantity,
 }: SubscriptionDetailViewProps) {
   const [tab, setTab] = useState<SubscriptionTab>('overview')
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
   const [saving, setSaving] = useState(false)
+  const [quantityLine, setQuantityLine] = useState<SubscriptionLine | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const s = subscription
   const isCancelled = s.status === SubscriptionStatus.Cancelled
@@ -170,8 +184,9 @@ export function SubscriptionDetailView({
 
   const canEditCharges = !isCancelled && !isCancelling
 
+  const canChangeQuantity = Boolean(onPreviewQuantity && onChangeQuantity)
   const chargeActionColumns: DetailColumn<SubscriptionLine>[] =
-    canEditCharges && (onEditCharge || onEndCharge)
+    canEditCharges && (onEditCharge || onEndCharge || canChangeQuantity)
       ? [
           {
             key: 'actions',
@@ -181,6 +196,13 @@ export function SubscriptionDetailView({
               isEnded(line) ? null : (
                 <RowActionsMenu
                   label={line.name}
+                  {...(canChangeQuantity && line.kind === 'fixed'
+                    ? {
+                        extra: [
+                          { label: 'Change quantity', onSelect: () => setQuantityLine(line) },
+                        ],
+                      }
+                    : {})}
                   {...(onEditCharge ? { onEdit: () => setDialog({ mode: 'edit', line }) } : {})}
                   {...(onEndCharge ? { onRemove: () => setDialog({ mode: 'end', line }) } : {})}
                   removeLabel="End charge"
@@ -826,6 +848,19 @@ export function SubscriptionDetailView({
           <RelatedCard items={related} />
         </div>
       </div>
+      {onPreviewQuantity && onChangeQuantity ? (
+        <ContractQuantityDialog
+          line={quantityLine}
+          currency={s.currency}
+          period={{ start: s.currentPeriodStart, end: s.currentPeriodEnd }}
+          onClose={() => setQuantityLine(null)}
+          onPreview={onPreviewQuantity}
+          onConfirm={async (line, draft) => {
+            await onChangeQuantity(line, draft)
+            setQuantityLine(null)
+          }}
+        />
+      ) : null}
       <ContractChargeDialog
         state={dialog}
         onClose={closeDialog}

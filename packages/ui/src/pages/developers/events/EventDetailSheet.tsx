@@ -1,7 +1,18 @@
 import type { RawEvent } from '@fp/domain'
-import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockTitle } from '@ui/components/reui/code-block/code-block'
+import {
+  CodeBlock,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from '@ui/components/reui/code-block/code-block'
 import { DetailList } from '@ui/compositions/tables/DetailList'
-import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@ui/components/primitives/sheet'
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+} from '@ui/components/primitives/sheet'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -36,24 +47,32 @@ export function EventDetailSheet({ event, onClose, locale }: EventDetailSheetPro
               <SheetTitle>{event.eventName || 'Event'}</SheetTitle>
               <SheetDescription>
                 {event.timestamp
-                  ? new Intl.DateTimeFormat(locale, { dateStyle: 'long', timeStyle: 'medium' }).format(
-                      event.timestamp,
-                    )
+                  ? new Intl.DateTimeFormat(locale, {
+                      dateStyle: 'long',
+                      timeStyle: 'medium',
+                    }).format(event.timestamp)
                   : 'No timestamp on this event'}
               </SheetDescription>
             </SheetHeader>
             <div className="flex min-h-0 flex-1 flex-col gap-6 overflow-y-auto px-4 pb-4">
               <DetailList
                 items={[
-                  { label: 'Event ID', value: <span className="font-mono text-xs">{event.id || '—'}</span> },
+                  {
+                    label: 'Event ID',
+                    value: <span className="font-mono text-xs">{event.id || '—'}</span>,
+                  },
                   { label: 'Source', value: event.source || '—' },
                   {
                     label: 'Customer ID',
-                    value: <span className="font-mono text-xs">{event.externalCustomerId || '—'}</span>,
+                    value: (
+                      <span className="font-mono text-xs">{event.externalCustomerId || '—'}</span>
+                    ),
                   },
                   {
                     label: 'Flexprice customer',
-                    value: <span className="font-mono text-xs">{event.customerId || 'Not matched'}</span>,
+                    value: (
+                      <span className="font-mono text-xs">{event.customerId || 'Not matched'}</span>
+                    ),
                   },
                 ]}
               />

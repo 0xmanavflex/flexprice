@@ -13,3 +13,6 @@ allowBuilds:
   esbuild: true
   nx: true
   msw: true
+
+minimumReleaseAgeExclude:
+  - '@flexprice/sdk@2.1.35'

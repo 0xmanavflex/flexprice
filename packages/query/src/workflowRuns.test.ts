@@ -38,7 +38,13 @@ describe('toWorkflowFilter', () => {
         search: 'wf_9',
         statuses: [WorkflowStatus.TimedOut],
       }),
-    ).toMatchObject({ limit: 25, offset: 25, workflowId: 'wf_9', workflowStatus: 'TimedOut', order: 'desc' })
+    ).toMatchObject({
+      limit: 25,
+      offset: 25,
+      workflowId: 'wf_9',
+      workflowStatus: 'TimedOut',
+      order: 'desc',
+    })
   })
 
   it('sends no status when several are chosen', () => {

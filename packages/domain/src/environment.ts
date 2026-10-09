@@ -40,11 +40,7 @@ export const createEnvironmentSchema = z.object({
    * and in the header of every page, so "EU staging" is worth more than
    * "Environment 4" on the one occasion it matters.
    */
-  name: z
-    .string()
-    .trim()
-    .min(1, 'Enter a name')
-    .max(60, 'Keep the name under 60 characters'),
+  name: z.string().trim().min(1, 'Enter a name').max(60, 'Keep the name under 60 characters'),
   type: z.enum([EnvironmentType.Production, EnvironmentType.Sandbox]),
 })
 export type CreateEnvironment = z.infer<typeof createEnvironmentSchema>

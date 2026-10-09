@@ -16,7 +16,9 @@ function pathsWithErrors(value: unknown): string[] {
 
 describe('flat fee', () => {
   it('needs an amount', () => {
-    expect(parse({ priceId: 'p1', billingModel: BillingModel.FlatFee, amount: '9.99' }).success).toBe(true)
+    expect(
+      parse({ priceId: 'p1', billingModel: BillingModel.FlatFee, amount: '9.99' }).success,
+    ).toBe(true)
     expect(errors({ priceId: 'p1', billingModel: BillingModel.FlatFee, amount: '' })).toContain(
       'Enter an amount',
     )

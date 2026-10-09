@@ -22,6 +22,8 @@ export const RowActionsMenuProvenance = provenance({
 export interface RowActionsMenuProps {
   /** Names the trigger: "Actions for <label>". */
   label: string
+  /** Extra items before Edit, for actions that are neither an edit nor a removal. */
+  extra?: { label: string; onSelect: () => void }[] | undefined
   onEdit?: (() => void) | undefined
   onRemove?: (() => void) | undefined
   removeLabel?: string
@@ -29,6 +31,7 @@ export interface RowActionsMenuProps {
 
 export function RowActionsMenu({
   label,
+  extra,
   onEdit,
   onRemove,
   removeLabel = 'Remove',
@@ -50,6 +53,11 @@ export function RowActionsMenu({
           <MoreHorizontalIcon aria-hidden className="size-4" />
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="min-w-40">
+          {extra?.map((item) => (
+            <DropdownMenuItem key={item.label} onClick={item.onSelect}>
+              {item.label}
+            </DropdownMenuItem>
+          ))}
           {onEdit ? <DropdownMenuItem onClick={onEdit}>Edit</DropdownMenuItem> : null}
           {onRemove ? (
             <DropdownMenuItem variant="destructive" onClick={onRemove}>

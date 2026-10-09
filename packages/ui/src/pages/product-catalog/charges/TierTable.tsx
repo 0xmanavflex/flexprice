@@ -122,7 +122,7 @@ export function TierTable({
                       }}
                     />
                     {error?.upTo ? (
-                      <p role="alert" className="mt-1 text-xs text-destructive">
+                      <p role="alert" className="text-destructive mt-1 text-xs">
                         {error.upTo}
                       </p>
                     ) : null}
@@ -139,7 +139,7 @@ export function TierTable({
                 return (
                   <>
                     <div className="flex items-center gap-1">
-                      <span className="text-xs text-muted-foreground">{currencySymbol}</span>
+                      <span className="text-muted-foreground text-xs">{currencySymbol}</span>
                       <Input
                         inputMode="decimal"
                         aria-label={`Tier ${index + 1} per unit`}
@@ -151,7 +151,7 @@ export function TierTable({
                       />
                     </div>
                     {error?.unitAmount ? (
-                      <p role="alert" className="mt-1 text-xs text-destructive">
+                      <p role="alert" className="text-destructive mt-1 text-xs">
                         {error.unitAmount}
                       </p>
                     ) : null}
@@ -167,7 +167,7 @@ export function TierTable({
                 const error = rowErrors?.[index]
                 return (
                   <div className="flex items-center gap-1">
-                    <span className="text-xs text-muted-foreground">{currencySymbol}</span>
+                    <span className="text-muted-foreground text-xs">{currencySymbol}</span>
                     <Input
                       inputMode="decimal"
                       aria-label={`Tier ${index + 1} flat fee`}

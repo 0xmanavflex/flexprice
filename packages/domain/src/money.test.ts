@@ -40,8 +40,11 @@ describe('formatMoney', () => {
     const exact = money('12345678901234567.89', 'USD')
 
     expect(formatMoney(exact, 'en-US')).toBe('$12,345,678,901,234,567.89')
-    expect(new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' })
-      .format(Number(exact.amount))).toBe('$12,345,678,901,234,568.00')
+    expect(
+      new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(
+        Number(exact.amount),
+      ),
+    ).toBe('$12,345,678,901,234,568.00')
   })
 
   it('formats ordinary amounts per locale', () => {
@@ -81,7 +84,11 @@ describe('compareMoney', () => {
   it('sorts a list correctly', () => {
     const amounts = ['100.5', '-3', '0', '100.50', '9.99'].map((a) => money(a, 'USD'))
     expect(amounts.sort(compareMoney).map((m) => m.amount)).toEqual([
-      '-3', '0', '9.99', '100.5', '100.50',
+      '-3',
+      '0',
+      '9.99',
+      '100.5',
+      '100.50',
     ])
   })
 

@@ -7,7 +7,9 @@ describe('toCreatePlanRequest', () => {
   })
 
   it('includes lookup key and description only when present', () => {
-    expect(toCreatePlanRequest({ name: 'Pro', lookupKey: 'pro', description: 'For teams' })).toEqual({
+    expect(
+      toCreatePlanRequest({ name: 'Pro', lookupKey: 'pro', description: 'For teams' }),
+    ).toEqual({
       name: 'Pro',
       lookupKey: 'pro',
       description: 'For teams',

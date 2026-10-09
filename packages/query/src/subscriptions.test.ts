@@ -51,7 +51,11 @@ describe('toSubscription', () => {
 
   it('keeps dates when present and null when absent', () => {
     const start = new Date('2026-01-01T00:00:00Z')
-    const withDates = toSubscription({ startDate: start, currentPeriodEnd: start, createdAt: start })
+    const withDates = toSubscription({
+      startDate: start,
+      currentPeriodEnd: start,
+      createdAt: start,
+    })
     expect(withDates.startDate).toEqual(start)
     expect(withDates.currentPeriodEnd).toEqual(start)
     expect(withDates.createdAt).toEqual(start)

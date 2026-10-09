@@ -237,6 +237,8 @@ export interface SubscriptionLine {
   /** Where the charge comes from: the plan (shared by every contract on it), an add-on, or this contract alone. */
   source: SubscriptionLineSource
   priceId: string
+  /** Only a flat-fee price in a real currency can be repriced through a quantity change. */
+  amountEditable: boolean
 }
 
 export type SubscriptionLineSource = 'plan' | 'addon' | 'contract'
@@ -258,6 +260,76 @@ export interface EditContractCharge {
 /** End a charge. `effectiveFrom` empty means now. */
 export interface EndContractCharge {
   effectiveFrom: string
+}
+
+/**
+ * A quantity and/or flat-fee price change on one fixed charge. Empty strings
+ * mean "unchanged"; an empty `effectiveDate` means now.
+ */
+export interface ChangeLineQuantity {
+  quantity: string
+  amount: string
+  effectiveDate: string
+}
+
+/** What a quantity change would do, as the API previews it before anything is saved. */
+export interface LineChangePreview {
+  lines: {
+    id: string
+    action: string
+    quantity: string
+    startDate: Date | null
+    endDate: Date | null
+  }[]
+  invoices: { action: string; status: string; amountDue: Money | null }[]
+}
+
+export interface LineChangeError {
+  quantity?: string
+  amount?: string
+  effectiveDate?: string
+  form?: string
+}
+
+const DECIMAL = /^\d+(\.\d{1,8})?$/
+
+/**
+ * The rules the API enforces, checked up front so the dialog can say what is
+ * wrong without a round trip: a non-negative quantity and price, at least one
+ * real change, and an effective date inside the current period and the line's
+ * own window (the end is exclusive).
+ */
+export function validateLineChange(
+  line: Pick<SubscriptionLine, 'quantity' | 'amount' | 'startDate' | 'endDate' | 'amountEditable'>,
+  draft: ChangeLineQuantity,
+  period: { start: Date | null; end: Date | null },
+): LineChangeError {
+  const errors: LineChangeError = {}
+  const quantity = draft.quantity.trim()
+  const amount = draft.amount.trim()
+  const quantityChanged = quantity !== '' && Number(quantity) !== Number(line.quantity)
+  const amountChanged =
+    line.amountEditable && amount !== '' && Number(amount) !== Number(line.amount.amount)
+
+  if (quantity !== '' && !DECIMAL.test(quantity)) errors.quantity = 'Enter a quantity of 0 or more.'
+  if (amount !== '' && !DECIMAL.test(amount)) errors.amount = 'Enter a price of 0 or more.'
+
+  if (draft.effectiveDate) {
+    const at = new Date(`${draft.effectiveDate}T00:00:00Z`)
+    const lower = [line.startDate, period.start].filter((d): d is Date => d !== null)
+    const earliest = lower.length ? new Date(Math.max(...lower.map((d) => d.getTime()))) : null
+    const latest = [line.endDate, period.end].filter((d): d is Date => d !== null)
+    const last = latest.length ? new Date(Math.min(...latest.map((d) => d.getTime()))) : null
+    if (earliest && at < earliest)
+      errors.effectiveDate = 'Pick a date inside the current billing period.'
+    else if (last && at >= last) errors.effectiveDate = 'Pick a date before this period ends.'
+  }
+
+  if (!errors.quantity && !errors.amount && !quantityChanged && !amountChanged) {
+    errors.form =
+      'Change the quantity' + (line.amountEditable ? ' or the price' : '') + ' to continue.'
+  }
+  return errors
 }
 
 /** One feature the subscription entitles the customer to. */

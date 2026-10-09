@@ -147,8 +147,8 @@ importers:
   packages/api:
     dependencies:
       '@flexprice/sdk':
-        specifier: ^2.1.30
-        version: 2.1.30
+        specifier: ^2.1.35
+        version: 2.1.35
     devDependencies:
       typescript:
         specifier: ~5.9.2
@@ -205,8 +205,8 @@ importers:
         version: 5.103.2(react@19.3.0)
     devDependencies:
       '@flexprice/sdk':
-        specifier: ^2.1.30
-        version: 2.1.30
+        specifier: ^2.1.35
+        version: 2.1.35
       '@types/react':
         specifier: ^19.2.14
         version: 19.3.0
@@ -1311,8 +1311,8 @@ packages:
     resolution: {integrity: sha512-IkO+/KEUvwbVpiURZg+P7zF74z5Jxe0UgJxVni+RtoHQ6IZieXaO02kmadomap/q+l6bc/jdPGGqTjhuZnuz1Q==}
     engines: {node: ^20.19.0 || ^22.13.0 || >=24}
 
-  '@flexprice/sdk@2.1.30':
-    resolution: {integrity: sha512-aOa+rMOQuQDeerdoUpqPQMtL+oIAoRk0FkjAKGCLmaxw6GJANClethZ/f8kg/vaX2b6WA3DQ6CPkD1lgKPw0Jw==}
+  '@flexprice/sdk@2.1.35':
+    resolution: {integrity: sha512-6I2uRX6OqrDz0xIIWC8jGIlnJJalphpsXnr4ObmsziwBpoqtA/fER9i94K/wsvamgDWME1gXO/dwSyIgG8+E/w==}
     engines: {node: '>=18'}
 
   '@floating-ui/core@1.8.0':
@@ -6932,7 +6932,7 @@ snapshots:
       '@eslint/core': 1.2.1
       levn: 0.4.1
 
-  '@flexprice/sdk@2.1.30':
+  '@flexprice/sdk@2.1.35':
     dependencies:
       zod: 4.6.5
 

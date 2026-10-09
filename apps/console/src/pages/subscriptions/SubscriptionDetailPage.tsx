@@ -6,6 +6,8 @@ import {
   useCancelSubscription,
   useCreateSubscriptionLineItem,
   useDeleteSubscriptionLineItem,
+  useExecuteLineChange,
+  usePreviewLineChange,
   useSubscription,
   useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
@@ -82,6 +84,8 @@ export function SubscriptionDetailPage({
   const addLine = useCreateSubscriptionLineItem()
   const editLine = useUpdateSubscriptionLineItem()
   const endLine = useDeleteSubscriptionLineItem()
+  const previewChange = usePreviewLineChange()
+  const executeChange = useExecuteLineChange()
 
   const [dialog, setDialog] = useState<'cancel' | 'activate' | null>(null)
   const [cancellationType, setCancellationType] =
@@ -148,6 +152,12 @@ export function SubscriptionDetailPage({
         }}
         onEndCharge={async (line, draft) => {
           await endLine.mutateAsync({ lineItemId: line.id, draft })
+        }}
+        onPreviewQuantity={(line, draft) =>
+          previewChange.mutateAsync({ subscriptionId: data.id, line, draft })
+        }
+        onChangeQuantity={async (line, draft) => {
+          await executeChange.mutateAsync({ subscriptionId: data.id, line, draft })
         }}
       />
       <ConfirmDialog

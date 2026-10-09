@@ -44,8 +44,7 @@ export const CustomerTaxTreatment = {
   Taxable: 'taxable',
   Exempt: 'exempt',
 } as const
-export type CustomerTaxTreatment =
-  (typeof CustomerTaxTreatment)[keyof typeof CustomerTaxTreatment]
+export type CustomerTaxTreatment = (typeof CustomerTaxTreatment)[keyof typeof CustomerTaxTreatment]
 
 export const CUSTOMER_TAX_TREATMENT_LABEL: Record<CustomerTaxTreatment, string> = {
   [CustomerTaxTreatment.Taxable]: 'Taxable',

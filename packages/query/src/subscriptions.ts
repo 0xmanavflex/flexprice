@@ -6,9 +6,11 @@ import {
   type BillingPeriod,
   type CancelSubscription,
   type CreateSubscription,
+  type ChangeLineQuantity,
   type CreditGrant,
   type EditContractCharge,
   type EndContractCharge,
+  type LineChangePreview,
   type Money,
   type Subscription,
   type SubscriptionDetail,
@@ -146,7 +148,14 @@ export interface SubscriptionLineWire {
   quantity?: string | undefined
   billingPeriod?: string | undefined
   currency?: string | undefined
-  price?: { amount?: string | undefined; currency?: string | undefined } | undefined
+  price?:
+    | {
+        amount?: string | undefined
+        currency?: string | undefined
+        billingModel?: string | undefined
+        priceUnitType?: string | undefined
+      }
+    | undefined
   startDate?: Date | undefined
   endDate?: Date | undefined
 }
@@ -169,6 +178,10 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
     endDate: realDate(wire.endDate),
     source: LINE_SOURCE[wire.entityType ?? ''] ?? 'plan',
     priceId: wire.priceId ?? '',
+    amountEditable:
+      wire.priceType !== 'USAGE' &&
+      wire.price?.billingModel === 'FLAT_FEE' &&
+      wire.price?.priceUnitType !== 'CUSTOM',
   }
 }
 
@@ -483,6 +496,126 @@ export function toUpdateLineItemRequest(draft: EditContractCharge): Record<strin
 export function toDeleteLineItemRequest(draft: EndContractCharge): Record<string, unknown> {
   const from = effectiveFrom(draft.effectiveFrom)
   return from ? { effectiveFrom: from } : {}
+}
+
+/**
+ * The `line_item_change` modify request for one charge. Only what changed is
+ * sent: the API rejects a request that changes nothing, and a repriced line
+ * starts a new price, so an untouched price must not be resent.
+ */
+export function toLineItemChangeRequest(
+  line: Pick<SubscriptionLine, 'id' | 'quantity' | 'amount' | 'amountEditable'>,
+  draft: ChangeLineQuantity,
+): Record<string, unknown> {
+  const quantity = draft.quantity.trim()
+  const amount = draft.amount.trim()
+  // The SDK serialises this field from a Date, unlike the line-item PUT/DELETE, which take a string.
+  const from = draft.effectiveDate ? new Date(`${draft.effectiveDate}T00:00:00Z`) : undefined
+  return {
+    type: 'line_item_change',
+    lineItemChangeParams: {
+      lineItems: [
+        {
+          id: line.id,
+          ...(quantity !== '' && Number(quantity) !== Number(line.quantity) ? { quantity } : {}),
+          ...(line.amountEditable && amount !== '' && Number(amount) !== Number(line.amount.amount)
+            ? { amount }
+            : {}),
+          ...(from ? { effectiveDate: from } : {}),
+        },
+      ],
+    },
+  }
+}
+
+interface ModifyResponseWire {
+  changedResources?:
+    | {
+        lineItems?:
+          | {
+              id?: string | undefined
+              changeAction?: string | undefined
+              quantity?: string | undefined
+              startDate?: Date | undefined
+              endDate?: Date | undefined
+            }[]
+          | undefined
+        invoices?:
+          | {
+              action?: string | undefined
+              status?: string | undefined
+              invoice?:
+                { amountDue?: string | undefined; currency?: string | undefined } | undefined
+            }[]
+          | undefined
+      }
+    | undefined
+}
+
+export function toLineChangePreview(wire: ModifyResponseWire): LineChangePreview {
+  const changed = wire.changedResources
+  return {
+    lines: (changed?.lineItems ?? []).map((item) => ({
+      id: item.id ?? '',
+      action: item.changeAction ?? '',
+      quantity: item.quantity ?? '',
+      startDate: realDate(item.startDate),
+      endDate: realDate(item.endDate),
+    })),
+    invoices: (changed?.invoices ?? []).map((item) => ({
+      action: item.action ?? '',
+      status: item.status ?? '',
+      amountDue: item.invoice?.amountDue
+        ? moneyOr(item.invoice.amountDue, item.invoice.currency)
+        : null,
+    })),
+  }
+}
+
+/** Preview a quantity or price change — `POST /subscriptions/{id}/modify/preview`. Saves nothing. */
+export function usePreviewLineChange() {
+  const client = useFlexprice()
+  return useMutation({
+    mutationFn: ({
+      subscriptionId,
+      line,
+      draft,
+    }: {
+      subscriptionId: string
+      line: SubscriptionLine
+      draft: ChangeLineQuantity
+    }) =>
+      call(() =>
+        client.subscriptions.previewSubscriptionModify(
+          subscriptionId,
+          toLineItemChangeRequest(line, draft) as never,
+        ),
+      ).then((response) => toLineChangePreview(response as ModifyResponseWire)),
+  })
+}
+
+/** Apply a quantity or price change — `POST /subscriptions/{id}/modify/execute`. */
+export function useExecuteLineChange() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      subscriptionId,
+      line,
+      draft,
+    }: {
+      subscriptionId: string
+      line: SubscriptionLine
+      draft: ChangeLineQuantity
+    }) =>
+      call(() =>
+        client.subscriptions.executeSubscriptionModify(
+          subscriptionId,
+          toLineItemChangeRequest(line, draft) as never,
+        ),
+      ),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
 }
 
 /** Add a charge to one contract — only this contract changes. */
