@@ -7,10 +7,10 @@ New reference: ReUI `settings-7` (`pnpm dlx shadcn@latest add @reui/settings-7`,
 the active section's content in a column on the right.
 
 Why: requested by the product owner on 2026-10-05, after the reference-matching pass. The panels were already
-drawn with `settings-7`'s cards and rows (`compositions/settingsSurface.ts`); this makes the shell match them.
+drawn with `settings-7`'s cards and rows (`compositions/layout/settingsSurface.ts`); this makes the shell match them.
 
 Affected:
-[x] a shared composition: `SettingsShell` (`packages/ui/src/pages/settings/SettingsShell.tsx`)
+[x] a shared composition: `SettingsShell` (`packages/ui/src/pages/settings/settings/SettingsShell.tsx`)
 [x] pages: every settings tab (one shell)
 [x] visual baselines: `settings-organization`, `settings-team`, `settings-developers`
 [ ] tokens, typography, shell/sidebar: unchanged

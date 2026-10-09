@@ -75,10 +75,18 @@ the same story file is the workbench, a browser test and an accessibility
 check.
 
 ```
-Foundation/Compositions/*    generic, reusable
-Foundation/Flexprice/*       billing vocabulary
-Surfaces/*                   real product screens
+Start here                   what the tree is and where files live
+Design system/*              tokens and the page map          src/design-system/
+Building blocks/<group>/*    generic parts and billing        src/compositions/<group>/,
+                             vocabulary (Money, Metric, …)    src/pages/shared/
+App/<nav area>/<entity>/*    real product screens, full page  src/pages/<area>/<entity>/
+                             first, then its parts
 ```
+
+The Building blocks groups are Layout, Forms, Tables & lists, Detail pages,
+Feedback & states, Charts & metrics and Shell. The App folders follow the
+console sidebar (`apps/console/src/app/shell/navigation.ts`). See
+`packages/ui/src/README.md` for the full map.
 
 ```bash
 pnpm --filter @fp/ui storybook        # the workbench, on :6006

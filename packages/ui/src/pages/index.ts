@@ -1,9 +1,10 @@
 /**
- * Product components that speak billing, one folder per page.
- *
- * `plans/` holds the plan grid, form and editor. `charges/` holds the charge
- * builder those pages share. `shared/` holds the list table and cells every
- * page is built from. Domain types belong here — a `Money` cell takes a
+ * Product components that speak billing, grouped by the console sidebar area
+ * they belong to (`home/`, `customers/`, `product-catalog/`, `contracts/`,
+ * `billing/`, `collections/`, `revenue/`, `developers/`, `integrations/`,
+ * `settings/`, `auth/`), one folder per entity inside an area. `shared/` holds
+ * the list table, cells, charts and meters every page is built from. See
+ * `../README.md` for the full map. Domain types belong here — a `Money` cell takes a
  * `Money`, an `InvoiceStatusBadge` takes a domain status. Transport types do
  * not: a component receiving a `WalletResponse` is the bug the layering prevents.
  *
@@ -34,9 +35,17 @@ export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance } from './billing/invoices/InvoiceForm'
 export type { InvoiceFormProps } from './billing/invoices/InvoiceForm'
 export { InvoiceBillingDetailBlock } from './billing/invoices/InvoiceBillingDetailBlock'
-export { InvoiceDetailView, InvoiceDetailViewProvenance } from './billing/invoices/InvoiceDetailView'
+export {
+  InvoiceDetailView,
+  InvoiceDetailViewProvenance,
+} from './billing/invoices/InvoiceDetailView'
 export type { InvoiceDetailViewProps } from './billing/invoices/InvoiceDetailView'
-export { DEMO_INVOICE, displayStatus, invoiceTotals, statusChips } from './billing/invoices/invoiceDocument'
+export {
+  DEMO_INVOICE,
+  displayStatus,
+  invoiceTotals,
+  statusChips,
+} from './billing/invoices/invoiceDocument'
 export type {
   InvoiceActivity,
   InvoiceCreditNoteRow,
@@ -46,7 +55,10 @@ export type {
   InvoicePaymentRow,
   StatusChip,
 } from './billing/invoices/invoiceDocument'
-export { PriceOverrideForm, PriceOverrideFormProvenance } from './product-catalog/charges/PriceOverrideForm'
+export {
+  PriceOverrideForm,
+  PriceOverrideFormProvenance,
+} from './product-catalog/charges/PriceOverrideForm'
 export type { PriceOverrideFormProps } from './product-catalog/charges/PriceOverrideForm'
 /*
  * The one list table, and the cells it is built from.
@@ -92,7 +104,10 @@ export type {
   PillTone,
 } from './shared/cells'
 export { FeatureDetailView } from './product-catalog/products/FeatureDetailView'
-export type { FeatureTab, FeatureDetailViewProps } from './product-catalog/products/FeatureDetailView'
+export type {
+  FeatureTab,
+  FeatureDetailViewProps,
+} from './product-catalog/products/FeatureDetailView'
 export { FeatureGrid, FeatureGridProvenance } from './product-catalog/products/FeatureGrid'
 export type { FeatureGridProps, ProductLinkage } from './product-catalog/products/FeatureGrid'
 export { PlanGrid, PlanGridProvenance } from './product-catalog/plans/PlanGrid'
@@ -103,7 +118,12 @@ export { TierTable, TierTableProvenance } from './product-catalog/charges/TierTa
 export type { TierRowError, TierTableProps } from './product-catalog/charges/TierTable'
 export { PlanPreviewCard, PlanPreviewCardProvenance } from './product-catalog/plans/PlanPreviewCard'
 export type { PlanPreviewCardProps } from './product-catalog/plans/PlanPreviewCard'
-export { pricingSummary, chargeLabel, includedLine, creditLine } from './product-catalog/plans/PlanPreviewCard'
+export {
+  pricingSummary,
+  chargeLabel,
+  includedLine,
+  creditLine,
+} from './product-catalog/plans/PlanPreviewCard'
 export { AddChargeDialog } from './product-catalog/plans/AddChargeDialog'
 export type { AddChargeDialogProps } from './product-catalog/plans/AddChargeDialog'
 export { PlanChargesView } from './product-catalog/plans/PlanChargesView'
@@ -112,7 +132,11 @@ export { PlanCreditGrantsView } from './product-catalog/plans/PlanCreditGrantsVi
 export { PlanEntitlementsView } from './product-catalog/plans/PlanEntitlementsView'
 export { EntityHeader } from './shared/EntityHeader'
 export { ChargeForm, ChargeFormProvenance } from './product-catalog/charges/ChargeForm'
-export type { ChargeFormProps, MeterOption, PriceUnitOption } from './product-catalog/charges/ChargeForm'
+export type {
+  ChargeFormProps,
+  MeterOption,
+  PriceUnitOption,
+} from './product-catalog/charges/ChargeForm'
 export { RowActionsMenu, RowActionsMenuProvenance } from './shared/RowActionsMenu'
 export type { RowActionsMenuProps } from './shared/RowActionsMenu'
 export { ChargeTable, ChargeTableProvenance } from './product-catalog/charges/ChargeTable'
@@ -123,7 +147,10 @@ export {
   EntitlementFormProvenance,
 } from './product-catalog/entitlements/EntitlementForm'
 export type { FeatureOption } from './product-catalog/entitlements/EntitlementForm'
-export { EntitlementTable, EntitlementTableProvenance } from './product-catalog/entitlements/EntitlementTable'
+export {
+  EntitlementTable,
+  EntitlementTableProvenance,
+} from './product-catalog/entitlements/EntitlementTable'
 export type { EntitlementTableProps } from './product-catalog/entitlements/EntitlementTable'
 export {
   CreditGrantCreateForm,
@@ -131,7 +158,10 @@ export {
   CreditGrantFormProvenance,
 } from './product-catalog/credit-grants/CreditGrantForm'
 export type { CreditGrantFormProps } from './product-catalog/credit-grants/CreditGrantForm'
-export { CreditGrantTable, CreditGrantTableProvenance } from './product-catalog/credit-grants/CreditGrantTable'
+export {
+  CreditGrantTable,
+  CreditGrantTableProvenance,
+} from './product-catalog/credit-grants/CreditGrantTable'
 export type { CreditGrantTableProps } from './product-catalog/credit-grants/CreditGrantTable'
 export { AddonGrid, AddonGridProvenance } from './product-catalog/addons/AddonGrid'
 export type { AddonGridProps } from './product-catalog/addons/AddonGrid'
@@ -154,10 +184,7 @@ export type { CostSheetGridProps } from './settings/cost-sheets/CostSheetGrid'
 export { CustomerGrid, CustomerGridProvenance } from './customers/CustomerGrid'
 export type { CustomerGridProps } from './customers/CustomerGrid'
 export { SubscriptionForm, SubscriptionFormProvenance } from './contracts/SubscriptionForm'
-export type {
-  SubscriptionFormProps,
-  SubscriptionPlanContext,
-} from './contracts/SubscriptionForm'
+export type { SubscriptionFormProps, SubscriptionPlanContext } from './contracts/SubscriptionForm'
 export { SubscriptionGrid, SubscriptionGridProvenance } from './contracts/SubscriptionGrid'
 export type { SubscriptionGridProps } from './contracts/SubscriptionGrid'
 export {
@@ -176,14 +203,26 @@ export {
 export { CreditNoteGrid, CreditNoteGridProvenance } from './billing/credit-notes/CreditNoteGrid'
 export type { CreditNoteGridProps } from './billing/credit-notes/CreditNoteGrid'
 export { CreditNoteForm, CreditNoteFormProvenance } from './billing/credit-notes/CreditNoteForm'
-export type { CreditNoteFormProps, CreditNoteInvoiceLine } from './billing/credit-notes/CreditNoteForm'
-export { CollectionsSummary, CollectionsSummaryProvenance } from './collections/payments/CollectionsSummary'
-export type { CollectionsSummaryCell, CollectionsSummaryProps } from './collections/payments/CollectionsSummary'
+export type {
+  CreditNoteFormProps,
+  CreditNoteInvoiceLine,
+} from './billing/credit-notes/CreditNoteForm'
+export {
+  CollectionsSummary,
+  CollectionsSummaryProvenance,
+} from './collections/payments/CollectionsSummary'
+export type {
+  CollectionsSummaryCell,
+  CollectionsSummaryProps,
+} from './collections/payments/CollectionsSummary'
 export { PaymentGrid, PaymentGridProvenance } from './collections/payments/PaymentGrid'
 export type { PaymentGridProps } from './collections/payments/PaymentGrid'
 export { PaymentForm, PaymentFormProvenance } from './collections/payments/PaymentForm'
 export type { PaymentFormProps } from './collections/payments/PaymentForm'
-export { PaymentStatusBadge, PaymentStatusBadgeProvenance } from './collections/payments/PaymentStatusBadge'
+export {
+  PaymentStatusBadge,
+  PaymentStatusBadgeProvenance,
+} from './collections/payments/PaymentStatusBadge'
 export { TaxRateGrid, TaxRateGridProvenance } from './settings/taxes/TaxRateGrid'
 export type { TaxRateGridProps } from './settings/taxes/TaxRateGrid'
 export { EventGrid, EventGridProvenance } from './developers/events/EventGrid'
@@ -192,7 +231,10 @@ export { EventDetailSheet, EventDetailSheetProvenance } from './developers/event
 export type { EventDetailSheetProps } from './developers/events/EventDetailSheet'
 export { FeatureForm, FeatureFormProvenance } from './product-catalog/products/FeatureForm'
 export type { FeatureFormProps } from './product-catalog/products/FeatureForm'
-export { FeatureCloneDialog, FeatureCloneDialogProvenance } from './product-catalog/products/FeatureCloneDialog'
+export {
+  FeatureCloneDialog,
+  FeatureCloneDialogProvenance,
+} from './product-catalog/products/FeatureCloneDialog'
 export type { FeatureCloneDialogProps } from './product-catalog/products/FeatureCloneDialog'
 export { Money, MoneyProvenance } from './shared/Money'
 export type { MoneyProps } from './shared/Money'
@@ -232,7 +274,11 @@ export {
 } from './settings/environments/EnvironmentRenameForm'
 export type { EnvironmentRenameFormProps } from './settings/environments/EnvironmentRenameForm'
 export { SettingsShell, SettingsShellProvenance } from './settings/settings/SettingsShell'
-export type { SettingsSection, SettingsShellProps, SettingsTab } from './settings/settings/SettingsShell'
+export type {
+  SettingsSection,
+  SettingsShellProps,
+  SettingsTab,
+} from './settings/settings/SettingsShell'
 export {
   THEME_CHOICES,
   ThemeChoiceCards,
@@ -296,7 +342,11 @@ export { CostSheetForm, CostSheetFormProvenance } from './settings/cost-sheets/C
 export type { CostSheetFormProps } from './settings/cost-sheets/CostSheetForm'
 export { GroupForm, GroupFormProvenance } from './settings/groups/GroupForm'
 export type { GroupFormProps } from './settings/groups/GroupForm'
-export { TaxRateCreateForm, TaxRateEditForm, TaxRateFormProvenance } from './settings/taxes/TaxRateForm'
+export {
+  TaxRateCreateForm,
+  TaxRateEditForm,
+  TaxRateFormProvenance,
+} from './settings/taxes/TaxRateForm'
 export type { TaxRateCreateFormProps, TaxRateEditFormProps } from './settings/taxes/TaxRateForm'
 export { CustomerForm, CustomerFormProvenance } from './customers/CustomerForm'
 export type { CustomerFormProps } from './customers/CustomerForm'
@@ -318,11 +368,20 @@ export type {
 } from './customers/CustomerAnalyticsView'
 
 export { CatalogDetailFrame } from './product-catalog/catalog-detail/CatalogDetailFrame'
-export type { CatalogDetailFrameProps, CatalogMenuItem } from './product-catalog/catalog-detail/CatalogDetailFrame'
-export { CouponRedemptionsView, DEMO_COUPON_REDEMPTIONS } from './settings/discounts/CouponRedemptionsView'
+export type {
+  CatalogDetailFrameProps,
+  CatalogMenuItem,
+} from './product-catalog/catalog-detail/CatalogDetailFrame'
+export {
+  CouponRedemptionsView,
+  DEMO_COUPON_REDEMPTIONS,
+} from './settings/discounts/CouponRedemptionsView'
 export { CouponRedemptionMeter } from './settings/discounts/CouponRedemptionMeter'
 export type { CouponRedemptionMeterProps } from './settings/discounts/CouponRedemptionMeter'
-export { AddonSubscriptionsView, DEMO_ADDON_SUBSCRIPTIONS } from './product-catalog/addons/AddonSubscriptionsView'
+export {
+  AddonSubscriptionsView,
+  DEMO_ADDON_SUBSCRIPTIONS,
+} from './product-catalog/addons/AddonSubscriptionsView'
 export { CostMarginCard, DEMO_COST_MARGIN } from './settings/cost-sheets/CostMarginCard'
 export { GroupMembersView, DEMO_GROUP_MEMBERS } from './settings/groups/GroupMembersView'
 
@@ -331,9 +390,15 @@ export { GroupMembersView, DEMO_GROUP_MEMBERS } from './settings/groups/GroupMem
  * list, endpoint detail (overview / testing / advanced), message attempts,
  * message sheet, event catalog, message log and activity.
  */
-export { WebhookEndpointGrid, WebhookEndpointGridProvenance } from './developers/webhooks/WebhookEndpointGrid'
+export {
+  WebhookEndpointGrid,
+  WebhookEndpointGridProvenance,
+} from './developers/webhooks/WebhookEndpointGrid'
 export type { WebhookEndpointGridProps } from './developers/webhooks/WebhookEndpointGrid'
-export { WebhookEndpointForm, WebhookEndpointFormProvenance } from './developers/webhooks/WebhookEndpointForm'
+export {
+  WebhookEndpointForm,
+  WebhookEndpointFormProvenance,
+} from './developers/webhooks/WebhookEndpointForm'
 export type { WebhookEndpointFormProps } from './developers/webhooks/WebhookEndpointForm'
 export {
   WebhookEndpointDetail,
@@ -344,13 +409,25 @@ export type {
   WebhookEndpointTab,
   WebhookSecretState,
 } from './developers/webhooks/WebhookEndpointDetail'
-export { WebhookAttemptList, WebhookAttemptListProvenance } from './developers/webhooks/WebhookAttemptList'
+export {
+  WebhookAttemptList,
+  WebhookAttemptListProvenance,
+} from './developers/webhooks/WebhookAttemptList'
 export type { WebhookAttemptListProps } from './developers/webhooks/WebhookAttemptList'
-export { WebhookMessageSheet, WebhookMessageSheetProvenance } from './developers/webhooks/WebhookMessageSheet'
+export {
+  WebhookMessageSheet,
+  WebhookMessageSheetProvenance,
+} from './developers/webhooks/WebhookMessageSheet'
 export type { WebhookMessageSheetProps } from './developers/webhooks/WebhookMessageSheet'
-export { WebhookMessageLog, WebhookMessageLogProvenance } from './developers/webhooks/WebhookMessageLog'
+export {
+  WebhookMessageLog,
+  WebhookMessageLogProvenance,
+} from './developers/webhooks/WebhookMessageLog'
 export type { WebhookMessageLogProps } from './developers/webhooks/WebhookMessageLog'
-export { WebhookEventCatalog, WebhookEventCatalogProvenance } from './developers/webhooks/WebhookEventCatalog'
+export {
+  WebhookEventCatalog,
+  WebhookEventCatalogProvenance,
+} from './developers/webhooks/WebhookEventCatalog'
 export type { WebhookEventCatalogProps } from './developers/webhooks/WebhookEventCatalog'
 export {
   WebhookEventTypePicker,

@@ -53,14 +53,17 @@ mirroring an existing sibling:
    wire shape.
 4. **`packages/query/src/<thing>s.test.ts`** — test the mapper's interesting
    branches (a discount → `Money`, an unknown enum → a safe default).
-5. **`packages/ui/src/flexprice/<Thing>Grid.tsx`** — the table/cards grid. This
+5. **`packages/ui/src/pages/<area>/<thing>s/<Thing>Grid.tsx`** — the table/cards grid,
+   in the folder of the sidebar area it lives under (Coupons are
+   `pages/settings/discounts/`; see `packages/ui/src/README.md`). This
    is the seam that may import `@ui/components/reui/data-grid`; a page never
    does. Reuse `CatalogStatusBadge`, `Money`, `GridToolbar`, `SortMenu`,
    `GridFooter`, `useViewportPageSize`.
-6. **`packages/ui/src/flexprice/<Thing>Filters.tsx`** + **`<thing>Fixtures.ts`**
-   + **`<Thing>Grid.stories.tsx`** — the filter, hand-authored domain fixtures
-   for the story, and the story with a `play` assertion. Export from
-   `flexprice/index.ts`.
+6. **`<thing>Fixtures.ts`** + **`<Thing>Grid.stories.tsx`** beside the grid —
+   hand-authored domain fixtures for the story, and the story with a `play`
+   assertion. Give it an explicit title under its nav area
+   (`App/Settings/Discounts/Discount table`) and add it to the `storySort` order
+   in `packages/ui/.storybook/preview.ts`. Export from `pages/index.ts`.
 7. **`apps/console/src/app/<thing>Search.ts`** (+ `.test.ts`) — the URL codec, so
    a filtered list is a shareable link and a hand-edited URL degrades to page one
    rather than throwing.
@@ -84,11 +87,11 @@ drawer over the list, not a page — the list stays visible behind it.
 2. **`packages/query/src/<thing>s.ts`** — add `to<Create/Update>Request`,
    `useCreate<Thing>`, `useUpdate<Thing>` (each mutation invalidates
    `queryKeys.<thing>s.all()`).
-3. **`packages/ui/src/flexprice/<Thing>Form.tsx`** — RHF + `standardSchemaResolver`
+3. **`packages/ui/src/pages/<area>/<thing>s/<Thing>Form.tsx`** — RHF + `standardSchemaResolver`
    over the domain schema, `Field` for each control, actions pinned to a footer
    (`mt-auto … border-t`). Presentational: emits a validated `Create<Thing>`,
    holds no other state.
-4. **`packages/ui/src/flexprice/<Thing>EditorSheet.tsx`** — the form in a `Sheet`,
+4. **`packages/ui/src/pages/<area>/<thing>s/<Thing>EditorSheet.tsx`** — the form in a `Sheet`,
    keyed per record so opening a second one resets the fields.
 5. **The list page** owns the drawer: an `editing` state, the mutations, a
    submit that calls create/update and closes on success. Add a mock handler in
@@ -102,7 +105,7 @@ drawer over the list, not a page — the list stays visible behind it.
 - **Do not edit anything under `packages/ui/src/components/**` or
   `primitives/**`.** It is vendored from the ReUI registry; an upstream fix stays
   a re-install (`pnpm ui:add <item>`). Wrong for us → compose around it in
-  `flexprice/` or `compositions/`, and record why in the component's provenance.
+  `pages/` or `compositions/`, and record why in the component's provenance.
 - **Do not import a block-grade primitive** (`data-grid`, `filters`, `cascader`)
   from a page or a new composition. Compose from `FeatureGrid`, `PlanGrid`,
   `FilterBar`. ESLint refuses it.

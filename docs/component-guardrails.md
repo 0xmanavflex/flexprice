@@ -9,7 +9,7 @@ Visual decisions live in `UI_SOURCE_OF_TRUTH.md`; this file covers how component
 
 ## 1. Provenance — every product component declares where it came from
 
-Every component in `packages/ui/src/flexprice/**` and `packages/ui/src/compositions/**`
+Every component in `packages/ui/src/pages/**` and `packages/ui/src/compositions/**`
 exports a `provenance({...})` (see `packages/ui/src/provenance/`):
 
 - `source: 'reui'` — straight from the registry, we own none of its markup. List the `registry` items.
