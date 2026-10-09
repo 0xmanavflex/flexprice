@@ -25,7 +25,8 @@ export function createQueryClient(): QueryClient {
         // keeps a back-navigation instant without showing yesterday's invoice.
         staleTime: 30_000,
         refetchOnWindowFocus: false,
-        throwOnError: (error) => error instanceof ApiError && error.kind === ErrorKind.Server,
+        throwOnError: (error) =>
+          error instanceof ApiError && error.kind === ErrorKind.Server,
       },
       mutations: {
         // A write is not idempotent unless the API says so. Retrying a failed

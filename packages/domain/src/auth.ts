@@ -20,11 +20,7 @@ export const signInSchema = z.object({
 export type SignInCredentials = z.infer<typeof signInSchema>
 
 export const resetRequestSchema = z.object({
-  email: z
-    .string()
-    .trim()
-    .min(1, 'Enter your email')
-    .email('That does not look like an email address'),
+  email: z.string().trim().min(1, 'Enter your email').email('That does not look like an email address'),
 })
 
 export type ResetRequest = z.infer<typeof resetRequestSchema>

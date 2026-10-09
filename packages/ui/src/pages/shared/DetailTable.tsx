@@ -260,9 +260,7 @@ export function DetailTable<T extends object>({
                 onQueryChange: (_query, flat: FlatFilter[]) => {
                   const next: Record<string, string[]> = {}
                   for (const spec of activeSpecs) {
-                    const allowed = new Set(
-                      (choicesById[spec.id] ?? []).map((choice) => choice.value),
-                    )
+                    const allowed = new Set((choicesById[spec.id] ?? []).map((choice) => choice.value))
                     next[spec.id] = readSelectFilter(flat, spec.id, allowed)
                   }
                   setSelected(next)

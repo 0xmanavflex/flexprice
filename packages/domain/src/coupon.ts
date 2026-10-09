@@ -173,11 +173,7 @@ export const createCouponSchema = z
     currency: z.string().trim().optional(),
     percentageOff: z.string().trim().optional(),
     cadence: z.enum([CouponCadence.Once, CouponCadence.Repeated, CouponCadence.Forever]),
-    durationInPeriods: z
-      .number()
-      .int('Must be a whole number')
-      .positive('Must be greater than zero')
-      .optional(),
+    durationInPeriods: z.number().int('Must be a whole number').positive('Must be greater than zero').optional(),
     redeemAfter: z.date().optional(),
     redeemBefore: z.date().optional(),
     maxRedemptions: z

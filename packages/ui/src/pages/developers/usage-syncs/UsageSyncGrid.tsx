@@ -10,13 +10,7 @@ import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
-import {
-  type EntityColumn,
-  idColumn,
-  moneyColumn,
-  pillColumn,
-  textColumn,
-} from '../../shared/cells'
+import { type EntityColumn, idColumn, moneyColumn, pillColumn, textColumn } from '../../shared/cells'
 import { providerLabel } from './usageSyncProviders'
 
 /**
