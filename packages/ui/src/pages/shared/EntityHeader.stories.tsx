@@ -41,7 +41,13 @@ function menuItems(): DetailMenuItem[] {
 const meta = {
   title: 'Foundation/Flexprice/EntityHeader',
   component: EntityHeader,
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    a11y: {
+      // Base UI's portal focus guards — see AppShell.stories.tsx.
+      config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
+    },
+  },
   args: {
     trail: [{ label: 'Features', onClick: fn() }, { label: 'API calls' }],
     icon: <GaugeIcon aria-hidden className="size-5" />,

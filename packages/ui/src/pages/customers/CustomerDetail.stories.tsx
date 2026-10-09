@@ -134,7 +134,13 @@ const withHeight: Decorator = (Story) => (
 const meta = {
   title: 'Surfaces/CustomerDetail',
   component: Harness,
-  parameters: { layout: 'fullscreen' },
+  parameters: {
+    layout: 'fullscreen',
+    a11y: {
+      // Base UI's portal focus guards — see AppShell.stories.tsx.
+      config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] },
+    },
+  },
   decorators: [withHeight],
   argTypes: {
     initialTab: { control: 'select', options: CUSTOMER_TABS },
