@@ -1,5 +1,5 @@
 import { PlusIcon, CoinsIcon } from 'lucide-react'
-import { SectionEmpty } from '@ui/compositions/SectionEmpty'
+import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
@@ -8,7 +8,7 @@ import {
   CreditGrantCadence,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { Section } from '@ui/compositions/Section'
+import { Section } from '@ui/compositions/layout/Section'
 
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
 import { DetailTable } from '../../shared/DetailTable'

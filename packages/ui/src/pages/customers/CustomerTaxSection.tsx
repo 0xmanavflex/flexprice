@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LabelWithHint } from '@ui/compositions/LabelWithHint'
+import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { PlusIcon } from 'lucide-react'
 import {
   type CreateTaxAssociation,
@@ -23,7 +23,7 @@ import {
   OptionSelect,
   Section,
 } from '../../compositions'
-import { Composer } from '../../compositions/DetailKit'
+import { Composer } from '../../compositions/detail/DetailKit'
 import { DetailTable } from '../shared/DetailTable'
 
 export interface TaxRateOption {

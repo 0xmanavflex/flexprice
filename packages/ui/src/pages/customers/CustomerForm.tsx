@@ -8,12 +8,12 @@ import {
   emptyCustomer,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
-import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormDisclosure } from '@ui/compositions/FormDisclosure'
-import { FormPage } from '@ui/compositions/FormPage'
-import type { DetailCrumb } from '@ui/compositions/DetailShell'
-import { OptionCombobox } from '@ui/compositions/OptionCombobox'
-import { OptionSelect } from '@ui/compositions/OptionSelect'
+import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
+import { FormDisclosure } from '@ui/compositions/forms/FormDisclosure'
+import { FormPage } from '@ui/compositions/forms/FormPage'
+import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
+import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
 
 /**

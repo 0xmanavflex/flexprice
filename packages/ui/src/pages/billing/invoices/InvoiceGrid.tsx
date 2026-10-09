@@ -10,7 +10,7 @@ import {
   PaymentStatus,
   isStoredInvoiceStatus,
 } from '@fp/domain'
-import { statusFilter } from '@ui/compositions/FilterBar'
+import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'

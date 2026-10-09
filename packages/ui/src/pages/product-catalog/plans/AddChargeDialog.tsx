@@ -9,8 +9,8 @@ import {
   emptyCharge,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { FormDialog } from '../../../compositions/FormDialog'
-import { ChoiceCards } from '../../../compositions/DetailKit'
+import { FormDialog } from '../../../compositions/forms/FormDialog'
+import { ChoiceCards } from '../../../compositions/detail/DetailKit'
 import { ChargeForm, type MeterOption, type PriceUnitOption } from '../charges/ChargeForm'
 
 export interface AddChargeDialogProps {

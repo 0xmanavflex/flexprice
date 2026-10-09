@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { SectionEmpty } from '@ui/compositions/SectionEmpty'
+import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { toast } from 'sonner'
 import {
   type AggregationType,
@@ -20,17 +20,17 @@ import {
 } from '@fp/domain'
 import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon, PlusIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
-import { DetailHeader } from '../../../compositions/DetailHeader'
-import { EditableCard } from '../../../compositions/EditableCard'
+import { DetailHeader } from '../../../compositions/detail/DetailHeader'
+import { EditableCard } from '../../../compositions/forms/EditableCard'
 import { LoadingRows } from '../../../compositions'
-import { MetadataCard } from '../../../compositions/MetadataCard'
-import { Section } from '../../../compositions/Section'
+import { MetadataCard } from '../../../compositions/detail/MetadataCard'
+import { Section } from '../../../compositions/layout/Section'
 import {
   DetailMoreMenu,
   DetailTabs,
   Properties,
   type DetailMenuItem,
-} from '../../../compositions/DetailKit'
+} from '../../../compositions/detail/DetailKit'
 import { MetricChart, type MetricPoint } from '../../shared/charts'
 import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../../shared/cells'
 import { DetailTable } from '../../shared/DetailTable'

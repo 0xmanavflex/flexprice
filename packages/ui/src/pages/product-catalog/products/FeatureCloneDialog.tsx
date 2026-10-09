@@ -3,9 +3,9 @@ import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type CloneFeature, type Feature, cloneFeatureSchema, emptyCloneFeature } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
-import { Field } from '@ui/compositions/Field'
-import { FormActions } from '@ui/compositions/FormActions'
-import { FormDialog } from '@ui/compositions/FormDialog'
+import { Field } from '@ui/compositions/forms/Field'
+import { FormActions } from '@ui/compositions/forms/FormActions'
+import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { provenance } from '@ui/provenance'
 
 /** Clone a feature: a new name and lookup key, both required and unique. */

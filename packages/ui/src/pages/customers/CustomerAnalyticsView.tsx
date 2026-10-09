@@ -12,8 +12,8 @@ import {
 import { Input } from '@ui/components/primitives/input'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { Switch } from '@ui/components/primitives/switch'
-import { SegmentMeter } from '@ui/compositions/DetailKit'
-import { Section } from '@ui/compositions/Section'
+import { SegmentMeter } from '@ui/compositions/detail/DetailKit'
+import { Section } from '@ui/compositions/layout/Section'
 import { MetricChart } from '../shared/charts'
 import { DetailTable } from '../shared/DetailTable'
 

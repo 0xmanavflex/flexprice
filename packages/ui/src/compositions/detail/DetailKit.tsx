@@ -13,7 +13,7 @@ import {
 } from '@ui/components/primitives/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
-import { useInFormDialog } from './formDialogContext'
+import { useInFormDialog } from '../forms/formDialogContext'
 
 /*
  * Shared grammar for every detail page, ported 1:1 from the reference kit

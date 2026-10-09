@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
-import { Panel } from './Section'
+import { Panel } from '../layout/Section'
 
 /**
  * Chart "boxing": the reference `Panel` (muted tray carrying the title and

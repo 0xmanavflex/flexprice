@@ -111,15 +111,22 @@ describe('apps compose through the door', () => {
 
 describe('block-grade primitives live behind one seam', () => {
   it('lets the page grids import the data grid', async () => {
-    expect(await lintAt('packages/ui/src/pages/settings/discounts/CouponGrid.tsx', IMPORTS.dataGrid)).toEqual([])
+    expect(
+      await lintAt('packages/ui/src/pages/settings/discounts/CouponGrid.tsx', IMPORTS.dataGrid),
+    ).toEqual([])
   })
 
   it('lets FilterBar import the filter builder', async () => {
-    expect(await lintAt('packages/ui/src/compositions/FilterBar.tsx', IMPORTS.filters)).toEqual([])
+    expect(
+      await lintAt('packages/ui/src/compositions/tables/FilterBar.tsx', IMPORTS.filters),
+    ).toEqual([])
   })
 
   it('refuses a composition reaching for the data grid directly', async () => {
-    const messages = await lintAt('packages/ui/src/compositions/Toolbar.tsx', IMPORTS.dataGrid)
+    const messages = await lintAt(
+      'packages/ui/src/compositions/tables/Toolbar.tsx',
+      IMPORTS.dataGrid,
+    )
     expect(messages).toHaveLength(1)
     expect(messages[0]).toMatch(/one place|FeatureGrid|block-grade/i)
   })
@@ -128,7 +135,9 @@ describe('block-grade primitives live behind one seam', () => {
   // no-restricted-imports config replaces the first, so if it dropped the SDK
   // ban, a non-seam file could quietly import the SDK. It must not.
   it('still forbids the SDK in a non-seam composition — the seam rule does not clobber the UI rule', async () => {
-    expect(await lintAt('packages/ui/src/compositions/Toolbar.tsx', IMPORTS.sdk)).toHaveLength(1)
+    expect(
+      await lintAt('packages/ui/src/compositions/tables/Toolbar.tsx', IMPORTS.sdk),
+    ).toHaveLength(1)
   })
 })
 
@@ -166,7 +175,9 @@ describe('pages follow the redesign', () => {
 
   it('refuses raw palette colours but allows semantic tokens', async () => {
     expect(await lintAt(page, 'const a = "bg-sky-50 text-violet-600"')).toHaveLength(1)
-    expect(await lintAt(page, 'const a = "bg-muted text-success border-destructive/40"')).toEqual([])
+    expect(await lintAt(page, 'const a = "bg-muted text-success border-destructive/40"')).toEqual(
+      [],
+    )
   })
 
   it('lets chart and meter files use a hue, but not a bold weight', async () => {

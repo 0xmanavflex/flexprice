@@ -3,7 +3,7 @@ import { CalendarIcon } from 'lucide-react'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 
-import { Panel } from '@ui/compositions/Section'
+import { Panel } from '@ui/compositions/layout/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ArcGauge } from '../shared/ArcGauge'

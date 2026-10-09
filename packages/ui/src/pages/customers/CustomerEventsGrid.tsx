@@ -6,7 +6,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@ui/components/primitives/sheet'
-import { Section } from '@ui/compositions/Section'
+import { Section } from '@ui/compositions/layout/Section'
 import { DetailTable } from '../shared/DetailTable'
 
 /** Demo usage events: no customer event feed is wired yet. */

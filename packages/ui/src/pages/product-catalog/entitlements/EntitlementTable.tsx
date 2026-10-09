@@ -1,8 +1,8 @@
 import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from 'lucide-react'
-import { SectionEmpty } from '@ui/compositions/SectionEmpty'
+import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { Section } from '@ui/compositions/Section'
+import { Section } from '@ui/compositions/layout/Section'
 
 import { provenance } from '@ui/provenance'
 import { EmDash, EntityLink } from '../../shared/cells'

@@ -3,7 +3,7 @@ import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { Panel, Section } from './Section'
-import { SimpleTable } from './DetailKit'
+import { SimpleTable } from '../detail/DetailKit'
 
 const meta = {
   title: 'Foundation/Compositions/Section',

@@ -101,14 +101,14 @@
       "story": "./src/pages/home/DashboardHome.stories.tsx"
     },
     "AppFailure": {
-      "file": "src/compositions/AppFailure.tsx",
+      "file": "src/compositions/feedback/AppFailure.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView"
       ],
-      "story": "./src/compositions/AppFailure.stories.tsx"
+      "story": "./src/compositions/feedback/AppFailure.stories.tsx"
     },
     "AppShell": {
       "file": "src/compositions/shell/AppShell.tsx",
@@ -258,25 +258,25 @@
       "story": null
     },
     "ChartBox": {
-      "file": "src/compositions/ChartBox.tsx",
+      "file": "src/compositions/charts/ChartBox.tsx",
       "layer": "composition",
       "composes": [
         "Panel"
       ],
       "usedBy": [],
-      "story": "./src/compositions/ChartBox.stories.tsx"
+      "story": "./src/compositions/charts/ChartBox.stories.tsx"
     },
     "CheckboxRow": {
-      "file": "src/compositions/CheckboxRow.tsx",
+      "file": "src/compositions/forms/CheckboxRow.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "WebhookEventTypePicker"
       ],
-      "story": "./src/compositions/CheckboxRow.stories.tsx"
+      "story": "./src/compositions/forms/CheckboxRow.stories.tsx"
     },
     "ChoiceCards": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -287,7 +287,7 @@
         "CustomerWalletView",
         "PriceOverrideForm"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "CollectionsSummary": {
       "file": "src/pages/collections/payments/CollectionsSummary.tsx",
@@ -297,7 +297,7 @@
       "story": "./src/pages/collections/payments/CollectionsSummary.stories.tsx"
     },
     "Composer": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -306,10 +306,10 @@
         "EnvironmentForm",
         "EnvironmentRenameForm"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "ConfirmDialog": {
-      "file": "src/compositions/ConfirmDialog.tsx",
+      "file": "src/compositions/feedback/ConfirmDialog.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -317,46 +317,46 @@
         "CustomerWalletView",
         "WebhookEndpointDetail"
       ],
-      "story": "./src/compositions/ConfirmDialog.stories.tsx"
+      "story": "./src/compositions/feedback/ConfirmDialog.stories.tsx"
     },
     "ConnectorCard": {
-      "file": "src/compositions/ConnectorCard.tsx",
+      "file": "src/compositions/layout/ConnectorCard.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "IntegrationsBlock"
       ],
-      "story": "./src/compositions/ConnectorCard.stories.tsx"
+      "story": "./src/compositions/layout/ConnectorCard.stories.tsx"
     },
     "ContextualSection": {
-      "file": "src/compositions/ContextualSection.tsx",
+      "file": "src/compositions/layout/ContextualSection.tsx",
       "layer": "composition",
       "composes": [
         "Section"
       ],
       "usedBy": [],
-      "story": "./src/compositions/ContextualSection.stories.tsx"
+      "story": "./src/compositions/layout/ContextualSection.stories.tsx"
     },
     "CopyChip": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "CopyEmail": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "CopyId": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "CostMarginCard": {
       "file": "src/pages/settings/cost-sheets/CostMarginCard.tsx",
@@ -655,7 +655,7 @@
       "story": "./src/pages/developers/exports/DataExportGrid.stories.tsx"
     },
     "DateInput": {
-      "file": "src/compositions/DateInput.tsx",
+      "file": "src/compositions/forms/DateInput.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -665,7 +665,7 @@
         "CreditGrantEditForm",
         "SubscriptionForm"
       ],
-      "story": "./src/compositions/DateInput.stories.tsx"
+      "story": "./src/compositions/forms/DateInput.stories.tsx"
     },
     "DateSelector": {
       "file": "src/components/reui/date-selector.tsx",
@@ -675,7 +675,7 @@
       "story": null
     },
     "DetailBreadcrumb": {
-      "file": "src/compositions/DetailShell.tsx",
+      "file": "src/compositions/detail/DetailShell.tsx",
       "layer": "composition",
       "composes": [
         "DetailHeaderCluster",
@@ -684,10 +684,10 @@
       "usedBy": [
         "EntityHeader"
       ],
-      "story": "./src/compositions/DetailShell.stories.tsx"
+      "story": "./src/compositions/detail/DetailShell.stories.tsx"
     },
     "DetailHeader": {
-      "file": "src/compositions/DetailHeader.tsx",
+      "file": "src/compositions/detail/DetailHeader.tsx",
       "layer": "composition",
       "composes": [
         "DetailHeaderCluster"
@@ -695,10 +695,10 @@
       "usedBy": [
         "FeatureDetailView"
       ],
-      "story": "./src/compositions/DetailHeader.stories.tsx"
+      "story": "./src/compositions/detail/DetailHeader.stories.tsx"
     },
     "DetailHeaderCluster": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -707,10 +707,10 @@
         "DetailShell",
         "EntityHeader"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "DetailList": {
-      "file": "src/compositions/DetailList.tsx",
+      "file": "src/compositions/tables/DetailList.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -719,10 +719,10 @@
         "WebhookEndpointDetail",
         "WebhookMessageSheet"
       ],
-      "story": "./src/compositions/DetailList.stories.tsx"
+      "story": "./src/compositions/tables/DetailList.stories.tsx"
     },
     "DetailMoreMenu": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -731,10 +731,10 @@
         "FeatureDetailView",
         "SubscriptionDetailView"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "DetailShell": {
-      "file": "src/compositions/DetailShell.tsx",
+      "file": "src/compositions/detail/DetailShell.tsx",
       "layer": "composition",
       "composes": [
         "DetailHeaderCluster",
@@ -745,16 +745,16 @@
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
-      "story": "./src/compositions/DetailShell.stories.tsx"
+      "story": "./src/compositions/detail/DetailShell.stories.tsx"
     },
     "DetailStats": {
-      "file": "src/compositions/DetailStats.tsx",
+      "file": "src/compositions/detail/DetailStats.tsx",
       "layer": "composition",
       "composes": [
         "SummaryRow"
       ],
       "usedBy": [],
-      "story": "./src/compositions/DetailStats.stories.tsx"
+      "story": "./src/compositions/detail/DetailStats.stories.tsx"
     },
     "DetailTable": {
       "file": "src/pages/shared/DetailTable.tsx",
@@ -783,7 +783,7 @@
       "story": "./src/pages/shared/DetailTable.stories.tsx"
     },
     "DetailTabs": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -794,14 +794,14 @@
         "SettingsShell",
         "SubscriptionDetailView"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "Dot": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "DotSeparator": {
       "file": "src/components/blocks/solution-billing-2/components/dot-separator.tsx",
@@ -811,7 +811,7 @@
       "story": null
     },
     "EditableCard": {
-      "file": "src/compositions/EditableCard.tsx",
+      "file": "src/compositions/forms/EditableCard.tsx",
       "layer": "composition",
       "composes": [
         "Section"
@@ -821,16 +821,16 @@
         "FeatureDetailView",
         "WebhookEndpointDetail"
       ],
-      "story": "./src/compositions/EditableCard.stories.tsx"
+      "story": "./src/compositions/forms/EditableCard.stories.tsx"
     },
     "EditableFields": {
-      "file": "src/compositions/EditableFields.tsx",
+      "file": "src/compositions/forms/EditableFields.tsx",
       "layer": "composition",
       "composes": [
         "InlineField"
       ],
       "usedBy": [],
-      "story": "./src/compositions/EditableFields.stories.tsx"
+      "story": "./src/compositions/forms/EditableFields.stories.tsx"
     },
     "EditPlanDialog": {
       "file": "src/components/blocks/solution-billing-2/components/edit-plan-dialog.tsx",
@@ -840,11 +840,11 @@
       "story": null
     },
     "EmbeddedPageContext": {
-      "file": "src/compositions/Page.tsx",
+      "file": "src/compositions/layout/Page.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/Page.stories.tsx"
+      "story": "./src/compositions/layout/Page.stories.tsx"
     },
     "EmDash": {
       "file": "src/pages/shared/cells.tsx",
@@ -867,7 +867,7 @@
       "story": "./src/pages/shared/cells.stories.tsx"
     },
     "EmptyState": {
-      "file": "src/compositions/EmptyState.tsx",
+      "file": "src/compositions/feedback/EmptyState.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -881,7 +881,7 @@
         "WebhookActivity",
         "WebhookEventCatalog"
       ],
-      "story": "./src/compositions/EmptyState.stories.tsx"
+      "story": "./src/compositions/feedback/EmptyState.stories.tsx"
     },
     "EnterpriseMemberInvite": {
       "file": "src/components/blocks/form-9/components/enterprise-member-invite.tsx",
@@ -1038,7 +1038,7 @@
       "story": "./src/compositions/shell/EnvironmentSwitcher.stories.tsx"
     },
     "ErrorState": {
-      "file": "src/compositions/States.tsx",
+      "file": "src/compositions/feedback/States.tsx",
       "layer": "composition",
       "composes": [
         "ListOfferProvider"
@@ -1046,7 +1046,7 @@
       "usedBy": [
         "PlanChargesView"
       ],
-      "story": "./src/compositions/States.stories.tsx"
+      "story": "./src/compositions/feedback/States.stories.tsx"
     },
     "EventDetailSheet": {
       "file": "src/pages/developers/events/EventDetailSheet.tsx",
@@ -1176,7 +1176,7 @@
       "story": "./src/pages/shared/cells.stories.tsx"
     },
     "Field": {
-      "file": "src/compositions/Field.tsx",
+      "file": "src/compositions/forms/Field.tsx",
       "layer": "composition",
       "composes": [
         "InfoHint"
@@ -1202,7 +1202,7 @@
         "SignInForm",
         "WebhookEndpointDetail"
       ],
-      "story": "./src/compositions/Field.stories.tsx"
+      "story": "./src/compositions/forms/Field.stories.tsx"
     },
     "FilterAdvancedRow": {
       "file": "src/components/reui/filters/filters-advanced.tsx",
@@ -1212,7 +1212,7 @@
       "story": null
     },
     "FilterBar": {
-      "file": "src/compositions/FilterBar.tsx",
+      "file": "src/compositions/tables/FilterBar.tsx",
       "layer": "composition",
       "composes": [
         "Filters"
@@ -1220,7 +1220,7 @@
       "usedBy": [
         "EntityList"
       ],
-      "story": "./src/compositions/FilterBar.stories.tsx"
+      "story": "./src/compositions/tables/FilterBar.stories.tsx"
     },
     "FilterBooleanEditor": {
       "file": "src/components/reui/filters/filters-editors.tsx",
@@ -1365,13 +1365,13 @@
       "story": null
     },
     "FitToWindow": {
-      "file": "src/compositions/FitToWindow.tsx",
+      "file": "src/compositions/layout/FitToWindow.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "GridFooter"
       ],
-      "story": "./src/compositions/FitToWindow.stories.tsx"
+      "story": "./src/compositions/layout/FitToWindow.stories.tsx"
     },
     "ForgotPasswordForm": {
       "file": "src/pages/auth/ForgotPasswordForm.tsx",
@@ -1383,7 +1383,7 @@
       "story": "./src/pages/auth/ForgotPasswordForm.stories.tsx"
     },
     "FormActions": {
-      "file": "src/compositions/FormActions.tsx",
+      "file": "src/compositions/forms/FormActions.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -1394,10 +1394,10 @@
         "EntitlementEditForm",
         "FeatureCloneDialog"
       ],
-      "story": "./src/compositions/FormActions.stories.tsx"
+      "story": "./src/compositions/forms/FormActions.stories.tsx"
     },
     "FormCard": {
-      "file": "src/compositions/FormCard.tsx",
+      "file": "src/compositions/forms/FormCard.tsx",
       "layer": "composition",
       "composes": [
         "Field",
@@ -1421,10 +1421,10 @@
         "TaxRateEditForm",
         "WebhookEndpointForm"
       ],
-      "story": "./src/compositions/FormCard.stories.tsx"
+      "story": "./src/compositions/forms/FormCard.stories.tsx"
     },
     "FormDialog": {
-      "file": "src/compositions/FormDialog.tsx",
+      "file": "src/compositions/forms/FormDialog.tsx",
       "layer": "composition",
       "composes": [
         "FormDialogBodyContext"
@@ -1438,10 +1438,10 @@
         "FeatureCloneDialog",
         "WebhookEndpointDetail"
       ],
-      "story": "./src/compositions/FormDialog.stories.tsx"
+      "story": "./src/compositions/forms/FormDialog.stories.tsx"
     },
     "FormDialogBodyContext": {
-      "file": "src/compositions/formDialogContext.ts",
+      "file": "src/compositions/forms/formDialogContext.ts",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -1450,7 +1450,7 @@
       "story": null
     },
     "FormDisclosure": {
-      "file": "src/compositions/FormDisclosure.tsx",
+      "file": "src/compositions/forms/FormDisclosure.tsx",
       "layer": "composition",
       "composes": [
         "FormCard"
@@ -1458,10 +1458,10 @@
       "usedBy": [
         "CustomerForm"
       ],
-      "story": "./src/compositions/FormDisclosure.stories.tsx"
+      "story": "./src/compositions/forms/FormDisclosure.stories.tsx"
     },
     "FormPage": {
-      "file": "src/compositions/FormPage.tsx",
+      "file": "src/compositions/forms/FormPage.tsx",
       "layer": "composition",
       "composes": [
         "FormToolbar",
@@ -1486,19 +1486,19 @@
         "TaxRateEditForm",
         "WebhookEndpointForm"
       ],
-      "story": "./src/compositions/FormPage.stories.tsx"
+      "story": "./src/compositions/forms/FormPage.stories.tsx"
     },
     "FormPreview": {
-      "file": "src/compositions/FormPreview.tsx",
+      "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "PlanPreviewCard"
       ],
-      "story": "./src/compositions/FormPreview.stories.tsx"
+      "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "FormRow": {
-      "file": "src/compositions/FormCard.tsx",
+      "file": "src/compositions/forms/FormCard.tsx",
       "layer": "composition",
       "composes": [
         "Field",
@@ -1521,25 +1521,25 @@
         "TaxRateEditForm",
         "WebhookEndpointForm"
       ],
-      "story": "./src/compositions/FormCard.stories.tsx"
+      "story": "./src/compositions/forms/FormCard.stories.tsx"
     },
     "FormSteps": {
-      "file": "src/compositions/useFormSteps.tsx",
+      "file": "src/compositions/forms/useFormSteps.tsx",
       "layer": "composition",
       "composes": [
         "WorkflowStepper"
       ],
       "usedBy": [],
-      "story": "./src/compositions/FormSteps.stories.tsx"
+      "story": "./src/compositions/forms/FormSteps.stories.tsx"
     },
     "FormToolbar": {
-      "file": "src/compositions/FormToolbar.tsx",
+      "file": "src/compositions/forms/FormToolbar.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "FormPage"
       ],
-      "story": "./src/compositions/FormToolbar.stories.tsx"
+      "story": "./src/compositions/forms/FormToolbar.stories.tsx"
     },
     "Formula": {
       "file": "src/pages/shared/cells.tsx",
@@ -1564,20 +1564,20 @@
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
     },
     "GridFooter": {
-      "file": "src/compositions/GridFooter.tsx",
+      "file": "src/compositions/tables/GridFooter.tsx",
       "layer": "composition",
       "composes": [
         "FitToWindow"
       ],
       "usedBy": [],
-      "story": "./src/compositions/GridFooter.stories.tsx"
+      "story": "./src/compositions/tables/GridFooter.stories.tsx"
     },
     "GridToolbar": {
-      "file": "src/compositions/GridToolbar.tsx",
+      "file": "src/compositions/tables/GridToolbar.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/GridToolbar.stories.tsx"
+      "story": "./src/compositions/tables/GridToolbar.stories.tsx"
     },
     "GroupForm": {
       "file": "src/pages/settings/groups/GroupForm.tsx",
@@ -1611,7 +1611,7 @@
       "story": "./src/pages/settings/groups/GroupMembersView.stories.tsx"
     },
     "GuidedEmptyState": {
-      "file": "src/compositions/GuidedEmptyState.tsx",
+      "file": "src/compositions/feedback/GuidedEmptyState.tsx",
       "layer": "composition",
       "composes": [
         "ProjectsEmptyIllustration"
@@ -1619,16 +1619,16 @@
       "usedBy": [
         "EntityList"
       ],
-      "story": "./src/compositions/GuidedEmptyState.stories.tsx"
+      "story": "./src/compositions/feedback/GuidedEmptyState.stories.tsx"
     },
     "GuideGrid": {
-      "file": "src/compositions/GuidedEmptyState.tsx",
+      "file": "src/compositions/feedback/GuidedEmptyState.tsx",
       "layer": "composition",
       "composes": [
         "ProjectsEmptyIllustration"
       ],
       "usedBy": [],
-      "story": "./src/compositions/GuidedEmptyState.stories.tsx"
+      "story": "./src/compositions/feedback/GuidedEmptyState.stories.tsx"
     },
     "HalfDonut": {
       "file": "src/pages/shared/HalfDonut.tsx",
@@ -1643,7 +1643,7 @@
       "story": "./src/pages/shared/HalfDonut.stories.tsx"
     },
     "InfoHint": {
-      "file": "src/compositions/InfoHint.tsx",
+      "file": "src/compositions/forms/InfoHint.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -1652,16 +1652,16 @@
         "FormRow",
         "LabelWithHint"
       ],
-      "story": "./src/compositions/InfoHint.stories.tsx"
+      "story": "./src/compositions/forms/InfoHint.stories.tsx"
     },
     "InlineField": {
-      "file": "src/compositions/InlineField.tsx",
+      "file": "src/compositions/forms/InlineField.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "EditableFields"
       ],
-      "story": "./src/compositions/InlineField.stories.tsx"
+      "story": "./src/compositions/forms/InlineField.stories.tsx"
     },
     "IntegrationsBlock": {
       "file": "src/pages/integrations/IntegrationsBlock.tsx",
@@ -1809,7 +1809,7 @@
       "story": null
     },
     "LabelWithHint": {
-      "file": "src/compositions/LabelWithHint.tsx",
+      "file": "src/compositions/forms/LabelWithHint.tsx",
       "layer": "composition",
       "composes": [
         "InfoHint"
@@ -1821,7 +1821,7 @@
         "InvoiceForm",
         "SignInForm"
       ],
-      "story": "./src/compositions/LabelWithHint.stories.tsx"
+      "story": "./src/compositions/forms/LabelWithHint.stories.tsx"
     },
     "LearnMoreGuides": {
       "file": "src/components/blocks/empty-state-1/components/learn-more-guides.tsx",
@@ -1831,7 +1831,7 @@
       "story": null
     },
     "ListOfferProvider": {
-      "file": "src/compositions/EmptyState.tsx",
+      "file": "src/compositions/feedback/EmptyState.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -1839,19 +1839,19 @@
         "ListState",
         "LoadingRows"
       ],
-      "story": "./src/compositions/EmptyState.stories.tsx"
+      "story": "./src/compositions/feedback/EmptyState.stories.tsx"
     },
     "ListState": {
-      "file": "src/compositions/States.tsx",
+      "file": "src/compositions/feedback/States.tsx",
       "layer": "composition",
       "composes": [
         "ListOfferProvider"
       ],
       "usedBy": [],
-      "story": "./src/compositions/States.stories.tsx"
+      "story": "./src/compositions/feedback/States.stories.tsx"
     },
     "LoadingRows": {
-      "file": "src/compositions/States.tsx",
+      "file": "src/compositions/feedback/States.tsx",
       "layer": "composition",
       "composes": [
         "ListOfferProvider"
@@ -1865,7 +1865,7 @@
         "PlanChargesView",
         "SubscriptionDetailView"
       ],
-      "story": "./src/compositions/States.stories.tsx"
+      "story": "./src/compositions/feedback/States.stories.tsx"
     },
     "LoginForm": {
       "file": "src/components/blocks/auth-18/components/login-form.tsx",
@@ -1889,7 +1889,7 @@
       "story": null
     },
     "MetadataCard": {
-      "file": "src/compositions/MetadataCard.tsx",
+      "file": "src/compositions/detail/MetadataCard.tsx",
       "layer": "composition",
       "composes": [
         "Section"
@@ -1900,7 +1900,7 @@
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
-      "story": "./src/compositions/MetadataCard.stories.tsx"
+      "story": "./src/compositions/detail/MetadataCard.stories.tsx"
     },
     "MeteredEntitlementFields": {
       "file": "src/pages/product-catalog/entitlements/MeteredEntitlementFields.tsx",
@@ -1951,7 +1951,7 @@
       "story": "./src/pages/shared/MetricChart.stories.tsx"
     },
     "MetricRail": {
-      "file": "src/compositions/MetricRail.tsx",
+      "file": "src/compositions/detail/MetricRail.tsx",
       "layer": "composition",
       "composes": [
         "SummaryRow"
@@ -1960,7 +1960,7 @@
         "DetailBreadcrumb",
         "DetailShell"
       ],
-      "story": "./src/compositions/MetricRail.stories.tsx"
+      "story": "./src/compositions/detail/MetricRail.stories.tsx"
     },
     "Money": {
       "file": "src/pages/shared/Money.tsx",
@@ -2034,16 +2034,16 @@
       "story": null
     },
     "OptionBody": {
-      "file": "src/compositions/OptionSelect.tsx",
+      "file": "src/compositions/forms/OptionSelect.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "OptionCombobox"
       ],
-      "story": "./src/compositions/OptionSelect.stories.tsx"
+      "story": "./src/compositions/forms/OptionSelect.stories.tsx"
     },
     "OptionCombobox": {
-      "file": "src/compositions/OptionCombobox.tsx",
+      "file": "src/compositions/forms/OptionCombobox.tsx",
       "layer": "composition",
       "composes": [
         "OptionBody"
@@ -2056,10 +2056,10 @@
         "SubscriptionForm",
         "WebhookEndpointDetail"
       ],
-      "story": "./src/compositions/OptionCombobox.stories.tsx"
+      "story": "./src/compositions/forms/OptionCombobox.stories.tsx"
     },
     "OptionSelect": {
-      "file": "src/compositions/OptionSelect.tsx",
+      "file": "src/compositions/forms/OptionSelect.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -2080,7 +2080,7 @@
         "TaxRateEditForm",
         "WebhookEndpointDetail"
       ],
-      "story": "./src/compositions/OptionSelect.stories.tsx"
+      "story": "./src/compositions/forms/OptionSelect.stories.tsx"
     },
     "Page": {
       "file": "src/components/blocks/app-shell-3/page.tsx",
@@ -2092,20 +2092,20 @@
       "story": null
     },
     "PageBody": {
-      "file": "src/compositions/Page.tsx",
+      "file": "src/compositions/layout/Page.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "FormPage"
       ],
-      "story": "./src/compositions/Page.stories.tsx"
+      "story": "./src/compositions/layout/Page.stories.tsx"
     },
     "PageHeader": {
-      "file": "src/compositions/Page.tsx",
+      "file": "src/compositions/layout/Page.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/Page.stories.tsx"
+      "story": "./src/compositions/layout/Page.stories.tsx"
     },
     "PageShell": {
       "file": "src/pages/shared/shellFixtures.tsx",
@@ -2120,14 +2120,14 @@
       "story": null
     },
     "PageToolbar": {
-      "file": "src/compositions/Page.tsx",
+      "file": "src/compositions/layout/Page.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/Page.stories.tsx"
+      "story": "./src/compositions/layout/Page.stories.tsx"
     },
     "Panel": {
-      "file": "src/compositions/Section.tsx",
+      "file": "src/compositions/layout/Section.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -2137,7 +2137,7 @@
         "RevenueDashboard",
         "UsageCard"
       ],
-      "story": "./src/compositions/Section.stories.tsx"
+      "story": "./src/compositions/layout/Section.stories.tsx"
     },
     "Pattern": {
       "file": "src/components/examples/c-badge-20.tsx",
@@ -2337,34 +2337,34 @@
       "story": null
     },
     "PreviewAmount": {
-      "file": "src/compositions/FormPreview.tsx",
+      "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/FormPreview.stories.tsx"
+      "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "PreviewRow": {
-      "file": "src/compositions/FormPreview.tsx",
+      "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/FormPreview.stories.tsx"
+      "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "PreviewRows": {
-      "file": "src/compositions/FormPreview.tsx",
+      "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/FormPreview.stories.tsx"
+      "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "PreviewSection": {
-      "file": "src/compositions/FormPreview.tsx",
+      "file": "src/compositions/forms/FormPreview.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "PlanPreviewCard"
       ],
-      "story": "./src/compositions/FormPreview.stories.tsx"
+      "story": "./src/compositions/forms/FormPreview.stories.tsx"
     },
     "PriceOverrideForm": {
       "file": "src/pages/product-catalog/charges/PriceOverrideForm.tsx",
@@ -2434,14 +2434,14 @@
       "story": null
     },
     "Properties": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "FeatureDetailView",
         "SubscriptionDetailView"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "QuickStartTemplates": {
       "file": "src/components/blocks/empty-state-3/components/quick-start-templates.tsx",
@@ -2465,7 +2465,7 @@
       "story": null
     },
     "RelatedCard": {
-      "file": "src/compositions/RelatedCard.tsx",
+      "file": "src/compositions/detail/RelatedCard.tsx",
       "layer": "composition",
       "composes": [
         "Section"
@@ -2477,11 +2477,11 @@
       "story": null
     },
     "ResourceNavigation": {
-      "file": "src/compositions/ResourceNavigation.tsx",
+      "file": "src/compositions/layout/ResourceNavigation.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/ResourceNavigation.stories.tsx"
+      "story": "./src/compositions/layout/ResourceNavigation.stories.tsx"
     },
     "RevenueDashboard": {
       "file": "src/pages/revenue/RevenueDashboard.tsx",
@@ -2528,7 +2528,7 @@
       "story": null
     },
     "Section": {
-      "file": "src/compositions/Section.tsx",
+      "file": "src/compositions/layout/Section.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -2558,10 +2558,10 @@
         "WebhookEndpointDetail",
         "WebhookEventCatalog"
       ],
-      "story": "./src/compositions/Section.stories.tsx"
+      "story": "./src/compositions/layout/Section.stories.tsx"
     },
     "SectionEmpty": {
-      "file": "src/compositions/SectionEmpty.tsx",
+      "file": "src/compositions/feedback/SectionEmpty.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -2575,7 +2575,7 @@
         "PlanEntitlementsView",
         "SubscriptionDetailView"
       ],
-      "story": "./src/compositions/SectionEmpty.stories.tsx"
+      "story": "./src/compositions/feedback/SectionEmpty.stories.tsx"
     },
     "SecurityTab": {
       "file": "src/components/blocks/settings-7/components/security-tab.tsx",
@@ -2585,7 +2585,7 @@
       "story": null
     },
     "SegmentMeter": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -2594,7 +2594,7 @@
         "DashboardHome",
         "UsageCard"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "SettingRow": {
       "file": "src/components/blocks/settings-7/components/setting-row.tsx",
@@ -2725,7 +2725,7 @@
       "story": "./src/pages/auth/SignInScreen.stories.tsx"
     },
     "SimpleTable": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -2733,30 +2733,30 @@
         "TierTable",
         "WebhookEndpointDetail"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "SortableItem": {
-      "file": "src/compositions/SortableList.tsx",
+      "file": "src/compositions/tables/SortableList.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/SortableList.stories.tsx"
+      "story": "./src/compositions/tables/SortableList.stories.tsx"
     },
     "SortableList": {
-      "file": "src/compositions/SortableList.tsx",
+      "file": "src/compositions/tables/SortableList.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/SortableList.stories.tsx"
+      "story": "./src/compositions/tables/SortableList.stories.tsx"
     },
     "SortMenu": {
-      "file": "src/compositions/SortMenu.tsx",
+      "file": "src/compositions/tables/SortMenu.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "EntityList"
       ],
-      "story": "./src/compositions/SortMenu.stories.tsx"
+      "story": "./src/compositions/tables/SortMenu.stories.tsx"
     },
     "Source": {
       "file": "src/provenance/index.ts",
@@ -2778,7 +2778,7 @@
       "story": null
     },
     "SplitMeter": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -2786,7 +2786,7 @@
         "RevenueDashboard",
         "WebhookEndpointDetail"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "StatCards": {
       "file": "src/pages/shared/StatCards.tsx",
@@ -2889,7 +2889,7 @@
       "story": "./src/pages/contracts/SubscriptionStatusBadge.stories.tsx"
     },
     "SummaryRow": {
-      "file": "src/compositions/DetailKit.tsx",
+      "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
@@ -2897,7 +2897,7 @@
         "MetricRail",
         "SubscriptionDetailView"
       ],
-      "story": "./src/compositions/DetailKit.stories.tsx"
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "Tag": {
       "file": "src/pages/shared/cells.tsx",
@@ -2998,11 +2998,11 @@
       "story": "./src/pages/product-catalog/charges/TierTable.stories.tsx"
     },
     "Toolbar": {
-      "file": "src/compositions/Toolbar.tsx",
+      "file": "src/compositions/tables/Toolbar.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [],
-      "story": "./src/compositions/Toolbar.stories.tsx"
+      "story": "./src/compositions/tables/Toolbar.stories.tsx"
     },
     "TrendBadge": {
       "file": "src/pages/shared/charts.tsx",
@@ -3207,77 +3207,32 @@
       "story": "./src/pages/developers/workflows/WorkflowGrid.stories.tsx"
     },
     "WorkflowStepper": {
-      "file": "src/compositions/WorkflowStepper.tsx",
+      "file": "src/compositions/forms/WorkflowStepper.tsx",
       "layer": "composition",
       "composes": [],
       "usedBy": [
         "FormPage",
         "FormSteps"
       ],
-      "story": "./src/compositions/WorkflowStepper.stories.tsx"
+      "story": "./src/compositions/forms/WorkflowStepper.stories.tsx"
     }
   },
   "stories": {
-    "./src/compositions/AppFailure.stories.tsx": {
-      "title": "Foundation/Compositions/AppFailure",
-      "component": "AppFailure",
-      "uses": [
-        "AppFailure"
-      ]
-    },
-    "./src/compositions/ChartBox.stories.tsx": {
+    "./src/compositions/charts/ChartBox.stories.tsx": {
       "title": "Foundation/Compositions/ChartBox",
       "component": "ChartBox",
       "uses": [
         "ChartBox"
       ]
     },
-    "./src/compositions/CheckboxRow.stories.tsx": {
-      "title": "Foundation/Compositions/CheckboxRow",
-      "component": "CheckboxRow",
-      "uses": [
-        "CheckboxRow"
-      ]
-    },
-    "./src/compositions/ConfirmDialog.stories.tsx": {
-      "title": "Foundation/Compositions/ConfirmDialog",
-      "component": "ConfirmDialog",
-      "uses": [
-        "ConfirmDialog"
-      ]
-    },
-    "./src/compositions/ConnectorCard.stories.tsx": {
-      "title": "Foundation/Compositions/ConnectorCard",
-      "component": "ConnectorCard",
-      "uses": [
-        "ConnectorCard"
-      ]
-    },
-    "./src/compositions/ContextualSection.stories.tsx": {
-      "title": "Foundation/Compositions/ContextualSection",
-      "component": "ContextualSection",
-      "uses": [
-        "ContextualSection",
-        "Field",
-        "SimpleTable"
-      ]
-    },
-    "./src/compositions/DateInput.stories.tsx": {
-      "title": "Foundation/Compositions/DateInput",
-      "component": "DateInput",
-      "uses": [
-        "DateInput",
-        "Field"
-      ]
-    },
-    "./src/compositions/DetailHeader.stories.tsx": {
+    "./src/compositions/detail/DetailHeader.stories.tsx": {
       "title": "Foundation/Compositions/DetailHeader",
       "component": "DetailHeader",
       "uses": [
         "DetailHeader"
       ]
     },
-    "./src/compositions/DetailKit.stories.tsx": {
+    "./src/compositions/detail/DetailKit.stories.tsx": {
       "title": "Foundation/Compositions/DetailKit",
       "component": null,
       "uses": [
@@ -3295,42 +3250,49 @@
         "SummaryRow"
       ]
     },
-    "./src/compositions/DetailList.stories.tsx": {
-      "title": "Foundation/Compositions/DetailList",
-      "component": "DetailList",
-      "uses": [
-        "DetailList"
-      ]
-    },
-    "./src/compositions/DetailShell.stories.tsx": {
+    "./src/compositions/detail/DetailShell.stories.tsx": {
       "title": "Foundation/Compositions/DetailShell",
       "component": "DetailShell",
       "uses": [
         "DetailShell"
       ]
     },
-    "./src/compositions/DetailStats.stories.tsx": {
+    "./src/compositions/detail/DetailStats.stories.tsx": {
       "title": "Foundation/Compositions/DetailStats",
       "component": "DetailStats",
       "uses": [
         "DetailStats"
       ]
     },
-    "./src/compositions/EditableCard.stories.tsx": {
-      "title": "Foundation/Compositions/EditableCard",
-      "component": "EditableCard",
+    "./src/compositions/detail/MetadataCard.stories.tsx": {
+      "title": "Foundation/Compositions/MetadataCard",
+      "component": "MetadataCard",
       "uses": [
-        "EditableCard"
+        "MetadataCard"
       ]
     },
-    "./src/compositions/EditableFields.stories.tsx": {
-      "title": "Compositions/EditableFields",
-      "component": null,
+    "./src/compositions/detail/MetricRail.stories.tsx": {
+      "title": "Foundation/Compositions/MetricRail",
+      "component": "MetricRail",
       "uses": [
-        "EditableFields"
+        "MetricRail"
       ]
     },
-    "./src/compositions/EmptyState.stories.tsx": {
+    "./src/compositions/feedback/AppFailure.stories.tsx": {
+      "title": "Foundation/Compositions/AppFailure",
+      "component": "AppFailure",
+      "uses": [
+        "AppFailure"
+      ]
+    },
+    "./src/compositions/feedback/ConfirmDialog.stories.tsx": {
+      "title": "Foundation/Compositions/ConfirmDialog",
+      "component": "ConfirmDialog",
+      "uses": [
+        "ConfirmDialog"
+      ]
+    },
+    "./src/compositions/feedback/EmptyState.stories.tsx": {
       "title": "Foundation/Compositions/EmptyState",
       "component": "EmptyState",
       "uses": [
@@ -3339,35 +3301,74 @@
         "PageBody"
       ]
     },
-    "./src/compositions/Field.stories.tsx": {
+    "./src/compositions/feedback/GuidedEmptyState.stories.tsx": {
+      "title": "Model your first plan",
+      "component": "GuidedEmptyState",
+      "uses": [
+        "GuideGrid",
+        "GuidedEmptyState"
+      ]
+    },
+    "./src/compositions/feedback/SectionEmpty.stories.tsx": {
+      "title": "Foundation/Compositions/SectionEmpty",
+      "component": "SectionEmpty",
+      "uses": [
+        "SectionEmpty"
+      ]
+    },
+    "./src/compositions/feedback/States.stories.tsx": {
+      "title": "Foundation/Compositions/ListState",
+      "component": "ListState",
+      "uses": [
+        "EmptyState",
+        "GridToolbar",
+        "ListState"
+      ]
+    },
+    "./src/compositions/forms/CheckboxRow.stories.tsx": {
+      "title": "Foundation/Compositions/CheckboxRow",
+      "component": "CheckboxRow",
+      "uses": [
+        "CheckboxRow"
+      ]
+    },
+    "./src/compositions/forms/DateInput.stories.tsx": {
+      "title": "Foundation/Compositions/DateInput",
+      "component": "DateInput",
+      "uses": [
+        "DateInput",
+        "Field"
+      ]
+    },
+    "./src/compositions/forms/EditableCard.stories.tsx": {
+      "title": "Foundation/Compositions/EditableCard",
+      "component": "EditableCard",
+      "uses": [
+        "EditableCard"
+      ]
+    },
+    "./src/compositions/forms/EditableFields.stories.tsx": {
+      "title": "Compositions/EditableFields",
+      "component": null,
+      "uses": [
+        "EditableFields"
+      ]
+    },
+    "./src/compositions/forms/Field.stories.tsx": {
       "title": "Foundation/Compositions/Field",
       "component": "Field",
       "uses": [
         "Field"
       ]
     },
-    "./src/compositions/FilterBar.stories.tsx": {
-      "title": "Foundation/Compositions/FilterBar",
-      "component": "FilterBar",
-      "uses": [
-        "FilterBar"
-      ]
-    },
-    "./src/compositions/FitToWindow.stories.tsx": {
-      "title": "Foundation/Compositions/FitToWindow",
-      "component": "FitToWindow",
-      "uses": [
-        "FitToWindow"
-      ]
-    },
-    "./src/compositions/FormActions.stories.tsx": {
+    "./src/compositions/forms/FormActions.stories.tsx": {
       "title": "Foundation/Compositions/FormActions",
       "component": "FormActions",
       "uses": [
         "FormActions"
       ]
     },
-    "./src/compositions/FormCard.stories.tsx": {
+    "./src/compositions/forms/FormCard.stories.tsx": {
       "title": "Foundation/Compositions/FormCard",
       "component": "FormCard",
       "uses": [
@@ -3377,7 +3378,7 @@
         "OptionSelect"
       ]
     },
-    "./src/compositions/FormDialog.stories.tsx": {
+    "./src/compositions/forms/FormDialog.stories.tsx": {
       "title": "Foundation/Compositions/FormDialog",
       "component": "FormDialog",
       "uses": [
@@ -3387,14 +3388,14 @@
         "FormDialog"
       ]
     },
-    "./src/compositions/FormDisclosure.stories.tsx": {
+    "./src/compositions/forms/FormDisclosure.stories.tsx": {
       "title": "Foundation/Compositions/FormDisclosure",
       "component": "FormDisclosure",
       "uses": [
         "FormDisclosure"
       ]
     },
-    "./src/compositions/FormKit.stories.tsx": {
+    "./src/compositions/forms/FormKit.stories.tsx": {
       "title": "Foundation/Compositions/Form kit",
       "component": null,
       "uses": [
@@ -3406,7 +3407,7 @@
         "OptionSelect"
       ]
     },
-    "./src/compositions/FormPage.stories.tsx": {
+    "./src/compositions/forms/FormPage.stories.tsx": {
       "title": "Foundation/Compositions/Form page",
       "component": "FormPage",
       "uses": [
@@ -3415,7 +3416,7 @@
         "FormRow"
       ]
     },
-    "./src/compositions/FormPreview.stories.tsx": {
+    "./src/compositions/forms/FormPreview.stories.tsx": {
       "title": "Foundation/Compositions/Form preview",
       "component": "FormPreview",
       "uses": [
@@ -3426,7 +3427,7 @@
         "PreviewSection"
       ]
     },
-    "./src/compositions/FormSteps.stories.tsx": {
+    "./src/compositions/forms/FormSteps.stories.tsx": {
       "title": "Details",
       "component": "FormSteps",
       "uses": [
@@ -3434,86 +3435,79 @@
         "FormToolbar"
       ]
     },
-    "./src/compositions/FormToolbar.stories.tsx": {
+    "./src/compositions/forms/FormToolbar.stories.tsx": {
       "title": "Foundation/Compositions/Form toolbar",
       "component": "FormToolbar",
       "uses": [
         "FormToolbar"
       ]
     },
-    "./src/compositions/GridFooter.stories.tsx": {
-      "title": "Foundation/Compositions/GridFooter",
-      "component": "GridFooter",
-      "uses": [
-        "GridFooter"
-      ]
-    },
-    "./src/compositions/GridToolbar.stories.tsx": {
-      "title": "Foundation/Compositions/GridToolbar",
-      "component": "GridToolbar",
-      "uses": [
-        "GridToolbar",
-        "ListOfferProvider"
-      ]
-    },
-    "./src/compositions/GuidedEmptyState.stories.tsx": {
-      "title": "Model your first plan",
-      "component": "GuidedEmptyState",
-      "uses": [
-        "GuideGrid",
-        "GuidedEmptyState"
-      ]
-    },
-    "./src/compositions/InfoHint.stories.tsx": {
+    "./src/compositions/forms/InfoHint.stories.tsx": {
       "title": "Foundation/Compositions/InfoHint",
       "component": "InfoHint",
       "uses": [
         "InfoHint"
       ]
     },
-    "./src/compositions/InlineField.stories.tsx": {
+    "./src/compositions/forms/InlineField.stories.tsx": {
       "title": "Foundation/Compositions/InlineField",
       "component": "InlineField",
       "uses": [
         "InlineField"
       ]
     },
-    "./src/compositions/LabelWithHint.stories.tsx": {
+    "./src/compositions/forms/LabelWithHint.stories.tsx": {
       "title": "Foundation/Compositions/LabelWithHint",
       "component": "LabelWithHint",
       "uses": [
         "LabelWithHint"
       ]
     },
-    "./src/compositions/MetadataCard.stories.tsx": {
-      "title": "Foundation/Compositions/MetadataCard",
-      "component": "MetadataCard",
-      "uses": [
-        "MetadataCard"
-      ]
-    },
-    "./src/compositions/MetricRail.stories.tsx": {
-      "title": "Foundation/Compositions/MetricRail",
-      "component": "MetricRail",
-      "uses": [
-        "MetricRail"
-      ]
-    },
-    "./src/compositions/OptionCombobox.stories.tsx": {
+    "./src/compositions/forms/OptionCombobox.stories.tsx": {
       "title": "Foundation/Compositions/OptionCombobox",
       "component": "OptionCombobox",
       "uses": [
         "OptionCombobox"
       ]
     },
-    "./src/compositions/OptionSelect.stories.tsx": {
+    "./src/compositions/forms/OptionSelect.stories.tsx": {
       "title": "Foundation/Compositions/OptionSelect",
       "component": "OptionSelect",
       "uses": [
         "OptionSelect"
       ]
     },
-    "./src/compositions/Page.stories.tsx": {
+    "./src/compositions/forms/WorkflowStepper.stories.tsx": {
+      "title": "Foundation/Compositions/WorkflowStepper",
+      "component": "WorkflowStepper",
+      "uses": [
+        "WorkflowStepper"
+      ]
+    },
+    "./src/compositions/layout/ConnectorCard.stories.tsx": {
+      "title": "Foundation/Compositions/ConnectorCard",
+      "component": "ConnectorCard",
+      "uses": [
+        "ConnectorCard"
+      ]
+    },
+    "./src/compositions/layout/ContextualSection.stories.tsx": {
+      "title": "Foundation/Compositions/ContextualSection",
+      "component": "ContextualSection",
+      "uses": [
+        "ContextualSection",
+        "Field",
+        "SimpleTable"
+      ]
+    },
+    "./src/compositions/layout/FitToWindow.stories.tsx": {
+      "title": "Foundation/Compositions/FitToWindow",
+      "component": "FitToWindow",
+      "uses": [
+        "FitToWindow"
+      ]
+    },
+    "./src/compositions/layout/Page.stories.tsx": {
       "title": "Foundation/Compositions/Page",
       "component": "PageHeader",
       "uses": [
@@ -3523,27 +3517,20 @@
         "PageToolbar"
       ]
     },
-    "./src/compositions/ResourceNavigation.stories.tsx": {
+    "./src/compositions/layout/ResourceNavigation.stories.tsx": {
       "title": "Foundation/Compositions/ResourceNavigation",
       "component": null,
       "uses": [
         "ResourceNavigation"
       ]
     },
-    "./src/compositions/Section.stories.tsx": {
+    "./src/compositions/layout/Section.stories.tsx": {
       "title": "Foundation/Compositions/Section",
       "component": "Section",
       "uses": [
         "Panel",
         "Section",
         "SimpleTable"
-      ]
-    },
-    "./src/compositions/SectionEmpty.stories.tsx": {
-      "title": "Foundation/Compositions/SectionEmpty",
-      "component": "SectionEmpty",
-      "uses": [
-        "SectionEmpty"
       ]
     },
     "./src/compositions/shell/AppShell.stories.tsx": {
@@ -3637,7 +3624,36 @@
         "ThemeToggle"
       ]
     },
-    "./src/compositions/SortableList.stories.tsx": {
+    "./src/compositions/tables/DetailList.stories.tsx": {
+      "title": "Foundation/Compositions/DetailList",
+      "component": "DetailList",
+      "uses": [
+        "DetailList"
+      ]
+    },
+    "./src/compositions/tables/FilterBar.stories.tsx": {
+      "title": "Foundation/Compositions/FilterBar",
+      "component": "FilterBar",
+      "uses": [
+        "FilterBar"
+      ]
+    },
+    "./src/compositions/tables/GridFooter.stories.tsx": {
+      "title": "Foundation/Compositions/GridFooter",
+      "component": "GridFooter",
+      "uses": [
+        "GridFooter"
+      ]
+    },
+    "./src/compositions/tables/GridToolbar.stories.tsx": {
+      "title": "Foundation/Compositions/GridToolbar",
+      "component": "GridToolbar",
+      "uses": [
+        "GridToolbar",
+        "ListOfferProvider"
+      ]
+    },
+    "./src/compositions/tables/SortableList.stories.tsx": {
       "title": "Foundation/Compositions/SortableList",
       "component": "SortableList",
       "uses": [
@@ -3645,34 +3661,18 @@
         "SortableList"
       ]
     },
-    "./src/compositions/SortMenu.stories.tsx": {
+    "./src/compositions/tables/SortMenu.stories.tsx": {
       "title": "Foundation/Compositions/SortMenu",
       "component": "SortMenu",
       "uses": [
         "SortMenu"
       ]
     },
-    "./src/compositions/States.stories.tsx": {
-      "title": "Foundation/Compositions/ListState",
-      "component": "ListState",
-      "uses": [
-        "EmptyState",
-        "GridToolbar",
-        "ListState"
-      ]
-    },
-    "./src/compositions/Toolbar.stories.tsx": {
+    "./src/compositions/tables/Toolbar.stories.tsx": {
       "title": "Foundation/Compositions/Toolbar",
       "component": "Toolbar",
       "uses": [
         "Toolbar"
-      ]
-    },
-    "./src/compositions/WorkflowStepper.stories.tsx": {
-      "title": "Foundation/Compositions/WorkflowStepper",
-      "component": "WorkflowStepper",
-      "uses": [
-        "WorkflowStepper"
       ]
     },
     "./src/design-system/Colors.stories.tsx": {

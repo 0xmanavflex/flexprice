@@ -73,8 +73,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitiv
 import { InvoiceDateField } from '@ui/components/blocks/form-3/components/invoice-date-field'
 import { InvoiceSection } from '@ui/components/blocks/form-3/components/invoice-section'
 import { InvoiceSummary } from '@ui/components/blocks/form-3/components/invoice-summary'
-import { LabelWithHint } from '@ui/compositions/LabelWithHint'
-import type { DetailCrumb } from '@ui/compositions/DetailShell'
+import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
+import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
 import { provenance } from '@ui/provenance'
 

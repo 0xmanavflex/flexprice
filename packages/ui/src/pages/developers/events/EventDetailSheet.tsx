@@ -1,6 +1,6 @@
 import type { RawEvent } from '@fp/domain'
 import { CodeBlock, CodeBlockCopyButton, CodeBlockHeader, CodeBlockTitle } from '@ui/components/reui/code-block/code-block'
-import { DetailList } from '@ui/compositions/DetailList'
+import { DetailList } from '@ui/compositions/tables/DetailList'
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@ui/components/primitives/sheet'
 import { provenance } from '@ui/provenance'
 

@@ -16,7 +16,7 @@ import {
   SheetTitle,
 } from '@ui/components/primitives/sheet'
 import { Skeleton } from '@ui/components/primitives/skeleton'
-import { DetailList } from '@ui/compositions/DetailList'
+import { DetailList } from '@ui/compositions/tables/DetailList'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { EmDash } from '../../shared/cells'

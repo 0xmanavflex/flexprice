@@ -11,7 +11,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/FilterBar'
+import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../../shared/cells'
 

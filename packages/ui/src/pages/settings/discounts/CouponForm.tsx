@@ -2,9 +2,9 @@ import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type EditCoupon, editCouponSchema } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
-import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormPage } from '@ui/compositions/FormPage'
-import type { DetailCrumb } from '@ui/compositions/DetailShell'
+import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
+import { FormPage } from '@ui/compositions/forms/FormPage'
+import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { provenance } from '@ui/provenance'
 
 /**

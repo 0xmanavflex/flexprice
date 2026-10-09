@@ -3,7 +3,7 @@ import { SearchIcon } from 'lucide-react'
 import { type WebhookEventType, groupWebhookEventTypes } from '@fp/domain'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import { Skeleton } from '@ui/components/primitives/skeleton'
-import { CheckboxRow } from '@ui/compositions/CheckboxRow'
+import { CheckboxRow } from '@ui/compositions/forms/CheckboxRow'
 import { provenance } from '@ui/provenance'
 
 /**

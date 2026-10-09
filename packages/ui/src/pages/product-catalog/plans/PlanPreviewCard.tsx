@@ -10,7 +10,7 @@ import {
   FeatureType,
   PriceType,
 } from '@fp/domain'
-import { FormPreview, PreviewSection } from '@ui/compositions/FormPreview'
+import { FormPreview, PreviewSection } from '@ui/compositions/forms/FormPreview'
 import { provenance } from '@ui/provenance'
 
 /**

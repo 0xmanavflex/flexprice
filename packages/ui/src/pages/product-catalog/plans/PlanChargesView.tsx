@@ -1,6 +1,6 @@
 import { GaugeIcon, PlusIcon, RepeatIcon } from 'lucide-react'
-import { SectionEmpty } from '@ui/compositions/SectionEmpty'
-import { ErrorState, LoadingRows } from '@ui/compositions/States'
+import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
+import { ErrorState, LoadingRows } from '@ui/compositions/feedback/States'
 import {
   BILLING_PERIOD_LABEL,
   type BillingPeriod,
@@ -15,7 +15,7 @@ import {
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
-import { Section } from '@ui/compositions/Section'
+import { Section } from '@ui/compositions/layout/Section'
 import { chargeLabel, pricingSummary } from './PlanPreviewCard'
 
 export interface PlanChargesViewProps {

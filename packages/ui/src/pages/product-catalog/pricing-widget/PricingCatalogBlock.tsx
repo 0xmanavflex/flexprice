@@ -8,7 +8,7 @@ import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { Button } from '@ui/components/primitives/button'
 import { ButtonGroup } from '@ui/components/primitives/button-group'
 import { Skeleton } from '@ui/components/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
+import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 
 /**
  * The pricing widget: ReUI `solution-billing-2` plan tiles fed the real plan

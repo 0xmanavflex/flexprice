@@ -6,7 +6,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@ui/components/primitives/input-group'
-import { useListOffer } from './EmptyState'
+import { useListOffer } from '../feedback/EmptyState'
 import { provenance } from '@ui/provenance'
 
 /**

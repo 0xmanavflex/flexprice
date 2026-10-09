@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, RefreshCwIcon } from 'lucide-react'
 import { type DataExport, type DataExportQuery, EXPORT_STATE, type ExportState } from '@fp/domain'
-import { singleChoiceFilter } from '@ui/compositions/FilterBar'
+import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'

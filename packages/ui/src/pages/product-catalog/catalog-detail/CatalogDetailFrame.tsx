@@ -4,8 +4,8 @@ import {
   DetailTabs,
   type DetailMenuItem,
   type DetailTabSpec,
-} from '../../../compositions/DetailKit'
-import { DetailShell } from '../../../compositions/DetailShell'
+} from '../../../compositions/detail/DetailKit'
+import { DetailShell } from '../../../compositions/detail/DetailShell'
 
 /** One header action. Destructive items are set apart, last in the menu. */
 export type CatalogMenuItem = DetailMenuItem

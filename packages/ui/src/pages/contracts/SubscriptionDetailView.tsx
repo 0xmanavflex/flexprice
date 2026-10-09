@@ -31,13 +31,18 @@ import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components
 import { Badge } from '@ui/components/reui/badge'
 import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
 import { provenance } from '@ui/provenance'
-import { DetailMoreMenu, DetailTabs, Properties, SummaryRow } from '../../compositions/DetailKit'
-import { DetailShell } from '../../compositions/DetailShell'
-import { MetadataCard } from '../../compositions/MetadataCard'
-import { RelatedCard, type RelatedItem } from '../../compositions/RelatedCard'
-import { Section } from '../../compositions/Section'
-import { SectionEmpty } from '../../compositions/SectionEmpty'
-import { LoadingRows } from '../../compositions/States'
+import {
+  DetailMoreMenu,
+  DetailTabs,
+  Properties,
+  SummaryRow,
+} from '../../compositions/detail/DetailKit'
+import { DetailShell } from '../../compositions/detail/DetailShell'
+import { MetadataCard } from '../../compositions/detail/MetadataCard'
+import { RelatedCard, type RelatedItem } from '../../compositions/detail/RelatedCard'
+import { Section } from '../../compositions/layout/Section'
+import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
+import { LoadingRows } from '../../compositions/feedback/States'
 import { DetailTable } from '../shared/DetailTable'
 import { EntityLink } from '../shared/cells'
 import { InvoiceStatusBadge } from '../shared/StatusBadge'

@@ -2,7 +2,7 @@ import { useEffect, useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
-import { ListOfferProvider } from './EmptyState'
+import { ListOfferProvider } from '../feedback/EmptyState'
 import { GridToolbar } from './GridToolbar'
 
 /**

@@ -2,7 +2,7 @@ import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
-import { GridToolbar } from './GridToolbar'
+import { GridToolbar } from '../tables/GridToolbar'
 import { PageBody, PageHeader, PageToolbar } from './Page'
 
 /**

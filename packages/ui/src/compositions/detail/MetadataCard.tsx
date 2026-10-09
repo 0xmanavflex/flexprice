@@ -3,7 +3,7 @@ import { PlusIcon, Trash2Icon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { provenance } from '@ui/provenance'
-import { Section } from './Section'
+import { Section } from '../layout/Section'
 
 export const MetadataCardProvenance = provenance({
   source: 'composition',

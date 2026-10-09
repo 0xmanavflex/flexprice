@@ -14,8 +14,8 @@ import { Button } from '@ui/components/primitives/button'
 import { RadioGroup, RadioGroupItem } from '@ui/components/primitives/radio-group'
 import { Label } from '@ui/components/primitives/label'
 import { Input } from '@ui/components/primitives/input'
-import { ChoiceCards, SimpleTable } from '@ui/compositions/DetailKit'
-import { Field } from '@ui/compositions/Field'
+import { ChoiceCards, SimpleTable } from '@ui/compositions/detail/DetailKit'
+import { Field } from '@ui/compositions/forms/Field'
 import { provenance } from '@ui/provenance'
 
 /**

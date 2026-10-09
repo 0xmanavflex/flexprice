@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { DetailBreadcrumb, type DetailCrumb } from '../DetailShell'
+import { DetailBreadcrumb, type DetailCrumb } from '../detail/DetailShell'
 import { ShellBreadcrumb, type ShellCrumb } from './ShellBreadcrumb'
 import { ShellDetailTrailProvider, type ShellDetailCrumb } from './ShellDetailTrail'
 

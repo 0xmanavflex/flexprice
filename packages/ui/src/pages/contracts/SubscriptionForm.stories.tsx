@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { BillingPeriod, type CreateSubscription } from '@fp/domain'
-import type { Option } from '@ui/compositions/OptionSelect'
+import type { Option } from '@ui/compositions/forms/OptionSelect'
 import { makeCharges, makeEntitlements } from '../product-catalog/plans/planDetailFixtures'
 import { SubscriptionForm, type SubscriptionPlanContext } from './SubscriptionForm'
 

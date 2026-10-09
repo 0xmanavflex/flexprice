@@ -1,7 +1,7 @@
 import { useMemo } from 'react'
 import { BookOpenIcon, CopyIcon, ScrollTextIcon, SendIcon } from 'lucide-react'
 import { DEFAULT_RAW_EVENT_QUERY, type RawEvent, type RawEventQuery } from '@fp/domain'
-import type { FlatFilter } from '@ui/compositions/FilterBar'
+import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import type { FilterField, FilterNode } from '@ui/components/reui/filters/filters-types'
 import { provenance } from '@ui/provenance'

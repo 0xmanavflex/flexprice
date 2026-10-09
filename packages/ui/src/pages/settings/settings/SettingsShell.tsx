@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { cn } from '@ui/lib/cn'
-import { EmptyState } from '@ui/compositions/EmptyState'
-import { DetailTabs } from '@ui/compositions/DetailKit'
+import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { DetailTabs } from '@ui/compositions/detail/DetailKit'
 import { Source, provenance } from '@ui/provenance'
 
 /**

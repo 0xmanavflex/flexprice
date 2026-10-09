@@ -22,7 +22,7 @@ import {
 } from '@fp/domain'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import type { FilterField, FilterNode } from '@ui/components/reui/filters/filters-types'
-import type { FlatFilter } from '@ui/compositions/FilterBar'
+import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'

@@ -5,11 +5,11 @@ import {
   type CreditGrant,
   CreditGrantCadence,
 } from '@fp/domain'
-import { SectionEmpty } from '@ui/compositions/SectionEmpty'
+import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Button } from '@ui/components/primitives/button'
 import { PlusIcon } from 'lucide-react'
 
-import { Section } from '@ui/compositions/Section'
+import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
 import { DetailTable } from '../../shared/DetailTable'

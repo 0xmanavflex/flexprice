@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { InfoIcon } from 'lucide-react'
-import { LabelWithHint } from '@ui/compositions/LabelWithHint'
+import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { useForm } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
@@ -10,8 +10,8 @@ import {
   createEnvironmentSchema,
   emptyEnvironment,
 } from '@fp/domain'
-import { Composer } from '@ui/compositions/DetailKit'
-import { FormDialog } from '@ui/compositions/FormDialog'
+import { Composer } from '@ui/compositions/detail/DetailKit'
+import { FormDialog } from '@ui/compositions/forms/FormDialog'
 import { buttonVariants } from '@ui/components/primitives/button'
 import { Field, FieldError, FieldGroup } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'

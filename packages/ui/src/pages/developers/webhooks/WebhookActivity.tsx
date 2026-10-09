@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { WebhookActivityPoint } from '@fp/domain'
 import { Skeleton } from '@ui/components/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/EmptyState'
+import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { provenance } from '@ui/provenance'
 import { MetricChart, formatWhole } from '../../shared/charts'
 

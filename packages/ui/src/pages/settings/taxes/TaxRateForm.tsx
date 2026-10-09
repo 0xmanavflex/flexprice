@@ -13,10 +13,10 @@ import {
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
-import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormPage } from '@ui/compositions/FormPage'
-import type { DetailCrumb } from '@ui/compositions/DetailShell'
-import { OptionSelect } from '@ui/compositions/OptionSelect'
+import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
+import { FormPage } from '@ui/compositions/forms/FormPage'
+import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
 
 /**

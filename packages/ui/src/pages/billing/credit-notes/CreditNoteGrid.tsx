@@ -17,7 +17,7 @@ import {
   pillColumn,
   textColumn,
 } from '../../shared/cells'
-import { statusFilter } from '@ui/compositions/FilterBar'
+import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 
 /**

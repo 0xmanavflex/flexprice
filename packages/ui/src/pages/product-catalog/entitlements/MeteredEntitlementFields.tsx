@@ -4,8 +4,8 @@ import { USAGE_RESET_PERIOD_LABEL, UsageResetPeriod } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
 import { cn } from '@ui/lib/cn'
-import { Field } from '@ui/compositions/Field'
-import { OptionSelect } from '@ui/compositions/OptionSelect'
+import { Field } from '@ui/compositions/forms/Field'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 
 /**
  * The metered half of the entitlement dialog: value type, value with an

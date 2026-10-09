@@ -1,6 +1,6 @@
 import { ArrowUpRightIcon } from 'lucide-react'
 import { provenance } from '@ui/provenance'
-import { Section } from './Section'
+import { Section } from '../layout/Section'
 
 export const RelatedCardProvenance = provenance({
   source: 'composition',

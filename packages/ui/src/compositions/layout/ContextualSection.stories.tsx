@@ -5,8 +5,8 @@ import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Badge } from '@ui/components/reui/badge'
 import { ContextualSection, type ContextualSectionProps } from './ContextualSection'
-import { SimpleTable } from './DetailKit'
-import { Field } from './Field'
+import { SimpleTable } from '../detail/DetailKit'
+import { Field } from '../forms/Field'
 
 interface SubscriptionRow {
   id: string

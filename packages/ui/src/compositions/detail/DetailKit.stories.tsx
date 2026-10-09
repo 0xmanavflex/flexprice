@@ -18,8 +18,8 @@ import {
   SummaryRow,
   type Choice,
 } from './DetailKit'
-import { Field } from './Field'
-import { FormDialogBodyContext } from './formDialogContext'
+import { Field } from '../forms/Field'
+import { FormDialogBodyContext } from '../forms/formDialogContext'
 
 /**
  * The shared grammar of every detail page. One section per export, each with

@@ -6,7 +6,7 @@ import {
   type UsageSync,
   type UsageSyncQuery,
 } from '@fp/domain'
-import { singleChoiceFilter } from '@ui/compositions/FilterBar'
+import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'

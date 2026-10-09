@@ -15,11 +15,11 @@ import {
   emptyCreditGrant,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
-import { ChoiceCards } from '@ui/compositions/DetailKit'
-import { DateInput } from '@ui/compositions/DateInput'
-import { Field } from '@ui/compositions/Field'
-import { FormActions } from '@ui/compositions/FormActions'
-import { OptionSelect } from '@ui/compositions/OptionSelect'
+import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
+import { DateInput } from '@ui/compositions/forms/DateInput'
+import { Field } from '@ui/compositions/forms/Field'
+import { FormActions } from '@ui/compositions/forms/FormActions'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { provenance } from '@ui/provenance'
 
 /**

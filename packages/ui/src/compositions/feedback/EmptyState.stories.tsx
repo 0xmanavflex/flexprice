@@ -4,7 +4,7 @@ import { ArrowUpRightIcon, BotIcon, KeyRoundIcon } from 'lucide-react'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { EmptyState, ListOfferProvider } from './EmptyState'
-import { PageBody } from './Page'
+import { PageBody } from '../layout/Page'
 
 const meta = {
   title: 'Foundation/Compositions/EmptyState',

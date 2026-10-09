@@ -10,9 +10,9 @@ import {
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
-import { FormCard, FormRow } from '@ui/compositions/FormCard'
-import { FormPage } from '@ui/compositions/FormPage'
-import type { DetailCrumb } from '@ui/compositions/DetailShell'
+import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
+import { FormPage } from '@ui/compositions/forms/FormPage'
+import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { provenance } from '@ui/provenance'
 import { WebhookEventTypePicker } from './WebhookEventTypePicker'
 

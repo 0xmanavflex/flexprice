@@ -4,7 +4,7 @@ import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { provenance } from '@ui/provenance'
-import { Section } from './Section'
+import { Section } from '../layout/Section'
 import type { EditableFieldDef } from './EditableFields'
 
 export const EditableCardProvenance = provenance({

@@ -5,7 +5,7 @@ import {
   CodeBlockHeader,
   CodeBlockTitle,
 } from '@ui/components/reui/code-block/code-block'
-import { DetailList } from '@ui/compositions/DetailList'
+import { DetailList } from '@ui/compositions/tables/DetailList'
 import { Pill } from '../../shared/cells'
 import {
   Sheet,

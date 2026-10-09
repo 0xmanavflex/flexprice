@@ -9,7 +9,7 @@ import {
 } from 'lucide-react'
 import { FeatureType } from '@fp/domain'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import type { DetailMenuItem } from '@ui/compositions/DetailKit'
+import type { DetailMenuItem } from '@ui/compositions/detail/DetailKit'
 import { CatalogStatusBadge, FeatureTypeBadge, type CatalogStatus } from './StatusBadge'
 import { EntityHeader } from './EntityHeader'
 

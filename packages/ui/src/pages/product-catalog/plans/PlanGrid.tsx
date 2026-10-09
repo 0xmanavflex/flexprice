@@ -19,7 +19,7 @@ import {
   PlanSortField,
   PlanStatus,
 } from '@fp/domain'
-import { statusFilter } from '@ui/compositions/FilterBar'
+import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'

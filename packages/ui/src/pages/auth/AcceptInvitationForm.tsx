@@ -6,7 +6,7 @@ import { type SetPassword, setPasswordSchema } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
-import { Field } from '@ui/compositions/Field'
+import { Field } from '@ui/compositions/forms/Field'
 import { provenance } from '@ui/provenance'
 
 /**

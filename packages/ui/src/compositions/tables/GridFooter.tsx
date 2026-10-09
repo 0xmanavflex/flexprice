@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react'
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
 import { provenance } from '@ui/provenance'
-import { FitToWindow } from './FitToWindow'
+import { FitToWindow } from '../layout/FitToWindow'
 
 /**
  * The bar below a grid: how many rows, and which page.

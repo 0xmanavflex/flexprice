@@ -1,5 +1,5 @@
 import { useEffect, useId, useRef } from 'react'
-import { LabelWithHint } from '@ui/compositions/LabelWithHint'
+import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { EyeIcon, EyeOffIcon } from 'lucide-react'
@@ -14,7 +14,7 @@ import {
   InputGroupButton,
   InputGroupInput,
 } from '@ui/components/primitives/input-group'
-import { Field } from '@ui/compositions/Field'
+import { Field } from '@ui/compositions/forms/Field'
 import { provenance } from '@ui/provenance'
 
 /**

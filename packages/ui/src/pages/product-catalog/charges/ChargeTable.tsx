@@ -8,10 +8,10 @@ import {
   PriceType,
   TierMode,
 } from '@fp/domain'
-import { SectionEmpty } from '@ui/compositions/SectionEmpty'
+import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { PlusIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
-import { Section } from '@ui/compositions/Section'
+import { Section } from '@ui/compositions/layout/Section'
 
 import { provenance } from '@ui/provenance'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
