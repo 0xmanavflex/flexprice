@@ -94,7 +94,12 @@ export function MetadataCard({
       </Button>
     </>
   ) : onSave ? (
-    <Button variant="outline" size="sm" onClick={start}>
+    <Button
+      variant="outline"
+      size="sm"
+      onClick={start}
+      aria-label={`Edit ${title.toLowerCase()}`}
+    >
       Edit
     </Button>
   ) : undefined
