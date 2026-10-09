@@ -94,9 +94,9 @@ export interface DetailShellProps {
   identifier?: string
   /** An email, rendered as a mail-icon copy chip beside the id. */
   email?: string
-  /** Up to two primary actions, first in the right-hand cluster. */
+  /** Legacy inline action slot. Prefer putting every action in `actions` via `DetailMoreMenu`. */
   primary?: ReactNode
-  /** The overflow (More) menu, last in the right-hand cluster. */
+  /** The overflow (More) menu, last in the right-hand cluster. Build it with `DetailMoreMenu`. */
   actions?: ReactNode
   /** The metric rail. Omitted (not an empty strip) when there is nothing to show. */
   metrics?: DetailMetric[]

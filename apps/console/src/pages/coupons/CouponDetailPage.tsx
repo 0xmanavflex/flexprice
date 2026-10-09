@@ -106,10 +106,10 @@ export function CouponDetailPage({
         </>
       }
       id={record.code || record.id}
-      onEdit={() => setTab('information')}
       menuLabel="Coupon actions"
-      menu={
-        isArchived
+      menu={[
+        { id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') },
+        ...(isArchived
           ? []
           : [
               ...(onEdit ? [{ id: 'edit', label: 'Edit coupon', onSelect: onEdit }] : []),
@@ -119,8 +119,8 @@ export function CouponDetailPage({
                 destructive: true,
                 onSelect: () => setArchiving(true),
               },
-            ]
-      }
+            ]),
+      ]}
       tab={tab}
       onTabChange={(next) => setTab(next as CouponTab)}
       tabs={[

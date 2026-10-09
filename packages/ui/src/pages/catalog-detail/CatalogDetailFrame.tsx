@@ -1,23 +1,14 @@
 import type { ReactNode } from 'react'
-import { MoreHorizontalIcon, PencilIcon } from 'lucide-react'
-import { DetailTabs, type DetailTabSpec } from '../../compositions/DetailKit'
-import { DetailShell } from '../../compositions/DetailShell'
-import { Button } from '@ui/components/primitives/button'
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@ui/components/primitives/dropdown-menu'
+  DetailMoreMenu,
+  DetailTabs,
+  type DetailMenuItem,
+  type DetailTabSpec,
+} from '../../compositions/DetailKit'
+import { DetailShell } from '../../compositions/DetailShell'
 
-export interface CatalogMenuItem {
-  id: string
-  label: string
-  onSelect: () => void
-  destructive?: boolean
-  disabled?: boolean
-}
+/** One header action. Destructive items are set apart, last in the menu. */
+export type CatalogMenuItem = DetailMenuItem
 
 export interface CatalogDetailFrameProps {
   /** Breadcrumb parent, e.g. "Coupons". */
@@ -29,10 +20,12 @@ export interface CatalogDetailFrameProps {
   badges?: ReactNode
   /** Copyable identifier. */
   id: string
-  primary?: { label: string; onClick: () => void; disabled?: boolean }
-  /** Shows the header's Edit button (pencil, outline). */
-  onEdit?: () => void
+  /** Accessible name of the More button. */
   menuLabel: string
+  /**
+   * Every header action — Edit, state changes such as Activate, Archive or
+   * Delete — in display order. The header has no inline buttons.
+   */
   menu?: CatalogMenuItem[]
   tabs: DetailTabSpec[]
   tab?: string
@@ -43,8 +36,8 @@ export interface CatalogDetailFrameProps {
 
 /**
  * The shared shell for catalog detail pages (coupon, add-on, cost sheet, group):
- * `DetailShell` (icon tile, title; right cluster of primary + Edit, chips, "ID"
- * copy chip, ⋯ overflow), then line `DetailTabs`.
+ * `DetailShell` (icon tile, title; right cluster of chips, "ID" copy chip and a
+ * single ⋯ menu holding every action), then line `DetailTabs`.
  */
 export function CatalogDetailFrame({
   listLabel,
@@ -53,8 +46,6 @@ export function CatalogDetailFrame({
   title,
   badges,
   id,
-  primary,
-  onEdit,
   menuLabel,
   menu = [],
   tabs,
@@ -62,53 +53,6 @@ export function CatalogDetailFrame({
   onTabChange,
   children,
 }: CatalogDetailFrameProps) {
-  const primaryActions = (
-    <>
-      {primary ? (
-        <Button
-          variant="outline"
-          className="h-8 px-3"
-          disabled={primary.disabled ?? false}
-          onClick={primary.onClick}
-        >
-          {primary.label}
-        </Button>
-      ) : null}
-      {onEdit ? (
-        <Button variant="outline" className="h-8 px-3" onClick={onEdit}>
-          <PencilIcon aria-hidden />
-          Edit
-        </Button>
-      ) : null}
-    </>
-  )
-  const more =
-    menu.length > 0 ? (
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <Button variant="outline" size="icon" className="size-8" aria-label={menuLabel} />
-          }
-        >
-          <MoreHorizontalIcon aria-hidden />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="w-44">
-          <DropdownMenuGroup>
-            {menu.map((item) => (
-              <DropdownMenuItem
-                key={item.id}
-                disabled={item.disabled ?? false}
-                {...(item.destructive ? { variant: 'destructive' as const } : {})}
-                onClick={item.onSelect}
-              >
-                {item.label}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuGroup>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    ) : null
-
   return (
     <DetailShell
       trail={[{ label: listLabel, onClick: onBack }, { label: title }]}
@@ -116,8 +60,7 @@ export function CatalogDetailFrame({
       title={title}
       {...(badges ? { badges } : {})}
       id={id}
-      primary={primaryActions}
-      actions={more}
+      actions={<DetailMoreMenu label={menuLabel} items={menu} />}
     >
       <DetailTabs
         tabs={tabs}

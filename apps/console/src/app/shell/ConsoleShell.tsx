@@ -16,7 +16,6 @@ import {
   FileSignatureIcon,
   HandCoinsIcon,
 } from 'lucide-react'
-import { useNavCounts } from '@fp/query'
 import {
   AppShell,
   EnvironmentSwitcher,
@@ -33,11 +32,8 @@ import { EnvironmentRenameFormPage } from '@/pages/environments/EnvironmentRenam
 import { CREATE_ACTIONS, pathForCreateAction } from './createActions'
 import { searchableDestinations, useGlobalSearch } from './useGlobalSearch'
 import {
-  ALWAYS_COUNTED,
   breadcrumbForPath,
   FOOTER_NAV,
-  GROUP_COUNTS,
-  groupForNavId,
   hrefForNavId,
   labelForNavId,
   NAV,
@@ -115,17 +111,12 @@ export function ConsoleShell({
   children,
 }: ConsoleShellProps) {
   const activeItemId = navEntryForPath(pathname, search)
-  const openGroup = groupForNavId(activeItemId)
   const [detailTrail, setDetailTrail] = useState<ShellDetailCrumb[] | null>(null)
   const [creatingEnvironment, setCreatingEnvironment] = useState(false)
   const [renamingEnvironment, setRenamingEnvironment] = useState<ShellEnvironment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const destinations = useMemo(() => searchableDestinations(), [])
   const found = useGlobalSearch(searchTerm)
-  const counts = useNavCounts([
-    ...ALWAYS_COUNTED,
-    ...(openGroup ? (GROUP_COUNTS[openGroup] ?? []) : []),
-  ])
 
   const goTo = (id: string) => {
     const href = hrefForNavId(id)
@@ -171,7 +162,7 @@ export function ConsoleShell({
   return (
     <ShellDetailTrailProvider value={setDetailTrail}>
       <AppShell
-        navGroups={toNavGroups(ICONS, counts)}
+        navGroups={toNavGroups(ICONS)}
         {...(activeItemId === undefined ? {} : { activeItemId })}
         onNavigate={goTo}
         user={user}

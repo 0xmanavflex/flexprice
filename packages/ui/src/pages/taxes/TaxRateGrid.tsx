@@ -94,7 +94,7 @@ export interface TaxRateGridProps {
   error?: string | null
   onRetry?: () => void
   onTaxRateClick?: (taxRate: TaxRate) => void
-  /** The primary create action; renders a "New tax rate" CTA at the toolbar's end. */
+  /** The primary create action; renders an "Add tax" CTA at the toolbar's end. */
   onCreate?: () => void
   /** Row menu: open the tax rate's editor. Left out of the menu when absent. */
   onEdit?: ((taxRate: TaxRate) => void) | undefined
@@ -232,7 +232,7 @@ export function TaxRateGrid({
         onCreate ? (
           <Button onClick={onCreate}>
             <PlusIcon aria-hidden className="size-4" />
-            New tax rate
+            Add tax
           </Button>
         ) : undefined
       }
@@ -244,10 +244,10 @@ export function TaxRateGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No tax rates match these filters"
       empty={{
-        title: 'No tax rates yet',
+        title: 'No taxes set up yet',
         description:
-          'A tax rate is a percentage the billing engine adds to an invoice. Create one, then attach it to the customers, plans or charges it applies to.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>New tax rate</Button> } : {}),
+          'Taxes are the percentages added on top of an invoice, like VAT or GST. Add a tax, then attach it to the customers, plans or charges it applies to.',
+        ...(onCreate ? { actions: <Button onClick={onCreate}>Add tax</Button> } : {}),
         guides: GUIDES,
       }}
     />

@@ -125,8 +125,9 @@ test.describe('the features list', () => {
     await expect(page).toHaveURL(url)
     await page.getByRole('button', { name: 'Cancel' }).click()
 
-    // The header's Edit button opens the dedicated edit page.
-    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    // The header menu's Edit item opens the dedicated edit page.
+    await page.getByRole('button', { name: 'More actions' }).click()
+    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
     await expect(page).toHaveURL(/\/edit$/)
   })
 })

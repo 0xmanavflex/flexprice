@@ -36,7 +36,8 @@ test('records a payment, processes a pending one, then deletes it', async ({ pag
   await expect(page).toHaveURL(/\/payments\/pay_new_/)
   await expect(page.getByText('Initiated').or(page.getByText('Pending')).first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'Process payment' }).click()
+  await page.getByRole('button', { name: 'Payment actions' }).click()
+  await page.getByRole('menuitem', { name: 'Process payment' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Process payment' }).click()
   await expect(page.getByText('Succeeded').first()).toBeVisible()
 

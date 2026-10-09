@@ -34,7 +34,8 @@ test('creates a draft credit note, finalizes it, then voids it', async ({ page }
   await expect(page).toHaveURL(/\/credit-notes\/cnote_new_/)
   await expect(page.getByText('Draft').first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'Finalize' }).click()
+  await page.getByRole('button', { name: 'Credit note actions' }).click()
+  await page.getByRole('menuitem', { name: 'Finalize' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Finalize' }).click()
   await expect(page.getByText('Finalized').first()).toBeVisible()
 

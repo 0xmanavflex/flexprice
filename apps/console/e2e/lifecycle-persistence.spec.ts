@@ -30,7 +30,7 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
   await expect(page.getByRole('heading', { name: 'Invoice', level: 1 })).toBeVisible()
   await expect(page.getByText('Draft', { exact: true }).first()).toBeVisible()
 
-  // Finalize lives in the More menu; the header's primary actions are PDF and Copy link.
+  // Every invoice action, Finalize included, lives in the header's More menu.
   await page.getByRole('button', { name: 'More actions' }).click()
   await page.getByRole('menuitem', { name: 'Finalize invoice' }).click()
   await expect(page.getByText('Finalized', { exact: true }).first()).toBeVisible()
@@ -167,8 +167,11 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
 
   await page.getByRole('row').nth(1).click()
   await expect(page.getByText('Incomplete').first()).toBeVisible()
-  await page.getByRole('button', { name: 'Activate' }).click()
+  await page.getByRole('button', { name: 'Contract actions' }).click()
+  await page.getByRole('menuitem', { name: 'Activate' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Activate' }).click()
   await expect(page.getByText('Active', { exact: true }).first()).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Activate' })).toBeHidden()
+  await page.getByRole('button', { name: 'Contract actions' }).click()
+  await expect(page.getByRole('menuitem', { name: 'Activate' })).toBeHidden()
+  await page.keyboard.press('Escape')
 })

@@ -109,6 +109,10 @@ export interface EventsPanel {
   total: number | null
   /** What the server priced this usage at. `null` when it sent no subtotal. */
   revenue: MoneyValue | null
+  /** Change in `total` against the window before this one. Omitted or `null` when there is no prior window to compare. */
+  totalChangePercent?: number | null | undefined
+  /** Change in `revenue` against the window before this one, in the same currency. Omitted or `null` when not comparable. */
+  revenueChangePercent?: number | null | undefined
 }
 
 /**
@@ -163,6 +167,8 @@ export interface CustomersPanel {
   partial: boolean
   /** New customers per bucket, oldest first. */
   points: { label: string; customers: number }[]
+  /** Change in `newCount` against the window before this one. Omitted or `null` when that window was not fully read. */
+  changePercent?: number | null | undefined
 }
 
 export interface UsageRow {
@@ -379,6 +385,11 @@ const PLACEHOLDER_SHAPE = [46, 61, 54, 72, 65, 83, 74, 91, 86, 104, 97, 112].map
   value,
 }))
 
+/** A tab's `changePercent`, present only when a real prior window produced one. */
+function changeOf(percent: number | null | undefined): { changePercent?: number } {
+  return percent === null || percent === undefined ? {} : { changePercent: percent }
+}
+
 function MetricsSection({
   events,
   customers,
@@ -422,6 +433,7 @@ function MetricsSection({
       // summing prices across currencies in the browser would be the wrong
       // answer rendered confidently.
       value: eventsReady && events.revenue !== null ? <Money value={events.revenue} /> : NOTHING,
+      ...changeOf(eventsReady && events.revenue !== null ? events.revenueChangePercent : null),
       points: [],
     },
     {
@@ -431,6 +443,7 @@ function MetricsSection({
         customersReady && customers.newCount !== null
           ? `${whole.format(customers.newCount)}${customers.partial ? '+' : ''}`
           : NOTHING,
+      ...changeOf(customersReady ? customers.changePercent : null),
       points: customersReady
         ? customers.points.map((point) => ({ label: point.label, value: point.customers }))
         : [],
@@ -439,6 +452,7 @@ function MetricsSection({
       id: METRIC_EVENTS,
       label: 'Usage ingestion',
       value: eventsReady && events.total !== null ? compact.format(events.total) : NOTHING,
+      ...changeOf(eventsReady && events.total !== null ? events.totalChangePercent : null),
       points: eventsReady
         ? events.points.map((point) => ({ label: point.label, value: point.events }))
         : [],

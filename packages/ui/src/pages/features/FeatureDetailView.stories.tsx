@@ -230,9 +230,15 @@ export const SwitchesTabs: Story = {
   },
 }
 
-export const EditButton: Story = {
+/** Edit is a More-menu item, not an inline header button. */
+export const EditFromMenu: Story = {
   play: async ({ canvasElement, args }) => {
-    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Edit' }))
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(
+      await within(canvasElement.ownerDocument.body).findByRole('menuitem', { name: 'Edit' }),
+    )
     await expect(args.onEditConfiguration).toHaveBeenCalled()
   },
 }

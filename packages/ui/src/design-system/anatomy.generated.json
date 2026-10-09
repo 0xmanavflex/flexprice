@@ -116,8 +116,7 @@
         "ShellAccount",
         "ShellNav",
         "ShellSearch",
-        "ThemeShortcut",
-        "ThemeToggle"
+        "ThemeShortcut"
       ],
       "usedBy": [
         "PageShell"
@@ -201,10 +200,13 @@
       "file": "src/pages/catalog-detail/CatalogDetailFrame.tsx",
       "layer": "surface",
       "composes": [
+        "DetailMoreMenu",
         "DetailShell",
         "DetailTabs"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "WebhookEndpointDetail"
+      ],
       "story": "./src/pages/catalog-detail/CatalogDetailFrame.stories.tsx"
     },
     "CatalogStatusBadge": {
@@ -267,7 +269,9 @@
       "file": "src/compositions/CheckboxRow.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "WebhookEventTypePicker"
+      ],
       "story": "./src/compositions/CheckboxRow.stories.tsx"
     },
     "ChoiceCards": {
@@ -309,7 +313,8 @@
       "composes": [],
       "usedBy": [
         "CustomerTaxSection",
-        "CustomerWalletView"
+        "CustomerWalletView",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/ConfirmDialog.stories.tsx"
     },
@@ -709,9 +714,22 @@
       "composes": [],
       "usedBy": [
         "EventDetailSheet",
-        "UsageSyncDetailSheet"
+        "UsageSyncDetailSheet",
+        "WebhookEndpointDetail",
+        "WebhookMessageSheet"
       ],
       "story": "./src/compositions/DetailList.stories.tsx"
+    },
+    "DetailMoreMenu": {
+      "file": "src/compositions/DetailKit.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "CatalogDetailFrame",
+        "EntityHeader",
+        "FeatureDetailView"
+      ],
+      "story": "./src/compositions/DetailKit.stories.tsx"
     },
     "DetailShell": {
       "file": "src/compositions/DetailShell.tsx",
@@ -795,7 +813,8 @@
       ],
       "usedBy": [
         "CustomerDetail",
-        "FeatureDetailView"
+        "FeatureDetailView",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/EditableCard.stories.tsx"
     },
@@ -831,10 +850,14 @@
       "usedBy": [
         "EntitlementTable",
         "EventGrid",
+        "EventTypeName",
         "FeatureGrid",
         "PaymentGrid",
         "PlanEntitlementsView",
-        "PlanGrid"
+        "PlanGrid",
+        "WebhookMessageSheet",
+        "WebhookStatusPill",
+        "WebhookTime"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -849,7 +872,9 @@
         "EntityList",
         "PricingCatalogBlock",
         "SettingsShell",
-        "SubscriptionForm"
+        "SubscriptionForm",
+        "WebhookActivity",
+        "WebhookEventCatalog"
       ],
       "story": "./src/compositions/EmptyState.stories.tsx"
     },
@@ -910,7 +935,8 @@
       ],
       "usedBy": [
         "FeatureGrid",
-        "PlanGrid"
+        "PlanGrid",
+        "WebhookEndpointGrid"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -919,7 +945,8 @@
       "layer": "surface",
       "composes": [
         "DetailBreadcrumb",
-        "DetailHeaderCluster"
+        "DetailHeaderCluster",
+        "DetailMoreMenu"
       ],
       "usedBy": [
         "CustomerDetail"
@@ -965,6 +992,9 @@
         "SubscriptionGrid",
         "TaxRateGrid",
         "UsageSyncGrid",
+        "WebhookAttemptList",
+        "WebhookEndpointGrid",
+        "WebhookMessageLog",
         "WorkflowGrid"
       ],
       "story": "./src/pages/shared/EntityList.stories.tsx"
@@ -1007,7 +1037,9 @@
       "composes": [
         "ListOfferProvider"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "PlanChargesView"
+      ],
       "story": "./src/compositions/States.stories.tsx"
     },
     "EventDetailSheet": {
@@ -1030,6 +1062,19 @@
       "usedBy": [],
       "story": "./src/pages/events/EventGrid.stories.tsx"
     },
+    "EventTypeName": {
+      "file": "src/pages/webhooks/webhookCells.tsx",
+      "layer": "surface",
+      "composes": [
+        "EmDash",
+        "Pill"
+      ],
+      "usedBy": [
+        "WebhookAttemptList",
+        "WebhookMessageLog"
+      ],
+      "story": null
+    },
     "FeatureCloneDialog": {
       "file": "src/pages/features/FeatureCloneDialog.tsx",
       "layer": "surface",
@@ -1046,6 +1091,7 @@
       "layer": "surface",
       "composes": [
         "DetailHeader",
+        "DetailMoreMenu",
         "DetailTable",
         "DetailTabs",
         "EditableCard",
@@ -1147,7 +1193,8 @@
         "InvoiceForm",
         "MeteredEntitlementFields",
         "PriceOverrideForm",
-        "SignInForm"
+        "SignInForm",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/Field.stories.tsx"
     },
@@ -1365,7 +1412,8 @@
         "PriceUnitForm",
         "SubscriptionForm",
         "TaxRateCreateForm",
-        "TaxRateEditForm"
+        "TaxRateEditForm",
+        "WebhookEndpointForm"
       ],
       "story": "./src/compositions/FormCard.stories.tsx"
     },
@@ -1381,7 +1429,8 @@
         "CustomerWalletView",
         "EnvironmentForm",
         "EnvironmentRenameForm",
-        "FeatureCloneDialog"
+        "FeatureCloneDialog",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/FormDialog.stories.tsx"
     },
@@ -1428,7 +1477,8 @@
         "PriceUnitForm",
         "SubscriptionForm",
         "TaxRateCreateForm",
-        "TaxRateEditForm"
+        "TaxRateEditForm",
+        "WebhookEndpointForm"
       ],
       "story": "./src/compositions/FormPage.stories.tsx"
     },
@@ -1462,7 +1512,8 @@
         "PriceUnitForm",
         "SubscriptionForm",
         "TaxRateCreateForm",
-        "TaxRateEditForm"
+        "TaxRateEditForm",
+        "WebhookEndpointForm"
       ],
       "story": "./src/compositions/FormCard.stories.tsx"
     },
@@ -1802,7 +1853,8 @@
         "CustomerTaxSection",
         "CustomerWalletView",
         "FeatureDetailView",
-        "InvoiceDetailView"
+        "InvoiceDetailView",
+        "PlanChargesView"
       ],
       "story": "./src/compositions/States.stories.tsx"
     },
@@ -1883,7 +1935,8 @@
         "DashboardHome",
         "FeatureDetailView",
         "RevenueDashboard",
-        "UsageCard"
+        "UsageCard",
+        "WebhookActivity"
       ],
       "story": "./src/pages/shared/MetricChart.stories.tsx"
     },
@@ -1990,7 +2043,8 @@
         "CustomerForm",
         "EntitlementCreateForm",
         "EntitlementEditForm",
-        "SubscriptionForm"
+        "SubscriptionForm",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/OptionCombobox.stories.tsx"
     },
@@ -2013,7 +2067,8 @@
         "PaymentForm",
         "SubscriptionForm",
         "TaxRateCreateForm",
-        "TaxRateEditForm"
+        "TaxRateEditForm",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/OptionSelect.stories.tsx"
     },
@@ -2129,13 +2184,18 @@
       "usedBy": [
         "CatalogStatusBadge",
         "CustomerDetail",
+        "EventTypeName",
         "FeatureDetailView",
         "FeatureGrid",
         "FeatureTypeBadge",
         "GlyphBadge",
         "InvoiceStatusBadge",
         "PaymentStatusBadge",
-        "UsageSyncDetailSheet"
+        "UsageSyncDetailSheet",
+        "WebhookEndpointDetail",
+        "WebhookEventCatalog",
+        "WebhookStatusPill",
+        "WebhookTime"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
@@ -2161,6 +2221,8 @@
       "file": "src/pages/plans/PlanChargesView.tsx",
       "layer": "surface",
       "composes": [
+        "ErrorState",
+        "LoadingRows",
         "RowActionsMenu",
         "Section",
         "SectionEmpty"
@@ -2479,7 +2541,9 @@
         "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
-        "RelatedCard"
+        "RelatedCard",
+        "WebhookEndpointDetail",
+        "WebhookEventCatalog"
       ],
       "story": "./src/compositions/Section.stories.tsx"
     },
@@ -2652,7 +2716,8 @@
       "composes": [],
       "usedBy": [
         "PriceOverrideForm",
-        "TierTable"
+        "TierTable",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/DetailKit.stories.tsx"
     },
@@ -2685,7 +2750,9 @@
       "composes": [],
       "usedBy": [
         "SettingsShell",
-        "SignInScreen"
+        "SignInScreen",
+        "ThemeChoiceCards",
+        "ThemePreferenceCards"
       ],
       "story": null
     },
@@ -2702,7 +2769,8 @@
       "composes": [],
       "usedBy": [
         "CustomerWalletView",
-        "RevenueDashboard"
+        "RevenueDashboard",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/DetailKit.stories.tsx"
     },
@@ -2837,6 +2905,24 @@
       "usedBy": [],
       "story": "./src/pages/taxes/TaxRateGrid.stories.tsx"
     },
+    "ThemeChoiceCards": {
+      "file": "src/pages/settings/AppearanceSettings.tsx",
+      "layer": "surface",
+      "composes": [
+        "Source"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/AppearanceSettings.stories.tsx"
+    },
+    "ThemePreferenceCards": {
+      "file": "src/pages/settings/AppearanceSettings.tsx",
+      "layer": "surface",
+      "composes": [
+        "Source"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/settings/AppearanceSettings.stories.tsx"
+    },
     "ThemeProvider": {
       "file": "src/compositions/shell/ThemeProvider.tsx",
       "layer": "composition",
@@ -2857,9 +2943,7 @@
       "file": "src/compositions/shell/ThemeToggle.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [
-        "AppShell"
-      ],
+      "usedBy": [],
       "story": "./src/compositions/shell/ThemeToggle.stories.tsx"
     },
     "TierTable": {
@@ -2936,6 +3020,140 @@
       "composes": [],
       "usedBy": [
         "SignInScreen"
+      ],
+      "story": null
+    },
+    "WebhookActivity": {
+      "file": "src/pages/webhooks/WebhookActivity.tsx",
+      "layer": "surface",
+      "composes": [
+        "EmptyState",
+        "MetricChart"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/webhooks/WebhookActivity.stories.tsx"
+    },
+    "WebhookAttemptList": {
+      "file": "src/pages/webhooks/WebhookAttemptList.tsx",
+      "layer": "surface",
+      "composes": [
+        "EntityList",
+        "EventTypeName"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/webhooks/WebhookAttemptList.stories.tsx"
+    },
+    "WebhookEndpointDetail": {
+      "file": "src/pages/webhooks/WebhookEndpointDetail.tsx",
+      "layer": "surface",
+      "composes": [
+        "CatalogDetailFrame",
+        "ConfirmDialog",
+        "DetailList",
+        "EditableCard",
+        "Field",
+        "FormDialog",
+        "OptionCombobox",
+        "OptionSelect",
+        "Pill",
+        "Section",
+        "SimpleTable",
+        "SplitMeter",
+        "WebhookEventTypePicker",
+        "WebhookTime"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/webhooks/WebhookEndpointDetail.stories.tsx"
+    },
+    "WebhookEndpointForm": {
+      "file": "src/pages/webhooks/WebhookEndpointForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "FormCard",
+        "FormPage",
+        "FormRow",
+        "WebhookEventTypePicker"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/webhooks/WebhookEndpointForm.stories.tsx"
+    },
+    "WebhookEndpointGrid": {
+      "file": "src/pages/webhooks/WebhookEndpointGrid.tsx",
+      "layer": "surface",
+      "composes": [
+        "EntityCell",
+        "EntityList"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/webhooks/WebhookEndpointGrid.stories.tsx"
+    },
+    "WebhookEventCatalog": {
+      "file": "src/pages/webhooks/WebhookEventCatalog.tsx",
+      "layer": "surface",
+      "composes": [
+        "EmptyState",
+        "Pill",
+        "Section"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/webhooks/WebhookEventCatalog.stories.tsx"
+    },
+    "WebhookEventTypePicker": {
+      "file": "src/pages/webhooks/WebhookEventTypePicker.tsx",
+      "layer": "surface",
+      "composes": [
+        "CheckboxRow"
+      ],
+      "usedBy": [
+        "WebhookEndpointDetail",
+        "WebhookEndpointForm"
+      ],
+      "story": "./src/pages/webhooks/WebhookEventTypePicker.stories.tsx"
+    },
+    "WebhookMessageLog": {
+      "file": "src/pages/webhooks/WebhookMessageLog.tsx",
+      "layer": "surface",
+      "composes": [
+        "EntityList",
+        "EventTypeName"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/webhooks/WebhookMessageLog.stories.tsx"
+    },
+    "WebhookMessageSheet": {
+      "file": "src/pages/webhooks/WebhookMessageSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailList",
+        "EmDash",
+        "WebhookStatusPill",
+        "WebhookTime"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/webhooks/WebhookMessageSheet.stories.tsx"
+    },
+    "WebhookStatusPill": {
+      "file": "src/pages/webhooks/webhookCells.tsx",
+      "layer": "surface",
+      "composes": [
+        "EmDash",
+        "Pill"
+      ],
+      "usedBy": [
+        "WebhookMessageSheet"
+      ],
+      "story": null
+    },
+    "WebhookTime": {
+      "file": "src/pages/webhooks/webhookCells.tsx",
+      "layer": "surface",
+      "composes": [
+        "EmDash",
+        "Pill"
+      ],
+      "usedBy": [
+        "WebhookEndpointDetail",
+        "WebhookMessageSheet"
       ],
       "story": null
     },
@@ -3077,7 +3295,8 @@
       "component": "EmptyState",
       "uses": [
         "EmptyState",
-        "ListOfferProvider"
+        "ListOfferProvider",
+        "PageBody"
       ]
     },
     "./src/compositions/Field.stories.tsx": {
@@ -3523,6 +3742,7 @@
       "uses": [
         "AppFailure",
         "DetailHeader",
+        "DetailMoreMenu",
         "DetailTabs",
         "EditableCard",
         "LoadingRows",
@@ -4056,6 +4276,15 @@
         "RevenueDashboard"
       ]
     },
+    "./src/pages/settings/AppearanceSettings.stories.tsx": {
+      "title": "Pages/Settings/Appearance",
+      "component": "ThemeChoiceCards",
+      "uses": [
+        "ThemeChoiceCards",
+        "ThemePreferenceCards",
+        "ThemeProvider"
+      ]
+    },
     "./src/pages/settings/SettingsShell.stories.tsx": {
       "title": "Surfaces/SettingsShell",
       "component": "SettingsShell",
@@ -4100,8 +4329,7 @@
       "uses": [
         "CatalogStatusBadge",
         "EntityHeader",
-        "FeatureTypeBadge",
-        "RowActionsMenu"
+        "FeatureTypeBadge"
       ]
     },
     "./src/pages/shared/EntityList.stories.tsx": {
@@ -4256,6 +4484,70 @@
         "UsageSyncGrid"
       ]
     },
+    "./src/pages/webhooks/WebhookActivity.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookActivity",
+      "component": "WebhookActivity",
+      "uses": [
+        "WebhookActivity"
+      ]
+    },
+    "./src/pages/webhooks/WebhookAttemptList.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookAttemptList",
+      "component": "WebhookAttemptList",
+      "uses": [
+        "WebhookAttemptList"
+      ]
+    },
+    "./src/pages/webhooks/WebhookEndpointDetail.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookEndpointDetail",
+      "component": "WebhookEndpointDetail",
+      "uses": [
+        "WebhookAttemptList",
+        "WebhookEndpointDetail"
+      ]
+    },
+    "./src/pages/webhooks/WebhookEndpointForm.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookEndpointForm",
+      "component": "WebhookEndpointForm",
+      "uses": [
+        "WebhookEndpointForm"
+      ]
+    },
+    "./src/pages/webhooks/WebhookEndpointGrid.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookEndpointGrid",
+      "component": "WebhookEndpointGrid",
+      "uses": [
+        "WebhookEndpointGrid"
+      ]
+    },
+    "./src/pages/webhooks/WebhookEventCatalog.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookEventCatalog",
+      "component": "WebhookEventCatalog",
+      "uses": [
+        "WebhookEventCatalog"
+      ]
+    },
+    "./src/pages/webhooks/WebhookEventTypePicker.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookEventTypePicker",
+      "component": "WebhookEventTypePicker",
+      "uses": [
+        "WebhookEventTypePicker"
+      ]
+    },
+    "./src/pages/webhooks/WebhookMessageLog.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookMessageLog",
+      "component": "WebhookMessageLog",
+      "uses": [
+        "WebhookMessageLog"
+      ]
+    },
+    "./src/pages/webhooks/WebhookMessageSheet.stories.tsx": {
+      "title": "Surfaces/Webhooks/WebhookMessageSheet",
+      "component": "WebhookMessageSheet",
+      "uses": [
+        "WebhookMessageSheet"
+      ]
+    },
     "./src/pages/workflows/WorkflowGrid.stories.tsx": {
       "title": "Surfaces/WorkflowGrid",
       "component": "WorkflowGrid",
@@ -4296,7 +4588,9 @@
         "FormDialog",
         "LoadingRows",
         "PageBody",
-        "Pill"
+        "Pill",
+        "Properties",
+        "Section"
       ]
     },
     "AddonFormPage": {
@@ -4855,6 +5149,39 @@
         "PageBody",
         "UsageSyncDetailSheet",
         "UsageSyncGrid"
+      ]
+    },
+    "WebhookEndpointCreatePage": {
+      "file": "apps/console/src/pages/webhooks/WebhookEndpointCreatePage.tsx",
+      "pattern": "Form",
+      "route": "/webhooks/new",
+      "uses": [
+        "WebhookEndpointForm"
+      ]
+    },
+    "WebhookEndpointDetailPage": {
+      "file": "apps/console/src/pages/webhooks/WebhookEndpointDetailPage.tsx",
+      "pattern": "Detail",
+      "route": "/webhooks/$endpointId",
+      "uses": [
+        "AppFailure",
+        "LoadingRows",
+        "WebhookAttemptList",
+        "WebhookEndpointDetail"
+      ]
+    },
+    "WebhooksPage": {
+      "file": "apps/console/src/pages/webhooks/WebhooksPage.tsx",
+      "pattern": "Other",
+      "route": "/webhooks",
+      "uses": [
+        "ConfirmDialog",
+        "PageBody",
+        "ResourceNavigation",
+        "WebhookActivity",
+        "WebhookEndpointGrid",
+        "WebhookEventCatalog",
+        "WebhookMessageLog"
       ]
     },
     "WorkflowListPage": {

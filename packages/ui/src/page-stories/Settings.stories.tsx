@@ -31,11 +31,7 @@ const SECTIONS: SettingsSection[] = [
     id: 'team',
     label: 'Team',
     icon: <UsersIcon aria-hidden className="size-4" />,
-    tabs: [
-      { id: 'members', label: 'Members' },
-      { id: 'roles', label: 'Roles & permissions' },
-      { id: 'sso', label: 'Single sign-on' },
-    ],
+    tabs: [{ id: 'members', label: 'Members' }],
   },
   {
     id: 'invoicing',
@@ -216,8 +212,6 @@ interface SettingsPageProps {
   tabId: string
   environment: 'Sandbox' | 'Production'
   memberCount: number
-  /** Marks Single sign-on unavailable, as the console does. */
-  ssoUnavailable: boolean
   isLoading: boolean
   hasError: boolean
 }
@@ -228,7 +222,6 @@ function SettingsPage({
   tabId,
   environment,
   memberCount,
-  ssoUnavailable,
   isLoading,
   hasError,
 }: SettingsPageProps) {
@@ -240,18 +233,7 @@ function SettingsPage({
     setTab(tabId)
   }, [sectionId, tabId])
 
-  const sections = SECTIONS.map((entry) => ({
-    ...entry,
-    tabs: entry.tabs.map((item) =>
-      item.id === 'sso' && ssoUnavailable
-        ? {
-            ...item,
-            unavailable: true,
-            unavailableReason: 'Single sign-on is switched off on this deployment.',
-          }
-        : item,
-    ),
-  }))
+  const sections = SECTIONS
   const active = sections.find((entry) => entry.id === section) ?? sections[0]!
   const activeTab = active.tabs.find((item) => item.id === tab) ?? active.tabs[0]!
 
@@ -305,7 +287,6 @@ const meta = {
     tabId: 'members',
     environment: 'Sandbox',
     memberCount: 4,
-    ssoUnavailable: true,
     isLoading: false,
     hasError: false,
   },
@@ -317,7 +298,6 @@ const meta = {
     },
     environment: { control: 'inline-radio', options: ['Sandbox', 'Production'] },
     memberCount: { control: { type: 'range', min: 0, max: MEMBERS.length, step: 1 } },
-    ssoUnavailable: { control: 'boolean' },
     isLoading: { control: 'boolean' },
     hasError: { control: 'boolean' },
   },
@@ -338,9 +318,13 @@ export const Invoicing: Story = {
   args: { sectionId: 'invoicing', tabId: 'invoices' },
 }
 
-/** `/settings?section=team&tab=sso`, a tab the console marks unavailable. */
-export const Unavailable: Story = {
-  args: { sectionId: 'team', tabId: 'sso' },
+/** `/settings?section=team`, a section with one tab: no tab strip is drawn. */
+export const SingleTab: Story = {
+  args: { sectionId: 'team', tabId: 'members' },
+  play: async ({ canvasElement }) => {
+    await expect((await within(canvasElement).findAllByText('Members')).length).toBeGreaterThan(0)
+    await expect(within(canvasElement).queryByRole('tablist')).toBeNull()
+  },
 }
 
 /** `/settings?section=alerts&tab=alert-rules`, a section with a tab strip. */

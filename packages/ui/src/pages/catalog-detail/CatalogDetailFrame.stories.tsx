@@ -17,7 +17,7 @@ function makeTabs(count: number) {
 
 function makeMenu(count: number) {
   const items = [
-    { id: 'archive', label: 'Archive', onSelect: fn() },
+    { id: 'edit', label: 'Edit', onSelect: fn() },
     { id: 'duplicate', label: 'Duplicate', onSelect: fn() },
     { id: 'delete', label: 'Delete', onSelect: fn(), destructive: true },
   ]
@@ -42,7 +42,6 @@ const meta = {
     title: 'Launch 20% off',
     badges: <CatalogStatusBadge status="published" />,
     id: 'coupon_01HZX3',
-    onEdit: fn(),
     menuLabel: 'Coupon actions',
     menu: makeMenu(3),
     tabs: makeTabs(3),
@@ -57,11 +56,9 @@ const meta = {
     icon: { control: false },
     children: { control: false },
     onBack: { control: false },
-    onEdit: { control: false },
     onTabChange: { control: false },
     menu: { control: false },
     tabs: { control: false },
-    primary: { control: false },
   },
 } satisfies Meta<typeof CatalogDetailFrame>
 
@@ -76,12 +73,9 @@ interface PlaygroundArgs {
   id: string
   tabCount: number
   menuItems: number
-  showEdit: boolean
-  showPrimary: boolean
-  primaryDisabled: boolean
 }
 
-/** Title, status chip, tab count, overflow items and the Edit / primary buttons are all controls. */
+/** Title, status chip, tab count and the number of menu items are controls. */
 export const Playground: StoryObj<PlaygroundArgs> = {
   args: {
     listLabel: 'Add-ons',
@@ -91,9 +85,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     id: 'addon_01HZX3',
     tabCount: 3,
     menuItems: 3,
-    showEdit: true,
-    showPrimary: false,
-    primaryDisabled: false,
   },
   argTypes: {
     listLabel: { control: 'text' },
@@ -103,9 +94,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     id: { control: 'text' },
     tabCount: { control: { type: 'range', min: 1, max: 5, step: 1 } },
     menuItems: { control: { type: 'range', min: 0, max: 3, step: 1 } },
-    showEdit: { control: 'boolean' },
-    showPrimary: { control: 'boolean' },
-    primaryDisabled: { control: 'boolean' },
   },
   render: (a) => (
     <Frame
@@ -118,10 +106,6 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       menu={makeMenu(a.menuItems)}
       tabs={makeTabs(a.tabCount)}
       {...(a.showBadge ? { badges: <CatalogStatusBadge status={a.status} /> } : {})}
-      {...(a.showEdit ? { onEdit: fn() } : {})}
-      {...(a.showPrimary
-        ? { primary: { label: 'Publish', onClick: fn(), disabled: a.primaryDisabled } }
-        : {})}
     />
   ),
 }
@@ -129,7 +113,8 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('button', { name: 'Edit' })).toBeInTheDocument()
+    await expect(canvas.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Coupon actions' })).toBeInTheDocument()
     await expect(canvas.getByText('Published')).toBeVisible()
     await expect(canvas.getByRole('tab', { name: 'Overview' })).toBeInTheDocument()
   },
@@ -152,20 +137,27 @@ export const OverflowMenu: Story = {
   },
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Coupon actions' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Archive' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
     await expect(args.menu?.[0]?.onSelect).toHaveBeenCalled()
   },
 }
 
-/** A primary action beside Edit, disabled. */
-export const PrimaryActionDisabled: Story = {
-  args: { primary: { label: 'Publish', onClick: fn(), disabled: true } },
+/** A disabled menu item stays in the list but cannot be chosen. */
+export const DisabledItem: Story = {
+  args: { menu: [{ id: 'activate', label: 'Activate', onSelect: fn(), disabled: true }] },
+  parameters: {
+    a11y: { config: { rules: [{ id: 'aria-hidden-focus', enabled: false }] } },
+  },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('button', { name: 'Publish' })).toBeDisabled()
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'Coupon actions' }))
+    await expect(await screen.findByRole('menuitem', { name: 'Activate' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
   },
 }
 
-/** No Edit, no menu: just the title and tabs. */
+/** No menu: just the title and tabs. */
 export const ReadOnly: Story = {
-  render: ({ onEdit: _onEdit, ...args }) => <Frame {...args} menu={[]} />,
+  render: (args) => <Frame {...args} menu={[]} />,
 }

@@ -138,7 +138,7 @@ function CustomerDetailPage({
           subscriptionsLoading={sectionsLoading}
           invoicesLoading={sectionsLoading}
           onBack={fn()}
-          onCreateSubscription={fn()}
+          onCreateInvoice={fn()}
           onOpenInvoice={fn()}
           onOpenPlan={fn()}
           {...(editable ? { onEdit: fn(), onUpdateField: fn(async () => undefined) } : {})}

@@ -11,7 +11,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
 | PlaceholderPage.tsx | `PlaceholderPage` | Other | EmptyState, PageHeader | Button, PageBody |
-| addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailShell, DetailTabs, EntityList, Field, FormActions, FormDialog, MetricRail, RowActionsMenu, Section | AddonSubscriptionsView, AppFailure, CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, LoadingRows, PageBody, Pill |
+| addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailShell, DetailTabs, EntityList, Field, FormActions, FormDialog, MetricRail, Properties, RowActionsMenu, Section | AddonSubscriptionsView, AppFailure, CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, LoadingRows, PageBody, Pill |
 | addons | `AddonFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AddonForm, AppFailure, LoadingRows, PageBody |
 | addons | `AddonListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | AddonGrid, Button, ListState, PageBody |
 | auth | `SignInPage` | Other | Field | SignInScreen |

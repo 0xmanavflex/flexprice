@@ -1,4 +1,5 @@
 import { type ReactNode } from 'react'
+import flexpriceIcon from '@ui/assets/flexprice-icon.png'
 import { TooltipProvider } from '@ui/components/primitives/tooltip'
 import {
   Sidebar,
@@ -16,15 +17,14 @@ import { ShellAccount } from './ShellAccount'
 import { ShellNav } from './ShellNav'
 import { ShellSearch, type ShellSearchProps } from './ShellSearch'
 import { ThemeShortcut } from './ThemeShortcut'
-import { ThemeToggle } from './ThemeToggle'
 import type { ShellNavGroup, ShellUser } from './types'
 
 /**
  * The application shell, as the reference app draws it.
  *
- * One inset sidebar that collapses to icons, with the tenant's name and the
- * theme control at the top, nested navigation below, and the
- * account menu at the bottom. The header carries the breadcrumb — which leads
+ * One inset sidebar that collapses to icons, with the brand mark and the
+ * tenant's name at the top, nested navigation below, and the account menu at
+ * the bottom. The header carries the breadcrumb — which leads
  * with the environment switcher — and, top-right, search beside whatever one
  * control belongs to the whole page rather than to its content.
  *
@@ -102,6 +102,9 @@ export function AppShell({
   headerActions,
   children,
 }: AppShellProps) {
+  // The pinned nav group already takes the free space above itself; a second
+  // `mt-auto` would split that space and leave a gap between the two.
+  const hasPinnedGroup = navGroups.some((group) => group.pinned)
   return (
     <SidebarProvider className={SHELL_CLASSES}>
       {/*
@@ -115,26 +118,22 @@ export function AppShell({
         <Sidebar collapsible="icon" variant="inset" aria-label="Main">
           <SidebarHeader className="px-3 pt-3">
             {/*
-              The tenant this console is signed in to — its name from `/users/me`
-              (falling back to the product name until that resolves), with the
-              brand mark beside it. The theme toggle sits at the
-              right of the same row, and drop out in the icon rail.
+              The Flexprice mark, then the tenant this console is signed in to —
+              its name from `/users/me`, falling back to the product name until
+              that resolves. The name drops out in the icon rail.
             */}
             <div className="flex h-8 items-center gap-2">
               {logo ?? (
-                <span
+                <img
+                  src={flexpriceIcon}
+                  alt=""
                   aria-hidden
-                  className="bg-primary text-primary-foreground flex size-6.5 shrink-0 items-center justify-center rounded-md text-[13px] font-medium"
-                >
-                  F
-                </span>
+                  className="size-7 shrink-0 rounded-md"
+                />
               )}
               <span className="truncate text-[15px] font-medium tracking-tight in-data-[state=collapsed]:hidden">
                 {user.organization ?? productName}
               </span>
-              <div className="ml-auto flex items-center gap-0.5 in-data-[state=collapsed]:hidden">
-                <ThemeToggle />
-              </div>
             </div>
           </SidebarHeader>
 
@@ -146,7 +145,14 @@ export function AppShell({
             />
 
             {pinned ? (
-              <div className="mt-auto px-2 pb-2 in-data-[state=collapsed]:hidden">{pinned}</div>
+              <div
+                className={cn(
+                  'px-2 pt-2 pb-2 in-data-[state=collapsed]:hidden',
+                  !hasPinnedGroup && 'mt-auto',
+                )}
+              >
+                {pinned}
+              </div>
             ) : null}
           </SidebarContent>
 

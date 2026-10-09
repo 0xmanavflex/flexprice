@@ -111,11 +111,11 @@ export function SubscriptionDetailPage({
         </>
       }
       id={data.id}
-      {...(canActivate
-        ? { primary: { label: 'Activate', onClick: () => setDialog('activate') } }
-        : {})}
       menuLabel="Contract actions"
       menu={[
+        ...(canActivate
+          ? [{ id: 'activate', label: 'Activate', onSelect: () => setDialog('activate') }]
+          : []),
         {
           id: 'cancel',
           label: 'Cancel contract',

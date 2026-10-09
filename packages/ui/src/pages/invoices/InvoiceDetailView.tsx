@@ -58,7 +58,7 @@ export const InvoiceDetailViewProvenance = provenance({
     '@reui/badge',
     'blocks/solution-billing-4',
   ],
-  note: 'Invoice detail: DetailShell header (Download PDF, Copy link, status chips, ID, More), the invoice document with Payments / Credit notes tabs, and an Activity, Metadata, Related rail.',
+  note: 'Invoice detail: DetailShell header (status chips, ID, More), the invoice document with Payments / Credit notes tabs, and an Activity, Metadata, Related rail.',
 })
 
 export interface InvoiceDetailViewProps {
@@ -69,7 +69,7 @@ export interface InvoiceDetailViewProps {
   /** Drafts only. */
   onFinalize?: () => void
   isFinalizing?: boolean
-  /** Primary: Download PDF. Omitted, the button is disabled. */
+  /** More menu: Download PDF. Omitted, the item is disabled. */
   onDownload?: () => void
   onRecordPayment?: () => void
   /** Drafts only: recompute lines, credits and taxes in place. */
@@ -85,14 +85,16 @@ export interface InvoiceDetailViewProps {
   onOpenCreditNote?: (creditNoteId: string) => void
   paymentsLoading?: boolean
   creditNotesLoading?: boolean
+  /** Starts with zero-amount lines shown; the switch above the items still toggles it. */
+  showZeroAmounts?: boolean
 }
 
 type InvoiceTab = 'payments' | 'credit-notes'
 
 /**
  * One invoice (reference `invoice-detail`). The header is the plain word
- * "Invoice" with the status chips, ID chip and More menu on the right; the two
- * primary actions are Download PDF and Copy link. The main column is the
+ * "Invoice" with the status chips, ID chip and one More menu on the right; every
+ * action, Download PDF and Copy link included, lives in that menu. The main column is the
  * invoice as a document, then Payments and Credit notes tabs; the rail is
  * Activity, Metadata, Related.
  */
@@ -115,9 +117,10 @@ export function InvoiceDetailView({
   onOpenCreditNote,
   paymentsLoading = false,
   creditNotesLoading = false,
+  showZeroAmounts = false,
 }: InvoiceDetailViewProps) {
   const [tab, setTab] = useState<InvoiceTab>('payments')
-  const [showZero, setShowZero] = useState(false)
+  const [showZero, setShowZero] = useState(showZeroAmounts)
   const totals = invoiceTotals(invoice)
   const money = (value: number) =>
     new Intl.NumberFormat('en-US', {
@@ -176,29 +179,6 @@ export function InvoiceDetailView({
           {chip.label}
         </Badge>
       ))}
-      primary={
-        <>
-          <Button
-            variant="outline"
-            className="h-8 px-3"
-            disabled={!onDownload}
-            onClick={onDownload}
-          >
-            <DownloadIcon aria-hidden="true" />
-            Download PDF
-          </Button>
-          <Button
-            variant="outline"
-            className="h-8 px-3"
-            disabled={!hostedUrl}
-            {...(hostedUrl ? {} : { title: 'Available once the invoice has a hosted page' })}
-            onClick={copyLink}
-          >
-            <LinkIcon aria-hidden="true" />
-            Copy link
-          </Button>
-        </>
-      }
       actions={
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -210,6 +190,18 @@ export function InvoiceDetailView({
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-60">
             <DropdownMenuGroup>
+              <MenuAction
+                icon={<DownloadIcon />}
+                label="Download PDF"
+                onSelect={onDownload}
+                hint="Available once the invoice has a PDF"
+              />
+              <MenuAction
+                icon={<LinkIcon />}
+                label="Copy link"
+                onSelect={hostedUrl ? copyLink : undefined}
+                hint="Available once the invoice has a hosted page"
+              />
               {isDraft && onFinalize ? (
                 <MenuAction
                   icon={<CheckCircle2Icon />}
@@ -512,7 +504,7 @@ function InvoiceDocumentArticle({
 
       <div className="grid gap-6 px-8 py-8 sm:grid-cols-2">
         {invoice.from ? <Party heading="Bill from" party={invoice.from} withLogo /> : null}
-        <Party heading="Bill to" party={invoice.billTo} />
+        <Party heading="Bill to" party={invoice.billTo} tagged />
         {invoice.payment ? (
           <div className="space-y-1.5 text-[13px]">
             <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Payment</p>
@@ -524,8 +516,8 @@ function InvoiceDocumentArticle({
         ) : null}
       </div>
 
-      <div className="mx-8 border-t">
-        <div className="flex items-center justify-between py-3">
+      <div className="mx-8 flex flex-col gap-3 border-t">
+        <div className="flex items-center justify-between pt-3">
           <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Items</p>
           <label className="text-muted-foreground flex items-center gap-2 text-xs">
             Show zero amounts
@@ -539,7 +531,7 @@ function InvoiceDocumentArticle({
         <div role="table" aria-label="Line items" className="text-sm">
           <div
             role="row"
-            className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] gap-4 border-b pb-2 text-xs"
+            className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_5rem_7rem_7rem] gap-4 border-b pb-3 text-xs"
           >
             <span role="columnheader">Description</span>
             <span role="columnheader" className="text-right">
@@ -622,42 +614,56 @@ function Party({
   heading,
   party,
   withLogo = false,
+  tagged = false,
 }: {
   heading: string
   party: InvoiceParty
   withLogo?: boolean
+  /** Marks the address and email rows with a small "Billing ..." tag. */
+  tagged?: boolean
 }) {
   return (
     <div className="space-y-1.5 text-[13px]">
       <p className="text-muted-foreground text-[11px] tracking-wider uppercase">{heading}</p>
       <div className="flex items-start gap-3">
-        {withLogo ? (
-          party.logoUrl ? (
-            <img
-              src={party.logoUrl}
-              alt=""
-              className="size-9 shrink-0 rounded-lg border object-contain"
-            />
-          ) : (
-            <span
-              aria-hidden
-              className="bg-muted text-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border text-sm font-medium"
-            >
-              {party.name.slice(0, 1).toUpperCase()}
-            </span>
-          )
+        {withLogo && party.logoUrl ? (
+          <img
+            src={party.logoUrl}
+            alt=""
+            className="size-9 shrink-0 rounded-lg border object-contain"
+          />
         ) : null}
-        <div className="min-w-0 space-y-0.5">
+        <div className="min-w-0 space-y-1">
           <p className="font-medium">{party.name}</p>
-          {party.address.map((line, index) => (
-            <p key={`${index}-${line}`} className="text-muted-foreground">
-              {line}
-            </p>
-          ))}
-          {party.email ? <p className="text-muted-foreground">{party.email}</p> : null}
+          {party.address.length > 0 ? (
+            <div className="flex flex-wrap items-start gap-x-2 gap-y-1">
+              <div className="space-y-0.5">
+                {party.address.map((line, index) => (
+                  <p key={`${index}-${line}`} className="text-muted-foreground">
+                    {line}
+                  </p>
+                ))}
+              </div>
+              {tagged ? <PartyTag>Billing address</PartyTag> : null}
+            </div>
+          ) : null}
+          {party.email ? (
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+              <p className="text-muted-foreground">{party.email}</p>
+              {tagged ? <PartyTag>Billing email</PartyTag> : null}
+            </div>
+          ) : null}
         </div>
       </div>
     </div>
+  )
+}
+
+function PartyTag({ children }: { children: ReactNode }) {
+  return (
+    <Badge variant="outline" size="sm" radius="full" className="text-muted-foreground font-normal">
+      {children}
+    </Badge>
   )
 }
 

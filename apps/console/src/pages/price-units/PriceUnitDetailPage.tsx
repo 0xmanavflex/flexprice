@@ -92,8 +92,8 @@ export function PriceUnitDetailPage({
         </>
       }
       id={data.code || data.id}
-      onEdit={() => setTab('information')}
       menuLabel="Price unit actions"
+      menu={[{ id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') }]}
       tab={tab}
       onTabChange={setTab}
       tabs={[

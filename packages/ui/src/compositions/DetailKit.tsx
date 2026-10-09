@@ -1,9 +1,16 @@
 import { useState, type ReactNode } from 'react'
-import { CheckIcon, CopyIcon, MailIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Button } from '@ui/components/primitives/button'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@ui/components/primitives/dropdown-menu'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@ui/components/primitives/tabs'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@ui/components/primitives/tooltip'
 import { useInFormDialog } from './formDialogContext'
@@ -19,7 +26,7 @@ import { useInFormDialog } from './formDialogContext'
  */
 export const DetailKitProvenance = provenance({
   source: 'composition',
-  composes: ['ui/tabs', 'ui/button', 'ui/tooltip'],
+  composes: ['ui/tabs', 'ui/button', 'ui/tooltip', 'ui/dropdown-menu'],
   note: 'Detail-page pieces (reference detail.tsx): line tabs with counts, light table, property grid, summary row, choice cards, form footer, copyable id, meters.',
 })
 
@@ -104,10 +111,70 @@ export function CopyEmail({ value }: { value: string }) {
   )
 }
 
+export interface DetailMenuItem {
+  id: string
+  label: string
+  /** Leading glyph; decorative, the label names the item. */
+  icon?: ReactNode
+  onSelect: () => void
+  /** Destructive items are set apart below a divider, last in the menu. */
+  destructive?: boolean
+  disabled?: boolean
+}
+
+/**
+ * The header's only action control: one "More" (ellipsis) button that opens
+ * every action for the record, destructive ones last under a divider. The
+ * trigger is `size-8`, the same height as the copy chips beside it.
+ */
+export function DetailMoreMenu({
+  label,
+  items,
+}: {
+  /** Accessible name of the trigger, e.g. "Customer actions". */
+  label: string
+  items: DetailMenuItem[]
+}) {
+  if (items.length === 0) return null
+  const regular = items.filter((item) => !item.destructive)
+  const destructive = items.filter((item) => item.destructive)
+  const renderItem = (item: DetailMenuItem) => (
+    <DropdownMenuItem
+      key={item.id}
+      disabled={item.disabled ?? false}
+      {...(item.destructive ? { variant: 'destructive' as const } : {})}
+      onClick={item.onSelect}
+    >
+      {item.icon ?? null}
+      {item.label}
+    </DropdownMenuItem>
+  )
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        render={<Button variant="outline" size="icon" className="size-8" aria-label={label} />}
+      >
+        <MoreHorizontalIcon aria-hidden="true" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-52">
+        {regular.map(renderItem)}
+        {regular.length > 0 && destructive.length > 0 ? <DropdownMenuSeparator /> : null}
+        {destructive.map(renderItem)}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 /**
  * The right-hand cluster every detail header shares, in one fixed order:
- * primary actions (at most two), status and type chips, the id and email copy
- * chips, then the overflow menu. Chips never sit beside the record name.
+ * status and type chips, the id and email copy chips, then the overflow menu
+ * (`DetailMoreMenu`), which holds every action. Chips never sit beside the
+ * record name.
+ *
+ * Chips are pinned to one height (`h-6`) so a small type pill and a status pill
+ * sit level; the copy chips and the More button share `h-8`.
+ *
+ * `primary` is legacy: new headers put every action in the menu.
  */
 export function DetailHeaderCluster({
   primary,
@@ -116,6 +183,7 @@ export function DetailHeaderCluster({
   email,
   more,
 }: {
+  /** Legacy inline action slot; prefer menu items. */
   primary?: ReactNode
   badges?: ReactNode
   id?: string | undefined
@@ -127,7 +195,9 @@ export function DetailHeaderCluster({
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {primary}
-      {badges ? <div className="flex flex-wrap items-center gap-1.5">{badges}</div> : null}
+      {badges ? (
+        <div className="flex flex-wrap items-center gap-1.5 [&>*]:h-6">{badges}</div>
+      ) : null}
       {id ? <CopyId value={id} /> : null}
       {email ? <CopyEmail value={email} /> : null}
       {more}

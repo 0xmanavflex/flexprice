@@ -154,9 +154,11 @@ export const FilteredEmpty: Story = {
 
 export const FirstRun: Story = {
   args: { taxRates: [], total: 0, onCreate: fn() },
-  play: async ({ canvasElement }) => {
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('No tax rates yet')).toBeInTheDocument()
+    await expect(await canvas.findByText('No taxes set up yet')).toBeInTheDocument()
+    await userEvent.click(canvas.getAllByRole('button', { name: 'Add tax' })[0]!)
+    await expect(args.onCreate).toHaveBeenCalled()
     await expect(canvas.getAllByText('Read docs')).toHaveLength(3)
   },
 }

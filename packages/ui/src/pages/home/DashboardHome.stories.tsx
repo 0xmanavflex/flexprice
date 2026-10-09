@@ -52,6 +52,8 @@ const events: EventsPanel = {
   })),
   total: 5_139_400,
   revenue: money('184210.00', 'USD'),
+  totalChangePercent: 8.4,
+  revenueChangePercent: -2.1,
 }
 
 // 1 + 0 + 2 + 3 + 1 + 4 + 2 + 1 = 14, the Customers headline.
@@ -63,6 +65,7 @@ const customers: CustomersPanel = {
     label,
     customers: [1, 0, 2, 3, 1, 4, 2, 1][index]!,
   })),
+  changePercent: 27.3,
 }
 
 // 11 + 10 + 9 + 8 = 38, the number above the bars.
@@ -159,6 +162,7 @@ interface PlaygroundArgs {
   currency: string
   newCustomersPerDay: number
   partialCustomers: boolean
+  showChange: boolean
   plansShown: number
   contractsPerDay: number
   paid: number
@@ -218,6 +222,8 @@ function makePanels(
       points,
       total: eventsReady ? points.reduce((sum, point) => sum + point.events, 0) : null,
       revenue: eventsReady ? money(revenueAmount, args.currency) : null,
+      totalChangePercent: eventsReady && args.showChange ? 8.4 : null,
+      revenueChangePercent: eventsReady && args.showChange ? -2.1 : null,
     },
     customers: {
       status: args.customersStatus,
@@ -226,6 +232,7 @@ function makePanels(
         : null,
       partial: customersReady && args.partialCustomers,
       points: customerPoints,
+      changePercent: customersReady && args.showChange && !args.partialCustomers ? 27.3 : null,
     },
     subscriptions: {
       status: args.subscriptionsStatus,
@@ -300,6 +307,7 @@ export const Playground = {
     currency: 'USD',
     newCustomersPerDay: 2,
     partialCustomers: false,
+    showChange: true,
     plansShown: 4,
     contractsPerDay: 2,
     paid: 34,
@@ -327,6 +335,10 @@ export const Playground = {
     currency: { control: 'select', options: ['USD', 'EUR', 'GBP', 'INR'] },
     newCustomersPerDay: { control: { type: 'range', min: 0, max: 20, step: 1 } },
     partialCustomers: { control: 'boolean', description: 'Shows the count as a floor, with a +.' },
+    showChange: {
+      control: 'boolean',
+      description: 'Shows each tab’s change against the prior window.',
+    },
     plansShown: { control: { type: 'range', min: 0, max: PLAN_POOL.length, step: 1 } },
     contractsPerDay: { control: { type: 'range', min: 1, max: 6, step: 1 } },
     paid: { control: { type: 'number', min: 0, max: 500, step: 1 } },
@@ -353,6 +365,7 @@ export const Playground = {
         'currency',
         'newCustomersPerDay',
         'partialCustomers',
+        'showChange',
         'plansShown',
         'contractsPerDay',
         'paid',

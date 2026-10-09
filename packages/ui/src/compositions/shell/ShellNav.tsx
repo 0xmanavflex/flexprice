@@ -31,8 +31,6 @@ import type { ShellNavGroup, ShellNavItem } from './types'
  * its own id and the app resolves that to the first child), so a heading never
  * does nothing when clicked. In the icon rail a parent becomes a flyout menu,
  * so collapsing the sidebar never makes the pages inside a group unreachable.
- *
- * Counts sit inline at the end of a child row, quiet and tabular.
  */
 export interface ShellNavProps {
   groups: ShellNavGroup[]
@@ -43,18 +41,6 @@ export interface ShellNavProps {
 function containsActive(item: ShellNavItem, activeItemId?: string): boolean {
   return (item.items ?? []).some((child) => child.id === activeItemId)
 }
-
-function Count({ value }: { value: number }) {
-  // Aria-hidden: the row's own accessible name already states the count.
-  return (
-    <span aria-hidden className="text-muted-foreground ml-auto text-xs tabular-nums">
-      {value}
-    </span>
-  )
-}
-
-const rowLabel = (item: ShellNavItem) =>
-  item.count === undefined ? item.label : `${item.label}, ${item.count}`
 
 /**
  * A parent in the icon rail: its children open in a flyout anchored to the
@@ -93,11 +79,6 @@ function CollapsedParent({
             {children.map((child) => (
               <DropdownMenuItem key={child.id} onClick={() => onNavigate(child.id)}>
                 {child.label}
-                {child.count !== undefined ? (
-                  <span className="text-muted-foreground ml-auto text-xs tabular-nums">
-                    {child.count}
-                  </span>
-                ) : null}
               </DropdownMenuItem>
             ))}
           </DropdownMenuGroup>
@@ -125,11 +106,10 @@ function Leaf({
         aria-current={isActive ? 'page' : undefined}
         // Always named from the item, never inferred from its text: in the icon
         // rail the label is clipped away entirely.
-        aria-label={rowLabel(item)}
+        aria-label={item.label}
       >
         {item.icon}
         <span>{item.label}</span>
-        {item.count !== undefined ? <Count value={item.count} /> : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
   )
@@ -184,11 +164,10 @@ function ExpandedParent({
                   isActive={isActive}
                   onClick={() => onNavigate(child.id)}
                   aria-current={isActive ? 'page' : undefined}
-                  aria-label={rowLabel(child)}
+                  aria-label={child.label}
                   className="h-8 w-full"
                 >
                   <span>{child.label}</span>
-                  {child.count !== undefined ? <Count value={child.count} /> : null}
                 </SidebarMenuSubButton>
               </SidebarMenuSubItem>
             )
@@ -286,7 +265,7 @@ export function ShellNav({ groups, activeItemId, onNavigate }: ShellNavProps) {
       {groups.map((group) => (
         <SidebarGroup
           key={group.id}
-          className={cn(group.pinned && 'mt-auto border-t pt-2')}
+          className={cn(group.pinned && 'mt-auto border-t pt-2 pb-0')}
           data-pinned={group.pinned ? '' : undefined}
         >
           {group.title ? <SidebarGroupLabel>{group.title}</SidebarGroupLabel> : null}

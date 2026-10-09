@@ -52,10 +52,10 @@ export function TaxListPage({
           isFiltered={isFiltered}
           onRetry={() => void taxRates.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={onCreateTaxRate}>New tax rate</Button>}
+          createAction={<Button onClick={onCreateTaxRate}>Add tax</Button>}
           emptyIcon={<PercentIcon aria-hidden />}
-          emptyTitle="No tax rates yet"
-          emptyDescription="Tax rates decide what is added to an invoice, and where each rate applies. Create the first to start."
+          emptyTitle="No taxes set up yet"
+          emptyDescription="Taxes are the percentages added on top of an invoice, like VAT or GST. Add a tax, then attach it to the customers, plans or charges it applies to."
         >
           <TaxRateGrid
             taxRates={rows}

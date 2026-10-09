@@ -86,7 +86,7 @@ function Harness({
   customer = CUSTOMER,
   subscriptions = SUBSCRIPTIONS,
   invoices = INVOICES,
-  onCreateSubscription,
+  onCreateInvoice,
   onBack,
   onEdit,
   onUpdateField,
@@ -97,7 +97,7 @@ function Harness({
   customer?: CustomerDetailModel
   subscriptions?: Subscription[]
   invoices?: Invoice[]
-  onCreateSubscription?: () => void
+  onCreateInvoice?: () => void
   onBack?: () => void
   onEdit?: () => void
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
@@ -117,8 +117,7 @@ function Harness({
         subscriptionsLoading={subscriptionsLoading}
         invoicesLoading={invoicesLoading}
         onBack={onBack ?? (() => {})}
-        onCreateSubscription={() => onCreateSubscription?.()}
-        onCreateInvoice={() => {}}
+        onCreateInvoice={() => onCreateInvoice?.()}
         {...(onEdit ? { onEdit } : {})}
         {...(onUpdateField ? { onUpdateField } : {})}
       />
@@ -144,7 +143,7 @@ const meta = {
     customer: { control: false },
     subscriptions: { control: false },
     invoices: { control: false },
-    onCreateSubscription: { control: false },
+    onCreateInvoice: { control: false },
     onBack: { control: false },
     onEdit: { control: false },
     onUpdateField: { control: false },
@@ -261,8 +260,8 @@ export const NavigatesSections: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
-    // One in the header, one on the Contracts table.
-    await expect(canvas.getAllByRole('button', { name: 'Create contract' })).toHaveLength(2)
+    // Contract creation lives elsewhere: no Create contract button on the page.
+    await expect(canvas.queryByRole('button', { name: 'Create contract' })).not.toBeInTheDocument()
 
     await userEvent.click(canvas.getByRole('tab', { name: /Invoices/ }))
     // The Invoices tab, with the full invoice number, is now on screen.
@@ -276,13 +275,17 @@ export const NavigatesSections: Story = {
   },
 }
 
-/** Create contract is the header's primary action. The detail view only hands off. */
-export const CreatesSubscription: Story = {
-  args: { onCreateSubscription: fn() },
+/** Create invoice is a More-menu item, not an inline header button. The detail view only hands off. */
+export const CreatesInvoiceFromMenu: Story = {
+  args: { onCreateInvoice: fn() },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
-    await expect(args.onCreateSubscription).toHaveBeenCalledOnce()
+    await expect(canvas.queryByRole('button', { name: 'Create contract' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('button', { name: 'Create invoice' })).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Customer actions' }))
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await body.findByRole('menuitem', { name: 'Create invoice' }))
+    await expect(args.onCreateInvoice).toHaveBeenCalledOnce()
     await expect(canvas.getByRole('heading', { level: 1, name: 'Acme Robotics' })).toBeVisible()
   },
 }

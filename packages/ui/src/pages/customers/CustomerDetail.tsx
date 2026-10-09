@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { MoreHorizontalIcon, PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
+import { PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,
@@ -13,17 +13,10 @@ import {
   type Subscription,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@ui/components/primitives/dropdown-menu'
 import { ScrollArea } from '@ui/components/primitives/scroll-area'
 import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
 import type { ActivityEvent } from '@ui/components/blocks/solution-billing-4/components/data'
-import { DetailTabs } from '@ui/compositions/DetailKit'
+import { DetailTabs, type DetailMenuItem } from '@ui/compositions/DetailKit'
 import { Section } from '@ui/compositions/Section'
 import { EditableCard } from '@ui/compositions/EditableCard'
 import { MetadataCard } from '@ui/compositions/MetadataCard'
@@ -40,7 +33,7 @@ import { SubscriptionCard } from './SubscriptionCard'
 
 /**
  * A customer's detail page: an avatar-tile `EntityHeader` (name; on the right
- * Create contract / Create invoice, "ID" and email copy chips, ⋯ menu)
+ * "ID" and email copy chips and a ⋯ menu holding Create invoice, Edit and Top up)
  * over line `DetailTabs`; the active tab renders as reference-style sections. It is presentational: the page fetches and hands data in.
  *
  * It shows only what the API has. A customer record carries no plan, currency or
@@ -74,9 +67,7 @@ export interface CustomerDetailProps {
   onTabChange: (tab: CustomerTab) => void
   /** Back to the customer list. */
   onBack: () => void
-  /** The header's primary action. */
-  onCreateSubscription: () => void
-  /** The header's second primary action; omitted, it is not shown. */
+  /** Adds "Create invoice" to the header menu and a "New invoice" button on the Invoices tab; omitted, neither is shown. */
   onCreateInvoice?: () => void
   /** Open the stepped Edit page: address and billing configuration. */
   onEdit?: () => void
@@ -132,7 +123,6 @@ export function CustomerDetail({
   tab,
   onTabChange,
   onBack,
-  onCreateSubscription,
   onCreateInvoice,
   onEdit,
   onUpdateField,
@@ -155,12 +145,34 @@ export function CustomerDetail({
       .map((part) => part[0]!.toUpperCase())
       .join('') || '?'
 
-  const addButton = (
-    <Button size="sm" className="h-8 px-3" onClick={onCreateSubscription}>
-      <PlusIcon aria-hidden="true" />
-      Create contract
-    </Button>
-  )
+  const menu: DetailMenuItem[] = [
+    ...(onCreateInvoice
+      ? [
+          {
+            id: 'create-invoice',
+            label: 'Create invoice',
+            icon: <ReceiptIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: onCreateInvoice,
+          },
+        ]
+      : []),
+    ...(onEdit
+      ? [
+          {
+            id: 'edit',
+            label: onUpdateField ? 'Edit billing details' : 'Edit customer',
+            icon: <PencilIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: onEdit,
+          },
+        ]
+      : []),
+    {
+      id: 'top-up-wallet',
+      label: 'Top up wallet',
+      icon: <WalletIcon className="text-muted-foreground" aria-hidden="true" />,
+      onSelect: () => onTabChange('wallet'),
+    },
+  ]
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
@@ -170,50 +182,8 @@ export function CustomerDetail({
         title={customer.name}
         id={customer.externalId || customer.id}
         {...(customer.email ? { email: customer.email } : {})}
-        primary={
-          <>
-            <Button className="h-8 px-3" onClick={onCreateSubscription}>
-              <PlusIcon aria-hidden="true" />
-              Create contract
-            </Button>
-            {onCreateInvoice ? (
-              <Button variant="outline" className="h-8 px-3" onClick={onCreateInvoice}>
-                <ReceiptIcon aria-hidden="true" />
-                Create invoice
-              </Button>
-            ) : null}
-          </>
-        }
-        actions={
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button
-                  variant="outline"
-                  size="icon"
-                  className="size-8"
-                  aria-label="Customer actions"
-                />
-              }
-            >
-              <MoreHorizontalIcon aria-hidden="true" />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-52">
-              <DropdownMenuGroup>
-                {onEdit ? (
-                  <DropdownMenuItem onClick={onEdit}>
-                    <PencilIcon className="text-muted-foreground" aria-hidden="true" />
-                    {onUpdateField ? 'Edit billing details' : 'Edit customer'}
-                  </DropdownMenuItem>
-                ) : null}
-                <DropdownMenuItem onClick={() => onTabChange('wallet')}>
-                  <WalletIcon className="text-muted-foreground" aria-hidden="true" />
-                  Top up wallet
-                </DropdownMenuItem>
-              </DropdownMenuGroup>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        }
+        menuLabel="Customer actions"
+        menu={menu}
       />
       <div className="flex flex-col gap-6 px-6 pb-10">
         <DetailTabs
@@ -246,7 +216,6 @@ export function CustomerDetail({
           <SubscriptionsTab
             subscriptions={subscriptions}
             isLoading={subscriptionsLoading}
-            addButton={addButton}
             formatDate={formatDate}
             onOpenPlan={onOpenPlan}
           />
@@ -415,7 +384,7 @@ function OverviewTab({
             </div>
           ) : (
             <p className="text-muted-foreground rounded-xl border border-dashed px-6 py-10 text-center text-[13px]">
-              No active contracts. Create one from the Contracts tab.
+              No active contracts.
             </p>
           )}
         </section>
@@ -443,30 +412,24 @@ function OverviewTab({
 function SubscriptionsTab({
   subscriptions,
   isLoading,
-  addButton,
   formatDate,
   onOpenPlan,
 }: {
   subscriptions: Subscription[]
   isLoading: boolean
-  addButton: ReactNode
   formatDate: FormatDate
   onOpenPlan: ((planId: string) => void) | undefined
 }) {
   return (
     <Section table title="Contracts">
       {isLoading ? (
-        <div>
-          <div className="flex justify-end px-6 py-3">{addButton}</div>
-          <div className="px-4 pb-4">
-            <LoadingRows />
-          </div>
+        <div className="px-4 py-4">
+          <LoadingRows />
         </div>
       ) : (
         <DetailTable
           compact
           label="Contracts"
-          action={addButton}
           facet={{ label: 'Status', value: (s) => SUBSCRIPTION_STATUS_LABEL[s.status] }}
           noun="contracts"
           rows={subscriptions}
@@ -520,7 +483,7 @@ function SubscriptionsTab({
               cell: (s) => <span className="text-muted-foreground font-mono text-xs">{s.id}</span>,
             },
           ]}
-          empty="No contracts yet. Create a contract to put this customer on a plan and start billing."
+          empty="No contracts yet."
         />
       )}
     </Section>

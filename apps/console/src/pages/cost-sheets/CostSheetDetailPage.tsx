@@ -110,9 +110,9 @@ export function CostSheetDetailPage({
         </>
       }
       id={data.lookupKey || data.id}
-      onEdit={() => setTab('information')}
       menuLabel="Cost sheet actions"
       menu={[
+        { id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') },
         ...(onEdit ? [{ id: 'edit', label: 'Edit cost sheet', onSelect: onEdit }] : []),
         { id: 'costs', label: 'View costs', onSelect: () => setTab('costs') },
       ]}

@@ -89,8 +89,8 @@ import { usePlanFormOptions } from './planFormOptions'
 /**
  * A plan's detail page — the hub where a plan is completed.
  *
- * Header: icon tile, name, status, lookup key as a copyable id, one primary Edit
- * and a ⋯ menu for the actions on the plan as a whole. Tabs: Charges,
+ * Header: icon tile, name, lookup key as a copyable id, badges and one ⋯ menu
+ * holding every action on the plan as a whole (sync, edit, duplicate, archive). Tabs: Charges,
  * Entitlements, Credit grants, Information. Beside the tabs, a persistent
  * "What customers see" preview reads the same charges, entitlements and grants.
  * Add and edit happen in dialogs; every destructive action goes through a
@@ -181,7 +181,7 @@ export function PlanDetailPage({
         id={record.lookupKey || record.id}
         badges={
           <>
-            <Pill>{planKind(charged)}</Pill>
+            {charges.isSuccess ? <Pill>{planKind(charged)}</Pill> : null}
             {billedLabel(charged) ? <Pill>{billedLabel(charged)}</Pill> : null}
             {isArchived ? <Status value={PLAN_STATUS_LABEL[record.status]} /> : null}
           </>
@@ -320,9 +320,9 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
   const [form, setForm] = useState<'add' | Charge | null>(null)
   const [terminating, setTerminating] = useState<Charge | null>(null)
 
-  if (charges.isPending) return <LoadingRows />
-
   const rows = charges.data ?? []
+  const loading = charges.isPending || (charges.isError && charges.isFetching)
+  const failed = charges.isError && !charges.isFetching
   const editing = form !== null && form !== 'add' ? form : null
 
   const close = () => {
@@ -351,18 +351,23 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
         <PlanChargesView
           charges={rows}
           readOnly={readOnly}
+          loading={loading}
+          error={failed}
+          onRetry={() => void charges.refetch()}
           meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
           onAdd={() => setForm('add')}
           onEdit={(charge) => setForm(charge)}
           onTerminate={(charge) => setTerminating(charge)}
         />
-        <PlanCustomerPreview
-          charges={rows}
-          entitlements={entitlements.data ?? []}
-          grants={grants.data ?? []}
-          meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-          featureUnit={(id) => featureOptions.find((f) => f.id === id)?.unit}
-        />
+        {charges.isSuccess ? (
+          <PlanCustomerPreview
+            charges={rows}
+            entitlements={entitlements.data ?? []}
+            grants={grants.data ?? []}
+            meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+            featureUnit={(id) => featureOptions.find((f) => f.id === id)?.unit}
+          />
+        ) : null}
       </div>
 
       <AddChargeDialog

@@ -81,8 +81,8 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
         </>
       }
       id={data.lookupKey || data.id}
-      onEdit={() => setTab('information')}
       menuLabel="Group actions"
+      menu={[{ id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') }]}
       tab={tab}
       onTabChange={setTab}
       tabs={[

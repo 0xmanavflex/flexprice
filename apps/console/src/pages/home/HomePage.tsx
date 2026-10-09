@@ -14,7 +14,7 @@ import {
   DEFAULT_SUBSCRIPTION_QUERY,
   InvoiceStatus,
 } from '@fp/domain'
-import type { Customer, Invoice, Subscription } from '@fp/domain'
+import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
 import { DashboardHome } from '@fp/ui/pages'
 import type {
   CustomersPanel,
@@ -176,16 +176,13 @@ export function HomePage() {
     windowSize: granularity.windowSize,
     ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
   })
-  /*
-   * Parked with usage by feature until quota-based metrics land: the prior
-   * window only fed the per-feature change.
-   *
-   * const priorAnalytics = useUsageAnalytics({
-   *   window: windows.prior,
-   *   windowSize: granularity.windowSize,
-   *   ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
-   * })
-   */
+  // The window before this one, so the tab strip's changes are two real
+  // measurements compared. The granularity is irrelevant to the totals it feeds.
+  const priorAnalytics = useUsageAnalytics({
+    window: windows.prior,
+    windowSize: UsageWindowSize.Day,
+    ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
+  })
 
   /*
    * Newest first, so once a row falls before the window every row after it is
@@ -223,8 +220,15 @@ export function HomePage() {
   // const apiKeys = useApiKeys()
 
   const eventsPanel = useMemo<EventsPanel>(
-    () => toEventsPanel(analytics.data, analytics.isPending, analytics.isError, granularityId),
-    [analytics.data, analytics.isPending, analytics.isError, granularityId],
+    () =>
+      toEventsPanel(
+        analytics.data,
+        priorAnalytics.data,
+        analytics.isPending,
+        analytics.isError,
+        granularityId,
+      ),
+    [analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError, granularityId],
   )
 
   const customersPanel = useMemo<CustomersPanel>(
@@ -232,7 +236,7 @@ export function HomePage() {
       toCustomersPanel(
         recentCustomers.data?.customers ?? [],
         recentCustomers.data?.total ?? null,
-        windows.current,
+        windows,
         range.days,
         recentCustomers.isPending,
         recentCustomers.isError,
@@ -311,6 +315,7 @@ export function HomePage() {
 
 function toEventsPanel(
   data: UsageAnalytics | undefined,
+  prior: UsageAnalytics | undefined,
   isPending: boolean,
   isError: boolean,
   granularityId: string,
@@ -333,6 +338,8 @@ function toEventsPanel(
     })),
     total: data.eventCount,
     revenue: data.revenue,
+    totalChangePercent: prior === undefined ? null : change(data.eventCount, prior.eventCount),
+    revenueChangePercent: revenueChange(data.revenue, prior?.revenue ?? null),
   }
 }
 
@@ -370,21 +377,31 @@ function toEventsPanel(
  * }
  */
 
+/**
+ * Change between two priced subtotals. Only comparable in one currency, and
+ * the server's two decimal strings are compared as a ratio — never summed or
+ * displayed — so the browser does no money arithmetic.
+ */
+function revenueChange(current: Money | null, prior: Money | null): number | null {
+  if (current === null || prior === null || current.currency !== prior.currency) return null
+  return change(Number(current.amount), Number(prior.amount))
+}
+
 function toCustomersPanel(
   rows: Customer[],
   total: number | null,
-  window: { start: Date; end: Date },
+  windows: { current: { start: Date; end: Date }; prior: { start: Date; end: Date } },
   days: number,
   isPending: boolean,
   isError: boolean,
 ): CustomersPanel {
+  const window = windows.current
   const blank: CustomersPanel = { status: 'loading', newCount: null, partial: false, points: [] }
   if (isError) return { ...blank, status: 'unavailable' }
   if (isPending) return blank
 
-  const created = rows
-    .map((row) => row.createdAt)
-    .filter((at): at is Date => at !== null && at >= window.start && at < window.end)
+  const dates = rows.map((row) => row.createdAt).filter((at): at is Date => at !== null)
+  const created = dates.filter((at) => at >= window.start && at < window.end)
   if (created.length === 0) return { ...blank, status: 'empty', newCount: 0 }
 
   // Every row on the page is new and the server holds more: the count is a floor.
@@ -400,7 +417,20 @@ function toCustomersPanel(
     }
   })
 
-  return { status: 'ready', newCount: created.length, partial, points }
+  /*
+   * The prior window is only countable when the page reaches back past its
+   * start (newest first, so nothing older is hiding) or already holds every
+   * customer. Otherwise the earlier count would be a floor posing as a total,
+   * and no change is shown.
+   */
+  const priorComplete =
+    (total !== null && total <= rows.length) || dates.some((at) => at < windows.prior.start)
+  const priorCount = dates.filter(
+    (at) => at >= windows.prior.start && at < windows.prior.end,
+  ).length
+  const changePercent = partial || !priorComplete ? null : change(created.length, priorCount)
+
+  return { status: 'ready', newCount: created.length, partial, points, changePercent }
 }
 
 function toSubscriptionsPanel(

@@ -69,11 +69,11 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
         ) : undefined
       }
       id={data.id}
-      {...(canProcess
-        ? { primary: { label: 'Process payment', onClick: () => setDialog('process') } }
-        : {})}
       menuLabel="Payment actions"
       menu={[
+        ...(canProcess
+          ? [{ id: 'process', label: 'Process payment', onSelect: () => setDialog('process') }]
+          : []),
         {
           id: 'delete',
           label: 'Delete payment',

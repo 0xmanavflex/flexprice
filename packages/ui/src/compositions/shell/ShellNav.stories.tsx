@@ -23,9 +23,9 @@ const navGroups: ShellNavGroup[] = [
         label: 'Product Catalog',
         icon: <PackageIcon className="size-4" />,
         items: [
-          { id: 'features', label: 'Features', count: 12 },
-          { id: 'plans', label: 'Plans', count: 5 },
-          { id: 'coupons', label: 'Coupons', count: 0 },
+          { id: 'features', label: 'Features' },
+          { id: 'plans', label: 'Plans' },
+          { id: 'coupons', label: 'Coupons' },
         ],
       },
       {
@@ -33,8 +33,8 @@ const navGroups: ShellNavGroup[] = [
         label: 'Billing',
         icon: <ReceiptIcon className="size-4" />,
         items: [
-          { id: 'customers', label: 'Customers', count: 30 },
-          { id: 'invoices', label: 'Invoices', count: 40 },
+          { id: 'customers', label: 'Customers' },
+          { id: 'invoices', label: 'Invoices' },
         ],
       },
       { id: 'revenue', label: 'Revenue', icon: <BarChart3Icon className="size-4" /> },
@@ -76,18 +76,16 @@ const NAV_IDS = [
   'webhooks',
 ]
 
-function shapeItem(item: ShellNavItem, showCounts: boolean, showIcons: boolean): ShellNavItem {
-  const { count, icon, items, ...rest } = item
+function shapeItem(item: ShellNavItem, showIcons: boolean): ShellNavItem {
+  const { icon, items, ...rest } = item
   return {
     ...rest,
-    ...(showCounts && count !== undefined ? { count } : {}),
     ...(showIcons && icon ? { icon } : {}),
-    ...(items ? { items: items.map((child) => shapeItem(child, showCounts, showIcons)) } : {}),
+    ...(items ? { items: items.map((child) => shapeItem(child, showIcons)) } : {}),
   }
 }
 
 type PlaygroundArgs = Omit<ComponentProps<typeof ShellNav>, 'groups'> & {
-  showCounts: boolean
   showIcons: boolean
   showGroupTitles: boolean
   showPinnedFooter: boolean
@@ -120,30 +118,28 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Move the active item to open a different group, and toggle counts, icons, group titles and the pinned footer. */
+/** Move the active item to open a different group, and toggle icons, group titles and the pinned footer. */
 export const Playground: StoryObj<PlaygroundArgs> = {
   args: {
     activeItemId: 'features',
-    showCounts: true,
     showIcons: true,
     showGroupTitles: true,
     showPinnedFooter: false,
     onNavigate: fn(),
   },
   argTypes: {
-    showCounts: { control: 'boolean' },
     showIcons: { control: 'boolean' },
     showGroupTitles: { control: 'boolean' },
     showPinnedFooter: { control: 'boolean', description: 'Adds a pinned group under a rule.' },
   },
-  render: ({ showCounts, showIcons, showGroupTitles, showPinnedFooter, ...args }) => (
+  render: ({ showIcons, showGroupTitles, showPinnedFooter, ...args }) => (
     <ShellNav
       {...args}
       groups={[...navGroups, ...(showPinnedFooter ? [FOOTER_GROUP] : [])].map(
         ({ title, items, ...group }): ShellNavGroup => ({
           ...group,
           ...(showGroupTitles && title ? { title } : {}),
-          items: items.map((item) => shapeItem(item, showCounts, showIcons)),
+          items: items.map((item) => shapeItem(item, showIcons)),
         }),
       )}
     />
@@ -169,20 +165,6 @@ export const ReportsNavigation: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /^plans/i }))
     await expect(args.onNavigate).toHaveBeenCalledWith('plans')
-  },
-}
-
-/**
- * Counts answer "is there anything here?" before the click — zero included.
- *
- * They render outside the row's button, so they sit outside the accessible
- * name too, which is why the row states the count itself.
- */
-export const CountsAreVisible: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByText('12')).toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'Coupons, 0' })).toBeInTheDocument()
   },
 }
 

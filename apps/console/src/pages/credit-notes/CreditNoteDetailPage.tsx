@@ -77,9 +77,11 @@ export function CreditNoteDetailPage({
         </>
       }
       id={data.id}
-      {...(isDraft ? { primary: { label: 'Finalize', onClick: () => setDialog('finalize') } } : {})}
       menuLabel="Credit note actions"
       menu={[
+        ...(isDraft
+          ? [{ id: 'finalize', label: 'Finalize', onSelect: () => setDialog('finalize') }]
+          : []),
         {
           id: 'void',
           label: 'Void credit note',

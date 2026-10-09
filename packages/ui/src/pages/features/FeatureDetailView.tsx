@@ -18,28 +18,19 @@ import {
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import {
-  ArchiveIcon,
-  ChevronRightIcon,
-  CopyIcon,
-  MoreHorizontalIcon,
-  PencilIcon,
-  PlusIcon,
-} from 'lucide-react'
+import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon, PlusIcon } from 'lucide-react'
 import { Button } from '@ui/components/primitives/button'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@ui/components/primitives/dropdown-menu'
 import { DetailHeader } from '../../compositions/DetailHeader'
 import { EditableCard } from '../../compositions/EditableCard'
 import { LoadingRows } from '../../compositions'
 import { MetadataCard } from '../../compositions/MetadataCard'
 import { Section } from '../../compositions/Section'
-import { DetailTabs, Properties } from '../../compositions/DetailKit'
+import {
+  DetailMoreMenu,
+  DetailTabs,
+  Properties,
+  type DetailMenuItem,
+} from '../../compositions/DetailKit'
 import { MetricChart, type MetricPoint } from '../shared/charts'
 import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
@@ -235,6 +226,36 @@ export function FeatureDetailView({
     { value: 'information', label: 'Information' },
   ]
 
+  const menu: DetailMenuItem[] = [
+    {
+      id: 'edit',
+      label: 'Edit',
+      icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+      onSelect: onEditConfiguration,
+    },
+    ...(onDuplicate
+      ? [
+          {
+            id: 'duplicate',
+            label: 'Duplicate',
+            icon: <CopyIcon className="text-muted-foreground" aria-hidden />,
+            onSelect: onDuplicate,
+          },
+        ]
+      : []),
+    ...(onDelete
+      ? [
+          {
+            id: 'delete',
+            label: 'Delete feature',
+            icon: <ArchiveIcon aria-hidden />,
+            destructive: true,
+            onSelect: onDelete,
+          },
+        ]
+      : []),
+  ]
+
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       <DetailHeader
@@ -247,47 +268,7 @@ export function FeatureDetailView({
             {archived ? <Status value="archived" /> : null}
           </>
         }
-        primary={
-          <Button variant="outline" className="h-8 px-3" onClick={onEditConfiguration}>
-            <PencilIcon aria-hidden />
-            Edit
-          </Button>
-        }
-        actions={
-          <>
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                render={
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="size-8"
-                    aria-label="More actions"
-                  />
-                }
-              >
-                <MoreHorizontalIcon aria-hidden />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-52">
-                {onDuplicate ? (
-                  <DropdownMenuItem onClick={onDuplicate}>
-                    <CopyIcon className="text-muted-foreground" aria-hidden />
-                    Duplicate
-                  </DropdownMenuItem>
-                ) : null}
-                {onDelete ? (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem variant="destructive" onClick={onDelete}>
-                      <ArchiveIcon aria-hidden />
-                      Delete feature
-                    </DropdownMenuItem>
-                  </>
-                ) : null}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </>
-        }
+        actions={<DetailMoreMenu label="More actions" items={menu} />}
       />
 
       <DetailTabs tabs={tabs} value={active} onChange={(next) => onTabChange(next as FeatureTab)} />

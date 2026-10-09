@@ -245,12 +245,16 @@ export function MetricChart({
 
   if (!active) return null
 
-  const wide = tabs.length > 3
+  // Equal columns at every width from `md` up: the strip divides its width by
+  // the number of tabs rather than by a fixed 3 or 6, so four tabs are four
+  // equal cells and never three-and-one. Below `md` they sit two to a row.
+  const columns = { '--tab-cols': tabs.length } as CSSProperties
 
   return (
     <div className={cn('bg-muted/40 rounded-xl border p-1', className)}>
       <div
-        className={cn('grid grid-cols-2 md:grid-cols-3', wide && 'xl:grid-cols-6')}
+        className="grid grid-cols-2 md:grid-cols-[repeat(var(--tab-cols),minmax(0,1fr))]"
+        style={columns}
         role="tablist"
         aria-label="Metrics"
       >
@@ -264,8 +268,8 @@ export function MetricChart({
             aria-controls={`${uid}-panel`}
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              'relative flex flex-col items-start gap-1 px-4 py-3 text-left transition-colors',
-              index > 0 && (wide ? 'xl:border-l' : 'md:border-l'),
+              'relative flex min-w-0 flex-col items-start gap-1 px-4 py-3 text-left transition-colors',
+              index > 0 && 'md:border-l',
               tab.id === active.id
                 ? 'text-foreground'
                 : 'text-muted-foreground hover:text-foreground',

@@ -224,6 +224,13 @@ export {
 export type { EnvironmentRenameFormProps } from './environments/EnvironmentRenameForm'
 export { SettingsShell, SettingsShellProvenance } from './settings/SettingsShell'
 export type { SettingsSection, SettingsShellProps, SettingsTab } from './settings/SettingsShell'
+export {
+  THEME_CHOICES,
+  ThemeChoiceCards,
+  ThemeChoiceCardsProvenance,
+  ThemePreferenceCards,
+} from './settings/AppearanceSettings'
+export type { ThemeChoice, ThemeChoiceCardsProps } from './settings/AppearanceSettings'
 
 /*
  * The shared chart library.

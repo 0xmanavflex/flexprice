@@ -5,7 +5,6 @@ import {
   SECONDARY,
   hrefForNavId,
   breadcrumbForPath,
-  groupForNavId,
   navEntryForPath,
   pathForNavId,
   toNavGroups,
@@ -40,7 +39,7 @@ describe('navEntryForPath', () => {
   })
 
   it.each([
-    ['?section=team&tab=roles', 'settings'],
+    ['?section=team&tab=members', 'settings'],
     ['?section=invoicing&tab=invoices', 'settings'],
     ['?section=tags&tab=tags', 'settings-tags'],
 
@@ -51,22 +50,6 @@ describe('navEntryForPath', () => {
 
   it('returns nothing for a path with no entry', () => {
     expect(navEntryForPath('/nonsense')).toBeUndefined()
-  })
-})
-
-describe('groupForNavId', () => {
-  it('finds the group a child belongs to', () => {
-    expect(groupForNavId('features')).toBe('catalog')
-    expect(groupForNavId('invoices')).toBe('billing')
-  })
-
-  it('treats a top-level entry as its own group', () => {
-    expect(groupForNavId('home')).toBe('home')
-  })
-
-  it('handles an unknown id', () => {
-    expect(groupForNavId(undefined)).toBeUndefined()
-    expect(groupForNavId('nonsense')).toBeUndefined()
   })
 })
 
@@ -82,18 +65,11 @@ describe('toNavGroups', () => {
     ])
   })
 
-  it('carries counts onto children and top-level rows, and omits them when absent', () => {
-    const [group] = toNavGroups({}, { features: 12, customers: 40 })
-    const catalog = group?.items.find((item) => item.id === 'catalog')
-    expect(catalog?.items?.find((c) => c.id === 'features')?.count).toBe(12)
-    expect(catalog?.items?.find((c) => c.id === 'plans')).not.toHaveProperty('count')
-    expect(group?.items.find((item) => item.id === 'customers')?.count).toBe(40)
-  })
-
-  it('shows a zero count rather than hiding it', () => {
-    const [group] = toNavGroups({}, { plans: 0 })
-    const catalog = group?.items.find((item) => item.id === 'catalog')
-    expect(catalog?.items?.find((c) => c.id === 'plans')?.count).toBe(0)
+  it('carries no counts onto any row', () => {
+    const rows = toNavGroups().flatMap((group) =>
+      group.items.flatMap((item) => [item, ...(item.items ?? [])]),
+    )
+    for (const row of rows) expect(row).not.toHaveProperty('count')
   })
 })
 

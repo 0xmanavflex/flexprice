@@ -128,6 +128,7 @@ const meta = {
     isFinalizing: false,
     paymentsLoading: false,
     creditNotesLoading: false,
+    showZeroAmounts: false,
     onBack: fn(),
     onEdit: fn(),
     onFinalize: fn(),
@@ -157,6 +158,7 @@ const meta = {
     isFinalizing: { control: 'boolean' },
     paymentsLoading: { control: 'boolean' },
     creditNotesLoading: { control: 'boolean' },
+    showZeroAmounts: { control: 'boolean' },
     onBack: { control: false },
     onEdit: { control: false },
     onFinalize: { control: false },
@@ -187,7 +189,7 @@ type Story = StoryObj<typeof meta>
 /** Status, payment status, and line, payment, credit-note and event counts as controls. */
 export const Playground: Story = {}
 
-/** Plain "Invoice" title; an open invoice whose last payment failed, with status chips, ID chip and the two primary actions on the right. */
+/** Plain "Invoice" title; an open invoice whose last payment failed, with status chips, ID chip and the More menu on the right. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -196,9 +198,9 @@ export const Default: Story = {
     const header = within(canvas.getByRole('banner'))
     await expect(header.getByText('Finalized')).toBeVisible()
     await expect(header.getByText('Payment failed')).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Download PDF' })).toBeEnabled()
-    // No hosted invoice page yet, so Copy link waits.
-    await expect(canvas.getByRole('button', { name: 'Copy link' })).toBeDisabled()
+    // The header holds only the chips, the ID and More: no inline action buttons.
+    await expect(header.queryByRole('button', { name: 'Download PDF' })).toBeNull()
+    await expect(header.queryByRole('button', { name: 'Copy link' })).toBeNull()
     await expect(canvas.getByRole('button', { name: /^Copy ID / })).toHaveTextContent('ID')
     // Stripe wording on the document.
     await expect(canvas.getByText('Date of issue')).toBeVisible()
@@ -212,7 +214,7 @@ export const Default: Story = {
   },
 }
 
-/** Everything but the two primary actions lives in More. */
+/** Every action lives in More, Download PDF and Copy link included. */
 export const MoreMenu: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
@@ -221,6 +223,14 @@ export const MoreMenu: Story = {
     await expect(
       await screen.findByRole('menuitem', { name: /Record payment/ }),
     ).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('menuitem', { name: /Download PDF/ }))
+    await expect(args.onDownload).toHaveBeenCalledOnce()
+    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
+    await screen.findByRole('menuitem', { name: 'Void invoice' })
+    await expect(screen.getByRole('menuitem', { name: /Copy link/ })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    )
     await expect(screen.getByRole('menuitem', { name: /Issue credit note/ })).toBeInTheDocument()
     await expect(screen.getByRole('menuitem', { name: /Send invoice/ })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('menuitem', { name: 'Void invoice' }))
@@ -359,5 +369,24 @@ export const ShowsZeroLines: Story = {
     await expect(canvas.queryByText('Support add-on')).toBeNull()
     await userEvent.click(canvas.getByRole('switch', { name: /Show zero amounts/ }))
     await expect(await canvas.findByText('Support add-on')).toBeInTheDocument()
+  },
+}
+
+/** Zero lines shown from the start; the items table sits clear of the toggle row above it. */
+export const ZeroAmountsShown: Story = {
+  args: { lineCount: 5, showZeroAmounts: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('switch', { name: /Show zero amounts/ })).toBeChecked()
+    await expect(canvas.getByText('Support add-on')).toBeVisible()
+  },
+}
+
+/** Bill to names the customer without an avatar and tags the email and address rows. */
+export const BillTo: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Billing email')).toBeVisible()
+    await expect(canvas.getByText('Billing address')).toBeVisible()
   },
 }

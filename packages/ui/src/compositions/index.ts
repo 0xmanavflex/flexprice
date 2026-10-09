@@ -116,6 +116,7 @@ export {
   CopyEmail,
   CopyId,
   DetailHeaderCluster,
+  DetailMoreMenu,
   DetailKitProvenance,
   DetailTabs,
   Dot,
@@ -125,7 +126,7 @@ export {
   SplitMeter,
   SummaryRow,
 } from './DetailKit'
-export type { Choice, DetailTabSpec, SimpleColumn } from './DetailKit'
+export type { Choice, DetailMenuItem, DetailTabSpec, SimpleColumn } from './DetailKit'
 export { GuidedEmptyState } from './GuidedEmptyState'
 export type { GuideCard, GuidedEmptyStateProps } from './GuidedEmptyState'
 export { ConnectorCard } from './ConnectorCard'

@@ -5,6 +5,7 @@ import {
   BadgeDollarSignIcon,
   BellIcon,
   CoinsIcon,
+  PaletteIcon,
   PercentIcon,
   ReceiptTextIcon,
   RepeatIcon,
@@ -21,7 +22,6 @@ import { PortalPanel } from './PortalPanel'
 import { MembersPanel } from './MembersPanel'
 import { PlanUsagePanel } from './PlanUsagePanel'
 import { ProfilePanel } from './ProfilePanel'
-import { RolesPanel } from './RolesPanel'
 import { SubscriptionsPanel } from './SubscriptionsPanel'
 import { TagsPanel } from './TagsPanel'
 import { WalletAlertsPanel } from './WalletAlertsPanel'
@@ -84,6 +84,7 @@ const SECTION_ICONS: Record<string, ReactNode> = {
   alerts: <BellIcon aria-hidden className="size-4" />,
   tags: <TagIcon aria-hidden className="size-4" />,
   'customer-experience': <SmileIcon aria-hidden className="size-4" />,
+  appearance: <PaletteIcon aria-hidden className="size-4" />,
 }
 
 /**
@@ -212,8 +213,6 @@ function SettingsPanel({
       return <PlanUsagePanel />
     case 'team/members':
       return <MembersPanel />
-    case 'team/roles':
-      return <RolesPanel />
     case 'invoicing/invoices':
       return <InvoicesPanel />
     case 'subscription/subscriptions':

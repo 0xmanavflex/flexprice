@@ -53,8 +53,12 @@ test('onboarding: adding a step saves it into the workflow', async ({ page }) =>
   await expect(steps).toHaveCount(before + 1)
 })
 
-test('single sign-on says plainly that the deployment does not offer it', async ({ page }) => {
-  await page.goto('/settings?section=team&tab=sso')
-  await expect(page.getByRole('status')).toContainText(/single sign-on|SAML/i)
-  await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0)
+test('team is a single page with no tab strip, and old role and SSO links land on it', async ({
+  page,
+}) => {
+  for (const tab of ['members', 'roles', 'sso']) {
+    await page.goto(`/settings?section=team&tab=${tab}`)
+    await expect(page.getByRole('navigation', { name: 'Settings' })).toBeVisible()
+    await expect(page.getByRole('tablist')).toHaveCount(0)
+  }
 })

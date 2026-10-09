@@ -1,4 +1,3 @@
-import type { CountableId } from '@fp/query'
 import type { ShellCrumb, ShellNavGroup, ShellNavItem } from '@fp/ui/compositions'
 
 /**
@@ -165,7 +164,7 @@ export function labelForNavId(id: string): string | undefined {
     ?.label
 }
 
-/** A parent, if the entry has one. Drives both the breadcrumb and the counts. */
+/** A parent, if the entry has one. Drives the breadcrumb. */
 export function parentForNavId(id: string | undefined): NavEntry | undefined {
   if (!id) return undefined
   // Discounts, Taxes, Cost Tracking and Tags are rows of Settings that keep their own routes.
@@ -193,52 +192,21 @@ export function breadcrumbForPath(pathname: string, search = ''): ShellCrumb[] {
   return parent ? [{ label: parent.label }, { label }] : [{ label }]
 }
 
-/**
- * Which entities to count, by the group that is open.
- *
- * Only the expanded group is counted — nobody needs the invoice count while
- * looking at the catalogue, and counting everything on every navigation would
- * be a dozen requests to render a sidebar.
- */
-export const GROUP_COUNTS: Record<string, readonly CountableId[]> = {
-  catalog: ['features', 'plans'],
-  billing: ['invoices'],
-}
-
-/** Top-level rows that show their count whichever group is open. */
-export const ALWAYS_COUNTED: readonly CountableId[] = ['customers', 'subscriptions']
-
-/** The group an entry sits in, so its counts can be fetched. */
-export function groupForNavId(id: string | undefined): string | undefined {
-  if (!id) return undefined
-  return [...NAV, ...FOOTER_NAV].find(
-    (entry) => entry.id === id || (entry.children ?? []).some((child) => child.id === id),
-  )?.id
-}
-
-function toItems(
-  entries: NavEntry[],
-  icons: Record<string, React.ReactNode>,
-  counts: Partial<Record<string, number>>,
-): ShellNavItem[] {
+function toItems(entries: NavEntry[], icons: Record<string, React.ReactNode>): ShellNavItem[] {
   return entries.map((entry) => ({
     id: entry.id,
     label: entry.label,
     ...(icons[entry.id] ? { icon: icons[entry.id] } : {}),
-    ...(counts[entry.id] !== undefined ? { count: counts[entry.id] } : {}),
-    ...(entry.children ? { items: toItems(entry.children, {}, counts) } : {}),
+    ...(entry.children ? { items: toItems(entry.children, {}) } : {}),
   }))
 }
 
-/** Builds what the shell renders. Counts come from the app. */
-export function toNavGroups(
-  icons: Record<string, React.ReactNode> = {},
-  counts: Partial<Record<string, number>> = {},
-): ShellNavGroup[] {
+/** Builds what the shell renders. */
+export function toNavGroups(icons: Record<string, React.ReactNode> = {}): ShellNavGroup[] {
   // The primary tree carries no heading — a lone label over the main section
   // names the obvious. The footer group is pinned to the bottom of the rail.
   return [
-    { id: 'main', items: toItems(NAV, icons, counts) },
-    { id: 'footer', pinned: true, items: toItems(FOOTER_NAV, icons, counts) },
+    { id: 'main', items: toItems(NAV, icons) },
+    { id: 'footer', pinned: true, items: toItems(FOOTER_NAV, icons) },
   ]
 }

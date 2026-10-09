@@ -307,7 +307,8 @@ test.describe('live flows', () => {
     // The list only renames inline; the in-place edit and Archive live on the detail page.
     await row(name).getByText(`E2E${tag}`).click()
     await expect(page.getByRole('heading', { name: name })).toBeVisible()
-    await page.getByRole('button', { name: 'Edit', exact: true }).click()
+    await page.getByRole('button', { name: 'Coupon actions' }).click()
+    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
     await fill(main, 'Name', `${name}-edited`)
     await saveInPlace(/\/v1\/coupons\/[^/]+$/)
     await expect(page.getByRole('heading', { name: `${name}-edited` })).toBeVisible({
@@ -361,7 +362,7 @@ test.describe('live flows', () => {
   test('tax rate: create, edit, delete', async () => {
     const name = `${run}-tax`
     await open('/taxes')
-    await page.getByRole('button', { name: 'New tax rate' }).first().click()
+    await page.getByRole('button', { name: 'Add tax' }).first().click()
     const main = page.getByRole('main')
     await fill(main, 'Name', name)
     await fill(main, 'Code', `E2E${tag}`)

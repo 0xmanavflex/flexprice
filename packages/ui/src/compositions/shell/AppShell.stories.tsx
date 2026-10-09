@@ -25,9 +25,9 @@ const navGroups: ShellNavGroup[] = [
         label: 'Product Catalog',
         icon: <PackageIcon className="size-4" />,
         items: [
-          { id: 'features', label: 'Features', count: 12 },
-          { id: 'plans', label: 'Plans', count: 5 },
-          { id: 'coupons', label: 'Coupons', count: 0 },
+          { id: 'features', label: 'Features' },
+          { id: 'plans', label: 'Plans' },
+          { id: 'coupons', label: 'Coupons' },
         ],
       },
       {
@@ -35,8 +35,8 @@ const navGroups: ShellNavGroup[] = [
         label: 'Billing',
         icon: <ReceiptIcon className="size-4" />,
         items: [
-          { id: 'customers', label: 'Customers', count: 30 },
-          { id: 'invoices', label: 'Invoices', count: 40 },
+          { id: 'customers', label: 'Customers' },
+          { id: 'invoices', label: 'Invoices' },
         ],
       },
       { id: 'revenue', label: 'Revenue', icon: <BarChart3Icon className="size-4" /> },
@@ -142,7 +142,10 @@ const meta = {
     onSettings: { control: false },
     onSignOut: { control: false },
     search: { control: false },
-    logo: { control: false },
+    logo: {
+      control: false,
+      description: 'Replaces the default Flexprice icon at the top of the sidebar.',
+    },
     pinned: { control: false },
     breadcrumb: { control: false },
     headerActions: { control: false },
@@ -268,28 +271,26 @@ export const ReportsNavigation: Story = {
   },
 }
 
+/**
+ * The Flexprice icon heads the sidebar beside the tenant's name. It is
+ * decorative (the name beside it already says whose workspace this is), so it
+ * carries no alt text, and there is no theme control in the header.
+ */
+export const BrandMarkHeadsTheSidebar: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const mark = canvasElement.querySelector('[data-slot="sidebar-header"] img')
+    await expect(mark).not.toBeNull()
+    await expect(mark).toHaveAttribute('aria-hidden', 'true')
+    await expect(canvas.getByText('Flexprice')).toBeInTheDocument()
+    await expect(canvas.queryByRole('button', { name: /theme/i })).not.toBeInTheDocument()
+  },
+}
+
 export const ReportsAGroupClick: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /billing/i }))
     await expect(args.onNavigate).toHaveBeenCalledWith('billing')
-  },
-}
-
-/**
- * Counts answer "is there anything here?" before the click — zero included.
- *
- * They render outside the row's button, so that the number does not compete
- * with the label for width. That puts them outside the accessible name too,
- * which is why the row states the count itself.
- */
-export const CountsAreVisible: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByText('12')).toBeInTheDocument()
-    await expect(canvas.getByText('0')).toBeInTheDocument()
-
-    await expect(canvas.getByRole('button', { name: 'Features, 12' })).toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'Coupons, 0' })).toBeInTheDocument()
   },
 }
 

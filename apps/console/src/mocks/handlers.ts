@@ -1430,6 +1430,29 @@ function patchRow(rows: Record<string, unknown>[], id: string, patch: Record<str
   return HttpResponse.json(rows[index])
 }
 
+/** The embedded meter a usage price carries under `expand=meters`, from the features that own it. */
+function meterOf(meterId: string): Record<string, unknown> | null {
+  for (const feature of (corpus['features'] as Corpus).items) {
+    const meter = (feature as Record<string, unknown>)['meter'] as
+      Record<string, unknown> | undefined
+    if (meter && readString(meter, 'id') === meterId) return meter
+  }
+  return null
+}
+
+function formatMoney(amount: string, currency: string): string {
+  const value = Number(amount)
+  if (!Number.isFinite(value)) return amount
+  try {
+    return new Intl.NumberFormat('en-US', {
+      style: 'currency',
+      currency: (currency || 'usd').toUpperCase(),
+    }).format(value)
+  } catch {
+    return amount
+  }
+}
+
 function removeRow(rows: Record<string, unknown>[], id: string) {
   const index = findIndexById(rows, id)
   if (index >= 0) rows.splice(index, 1)
@@ -1760,7 +1783,21 @@ const DASHBOARD_CORPUS: Record<string, Corpus> = {
   })(),
 }
 
+/**
+ * Prices, held as a mutable copy of the corpus.
+ *
+ * A plan's Charges tab refetches the prices search after every add, edit and
+ * terminate. If the mutations only echoed, the list would not change and the
+ * flow would look broken in mock mode; so they write here and the search reads
+ * from here.
+ */
+const priceCorpus: Corpus = (() => {
+  const base = corpus.prices as Corpus
+  return { items: [...base.items], pagination: { ...base.pagination } }
+})()
+
 function sourceFor(key: string): Corpus {
+  if (key === 'prices') return priceCorpus
   return DASHBOARD_CORPUS[key] ?? (corpus[key] as Corpus)
 }
 
@@ -2601,25 +2638,50 @@ export const handlers = [
     }),
   ),
 
-  // Saving a plan's charges. The bulk endpoint echoes each price back with an
-  // id, so the editor's success path — close, invalidate, refetch — runs end to
-  // end and the Overview tab shows what was just saved.
+  // A plan's charges. Create, edit and terminate write to `priceCorpus`, so the
+  // refetch that follows each one shows the change. The real API versions an
+  // edit and end-dates a delete; the mock patches and removes in place, which
+  // is the same thing as far as the plan's active charge list can tell.
   http.post(`${BASE}/prices/bulk`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as { items?: Record<string, unknown>[] }
-    const items = (body.items ?? []).map((item, index) => ({
-      ...item,
-      id: `price_new_${Date.now()}_${index}`,
-      status: 'published',
-    }))
+    const now = new Date().toISOString()
+    const items = (body.items ?? []).map((item, index) => {
+      const meterId = readString(item, 'meter_id')
+      const meter = meterId ? meterOf(meterId) : null
+      const amount = readString(item, 'amount')
+      return {
+        ...item,
+        id: `price_new_${Date.now()}_${index}`,
+        status: 'published',
+        created_at: now,
+        updated_at: now,
+        start_date: now,
+        ...(amount ? { display_amount: formatMoney(amount, readString(item, 'currency')) } : {}),
+        ...(meter ? { meter } : {}),
+      }
+    })
+    priceCorpus.items.push(...items)
+    priceCorpus.pagination.total = priceCorpus.items.length
     return HttpResponse.json({ items }, { status: 201 })
   }),
   http.put(`${BASE}/prices/:id`, async ({ request, params }) => {
-    const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json({ ...body, id: params['id'], status: 'published' })
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
+    const { effective_from: _effectiveFrom, ...patch } = body
+    const amount = readString(patch, 'amount')
+    const existing = byId('prices', String(params['id']))
+    return patchRow(priceCorpus.items, String(params['id']), {
+      ...patch,
+      updated_at: new Date().toISOString(),
+      ...(amount
+        ? { display_amount: formatMoney(amount, readString(existing ?? {}, 'currency')) }
+        : {}),
+    })
   }),
-  http.delete(`${BASE}/prices/:id`, ({ params }) =>
-    HttpResponse.json({ success: true, id: params['id'] }),
-  ),
+  http.delete(`${BASE}/prices/:id`, ({ params }) => {
+    removeRow(priceCorpus.items, String(params['id']))
+    priceCorpus.pagination.total = priceCorpus.items.length
+    return HttpResponse.json({ success: true, id: params['id'] })
+  }),
 
   // Granting entitlements, the same bulk shape.
   http.post(`${BASE}/entitlements/bulk`, async ({ request }) => {

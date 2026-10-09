@@ -107,12 +107,6 @@ export function CustomerDetailPage({
       tab={tab}
       onTabChange={onTabChange}
       onBack={onNavigateToList}
-      onCreateSubscription={() =>
-        void navigate({
-          to: '/customers/$customerId/subscriptions/new',
-          params: { customerId: customer.data.id },
-        })
-      }
       onCreateInvoice={() => void navigate({ to: '/invoices/new' })}
       onEdit={() => onEdit(customer.data.id)}
       onOpenInvoice={(invoiceId) =>

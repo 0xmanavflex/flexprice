@@ -4,12 +4,17 @@ import { BillingModel, BillingPeriod } from '@fp/domain'
 import { PlanChargesView, type PlanChargesViewProps } from './PlanChargesView'
 import { makeCharges, meterUnitOf } from './planDetailFixtures'
 
-interface PlaygroundProps extends Pick<PlanChargesViewProps, 'onAdd' | 'onEdit' | 'onTerminate'> {
+interface PlaygroundProps extends Pick<
+  PlanChargesViewProps,
+  'onAdd' | 'onEdit' | 'onTerminate' | 'onRetry'
+> {
   fixedCharges: number
   usageCharges: number
   usageModel: BillingModel
   billingPeriod: BillingPeriod
   readOnly: boolean
+  loading: boolean
+  error: boolean
 }
 
 /** Fixture charges built from the counts, so the empty, short and long states are one drag away. */
@@ -19,6 +24,8 @@ function ChargesPlayground({
   usageModel,
   billingPeriod,
   readOnly,
+  loading,
+  error,
   ...handlers
 }: PlaygroundProps) {
   const charges = makeCharges(fixedCharges, usageCharges, {
@@ -26,7 +33,14 @@ function ChargesPlayground({
     billingPeriod,
   })
   return (
-    <PlanChargesView charges={charges} readOnly={readOnly} meterUnit={meterUnitOf} {...handlers} />
+    <PlanChargesView
+      charges={charges}
+      readOnly={readOnly}
+      loading={loading}
+      error={error}
+      meterUnit={meterUnitOf}
+      {...handlers}
+    />
   )
 }
 
@@ -41,7 +55,10 @@ const meta = {
     usageModel: BillingModel.Tiered,
     billingPeriod: BillingPeriod.Monthly,
     readOnly: false,
+    loading: false,
+    error: false,
     onAdd: fn(),
+    onRetry: fn(),
     onEdit: fn(),
     onTerminate: fn(),
   },
@@ -51,6 +68,9 @@ const meta = {
     usageModel: { control: 'select', options: Object.values(BillingModel) },
     billingPeriod: { control: 'select', options: Object.values(BillingPeriod) },
     readOnly: { control: 'boolean' },
+    loading: { control: 'boolean' },
+    error: { control: 'boolean' },
+    onRetry: { control: false },
     onAdd: { control: false },
     onEdit: { control: false },
     onTerminate: { control: false },
@@ -80,6 +100,28 @@ export const Empty: Story = {
     await expect(canvas.getByText('No charges yet')).toBeVisible()
     await userEvent.click(canvas.getByRole('button', { name: 'Add the first charge' }))
     await expect(args.onAdd).toHaveBeenCalledOnce()
+  },
+}
+
+/** The prices are still loading: skeleton rows, no add button. */
+export const Loading: Story = {
+  args: { loading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Loading')).toBeInTheDocument()
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+  },
+}
+
+/** The fetch failed: an error with a retry, never "No charges yet". */
+export const LoadFailed: Story = {
+  args: { error: true },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('alert')).toBeVisible()
+    await expect(canvas.queryByText('No charges yet')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Try again' }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
   },
 }
 

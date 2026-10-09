@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { LayersIcon, MoreHorizontalIcon, RefreshCwIcon } from 'lucide-react'
+import { LayersIcon, PencilIcon, RefreshCwIcon } from 'lucide-react'
 import { PLAN_STATUS_LABEL, PlanStatus } from '@fp/domain'
 import {
   AppFailure,
   DetailHeader,
+  DetailMoreMenu,
   DetailTabs,
   EditableCard,
   LoadingRows,
@@ -23,7 +24,6 @@ import {
   makeGrants,
   meterUnitOf,
 } from '@ui/pages/plans/planDetailFixtures'
-import { Button } from '@ui/components/primitives/button'
 import { PAGE_STORY_PARAMETERS, PageShell } from './shellFixtures'
 
 type PlanTab = 'overview' | 'entitlements' | 'credit-grants' | 'information'
@@ -103,22 +103,25 @@ function PlanDetailPage({
               {archived ? <Status value={PLAN_STATUS_LABEL[status]} /> : null}
             </>
           }
-          primary={
-            <Button variant="outline" className="h-8 px-3" disabled={archived} onClick={fn()}>
-              <RefreshCwIcon aria-hidden />
-              Sync to contracts
-            </Button>
-          }
           actions={
-            <Button
-              variant="outline"
-              size="icon"
-              className="size-8"
-              aria-label="More actions"
-              onClick={fn()}
-            >
-              <MoreHorizontalIcon aria-hidden />
-            </Button>
+            <DetailMoreMenu
+              label="Plan actions"
+              items={[
+                {
+                  id: 'edit',
+                  label: 'Edit details',
+                  icon: <PencilIcon aria-hidden />,
+                  onSelect: fn(),
+                },
+                {
+                  id: 'sync',
+                  label: 'Sync to contracts',
+                  icon: <RefreshCwIcon aria-hidden />,
+                  disabled: archived,
+                  onSelect: fn(),
+                },
+              ]}
+            />
           }
         />
 

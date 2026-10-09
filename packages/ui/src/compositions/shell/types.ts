@@ -11,13 +11,6 @@ export interface ShellNavItem {
   id: string
   label: string
   icon?: ReactNode
-  /**
-   * How many of this thing exist.
-   *
-   * Answers "is there anything here?" before a click, which is how an empty
-   * catalogue becomes obvious rather than a surprise after navigating.
-   */
-  count?: number
   /** Children. A parent with children expands rather than standing alone. */
   items?: ShellNavItem[]
 }

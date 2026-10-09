@@ -6,11 +6,10 @@ import type { SettingsTabSpec } from './sections'
 /**
  * What an unavailable settings tab says, and why it says it in words.
  *
- * **One tab uses this now: Single sign-on.** `GET /settings/saml_config`
- * answers `404 "SAML single sign-on is not available on this deployment"` —
- * the deployment declining, not a contract we lack. `useSamlConfig` treats any
- * read failure that way on purpose, because a 500 rendering an empty SSO form
- * would let the next Save wipe a live config and lock a tenant out.
+ * **No tab uses this today**; it is also the fallback for a tab declared in
+ * the table with no panel wired to it. A tab belongs here when the deployment
+ * declines the capability (a 404 saying so), not when the generated SDK lacks
+ * a module for it.
  *
  * Eight tabs used to render this, on the reasoning that `/settings/:key` was
  * unreachable: `settings.go` is unannotated, so the route is absent from the
@@ -71,11 +70,6 @@ export function SettingsUnavailable({ tab, what, workaround }: SettingsUnavailab
  * `<section>/<tab>` so a tab cannot pick up another section's sentence.
  */
 export const UNAVAILABLE_COPY: Record<string, { what: string; workaround?: string }> = {
-  'team/sso': {
-    what: 'Single sign-on would let your team sign in through your own identity provider instead of a Flexprice password.',
-    workaround:
-      'Until then, members sign in with an email and password, and you invite them on the Team tab.',
-  },
   'billing/invoices': {
     what: 'These are the defaults every invoice inherits — numbering, due terms, the footer your customers read.',
     workaround: 'Individual invoices are still fully editable under Invoices.',

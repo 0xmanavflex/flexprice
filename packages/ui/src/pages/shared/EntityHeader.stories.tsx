@@ -1,11 +1,17 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { BracesIcon, GaugeIcon, HashIcon, ToggleRightIcon } from 'lucide-react'
+import {
+  ArchiveIcon,
+  BracesIcon,
+  GaugeIcon,
+  HashIcon,
+  PencilIcon,
+  ToggleRightIcon,
+} from 'lucide-react'
 import { FeatureType } from '@fp/domain'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { Button } from '@ui/components/primitives/button'
+import type { DetailMenuItem } from '@ui/compositions/DetailKit'
 import { CatalogStatusBadge, FeatureTypeBadge, type CatalogStatus } from './StatusBadge'
 import { EntityHeader } from './EntityHeader'
-import { RowActionsMenu } from './RowActionsMenu'
 
 const TYPE_ICON = {
   [FeatureType.Metered]: GaugeIcon,
@@ -13,6 +19,24 @@ const TYPE_ICON = {
   [FeatureType.Boolean]: ToggleRightIcon,
   [FeatureType.Config]: BracesIcon,
 } as const
+
+function menuItems(): DetailMenuItem[] {
+  return [
+    {
+      id: 'edit',
+      label: 'Edit feature',
+      icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+      onSelect: fn(),
+    },
+    {
+      id: 'archive',
+      label: 'Archive',
+      icon: <ArchiveIcon aria-hidden />,
+      destructive: true,
+      onSelect: fn(),
+    },
+  ]
+}
 
 const meta = {
   title: 'Foundation/Flexprice/EntityHeader',
@@ -30,10 +54,8 @@ const meta = {
         <CatalogStatusBadge status="published" />
       </>
     ),
-    primary: <Button variant="outline">Edit feature</Button>,
-    actions: (
-      <RowActionsMenu label="API calls" onEdit={fn()} onRemove={fn()} removeLabel="Archive" />
-    ),
+    menuLabel: 'Feature actions',
+    menu: menuItems(),
   },
   argTypes: {
     title: { control: 'text' },
@@ -42,8 +64,8 @@ const meta = {
     trail: { control: 'object' },
     icon: { control: false },
     badges: { control: false },
-    primary: { control: false },
-    actions: { control: false },
+    menuLabel: { control: 'text' },
+    menu: { control: false },
   },
 } satisfies Meta<typeof EntityHeader>
 
@@ -60,12 +82,11 @@ interface PlaygroundArgs {
   showBadges: boolean
   showId: boolean
   showEmail: boolean
-  showPrimary: boolean
-  showActions: boolean
+  showMenu: boolean
   onBack: () => void
 }
 
-/** Every slot as a control: names, type (tile icon and type chip), status chip, id and email chips, primary action and More menu. */
+/** Every slot as a control: names, type (tile icon and type chip), status chip, id and email chips, and the More menu that holds every action. */
 export const Playground: StoryObj<PlaygroundArgs> = {
   args: {
     parent: 'Features',
@@ -77,8 +98,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     showBadges: true,
     showId: true,
     showEmail: false,
-    showPrimary: true,
-    showActions: true,
+    showMenu: true,
     onBack: fn(),
   },
   argTypes: {
@@ -91,8 +111,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     showBadges: { control: 'boolean' },
     showId: { control: 'boolean' },
     showEmail: { control: 'boolean' },
-    showPrimary: { control: 'boolean' },
-    showActions: { control: 'boolean' },
+    showMenu: { control: 'boolean' },
     onBack: { control: false },
   },
   render: (args) => {
@@ -114,32 +133,32 @@ export const Playground: StoryObj<PlaygroundArgs> = {
               ),
             }
           : {})}
-        {...(args.showPrimary ? { primary: <Button variant="outline">Edit feature</Button> } : {})}
-        {...(args.showActions
-          ? {
-              actions: (
-                <RowActionsMenu
-                  label={args.title}
-                  onEdit={fn()}
-                  onRemove={fn()}
-                  removeLabel="Archive"
-                />
-              ),
-            }
-          : {})}
+        menuLabel="Feature actions"
+        {...(args.showMenu ? { menu: menuItems() } : {})}
       />
     )
   },
 }
 
-/** Tile and name on the left; primary action, chips, copyable id and the More menu on the right. */
+/** Tile and name on the left; chips, copyable id and a single More menu on the right. No inline action buttons. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { level: 1, name: 'API calls' })).toBeVisible()
     await expect(canvas.getByText('Published')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Copy ID feat_01HZX3API' })).toBeVisible()
-    await expect(canvas.getByRole('button', { name: 'Edit feature' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Edit feature' })).not.toBeInTheDocument()
+  },
+}
+
+/** Every action lives in the More menu; the destructive one is last. */
+export const MoreMenu: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Feature actions' }))
+    const body = within(canvasElement.ownerDocument.body)
+    await userEvent.click(await body.findByRole('menuitem', { name: 'Edit feature' }))
+    await expect(args.menu?.[0]?.onSelect).toHaveBeenCalledOnce()
   },
 }
 
@@ -156,7 +175,7 @@ export const TrailGoesBack: Story = {
   },
 }
 
-/** Only the required slots: no chips, id, email or actions. */
+/** Only the required slots: no chips, id, email or menu. */
 export const Minimal: Story = {
   render: (args) => <EntityHeader trail={args.trail} icon={args.icon} title={args.title} />,
   play: async ({ canvasElement }) => {

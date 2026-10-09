@@ -1,5 +1,6 @@
 import { GaugeIcon, PlusIcon, RepeatIcon } from 'lucide-react'
 import { SectionEmpty } from '@ui/compositions/SectionEmpty'
+import { ErrorState, LoadingRows } from '@ui/compositions/States'
 import {
   BILLING_PERIOD_LABEL,
   type BillingPeriod,
@@ -23,6 +24,12 @@ export interface PlanChargesViewProps {
   onEdit: (charge: Charge) => void
   onTerminate: (charge: Charge) => void
   readOnly?: boolean
+  /** The plan's prices are still being fetched: skeleton rows, no add action. */
+  loading?: boolean
+  /** The fetch failed. Shown in place of the list — never as "No charges yet". */
+  error?: boolean
+  /** Re-runs the fetch; the error state's "Try again". */
+  onRetry?: () => void
   /** Singular unit of a meter ("call"), for "per call" wording. */
   meterUnit?: (meterId: string) => string | undefined
 }
@@ -70,6 +77,9 @@ export function PlanChargesView({
   onEdit,
   onTerminate,
   readOnly,
+  loading,
+  error,
+  onRetry,
   meterUnit,
 }: PlanChargesViewProps) {
   const meterName = (id: string) => charges.find((c) => c.meterId === id)?.meterName ?? id
@@ -79,7 +89,7 @@ export function PlanChargesView({
       title="Charges"
       flush
       action={
-        readOnly || charges.length === 0 ? undefined : (
+        readOnly || loading || error || charges.length === 0 ? undefined : (
           <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
             <PlusIcon aria-hidden />
             Add charge
@@ -87,7 +97,19 @@ export function PlanChargesView({
         )
       }
     >
-      {charges.length === 0 ? (
+      {loading ? (
+        <div className="p-6">
+          <LoadingRows rows={3} columns={4} />
+        </div>
+      ) : error ? (
+        <div className="p-6">
+          <ErrorState
+            title="Charges could not be loaded"
+            description="The plan's prices did not load, so nothing is shown rather than a wrong list."
+            {...(onRetry ? { onRetry } : {})}
+          />
+        </div>
+      ) : charges.length === 0 ? (
         <SectionEmpty
           title="No charges yet"
           description="Nothing is billed yet. Add a fixed fee, a usage charge, or both."

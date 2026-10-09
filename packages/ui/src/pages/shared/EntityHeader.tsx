@@ -1,6 +1,10 @@
 import type { ReactNode } from 'react'
 import { DetailBreadcrumb, type DetailCrumb } from '../../compositions/DetailShell'
-import { DetailHeaderCluster } from '../../compositions/DetailKit'
+import {
+  DetailHeaderCluster,
+  DetailMoreMenu,
+  type DetailMenuItem,
+} from '../../compositions/DetailKit'
 
 export interface EntityHeaderProps {
   trail: DetailCrumb[]
@@ -13,16 +17,17 @@ export interface EntityHeaderProps {
   id?: string
   /** Copyable email, shown as a mail-icon copy chip beside the id. */
   email?: string
-  /** Up to two primary actions, first in the right-hand cluster. */
-  primary?: ReactNode
-  /** The overflow (More) menu, last in the right-hand cluster. */
-  actions?: ReactNode
+  /** Accessible name of the More button, e.g. "Customer actions". */
+  menuLabel?: string
+  /** Every action for the record. The header has no other action control. */
+  menu?: DetailMenuItem[]
 }
 
 /**
  * The detail-page header for records that need a custom tile (an avatar, say):
  * the tile and the name on the left; on the right the shared
- * `DetailHeaderCluster` — primary actions, chips, "ID"/email copy chips, More.
+ * `DetailHeaderCluster` — chips, "ID"/email copy chips, then a single More menu
+ * that holds every action (no inline buttons).
  * There is no subtitle line. The trail is published to the shell's header
  * breadcrumb, not drawn here.
  */
@@ -33,8 +38,8 @@ export function EntityHeader({
   badges,
   id,
   email,
-  primary,
-  actions,
+  menuLabel = 'More actions',
+  menu = [],
 }: EntityHeaderProps) {
   return (
     <header className="flex flex-col gap-4 px-6 pt-6 pb-4">
@@ -52,11 +57,10 @@ export function EntityHeader({
           </h1>
         </div>
         <DetailHeaderCluster
-          primary={primary}
           badges={badges}
           id={id}
           email={email}
-          more={actions}
+          more={<DetailMoreMenu label={menuLabel} items={menu} />}
         />
       </div>
     </header>

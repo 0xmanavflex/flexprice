@@ -14,27 +14,19 @@
  * ## `unavailable`
  *
  * A tab marked `unavailable` is one this console cannot build honestly, not one
- * that is merely unfinished. Exactly one qualifies today: **Single sign-on**.
+ * that is merely unfinished. None qualifies today: Single sign-on, the last one,
+ * was removed from Team along with Roles & permissions. The flag and
+ * `SettingsUnavailable` stay so the next tab that cannot be built honestly has
+ * somewhere to say so.
  *
- * `GET /settings/saml_config` answers `404 {"code":"not_found","message":"SAML
- * single sign-on is not available on this deployment"}`. That is the deployment
- * saying SSO is switched off, not a contract we are missing — so there is
- * nothing to render and nothing to save, and `useSamlConfig` deliberately
- * treats *any* read failure the same way. V1 learned that one the hard way: a
- * 500 rendering an empty SSO form lets the next Save wipe a live config and
- * lock a tenant out of their own dashboard.
+ * Absent from the generated SDK and absent from the server are different
+ * claims — `/settings/:key` answers 200 in production and `@fp/api`'s
+ * `settings.ts` reaches it with `fetch` — and only the second makes a tab
+ * unavailable.
  *
- * Everything else on this page used to carry this flag, on the belief that
- * `/settings/:key` was unreachable because `settings.go` is unannotated and the
- * generated SDK therefore has no `settings` module. The SDK part is true; the
- * conclusion was not. The routes exist and answer 200 in production, so
- * `@fp/api`'s `settings.ts` reaches them with `fetch`, exactly as `session.ts`
- * already does for the four undocumented auth routes. Absent from the contract
- * and absent from the server are different claims, and only the first one held.
- *
- * The tab stays listed and stays selectable, because "you cannot get there" and
- * "there is nothing there yet" look identical from outside and only one of them
- * is true.
+ * A listed unavailable tab stays selectable, because "you cannot get there"
+ * and "there is nothing there yet" look identical from outside and only one of
+ * them is true.
  */
 export interface SettingsTabSpec {
   id: string
@@ -68,8 +60,6 @@ export const SETTINGS_SECTIONS = [
     tabs: [
       // The tab id stays `members` so old links keep landing here.
       { id: 'members', label: 'Team' },
-      { id: 'roles', label: 'Roles & permissions' },
-      { id: 'sso', label: 'Single sign-on', unavailable: true },
     ],
   },
   {
@@ -135,7 +125,6 @@ export const SETTINGS_SECTIONS = [
   {
     id: 'appearance',
     label: 'Appearance',
-    hidden: true,
     tabs: [{ id: 'theme', label: 'Theme' }],
   },
 ] as const satisfies readonly SettingsSectionSpec[]

@@ -54,6 +54,8 @@ import {
   FormDialog,
   LoadingRows,
   PageBody,
+  Properties,
+  Section,
 } from '@fp/ui/compositions'
 import { PuzzleIcon } from 'lucide-react'
 
@@ -159,9 +161,9 @@ export function AddonDetailPage({
       title={data.name}
       badges={badges}
       id={data.lookupKey || data.id}
-      onEdit={() => setTab('information')}
       menuLabel="Add-on actions"
       menu={[
+        { id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') },
         ...(onEdit ? [{ id: 'edit', label: 'Edit add-on', onSelect: onEdit }] : []),
         {
           id: 'entitlements',
@@ -470,46 +472,59 @@ function InformationTab({
   onSave: (patch: { name?: string; description?: string }) => Promise<void>
 }) {
   return (
-    <EditableCard
-      className="max-w-3xl"
-      title="Add-on details"
-      locked={addon.status === 'archived'}
-      fields={[
-        { key: 'name', label: 'Name', value: addon.name, required: true },
-        {
-          // Integrations key off it, so the API never lets it change.
-          key: 'lookupKey',
-          label: 'Lookup key',
-          value: addon.lookupKey,
-          display: <span className="font-mono text-[13px]">{addon.lookupKey}</span>,
-          readOnly: true,
-        },
-        {
-          key: 'status',
-          label: 'Status',
-          value: addon.status,
-          display: <CatalogStatusBadge status={addon.status} />,
-          readOnly: true,
-        },
-        {
-          key: 'id',
-          label: 'Add-on ID',
-          value: addon.id,
-          display: <span className="font-mono text-[13px]">{addon.id}</span>,
-          readOnly: true,
-        },
-        { key: 'created', label: 'Created', value: formatDate(addon.createdAt), readOnly: true },
-        { key: 'updated', label: 'Updated', value: formatDate(addon.updatedAt), readOnly: true },
-        {
-          key: 'description',
-          label: 'Description',
-          value: addon.description ?? '',
-          multiline: true,
-          placeholder: 'Add a description',
-        },
-      ]}
-      onSave={(changes) => onSave(changes)}
-    />
+    <div className="grid gap-5 xl:grid-cols-3">
+      <EditableCard
+        className="xl:col-span-2"
+        title="Add-on details"
+        locked={addon.status === 'archived'}
+        fields={[
+          { key: 'name', label: 'Name', value: addon.name, required: true },
+          {
+            // Integrations key off it, so the API never lets it change.
+            key: 'lookupKey',
+            label: 'Lookup key',
+            value: addon.lookupKey,
+            display: <span className="font-mono text-[13px]">{addon.lookupKey}</span>,
+            readOnly: true,
+          },
+          {
+            key: 'status',
+            label: 'Status',
+            value: addon.status,
+            // The pill is taller than a text line; this keeps its row as tall as its neighbours.
+            display: (
+              <span className="flex h-5 items-center">
+                <CatalogStatusBadge status={addon.status} />
+              </span>
+            ),
+            readOnly: true,
+          },
+          { key: 'created', label: 'Created', value: formatDate(addon.createdAt), readOnly: true },
+          { key: 'updated', label: 'Updated', value: formatDate(addon.updatedAt), readOnly: true },
+          {
+            key: 'description',
+            label: 'Description',
+            value: addon.description ?? '',
+            multiline: true,
+            placeholder: 'No description',
+          },
+        ]}
+        onSave={(changes) => onSave(changes)}
+      />
+      <div className="flex flex-col gap-5">
+        <Section title="Metadata">
+          <Properties
+            columns={2}
+            items={[
+              {
+                label: 'Add-on ID',
+                value: <span className="font-mono text-[13px]">{addon.id}</span>,
+              },
+            ]}
+          />
+        </Section>
+      </div>
+    </div>
   )
 }
 

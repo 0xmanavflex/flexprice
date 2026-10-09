@@ -61,11 +61,19 @@ describe('parseSettingsSearch', () => {
     })
   })
 
-  it('keeps an unavailable tab — it is listed, selectable and linkable', () => {
-    expect(parseSettingsSearch({ section: 'team', tab: 'sso' })).toEqual({
-      section: 'team',
-      tab: 'sso',
-    })
+  it('sends the removed Roles and Single sign-on tabs to Team', () => {
+    for (const tab of ['roles', 'sso']) {
+      expect(parseSettingsSearch({ section: 'team', tab })).toEqual({
+        section: 'team',
+        tab: 'members',
+      })
+    }
+  })
+
+  it('gives Team a single tab, so no tab strip is drawn for it', () => {
+    expect(SECTIONS.find((section) => section.id === 'team')?.tabs.map((tab) => tab.id)).toEqual([
+      'members',
+    ])
   })
 
   it.each([
@@ -124,25 +132,15 @@ describe('the settings table itself', () => {
   /**
    * The unavailable set, pinned.
    *
-   * It holds exactly one id, and shrinking it to that took undoing a wrong
-   * conclusion. All eight of these were once listed as having "no backend
-   * contract", reasoning from `settings.go` being unannotated to the routes
-   * being unreachable. They answer 200 in production; only the generated SDK
-   * was missing them, and `@fp/api/settings.ts` reaches them with `fetch`.
-   *
-   * What is left is `team/sso`, and its absence is real but different in kind:
-   * the deployment answers 404 "SAML single sign-on is not available on this
-   * deployment". Switched off, not undocumented.
-   *
-   * A tab quietly *added* to this list is a capability somebody gave up on, and
-   * this test exists to make that a visible diff rather than a silent one —
-   * which is precisely how it caught the seven that never belonged.
+   * Empty since Single sign-on left Team. A tab quietly *added* to this list is
+   * a capability somebody gave up on, and this test makes that a visible diff
+   * rather than a silent one.
    */
-  it('marks only the capability this deployment has switched off', () => {
+  it('marks no tab unavailable', () => {
     const unavailable = SECTIONS.flatMap((section) =>
       section.tabs.filter((tab) => tab.unavailable).map((tab) => `${section.id}/${tab.id}`),
     )
 
-    expect(unavailable).toEqual(['team/sso'])
+    expect(unavailable).toEqual([])
   })
 })
