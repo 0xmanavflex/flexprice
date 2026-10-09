@@ -67,3 +67,32 @@ export type { Flexprice } from '@flexprice/sdk'
 export { searchUsageRecords } from './usageRecords'
 export type { SearchUsageRecordsParams } from './usageRecords'
 export { listConnections } from './connections'
+
+/**
+ * The tenant's Svix webhook portal, called directly with the app-portal token
+ * `fetchWebhookDashboard` hands out — as V1 does through `svix-react`. See
+ * `webhooks.ts`.
+ */
+export {
+  createWebhookEndpoint,
+  deleteWebhookEndpoint,
+  generateSvixPlayEndpoint,
+  getWebhookEndpoint,
+  getWebhookEndpointHeaders,
+  getWebhookEndpointSecret,
+  getWebhookEndpointStats,
+  getWebhookMessage,
+  listWebhookEndpointMessages,
+  listWebhookEndpoints,
+  listWebhookEventTypes,
+  listWebhookMessageAttempts,
+  listWebhookMessages,
+  patchWebhookEndpointHeaders,
+  recoverWebhookEndpoint,
+  resendWebhookMessage,
+  rotateWebhookEndpointSecret,
+  sendWebhookExample,
+  svixServerURL,
+  updateWebhookEndpoint,
+} from './webhooks'
+export type { SvixEndpointIn, SvixListPage, SvixMessageStatus, SvixSession } from './webhooks'

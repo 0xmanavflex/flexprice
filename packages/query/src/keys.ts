@@ -196,6 +196,19 @@ export const queryKeys = {
     webhookDashboard: (environmentId: string) =>
       ['settings', environmentId, 'webhookDashboard'] as const,
   },
+  /**
+   * The Svix webhook portal. Environment-scoped, because each environment is
+   * its own Svix application. `portal` holds the app-portal token; everything
+   * read *with* that token sits under `data`, so a mutation can refresh the
+   * portal's contents without minting a new token.
+   */
+  webhooks: {
+    all: () => ['webhooks'] as const,
+    portal: (environmentId: string) => ['webhooks', environmentId, 'portal'] as const,
+    data: (environmentId: string) => ['webhooks', environmentId, 'data'] as const,
+    of: (environmentId: string, ...parts: readonly unknown[]) =>
+      ['webhooks', environmentId, 'data', ...parts] as const,
+  },
   alertSettings: {
     all: () => ['alertSettings'] as const,
     list: (filter: Readonly<Record<string, unknown>> = {}) =>
