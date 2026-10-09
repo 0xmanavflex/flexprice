@@ -1,10 +1,10 @@
 import type { ReactNode } from 'react'
-import { DetailBreadcrumb, type DetailCrumb } from '../../compositions/DetailShell'
+import { DetailBreadcrumb, type DetailCrumb } from '../../compositions/detail/DetailShell'
 import {
   DetailHeaderCluster,
   DetailMoreMenu,
   type DetailMenuItem,
-} from '../../compositions/DetailKit'
+} from '../../compositions/detail/DetailKit'
 
 export interface EntityHeaderProps {
   trail: DetailCrumb[]

@@ -38,7 +38,7 @@ function makeFeatures(count: number): FeatureAnalytics[] {
 }
 
 const meta = {
-  title: 'Surfaces/CustomerAnalyticsView',
+  title: 'App/Customers/Customer analytics',
   component: CustomerAnalyticsView,
   parameters: { layout: 'padded' },
   args: { features: DEMO_FEATURE_ANALYTICS },

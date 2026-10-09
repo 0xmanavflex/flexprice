@@ -3,7 +3,7 @@ import { expect, fn, userEvent, within } from 'storybook/test'
 import { AcceptInvitationForm } from './AcceptInvitationForm'
 
 const meta = {
-  title: 'Surfaces/AcceptInvitationForm',
+  title: 'App/Sign-in/Accept invitation form',
   component: AcceptInvitationForm,
   parameters: { layout: 'centered' },
   args: {

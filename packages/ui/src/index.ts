@@ -23,9 +23,11 @@
  *   components/primitives/  Vendored shadcn controls. Never hand-edited, so an
  *                           upstream update stays a re-install.
  *   components/reui/        Vendored ReUI blocks. Same rule.
- *   compositions/           Generic behaviour composed over those parts.
- *   pages/                  One folder per screen. Product components that
- *                           know billing vocabulary. Domain types are welcome
+ *   compositions/           Generic behaviour composed over those parts, one
+ *                           folder per Building blocks group (layout, forms,
+ *                           tables, detail, feedback, charts, shell).
+ *   pages/                  One folder per sidebar area, then per entity.
+ *                           Product components that know billing vocabulary. Domain types are welcome
  *                           here; transport types are not.
  *   provenance/    Where each component came from, in the type system.
  *

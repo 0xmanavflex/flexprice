@@ -11,7 +11,7 @@ import {
 import { RowActionsMenu } from './RowActionsMenu'
 
 const meta = {
-  title: 'Foundation/Flexprice/RowActionsMenu',
+  title: 'Building blocks/Tables & lists/RowActionsMenu',
   component: RowActionsMenu,
   parameters: {
     layout: 'centered',

@@ -20,7 +20,7 @@ const columns: PillColumn[] = [
 ]
 
 const meta = {
-  title: 'Foundation/Flexprice/PillColumns',
+  title: 'Building blocks/Charts & metrics/PillColumns',
   component: PillColumns,
   parameters: { layout: 'padded' },
   args: { columns, series, label: 'New contracts by day and plan' },

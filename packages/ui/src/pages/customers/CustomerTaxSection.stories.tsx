@@ -37,7 +37,7 @@ function makeAssociations(count: number): TaxAssociation[] {
 }
 
 const meta = {
-  title: 'Surfaces/CustomerTaxSection',
+  title: 'App/Customers/Customer tax section',
   component: CustomerTaxSection,
   parameters: { layout: 'padded' },
   args: {

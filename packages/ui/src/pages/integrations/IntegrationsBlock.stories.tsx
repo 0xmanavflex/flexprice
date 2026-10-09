@@ -20,7 +20,7 @@ function makeIntegrations(count: number, connected: number): Integration[] {
 
 /** The integrations gallery: search, category filter, and Connected / Available sections. */
 const meta = {
-  title: 'Surfaces/IntegrationsBlock',
+  title: 'App/Integrations/Integrations',
   component: IntegrationsBlock,
   parameters: { layout: 'fullscreen' },
   decorators: [

@@ -3,7 +3,7 @@ import { expect, fn, within } from 'storybook/test'
 import { QuotaCard } from './QuotaCard'
 
 const meta = {
-  title: 'Foundation/Flexprice/QuotaCard',
+  title: 'Building blocks/Charts & metrics/QuotaCard',
   component: QuotaCard,
   parameters: { layout: 'padded' },
   args: {

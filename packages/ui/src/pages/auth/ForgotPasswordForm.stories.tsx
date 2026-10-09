@@ -8,7 +8,7 @@ import { ForgotPasswordForm } from './ForgotPasswordForm'
  * the address has an account. No provider, no network.
  */
 const meta = {
-  title: 'Surfaces/ForgotPasswordForm',
+  title: 'App/Sign-in/Forgot password form',
   component: ForgotPasswordForm,
   parameters: { layout: 'centered' },
   args: { onSubmit: fn(), onBack: fn() },

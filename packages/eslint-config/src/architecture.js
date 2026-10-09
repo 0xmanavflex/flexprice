@@ -175,20 +175,20 @@ export const uiSeamRules = {
   ignores: [
     'packages/ui/src/components/**',
     'packages/ui/src/pages/**',
-    'packages/ui/src/compositions/FilterBar.tsx',
-    'packages/ui/src/compositions/GridFooter.tsx',
+    'packages/ui/src/compositions/tables/FilterBar.tsx',
+    'packages/ui/src/compositions/tables/GridFooter.tsx',
     // A seam component's own story is part of the seam: it must build the same
     // block-primitive inputs (a `FilterField`, a `DataGrid` context) to render
     // the component in isolation. Only these two stories, for the same reason
     // FilterBar.tsx and GridFooter.tsx above are allowed.
-    'packages/ui/src/compositions/FilterBar.stories.tsx',
-    'packages/ui/src/compositions/GridFooter.stories.tsx',
+    'packages/ui/src/compositions/tables/FilterBar.stories.tsx',
+    'packages/ui/src/compositions/tables/GridFooter.stories.tsx',
     // The settings seam, and the same argument as FilterBar: this file exists
     // *to be* the one place that knows the vendored settings-7 path, so the
     // panels can compose `SettingsCard` and `SettingRow` without naming a
     // block. Forbidding it here would not remove the import, it would scatter
     // it across every settings panel — the opposite of the rule's intent.
-    'packages/ui/src/compositions/settingsSurface.ts',
+    'packages/ui/src/compositions/layout/settingsSurface.ts',
   ],
   rules: {
     'no-restricted-imports': [
@@ -222,7 +222,7 @@ const PAGE_SURFACES = [
   {
     group: ['@ui/components/primitives/card'],
     message:
-      'Pages do not use the Card primitive. A titled surface is Section (or Panel) from compositions/DetailKit, exactly as in the redesign.',
+      'Pages do not use the Card primitive. A titled surface is Section (or Panel) from compositions/detail/DetailKit, exactly as in the redesign.',
   },
   {
     group: ['@ui/components/primitives/table'],

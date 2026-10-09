@@ -14,7 +14,7 @@ const money = (value: number) => `$${(value / 1000).toFixed(1)}k`
 const statusTones = ['good', 'warning', 'critical'] as const
 
 const meta = {
-  title: 'Foundation/Flexprice/SplitMeter',
+  title: 'Building blocks/Charts & metrics/SplitMeter',
   component: SplitMeter,
   parameters: { layout: 'padded' },
   args: {

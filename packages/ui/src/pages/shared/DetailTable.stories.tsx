@@ -39,7 +39,7 @@ function makeInvoices(count: number): Invoice[] {
 }
 
 const meta = {
-  title: 'Pages/Shared/DetailTable',
+  title: 'Building blocks/Tables & lists/DetailTable',
   component: DetailTable<Invoice>,
   args: {
     label: 'Invoices',

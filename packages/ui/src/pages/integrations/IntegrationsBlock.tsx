@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react'
 import { BoxIcon, SearchIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import type { Integration } from '@fp/domain'
-import { ConnectorCard } from '@ui/compositions/ConnectorCard'
+import { ConnectorCard } from '@ui/compositions/layout/ConnectorCard'
 import { Button } from '@ui/components/primitives/button'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import {

@@ -9,7 +9,7 @@ import { ShellAccount } from './ShellAccount'
  * the sidebar, so it is mounted in a `SidebarProvider` here.
  */
 const meta = {
-  title: 'Foundation/Compositions/Shell/ShellAccount',
+  title: 'Building blocks/Shell/ShellAccount',
   component: ShellAccount,
   decorators: [
     (Story) => (

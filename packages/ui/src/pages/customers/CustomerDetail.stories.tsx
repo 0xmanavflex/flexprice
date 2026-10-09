@@ -135,7 +135,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'Surfaces/CustomerDetail',
+  title: 'App/Customers/Customer detail view',
   component: Harness,
   parameters: {
     layout: 'fullscreen',

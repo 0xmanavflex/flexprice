@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { LabelWithHint } from '@ui/compositions/LabelWithHint'
+import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import {
   ArrowDownRightIcon,
   ArrowUpRightIcon,
@@ -51,7 +51,7 @@ import {
   OptionSelect,
   Section,
 } from '../../compositions'
-import { ChoiceCards, Composer, SplitMeter } from '../../compositions/DetailKit'
+import { ChoiceCards, Composer, SplitMeter } from '../../compositions/detail/DetailKit'
 
 export interface CustomerWalletViewProps {
   wallets: Wallet[]

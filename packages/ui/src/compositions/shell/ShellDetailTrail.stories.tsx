@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { DetailBreadcrumb, type DetailCrumb } from '../DetailShell'
+import { DetailBreadcrumb, type DetailCrumb } from '../detail/DetailShell'
 import { ShellBreadcrumb, type ShellCrumb } from './ShellBreadcrumb'
 import { ShellDetailTrailProvider, type ShellDetailCrumb } from './ShellDetailTrail'
 
@@ -11,7 +11,7 @@ import { ShellDetailTrailProvider, type ShellDetailCrumb } from './ShellDetailTr
  * is the page's end. Bare, with no provider, the page draws its own trail.
  */
 const meta = {
-  title: 'Foundation/Compositions/Shell/ShellDetailTrail',
+  title: 'Building blocks/Shell/ShellDetailTrail',
   component: ShellDetailTrailProvider,
   parameters: { layout: 'fullscreen' },
 } satisfies Meta<typeof ShellDetailTrailProvider>

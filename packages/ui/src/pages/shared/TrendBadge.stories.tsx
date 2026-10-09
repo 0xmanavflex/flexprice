@@ -3,7 +3,7 @@ import { expect, within } from 'storybook/test'
 import { TrendBadge } from './charts'
 
 const meta = {
-  title: 'Foundation/Flexprice/TrendBadge',
+  title: 'Building blocks/Charts & metrics/TrendBadge',
   component: TrendBadge,
   parameters: { layout: 'centered' },
   args: { percent: 12.5 },

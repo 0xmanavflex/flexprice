@@ -9,7 +9,7 @@ import { ThemeProvider } from './ThemeProvider'
  * sample as its children to show it mounts and its tokens resolve.
  */
 const meta = {
-  title: 'Foundation/Compositions/Shell/ThemeProvider',
+  title: 'Building blocks/Shell/ThemeProvider',
   component: ThemeProvider,
   parameters: { layout: 'padded' },
   args: {

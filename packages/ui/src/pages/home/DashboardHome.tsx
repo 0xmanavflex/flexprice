@@ -10,7 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
-import { Panel } from '@ui/compositions/Section'
+import { Panel } from '@ui/compositions/layout/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ArcGauge } from '../shared/ArcGauge'

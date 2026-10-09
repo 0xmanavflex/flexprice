@@ -77,6 +77,13 @@ with the active section's tabs nested under it (no second nav above the content)
 If nothing fits, that is a design decision (see `DESIGN_CHANGE.md`), not a licence to add a component. Do not
 create per-entity copies of a kit part (`CustomerInfoCard`, `PlanTable`): the page passes data to the kit.
 
+## Where the code lives
+
+`packages/ui/src` reads top to bottom in the same order as Storybook: `design-system/` (tokens, page map),
+`compositions/<group>/` and `pages/shared/` (Building blocks), then `pages/<nav area>/<entity>/` (App), one folder
+per console sidebar area. `packages/ui/src/README.md` is the map. A new part goes in the folder of the screen it
+belongs to, with an explicit story `title` in the matching Storybook section.
+
 ## Page matrix
 
 `docs/ui-page-matrix.md` lists every route page with the kit pieces it reaches. It is generated

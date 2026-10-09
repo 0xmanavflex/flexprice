@@ -3,7 +3,7 @@ import {
   readSelectFilter,
   selectFilterField,
   type FlatFilter,
-} from '@ui/compositions/FilterBar'
+} from '@ui/compositions/tables/FilterBar'
 import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'

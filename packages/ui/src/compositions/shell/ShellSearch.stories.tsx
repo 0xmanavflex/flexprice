@@ -10,7 +10,7 @@ import { ShellSearch } from './ShellSearch'
  * control with no sidebar context to mount.
  */
 const meta = {
-  title: 'Foundation/Compositions/Shell/ShellSearch',
+  title: 'Building blocks/Shell/ShellSearch',
   component: ShellSearch,
   parameters: {
     // The dialog is a Base UI portal; its focus guards trip axe. The dialog

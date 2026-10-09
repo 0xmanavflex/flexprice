@@ -5,7 +5,7 @@ import { Metric } from './Metric'
 import { Money } from './Money'
 
 const meta = {
-  title: 'Foundation/Flexprice/Metric',
+  title: 'Building blocks/Charts & metrics/Metric',
   component: Metric,
   parameters: { layout: 'centered' },
   args: {

@@ -63,7 +63,7 @@ function makeTransactions(count: number): WalletTransaction[] {
 const asyncOk = () => fn(async () => undefined)
 
 const meta = {
-  title: 'Surfaces/CustomerWalletView',
+  title: 'App/Customers/Customer wallet',
   component: CustomerWalletView,
   parameters: {
     layout: 'padded',

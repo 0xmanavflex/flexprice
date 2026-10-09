@@ -18,7 +18,7 @@ const STAT_LABELS = [
 ]
 
 const meta = {
-  title: 'Surfaces/StatCards',
+  title: 'Building blocks/Charts & metrics/StatCards',
   component: StatCards,
   parameters: { layout: 'padded' },
   args: {

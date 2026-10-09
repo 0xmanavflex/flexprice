@@ -7,7 +7,7 @@ import { ShellPromoCard } from './ShellPromoCard'
  * The sidebar's promo card, at the width it renders in the rail's `pinned` slot.
  */
 const meta = {
-  title: 'Foundation/Compositions/Shell/ShellPromoCard',
+  title: 'Building blocks/Shell/ShellPromoCard',
   component: ShellPromoCard,
   parameters: { layout: 'centered' },
   decorators: [

@@ -105,7 +105,7 @@ function PlaygroundChart({
 }
 
 const meta = {
-  title: 'Foundation/Flexprice/MetricChart',
+  title: 'Building blocks/Charts & metrics/MetricChart',
   component: MetricChart,
   parameters: { layout: 'padded' },
   args: {
