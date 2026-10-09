@@ -17,19 +17,22 @@ import {
   useRoles,
   useServiceAccounts,
 } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, FormDialog } from '@fp/ui/compositions'
+import { ConfirmDialog, Field, FormDialog } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { BotIcon } from 'lucide-react'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
   PanelError,
+  PanelFirstRun,
   SettingsTable,
   WidePanel,
   mutationMessage,
   toFailure,
 } from './panelKit'
 import { useDraft } from './useDraft'
+
+const SERVICE_ACCOUNT_DOCS_URL = 'https://docs.flexprice.io/docs/rbac/service-accounts/create'
 
 /**
  * Service accounts — the identities that are not people. Lives under
@@ -66,71 +69,77 @@ export function ServiceAccountsPanel() {
     )
   }
 
-  const create = (
-    <Button size="sm" onClick={() => setIsCreating(true)}>
-      New service account
-    </Button>
-  )
+  // Laid out exactly as API keys' first run: the empty state alone, centred in
+  // the page body, carrying the only create button.
+  const firstRun = !accounts.isPending && rows.length === 0
 
   return (
-    <WidePanel>
+    <WidePanel fill={firstRun}>
       <h1 className="sr-only">Service accounts</h1>
-      <SettingsTable<Member>
-        label="Service accounts"
-        noun="service accounts"
-        hint="Identities for your systems rather than your people. An API key is issued against one."
-        rows={rows}
-        isLoading={accounts.isPending}
-        getRowId={(account) => account.id}
-        action={create}
-        empty={
-          <EmptyState
-            size="inline"
-            icon={<BotIcon aria-hidden />}
-            title="No service accounts yet"
-            description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
-            action={create}
-          />
-        }
-        columns={[
-          {
-            key: 'name',
-            header: 'Name',
-            sortBy: (account) => memberDisplayName(account),
-            text: (account) => memberDisplayName(account),
-            cell: (account) => <span className="font-medium">{memberDisplayName(account)}</span>,
-          },
-          {
-            key: 'roles',
-            header: 'Roles',
-            text: (account) => account.roles.join(' '),
-            cell: (account) => <RoleList roles={account.roles} catalogue={roles.data ?? []} />,
-          },
-          {
-            key: 'id',
-            header: 'Identifier',
-            text: (account) => account.id,
-            cell: (account) => (
-              <span className="text-muted-foreground font-mono text-xs">{account.id}</span>
-            ),
-          },
-          {
-            key: 'actions',
-            header: '',
-            width: 160,
-            cell: (account) => (
-              <span className="flex justify-end gap-1">
-                <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
-                  Rename
-                </Button>
-                <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
-                  Delete
-                </Button>
-              </span>
-            ),
-          },
-        ]}
-      />
+      {firstRun ? (
+        <PanelFirstRun
+          icon={<BotIcon aria-hidden />}
+          title="No service accounts yet"
+          description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
+          action={<Button onClick={() => setIsCreating(true)}>New service account</Button>}
+          docsHref={SERVICE_ACCOUNT_DOCS_URL}
+        />
+      ) : (
+        <SettingsTable<Member>
+          label="Service accounts"
+          noun="service accounts"
+          hint="Identities for your systems rather than your people. An API key is issued against one."
+          rows={rows}
+          isLoading={accounts.isPending}
+          getRowId={(account) => account.id}
+          action={
+            <Button size="sm" onClick={() => setIsCreating(true)}>
+              New service account
+            </Button>
+          }
+          // First run is handled above; the table only ever renders with rows
+          // or while loading.
+          empty={null}
+          columns={[
+            {
+              key: 'name',
+              header: 'Name',
+              sortBy: (account) => memberDisplayName(account),
+              text: (account) => memberDisplayName(account),
+              cell: (account) => <span className="font-medium">{memberDisplayName(account)}</span>,
+            },
+            {
+              key: 'roles',
+              header: 'Roles',
+              text: (account) => account.roles.join(' '),
+              cell: (account) => <RoleList roles={account.roles} catalogue={roles.data ?? []} />,
+            },
+            {
+              key: 'id',
+              header: 'Identifier',
+              text: (account) => account.id,
+              cell: (account) => (
+                <span className="text-muted-foreground font-mono text-xs">{account.id}</span>
+              ),
+            },
+            {
+              key: 'actions',
+              header: '',
+              width: 160,
+              cell: (account) => (
+                <span className="flex justify-end gap-1">
+                  <Button size="sm" variant="ghost" onClick={() => setRenaming(account)}>
+                    Rename
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setDeleting(account)}>
+                    Delete
+                  </Button>
+                </span>
+              ),
+            },
+          ]}
+        />
+      )}
 
       <CreateAccountDialog
         open={isCreating}

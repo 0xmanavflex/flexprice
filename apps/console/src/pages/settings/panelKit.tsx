@@ -1,9 +1,9 @@
 import { type ReactNode, useId } from 'react'
-import { InfoIcon } from 'lucide-react'
+import { ArrowUpRightIcon, InfoIcon } from 'lucide-react'
 import { ApiError } from '@fp/query'
-import { ErrorState } from '@fp/ui/compositions'
+import { EmptyState, ErrorState } from '@fp/ui/compositions'
 import { DetailTable, type DetailColumn } from '@fp/ui/pages'
-import { Tooltip, TooltipContent, TooltipTrigger } from '@fp/ui/primitives'
+import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@fp/ui/primitives'
 
 /**
  * The few things every settings panel needs, in one place.
@@ -258,9 +258,66 @@ export function Panel({ children }: { children: ReactNode }) {
   return <div className="flex max-w-3xl flex-col gap-6 pb-10">{children}</div>
 }
 
-/** The same stack, at full width — for the panels that are mostly a table. */
-export function WidePanel({ children }: { children: ReactNode }) {
-  return <div className="flex min-w-0 flex-col gap-6 pb-10">{children}</div>
+/**
+ * The same stack, at full width — for the panels that are mostly a table.
+ *
+ * `fill` makes it take the rest of the page body, for a panel whose only
+ * content is its first-run `EmptyState`: a `size="page"` block centres in the
+ * height it is given, and without this it is given none, so it sits at the top
+ * of an otherwise blank page.
+ */
+export function WidePanel({ children, fill = false }: { children: ReactNode; fill?: boolean }) {
+  return (
+    <div className={`flex min-w-0 flex-col gap-6 ${fill ? 'flex-1' : 'pb-10'}`}>{children}</div>
+  )
+}
+
+/**
+ * A panel with nothing in it yet: the shared `EmptyState` at page size, centred
+ * in the page body, with the create button and a link to the docs. Render it
+ * *instead of* the panel's list and toolbar, so the create action is offered
+ * once, and inside `<WidePanel fill>` so it has a height to centre in.
+ */
+export function PanelFirstRun({
+  icon,
+  title,
+  description,
+  action,
+  docsHref,
+  docsLabel = 'Read the docs',
+}: {
+  icon: ReactNode
+  title: string
+  description: string
+  action: ReactNode
+  docsHref?: string
+  docsLabel?: string
+}) {
+  return (
+    <EmptyState
+      size="page"
+      icon={icon}
+      title={title}
+      description={description}
+      action={action}
+      {...(docsHref
+        ? {
+            secondaryAction: (
+              <Button
+                variant="outline"
+                nativeButton={false}
+                // `role="link"`: Base UI marks a non-native button `role="button"`,
+                // and this navigates — it should be announced as the link it is.
+                render={<a href={docsHref} target="_blank" rel="noreferrer" role="link" />}
+              >
+                {docsLabel}
+                <ArrowUpRightIcon aria-hidden data-icon="inline-end" />
+              </Button>
+            ),
+          }
+        : {})}
+    />
+  )
 }
 
 /**

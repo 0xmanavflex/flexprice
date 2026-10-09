@@ -1,8 +1,10 @@
-import type { ComponentProps } from 'react'
+import type { ComponentProps, ReactNode } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
+import { ArrowUpRightIcon, BotIcon, KeyRoundIcon } from 'lucide-react'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { EmptyState, ListOfferProvider } from './EmptyState'
+import { PageBody } from './Page'
 
 const meta = {
   title: 'Foundation/Compositions/EmptyState',
@@ -214,5 +216,101 @@ export const PageSizedIsCentred: Story = {
 
     await expect(above).toBeGreaterThan(60)
     await expect(Math.abs(above - below)).toBeLessThan(24)
+  },
+}
+
+/*
+ * The Developers panels' first run (`/api-keys`, `/service-accounts`).
+ *
+ * The console's `PanelFirstRun` renders exactly this: a page-sized
+ * `EmptyState` alone in the page body (`PageBody` > a `flex-1` panel), with the
+ * create button and an outline link to the docs, and no toolbar above it — so
+ * the create action appears once. The copy here mirrors the panels'.
+ */
+function DeveloperFirstRunFrame({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex h-[36rem] flex-col border">
+      <PageBody>
+        <div className="flex min-w-0 flex-1 flex-col gap-6">{children}</div>
+      </PageBody>
+    </div>
+  )
+}
+
+function DocsLink({ href, children }: { href: string; children: ReactNode }) {
+  return (
+    <Button
+      variant="outline"
+      nativeButton={false}
+      // Base UI marks a non-native button `role="button"`; this one navigates.
+      render={<a href={href} target="_blank" rel="noreferrer" role="link" />}
+    >
+      {children}
+      <ArrowUpRightIcon aria-hidden data-icon="inline-end" />
+    </Button>
+  )
+}
+
+/** Checks the first run is centred in the page body and offers create once. */
+async function expectCentredFirstRun(canvasElement: HTMLElement, create: string, docs: string) {
+  const canvas = within(canvasElement)
+  const block = canvas.getByRole('status')
+  const body = block.closest('[class*="overflow-y-auto"]') as HTMLElement
+
+  await expect(canvas.getAllByRole('button', { name: create })).toHaveLength(1)
+  const link = canvas.getByRole('link', { name: docs })
+  await expect(link).toHaveAttribute('target', '_blank')
+
+  // Centred both ways in the page body, not pinned to its top-left corner.
+  const bodyBox = body.getBoundingClientRect()
+  const header = block.querySelector('[data-slot="empty-header"]') as HTMLElement
+  const headerBox = header.getBoundingClientRect()
+  const above = headerBox.top - bodyBox.top
+  const below =
+    bodyBox.bottom - canvas.getByRole('button', { name: create }).getBoundingClientRect().bottom
+  await expect(above).toBeGreaterThan(80)
+  await expect(Math.abs(above - below)).toBeLessThan(48)
+  const left = headerBox.left - bodyBox.left
+  const right = bodyBox.right - headerBox.right
+  await expect(Math.abs(left - right)).toBeLessThan(24)
+}
+
+/** `/api-keys` with no keys: the page is this, and only this. */
+export const ApiKeysFirstRun: Story = {
+  args: {
+    size: 'page',
+    icon: <KeyRoundIcon aria-hidden />,
+    title: 'No API keys yet',
+    description:
+      'An API key lets your servers send usage events and call the Flexprice API without a person signing in.',
+    action: <Button>Create API key</Button>,
+    secondaryAction: (
+      <DocsLink href="https://docs.flexprice.io/api-reference/introduction">API docs</DocsLink>
+    ),
+  },
+  decorators: [(Story) => <DeveloperFirstRunFrame>{<Story />}</DeveloperFirstRunFrame>],
+  play: async ({ canvasElement }) => {
+    await expectCentredFirstRun(canvasElement, 'Create API key', 'API docs')
+  },
+}
+
+/** `/service-accounts` with none: the same layout as API keys, its own copy. */
+export const ServiceAccountsFirstRun: Story = {
+  args: {
+    size: 'page',
+    icon: <BotIcon aria-hidden />,
+    title: 'No service accounts yet',
+    description:
+      'A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key.',
+    action: <Button>New service account</Button>,
+    secondaryAction: (
+      <DocsLink href="https://docs.flexprice.io/docs/rbac/service-accounts/create">
+        Read the docs
+      </DocsLink>
+    ),
+  },
+  decorators: [(Story) => <DeveloperFirstRunFrame>{<Story />}</DeveloperFirstRunFrame>],
+  play: async ({ canvasElement }) => {
+    await expectCentredFirstRun(canvasElement, 'New service account', 'Read the docs')
   },
 }

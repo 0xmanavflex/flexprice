@@ -13,19 +13,23 @@ import {
   isExpired,
 } from '@fp/domain'
 import { DEFAULT_API_KEY_QUERY, useApiKeys, useCreateApiKey, useDeleteApiKey } from '@fp/query'
-import { ConfirmDialog, EmptyState, Field, FormDialog, LoadingRows } from '@fp/ui/compositions'
+import { ConfirmDialog, Field, FormDialog, LoadingRows } from '@fp/ui/compositions'
 import { Badge, Button, Input } from '@fp/ui/primitives'
 import { CheckIcon, CopyIcon, KeyRoundIcon } from 'lucide-react'
 import {
   ActionError,
   DelayedHint,
   PanelError,
+  PanelFirstRun,
   WidePanel,
   formatDate,
   mutationMessage,
   toFailure,
 } from './panelKit'
 import { useDraft } from './useDraft'
+
+/** Where a key is used: the API reference's introduction covers authenticating with one. */
+const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
 
 /**
  * API keys — list, issue, revoke. Lives under Developers (`/api-keys`).
@@ -67,31 +71,33 @@ export function ApiKeysPanel() {
     )
   }
 
-  const createButton = (
-    <Button size="sm" onClick={() => setIsCreating(true)}>
-      Create API key
-    </Button>
-  )
+  // With no keys the page is the empty state alone, centred in the page body,
+  // and it carries the only create button — no toolbar above it offering a
+  // second one.
+  const firstRun = !keys.isPending && rows.length === 0
 
   return (
-    <WidePanel>
-      <section className="flex flex-col gap-3">
+    <WidePanel fill={firstRun}>
+      <section className={firstRun ? 'flex flex-1 flex-col' : 'flex flex-col gap-3'}>
         <h1 className="sr-only">API keys</h1>
         {keys.isPending ? (
           <LoadingRows rows={3} columns={3} />
-        ) : rows.length === 0 ? (
-          <EmptyState
-            size="inline"
+        ) : firstRun ? (
+          <PanelFirstRun
             icon={<KeyRoundIcon aria-hidden />}
             title="No API keys yet"
-            description="An API key lets your systems send usage and read billing data without a person signing in. Create one per system so you can revoke it on its own."
-            action={createButton}
+            description="An API key lets your servers send usage events and call the Flexprice API without a person signing in."
+            action={<Button onClick={() => setIsCreating(true)}>Create API key</Button>}
+            docsHref={API_DOCS_URL}
+            docsLabel="API docs"
           />
         ) : (
           <>
             <div className="flex justify-end">
               <DelayedHint text="What your systems authenticate with when they send usage or read billing data.">
-                {createButton}
+                <Button size="sm" onClick={() => setIsCreating(true)}>
+                  Create API key
+                </Button>
               </DelayedHint>
             </div>
             <ul aria-label="API keys" className="bg-background divide-y rounded-xl border">
@@ -283,8 +289,7 @@ function CreateKeyDialog({
       {issued ? (
         <div className="flex flex-col gap-4">
           <p className="text-muted-foreground text-sm">
-            This is the only time Flexprice will show it. A lost key has to be revoked and
-            replaced.
+            This is the only time Flexprice will show it. A lost key has to be revoked and replaced.
           </p>
           <CopySnippet value={issued.secret} label={issued.key.name || 'the new API key'} />
           <div className="flex justify-end">
