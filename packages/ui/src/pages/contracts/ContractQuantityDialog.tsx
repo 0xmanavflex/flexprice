@@ -75,7 +75,7 @@ export function ContractQuantityDialog({
         if (!next && !busy) onClose()
       }}
       size="sm"
-      title="Change quantity"
+      title="Edit charge"
     >
       {line ? (
         <QuantityFlow

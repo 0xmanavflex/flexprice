@@ -234,6 +234,8 @@
       ],
       "usedBy": [
         "AddChargeDialog",
+        "ContractAddChargeForm",
+        "ContractUsageEditForm",
         "PlanForm"
       ],
       "story": "./src/pages/product-catalog/charges/ChargeForm.stories.tsx"
@@ -271,6 +273,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "UsageTermsFields",
         "WebhookEventTypePicker"
       ],
       "story": "./src/compositions/forms/CheckboxRow.stories.tsx"
@@ -282,6 +285,7 @@
       "usedBy": [
         "AddChargeDialog",
         "ChargeForm",
+        "ContractChargeDialog",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
@@ -339,11 +343,29 @@
       "usedBy": [],
       "story": "./src/compositions/layout/ContextualSection.stories.tsx"
     },
+    "ContractAddChargeForm": {
+      "file": "src/pages/contracts/ContractAddChargeForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChargeForm",
+        "DateInput",
+        "Field",
+        "OptionSelect",
+        "UsageTermsFields"
+      ],
+      "usedBy": [
+        "ContractChargeDialog"
+      ],
+      "story": null
+    },
     "ContractChargeDialog": {
       "file": "src/pages/contracts/ContractChargeDialog.tsx",
       "layer": "surface",
       "composes": [
+        "ChoiceCards",
         "Composer",
+        "ContractAddChargeForm",
+        "ContractUsageEditForm",
         "Field",
         "FormDialog"
       ],
@@ -362,6 +384,18 @@
       ],
       "usedBy": [
         "SubscriptionDetailView"
+      ],
+      "story": null
+    },
+    "ContractUsageEditForm": {
+      "file": "src/pages/contracts/ContractUsageEditForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChargeForm",
+        "UsageTermsFields"
+      ],
+      "usedBy": [
+        "ContractChargeDialog"
       ],
       "story": null
     },
@@ -689,6 +723,7 @@
       "composes": [],
       "usedBy": [
         "ChargeForm",
+        "ContractAddChargeForm",
         "CouponCreateForm",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
@@ -1213,6 +1248,7 @@
       "usedBy": [
         "AcceptInvitationForm",
         "ChargeForm",
+        "ContractAddChargeForm",
         "ContractChargeDialog",
         "ContractQuantityDialog",
         "CreditGrantCreateForm",
@@ -1231,6 +1267,7 @@
         "MeteredEntitlementFields",
         "PriceOverrideForm",
         "SignInForm",
+        "UsageTermsFields",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/Field.stories.tsx"
@@ -2097,6 +2134,7 @@
       "composes": [],
       "usedBy": [
         "ChargeForm",
+        "ContractAddChargeForm",
         "CouponCreateForm",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
@@ -2111,6 +2149,7 @@
         "SubscriptionForm",
         "TaxRateCreateForm",
         "TaxRateEditForm",
+        "UsageTermsFields",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/OptionSelect.stories.tsx"
@@ -3091,6 +3130,20 @@
       ],
       "usedBy": [],
       "story": "./src/pages/developers/usage-syncs/UsageSyncGrid.stories.tsx"
+    },
+    "UsageTermsFields": {
+      "file": "src/pages/contracts/UsageTermsFields.tsx",
+      "layer": "surface",
+      "composes": [
+        "CheckboxRow",
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "ContractAddChargeForm",
+        "ContractUsageEditForm"
+      ],
+      "story": null
     },
     "WaveDots": {
       "file": "src/components/blocks/auth-11/components/wave-dots.tsx",

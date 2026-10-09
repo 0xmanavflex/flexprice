@@ -27,6 +27,7 @@ import {
   PageBody,
 } from '@fp/ui/compositions'
 import { Input } from '@fp/ui/primitives'
+import { usePlanFormOptions } from '../plans/planFormOptions'
 import { mockSubscriptionActivity } from './subscriptionActivityMock'
 
 export interface SubscriptionDetailPageProps {
@@ -86,6 +87,7 @@ export function SubscriptionDetailPage({
   const endLine = useDeleteSubscriptionLineItem()
   const previewChange = usePreviewLineChange()
   const executeChange = useExecuteLineChange()
+  const formOptions = usePlanFormOptions()
 
   const [dialog, setDialog] = useState<'cancel' | 'activate' | null>(null)
   const [cancellationType, setCancellationType] =
@@ -142,10 +144,10 @@ export function SubscriptionDetailPage({
           ? { onActivate: () => setDialog('activate') }
           : {})}
         onCancel={() => setDialog('cancel')}
+        meters={formOptions.meters}
+        priceUnits={formOptions.units.filter((unit) => unit.baseCurrency === data.currency)}
         onAddCharge={async (draft) => {
-          if (!data.billingPeriod)
-            throw new Error('This contract has no billing period to charge on.')
-          await addLine.mutateAsync({ id: data.id, billingPeriod: data.billingPeriod, draft })
+          await addLine.mutateAsync({ id: data.id, draft })
         }}
         onEditCharge={async (line, draft) => {
           await editLine.mutateAsync({ lineItemId: line.id, draft })

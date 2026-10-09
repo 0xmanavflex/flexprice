@@ -63,7 +63,11 @@ const INVOICE_CADENCES = new Set<string>(Object.values(InvoiceCadence))
 const TIER_MODES = new Set<string>(Object.values(TierMode))
 
 /** One tier band, snake-safe: the SDK camelCases it, but guard the shape anyway. */
-function toTier(raw: { upTo?: number | null; unitAmount?: string; flatAmount?: string }): Tier {
+export function toTier(raw: {
+  upTo?: number | null
+  unitAmount?: string
+  flatAmount?: string
+}): Tier {
   return {
     upTo: typeof raw.upTo === 'number' ? raw.upTo : null,
     unitAmount: raw.unitAmount ?? '0',
@@ -216,7 +220,10 @@ export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknow
 
   switch (draft.billingModel) {
     case BillingModel.FlatFee:
-      return { ...common, ...(custom ? { priceUnitAmount: draft.amount } : { amount: draft.amount }) }
+      return {
+        ...common,
+        ...(custom ? { priceUnitAmount: draft.amount } : { amount: draft.amount }),
+      }
     case BillingModel.Package:
       return {
         ...common,
@@ -401,7 +408,12 @@ export function useFeatureCharges(meterId: string | null) {
       const sheetById = byId(sheets)
 
       return items
-        .filter((item) => item.entityType === 'PLAN' || item.entityType === 'ADDON' || item.entityType === 'COSTSHEET')
+        .filter(
+          (item) =>
+            item.entityType === 'PLAN' ||
+            item.entityType === 'ADDON' ||
+            item.entityType === 'COSTSHEET',
+        )
         .map((item) => {
           const parent = parentOf(item, planById, addonById, sheetById)
           return { charge: toCharge(item), parentName: parent.name, parentStatus: parent.status }
@@ -424,14 +436,18 @@ function parentOf(
 ): { name: string; status: string } {
   const looked =
     item.entityType === 'PLAN'
-      ? item.plan ?? (item.entityId ? plans.get(item.entityId) : undefined)
+      ? (item.plan ?? (item.entityId ? plans.get(item.entityId) : undefined))
       : item.entityType === 'ADDON'
-        ? item.addon ?? (item.entityId ? addons.get(item.entityId) : undefined)
+        ? (item.addon ?? (item.entityId ? addons.get(item.entityId) : undefined))
         : item.entityId
           ? sheets.get(item.entityId)
           : undefined
   const fallback =
-    item.entityType === 'ADDON' ? 'Untitled add-on' : item.entityType === 'COSTSHEET' ? 'Untitled cost sheet' : 'Untitled plan'
+    item.entityType === 'ADDON'
+      ? 'Untitled add-on'
+      : item.entityType === 'COSTSHEET'
+        ? 'Untitled cost sheet'
+        : 'Untitled plan'
   return {
     name: looked?.name || item.displayName || fallback,
     status: looked?.status || 'published',

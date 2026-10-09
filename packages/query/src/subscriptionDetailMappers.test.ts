@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { NO_USAGE_TERMS } from '@fp/domain'
 import {
   toCreateLineItemRequest,
   toDeleteLineItemRequest,
@@ -136,34 +137,260 @@ describe('toPendingSchedules', () => {
     expect(toSubscriptionLine({}).source).toBe('plan')
   })
 
-  it('prices a new contract charge inline in the contract billing period', () => {
-    expect(
-      toCreateLineItemRequest(
-        { name: ' Onboarding ', amount: '250.00', quantity: '2', startDate: '2026-11-01' },
-        'MONTHLY',
-      ),
-    ).toEqual({
+  it('prices a new fixed contract charge inline, with quantity, start date and proration', () => {
+    const request = toCreateLineItemRequest({
+      charge: {
+        type: 'FIXED',
+        billingModel: 'FLAT_FEE',
+        currency: 'USD',
+        billingPeriod: 'MONTHLY',
+        invoiceCadence: 'ADVANCE',
+        displayName: 'Onboarding',
+        amount: '250.00',
+      },
+      quantity: '2',
+      startDate: '2026-11-01',
+      proration: 'none',
+      terms: NO_USAGE_TERMS,
+    })
+    expect(request).toEqual({
       displayName: 'Onboarding',
       quantity: 2,
       startDate: new Date('2026-11-01T00:00:00Z'),
+      prorationBehavior: 'none',
       price: {
         type: 'FIXED',
         billingModel: 'FLAT_FEE',
         billingPeriod: 'MONTHLY',
+        billingPeriodCount: 1,
         invoiceCadence: 'ADVANCE',
         priceUnitType: 'FIAT',
-        amount: '250.00',
         displayName: 'Onboarding',
+        amount: '250.00',
       },
     })
   })
 
-  it('leaves the effective date out when the change is immediate', () => {
-    expect(toUpdateLineItemRequest({ amount: '120', effectiveFrom: '' })).toEqual({ amount: '120' })
-    expect(toUpdateLineItemRequest({ amount: '120', effectiveFrom: '2026-12-01' })).toEqual({
-      amount: '120',
-      effectiveFrom: '2026-12-01T00:00:00Z',
+  it('sends a metered charge with its meter, bands, bucket and commitment — and no quantity', () => {
+    const request = toCreateLineItemRequest({
+      charge: {
+        type: 'USAGE',
+        billingModel: 'TIERED',
+        currency: 'USD',
+        billingPeriod: 'MONTHLY',
+        invoiceCadence: 'ARREAR',
+        meterId: 'meter_1',
+        tierMode: 'SLAB',
+        tiers: [
+          { upTo: 1000, unitAmount: '0.01' },
+          { upTo: null, unitAmount: '0.005', flatAmount: '2' },
+        ],
+      },
+      quantity: '1',
+      startDate: '',
+      proration: 'create_prorations',
+      terms: {
+        bucketSize: 'DAY',
+        commitment: {
+          kind: 'amount',
+          value: '500',
+          windowed: true,
+          overageFactor: '1.5',
+          trueUp: true,
+        },
+      },
     })
+    expect(request).toMatchObject({
+      price: {
+        type: 'USAGE',
+        billingModel: 'TIERED',
+        meterId: 'meter_1',
+        tierMode: 'SLAB',
+        bucketSize: 'DAY',
+        tiers: [
+          { upTo: 1000, unitAmount: '0.01', flatAmount: '0' },
+          { upTo: null, unitAmount: '0.005', flatAmount: '2' },
+        ],
+      },
+      commitmentType: 'amount',
+      commitmentAmount: 500,
+      commitmentWindowed: true,
+      commitmentOverageFactor: 1.5,
+      commitmentTrueUpEnabled: true,
+    })
+    expect(request).not.toHaveProperty('quantity')
+    expect(request).not.toHaveProperty('prorationBehavior')
+    expect(request).not.toHaveProperty('startDate')
+    expect(request['price']).not.toHaveProperty('currency')
+    expect(request['price']).not.toHaveProperty('entityId')
+  })
+
+  it('sends a quantity commitment as a quantity', () => {
+    const request = toCreateLineItemRequest({
+      charge: {
+        type: 'USAGE',
+        billingModel: 'FLAT_FEE',
+        currency: 'USD',
+        billingPeriod: 'MONTHLY',
+        invoiceCadence: 'ARREAR',
+        meterId: 'm',
+        amount: '0.02',
+      },
+      quantity: '1',
+      startDate: '',
+      proration: 'create_prorations',
+      terms: {
+        bucketSize: '',
+        commitment: {
+          kind: 'quantity',
+          value: '1000',
+          windowed: false,
+          overageFactor: '1',
+          trueUp: false,
+        },
+      },
+    })
+    expect(request).toMatchObject({ commitmentType: 'quantity', commitmentQuantity: 1000 })
+    expect(request).not.toHaveProperty('commitmentAmount')
+  })
+
+  describe('editing a metered charge', () => {
+    const edit = {
+      priceUnit: '',
+      effectiveFrom: '',
+      terms: NO_USAGE_TERMS,
+    }
+
+    it('sends a flat amount, leaving the date out when the change is immediate', () => {
+      const price = { priceId: 'p', billingModel: 'FLAT_FEE', amount: '120' } as const
+      expect(toUpdateLineItemRequest({ ...edit, price })).toEqual({
+        billingModel: 'FLAT_FEE',
+        amount: '120',
+      })
+      expect(toUpdateLineItemRequest({ ...edit, price, effectiveFrom: '2026-12-01' })).toEqual({
+        billingModel: 'FLAT_FEE',
+        amount: '120',
+        effectiveFrom: '2026-12-01T00:00:00Z',
+      })
+    })
+
+    it('sends a package size and a tier table in the price unit when the price has one', () => {
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price: { priceId: 'p', billingModel: 'PACKAGE', amount: '2', divideBy: 1000 },
+        }),
+      ).toEqual({
+        billingModel: 'PACKAGE',
+        amount: '2',
+        transformQuantity: { divideBy: 1000 },
+      })
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          priceUnit: 'TOK',
+          price: {
+            priceId: 'p',
+            billingModel: 'TIERED',
+            tierMode: 'VOLUME',
+            tiers: [{ upTo: null, unitAmount: '3' }],
+          },
+        }),
+      ).toEqual({
+        billingModel: 'TIERED',
+        tierMode: 'VOLUME',
+        priceUnitTiers: [{ upTo: null, unitAmount: '3', flatAmount: '0' }],
+      })
+    })
+
+    it('carries the bucket and commitment', () => {
+      expect(
+        toUpdateLineItemRequest({
+          ...edit,
+          price: { priceId: 'p', billingModel: 'FLAT_FEE', amount: '1' },
+          terms: {
+            bucketSize: 'HOUR',
+            commitment: {
+              kind: 'amount',
+              value: '40',
+              windowed: false,
+              overageFactor: '2',
+              trueUp: false,
+            },
+          },
+        }),
+      ).toMatchObject({
+        bucketSize: 'HOUR',
+        commitmentType: 'amount',
+        commitmentAmount: 40,
+        commitmentOverageFactor: 2,
+      })
+    })
+  })
+
+  it('reads how a line is priced, for editing', () => {
+    const line = toSubscriptionLine({
+      id: 'l1',
+      priceType: 'USAGE',
+      billingPeriod: 'MONTHLY',
+      currency: 'usd',
+      meterId: 'm1',
+      commitmentType: 'quantity',
+      commitmentQuantity: '5000',
+      commitmentOverageFactor: '1.2',
+      commitmentTrueUpEnabled: true,
+      price: {
+        billingModel: 'TIERED',
+        tierMode: 'SLAB',
+        bucketSize: 'DAY',
+        tiers: [
+          { upTo: 100, unitAmount: '1' },
+          { unitAmount: '0.5', flatAmount: '3' },
+        ],
+      },
+    })
+    expect(line.pricing).toEqual({
+      billingModel: 'TIERED',
+      tierMode: 'SLAB',
+      tiers: [
+        { upTo: 100, unitAmount: '1' },
+        { upTo: null, unitAmount: '0.5', flatAmount: '3' },
+      ],
+      divideBy: null,
+      priceUnit: '',
+      meterId: 'm1',
+      billingPeriod: 'MONTHLY',
+      currency: 'USD',
+      terms: {
+        bucketSize: 'DAY',
+        commitment: {
+          kind: 'quantity',
+          value: '5000',
+          windowed: false,
+          overageFactor: '1.2',
+          trueUp: true,
+        },
+      },
+    })
+    expect(toSubscriptionLine({ id: 'l2' }).pricing).toBeNull()
+  })
+
+  it('reads a custom price unit’s amounts, not the currency ones', () => {
+    const line = toSubscriptionLine({
+      priceType: 'USAGE',
+      price: {
+        billingModel: 'TIERED',
+        priceUnitType: 'CUSTOM',
+        priceUnit: 'TOK',
+        tiers: [{ unitAmount: '9' }],
+        priceUnitTiers: [{ unitAmount: '3' }],
+      },
+    })
+    expect(line.pricing?.priceUnit).toBe('TOK')
+    expect(line.pricing?.tiers).toEqual([{ upTo: null, unitAmount: '3' }])
+  })
+
+  it('leaves the end date out when the end is immediate', () => {
     expect(toDeleteLineItemRequest({ effectiveFrom: '' })).toEqual({})
     expect(toDeleteLineItemRequest({ effectiveFrom: '2026-12-01' })).toEqual({
       effectiveFrom: '2026-12-01T00:00:00Z',

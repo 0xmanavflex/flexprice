@@ -54,6 +54,7 @@ import { EntityLink } from '../shared/cells'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 import { InvoiceStatusBadge } from '../shared/StatusBadge'
 import type { InvoiceActivity } from '../billing/invoices/invoiceDocument'
+import type { MeterOption, PriceUnitOption } from '../product-catalog/charges/ChargeForm'
 import { ContractQuantityDialog } from './ContractQuantityDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
@@ -115,6 +116,9 @@ export interface SubscriptionDetailViewProps {
     ((line: SubscriptionLine, draft: ChangeLineQuantity) => Promise<LineChangePreview>) | undefined
   onChangeQuantity?:
     ((line: SubscriptionLine, draft: ChangeLineQuantity) => Promise<void> | void) | undefined
+  /** The metered features and custom price units the charge forms offer. */
+  meters?: MeterOption[] | undefined
+  priceUnits?: PriceUnitOption[] | undefined
 }
 
 type SubscriptionTab = 'overview' | 'pricing' | 'usage' | 'invoices' | 'entitlements'
@@ -162,6 +166,8 @@ export function SubscriptionDetailView({
   onEndCharge,
   onPreviewQuantity,
   onChangeQuantity,
+  meters = [],
+  priceUnits = [],
 }: SubscriptionDetailViewProps) {
   const [tab, setTab] = useState<SubscriptionTab>('overview')
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
@@ -183,8 +189,16 @@ export function SubscriptionDetailView({
   const endLabel = isCancelled ? 'Ended' : isCancelling ? 'Ends' : 'Renews'
 
   const canEditCharges = !isCancelled && !isCancelling
+  const canAddCharge =
+    Boolean(onAddCharge) && canEditCharges && s.status !== SubscriptionStatus.Trialing
 
+  // A fixed charge is edited through its quantity (and flat price), previewed
+  // before it is saved; a metered one through the full price form.
   const canChangeQuantity = Boolean(onPreviewQuantity && onChangeQuantity)
+  const editLine = (line: SubscriptionLine) =>
+    line.kind === 'fixed' ? setQuantityLine(line) : setDialog({ mode: 'edit', line })
+  const canEditLine = (line: SubscriptionLine) =>
+    line.kind === 'fixed' ? canChangeQuantity : Boolean(onEditCharge)
   const chargeActionColumns: DetailColumn<SubscriptionLine>[] =
     canEditCharges && (onEditCharge || onEndCharge || canChangeQuantity)
       ? [
@@ -196,14 +210,7 @@ export function SubscriptionDetailView({
               isEnded(line) ? null : (
                 <RowActionsMenu
                   label={line.name}
-                  {...(canChangeQuantity && line.kind === 'fixed'
-                    ? {
-                        extra: [
-                          { label: 'Change quantity', onSelect: () => setQuantityLine(line) },
-                        ],
-                      }
-                    : {})}
-                  {...(onEditCharge ? { onEdit: () => setDialog({ mode: 'edit', line }) } : {})}
+                  {...(canEditLine(line) ? { onEdit: () => editLine(line) } : {})}
                   {...(onEndCharge ? { onRemove: () => setDialog({ mode: 'end', line }) } : {})}
                   removeLabel="End charge"
                 />
@@ -535,7 +542,7 @@ export function SubscriptionDetailView({
                 emptyTitle="No priced lines"
                 emptyDescription="This contract has no priced lines."
                 isEmpty={(rows) => rows.length === 0}
-                {...(onAddCharge && canEditCharges
+                {...(canAddCharge
                   ? {
                       action: (
                         <Button
@@ -865,6 +872,9 @@ export function SubscriptionDetailView({
         state={dialog}
         onClose={closeDialog}
         currency={s.currency}
+        billingPeriod={s.billingPeriod}
+        meters={meters}
+        priceUnits={priceUnits}
         isSubmitting={saving}
         submitError={saveError}
         onAdd={(draft) => void run(onAddCharge?.(draft))}

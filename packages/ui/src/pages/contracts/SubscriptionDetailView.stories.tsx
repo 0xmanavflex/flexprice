@@ -8,11 +8,16 @@ import {
   InvoiceStatus,
   SubscriptionScheduleType,
   SubscriptionStatus,
+  BillingModel,
+  BillingPeriod,
+  NO_USAGE_TERMS,
+  TierMode,
   money,
   type CreditGrant,
   type Invoice,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
+  type LinePricing,
   type SubscriptionLine,
   type SubscriptionSchedule,
   type SubscriptionUsage,
@@ -60,6 +65,20 @@ const SUBSCRIPTION: SubscriptionDetail = {
   latestInvoice: { id: 'inv_0922', number: 'INV-0922' },
 }
 
+const flat = (): LinePricing => ({
+  billingModel: BillingModel.FlatFee,
+  tierMode: null,
+  tiers: [],
+  divideBy: null,
+  priceUnit: '',
+  meterId: '',
+  billingPeriod: BillingPeriod.Monthly,
+  currency: 'USD',
+  terms: NO_USAGE_TERMS,
+})
+
+const METERS = [{ id: 'meter_api', name: 'API requests', unit: 'request' }]
+
 const LINES: SubscriptionLine[] = [
   {
     id: 'line_1',
@@ -73,6 +92,7 @@ const LINES: SubscriptionLine[] = [
     source: 'plan',
     priceId: 'price_platform',
     amountEditable: true,
+    pricing: flat(),
   },
   {
     id: 'line_2',
@@ -86,6 +106,29 @@ const LINES: SubscriptionLine[] = [
     source: 'plan',
     priceId: 'price_api',
     amountEditable: false,
+    pricing: {
+      billingModel: BillingModel.Tiered,
+      tierMode: TierMode.Slab,
+      tiers: [
+        { upTo: 1_000_000, unitAmount: '0.002' },
+        { upTo: null, unitAmount: '0.001' },
+      ],
+      divideBy: null,
+      priceUnit: '',
+      meterId: 'meter_api',
+      billingPeriod: BillingPeriod.Monthly,
+      currency: 'USD',
+      terms: {
+        bucketSize: 'DAY',
+        commitment: {
+          kind: 'amount',
+          value: '500',
+          windowed: false,
+          overageFactor: '1.5',
+          trueUp: false,
+        },
+      },
+    },
   },
   {
     id: 'line_3',
@@ -99,6 +142,7 @@ const LINES: SubscriptionLine[] = [
     source: 'contract',
     priceId: 'price_onboarding',
     amountEditable: true,
+    pricing: flat(),
   },
 ]
 
@@ -253,6 +297,8 @@ const BASE: SubscriptionDetailViewProps = {
   onOpenInvoice: fn(),
   onActivate: fn(),
   onCancel: fn(),
+  meters: METERS,
+  priceUnits: [],
   onAddCharge: fn(),
   onEditCharge: fn(),
   onEndCharge: fn(),
@@ -469,60 +515,145 @@ export const EditPlanLink: Story = {
   },
 }
 
-/** Add a fixed charge to this contract only. */
+/** Add a fixed charge: the full charge form plus quantity, start date and proration. */
 export const AddCharge: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    // Fixed or usage first, then the form for that type.
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
     const dialog = within(await screen.findByRole('dialog'))
-    // Empty fields are refused with a message, not sent.
+    await dialog.findByLabelText(/^Amount/)
+    // The contract's currency is fixed.
+    await expect(dialog.getByLabelText(/^Currency/)).toBeDisabled()
+    // Empty fields are refused, not sent.
     await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
-    await expect(await dialog.findByText('Enter a name.')).toBeVisible()
     await expect(args.onAddCharge).not.toHaveBeenCalled()
-    await userEvent.type(dialog.getByLabelText('Name'), 'Premium support')
-    await userEvent.type(dialog.getByLabelText(/^Price/), '400')
+    await userEvent.type(dialog.getByLabelText('Display name'), 'Premium support')
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '400')
+    const quantity = dialog.getByLabelText(/^Quantity/)
+    await userEvent.clear(quantity)
+    await userEvent.type(quantity, '0')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(await dialog.findByText('Enter a whole number of 1 or more.')).toBeVisible()
+    await expect(args.onAddCharge).not.toHaveBeenCalled()
+    await userEvent.clear(quantity)
+    await userEvent.type(quantity, '3')
     await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
     await expect(args.onAddCharge).toHaveBeenCalledWith({
-      name: 'Premium support',
-      amount: '400',
-      quantity: '1',
+      charge: expect.objectContaining({
+        type: 'FIXED',
+        billingModel: 'FLAT_FEE',
+        displayName: 'Premium support',
+        amount: '400',
+        currency: 'USD',
+        billingPeriod: 'MONTHLY',
+      }),
+      quantity: '3',
       startDate: '',
+      proration: 'create_prorations',
+      terms: NO_USAGE_TERMS,
     })
   },
 }
 
-/** Change one charge's price; the dialog starts from the current price. */
-export const EditPrice: Story = {
+/** Add a metered charge: meter, pricing model, bucket size and a commitment. */
+export const AddUsageCharge: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    await userEvent.click(await screen.findByRole('radio', { name: /Usage/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(await dialog.findByRole('combobox', { name: /Metered feature/ }))
+    await userEvent.click(await screen.findByRole('option', { name: /API requests/ }))
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '0.002')
+    // Usage terms exist only on a metered charge; quantity does not.
+    await expect(dialog.queryByLabelText(/^Quantity/)).toBeNull()
+    await userEvent.click(dialog.getByRole('checkbox', { name: 'Add a commitment' }))
+    await userEvent.type(dialog.getByLabelText(/^Commitment/), '500')
+    // A commitment needs a value above zero.
+    await userEvent.clear(dialog.getByLabelText(/^Overage factor/))
+    await userEvent.type(dialog.getByLabelText(/^Overage factor/), '0.5')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(
+      await dialog.findByText('Enter 1 or more. 1 means no overage premium.'),
+    ).toBeVisible()
+    await expect(args.onAddCharge).not.toHaveBeenCalled()
+    await userEvent.clear(dialog.getByLabelText(/^Overage factor/))
+    await userEvent.type(dialog.getByLabelText(/^Overage factor/), '1.5')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(args.onAddCharge).toHaveBeenCalledWith({
+      charge: expect.objectContaining({
+        type: 'USAGE',
+        billingModel: 'FLAT_FEE',
+        meterId: 'meter_api',
+        amount: '0.002',
+      }),
+      quantity: '1',
+      startDate: '',
+      proration: 'create_prorations',
+      terms: {
+        bucketSize: '',
+        commitment: {
+          kind: 'amount',
+          value: '500',
+          windowed: false,
+          overageFactor: '1.5',
+          trueUp: false,
+        },
+      },
+    })
+  },
+}
+
+/** Edit a metered charge: the form opens on its own price, bucket and commitment. */
+export const EditUsageCharge: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = await openPricing(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for API requests' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
     const dialog = within(await screen.findByRole('dialog'))
-    await expect(
-      dialog.getByText(/Only this contract changes; the plan keeps its price/),
-    ).toBeVisible()
-    const price = dialog.getByLabelText(/^New price/)
-    await expect(price).toHaveValue('1500')
-    await userEvent.clear(price)
-    await userEvent.type(price, '1400')
-    await userEvent.type(dialog.getByLabelText('Effective from'), '2026-11-01')
-    await userEvent.click(dialog.getByRole('button', { name: 'Save price' }))
+    await expect(await dialog.findByText('Only this contract changes')).toBeVisible()
+    await expect(dialog.getByText(/the plan keeps its price/)).toBeVisible()
+    // Currency, period and meter cannot change on an existing charge.
+    await expect(dialog.getByLabelText('Display name')).toBeDisabled()
+    await expect(dialog.getByLabelText(/^Currency/)).toBeDisabled()
+    // Starts on the line's own commitment.
+    await expect(dialog.getByLabelText(/^Commitment/)).toHaveValue('500')
+    await expect(dialog.getByLabelText(/^Overage factor/)).toHaveValue('1.5')
+    const commitment = dialog.getByLabelText(/^Commitment/)
+    await userEvent.clear(commitment)
+    await userEvent.type(commitment, '800')
+    await userEvent.click(dialog.getByRole('button', { name: 'Save charge' }))
     await expect(args.onEditCharge).toHaveBeenCalledWith(
-      expect.objectContaining({ id: 'line_1' }),
-      { amount: '1400', effectiveFrom: '2026-11-01' },
+      expect.objectContaining({ id: 'line_2' }),
+      expect.objectContaining({
+        price: expect.objectContaining({
+          priceId: 'price_api',
+          billingModel: 'TIERED',
+          tierMode: 'SLAB',
+        }),
+        effectiveFrom: '',
+        terms: expect.objectContaining({
+          bucketSize: 'DAY',
+          commitment: expect.objectContaining({ value: '800', overageFactor: '1.5' }),
+        }),
+      }),
     )
   },
 }
 
-/** Quantity is changed in two steps: the form, then the API's preview, then confirm. */
+/** A fixed charge is edited through its quantity: the form, then the API's preview, then confirm. */
 export const ChangeQuantity: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change quantity' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
     const dialog = within(await screen.findByRole('dialog'))
     // Nothing changed yet: the form refuses to continue.
     await userEvent.click(dialog.getByRole('button', { name: 'Preview change' }))
@@ -545,14 +676,16 @@ export const ChangeQuantity: Story = {
   },
 }
 
-/** Usage charges are repriced, not given a quantity. */
+/** Usage charges open the price form, not the quantity dialog. */
 export const UsageChargeHasNoQuantityChange: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for API requests' }))
-    await screen.findByRole('menuitem', { name: 'Edit' })
-    await expect(screen.queryByRole('menuitem', { name: 'Change quantity' })).toBeNull()
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(await dialog.findByText('Bucket size')).toBeVisible()
+    await expect(dialog.queryByRole('button', { name: 'Preview change' })).toBeNull()
   },
 }
 
@@ -566,7 +699,7 @@ export const QuantityPreviewFails: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
     await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Change quantity' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
     const dialog = within(await screen.findByRole('dialog'))
     const quantity = dialog.getByLabelText('Quantity')
     await userEvent.clear(quantity)
@@ -617,6 +750,16 @@ export const CancelledPricingIsReadOnly: Story = {
     const canvas = await openPricing(canvasElement)
     await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
     await expect(canvas.queryByRole('button', { name: /^Actions for/ })).toBeNull()
+  },
+}
+
+/** A contract still in its trial takes no new charges, but existing ones stay editable. */
+export const TrialingCannotAddCharge: Story = {
+  args: withSubscription({ status: SubscriptionStatus.Trialing }),
+  play: async ({ canvasElement }) => {
+    const canvas = await openPricing(canvasElement)
+    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Actions for Platform fee' })).toBeVisible()
   },
 }
 

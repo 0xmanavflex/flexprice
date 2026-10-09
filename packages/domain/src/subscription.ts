@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
+import { type LinePricing } from './contractCharge'
 import { type Money } from './money'
 import { BillingPeriod } from './price'
 import { priceOverrideSchema } from './priceOverride'
@@ -239,23 +240,11 @@ export interface SubscriptionLine {
   priceId: string
   /** Only a flat-fee price in a real currency can be repriced through a quantity change. */
   amountEditable: boolean
+  /** How the price is built, for editing a metered charge; null when the API did not say. */
+  pricing: LinePricing | null
 }
 
 export type SubscriptionLineSource = 'plan' | 'addon' | 'contract'
-
-/** A new fixed recurring charge on one contract. `startDate` empty means now. */
-export interface AddContractCharge {
-  name: string
-  amount: string
-  quantity: string
-  startDate: string
-}
-
-/** A new unit price for one charge. `effectiveFrom` empty means now. */
-export interface EditContractCharge {
-  amount: string
-  effectiveFrom: string
-}
 
 /** End a charge. `effectiveFrom` empty means now. */
 export interface EndContractCharge {

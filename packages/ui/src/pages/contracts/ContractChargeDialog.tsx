@@ -1,34 +1,38 @@
 import { useState } from 'react'
+import { GaugeIcon, RepeatIcon } from 'lucide-react'
 import {
-  formatMoney,
   type AddContractCharge,
+  type BillingPeriod,
+  BillingPeriod as Period,
   type EditContractCharge,
   type EndContractCharge,
+  PriceType,
   type SubscriptionLine,
+  formatMoney,
 } from '@fp/domain'
-import { Composer } from '@ui/compositions/detail/DetailKit'
+import { Button } from '@ui/components/primitives/button'
+import { Composer, ChoiceCards } from '@ui/compositions/detail/DetailKit'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
-import {
-  Field,
-  FieldDescription,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from '@ui/components/primitives/field'
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
 import { Alert, AlertDescription } from '@ui/components/reui/alert'
 import { provenance } from '@ui/provenance'
+import type { MeterOption, PriceUnitOption } from '../product-catalog/charges/ChargeForm'
+import { ContractAddChargeForm } from './ContractAddChargeForm'
+import { ContractUsageEditForm } from './ContractUsageEditForm'
 
 export const ContractChargeDialogProvenance = provenance({
   source: 'composition',
   composes: [
     'compositions/form-dialog',
     'compositions/detail-kit',
+    'pages/ContractAddChargeForm',
+    'pages/ContractUsageEditForm',
     'ui/input',
     'ui/field',
     '@reui/alert',
   ],
-  note: 'One dialog for the three edits a contract allows on its charges: add a fixed charge, change a price, end a charge.',
+  note: 'One dialog for the edits a contract allows on its charges: add a fixed or metered charge, edit a metered charge, end a charge. Fixed charges are edited through the quantity dialog.',
 })
 
 /** Which edit is open, and on which charge. */
@@ -41,6 +45,10 @@ export interface ContractChargeDialogProps {
   state: ContractChargeDialogState | null
   onClose: () => void
   currency: string
+  /** The contract's billing period, which a new charge starts on. */
+  billingPeriod?: BillingPeriod | null
+  meters?: MeterOption[]
+  priceUnits?: PriceUnitOption[]
   onAdd: (draft: AddContractCharge) => void
   onEdit: (line: SubscriptionLine, draft: EditContractCharge) => void
   onEnd: (line: SubscriptionLine, draft: EndContractCharge) => void
@@ -48,11 +56,8 @@ export interface ContractChargeDialogProps {
   submitError?: string | null
 }
 
-const AMOUNT = /^\d+(\.\d{1,8})?$/
-const QUANTITY = /^[1-9]\d*$/
-
 /**
- * Add, reprice or end one charge on a single contract. These calls touch only
+ * Add, edit or end one charge on a single contract. These calls touch only
  * this contract: a plan's own prices change on the plan page, and the dialog
  * says so on charges that came from the plan.
  */
@@ -60,6 +65,9 @@ export function ContractChargeDialog({
   state,
   onClose,
   currency,
+  billingPeriod = null,
+  meters = [],
+  priceUnits = [],
   onAdd,
   onEdit,
   onEnd,
@@ -67,7 +75,7 @@ export function ContractChargeDialog({
   submitError = null,
 }: ContractChargeDialogProps) {
   const title =
-    state?.mode === 'add' ? 'Add charge' : state?.mode === 'edit' ? 'Edit price' : 'End charge'
+    state?.mode === 'add' ? 'Add charge' : state?.mode === 'edit' ? 'Edit charge' : 'End charge'
 
   return (
     <FormDialog
@@ -75,17 +83,38 @@ export function ContractChargeDialog({
       onOpenChange={(next) => {
         if (!next && !isSubmitting) onClose()
       }}
-      size="sm"
+      size={state?.mode === 'end' ? 'sm' : 'lg'}
       title={title}
     >
-      {state ? (
-        <ChargeForm
-          key={state.mode === 'add' ? 'add' : `${state.mode}:${state.line.id}`}
-          state={state}
+      {state?.mode === 'add' ? (
+        <AddStep
+          key="add"
           currency={currency}
+          billingPeriod={billingPeriod ?? Period.Monthly}
+          meters={meters}
+          priceUnits={priceUnits}
           onCancel={onClose}
           onAdd={onAdd}
-          onEdit={onEdit}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      ) : state?.mode === 'edit' ? (
+        <ContractUsageEditForm
+          key={`edit:${state.line.id}`}
+          line={state.line}
+          currency={currency}
+          billingPeriod={billingPeriod ?? Period.Monthly}
+          meters={meters}
+          priceUnits={priceUnits}
+          onSubmit={(draft) => onEdit(state.line, draft)}
+          isSubmitting={isSubmitting}
+          submitError={submitError}
+        />
+      ) : state?.mode === 'end' ? (
+        <EndForm
+          key={`end:${state.line.id}`}
+          line={state.line}
+          onCancel={onClose}
           onEnd={onEnd}
           isSubmitting={isSubmitting}
           submitError={submitError}
@@ -95,136 +124,113 @@ export function ContractChargeDialog({
   )
 }
 
-function ChargeForm({
-  state,
+/** First step: fixed or metered. The form that follows is the granular one for that type. */
+function AddStep({
   currency,
+  billingPeriod,
+  meters,
+  priceUnits,
   onCancel,
   onAdd,
-  onEdit,
+  isSubmitting,
+  submitError,
+}: {
+  currency: string
+  billingPeriod: BillingPeriod
+  meters: MeterOption[]
+  priceUnits: PriceUnitOption[]
+  onCancel: () => void
+  onAdd: (draft: AddContractCharge) => void
+  isSubmitting: boolean
+  submitError: string | null
+}) {
+  const [type, setType] = useState<PriceType>(PriceType.Fixed)
+  const [chosen, setChosen] = useState(false)
+
+  if (chosen) {
+    return (
+      <ContractAddChargeForm
+        key={type}
+        type={type}
+        currency={currency}
+        billingPeriod={billingPeriod}
+        meters={meters}
+        priceUnits={priceUnits}
+        onSubmit={onAdd}
+        isSubmitting={isSubmitting}
+        submitError={submitError}
+      />
+    )
+  }
+
+  return (
+    <div className="flex flex-col gap-5">
+      <p className="text-muted-foreground text-sm">
+        Only this contract gets the charge; the plan does not change.
+      </p>
+      <ChoiceCards
+        label="Charge type"
+        value={type}
+        onChange={setType}
+        choices={[
+          {
+            value: PriceType.Fixed,
+            title: 'Fixed',
+            description: 'A flat fee, billed each period for a quantity.',
+            icon: <RepeatIcon aria-hidden className="text-muted-foreground size-4" />,
+          },
+          {
+            value: PriceType.Usage,
+            title: 'Usage',
+            description: 'Billed at the end of the period for what was used.',
+            icon: <GaugeIcon aria-hidden className="text-muted-foreground size-4" />,
+          },
+        ]}
+      />
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="button" onClick={() => setChosen(true)}>
+          Continue
+        </Button>
+      </div>
+    </div>
+  )
+}
+
+function EndForm({
+  line,
+  onCancel,
   onEnd,
   isSubmitting,
   submitError,
-}: Omit<ContractChargeDialogProps, 'state' | 'onClose'> & {
-  state: ContractChargeDialogState
+}: {
+  line: SubscriptionLine
   onCancel: () => void
+  onEnd: (line: SubscriptionLine, draft: EndContractCharge) => void
+  isSubmitting: boolean
+  submitError: string | null
 }) {
-  const line = state.mode === 'add' ? null : state.line
-  const [name, setName] = useState('')
-  const [amount, setAmount] = useState(line && state.mode === 'edit' ? line.amount.amount : '')
-  const [quantity, setQuantity] = useState('1')
   const [date, setDate] = useState('')
-  const [touched, setTouched] = useState(false)
-
-  const errors = {
-    name: state.mode === 'add' && name.trim() === '' ? 'Enter a name.' : null,
-    amount:
-      state.mode !== 'end' && !AMOUNT.test(amount.trim())
-        ? 'Enter an amount, such as 99 or 99.50.'
-        : null,
-    quantity:
-      state.mode === 'add' && !QUANTITY.test(quantity.trim())
-        ? 'Enter a whole number of 1 or more.'
-        : null,
-  }
-  const invalid = Object.values(errors).some(Boolean)
-
-  const submit = () => {
-    setTouched(true)
-    if (invalid) return
-    if (state.mode === 'add') onAdd({ name, amount, quantity, startDate: date })
-    else if (state.mode === 'edit') onEdit(state.line, { amount, effectiveFrom: date })
-    else onEnd(state.line, { effectiveFrom: date })
-  }
-
-  const dateLabel =
-    state.mode === 'add' ? 'Starts on' : state.mode === 'edit' ? 'Effective from' : 'Ends on'
-  const dateHint =
-    state.mode === 'add'
-      ? 'Leave empty to start now.'
-      : 'Leave empty to apply now. The change is prorated if the period is under way.'
 
   return (
     <Composer
-      submitLabel={
-        isSubmitting
-          ? 'Saving…'
-          : state.mode === 'add'
-            ? 'Add charge'
-            : state.mode === 'edit'
-              ? 'Save price'
-              : 'End charge'
-      }
-      submitting={isSubmitting ?? false}
+      submitLabel={isSubmitting ? 'Saving…' : 'End charge'}
+      submitting={isSubmitting}
       onCancel={onCancel}
-      onSubmit={submit}
+      onSubmit={() => onEnd(line, { effectiveFrom: date })}
     >
-      {line ? (
-        <p className="text-muted-foreground text-sm">
-          {state.mode === 'edit' ? 'Changing' : 'Ending'}{' '}
-          <strong className="text-foreground">{line.name}</strong>, currently{' '}
-          {formatMoney(line.amount)}.{' '}
-          {line.source === 'plan'
-            ? 'It comes from the plan. Only this contract changes; the plan keeps its price.'
-            : 'Only this contract changes.'}
-        </p>
-      ) : (
-        <p className="text-muted-foreground text-sm">
-          A fixed charge, billed {currency ? `in ${currency} ` : ''}each billing period. Only this
-          contract gets it.
-        </p>
-      )}
-
+      <p className="text-muted-foreground text-sm">
+        Ending <strong className="text-foreground">{line.name}</strong>, currently{' '}
+        {formatMoney(line.amount)}.{' '}
+        {line.source === 'plan'
+          ? 'It comes from the plan. Only this contract stops paying for it.'
+          : 'Only this contract changes.'}
+      </p>
       <FieldGroup className="gap-4">
-        {state.mode === 'add' ? (
-          <Field className="gap-2">
-            <FieldLabel htmlFor="charge-name">Name</FieldLabel>
-            <Input
-              id="charge-name"
-              autoFocus
-              value={name}
-              disabled={isSubmitting}
-              aria-invalid={touched && errors.name ? true : undefined}
-              onChange={(event) => setName(event.target.value)}
-            />
-            {touched && errors.name ? <FieldError>{errors.name}</FieldError> : null}
-          </Field>
-        ) : null}
-
-        {state.mode !== 'end' ? (
-          <Field className="gap-2">
-            <FieldLabel htmlFor="charge-amount">
-              {state.mode === 'add' ? 'Price' : 'New price'}
-              {currency ? ` (${currency})` : ''}
-            </FieldLabel>
-            <Input
-              id="charge-amount"
-              inputMode="decimal"
-              value={amount}
-              disabled={isSubmitting}
-              aria-invalid={touched && errors.amount ? true : undefined}
-              onChange={(event) => setAmount(event.target.value)}
-            />
-            {touched && errors.amount ? <FieldError>{errors.amount}</FieldError> : null}
-          </Field>
-        ) : null}
-
-        {state.mode === 'add' ? (
-          <Field className="gap-2">
-            <FieldLabel htmlFor="charge-quantity">Quantity</FieldLabel>
-            <Input
-              id="charge-quantity"
-              inputMode="numeric"
-              value={quantity}
-              disabled={isSubmitting}
-              aria-invalid={touched && errors.quantity ? true : undefined}
-              onChange={(event) => setQuantity(event.target.value)}
-            />
-            {touched && errors.quantity ? <FieldError>{errors.quantity}</FieldError> : null}
-          </Field>
-        ) : null}
-
         <Field className="gap-2">
-          <FieldLabel htmlFor="charge-date">{dateLabel}</FieldLabel>
+          <FieldLabel htmlFor="charge-date">Ends on</FieldLabel>
           <Input
             id="charge-date"
             type="date"
@@ -232,10 +238,11 @@ function ChargeForm({
             disabled={isSubmitting}
             onChange={(event) => setDate(event.target.value)}
           />
-          <FieldDescription>{dateHint}</FieldDescription>
+          <FieldDescription>
+            Leave empty to end now. The change is prorated if the period is under way.
+          </FieldDescription>
         </Field>
       </FieldGroup>
-
       {submitError ? (
         <Alert variant="destructive">
           <AlertDescription>{submitError}</AlertDescription>

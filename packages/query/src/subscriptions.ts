@@ -3,13 +3,18 @@ import { type Flexprice, call } from '@fp/api'
 import {
   type AddContractCharge,
   BILLING_PERIOD_LABEL,
+  BillingModel,
   type BillingPeriod,
+  type BucketSize,
+  CommitmentKind,
   type CancelSubscription,
   type CreateSubscription,
   type ChangeLineQuantity,
   type CreditGrant,
   type EditContractCharge,
   type EndContractCharge,
+  type LineCommitment,
+  type LinePricing,
   type LineChangePreview,
   type Money,
   type Subscription,
@@ -23,11 +28,16 @@ import {
   SubscriptionSortField,
   SubscriptionStatus,
   type SubscriptionUsage,
+  type Tier,
+  type UsageTerms,
+  PriceType,
+  TierMode,
   moneyOr,
 } from '@fp/domain'
 import { type CreditGrantWire, toCreditGrant, toCreditGrantTerms } from './creditGrants'
 import { type InvoiceWire, toInvoice } from './invoices'
 import { queryKeys } from './keys'
+import { toChargeRequest, toTier } from './prices'
 import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice } from './provider'
 
@@ -148,22 +158,87 @@ export interface SubscriptionLineWire {
   quantity?: string | undefined
   billingPeriod?: string | undefined
   currency?: string | undefined
+  meterId?: string | undefined
   price?:
     | {
         amount?: string | undefined
         currency?: string | undefined
         billingModel?: string | undefined
         priceUnitType?: string | undefined
+        priceUnit?: string | undefined
+        priceUnitAmount?: string | undefined
+        priceUnitTiers?: TierWire[] | undefined
+        tierMode?: string | undefined
+        tiers?: TierWire[] | undefined
+        transformQuantity?: { divideBy?: number | undefined } | undefined
+        bucketSize?: string | undefined
+        meterId?: string | undefined
       }
     | undefined
+  commitmentType?: string | undefined
+  commitmentAmount?: string | undefined
+  commitmentQuantity?: string | undefined
+  commitmentWindowed?: boolean | undefined
+  commitmentOverageFactor?: string | undefined
+  commitmentTrueUpEnabled?: boolean | undefined
   startDate?: Date | undefined
   endDate?: Date | undefined
 }
+
+type TierWire = { upTo?: number | null; unitAmount?: string; flatAmount?: string }
 
 const LINE_SOURCE: Record<string, SubscriptionLineSource> = {
   plan: 'plan',
   addon: 'addon',
   subscription: 'contract',
+}
+
+const BILLING_MODELS = new Set<string>(Object.values(BillingModel))
+
+function toLineCommitment(wire: SubscriptionLineWire): LineCommitment | null {
+  const kind =
+    wire.commitmentType === CommitmentKind.Quantity
+      ? CommitmentKind.Quantity
+      : wire.commitmentType === CommitmentKind.Amount
+        ? CommitmentKind.Amount
+        : null
+  const value = kind === CommitmentKind.Quantity ? wire.commitmentQuantity : wire.commitmentAmount
+  if (!kind || !value || Number(value) <= 0) return null
+  return {
+    kind,
+    value,
+    windowed: wire.commitmentWindowed ?? false,
+    overageFactor: wire.commitmentOverageFactor || '1',
+    trueUp: wire.commitmentTrueUpEnabled ?? false,
+  }
+}
+
+/** The price of a line as the edit form needs it, in the unit it is written in. */
+function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
+  const price = wire.price
+  if (!price || !BILLING_MODELS.has(price.billingModel ?? '')) return null
+  const custom = price.priceUnitType === 'CUSTOM'
+  const tiers = (custom ? price.priceUnitTiers : price.tiers) ?? []
+  return {
+    billingModel: price.billingModel as BillingModel,
+    tierMode: price.tierMode === TierMode.Slab ? TierMode.Slab : TierMode.Volume,
+    tiers: tiers.map(toTier),
+    divideBy:
+      typeof price.transformQuantity?.divideBy === 'number'
+        ? price.transformQuantity.divideBy
+        : null,
+    priceUnit: custom ? (price.priceUnit ?? '') : '',
+    meterId: wire.meterId || price.meterId || '',
+    billingPeriod:
+      wire.billingPeriod && wire.billingPeriod in BILLING_PERIOD_LABEL
+        ? (wire.billingPeriod as BillingPeriod)
+        : null,
+    currency: (price.currency || wire.currency || '').toUpperCase(),
+    terms: {
+      bucketSize: (price.bucketSize ?? '') as BucketSize | '',
+      commitment: toLineCommitment(wire),
+    },
+  }
 }
 
 export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): SubscriptionLine {
@@ -182,6 +257,7 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
       wire.priceType !== 'USAGE' &&
       wire.price?.billingModel === 'FLAT_FEE' &&
       wire.price?.priceUnitType !== 'CUSTOM',
+    pricing: toLinePricing(wire),
   }
 }
 
@@ -467,30 +543,85 @@ export function useActivateSubscription() {
 /** A date input's `YYYY-MM-DD` as the instant the API takes; empty means "now" and is left out. */
 const effectiveFrom = (day: string) => (day ? `${day}T00:00:00Z` : undefined)
 
-/** A new fixed recurring charge on one contract, priced inline — `POST /subscriptions/{id}/lineitems`. */
-export function toCreateLineItemRequest(
-  draft: AddContractCharge,
-  billingPeriod: BillingPeriod,
-): Record<string, unknown> {
+/** Commitment fields shared by the add and edit requests; the API takes the numbers as numbers. */
+function commitmentFields(terms: UsageTerms): Record<string, unknown> {
+  const commitment = terms.commitment
+  if (!commitment) return {}
   return {
-    displayName: draft.name.trim(),
-    quantity: Number(draft.quantity) || 1,
-    ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
-    price: {
-      type: 'FIXED',
-      billingModel: 'FLAT_FEE',
-      billingPeriod,
-      invoiceCadence: 'ADVANCE',
-      priceUnitType: 'FIAT',
-      amount: draft.amount.trim(),
-      displayName: draft.name.trim(),
-    },
+    commitmentType: commitment.kind,
+    ...(commitment.kind === CommitmentKind.Quantity
+      ? { commitmentQuantity: Number(commitment.value) }
+      : { commitmentAmount: Number(commitment.value) }),
+    commitmentWindowed: commitment.windowed,
+    commitmentOverageFactor: Number(commitment.overageFactor),
+    commitmentTrueUpEnabled: commitment.trueUp,
   }
 }
 
+/**
+ * A new charge on one contract, priced inline — `POST /subscriptions/{id}/lineitems`.
+ *
+ * The price is the same request the plan page sends, minus what the contract
+ * decides (its currency and the entity it prices). A metered charge carries no
+ * quantity, and a fixed one no bucket or commitment.
+ */
+export function toCreateLineItemRequest(draft: AddContractCharge): Record<string, unknown> {
+  const { charge } = draft
+  const usage = charge.type === PriceType.Usage
+  const {
+    entityType: _entityType,
+    entityId: _entityId,
+    currency: _currency,
+    ...price
+  } = toChargeRequest(charge, 'PLAN', '')
+  return {
+    ...(charge.displayName ? { displayName: charge.displayName } : {}),
+    ...(usage ? {} : { quantity: Number(draft.quantity) || 1 }),
+    ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
+    ...(usage ? {} : { prorationBehavior: draft.proration }),
+    price: {
+      ...price,
+      ...(usage && draft.terms.bucketSize ? { bucketSize: draft.terms.bucketSize } : {}),
+    },
+    ...(usage ? commitmentFields(draft.terms) : {}),
+  }
+}
+
+/** A metered charge's new price and terms — `PUT /subscriptions/lineitems/{lineItemId}`. */
 export function toUpdateLineItemRequest(draft: EditContractCharge): Record<string, unknown> {
+  const { price } = draft
+  const custom = draft.priceUnit !== ''
   const from = effectiveFrom(draft.effectiveFrom)
-  return { amount: draft.amount.trim(), ...(from ? { effectiveFrom: from } : {}) }
+  const tiersOf = (tiers: Tier[]) =>
+    tiers.map((tier) => ({
+      upTo: tier.upTo,
+      unitAmount: tier.unitAmount,
+      flatAmount: tier.flatAmount ?? '0',
+    }))
+  const amountField = (amount: string) => (custom ? { priceUnitAmount: amount } : { amount })
+
+  let priced: Record<string, unknown>
+  switch (price.billingModel) {
+    case BillingModel.FlatFee:
+      priced = amountField(price.amount)
+      break
+    case BillingModel.Package:
+      priced = { ...amountField(price.amount), transformQuantity: { divideBy: price.divideBy } }
+      break
+    case BillingModel.Tiered:
+      priced = {
+        tierMode: price.tierMode,
+        ...(custom ? { priceUnitTiers: tiersOf(price.tiers) } : { tiers: tiersOf(price.tiers) }),
+      }
+      break
+  }
+  return {
+    billingModel: price.billingModel,
+    ...priced,
+    ...(draft.terms.bucketSize ? { bucketSize: draft.terms.bucketSize } : {}),
+    ...commitmentFields(draft.terms),
+    ...(from ? { effectiveFrom: from } : {}),
+  }
 }
 
 export function toDeleteLineItemRequest(draft: EndContractCharge): Record<string, unknown> {
@@ -624,19 +755,11 @@ export function useCreateSubscriptionLineItem() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({
-      id,
-      billingPeriod,
-      draft,
-    }: {
-      id: string
-      billingPeriod: BillingPeriod
-      draft: AddContractCharge
-    }) =>
+    mutationFn: ({ id, draft }: { id: string; draft: AddContractCharge }) =>
       call(() =>
         client.subscriptions.createSubscriptionLineItem(
           id,
-          toCreateLineItemRequest(draft, billingPeriod) as never,
+          toCreateLineItemRequest(draft) as never,
         ),
       ),
     onSuccess: () => invalidateSubscription(queryClient),

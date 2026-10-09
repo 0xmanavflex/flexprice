@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react'
 import { Controller, useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
@@ -96,6 +97,14 @@ export interface ChargeFormProps {
   submitLabel?: string
   /** Hides the Fixed/Usage tabs when the type was already chosen (e.g. by a dialog's first step). */
   lockType?: boolean
+  /** Fields that belong to the container, not the price — drawn after the price fields. */
+  extras?: ReactNode
+  /** Replaces the edit-mode notice, for a container whose edits are not new price versions. */
+  notice?: ReactNode
+  /** Shows the currency locked — a contract bills in one currency. */
+  lockCurrency?: boolean
+  /** Shows the display name locked, for a container that cannot rename a charge. */
+  lockDisplayName?: boolean
 }
 
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
@@ -131,6 +140,10 @@ export function ChargeForm({
   submitError = null,
   submitLabel,
   lockType = false,
+  extras,
+  notice,
+  lockCurrency = false,
+  lockDisplayName = false,
 }: ChargeFormProps) {
   const isEdit = mode === 'edit'
   const form = useForm<CreateCharge>({
@@ -216,7 +229,9 @@ export function ChargeForm({
       noValidate
       className="flex flex-col gap-5"
     >
-      {isEdit ? (
+      {isEdit && notice ? (
+        notice
+      ) : isEdit ? (
         <Alert>
           <AlertTitle>Changing the price creates a new version</AlertTitle>
           <AlertDescription>
@@ -252,51 +267,70 @@ export function ChargeForm({
             error={messageOf(errors, 'meterId')}
             hint={isEdit ? 'Fixed once created.' : 'The feature whose usage this charge bills.'}
           >
-            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) => (
-              <Controller
-                control={form.control}
-                name={'meterId' as never}
-                render={({ field }) => (
-                  <OptionCombobox
-                    id={id}
-                    value={(field.value as string) || ''}
-                    onValueChange={field.onChange}
-                    options={meters.map((meter) => ({
-                      value: meter.id,
-                      label: meter.name,
-                      trailing: <FeatureTypeGlyph type="metered" />,
-                    }))}
-                    placeholder="Choose a feature to meter"
-                    emptyText="No metered features."
-                    disabled={isSubmitting || isEdit}
-                    aria-describedby={describedBy}
-                    aria-invalid={invalid}
-                  />
-                )}
-              />
-            )}
+            {({ id, 'aria-describedby': describedBy, 'aria-invalid': invalid }) =>
+              isEdit ? (
+                lockedInput(
+                  id,
+                  meters.find(
+                    (meter) => meter.id === (form.getValues() as { meterId?: string }).meterId,
+                  )?.name ?? '',
+                )
+              ) : (
+                <Controller
+                  control={form.control}
+                  name={'meterId' as never}
+                  render={({ field }) => (
+                    <OptionCombobox
+                      id={id}
+                      value={(field.value as string) || ''}
+                      onValueChange={field.onChange}
+                      options={meters.map((meter) => ({
+                        value: meter.id,
+                        label: meter.name,
+                        trailing: <FeatureTypeGlyph type="metered" />,
+                      }))}
+                      placeholder="Choose a feature to meter"
+                      emptyText="No metered features."
+                      disabled={isSubmitting || isEdit}
+                      aria-describedby={describedBy}
+                      aria-invalid={invalid}
+                    />
+                  )}
+                />
+              )
+            }
           </Field>
         ) : null}
 
         <Field label="Display name" hint="Optional. What this charge is called on an invoice.">
-          {({ id, ...field }) => (
-            <Input
-              id={id}
-              disabled={isSubmitting}
-              placeholder={isUsage ? 'e.g. API calls' : 'e.g. Platform base'}
-              {...field}
-              {...form.register('displayName' as never)}
-            />
-          )}
+          {({ id, ...field }) =>
+            lockDisplayName ? (
+              lockedInput(id, form.getValues('displayName') ?? '')
+            ) : (
+              <Input
+                id={id}
+                disabled={isSubmitting}
+                placeholder={isUsage ? 'e.g. API calls' : 'e.g. Platform base'}
+                {...field}
+                {...form.register('displayName' as never)}
+              />
+            )
+          }
         </Field>
 
         <Field
           label="Currency"
-          hint={priceUnit ? 'Follows the price unit.' : 'The currency the charge is billed in.'}
+          hint={
+            priceUnit
+              ? 'Follows the price unit.'
+              : lockCurrency
+                ? 'Set by the contract.'
+                : 'The currency the charge is billed in.'
+          }
           required
         >
           {({ id, 'aria-describedby': describedBy }) =>
-            isEdit || priceUnit ? (
+            isEdit || priceUnit || lockCurrency ? (
               lockedInput(id, currency.toUpperCase())
             ) : (
               <Controller
@@ -570,6 +604,8 @@ export function ChargeForm({
           </Field>
         </div>
       ) : null}
+
+      {extras}
 
       <FormActions
         mode={mode}

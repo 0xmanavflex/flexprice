@@ -1475,6 +1475,25 @@ function contractLines(id: string, row: Record<string, unknown>): Record<string,
   return lines
 }
 
+const COMMITMENT_KEYS = [
+  'commitment_type',
+  'commitment_amount',
+  'commitment_quantity',
+  'commitment_windowed',
+  'commitment_overage_factor',
+  'commitment_true_up_enabled',
+] as const
+
+/** The commitment fields of a line-item request, as the line reports them back. */
+function commitmentOf(body: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(
+    COMMITMENT_KEYS.filter((key) => body[key] !== undefined).map((key) => [
+      key,
+      typeof body[key] === 'number' ? String(body[key]) : body[key],
+    ]),
+  )
+}
+
 function findContractLine(lineId: string): Record<string, unknown> | undefined {
   for (const lines of contractLineStore.values()) {
     const found = lines.find((line) => line['id'] === lineId)
@@ -3038,17 +3057,29 @@ export const handlers = [
     const body = await readBody(request)
     const price = (body['price'] ?? {}) as Record<string, unknown>
     const currency = String(row['currency'] ?? 'USD')
-    const line = {
+    const usage = price['type'] === 'USAGE'
+    const line: Record<string, unknown> = {
       id: `${id}_line_${contractLines(id, row).length + 1}`,
       display_name: body['display_name'],
-      price_type: 'FIXED',
+      price_type: usage ? 'USAGE' : 'FIXED',
       entity_type: 'subscription',
-      quantity: String(body['quantity'] ?? 1),
-      billing_period: price['billing_period'] ?? 'MONTHLY',
+      quantity: usage ? '0' : String(body['quantity'] ?? 1),
+      billing_period: price['billing_period'] ?? row['billing_period'] ?? 'MONTHLY',
       currency,
-      price: { amount: price['amount'], currency, billing_model: 'FLAT_FEE' },
+      meter_id: price['meter_id'],
+      price: {
+        amount: price['amount'],
+        currency,
+        billing_model: price['billing_model'] ?? 'FLAT_FEE',
+        tier_mode: price['tier_mode'],
+        tiers: price['tiers'],
+        transform_quantity: price['transform_quantity'],
+        bucket_size: price['bucket_size'],
+        meter_id: price['meter_id'],
+      },
       start_date: body['start_date'] ?? new Date().toISOString(),
       end_date: '0001-01-01T00:00:00Z',
+      ...commitmentOf(body),
     }
     contractLines(id, row).push(line)
     return HttpResponse.json(line)
@@ -3102,7 +3133,20 @@ export const handlers = [
     const line = findContractLine(String(params['lineId']))
     if (!line) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
     const body = await readBody(request)
-    line['price'] = { ...(line['price'] as object), amount: body['amount'] }
+    const priced = (
+      [
+        'amount',
+        'billing_model',
+        'tier_mode',
+        'tiers',
+        'transform_quantity',
+        'bucket_size',
+      ] as const
+    )
+      .filter((key) => body[key] !== undefined)
+      .reduce<Record<string, unknown>>((acc, key) => ({ ...acc, [key]: body[key] }), {})
+    line['price'] = { ...(line['price'] as object), ...priced }
+    Object.assign(line, commitmentOf(body))
     return HttpResponse.json(line)
   }),
   http.delete(`${BASE}/subscriptions/lineitems/:lineId`, async ({ request, params }) => {

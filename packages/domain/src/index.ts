@@ -260,11 +260,9 @@ export {
   validateLineChange,
 } from './subscription'
 export type {
-  AddContractCharge,
   ChangeLineQuantity,
   LineChangeError,
   LineChangePreview,
-  EditContractCharge,
   EndContractCharge,
   CancelSubscription,
   CreateSubscription,
@@ -279,6 +277,27 @@ export type {
   SubscriptionUsage,
   SubscriptionUsageCharge,
 } from './subscription'
+
+export {
+  BUCKET_SIZE_LABEL,
+  BucketSize,
+  COMMITMENT_KIND_LABEL,
+  CommitmentKind,
+  NO_USAGE_TERMS,
+  PRORATION,
+  PRORATION_LABEL,
+  hasTermsErrors,
+  validateContractTerms,
+} from './contractCharge'
+export type {
+  AddContractCharge,
+  ContractTermsErrors,
+  EditContractCharge,
+  LineCommitment,
+  LinePricing,
+  Proration,
+  UsageTerms,
+} from './contractCharge'
 
 export {
   DEFAULT_PAYMENT_QUERY,
