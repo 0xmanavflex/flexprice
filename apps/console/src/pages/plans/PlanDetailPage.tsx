@@ -186,17 +186,6 @@ export function PlanDetailPage({
             {isArchived ? <Status value={PLAN_STATUS_LABEL[record.status]} /> : null}
           </>
         }
-        primary={
-          <Button
-            variant="outline"
-            className="h-8 px-3"
-            disabled={sync.isPending || isArchived}
-            onClick={() => sync.mutate(planId)}
-          >
-            <RefreshCwIcon aria-hidden />
-            {sync.isPending ? 'Syncing…' : 'Sync to contracts'}
-          </Button>
-        }
         actions={
           <>
             <DropdownMenu>
@@ -213,6 +202,13 @@ export function PlanDetailPage({
                 <MoreHorizontalIcon aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem
+                  disabled={sync.isPending || isArchived}
+                  onClick={() => sync.mutate(planId)}
+                >
+                  <RefreshCwIcon className="text-muted-foreground" aria-hidden />
+                  {sync.isPending ? 'Syncing…' : 'Sync to contracts'}
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={() => onEdit(planId)}>
                   <PencilIcon className="text-muted-foreground" aria-hidden />
                   Edit details
