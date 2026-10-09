@@ -137,7 +137,7 @@
   "packages/ui/src/components/primitives/checkbox.tsx": "508c003f5fbb33cb",
   "packages/ui/src/components/primitives/combobox.tsx": "7fda8c8c362ca088",
   "packages/ui/src/components/primitives/dialog.tsx": "97d9be6671877298",
-  "packages/ui/src/components/primitives/dropdown-menu.tsx": "9317d597a1752dba",
+  "packages/ui/src/components/primitives/dropdown-menu.tsx": "74d6c99a1dc0c4d5",
   "packages/ui/src/components/primitives/empty.tsx": "463204f897478b48",
   "packages/ui/src/components/primitives/field.tsx": "bbe5556dfc973856",
   "packages/ui/src/components/primitives/index.ts": "3a3e5c8497817851",
