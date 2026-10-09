@@ -4,6 +4,7 @@ import { SettingsShell, type SettingsSection } from '@fp/ui/pages'
 import {
   BadgeDollarSignIcon,
   BellIcon,
+  Building2Icon,
   CoinsIcon,
   PaletteIcon,
   PercentIcon,
@@ -75,6 +76,7 @@ export interface SettingsPageProps {
  */
 const SECTION_ICONS: Record<string, ReactNode> = {
   team: <UsersIcon aria-hidden className="size-4" />,
+  organization: <Building2Icon aria-hidden className="size-4" />,
   discounts: <TicketPercentIcon aria-hidden className="size-4" />,
   taxes: <PercentIcon aria-hidden className="size-4" />,
   'cost-tracking': <CoinsIcon aria-hidden className="size-4" />,

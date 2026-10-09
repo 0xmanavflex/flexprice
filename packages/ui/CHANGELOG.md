@@ -8,6 +8,7 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-06
 
+- 2026-10-09 — apps/console pages/settings: Organization (Profile and Plan & usage, where the tenant's name, address and details are edited) is a row in the Settings rail, right after Team; it was reachable only by URL (user request)
 - 2026-10-09 — assets/flexprice-icon.png + compositions/shell/AppShell: the sidebar's Flexprice mark is the new logo (white mark on the dark blue gradient), resized to 256px (user request)
 - 2026-10-09 — apps/console shell/ConsoleShell: global search rows carry the sidebar's icons (a page takes its section's, a record the icon of its table, an action its Create-menu icon) under per-table headings such as Customers (user request)
 - 2026-10-09 — compositions/shell/{ShellSearch,ThemeShortcut}: the ⌘K and ⌘D shortcuts ignore keydown events with no `key` (browser autofill, extensions) instead of throwing `toLowerCase` of undefined (production console error)

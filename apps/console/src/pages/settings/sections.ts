@@ -63,6 +63,14 @@ export const SETTINGS_SECTIONS = [
     ],
   },
   {
+    id: 'organization',
+    label: 'Organization',
+    tabs: [
+      { id: 'profile', label: 'Profile' },
+      { id: 'plan', label: 'Plan & usage' },
+    ],
+  },
+  {
     id: 'discounts',
     label: 'Discounts',
     href: '/coupons',
@@ -111,15 +119,6 @@ export const SETTINGS_SECTIONS = [
     tabs: [
       { id: 'portal', label: 'Portal' },
       { id: 'onboarding', label: 'Onboarding' },
-    ],
-  },
-  {
-    id: 'organization',
-    label: 'Organization',
-    hidden: true,
-    tabs: [
-      { id: 'profile', label: 'Profile' },
-      { id: 'plan', label: 'Plan & usage' },
     ],
   },
   {
