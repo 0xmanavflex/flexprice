@@ -1,0 +1,116 @@
+name: Deploy develop
+
+# Deploys the `develop` branch to its own Vercel project, so integration work
+# has a stable URL that is not production.
+#
+# Same shape as deploy.yml and the same gate: with the secrets missing the job
+# skips with a warning instead of failing. A push to `develop` is that project's
+# production deployment; nothing else triggers it, because pull requests already
+# get a preview from deploy.yml.
+#
+# Secrets (Settings → Secrets and variables → Actions):
+#
+#   VERCEL_TOKEN               shared with deploy.yml
+#   VERCEL_ORG_ID              shared with deploy.yml
+#   VERCEL_DEVELOP_PROJECT_ID  Vercel → the develop project → Settings → General
+#
+# Application config (every VITE_* variable) belongs in the develop project's
+# own Environment Variables, so this build uses the develop API, not production's.
+on:
+  push:
+    branches:
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy-develop
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    name: Vercel (develop)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_DEVELOP_PROJECT_ID }}
+    steps:
+      # The gate. Resolved in a step rather than in `if:` expressions on each
+      # later step, so there is one place that decides and one message when the
+      # answer is no.
+      - name: Decide whether this can deploy
+        id: gate
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          if [ -z "$VERCEL_TOKEN" ]; then
+            reason="the VERCEL_TOKEN repository secret is not set"
+          elif [ -z "$VERCEL_ORG_ID" ]; then
+            reason="the VERCEL_ORG_ID repository secret is not set"
+          elif [ -z "$VERCEL_PROJECT_ID" ]; then
+            reason="the VERCEL_DEVELOP_PROJECT_ID repository secret is not set"
+          else
+            reason=""
+          fi
+
+          if [ -n "$reason" ]; then
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "::warning::Deploy skipped — $reason. The secrets are listed at the top of .github/workflows/deploy-develop.yml."
+            echo "Deploy skipped — $reason." >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          echo "enabled=true" >> "$GITHUB_OUTPUT"
+          echo "environment=production" >> "$GITHUB_OUTPUT"
+          echo "flag=--prod" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          filter: tree:0
+          fetch-depth: 0
+
+      - uses: pnpm/action-setup@v4
+        if: steps.gate.outputs.enabled == 'true'
+
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.enabled == 'true'
+        with:
+          node-version: 24
+          cache: 'pnpm'
+
+      - run: pnpm install --frozen-lockfile
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          HUSKY: 0
+
+      # Pinned to a major so a CLI release cannot change the build underneath
+      # us. Bump deliberately.
+      - name: Install the Vercel CLI
+        if: steps.gate.outputs.enabled == 'true'
+        run: npm install --global vercel@59
+
+      - name: Pull the Vercel environment
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel pull --yes --environment=${{ steps.gate.outputs.environment }}
+
+      - name: Build
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: vercel build ${{ steps.gate.outputs.flag }}
+
+      - name: Deploy
+        id: deploy
+        if: steps.gate.outputs.enabled == 'true'
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+        run: |
+          url=$(vercel deploy --prebuilt ${{ steps.gate.outputs.flag }})
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "Deployed to ${{ steps.gate.outputs.environment }} — $url" >> "$GITHUB_STEP_SUMMARY"
