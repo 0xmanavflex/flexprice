@@ -299,7 +299,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: `/invoices/${INVOICE}`,
     reference: 'pages/invoice-detail.tsx',
     pattern: 'detail',
-    ready: { heading: 'Timeline' },
+    ready: { heading: 'Activity' },
   },
   {
     name: 'invoice-new',
