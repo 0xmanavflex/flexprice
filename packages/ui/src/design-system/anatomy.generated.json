@@ -556,6 +556,7 @@
         "Money",
         "Pill",
         "Section",
+        "SectionEmpty",
         "Status",
         "SubscriptionCard"
       ],
@@ -2584,6 +2585,7 @@
       "usedBy": [
         "ChargeTable",
         "CreditGrantTable",
+        "CustomerDetail",
         "EntitlementTable",
         "FeatureDetailView",
         "InvoiceDetailView",

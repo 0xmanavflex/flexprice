@@ -94,6 +94,7 @@ function Harness({
   onEdit,
   onUpdateField,
   subscriptionsLoading = false,
+  subscriptionsError = false,
   invoicesLoading = false,
   initialTab = 'overview',
 }: {
@@ -108,6 +109,7 @@ function Harness({
   onEdit?: () => void
   onUpdateField?: (patch: { name?: string; email?: string; phone?: string }) => Promise<unknown>
   subscriptionsLoading?: boolean
+  subscriptionsError?: boolean
   invoicesLoading?: boolean
   initialTab?: CustomerTab
 }) {
@@ -121,6 +123,7 @@ function Harness({
         tab={tab}
         onTabChange={setTab}
         subscriptionsLoading={subscriptionsLoading}
+        subscriptionsError={subscriptionsError}
         invoicesLoading={invoicesLoading}
         onBack={onBack ?? (() => {})}
         onCreateInvoice={() => onCreateInvoice?.()}
@@ -379,5 +382,29 @@ export const Empty: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText(/No invoices yet/)).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: /Active contracts/ })).toBeNull()
+  },
+}
+
+/** With no contracts the tab says what a contract is and offers Create contract in the middle. */
+export const EmptyContracts: Story = {
+  args: { subscriptions: [], onCreateContract: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
+    await expect(canvas.getByText('No contracts yet')).toBeVisible()
+    await expect(canvas.getByText(/puts this customer on a plan/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await expect(args.onCreateContract).toHaveBeenCalledOnce()
+  },
+}
+
+/** A failed contracts read says so; it must never read as "no contracts". */
+export const ContractsLoadFailed: Story = {
+  args: { subscriptions: [], subscriptionsError: true, onCreateContract: fn() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: /Contracts/ }))
+    await expect(canvas.getByText("Contracts couldn't be loaded")).toBeVisible()
+    await expect(canvas.queryByText('No contracts yet')).toBeNull()
   },
 }

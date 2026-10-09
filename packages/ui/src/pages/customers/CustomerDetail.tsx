@@ -21,6 +21,7 @@ import { Section } from '@ui/compositions/layout/Section'
 import { EditableCard } from '@ui/compositions/forms/EditableCard'
 import { MetadataCard } from '@ui/compositions/detail/MetadataCard'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { LoadingRows } from '@ui/compositions/feedback/States'
 import { Money } from '../shared/Money'
 import { EntityHeader } from '../shared/EntityHeader'
@@ -87,6 +88,8 @@ export interface CustomerDetailProps {
   /** Open one contract's own page, from a Contracts row or a running-contract card. Omitted, rows are not links. */
   onOpenContract?: (subscriptionId: string) => void
   subscriptionsLoading?: boolean
+  /** The contracts read failed — shown as such, never as "no contracts". */
+  subscriptionsError?: boolean
   invoicesLoading?: boolean
   /**
    * The Usage section's contents — the per-feature quota cards.
@@ -136,6 +139,7 @@ export function CustomerDetail({
   onOpenPlan,
   onOpenContract,
   subscriptionsLoading = false,
+  subscriptionsError = false,
   invoicesLoading = false,
   usage,
   wallet,
@@ -210,6 +214,7 @@ export function CustomerDetail({
           <OverviewTab
             subscriptions={subscriptions}
             subscriptionsLoading={subscriptionsLoading}
+            subscriptionsError={subscriptionsError}
             onViewSubscriptions={() => onTabChange('subscriptions')}
             onOpenContract={onOpenContract}
             invoices={invoices}
@@ -223,6 +228,7 @@ export function CustomerDetail({
           <SubscriptionsTab
             subscriptions={subscriptions}
             isLoading={subscriptionsLoading}
+            isError={subscriptionsError}
             formatDate={formatDate}
             onOpenPlan={onOpenPlan}
             onOpenContract={onOpenContract}
@@ -348,6 +354,7 @@ const MAX_CARDS = 4
 function OverviewTab({
   subscriptions,
   subscriptionsLoading,
+  subscriptionsError,
   onViewSubscriptions,
   onOpenContract,
   invoices,
@@ -357,6 +364,7 @@ function OverviewTab({
 }: {
   subscriptions: Subscription[]
   subscriptionsLoading: boolean
+  subscriptionsError: boolean
   onViewSubscriptions: () => void
   onOpenContract: ((subscriptionId: string) => void) | undefined
   invoices: Invoice[]
@@ -395,7 +403,7 @@ function OverviewTab({
             </div>
           ) : (
             <p className="text-muted-foreground rounded-xl border border-dashed px-6 py-10 text-center text-[13px]">
-              No active contracts.
+              {subscriptionsError ? "Contracts couldn't be loaded." : 'No active contracts.'}
             </p>
           )}
         </section>
@@ -423,6 +431,7 @@ function OverviewTab({
 function SubscriptionsTab({
   subscriptions,
   isLoading,
+  isError,
   formatDate,
   onOpenPlan,
   onOpenContract,
@@ -430,6 +439,7 @@ function SubscriptionsTab({
 }: {
   subscriptions: Subscription[]
   isLoading: boolean
+  isError: boolean
   formatDate: FormatDate
   onOpenPlan: ((planId: string) => void) | undefined
   onOpenContract: ((subscriptionId: string) => void) | undefined
@@ -441,6 +451,24 @@ function SubscriptionsTab({
         <div className="px-4 py-4">
           <LoadingRows />
         </div>
+      ) : isError ? (
+        <SectionEmpty
+          title="Contracts couldn't be loaded"
+          description="Something went wrong fetching this customer's contracts. Refresh to try again."
+        />
+      ) : subscriptions.length === 0 ? (
+        <SectionEmpty
+          title="No contracts yet"
+          description="A contract puts this customer on a plan. Create one to start billing them."
+          action={
+            onCreateContract ? (
+              <Button size="sm" className="h-8 px-3" onClick={onCreateContract}>
+                <PlusIcon aria-hidden="true" />
+                Create contract
+              </Button>
+            ) : undefined
+          }
+        />
       ) : (
         <DetailTable
           compact
@@ -499,7 +527,6 @@ function SubscriptionsTab({
               ),
             },
           ]}
-          empty="No contracts yet."
           {...(onOpenContract ? { onRowClick: (s: Subscription) => onOpenContract(s.id) } : {})}
           {...(onCreateContract
             ? {

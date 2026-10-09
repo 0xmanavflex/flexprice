@@ -189,21 +189,25 @@ export async function fetchCustomerSubscriptions(
   client: Flexprice,
   externalId: string,
 ): Promise<Subscription[]> {
-  const response = (await call(() =>
-    client.customers.getSubscriptionsForCustomer(externalId, 'plan'),
-  )) as {
-    items?: unknown[]
-  }
+  const response = await call(() =>
+    client.subscriptions.querySubscription({
+      externalCustomerId: externalId,
+      expand: 'plan',
+      limit: 100,
+    } as never),
+  )
   return (response.items ?? []).map((item) => toSubscription(item as SubscriptionWire))
 }
 
 /**
  * A customer's subscriptions, scoped by their external id.
  *
- * `GET /customers/external/{external_id}/subscriptions` — the one that takes the
- * *external* id, which is why the page waits on `useCustomer` before calling
- * this. Not a paged list: a single customer's subscriptions are a handful, shown
- * whole rather than behind a pager.
+ * The subscription search narrowed by `externalCustomerId`, which is why the page
+ * waits on `useCustomer` before calling this. Not
+ * `GET /customers/external/{id}/subscriptions`: that endpoint rejects any
+ * `expand` (400), so the plan name could not be resolved and the whole tab
+ * failed. Not a paged list: a single customer's subscriptions are a handful,
+ * shown whole rather than behind a pager.
  */
 export function useCustomerSubscriptions(externalId: string) {
   const client = useFlexprice()

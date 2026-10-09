@@ -141,6 +141,7 @@ export function CustomerDetailPage({
         })
       }
       subscriptionsLoading={subscriptions.isLoading}
+      subscriptionsError={subscriptions.isError}
       invoicesLoading={invoices.isLoading}
       wallet={<CustomerWalletPanel customerId={customer.data.id} />}
       taxes={<CustomerTaxPanel customerId={customer.data.id} />}

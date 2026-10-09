@@ -1991,7 +1991,14 @@ export const handlers = [
   // calls). The external id resolves to the internal customer, then the
   // subscriptions are scoped to it — each row keeps its embedded plan and
   // customer, so the table shows plan names rather than ids.
-  http.get(`${BASE}/customers/external/:externalId/subscriptions`, ({ params }) => {
+  http.get(`${BASE}/customers/external/:externalId/subscriptions`, ({ params, request }) => {
+    // The real endpoint refuses any expand (400 "Field is not allowed to be
+    // expanded"); mirror it so a caller that adds one fails here, not in prod.
+    if (new URL(request.url).searchParams.has('expand'))
+      return HttpResponse.json(
+        { code: 'validation_error', message: 'Field is not allowed to be expanded' },
+        { status: 400 },
+      )
     const externalId = String(params['externalId'])
     const customer = (corpus.customers as Corpus).items.find(
       (row) => readString(row, 'external_id') === externalId,
