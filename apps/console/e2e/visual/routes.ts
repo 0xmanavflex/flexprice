@@ -394,7 +394,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/integrations',
     reference: 'pages/integrations.tsx',
     pattern: 'list',
-    ready: { heading: 'Available' },
+    ready: { heading: 'Available', text: 'Stripe' },
   },
   {
     name: 'pricing-widget',
