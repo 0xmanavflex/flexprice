@@ -52,6 +52,9 @@ jobs:
       - name: Vendored UI is unmodified
         run: node scripts/check-vendor.mjs
 
+      - name: Console calls only what the SDK has
+        run: node scripts/check-sdk.mjs --check
+
       - name: UI page matrix is current
         run: node scripts/ui-page-matrix.mjs --check
 

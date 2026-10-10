@@ -1,0 +1,9 @@
+{
+  "sdkVersion": "2.1.35",
+  "castCount": 103,
+  "missingOps": [],
+  "missingFields": [
+    "Invoice.fx_conversion",
+    "InvoiceLineItem.fx_conversion"
+  ]
+}
