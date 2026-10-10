@@ -53,12 +53,12 @@ test('onboarding: adding a step saves it into the workflow', async ({ page }) =>
   await expect(steps).toHaveCount(before + 1)
 })
 
-test('team is a single page with no tab strip, and old role and SSO links land on it', async ({
-  page,
-}) => {
-  for (const tab of ['members', 'roles', 'sso']) {
+for (const tab of ['members', 'roles', 'sso']) {
+  test(`team is a single page with no tab strip, and the old ${tab} link lands on it`, async ({
+    page,
+  }) => {
     await page.goto(`/settings?section=team&tab=${tab}`)
     await expect(page.getByRole('navigation', { name: 'Settings' })).toBeVisible()
     await expect(page.getByRole('tablist')).toHaveCount(0)
-  }
-})
+  })
+}
