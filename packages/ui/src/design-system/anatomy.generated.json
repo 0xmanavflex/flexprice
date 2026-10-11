@@ -2790,13 +2790,6 @@
       "usedBy": [],
       "story": null
     },
-    "GearIcon": {
-      "file": "src/reui/icons/default/outline/gear.tsx",
-      "layer": "other",
-      "composes": [],
-      "usedBy": [],
-      "story": null
-    },
     "Globe": {
       "file": "src/icons/index.ts",
       "layer": "other",

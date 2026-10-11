@@ -3,6 +3,7 @@
 // The one place the app gets icons from. Names follow lucide's, so existing
 // call sites keep working while the glyphs come from ReUI Motion Icons.
 import { animatedIcon, staticIcon, type IconComponent, type IconProps } from './factory'
+import animated_filled_squaresRing from '../reui/icons/animated/filled/squares-ring'
 import animated_bolt from '../reui/icons/animated/outline/bolt'
 import animated_circlePlay from '../reui/icons/animated/outline/circle-play'
 import animated_crossOutline from '../reui/icons/animated/outline/cross-outline'
@@ -76,7 +77,6 @@ import static_filter from '../reui/icons/default/outline/filter'
 import static_filterEdit from '../reui/icons/default/outline/filter-edit'
 import static_filterSearch from '../reui/icons/default/outline/filter-search'
 import static_flask from '../reui/icons/default/outline/flask'
-import static_gear from '../reui/icons/default/outline/gear'
 import static_globe from '../reui/icons/default/outline/globe'
 import static_hash from '../reui/icons/default/outline/hash'
 import static_hotel from '../reui/icons/default/outline/hotel'
@@ -405,7 +405,7 @@ export const SearchX: IconComponent = staticIcon(static_filterSearch, 'SearchX')
 export { SearchX as SearchXIcon }
 export const Send: IconComponent = staticIcon(static_paperPlane, 'Send')
 export { Send as SendIcon }
-export const Settings: IconComponent = staticIcon(static_gear, 'Settings')
+export const Settings: IconComponent = animatedIcon(animated_filled_squaresRing, 'Settings')
 export { Settings as SettingsIcon }
 export const Settings2: IconComponent = staticIcon(static_sliders, 'Settings2')
 export { Settings2 as Settings2Icon }

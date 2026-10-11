@@ -131,7 +131,7 @@
     "Search": { "reui": "magnifier" },
     "SearchX": { "reui": "filter-search" },
     "Send": { "reui": "paper-plane" },
-    "Settings": { "reui": "gear" },
+    "Settings": { "reui": "squares-ring", "animated": true, "style": "filled" },
     "Settings2": { "reui": "sliders" },
     "Share2": { "reui": "share" },
     "Sheet": { "reui": "file-sheet" },
