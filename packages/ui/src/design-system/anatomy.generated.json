@@ -4,6 +4,7 @@
       "file": "src/pages/auth/AcceptInvitationForm.tsx",
       "layer": "surface",
       "composes": [
+        "EyeIcon",
         "Field"
       ],
       "usedBy": [],
@@ -34,6 +35,13 @@
       "usedBy": [],
       "story": null
     },
+    "Activity": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "AddChargeDialog": {
       "file": "src/pages/product-catalog/plans/AddChargeDialog.tsx",
       "layer": "surface",
@@ -44,6 +52,13 @@
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/AddChargeDialog.stories.tsx"
+    },
+    "AddFolderIcon": {
+      "file": "src/reui/icons/default/outline/add-folder.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "AddonForm": {
       "file": "src/pages/product-catalog/addons/AddonForm.tsx",
@@ -60,7 +75,11 @@
       "file": "src/pages/product-catalog/addons/AddonGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "PencilIcon",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/addons/AddonGrid.stories.tsx"
@@ -76,6 +95,20 @@
       "usedBy": [],
       "story": "./src/pages/product-catalog/addons/AddonSubscriptionsView.stories.tsx"
     },
+    "AddUserIcon": {
+      "file": "src/reui/icons/default/outline/add-user.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "AlertCircle": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "AnimatedGridPattern": {
       "file": "src/components/blocks/auth-18/components/auth-grid-background.tsx",
       "layer": "vendor/blocks",
@@ -88,7 +121,9 @@
       "layer": "surface",
       "composes": [
         "ArcGauge",
+        "ArrowUpRightIcon",
         "BlurredEmpty",
+        "CalendarIcon",
         "HalfDonut",
         "MeterTrack",
         "MetricChart",
@@ -143,6 +178,217 @@
       ],
       "story": "./src/pages/shared/ArcGauge.stories.tsx"
     },
+    "Archive": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArchiveIcon": {
+      "file": "src/reui/icons/default/outline/archive.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "CouponGrid",
+        "FeatureDetailView",
+        "PlanGrid"
+      ],
+      "story": null
+    },
+    "ArrowBackIcon": {
+      "file": "src/reui/icons/default/outline/arrow-back.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowDown": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowDownIcon": {
+      "file": "src/reui/icons/default/outline/arrow-down.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "EntityList",
+        "SortMenu"
+      ],
+      "story": null
+    },
+    "ArrowDownRight": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowDownRightIcon": {
+      "file": "src/reui/icons/default/outline/arrow-down-right.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "CustomerWalletView"
+      ],
+      "story": null
+    },
+    "ArrowLeft": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowLeftIcon": {
+      "file": "src/reui/icons/default/outline/arrow-left.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "ContextualSection",
+        "FormToolbar"
+      ],
+      "story": null
+    },
+    "ArrowLeftLineIcon": {
+      "file": "src/reui/icons/default/outline/arrow-left-line.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowLeftRight": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowLeftToLine": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowRight": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowRightIcon": {
+      "file": "src/reui/icons/default/outline/arrow-right.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "FormToolbar",
+        "GuideGrid",
+        "GuidedEmptyState"
+      ],
+      "story": null
+    },
+    "ArrowRightLeftIcon": {
+      "file": "src/reui/icons/default/outline/arrow-right-left.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowRightLineIcon": {
+      "file": "src/reui/icons/default/outline/arrow-right-line.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowRightToLine": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowRotateLeftIcon": {
+      "file": "src/reui/icons/default/outline/arrow-rotate-left.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowsLoopIcon": {
+      "file": "src/reui/icons/default/outline/arrows-loop.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowUp": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowUpDown": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowUpDownIcon": {
+      "file": "src/reui/icons/default/outline/arrow-up-down.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "EntityList",
+        "SortMenu"
+      ],
+      "story": null
+    },
+    "ArrowUpIcon": {
+      "file": "src/reui/icons/default/outline/arrow-up.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "EntityList",
+        "SortMenu"
+      ],
+      "story": null
+    },
+    "ArrowUpRight": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ArrowUpRightIcon": {
+      "file": "src/reui/icons/default/outline/arrow-up-right.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "ApiCard",
+        "ConnectorCard",
+        "CustomerWalletView",
+        "DashboardHome",
+        "RelatedCard",
+        "UsageCard"
+      ],
+      "story": null
+    },
+    "ArtificialIntelligenceIcon": {
+      "file": "src/reui/icons/default/outline/artificial-intelligence.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Auth": {
       "file": "src/components/blocks/auth-18/components/auth.tsx",
       "layer": "vendor/blocks",
@@ -164,6 +410,76 @@
       "usedBy": [],
       "story": null
     },
+    "BadgeDollarSign": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Ban": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "BankIcon": {
+      "file": "src/reui/icons/default/outline/bank.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Banknote": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "BankReserveIcon": {
+      "file": "src/reui/icons/default/outline/bank-reserve.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "BarChart3": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "BarChartIcon": {
+      "file": "src/reui/icons/default/outline/bar-chart.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "BasketIcon": {
+      "file": "src/reui/icons/default/outline/basket.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Bell": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "BillIcon": {
+      "file": "src/reui/icons/default/outline/bill.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "BillingIconTile": {
       "file": "src/components/blocks/solution-billing-4/components/billing-icon-tile.tsx",
       "layer": "vendor/blocks",
@@ -174,6 +490,13 @@
     "BillingTab": {
       "file": "src/components/blocks/settings-7/components/billing-tab.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Blocks": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -190,11 +513,132 @@
       ],
       "story": "./src/pages/shared/BlurredEmpty.stories.tsx"
     },
+    "BookOpen": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "BookOpenIcon": {
+      "file": "src/reui/icons/default/outline/book-open.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "AddonGrid",
+        "CostSheetGrid",
+        "CouponGrid",
+        "CustomerGrid",
+        "DataExportGrid",
+        "EventGrid",
+        "FeatureGrid",
+        "GroupGrid",
+        "PlanGrid",
+        "PriceUnitGrid",
+        "ShellSearch",
+        "SubscriptionGrid",
+        "UsageSyncGrid",
+        "WebhookEndpointGrid",
+        "WorkflowGrid"
+      ],
+      "story": null
+    },
+    "Bot": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Box": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Boxes": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Braces": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Building2": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "BulletSeparator": {
       "file": "src/components/blocks/app-shell-3/components/bullet-separator.tsx",
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "Calculator": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CalculatorIcon": {
+      "file": "src/reui/icons/default/outline/calculator.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "InvoiceDetailView",
+        "ShellSearch"
+      ],
+      "story": null
+    },
+    "Calendar": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "DateInput",
+        "InvoiceForm"
+      ],
+      "story": null
+    },
+    "CalendarClock": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CalendarDotsIcon": {
+      "file": "src/reui/icons/default/outline/calendar-dots.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CalendarIcon": {
+      "file": "src/reui/icons/default/outline/calendar.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "ApiCard",
+        "CustomerAnalyticsView",
+        "DashboardHome",
+        "DateInput",
+        "InvoiceForm",
+        "RevenueDashboard",
+        "UsageCard"
+      ],
       "story": null
     },
     "CatalogDetailFrame": {
@@ -214,6 +658,7 @@
       "file": "src/pages/shared/StatusBadge.tsx",
       "layer": "surface",
       "composes": [
+        "HashIcon",
         "Pill"
       ],
       "usedBy": [],
@@ -245,6 +690,7 @@
       "layer": "surface",
       "composes": [
         "DetailTable",
+        "PlusIcon",
         "RowActionsMenu",
         "Section",
         "SectionEmpty"
@@ -259,6 +705,27 @@
       "usedBy": [],
       "story": null
     },
+    "ChartArrowDownIcon": {
+      "file": "src/reui/icons/default/outline/chart-arrow-down.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ChartArrowUpIcon": {
+      "file": "src/reui/icons/default/outline/chart-arrow-up.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ChartBarsSquareIcon": {
+      "file": "src/reui/icons/default/outline/chart-bars-square.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "ChartBox": {
       "file": "src/compositions/charts/ChartBox.tsx",
       "layer": "composition",
@@ -267,6 +734,13 @@
       ],
       "usedBy": [],
       "story": "./src/compositions/charts/ChartBox.stories.tsx"
+    },
+    "Check": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "CheckboxRow": {
       "file": "src/compositions/forms/CheckboxRow.tsx",
@@ -278,10 +752,98 @@
       ],
       "story": "./src/compositions/forms/CheckboxRow.stories.tsx"
     },
+    "CheckCircle2": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CheckCircleIcon": {
+      "file": "src/reui/icons/default/outline/check-circle.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CheckIcon": {
+      "file": "src/reui/icons/default/outline/check.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "ChoiceCards",
+        "Composer",
+        "CopyChip",
+        "CopyEmail",
+        "CopyId",
+        "DetailHeaderCluster",
+        "DetailMoreMenu",
+        "DetailTabs",
+        "Dot",
+        "EnvironmentSwitcher",
+        "InvoiceForm",
+        "Mark",
+        "PlanPreviewCard",
+        "Properties",
+        "SegmentMeter",
+        "SimpleTable",
+        "SplitMeter",
+        "SummaryRow"
+      ],
+      "story": null
+    },
+    "ChevronDown": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ChevronLeft": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ChevronRight": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ChevronsUpDown": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ChevronsUpDownIcon": {
+      "file": "src/reui/icons/default/outline/chevrons-up-down.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "EnvironmentSwitcher",
+        "Mark"
+      ],
+      "story": null
+    },
+    "ChevronUp": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "ChoiceCards": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "AddChargeDialog",
         "ChargeForm",
@@ -293,6 +855,127 @@
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
+    "Circle": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CircleAlert": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CircleCheck": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CircleDashed": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CircleDollarSign": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CirclePause": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CirclePlus": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CircleRingIcon": {
+      "file": "src/reui/icons/default/outline/circle-ring.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CircleSlash": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Clock": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CloudDownloadIcon": {
+      "file": "src/reui/icons/default/outline/cloud-download.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CloudIcon": {
+      "file": "src/reui/icons/default/outline/cloud.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CloudUploadIcon": {
+      "file": "src/reui/icons/default/outline/cloud-upload.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Code": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CodeIcon": {
+      "file": "src/reui/icons/default/outline/code.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "PageShell"
+      ],
+      "story": null
+    },
+    "CodeXml": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Coins": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "CollectionsSummary": {
       "file": "src/pages/collections/payments/CollectionsSummary.tsx",
       "layer": "surface",
@@ -300,10 +983,20 @@
       "usedBy": [],
       "story": "./src/pages/collections/payments/CollectionsSummary.stories.tsx"
     },
+    "ColorSwatchIcon": {
+      "file": "src/reui/icons/default/outline/color-swatch.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Composer": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "ContractChargeDialog",
         "ContractQuantityDialog",
@@ -328,7 +1021,9 @@
     "ConnectorCard": {
       "file": "src/compositions/layout/ConnectorCard.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "ArrowUpRightIcon"
+      ],
       "usedBy": [
         "IntegrationsBlock"
       ],
@@ -338,6 +1033,7 @@
       "file": "src/compositions/layout/ContextualSection.tsx",
       "layer": "composition",
       "composes": [
+        "ArrowLeftIcon",
         "Section"
       ],
       "usedBy": [],
@@ -399,26 +1095,122 @@
       ],
       "story": null
     },
+    "Copy": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CopyAddIcon": {
+      "file": "src/reui/icons/default/outline/copy-add.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "CopyChip": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
     "CopyEmail": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
+    "CopyIcon": {
+      "file": "src/reui/icons/default/outline/copy.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "AddonGrid",
+        "ChoiceCards",
+        "Composer",
+        "CopyChip",
+        "CopyEmail",
+        "CopyId",
+        "CostSheetGrid",
+        "CouponGrid",
+        "CreditNoteGrid",
+        "CustomerGrid",
+        "DataExportGrid",
+        "DetailHeaderCluster",
+        "DetailMoreMenu",
+        "DetailTabs",
+        "Dot",
+        "EventGrid",
+        "FeatureDetailView",
+        "FeatureGrid",
+        "GroupGrid",
+        "InvoiceGrid",
+        "PaymentGrid",
+        "PlanGrid",
+        "PriceUnitGrid",
+        "PricingCatalogBlock",
+        "Properties",
+        "SegmentMeter",
+        "SimpleTable",
+        "SplitMeter",
+        "SubscriptionCard",
+        "SubscriptionGrid",
+        "SummaryRow",
+        "TaxRateGrid",
+        "UsageSyncGrid",
+        "WebhookEndpointDetail",
+        "WebhookEndpointGrid",
+        "WebhookMessageLog",
+        "WorkflowGrid"
+      ],
+      "story": null
     },
     "CopyId": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
+    "CopyPlus": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CornerDownRight": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CornerUpLeft": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CornerUpRight": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "CostMarginCard": {
       "file": "src/pages/settings/cost-sheets/CostMarginCard.tsx",
@@ -444,7 +1236,11 @@
       "file": "src/pages/settings/cost-sheets/CostSheetGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "PencilIcon",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/settings/cost-sheets/CostSheetGrid.stories.tsx"
@@ -477,7 +1273,12 @@
       "file": "src/pages/settings/discounts/CouponGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "ArchiveIcon",
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "PencilIcon",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/settings/discounts/CouponGrid.stories.tsx"
@@ -504,6 +1305,24 @@
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "CreditCard": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CreditCardIcon": {
+      "file": "src/reui/icons/default/outline/credit-card.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "PageShell",
+        "PaymentGrid",
+        "ShellSearch"
+      ],
       "story": null
     },
     "CreditGrantCreateForm": {
@@ -540,6 +1359,7 @@
       "layer": "surface",
       "composes": [
         "DetailTable",
+        "PlusIcon",
         "RowActionsMenu",
         "Section",
         "SectionEmpty"
@@ -563,15 +1383,38 @@
       "file": "src/pages/billing/credit-notes/CreditNoteGrid.tsx",
       "layer": "surface",
       "composes": [
+        "CopyIcon",
         "EntityList"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/credit-notes/CreditNoteGrid.stories.tsx"
     },
+    "CrossCircleIcon": {
+      "file": "src/reui/icons/default/outline/cross-circle.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CubeIcon": {
+      "file": "src/reui/icons/default/outline/cube.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "CubeSquareIcon": {
+      "file": "src/reui/icons/default/outline/cube-square.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "CustomerAnalyticsView": {
       "file": "src/pages/customers/CustomerAnalyticsView.tsx",
       "layer": "surface",
       "composes": [
+        "CalendarIcon",
         "DetailTable",
         "MetricChart",
         "Section",
@@ -602,11 +1445,14 @@
         "LoadingRows",
         "MetadataCard",
         "Money",
+        "PencilIcon",
         "Pill",
+        "PlusIcon",
         "Section",
         "SectionEmpty",
         "Status",
-        "SubscriptionCard"
+        "SubscriptionCard",
+        "WalletIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerDetail.stories.tsx"
@@ -616,7 +1462,8 @@
       "layer": "surface",
       "composes": [
         "DetailTable",
-        "Section"
+        "Section",
+        "Sheet"
       ],
       "usedBy": [
         "CustomerDetail"
@@ -641,7 +1488,12 @@
       "file": "src/pages/customers/CustomerGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "PencilIcon",
+        "PlusIcon",
+        "UserIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerGrid.stories.tsx"
@@ -659,6 +1511,7 @@
         "LabelWithHint",
         "LoadingRows",
         "OptionSelect",
+        "PlusIcon",
         "Section"
       ],
       "usedBy": [],
@@ -669,6 +1522,8 @@
       "layer": "surface",
       "composes": [
         "AppFailure",
+        "ArrowDownRightIcon",
+        "ArrowUpRightIcon",
         "ChoiceCards",
         "Composer",
         "ConfirmDialog",
@@ -678,8 +1533,10 @@
         "LabelWithHint",
         "LoadingRows",
         "OptionSelect",
+        "PlusIcon",
         "Section",
-        "SplitMeter"
+        "SplitMeter",
+        "WalletIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerWalletView.stories.tsx"
@@ -696,7 +1553,9 @@
       "layer": "surface",
       "composes": [
         "ArcGauge",
+        "ArrowUpRightIcon",
         "BlurredEmpty",
+        "CalendarIcon",
         "HalfDonut",
         "MeterTrack",
         "MetricChart",
@@ -708,10 +1567,19 @@
       "usedBy": [],
       "story": "./src/pages/home/DashboardHome.stories.tsx"
     },
+    "Database": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "DataExportGrid": {
       "file": "src/pages/developers/exports/DataExportGrid.tsx",
       "layer": "surface",
       "composes": [
+        "BookOpenIcon",
+        "CopyIcon",
         "EntityList"
       ],
       "usedBy": [],
@@ -720,7 +1588,10 @@
     "DateInput": {
       "file": "src/compositions/forms/DateInput.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "Calendar",
+        "CalendarIcon"
+      ],
       "usedBy": [
         "ChargeForm",
         "ContractAddChargeForm",
@@ -734,6 +1605,13 @@
     "DateSelector": {
       "file": "src/components/reui/date-selector.tsx",
       "layer": "vendor/reui",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "DeleteFilesIcon": {
+      "file": "src/reui/icons/default/outline/delete-files.tsx",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -764,7 +1642,10 @@
     "DetailHeaderCluster": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "DetailBreadcrumb",
         "DetailHeader",
@@ -788,7 +1669,10 @@
     "DetailMoreMenu": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "CatalogDetailFrame",
         "EntityHeader",
@@ -849,7 +1733,10 @@
     "DetailTabs": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "CatalogDetailFrame",
         "CustomerDetail",
@@ -860,10 +1747,41 @@
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
+    "DiscountIcon": {
+      "file": "src/reui/icons/default/outline/discount.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "DiskIcon": {
+      "file": "src/reui/icons/default/outline/disk.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "DocumentIcon": {
+      "file": "src/reui/icons/default/outline/document.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "DollarIcon": {
+      "file": "src/reui/icons/default/outline/dollar.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Dot": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -874,10 +1792,46 @@
       "usedBy": [],
       "story": null
     },
+    "DotsHorizontalIcon": {
+      "file": "src/reui/icons/default/outline/dots-horizontal.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "DotsVerticalIcon": {
+      "file": "src/reui/icons/default/outline/dots-vertical.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Download": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "DownloadCloud": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "DragIcon": {
+      "file": "src/reui/icons/default/outline/drag.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "EditableCard": {
       "file": "src/compositions/forms/EditableCard.tsx",
       "layer": "composition",
       "composes": [
+        "PencilIcon",
         "Section"
       ],
       "usedBy": [
@@ -903,6 +1857,13 @@
       "usedBy": [],
       "story": null
     },
+    "EllipsisVertical": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "EmbeddedPageContext": {
       "file": "src/compositions/layout/Page.tsx",
       "layer": "composition",
@@ -914,7 +1875,9 @@
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
       "composes": [
-        "Money"
+        "HashIcon",
+        "Money",
+        "PencilIcon"
       ],
       "usedBy": [
         "EntitlementTable",
@@ -929,6 +1892,13 @@
         "WebhookTime"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
+    },
+    "EmojiSmileIcon": {
+      "file": "src/reui/icons/default/outline/emoji-smile.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "EmptyState": {
       "file": "src/compositions/feedback/EmptyState.tsx",
@@ -989,6 +1959,7 @@
         "DetailTable",
         "EmDash",
         "EntityLink",
+        "PlusIcon",
         "RowActionsMenu",
         "Section",
         "SectionEmpty"
@@ -1000,7 +1971,9 @@
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
       "composes": [
-        "Money"
+        "HashIcon",
+        "Money",
+        "PencilIcon"
       ],
       "usedBy": [
         "FeatureGrid",
@@ -1026,7 +1999,9 @@
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
       "composes": [
-        "Money"
+        "HashIcon",
+        "Money",
+        "PencilIcon"
       ],
       "usedBy": [
         "CustomerDetail",
@@ -1039,8 +2014,12 @@
       "file": "src/pages/shared/EntityList.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowDownIcon",
+        "ArrowUpDownIcon",
+        "ArrowUpIcon",
         "EmptyState",
         "FilterBar",
+        "FilterIcon",
         "GuidedEmptyState",
         "SortMenu"
       ],
@@ -1095,7 +2074,12 @@
     "EnvironmentSwitcher": {
       "file": "src/compositions/shell/EnvironmentSwitcher.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "ChevronsUpDownIcon",
+        "PencilIcon",
+        "PlusIcon"
+      ],
       "usedBy": [
         "PageShell"
       ],
@@ -1116,7 +2100,8 @@
       "file": "src/pages/developers/events/EventDetailSheet.tsx",
       "layer": "surface",
       "composes": [
-        "DetailList"
+        "DetailList",
+        "Sheet"
       ],
       "usedBy": [],
       "story": "./src/pages/developers/events/EventDetailSheet.stories.tsx"
@@ -1125,6 +2110,8 @@
       "file": "src/pages/developers/events/EventGrid.tsx",
       "layer": "surface",
       "composes": [
+        "BookOpenIcon",
+        "CopyIcon",
         "EmDash",
         "EntityList",
         "Tag"
@@ -1145,6 +2132,66 @@
       ],
       "story": null
     },
+    "ExclamationBadgeIcon": {
+      "file": "src/reui/icons/default/outline/exclamation-badge.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ExclamationCircleIcon": {
+      "file": "src/reui/icons/default/outline/exclamation-circle.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ExitRightIcon": {
+      "file": "src/reui/icons/default/outline/exit-right.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ExternalLink": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Eye": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "EyeIcon": {
+      "file": "src/reui/icons/default/outline/eye.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "AcceptInvitationForm",
+        "SignInForm",
+        "WebhookEndpointDetail"
+      ],
+      "story": null
+    },
+    "EyeOff": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "EyeSlashIcon": {
+      "file": "src/reui/icons/default/outline/eye-slash.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "FeatureCloneDialog": {
       "file": "src/pages/product-catalog/products/FeatureCloneDialog.tsx",
       "layer": "surface",
@@ -1160,6 +2207,8 @@
       "file": "src/pages/product-catalog/products/FeatureDetailView.tsx",
       "layer": "surface",
       "composes": [
+        "ArchiveIcon",
+        "CopyIcon",
         "DetailHeader",
         "DetailMoreMenu",
         "DetailTable",
@@ -1169,7 +2218,9 @@
         "LoadingRows",
         "MetadataCard",
         "MetricChart",
+        "PencilIcon",
         "Pill",
+        "PlusIcon",
         "Properties",
         "Section",
         "SectionEmpty",
@@ -1186,7 +2237,8 @@
         "FormCard",
         "FormPage",
         "FormRow",
-        "OptionSelect"
+        "OptionSelect",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureForm.stories.tsx"
@@ -1195,12 +2247,16 @@
       "file": "src/pages/product-catalog/products/FeatureGrid.tsx",
       "layer": "surface",
       "composes": [
+        "BookOpenIcon",
+        "CopyIcon",
         "EmDash",
         "EntityCell",
         "EntityList",
         "FeatureTypePill",
         "Formula",
-        "Pill"
+        "PencilIcon",
+        "Pill",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureGrid.stories.tsx"
@@ -1209,6 +2265,7 @@
       "file": "src/pages/shared/StatusBadge.tsx",
       "layer": "surface",
       "composes": [
+        "HashIcon",
         "Pill"
       ],
       "usedBy": [],
@@ -1218,7 +2275,9 @@
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
       "composes": [
-        "Money"
+        "HashIcon",
+        "Money",
+        "PencilIcon"
       ],
       "usedBy": [
         "ChargeForm",
@@ -1231,7 +2290,9 @@
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
       "composes": [
-        "Money"
+        "HashIcon",
+        "Money",
+        "PencilIcon"
       ],
       "usedBy": [
         "FeatureDetailView",
@@ -1272,6 +2333,48 @@
       ],
       "story": "./src/compositions/forms/Field.stories.tsx"
     },
+    "FileJson": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "FileMinus": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "FileSheetIcon": {
+      "file": "src/reui/icons/default/outline/file-sheet.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "FileSignature": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "FileText": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Filter": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "FilterAdvancedRow": {
       "file": "src/components/reui/filters/filters-advanced.tsx",
       "layer": "vendor/reui",
@@ -1283,6 +2386,7 @@
       "file": "src/compositions/tables/FilterBar.tsx",
       "layer": "composition",
       "composes": [
+        "FilterIcon",
         "Filters"
       ],
       "usedBy": [
@@ -1304,11 +2408,28 @@
       "usedBy": [],
       "story": null
     },
+    "FilterEditIcon": {
+      "file": "src/reui/icons/default/outline/filter-edit.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "FilterFieldPicker": {
       "file": "src/components/reui/filters/filters-builder.tsx",
       "layer": "vendor/reui",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "FilterIcon": {
+      "file": "src/reui/icons/default/outline/filter.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "EntityList",
+        "FilterBar"
+      ],
       "story": null
     },
     "FilterMenu": {
@@ -1404,6 +2525,13 @@
       "usedBy": [],
       "story": null
     },
+    "FilterSearchIcon": {
+      "file": "src/reui/icons/default/outline/filter-search.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "FilterSelectEditor": {
       "file": "src/components/reui/filters/filters-editors.tsx",
       "layer": "vendor/reui",
@@ -1440,6 +2568,27 @@
         "GridFooter"
       ],
       "story": "./src/compositions/layout/FitToWindow.stories.tsx"
+    },
+    "FlaskConical": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "FlaskIcon": {
+      "file": "src/reui/icons/default/outline/flask.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "FolderPlus": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "ForgotPasswordForm": {
       "file": "src/pages/auth/ForgotPasswordForm.tsx",
@@ -1605,7 +2754,10 @@
     "FormToolbar": {
       "file": "src/compositions/forms/FormToolbar.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "ArrowLeftIcon",
+        "ArrowRightIcon"
+      ],
       "usedBy": [
         "FormPage"
       ],
@@ -1615,17 +2767,55 @@
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
       "composes": [
-        "Money"
+        "HashIcon",
+        "Money",
+        "PencilIcon"
       ],
       "usedBy": [
         "FeatureGrid"
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
+    "GalleryHorizontalEnd": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Gauge": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "GearIcon": {
+      "file": "src/reui/icons/default/outline/gear.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Globe": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "GlobeIcon": {
+      "file": "src/reui/icons/default/outline/globe.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "GlyphBadge": {
       "file": "src/pages/shared/StatusBadge.tsx",
       "layer": "surface",
       "composes": [
+        "HashIcon",
         "Pill"
       ],
       "usedBy": [
@@ -1649,6 +2839,20 @@
       "usedBy": [],
       "story": "./src/compositions/tables/GridToolbar.stories.tsx"
     },
+    "GripHorizontal": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "GripVertical": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "GroupForm": {
       "file": "src/pages/settings/groups/GroupForm.tsx",
       "layer": "surface",
@@ -1665,7 +2869,10 @@
       "file": "src/pages/settings/groups/GroupGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/settings/groups/GroupGrid.stories.tsx"
@@ -1684,6 +2891,7 @@
       "file": "src/compositions/feedback/GuidedEmptyState.tsx",
       "layer": "composition",
       "composes": [
+        "ArrowRightIcon",
         "ProjectsEmptyIllustration"
       ],
       "usedBy": [
@@ -1695,6 +2903,7 @@
       "file": "src/compositions/feedback/GuidedEmptyState.tsx",
       "layer": "composition",
       "composes": [
+        "ArrowRightIcon",
         "ProjectsEmptyIllustration"
       ],
       "usedBy": [],
@@ -1712,6 +2921,97 @@
       ],
       "story": "./src/pages/shared/HalfDonut.stories.tsx"
     },
+    "HandCoins": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Hash": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "HashIcon": {
+      "file": "src/reui/icons/default/outline/hash.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "CatalogStatusBadge",
+        "EmDash",
+        "EntityCell",
+        "EntityLink",
+        "FeatureTypeBadge",
+        "FeatureTypeGlyph",
+        "FeatureTypePill",
+        "Formula",
+        "GlyphBadge",
+        "InvoiceForm",
+        "InvoiceStatusBadge",
+        "Pill",
+        "Status"
+      ],
+      "story": null
+    },
+    "Headphones": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "HelpCircle": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "HotelIcon": {
+      "file": "src/reui/icons/default/outline/hotel.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "House": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "HouseWindowIcon": {
+      "file": "src/reui/icons/default/outline/house-window.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Inbox": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "InboxIcon": {
+      "file": "src/reui/icons/default/outline/inbox.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Info": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "InfoHint": {
       "file": "src/compositions/forms/InfoHint.tsx",
       "layer": "composition",
@@ -1724,10 +3024,19 @@
       ],
       "story": "./src/compositions/forms/InfoHint.stories.tsx"
     },
+    "InformationCircleIcon": {
+      "file": "src/reui/icons/default/outline/information-circle.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "InlineField": {
       "file": "src/compositions/forms/InlineField.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "PencilIcon"
+      ],
       "usedBy": [
         "EditableFields"
       ],
@@ -1786,15 +3095,19 @@
       "layer": "surface",
       "composes": [
         "AccountActivityRail",
+        "CalculatorIcon",
         "DetailShell",
         "DetailTable",
         "DetailTabs",
+        "LinkIcon",
         "LoadingRows",
         "MetadataCard",
+        "PencilIcon",
         "RelatedCard",
         "Section",
         "SectionEmpty",
-        "Status"
+        "Status",
+        "WalletIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/invoices/InvoiceDetailView.stories.tsx"
@@ -1803,11 +3116,16 @@
       "file": "src/pages/billing/invoices/InvoiceForm.tsx",
       "layer": "surface",
       "composes": [
+        "Calendar",
+        "CalendarIcon",
+        "CheckIcon",
         "Field",
+        "HashIcon",
         "InvoiceDateField",
         "InvoiceSection",
         "InvoiceSummary",
-        "LabelWithHint"
+        "LabelWithHint",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/invoices/InvoiceForm.stories.tsx"
@@ -1816,7 +3134,10 @@
       "file": "src/pages/billing/invoices/InvoiceGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "CopyIcon",
+        "EntityList",
+        "PlusIcon",
+        "WalletIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/billing/invoices/InvoiceGrid.stories.tsx"
@@ -1848,6 +3169,7 @@
       "file": "src/pages/shared/StatusBadge.tsx",
       "layer": "surface",
       "composes": [
+        "HashIcon",
         "Pill"
       ],
       "usedBy": [
@@ -1871,9 +3193,44 @@
       "usedBy": [],
       "story": null
     },
+    "IssueMoneyIcon": {
+      "file": "src/reui/icons/default/outline/issue-money.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "ItemActionMenu": {
       "file": "src/components/blocks/app-shell-3/components/item-action-menu.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Kanban": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "KanbanIcon": {
+      "file": "src/reui/icons/default/outline/kanban.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "KeyIcon": {
+      "file": "src/reui/icons/default/outline/key.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "KeyRound": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -1893,9 +3250,110 @@
       ],
       "story": "./src/compositions/forms/LabelWithHint.stories.tsx"
     },
+    "Landmark": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Layers": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Layers2": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LayoutDashboardIcon": {
+      "file": "src/reui/icons/default/outline/layout-dashboard.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LayoutHeaderIcon": {
+      "file": "src/reui/icons/default/outline/layout-header.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LayoutList": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LayoutPanelLeft": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LayoutSidebarLeftIcon": {
+      "file": "src/reui/icons/default/outline/layout-sidebar-left.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LayoutTemplate": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "LearnMoreGuides": {
       "file": "src/components/blocks/empty-state-1/components/learn-more-guides.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Link": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LinkIcon": {
+      "file": "src/reui/icons/default/outline/link.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "InvoiceDetailView",
+        "TaxRateGrid"
+      ],
+      "story": null
+    },
+    "List": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ListFilter": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ListFilterPlus": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -1920,6 +3378,27 @@
       "usedBy": [],
       "story": "./src/compositions/feedback/States.stories.tsx"
     },
+    "Loader2": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LoaderCircle": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LoadingIcon": {
+      "file": "src/reui/icons/default/outline/loading.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "LoadingRows": {
       "file": "src/compositions/feedback/States.tsx",
       "layer": "composition",
@@ -1937,6 +3416,20 @@
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
     },
+    "Lock": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "LockIcon": {
+      "file": "src/reui/icons/default/outline/lock.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "LoginForm": {
       "file": "src/components/blocks/auth-18/components/login-form.tsx",
       "layer": "vendor/blocks",
@@ -1944,12 +3437,66 @@
       "usedBy": [],
       "story": null
     },
+    "LogOut": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "MagnifierIcon": {
+      "file": "src/reui/icons/default/outline/magnifier.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Mail": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Mark": {
       "file": "src/compositions/shell/EnvironmentSwitcher.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "ChevronsUpDownIcon",
+        "PencilIcon",
+        "PlusIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/shell/EnvironmentSwitcher.stories.tsx"
+    },
+    "Maximize2": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "MaximizeIcon": {
+      "file": "src/reui/icons/default/outline/maximize.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Megaphone": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "MegaphoneIcon": {
+      "file": "src/reui/icons/default/outline/megaphone.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "MembersDataGridView": {
       "file": "src/components/blocks/data-grid-base-6/components/data-grid-view.tsx",
@@ -1958,10 +3505,32 @@
       "usedBy": [],
       "story": null
     },
+    "Message24Icon": {
+      "file": "src/reui/icons/default/outline/message-24.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "MessageSquareText": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "MessageTextIcon": {
+      "file": "src/reui/icons/default/outline/message-text.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "MetadataCard": {
       "file": "src/compositions/detail/MetadataCard.tsx",
       "layer": "composition",
       "composes": [
+        "PlusIcon",
         "Section"
       ],
       "usedBy": [
@@ -2032,6 +3601,20 @@
       ],
       "story": "./src/compositions/detail/MetricRail.stories.tsx"
     },
+    "Minus": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "MinusIcon": {
+      "file": "src/reui/icons/default/outline/minus.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Money": {
       "file": "src/pages/shared/Money.tsx",
       "layer": "surface",
@@ -2049,10 +3632,39 @@
         "Pill",
         "RevenueDashboard",
         "Status",
-        "Tag",
         "UsageCard"
       ],
       "story": "./src/pages/shared/Money.stories.tsx"
+    },
+    "Monitor": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Moon": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "MoonIcon": {
+      "file": "src/reui/icons/default/outline/moon.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "ThemeToggle"
+      ],
+      "story": null
+    },
+    "MoreHorizontal": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "NavMain": {
       "file": "src/components/blocks/app-shell-3/components/nav-main.tsx",
@@ -2071,6 +3683,13 @@
     "NavWorkspace": {
       "file": "src/components/blocks/app-shell-3/components/nav-workspace.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "NotificationIcon": {
+      "file": "src/reui/icons/default/outline/notification.tsx",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -2154,6 +3773,22 @@
       ],
       "story": "./src/compositions/forms/OptionSelect.stories.tsx"
     },
+    "Package": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PackageIcon": {
+      "file": "src/reui/icons/default/outline/package.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "PageShell"
+      ],
+      "story": null
+    },
     "Page": {
       "file": "src/components/blocks/app-shell-3/page.tsx",
       "layer": "vendor/blocks",
@@ -2184,9 +3819,14 @@
       "layer": "surface",
       "composes": [
         "AppShell",
+        "CodeIcon",
+        "CreditCardIcon",
         "EnvironmentSwitcher",
+        "PackageIcon",
         "ShellBreadcrumb",
-        "ShellDetailTrailProvider"
+        "ShellDetailTrailProvider",
+        "UsersIcon",
+        "WalletIcon"
       ],
       "usedBy": [],
       "story": null
@@ -2197,6 +3837,13 @@
       "composes": [],
       "usedBy": [],
       "story": "./src/compositions/layout/Page.stories.tsx"
+    },
+    "Palette": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "Panel": {
       "file": "src/compositions/layout/Section.tsx",
@@ -2210,6 +3857,27 @@
         "UsageCard"
       ],
       "story": "./src/compositions/layout/Section.stories.tsx"
+    },
+    "PanelLeft": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PanelLeftIcon": {
+      "file": "src/reui/icons/default/outline/panel-left.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PaperPlaneIcon": {
+      "file": "src/reui/icons/default/outline/paper-plane.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "Pattern": {
       "file": "src/components/examples/c-badge-20.tsx",
@@ -2234,6 +3902,8 @@
       "file": "src/pages/collections/payments/PaymentGrid.tsx",
       "layer": "surface",
       "composes": [
+        "CopyIcon",
+        "CreditCardIcon",
         "EmDash",
         "EntityList",
         "Tag"
@@ -2257,11 +3927,79 @@
       "usedBy": [],
       "story": "./src/pages/collections/payments/PaymentStatusBadge.stories.tsx"
     },
+    "Pencil": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PencilIcon": {
+      "file": "src/reui/icons/default/outline/pencil.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "AddonGrid",
+        "CostSheetGrid",
+        "CouponGrid",
+        "CustomerDetail",
+        "CustomerGrid",
+        "EditableCard",
+        "EmDash",
+        "EntityCell",
+        "EntityLink",
+        "EnvironmentSwitcher",
+        "FeatureDetailView",
+        "FeatureGrid",
+        "FeatureTypeGlyph",
+        "FeatureTypePill",
+        "Formula",
+        "InlineField",
+        "InvoiceDetailView",
+        "Mark",
+        "Pill",
+        "PlanGrid",
+        "PriceUnitGrid",
+        "Status",
+        "TaxRateGrid"
+      ],
+      "story": null
+    },
+    "PenNibIcon": {
+      "file": "src/reui/icons/default/outline/pen-nib.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Percent": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PercentageIcon": {
+      "file": "src/reui/icons/default/outline/percentage.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PhoneIcon": {
+      "file": "src/reui/icons/default/outline/phone.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Pill": {
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
       "composes": [
-        "Money"
+        "HashIcon",
+        "Money",
+        "PencilIcon"
       ],
       "usedBy": [
         "CatalogStatusBadge",
@@ -2292,6 +4030,27 @@
       ],
       "story": "./src/pages/shared/PillColumns.stories.tsx"
     },
+    "Pin": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PinIcon": {
+      "file": "src/reui/icons/default/outline/pin.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PinOff": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "PlanChangeWizard": {
       "file": "src/components/blocks/solution-billing-8/components/plan-change-wizard.tsx",
       "layer": "vendor/blocks",
@@ -2305,6 +4064,7 @@
       "composes": [
         "ErrorState",
         "LoadingRows",
+        "PlusIcon",
         "RowActionsMenu",
         "Section",
         "SectionEmpty"
@@ -2317,6 +4077,7 @@
       "layer": "surface",
       "composes": [
         "DetailTable",
+        "PlusIcon",
         "RowActionsMenu",
         "Section",
         "SectionEmpty"
@@ -2339,6 +4100,7 @@
       "composes": [
         "DetailTable",
         "EmDash",
+        "PlusIcon",
         "RowActionsMenu",
         "Section",
         "SectionEmpty"
@@ -2355,7 +4117,8 @@
         "EntitlementCreateForm",
         "FormCard",
         "FormPage",
-        "FormRow"
+        "FormRow",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanForm.stories.tsx"
@@ -2364,9 +4127,13 @@
       "file": "src/pages/product-catalog/plans/PlanGrid.tsx",
       "layer": "surface",
       "composes": [
+        "ArchiveIcon",
+        "BookOpenIcon",
+        "CopyIcon",
         "EmDash",
         "EntityCell",
         "EntityList",
+        "PencilIcon",
         "Status",
         "Tag"
       ],
@@ -2377,6 +4144,7 @@
       "file": "src/pages/product-catalog/plans/PlanPreviewCard.tsx",
       "layer": "surface",
       "composes": [
+        "CheckIcon",
         "FormPreview",
         "PreviewSection"
       ],
@@ -2406,6 +4174,96 @@
       "usedBy": [
         "PricingCatalogBlock"
       ],
+      "story": null
+    },
+    "Play": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Plug": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PlugChargingIcon": {
+      "file": "src/reui/icons/default/outline/plug-charging.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PlugZap": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Plus": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PlusCircleIcon": {
+      "file": "src/reui/icons/default/outline/plus-circle.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "PlusIcon": {
+      "file": "src/reui/icons/default/outline/plus.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "AddonGrid",
+        "ChargeTable",
+        "CostSheetGrid",
+        "CouponGrid",
+        "CreditGrantTable",
+        "CustomerDetail",
+        "CustomerGrid",
+        "CustomerTaxSection",
+        "CustomerWalletView",
+        "EntitlementTable",
+        "EnvironmentSwitcher",
+        "FeatureDetailView",
+        "FeatureForm",
+        "FeatureGrid",
+        "GroupGrid",
+        "InvoiceForm",
+        "InvoiceGrid",
+        "Mark",
+        "MetadataCard",
+        "PlanChargesView",
+        "PlanCreditGrantsView",
+        "PlanEntitlementsView",
+        "PlanForm",
+        "PriceUnitGrid",
+        "PricingCatalogBlock",
+        "ShellCreateMenu",
+        "ShellSearch",
+        "SubscriptionDetailView",
+        "SubscriptionGrid",
+        "TaxRateGrid",
+        "TierTable",
+        "WebhookEndpointDetail",
+        "WebhookEndpointGrid"
+      ],
+      "story": null
+    },
+    "Power": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
       "story": null
     },
     "PreviewAmount": {
@@ -2451,6 +4309,13 @@
       ],
       "story": "./src/pages/product-catalog/charges/PriceOverrideForm.stories.tsx"
     },
+    "PriceTagIcon": {
+      "file": "src/reui/icons/default/outline/price-tag.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "PriceUnitForm": {
       "file": "src/pages/settings/price-units/PriceUnitForm.tsx",
       "layer": "surface",
@@ -2466,7 +4331,11 @@
       "file": "src/pages/settings/price-units/PriceUnitGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "PencilIcon",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/settings/price-units/PriceUnitGrid.stories.tsx"
@@ -2475,8 +4344,10 @@
       "file": "src/pages/product-catalog/pricing-widget/PricingCatalogBlock.tsx",
       "layer": "surface",
       "composes": [
+        "CopyIcon",
         "EmptyState",
-        "PlanTile"
+        "PlanTile",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/pricing-widget/PricingCatalogBlock.stories.tsx"
@@ -2484,6 +4355,13 @@
     "ProfileAvatarUpload": {
       "file": "src/components/blocks/settings-7/components/profile-avatar-upload.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ProfileCircleIcon": {
+      "file": "src/reui/icons/default/outline/profile-circle.tsx",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -2508,12 +4386,36 @@
     "Properties": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "FeatureDetailView",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
+    "PulseIcon": {
+      "file": "src/reui/icons/default/outline/pulse.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Puzzle": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "QuestionCircleIcon": {
+      "file": "src/reui/icons/default/outline/question-circle.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "QuickStartTemplates": {
       "file": "src/components/blocks/empty-state-3/components/quick-start-templates.tsx",
@@ -2529,9 +4431,37 @@
       "usedBy": [],
       "story": "./src/pages/shared/QuotaCard.stories.tsx"
     },
+    "Receipt": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ReceiptText": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "RecordsEmptyIllustration": {
       "file": "src/components/blocks/empty-state-1/components/records-empty-illustration.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "RefreshArrowClockwiseIcon": {
+      "file": "src/reui/icons/default/outline/refresh-arrow-clockwise.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "RefreshCw": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -2540,12 +4470,20 @@
       "file": "src/compositions/detail/RelatedCard.tsx",
       "layer": "composition",
       "composes": [
+        "ArrowUpRightIcon",
         "Section"
       ],
       "usedBy": [
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
+      "story": null
+    },
+    "Repeat": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
       "story": null
     },
     "ResourceNavigation": {
@@ -2561,6 +4499,7 @@
       "composes": [
         "ArcGauge",
         "BlurredEmpty",
+        "CalendarIcon",
         "DetailTable",
         "HalfDonut",
         "MetricChart",
@@ -2571,9 +4510,51 @@
       "usedBy": [],
       "story": "./src/pages/revenue/RevenueDashboard.stories.tsx"
     },
+    "RightIcon": {
+      "file": "src/reui/icons/default/filled/right.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Rocket": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "RocketIcon": {
+      "file": "src/reui/icons/default/outline/rocket.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "RoleTree": {
       "file": "src/components/blocks/form-9/components/role-tree.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "RotateCcw": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "RotateCw": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "RouteIcon": {
+      "file": "src/reui/icons/default/outline/route.tsx",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -2593,9 +4574,58 @@
       ],
       "story": "./src/pages/shared/RowActionsMenu.stories.tsx"
     },
+    "RowsStackedIcon": {
+      "file": "src/reui/icons/default/outline/rows-stacked.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Save": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Scale": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ScreenIcon": {
+      "file": "src/reui/icons/default/outline/screen.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ScrollText": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Search": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "SearchForm": {
       "file": "src/components/blocks/app-shell-3/components/search-form.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SearchX": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -2661,7 +4691,10 @@
     "SegmentMeter": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "ApiCard",
         "CustomerAnalyticsView",
@@ -2669,6 +4702,13 @@
         "UsageCard"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
+    "Send": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "SettingRow": {
       "file": "src/components/blocks/settings-7/components/setting-row.tsx",
@@ -2680,6 +4720,20 @@
     "SettingRowGroup": {
       "file": "src/components/blocks/solution-billing-4/components/payment-methods-row.tsx",
       "layer": "vendor/blocks",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Settings": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Settings2": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
       "composes": [],
       "usedBy": [],
       "story": null
@@ -2716,10 +4770,38 @@
       "usedBy": [],
       "story": "./src/pages/settings/settings/SettingsShell.stories.tsx"
     },
+    "Share2": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ShareIcon": {
+      "file": "src/reui/icons/default/outline/share.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Sheet": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "CustomerEventsGrid",
+        "EventDetailSheet",
+        "UsageSyncDetailSheet",
+        "WebhookMessageSheet"
+      ],
+      "story": null
+    },
     "ShellAccount": {
       "file": "src/compositions/shell/ShellAccount.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "UserIcon"
+      ],
       "usedBy": [
         "AppShell"
       ],
@@ -2737,7 +4819,9 @@
     "ShellCreateMenu": {
       "file": "src/compositions/shell/ShellCreateMenu.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "PlusIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/shell/ShellCreateMenu.stories.tsx"
     },
@@ -2769,16 +4853,65 @@
     "ShellSearch": {
       "file": "src/compositions/shell/ShellSearch.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "BookOpenIcon",
+        "CalculatorIcon",
+        "CreditCardIcon",
+        "PlusIcon",
+        "UsersIcon"
+      ],
       "usedBy": [
         "AppShell"
       ],
       "story": "./src/compositions/shell/ShellSearch.stories.tsx"
     },
+    "Shield": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ShieldCheck": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ShieldIcon": {
+      "file": "src/reui/icons/default/outline/shield.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ShieldTickIcon": {
+      "file": "src/reui/icons/default/outline/shield-tick.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ShopIcon": {
+      "file": "src/reui/icons/default/outline/shop.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ShoppingCart": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "SignInForm": {
       "file": "src/pages/auth/SignInForm.tsx",
       "layer": "surface",
       "composes": [
+        "EyeIcon",
         "Field",
         "LabelWithHint"
       ],
@@ -2801,13 +4934,51 @@
     "SimpleTable": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "PriceOverrideForm",
         "TierTable",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
+    "SlidersHorizontal": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SlidersIcon": {
+      "file": "src/reui/icons/default/outline/sliders.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Smartphone": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Smile": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SmsIcon": {
+      "file": "src/reui/icons/default/outline/sms.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "SortableItem": {
       "file": "src/compositions/tables/SortableList.tsx",
@@ -2826,7 +4997,11 @@
     "SortMenu": {
       "file": "src/compositions/tables/SortMenu.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "ArrowDownIcon",
+        "ArrowUpDownIcon",
+        "ArrowUpIcon"
+      ],
       "usedBy": [
         "EntityList"
       ],
@@ -2844,6 +5019,13 @@
       ],
       "story": null
     },
+    "Sparkles": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "SpendingLimit": {
       "file": "src/components/blocks/app-shell-3/components/spending-limit.tsx",
       "layer": "vendor/blocks",
@@ -2854,13 +5036,58 @@
     "SplitMeter": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "CustomerWalletView",
         "RevenueDashboard",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
+    "SquareArrowDownLineIcon": {
+      "file": "src/reui/icons/default/outline/square-arrow-down-line.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SquareBulletListIcon": {
+      "file": "src/reui/icons/default/outline/square-bullet-list.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SquareInCircleIcon": {
+      "file": "src/reui/icons/default/outline/square-in-circle.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SquareStack": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Star": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "StarIcon": {
+      "file": "src/reui/icons/default/outline/star.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "StatCards": {
       "file": "src/pages/shared/StatCards.tsx",
@@ -2882,7 +5109,9 @@
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
       "composes": [
-        "Money"
+        "HashIcon",
+        "Money",
+        "PencilIcon"
       ],
       "usedBy": [
         "AddonSubscriptionsView",
@@ -2893,10 +5122,19 @@
       ],
       "story": "./src/pages/shared/cells.stories.tsx"
     },
+    "Store": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "SubscriptionCard": {
       "file": "src/pages/customers/SubscriptionCard.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "CopyIcon"
+      ],
       "usedBy": [
         "CustomerDetail"
       ],
@@ -2917,6 +5155,7 @@
         "InvoiceStatusBadge",
         "LoadingRows",
         "MetadataCard",
+        "PlusIcon",
         "Properties",
         "RelatedCard",
         "RowActionsMenu",
@@ -2949,7 +5188,10 @@
       "file": "src/pages/contracts/SubscriptionGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "BookOpenIcon",
+        "CopyIcon",
+        "EntityList",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionGrid.stories.tsx"
@@ -2968,7 +5210,10 @@
     "SummaryRow": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
       "usedBy": [
         "DetailStats",
         "MetricRail",
@@ -2976,18 +5221,39 @@
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
-    "Tag": {
-      "file": "src/pages/shared/cells.tsx",
-      "layer": "surface",
-      "composes": [
-        "Money"
+    "Sun": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "SunIcon": {
+      "file": "src/reui/icons/default/outline/sun.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "ThemeToggle"
       ],
+      "story": null
+    },
+    "SwitchIcon": {
+      "file": "src/reui/icons/default/outline/switch.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Tag": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
       "usedBy": [
         "EventGrid",
         "PaymentGrid",
         "PlanGrid"
       ],
-      "story": "./src/pages/shared/cells.stories.tsx"
+      "story": null
     },
     "TaxRateCreateForm": {
       "file": "src/pages/settings/taxes/TaxRateForm.tsx",
@@ -3017,10 +5283,21 @@
       "file": "src/pages/settings/taxes/TaxRateGrid.tsx",
       "layer": "surface",
       "composes": [
-        "EntityList"
+        "CopyIcon",
+        "EntityList",
+        "LinkIcon",
+        "PencilIcon",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/settings/taxes/TaxRateGrid.stories.tsx"
+    },
+    "TextIcon": {
+      "file": "src/reui/icons/default/outline/text.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "ThemeChoiceCards": {
       "file": "src/pages/settings/settings/AppearanceSettings.tsx",
@@ -3059,20 +5336,66 @@
     "ThemeToggle": {
       "file": "src/compositions/shell/ThemeToggle.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "MoonIcon",
+        "SunIcon"
+      ],
       "usedBy": [],
       "story": "./src/compositions/shell/ThemeToggle.stories.tsx"
+    },
+    "TicketPercent": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "TierTable": {
       "file": "src/pages/product-catalog/charges/TierTable.tsx",
       "layer": "surface",
       "composes": [
+        "PlusIcon",
         "SimpleTable"
       ],
       "usedBy": [
         "ChargeForm"
       ],
       "story": "./src/pages/product-catalog/charges/TierTable.stories.tsx"
+    },
+    "TimeIcon": {
+      "file": "src/reui/icons/default/outline/time.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Timer": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "TimerIcon": {
+      "file": "src/reui/icons/default/outline/timer.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ToggleOnIcon": {
+      "file": "src/reui/icons/default/outline/toggle-on.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "ToggleRight": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "Toolbar": {
       "file": "src/compositions/tables/Toolbar.tsx",
@@ -3081,6 +5404,20 @@
       "usedBy": [],
       "story": "./src/compositions/tables/Toolbar.stories.tsx"
     },
+    "Trash2": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "TrashIcon": {
+      "file": "src/reui/icons/default/outline/trash.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "TrendBadge": {
       "file": "src/pages/shared/charts.tsx",
       "layer": "surface",
@@ -3088,12 +5425,63 @@
       "usedBy": [],
       "story": "./src/pages/shared/TrendBadge.stories.tsx"
     },
+    "TrendingDown": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "TrendingUp": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "TriangleAlert": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "TriangleSplitIcon": {
+      "file": "src/reui/icons/default/outline/triangle-split.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Type": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Ungroup": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Upload": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "UsageCard": {
       "file": "src/pages/home/DashboardHome.tsx",
       "layer": "surface",
       "composes": [
         "ArcGauge",
+        "ArrowUpRightIcon",
         "BlurredEmpty",
+        "CalendarIcon",
         "HalfDonut",
         "MeterTrack",
         "MetricChart",
@@ -3117,7 +5505,8 @@
       "layer": "surface",
       "composes": [
         "DetailList",
-        "Pill"
+        "Pill",
+        "Sheet"
       ],
       "usedBy": [],
       "story": "./src/pages/developers/usage-syncs/UsageSyncDetailSheet.stories.tsx"
@@ -3126,6 +5515,8 @@
       "file": "src/pages/developers/usage-syncs/UsageSyncGrid.tsx",
       "layer": "surface",
       "composes": [
+        "BookOpenIcon",
+        "CopyIcon",
         "EntityList"
       ],
       "usedBy": [],
@@ -3145,6 +5536,74 @@
       ],
       "story": null
     },
+    "User": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "UserCircle": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "UserIcon": {
+      "file": "src/reui/icons/default/outline/user.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "CustomerGrid",
+        "ShellAccount"
+      ],
+      "story": null
+    },
+    "UserPlus": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Users": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "UsersIcon": {
+      "file": "src/reui/icons/default/outline/users.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "PageShell",
+        "ShellSearch"
+      ],
+      "story": null
+    },
+    "Wallet": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "WalletIcon": {
+      "file": "src/reui/icons/default/outline/wallet.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [
+        "CustomerDetail",
+        "CustomerWalletView",
+        "InvoiceDetailView",
+        "InvoiceGrid",
+        "PageShell"
+      ],
+      "story": null
+    },
     "WaveDots": {
       "file": "src/components/blocks/auth-11/components/wave-dots.tsx",
       "layer": "vendor/blocks",
@@ -3152,6 +5611,20 @@
       "usedBy": [
         "SignInScreen"
       ],
+      "story": null
+    },
+    "Waypoints": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Webhook": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
       "story": null
     },
     "WebhookActivity": {
@@ -3180,13 +5653,16 @@
       "composes": [
         "CatalogDetailFrame",
         "ConfirmDialog",
+        "CopyIcon",
         "DetailList",
         "EditableCard",
+        "EyeIcon",
         "Field",
         "FormDialog",
         "OptionCombobox",
         "OptionSelect",
         "Pill",
+        "PlusIcon",
         "Section",
         "SimpleTable",
         "SplitMeter",
@@ -3212,8 +5688,11 @@
       "file": "src/pages/developers/webhooks/WebhookEndpointGrid.tsx",
       "layer": "surface",
       "composes": [
+        "BookOpenIcon",
+        "CopyIcon",
         "EntityCell",
-        "EntityList"
+        "EntityList",
+        "PlusIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/developers/webhooks/WebhookEndpointGrid.stories.tsx"
@@ -3245,6 +5724,7 @@
       "file": "src/pages/developers/webhooks/WebhookMessageLog.tsx",
       "layer": "surface",
       "composes": [
+        "CopyIcon",
         "EntityList",
         "EventTypeName"
       ],
@@ -3257,6 +5737,7 @@
       "composes": [
         "DetailList",
         "EmDash",
+        "Sheet",
         "WebhookStatusPill",
         "WebhookTime"
       ],
@@ -3288,10 +5769,19 @@
       ],
       "story": null
     },
+    "Workflow": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "WorkflowGrid": {
       "file": "src/pages/developers/workflows/WorkflowGrid.tsx",
       "layer": "surface",
       "composes": [
+        "BookOpenIcon",
+        "CopyIcon",
         "EntityList"
       ],
       "usedBy": [],
@@ -3306,6 +5796,34 @@
         "FormSteps"
       ],
       "story": "./src/compositions/forms/WorkflowStepper.stories.tsx"
+    },
+    "Wrench": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "WrenchIcon": {
+      "file": "src/reui/icons/default/outline/wrench.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "XCircle": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "Zap": {
+      "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     }
   },
   "stories": {
@@ -3320,7 +5838,8 @@
       "title": "Building blocks/Detail pages/DetailHeader",
       "component": "DetailHeader",
       "uses": [
-        "DetailHeader"
+        "DetailHeader",
+        "UserIcon"
       ]
     },
     "./src/compositions/detail/DetailKit.stories.tsx": {
@@ -3387,6 +5906,7 @@
       "title": "Building blocks/Feedback & states/EmptyState",
       "component": "EmptyState",
       "uses": [
+        "ArrowUpRightIcon",
         "EmptyState",
         "ListOfferProvider",
         "PageBody"
@@ -3396,6 +5916,8 @@
       "title": "Model your first plan",
       "component": "GuidedEmptyState",
       "uses": [
+        "BookOpenIcon",
+        "CodeIcon",
         "GuideGrid",
         "GuidedEmptyState"
       ]
@@ -3404,6 +5926,7 @@
       "title": "Building blocks/Feedback & states/SectionEmpty",
       "component": "SectionEmpty",
       "uses": [
+        "PlusIcon",
         "SectionEmpty"
       ]
     },
@@ -3579,7 +6102,8 @@
       "title": "Building blocks/Layout/ConnectorCard",
       "component": "ConnectorCard",
       "uses": [
-        "ConnectorCard"
+        "ConnectorCard",
+        "CreditCardIcon"
       ]
     },
     "./src/compositions/layout/ContextualSection.stories.tsx": {
@@ -3630,6 +6154,7 @@
       "uses": [
         "AppShell",
         "EnvironmentSwitcher",
+        "PackageIcon",
         "ShellBreadcrumb",
         "ShellCreateMenu"
       ]
@@ -3659,6 +6184,8 @@
       "title": "Building blocks/Shell/ShellCreateMenu",
       "component": "ShellCreateMenu",
       "uses": [
+        "CreditCardIcon",
+        "PackageIcon",
         "ShellCreateMenu"
       ]
     },
@@ -3675,6 +6202,7 @@
       "title": "Workspace",
       "component": "ShellNav",
       "uses": [
+        "PackageIcon",
         "ShellNav"
       ]
     },
@@ -3689,7 +6217,8 @@
       "title": "Building blocks/Shell/ShellSearch",
       "component": "ShellSearch",
       "uses": [
-        "ShellSearch"
+        "ShellSearch",
+        "UsersIcon"
       ]
     },
     "./src/compositions/shell/ThemeProvider.stories.tsx": {
@@ -3996,7 +6525,8 @@
         "CustomerGrid",
         "ListState",
         "PageBody",
-        "PageShell"
+        "PageShell",
+        "UsersIcon"
       ]
     },
     "./src/pages/customers/CustomerTaxSection.stories.tsx": {
@@ -4281,6 +6811,7 @@
         "EditableCard",
         "LoadingRows",
         "PageShell",
+        "PencilIcon",
         "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanCustomerPreview",
@@ -4324,6 +6855,7 @@
       "component": null,
       "uses": [
         "ListState",
+        "PackageIcon",
         "PageBody",
         "PageShell",
         "PlanGrid"
@@ -4526,14 +7058,23 @@
         "SettingRow",
         "SettingsCard",
         "SettingsFieldGroup",
-        "SettingsShell"
+        "SettingsShell",
+        "UsersIcon"
       ]
     },
     "./src/pages/settings/settings/SettingsShell.stories.tsx": {
       "title": "App/Settings/Settings/Settings shell",
       "component": "SettingsShell",
       "uses": [
-        "SettingsShell"
+        "Bell",
+        "Building2",
+        "CreditCard",
+        "KeyRound",
+        "Plug",
+        "Receipt",
+        "SettingsShell",
+        "Users",
+        "Webhook"
       ]
     },
     "./src/pages/settings/taxes/TaxRateForm.stories.tsx": {
@@ -4586,16 +7127,22 @@
       "title": "Building blocks/Detail pages/EntityHeader",
       "component": "EntityHeader",
       "uses": [
+        "ArchiveIcon",
         "CatalogStatusBadge",
         "EntityHeader",
-        "FeatureTypeBadge"
+        "FeatureTypeBadge",
+        "HashIcon",
+        "PencilIcon"
       ]
     },
     "./src/pages/shared/EntityList.stories.tsx": {
       "title": "Building blocks/Tables & lists/EntityList",
       "component": null,
       "uses": [
-        "EntityList"
+        "BookOpenIcon",
+        "EntityList",
+        "RocketIcon",
+        "WrenchIcon"
       ]
     },
     "./src/pages/shared/HalfDonut.stories.tsx": {
@@ -4766,6 +7313,7 @@
       "route": "/cost-sheets/$costSheetId",
       "uses": [
         "AppFailure",
+        "CalculatorIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
         "ChargeTable",
@@ -4909,7 +7457,8 @@
         "ConfirmDialog",
         "CustomerGrid",
         "ListState",
-        "PageBody"
+        "PageBody",
+        "UsersIcon"
       ]
     },
     "EnvironmentFormPage": {
@@ -5076,6 +7625,7 @@
         "AppFailure",
         "CatalogDetailFrame",
         "ConfirmDialog",
+        "CreditCardIcon",
         "EditableCard",
         "EntityLink",
         "LoadingRows",
@@ -5098,6 +7648,7 @@
       "route": "/payments",
       "uses": [
         "CollectionsSummary",
+        "CreditCardIcon",
         "ListState",
         "PageBody",
         "PaymentGrid"
@@ -5110,7 +7661,9 @@
       "uses": [
         "AddChargeDialog",
         "AppFailure",
+        "ArchiveIcon",
         "ConfirmDialog",
+        "CopyIcon",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "DetailHeader",
@@ -5120,6 +7673,7 @@
         "EntitlementEditForm",
         "FormDialog",
         "LoadingRows",
+        "PencilIcon",
         "Pill",
         "PlanChargesView",
         "PlanCreditGrantsView",
@@ -5147,6 +7701,7 @@
       "route": "/plans",
       "uses": [
         "ListState",
+        "PackageIcon",
         "PageBody",
         "PlanGrid"
       ]
@@ -5205,7 +7760,8 @@
       "route": "/settings",
       "uses": [
         "EmbeddedPageContext",
-        "SettingsShell"
+        "SettingsShell",
+        "UsersIcon"
       ]
     },
     "CustomerSubscriptionFormPage": {

@@ -15,13 +15,15 @@ if (!container) throw new Error('#root is missing from index.html')
 /**
  * A tab left open across a deploy asks for chunks whose hashed names no longer
  * exist; the host answers with index.html and the dynamic import fails. Reload
- * once to pick up the new build. The flag stops a loop if the chunk is truly gone.
+ * to pick up the new build. The timestamp stops a loop if the chunk is truly
+ * gone, while still letting a later deploy recover the same tab again.
  */
 window.addEventListener('vite:preloadError', (event) => {
   const key = 'fp:chunk-reload'
   try {
-    if (sessionStorage.getItem(key)) return
-    sessionStorage.setItem(key, '1')
+    const last = Number(sessionStorage.getItem(key) ?? 0)
+    if (Date.now() - last < 30_000) return
+    sessionStorage.setItem(key, String(Date.now()))
   } catch {
     return
   }
