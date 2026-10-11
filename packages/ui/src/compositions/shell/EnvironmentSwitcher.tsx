@@ -1,4 +1,4 @@
-import { CheckIcon, ChevronsUpDownIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react'
+import { CheckIcon, ChevronsUpDownIcon, PencilIcon, PlusIcon, Trash2Icon } from '@ui/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,

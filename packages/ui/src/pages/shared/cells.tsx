@@ -1,6 +1,6 @@
 import { useRef, useState, type ReactNode } from 'react'
-import { BracesIcon, PencilIcon, GaugeIcon, HashIcon, ToggleRightIcon } from 'lucide-react'
-import type { CircleIcon } from 'lucide-react'
+import { BracesIcon, PencilIcon, GaugeIcon, HashIcon, ToggleRightIcon } from '@ui/icons'
+import type { CircleIcon } from '@ui/icons'
 import { type Money as MoneyValue, formatMoney } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Skeleton } from '@ui/components/primitives/skeleton'

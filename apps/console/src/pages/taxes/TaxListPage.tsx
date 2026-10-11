@@ -4,7 +4,7 @@ import { ApiError, useDeleteTaxRate, useTaxRates } from '@fp/query'
 import { TaxRateGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { PercentIcon } from 'lucide-react'
+import { PercentIcon } from '@fp/ui/icons'
 
 export interface TaxListPageProps {
   query: TaxRateQuery

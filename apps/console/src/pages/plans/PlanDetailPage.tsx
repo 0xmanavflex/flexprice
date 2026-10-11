@@ -83,7 +83,7 @@ import {
   MoreHorizontalIcon,
   PencilIcon,
   RefreshCwIcon,
-} from 'lucide-react'
+} from '@fp/ui/icons'
 import { usePlanFormOptions } from './planFormOptions'
 
 /**

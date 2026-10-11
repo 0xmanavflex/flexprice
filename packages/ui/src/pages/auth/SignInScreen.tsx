@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { KeyRoundIcon } from 'lucide-react'
+import { KeyRoundIcon } from '@ui/icons'
 import flexpriceIcon from '@ui/assets/flexprice-icon.png'
 import { WaveDots } from '@ui/components/blocks/auth-11/components/wave-dots'
 import { Google } from '@ui/components/ui/svgs/google'

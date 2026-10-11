@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { PlusIcon, XIcon } from 'lucide-react'
+import { PlusIcon, XIcon } from '@fp/ui/icons'
 import {
   type CustomCurrencyConfig,
   customCurrencyConfigSchema,

@@ -3,7 +3,7 @@ import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
 import { ApiError, useGroup } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView, Pill } from '@fp/ui/pages'
 import { AppFailure, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
-import { LayersIcon } from 'lucide-react'
+import { LayersIcon } from '@fp/ui/icons'
 
 export interface GroupDetailPageProps {
   groupId: string

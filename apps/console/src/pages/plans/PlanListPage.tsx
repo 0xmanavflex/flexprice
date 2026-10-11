@@ -2,7 +2,7 @@ import { type PlanQuery } from '@fp/domain'
 import { ApiError, usePlans } from '@fp/query'
 import { PlanGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { PackageIcon } from 'lucide-react'
+import { PackageIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 
 export interface PlanListPageProps {

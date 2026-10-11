@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from 'lucide-react'
+import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from '@ui/icons'
 import {
   DEFAULT_INVOICE_QUERY,
   type Invoice,

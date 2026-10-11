@@ -1,5 +1,5 @@
 import { EmptyState } from '@fp/ui/compositions'
-import { PlugZapIcon } from 'lucide-react'
+import { PlugZapIcon } from '@fp/ui/icons'
 import { SettingsBlock } from './panelKit'
 import type { SettingsTabSpec } from './sections'
 

@@ -1,7 +1,7 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from 'lucide-react'
+import { BarChart3Icon, HouseIcon, PackageIcon, ReceiptIcon, SettingsIcon } from '@ui/icons'
 import { SidebarProvider } from '@ui/components/primitives/sidebar'
 import { TooltipProvider } from '@ui/components/primitives/tooltip'
 import { ShellNav } from './ShellNav'

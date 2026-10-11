@@ -5,7 +5,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@ui/components/primitives/dropdown-menu'
-import { MoreHorizontalIcon } from 'lucide-react'
+import { MoreHorizontalIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 
 /**

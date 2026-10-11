@@ -1,6 +1,6 @@
 import { type ReactNode } from 'react'
 import { usePublishDetailTrail, useShellDetailTrail } from '../shell/ShellDetailTrail'
-import { ChevronRightIcon } from 'lucide-react'
+import { ChevronRightIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { MetricRail, type DetailMetric } from './MetricRail'

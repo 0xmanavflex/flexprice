@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ScrollTextIcon } from 'lucide-react'
+import { ScrollTextIcon } from '@fp/ui/icons'
 import { type RawEvent, type RawEventQuery } from '@fp/domain'
 import { ApiError, useRawEvents } from '@fp/query'
 import { EventDetailSheet, EventGrid } from '@fp/ui/pages'

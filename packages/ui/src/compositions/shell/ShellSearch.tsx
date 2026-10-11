@@ -42,8 +42,8 @@ import {
   UsersIcon,
   WebhookIcon,
   WorkflowIcon,
-  type LucideIcon,
-} from 'lucide-react'
+  type IconComponent,
+} from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import {
   Dialog,
@@ -120,7 +120,7 @@ export interface ShellSearchProps {
 const MAX_STATIC = 12
 
 /** The mark on a row. Pages use the rail glyphs; a record uses the glyph of its list. */
-const PAGE_GLYPHS: Record<string, LucideIcon> = {
+const PAGE_GLYPHS: Record<string, IconComponent> = {
   home: HouseIcon,
   customers: UsersIcon,
   features: BoxIcon,
@@ -152,21 +152,21 @@ const PAGE_GLYPHS: Record<string, LucideIcon> = {
   groups: UsersIcon,
 }
 
-const ACTION_GLYPHS: Record<string, LucideIcon> = {
+const ACTION_GLYPHS: Record<string, IconComponent> = {
   subscription: RepeatIcon,
   customer: UserPlusIcon,
   invoice: ReceiptIcon,
   payment: CreditCardIcon,
 }
 
-const RECORD_GLYPHS: Record<string, LucideIcon> = {
+const RECORD_GLYPHS: Record<string, IconComponent> = {
   customer: UsersIcon,
   plan: LayersIcon,
   feature: BoxIcon,
   invoice: ReceiptIcon,
 }
 
-function glyphFor(item: ShellSearchItem): LucideIcon {
+function glyphFor(item: ShellSearchItem): IconComponent {
   if (item.id.startsWith('page:')) return PAGE_GLYPHS[item.id.slice('page:'.length)] ?? FileTextIcon
   if (item.id.startsWith('action:')) {
     return ACTION_GLYPHS[item.id.slice('action:'.length)] ?? PlusIcon

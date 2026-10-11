@@ -1,4 +1,4 @@
-import { PlusIcon, CoinsIcon } from 'lucide-react'
+import { PlusIcon, CoinsIcon } from '@ui/icons'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import {
   CREDIT_GRANT_CADENCE_LABEL,

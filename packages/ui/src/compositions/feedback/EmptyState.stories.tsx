@@ -1,6 +1,6 @@
 import type { ComponentProps, ReactNode } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { ArrowUpRightIcon, BotIcon, KeyRoundIcon } from 'lucide-react'
+import { ArrowUpRightIcon, BotIcon, KeyRoundIcon } from '@ui/icons'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { EmptyState, ListOfferProvider } from './EmptyState'

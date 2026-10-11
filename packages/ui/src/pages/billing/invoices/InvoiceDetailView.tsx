@@ -12,7 +12,7 @@ import {
   SendIcon,
   WalletIcon,
   XCircleIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { toast } from 'sonner'
 import { InvoiceStatus, PaymentStatus } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, DownloadIcon, RefreshCwIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, DownloadIcon, RefreshCwIcon } from '@ui/icons'
 import {
   DEFAULT_WORKFLOW_QUERY,
   WORKFLOW_STATUS_LABEL,

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BanIcon, CopyIcon, FileMinusIcon, ReceiptIcon } from 'lucide-react'
+import { BanIcon, CopyIcon, FileMinusIcon, ReceiptIcon } from '@ui/icons'
 import {
   CREDIT_NOTE_STATUS_LABEL,
   CREDIT_NOTE_TYPE_LABEL,

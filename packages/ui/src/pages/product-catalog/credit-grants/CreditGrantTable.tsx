@@ -7,7 +7,7 @@ import {
 } from '@fp/domain'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { Button } from '@ui/components/primitives/button'
-import { PlusIcon } from 'lucide-react'
+import { PlusIcon } from '@ui/icons'
 
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'

@@ -9,7 +9,7 @@ import {
   SaveIcon,
   Trash2Icon,
   XIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { z } from 'zod'
 import { type CreateInvoice, createInvoiceSchema, emptyInvoice, sumLineAmounts } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'

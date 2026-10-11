@@ -6,7 +6,7 @@ import {
   LayersIcon,
   RepeatIcon,
   PlusIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   DEFAULT_SUBSCRIPTION_QUERY,
   SUBSCRIPTION_SORT_LABEL,

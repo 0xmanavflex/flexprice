@@ -28,7 +28,7 @@ import {
   DialogTitle,
   Input,
 } from '@fp/ui/primitives'
-import { UsersIcon } from 'lucide-react'
+import { UsersIcon } from '@fp/ui/icons'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,

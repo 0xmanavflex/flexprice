@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { TicketPercentIcon } from 'lucide-react'
+import { TicketPercentIcon } from '@ui/icons'
 import { CouponStatus, DEFAULT_COUPON_QUERY, type CouponQuery } from '@fp/domain'
 import { ListState, PageBody } from '@ui/compositions'
 import { CouponGrid } from '@ui/pages/settings/discounts/CouponGrid'

@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowLeftIcon, ArrowRightIcon, XIcon } from 'lucide-react'
+import { ArrowLeftIcon, ArrowRightIcon, XIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Separator } from '@ui/components/primitives/separator'
 import { provenance } from '@ui/provenance'

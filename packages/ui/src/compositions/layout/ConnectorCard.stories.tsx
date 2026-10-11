@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { CreditCardIcon } from 'lucide-react'
+import { CreditCardIcon } from '@ui/icons'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { ConnectorCard, type ConnectorCardProps } from './ConnectorCard'
 

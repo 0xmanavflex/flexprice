@@ -4,7 +4,7 @@ import { ApiError, useCustomers, useDeleteCustomer } from '@fp/query'
 import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { UsersIcon } from 'lucide-react'
+import { UsersIcon } from '@fp/ui/icons'
 
 export interface CustomerListPageProps {
   query: CustomerQuery

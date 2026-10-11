@@ -7,7 +7,7 @@ import {
   TagIcon,
   Trash2Icon,
   PlusIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   DEFAULT_GROUP_QUERY,
   GROUP_ENTITY_TYPE_LABEL,

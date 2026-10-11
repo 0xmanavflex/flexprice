@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowUpRightIcon, SettingsIcon } from 'lucide-react'
+import { ArrowUpRightIcon, SettingsIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Switch } from '@ui/components/primitives/switch'
 import { cn } from '@ui/lib/cn'

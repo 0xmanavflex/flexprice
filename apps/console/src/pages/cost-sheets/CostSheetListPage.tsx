@@ -4,7 +4,7 @@ import { ApiError, useCostSheets, useDeleteCostSheet } from '@fp/query'
 import { CostSheetGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { SheetIcon } from 'lucide-react'
+import { SheetIcon } from '@fp/ui/icons'
 
 export interface CostSheetListPageProps {
   query: CostSheetQuery

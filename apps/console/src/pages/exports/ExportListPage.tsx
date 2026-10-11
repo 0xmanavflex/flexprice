@@ -1,4 +1,4 @@
-import { DownloadCloudIcon } from 'lucide-react'
+import { DownloadCloudIcon } from '@fp/ui/icons'
 import { type DataExportQuery, EXPORT_STATE } from '@fp/domain'
 import { ApiError, useDataExports } from '@fp/query'
 import { DataExportGrid } from '@fp/ui/pages'

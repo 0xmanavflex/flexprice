@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { CreditCardIcon } from 'lucide-react'
+import { CreditCardIcon } from '@fp/ui/icons'
 import { PaymentStatus, formatMoney, PAYMENT_STATUS_LABEL } from '@fp/domain'
 import { ApiError, useDeletePayment, usePayment, useProcessPayment } from '@fp/query'
 import { CatalogDetailFrame, EntityLink, PaymentStatusBadge, Pill } from '@fp/ui/pages'

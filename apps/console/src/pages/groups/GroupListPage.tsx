@@ -4,7 +4,7 @@ import { ApiError, useDeleteGroup, useGroups } from '@fp/query'
 import { GroupGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { LayersIcon } from 'lucide-react'
+import { LayersIcon } from '@fp/ui/icons'
 
 export interface GroupListPageProps {
   query: GroupQuery

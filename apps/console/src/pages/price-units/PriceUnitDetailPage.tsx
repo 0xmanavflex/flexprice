@@ -3,7 +3,7 @@ import { formatMoney, money } from '@fp/domain'
 import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, Pill } from '@fp/ui/pages'
 import { AppFailure, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
-import { CoinsIcon } from 'lucide-react'
+import { CoinsIcon } from '@fp/ui/icons'
 
 export interface PriceUnitDetailPageProps {
   priceUnitId: string

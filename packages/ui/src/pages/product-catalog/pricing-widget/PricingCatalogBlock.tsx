@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { toast, Toaster } from 'sonner'
 import { FeatureType, PlanStatus, type Entitlement, type Plan as PlanRecord } from '@fp/domain'
-import { CodeXmlIcon, CopyIcon, PlusIcon, ZapIcon } from 'lucide-react'
+import { CodeXmlIcon, CopyIcon, PlusIcon, ZapIcon } from '@ui/icons'
 import { PlanTile } from '@ui/components/blocks/solution-billing-2/components/plan-tile'
 import type { Plan } from '@ui/components/blocks/solution-billing-2/components/data'
 import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'

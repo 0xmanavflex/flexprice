@@ -8,6 +8,9 @@
     "paths": {
       "@ui/*": [
         "./src/*"
+      ],
+      "lucide-react": [
+        "./src/icons/index.ts"
       ]
     }
   },

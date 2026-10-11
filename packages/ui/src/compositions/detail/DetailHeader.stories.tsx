@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { MoreHorizontalIcon, UserIcon } from 'lucide-react'
+import { MoreHorizontalIcon, UserIcon } from '@ui/icons'
 import { expect, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import {

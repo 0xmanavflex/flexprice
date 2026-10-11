@@ -24,7 +24,7 @@ import {
   LoadingRows,
   Section,
 } from '@fp/ui/compositions'
-import { TicketPercentIcon } from 'lucide-react'
+import { TicketPercentIcon } from '@fp/ui/icons'
 
 type CouponTab = 'overview' | 'redemptions' | 'information'
 

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ChevronRightIcon } from 'lucide-react'
+import { ChevronRightIcon } from '@ui/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,

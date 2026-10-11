@@ -9,6 +9,7 @@
     "./primitives": "./src/components/primitives/index.ts",
     "./compositions": "./src/compositions/index.ts",
     "./pages": "./src/pages/index.ts",
+    "./icons": "./src/icons/index.ts",
     "./styles.css": "./src/styles.css"
   },
   "scripts": {
@@ -17,6 +18,7 @@
     "test": "vitest run --passWithNoTests",
     "vendor:suppress": "node scripts/vendor-suppress.mjs",
     "ui:add": "node scripts/add.mjs",
+    "icons:sync": "node scripts/icons-sync.mjs",
     "anatomy": "node ../../scripts/storybook-anatomy.mjs",
     "storybook": "pnpm anatomy && storybook dev -p 6006 --no-open",
     "build-storybook": "pnpm anatomy && storybook build --output-dir dist/storybook --quiet",
@@ -40,7 +42,6 @@
     "clsx": "^2.1.1",
     "cn": "^0.4.0",
     "date-fns": "^4.4.0",
-    "lucide-react": "^1.17.0",
     "motion": "^13.4.1",
     "next-themes": "^0.4.6",
     "react-day-picker": "^10.0.1",

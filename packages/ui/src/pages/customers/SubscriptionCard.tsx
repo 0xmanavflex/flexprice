@@ -1,4 +1,4 @@
-import { CopyIcon, MoreHorizontalIcon } from 'lucide-react'
+import { CopyIcon, MoreHorizontalIcon } from '@ui/icons'
 import { SUBSCRIPTION_STATUS_LABEL, SubscriptionStatus, type Subscription } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {

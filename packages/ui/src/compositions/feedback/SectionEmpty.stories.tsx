@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { PlusIcon } from 'lucide-react'
+import { PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { SectionEmpty } from './SectionEmpty'
 

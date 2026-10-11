@@ -27,7 +27,7 @@ import {
 } from '@fp/query'
 import { EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { WorkflowIcon } from 'lucide-react'
+import { WorkflowIcon } from '@fp/ui/icons'
 import { useSession } from '@/app/session'
 import {
   ActionError,

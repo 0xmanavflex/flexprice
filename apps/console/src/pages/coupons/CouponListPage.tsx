@@ -2,7 +2,7 @@ import { type Coupon, type CouponQuery } from '@fp/domain'
 import { ApiError, useCoupons } from '@fp/query'
 import { CouponGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { TicketPercentIcon } from 'lucide-react'
+import { TicketPercentIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 
 export interface CouponListPageProps {

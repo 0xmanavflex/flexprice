@@ -1,5 +1,5 @@
 import { useEffect, useRef, type ReactNode } from 'react'
-import { ArrowLeftIcon } from 'lucide-react'
+import { ArrowLeftIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'

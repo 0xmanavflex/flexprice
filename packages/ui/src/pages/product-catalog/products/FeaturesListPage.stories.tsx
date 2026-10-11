@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { GaugeIcon } from 'lucide-react'
+import { GaugeIcon } from '@ui/icons'
 import { DEFAULT_FEATURE_QUERY, FeatureStatus, FeatureType, type FeatureQuery } from '@fp/domain'
 import { ListState, PageBody } from '@ui/compositions'
 import { FeatureGrid } from '@ui/pages/product-catalog/products/FeatureGrid'

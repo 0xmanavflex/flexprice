@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowUpRightIcon, CalendarIcon } from 'lucide-react'
+import { ArrowUpRightIcon, CalendarIcon } from '@ui/icons'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {

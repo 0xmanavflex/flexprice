@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { UsersIcon } from 'lucide-react'
+import { UsersIcon } from '@ui/icons'
 import {
   type Customer,
   CustomerStatus,

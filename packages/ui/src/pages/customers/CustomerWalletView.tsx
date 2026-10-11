@@ -8,7 +8,7 @@ import {
   PlusIcon,
   WalletIcon,
   XCircleIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   type CreateWallet,
   type TopUpWallet,

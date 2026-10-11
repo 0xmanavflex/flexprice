@@ -16,7 +16,7 @@ import {
   PageBody,
   Section,
 } from '@fp/ui/compositions'
-import { CalculatorIcon, ReceiptIcon } from 'lucide-react'
+import { CalculatorIcon, ReceiptIcon } from '@fp/ui/icons'
 
 type CostSheetTab = 'costs' | 'information'
 

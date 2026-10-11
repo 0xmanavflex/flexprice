@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { SearchIcon } from 'lucide-react'
+import { SearchIcon } from '@ui/icons'
 import { type WebhookEventType, groupWebhookEventTypes } from '@fp/domain'
 import {
   CodeBlock,

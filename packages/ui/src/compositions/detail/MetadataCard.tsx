@@ -1,5 +1,5 @@
 import { useId, useState, type FormEvent } from 'react'
-import { PlusIcon, Trash2Icon } from 'lucide-react'
+import { PlusIcon, Trash2Icon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { provenance } from '@ui/provenance'

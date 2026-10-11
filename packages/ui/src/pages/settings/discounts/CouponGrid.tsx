@@ -6,7 +6,7 @@ import {
   PencilIcon,
   TicketPercentIcon,
   PlusIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   COUPON_CADENCE_LABEL,
   COUPON_SORT_LABEL,

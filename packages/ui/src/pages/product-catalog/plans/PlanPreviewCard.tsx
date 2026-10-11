@@ -1,4 +1,4 @@
-import { CheckIcon } from 'lucide-react'
+import { CheckIcon } from '@ui/icons'
 import type { ReactNode } from 'react'
 import {
   BILLING_PERIOD_SHORT,

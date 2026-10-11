@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
-import { TicketPercentIcon } from 'lucide-react'
+import { TicketPercentIcon } from '@ui/icons'
 import { CatalogStatusBadge, type CatalogStatus } from '../../shared/StatusBadge'
 import { CatalogDetailFrame, type CatalogDetailFrameProps } from './CatalogDetailFrame'
 

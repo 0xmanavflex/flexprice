@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { ReceiptIcon } from 'lucide-react'
+import { ReceiptIcon } from '@ui/icons'
 import { DEFAULT_INVOICE_QUERY, InvoiceStatus, type InvoiceQuery } from '@fp/domain'
 import { ListState, PageBody } from '@ui/compositions'
 import { InvoiceGrid } from '@ui/pages/billing/invoices/InvoiceGrid'

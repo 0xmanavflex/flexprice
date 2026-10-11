@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon } from '@ui/icons'
 import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 

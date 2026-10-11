@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { XIcon } from 'lucide-react'
+import { XIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'

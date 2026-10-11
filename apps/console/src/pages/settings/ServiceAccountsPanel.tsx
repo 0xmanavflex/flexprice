@@ -19,7 +19,7 @@ import {
 } from '@fp/query'
 import { ConfirmDialog, Field, FormDialog } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { BotIcon } from 'lucide-react'
+import { BotIcon } from '@fp/ui/icons'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,

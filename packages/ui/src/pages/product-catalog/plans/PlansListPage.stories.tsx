@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { PackageIcon } from 'lucide-react'
+import { PackageIcon } from '@ui/icons'
 import { DEFAULT_PLAN_QUERY, PlanStatus, type PlanQuery } from '@fp/domain'
 import { ListState, PageBody } from '@ui/compositions'
 import { PlanGrid } from '@ui/pages/product-catalog/plans/PlanGrid'

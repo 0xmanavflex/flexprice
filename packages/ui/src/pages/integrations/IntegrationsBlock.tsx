@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BoxIcon, SearchIcon } from 'lucide-react'
+import { BoxIcon, SearchIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import type { Integration } from '@fp/domain'
 import { ConnectorCard } from '@ui/compositions/layout/ConnectorCard'

@@ -2,7 +2,7 @@ import { type PriceUnit, type PriceUnitQuery } from '@fp/domain'
 import { ApiError, usePriceUnits } from '@fp/query'
 import { PriceUnitGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { CoinsIcon } from 'lucide-react'
+import { CoinsIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 
 export interface PriceUnitListPageProps {

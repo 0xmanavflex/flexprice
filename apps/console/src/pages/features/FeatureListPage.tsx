@@ -9,7 +9,7 @@ import {
 } from '@fp/query'
 import { FeatureCloneDialog, FeatureGrid, type ProductLinkage } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
-import { GaugeIcon } from 'lucide-react'
+import { GaugeIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 import { toSubmitError } from './featureMessages'
 

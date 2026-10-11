@@ -1,4 +1,4 @@
-import { InfoIcon } from 'lucide-react'
+import { InfoIcon } from '@ui/icons'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { provenance } from '@ui/provenance'
 

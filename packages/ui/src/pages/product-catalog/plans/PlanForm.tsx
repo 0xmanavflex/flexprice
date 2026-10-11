@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { PlusIcon, Trash2Icon, XIcon } from 'lucide-react'
+import { PlusIcon, Trash2Icon, XIcon } from '@ui/icons'
 import {
   BILLING_PERIOD_LABEL,
   type CreateCharge,

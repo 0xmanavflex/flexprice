@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { MoreHorizontalIcon } from 'lucide-react'
+import { MoreHorizontalIcon } from '@ui/icons'
 import { expect, within } from 'storybook/test'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'

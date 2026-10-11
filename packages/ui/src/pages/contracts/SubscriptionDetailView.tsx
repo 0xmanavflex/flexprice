@@ -8,7 +8,7 @@ import {
   PlayIcon,
   RefreshCwIcon,
   XCircleIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,

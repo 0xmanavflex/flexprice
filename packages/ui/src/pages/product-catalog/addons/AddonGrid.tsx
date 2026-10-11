@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, PencilIcon, PlusIcon, PuzzleIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, PencilIcon, PlusIcon, PuzzleIcon } from '@ui/icons'
 import {
   ADDON_SORT_LABEL,
   ADDON_STATUS_LABEL,

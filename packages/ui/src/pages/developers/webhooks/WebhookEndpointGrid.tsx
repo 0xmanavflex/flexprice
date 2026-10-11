@@ -8,7 +8,7 @@ import {
   ShieldCheckIcon,
   Trash2Icon,
   WebhookIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { type WebhookEndpoint, type WebhookEndpointStats, webhookErrorRate } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'

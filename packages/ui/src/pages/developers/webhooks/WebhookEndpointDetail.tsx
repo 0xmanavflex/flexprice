@@ -9,7 +9,7 @@ import {
   SendIcon,
   Trash2Icon,
   WebhookIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   WEBHOOK_RECOVER_WINDOWS,
   type WebhookEndpoint,

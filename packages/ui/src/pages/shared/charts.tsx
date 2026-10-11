@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import type { CSSProperties, ReactNode } from 'react'
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from 'recharts'
-import { TrendingDownIcon, TrendingUpIcon } from 'lucide-react'
+import { TrendingDownIcon, TrendingUpIcon } from '@ui/icons'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@ui/components/primitives/chart'

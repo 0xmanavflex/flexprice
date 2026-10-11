@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, MailIcon, MoreHorizontalIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'

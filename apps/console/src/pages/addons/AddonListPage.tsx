@@ -2,7 +2,7 @@ import { type Addon, type AddonQuery } from '@fp/domain'
 import { ApiError, useAddons } from '@fp/query'
 import { AddonGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { PuzzleIcon } from 'lucide-react'
+import { PuzzleIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 
 export interface AddonListPageProps {

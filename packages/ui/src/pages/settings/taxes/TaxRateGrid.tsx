@@ -7,7 +7,7 @@ import {
   PercentIcon,
   PlusIcon,
   Trash2Icon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   DEFAULT_TAX_RATE_QUERY,
   TAX_RATE_SCOPE_LABEL,

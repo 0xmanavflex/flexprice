@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { GaugeIcon } from 'lucide-react'
+import { GaugeIcon } from '@ui/icons'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { OptionCombobox, type OptionComboboxProps } from './OptionCombobox'
 import type { Option } from './OptionSelect'

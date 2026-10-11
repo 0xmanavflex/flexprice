@@ -9,7 +9,7 @@ import {
   ScrollTextIcon,
   SquareStackIcon,
   Trash2Icon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   aggregationFormula,
   DEFAULT_FEATURE_QUERY,

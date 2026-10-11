@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { FilterIcon } from 'lucide-react'
+import { FilterIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Filters } from '@ui/components/reui/filters/filters'
 import {

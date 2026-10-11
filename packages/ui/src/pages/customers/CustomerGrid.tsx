@@ -7,7 +7,7 @@ import {
   Trash2Icon,
   UserIcon,
   PlusIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,

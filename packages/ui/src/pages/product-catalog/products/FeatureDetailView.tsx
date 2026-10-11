@@ -18,7 +18,7 @@ import {
   USAGE_RESET_PERIOD_LABEL,
   type Feature,
 } from '@fp/domain'
-import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon, PlusIcon } from 'lucide-react'
+import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
 import { EditableCard } from '../../../compositions/forms/EditableCard'

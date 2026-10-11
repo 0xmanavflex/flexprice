@@ -1,4 +1,4 @@
-import { LogOutIcon, MoreHorizontalIcon, SettingsIcon, UserIcon } from 'lucide-react'
+import { LogOutIcon, MoreHorizontalIcon, SettingsIcon, UserIcon } from '@ui/icons'
 import { Avatar, AvatarFallback } from '@ui/components/primitives/avatar'
 import {
   DropdownMenu,

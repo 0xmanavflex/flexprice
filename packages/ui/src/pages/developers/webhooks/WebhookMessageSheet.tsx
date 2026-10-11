@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { RotateCcwIcon } from 'lucide-react'
+import { RotateCcwIcon } from '@ui/icons'
 import type { WebhookAttempt, WebhookMessage } from '@fp/domain'
 import {
   CodeBlock,

@@ -31,7 +31,7 @@ import {
   SortableList,
 } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { EyeIcon, EyeOffIcon, LayoutPanelLeftIcon } from 'lucide-react'
+import { EyeIcon, EyeOffIcon, LayoutPanelLeftIcon } from '@fp/ui/icons'
 import { useSession } from '@/app/session'
 import {
   ActionError,

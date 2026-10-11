@@ -11,7 +11,7 @@ import {
   TrendingUpIcon,
   UsersIcon,
   WalletIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import { AppShell } from '@ui/compositions/shell/AppShell'
 import { EnvironmentSwitcher } from '@ui/compositions/shell/EnvironmentSwitcher'
 import { ShellBreadcrumb } from '@ui/compositions/shell/ShellBreadcrumb'

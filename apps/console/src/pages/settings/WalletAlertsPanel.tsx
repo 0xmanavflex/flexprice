@@ -17,7 +17,7 @@ import {
 } from '@fp/query'
 import { FormCard, FormRow, LoadingRows } from '@fp/ui/compositions'
 import { Button, Input, Switch } from '@fp/ui/primitives'
-import { InfoIcon } from 'lucide-react'
+import { InfoIcon } from '@fp/ui/icons'
 import { useSession } from '@/app/session'
 import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
 import { useDraft } from './useDraft'

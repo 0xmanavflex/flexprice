@@ -1,5 +1,5 @@
 import { useId, useState, type ReactNode } from 'react'
-import { ChevronDownIcon } from 'lucide-react'
+import { ChevronDownIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { FormCard } from './FormCard'

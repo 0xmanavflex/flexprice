@@ -1,5 +1,5 @@
 import { type ReactNode } from 'react'
-import { PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from 'lucide-react'
+import { PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from '@ui/icons'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_TAX_TREATMENT_LABEL,

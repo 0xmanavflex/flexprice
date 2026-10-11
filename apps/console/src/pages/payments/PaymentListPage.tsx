@@ -2,7 +2,7 @@ import { type Payment, type PaymentQuery, formatMoney } from '@fp/domain'
 import { ApiError, useCollectionsSummary, usePayments } from '@fp/query'
 import { CollectionsSummary, PaymentGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { CreditCardIcon } from 'lucide-react'
+import { CreditCardIcon } from '@fp/ui/icons'
 
 export interface PaymentListPageProps {
   query: PaymentQuery

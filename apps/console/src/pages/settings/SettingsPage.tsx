@@ -14,7 +14,7 @@ import {
   TagIcon,
   TicketPercentIcon,
   UsersIcon,
-} from 'lucide-react'
+} from '@fp/ui/icons'
 import { AppearancePanel } from './AppearancePanel'
 import { CurrenciesPanel } from './CurrenciesPanel'
 import { InvoicesPanel } from './InvoicesPanel'

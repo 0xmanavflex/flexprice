@@ -1,4 +1,4 @@
-import { WorkflowIcon } from 'lucide-react'
+import { WorkflowIcon } from '@fp/ui/icons'
 import { type WorkflowQuery } from '@fp/domain'
 import { ApiError, useWorkflowRuns } from '@fp/query'
 import { WorkflowGrid } from '@fp/ui/pages'

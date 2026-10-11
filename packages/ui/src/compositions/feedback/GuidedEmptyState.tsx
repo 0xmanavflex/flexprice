@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { ArrowRightIcon } from 'lucide-react'
+import { ArrowRightIcon } from '@ui/icons'
 // eslint-disable-next-line no-restricted-imports -- wraps the empty-state-3 illustration unchanged, by design
 import { ProjectsEmptyIllustration } from '@ui/components/blocks/empty-state-3/components/projects-empty-illustration'
 import { cn } from '@ui/lib/cn'

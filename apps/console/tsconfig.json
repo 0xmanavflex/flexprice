@@ -11,6 +11,9 @@
       ],
       "@ui/*": [
         "../../packages/ui/src/*"
+      ],
+      "lucide-react": [
+        "../../packages/ui/src/icons/index.ts"
       ]
     },
     "noEmit": false,

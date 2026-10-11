@@ -8,7 +8,7 @@ import {
   PencilIcon,
   ReceiptTextIcon,
   SquareStackIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   BILLING_PERIOD_SHORT,
   DEFAULT_PLAN_QUERY,

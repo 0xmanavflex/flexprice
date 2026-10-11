@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { WebhookIcon } from 'lucide-react'
+import { WebhookIcon } from '@fp/ui/icons'
 import { useWebhookPortal } from '@fp/query'
 import { AppFailure, EmptyState, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { useSession } from '@/app/session'

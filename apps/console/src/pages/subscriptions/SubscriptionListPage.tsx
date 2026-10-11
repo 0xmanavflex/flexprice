@@ -2,7 +2,7 @@ import { type SubscriptionQuery } from '@fp/domain'
 import { ApiError, useSubscriptions } from '@fp/query'
 import { SubscriptionGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { RefreshCwIcon } from 'lucide-react'
+import { RefreshCwIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 
 export interface SubscriptionListPageProps {

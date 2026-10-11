@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, RefreshCwIcon, WaypointsIcon } from 'lucide-react'
+import { BookOpenIcon, CopyIcon, RefreshCwIcon, WaypointsIcon } from '@ui/icons'
 import {
   USAGE_SYNC_STATE,
   USAGE_SYNC_STATE_LABEL,

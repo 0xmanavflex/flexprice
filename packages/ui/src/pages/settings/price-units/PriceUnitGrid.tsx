@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CoinsIcon, CopyIcon, PencilIcon, ScaleIcon, PlusIcon } from 'lucide-react'
+import { BookOpenIcon, CoinsIcon, CopyIcon, PencilIcon, ScaleIcon, PlusIcon } from '@ui/icons'
 import {
   DEFAULT_PRICE_UNIT_QUERY,
   PRICE_UNIT_SORT_LABEL,

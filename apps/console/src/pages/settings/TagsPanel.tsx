@@ -21,7 +21,7 @@ import {
   DialogTitle,
   Input,
 } from '@fp/ui/primitives'
-import { TagIcon } from 'lucide-react'
+import { TagIcon } from '@fp/ui/icons'
 import {
   ActionError,
   PanelError,

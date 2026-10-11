@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { BookOpenIcon, RocketIcon, WrenchIcon } from 'lucide-react'
+import { BookOpenIcon, RocketIcon, WrenchIcon } from '@ui/icons'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { money } from '@fp/domain'
 import { createFilterQuery } from '@ui/components/reui/filters/filters-query'

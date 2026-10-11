@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
-import { Bell, Building2, CreditCard, KeyRound, Plug, Receipt, Users, Webhook } from 'lucide-react'
+import { Bell, Building2, CreditCard, KeyRound, Plug, Receipt, Users, Webhook } from '@ui/icons'
 import { SettingsShell, type SettingsSection, type SettingsShellProps } from './SettingsShell'
 
 const SECTIONS: SettingsSection[] = [

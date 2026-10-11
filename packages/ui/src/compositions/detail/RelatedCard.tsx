@@ -1,4 +1,4 @@
-import { ArrowUpRightIcon } from 'lucide-react'
+import { ArrowUpRightIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 import { Section } from '../layout/Section'
 

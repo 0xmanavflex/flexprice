@@ -1,4 +1,4 @@
-import { CalendarIcon } from 'lucide-react'
+import { CalendarIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Calendar } from '@ui/components/primitives/calendar'
 import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { CopyIcon, FileJsonIcon, RefreshCwIcon } from 'lucide-react'
+import { CopyIcon, FileJsonIcon, RefreshCwIcon } from '@ui/icons'
 import type { WebhookMessage } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { singleChoiceFilter } from '@ui/compositions/tables/FilterBar'

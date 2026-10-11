@@ -37,6 +37,8 @@ const config: StorybookConfig = {
       resolve: {
         alias: {
           '@ui/': fileURLToPath(new URL('../src/', import.meta.url)),
+          // Vendored ReUI code imports `lucide-react`; it gets the ReUI icon barrel.
+          'lucide-react': fileURLToPath(new URL('../src/icons/index.ts', import.meta.url)),
         },
       },
     }),

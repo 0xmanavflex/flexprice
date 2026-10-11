@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react'
-import { SearchIcon, XIcon } from 'lucide-react'
+import { SearchIcon, XIcon } from '@ui/icons'
 import {
   InputGroup,
   InputGroupAddon,

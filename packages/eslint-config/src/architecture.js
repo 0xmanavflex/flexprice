@@ -30,6 +30,8 @@
  * `architecture.test.ts` lints a file at each path to prove it.
  */
 
+import tseslint from 'typescript-eslint'
+
 const SDK = ['@flexprice/sdk', '@flexprice/sdk/*']
 const API = ['@fp/api', '@fp/api/*']
 const QUERY = ['@fp/query', '@fp/query/*', '@tanstack/react-query']
@@ -324,8 +326,47 @@ export const appRules = layer(
   ],
 )
 
+/**
+ * Icons come from `@fp/ui/icons` (inside packages/ui: `@ui/icons`), whose names
+ * are driven by `packages/ui/src/icons/icon-map.json`. Vendored registry code
+ * still says `lucide-react`; the build aliases that to the same barrel, so the
+ * vendored files stay unmodified. First-party code must not.
+ *
+ * Uses the typescript-eslint copy of the rule on purpose: it has its own rule
+ * name, so it does not replace the layers' `no-restricted-imports` sets.
+ */
+export const iconRules = {
+  files: ['**/*.{ts,tsx}'],
+  plugins: { '@typescript-eslint': tseslint.plugin },
+  ignores: [
+    'packages/ui/src/components/reui/**',
+    'packages/ui/src/components/primitives/**',
+    'packages/ui/src/components/blocks/**',
+    'packages/ui/src/components/examples/**',
+    'packages/ui/src/hooks/**',
+    'packages/ui/src/icons/**',
+    'packages/ui/src/reui/**',
+  ],
+  rules: {
+    '@typescript-eslint/no-restricted-imports': [
+      'error',
+      {
+        paths: [
+          {
+            name: 'lucide-react',
+            message:
+              'Icons come from ReUI Motion Icons. Import from @fp/ui/icons (@ui/icons inside packages/ui). To add or swap one, edit packages/ui/src/icons/icon-map.json and run pnpm --filter @fp/ui icons:sync.',
+          },
+        ],
+        patterns: [{ group: ['lucide-react/*'], message: 'Use @fp/ui/icons, not lucide.' }],
+      },
+    ],
+  },
+}
+
 /** Every architecture rule, in dependency order. */
 export const architecture = [
+  iconRules,
   domainRules,
   adapterRules,
   queryRules,

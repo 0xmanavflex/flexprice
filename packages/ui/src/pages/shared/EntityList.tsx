@@ -14,7 +14,7 @@ import {
   MoreHorizontalIcon,
   SearchIcon,
   XIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   DataGrid,
   DataGridContainer,

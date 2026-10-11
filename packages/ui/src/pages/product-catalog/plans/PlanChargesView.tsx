@@ -1,4 +1,4 @@
-import { GaugeIcon, PlusIcon, RepeatIcon } from 'lucide-react'
+import { GaugeIcon, PlusIcon, RepeatIcon } from '@ui/icons'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { ErrorState, LoadingRows } from '@ui/compositions/feedback/States'
 import {

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { FileMinusIcon } from 'lucide-react'
+import { FileMinusIcon } from '@fp/ui/icons'
 import {
   CREDIT_NOTE_REASON_LABEL,
   CREDIT_NOTE_STATUS_LABEL,

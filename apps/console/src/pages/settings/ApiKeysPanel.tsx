@@ -15,7 +15,7 @@ import {
 import { DEFAULT_API_KEY_QUERY, useApiKeys, useCreateApiKey, useDeleteApiKey } from '@fp/query'
 import { ConfirmDialog, Field, FormDialog, LoadingRows } from '@fp/ui/compositions'
 import { Badge, Button, Input } from '@fp/ui/primitives'
-import { CheckIcon, CopyIcon, KeyRoundIcon } from 'lucide-react'
+import { CheckIcon, CopyIcon, KeyRoundIcon } from '@fp/ui/icons'
 import {
   ActionError,
   DelayedHint,

@@ -16,7 +16,7 @@ import {
   FileSignatureIcon,
   HandCoinsIcon,
   SettingsIcon,
-} from 'lucide-react'
+} from '@fp/ui/icons'
 import {
   AppShell,
   EnvironmentSwitcher,

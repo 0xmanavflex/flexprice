@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BanknoteIcon, CopyIcon, CreditCardIcon, ReceiptIcon } from 'lucide-react'
+import { BanknoteIcon, CopyIcon, CreditCardIcon, ReceiptIcon } from '@ui/icons'
 import {
   DEFAULT_PAYMENT_QUERY,
   PAYMENT_SORT_LABEL,

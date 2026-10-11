@@ -9,7 +9,7 @@ import {
   TierMode,
 } from '@fp/domain'
 import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
-import { PlusIcon } from 'lucide-react'
+import { PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
 

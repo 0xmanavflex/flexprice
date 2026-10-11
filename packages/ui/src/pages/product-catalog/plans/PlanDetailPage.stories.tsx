@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { LayersIcon, PencilIcon, RefreshCwIcon } from 'lucide-react'
+import { LayersIcon, PencilIcon, RefreshCwIcon } from '@ui/icons'
 import { PLAN_STATUS_LABEL, PlanStatus } from '@fp/domain'
 import {
   AppFailure,

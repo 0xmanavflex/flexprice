@@ -57,7 +57,7 @@ import {
   Properties,
   Section,
 } from '@fp/ui/compositions'
-import { PuzzleIcon } from 'lucide-react'
+import { PuzzleIcon } from '@fp/ui/icons'
 
 export interface AddonDetailPageProps {
   addonId: string

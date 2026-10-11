@@ -1,4 +1,4 @@
-import { FileMinusIcon } from 'lucide-react'
+import { FileMinusIcon } from '@fp/ui/icons'
 import { type CreditNote, type CreditNoteQuery } from '@fp/domain'
 import { ApiError, useCreditNotes } from '@fp/query'
 import { CreditNoteGrid } from '@fp/ui/pages'

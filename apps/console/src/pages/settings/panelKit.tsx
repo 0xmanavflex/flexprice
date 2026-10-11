@@ -1,5 +1,5 @@
 import { type ReactNode, useId } from 'react'
-import { ArrowUpRightIcon, InfoIcon } from 'lucide-react'
+import { ArrowUpRightIcon, InfoIcon } from '@fp/ui/icons'
 import { ApiError } from '@fp/query'
 import { EmptyState, ErrorState } from '@fp/ui/compositions'
 import { DetailTable, type DetailColumn } from '@fp/ui/pages'

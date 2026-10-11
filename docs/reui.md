@@ -14,7 +14,7 @@ change it; compose around it.
 |---|---|
 | Agent skill | `0fa9ecfa6e` (current as of install) |
 | MCP server | `https://mcp.reui.io/api/mcp`, wired in `.mcp.json` |
-| Plan | **Pro** — premium blocks unlocked; Motion Icons would need Ultimate |
+| Plan | Licence reports **Ultimate** — premium blocks and Motion Icons unlocked. Ultimate is a per-seat tier; the unlimited-seat tier is Enterprise |
 
 The skill is vendored for four agents — `.claude/`, `.agents/`, `.cursor/`,
 `.opencode/` — so a teammate on Cursor or OpenCode gets the same workflow rules
@@ -43,6 +43,51 @@ For Codex / Cursor / OpenCode, export it from your shell profile:
 
 A licence is needed only to **install** premium blocks. The 22 components and
 every `c-*` example are free.
+
+## Icons
+
+Every icon in the app is a ReUI **Motion Icon** in the **outline** style. There
+is no other icon library; `lucide-react` is not a dependency.
+
+**One file decides which icon is used:** `packages/ui/src/icons/icon-map.json`.
+
+```json
+"Zap":   { "reui": "bolt", "animated": true },
+"Plus":  { "reui": "plus" },
+"ChevronDown": { "reui": "chevron-right-outline", "rotate": 90 }
+```
+
+The key is the name code imports (`ZapIcon` or `Zap`), `reui` is the registry
+item, `animated` picks the animated variant (it animates on hover; only about a
+tenth of the set has one, so it is used where the metaphor fits), and `rotate`
+turns a glyph, which is how one chevron serves all four directions.
+
+To add or swap an icon, edit the map and run:
+
+```bash
+pnpm --filter @fp/ui icons:sync
+```
+
+That installs what is missing (needs the licence, see above), prunes what is
+unused, and regenerates `packages/ui/src/icons/index.ts` — the barrel, which
+you do not edit. Installed icons live in `packages/ui/src/reui/icons/` and are
+committed, so CI and teammates never need the key. They are vendored like the
+other ReUI code: hash-locked in `vendor.lock.json`, never hand-edited.
+
+**Importing.** First-party code uses `@fp/ui/icons` (inside `packages/ui`:
+`@ui/icons`). ESLint rejects `lucide-react` there.
+
+**Vendored registry code** (primitives, blocks, examples) still says
+`import { X } from 'lucide-react'`. We do not edit it, so the build aliases
+`lucide-react` to the same barrel in Vite, Vitest, Storybook and both
+tsconfigs. Vendored files therefore render ReUI icons too, and a block updated
+from the registry keeps working. If a registry update imports a lucide name
+that is not in the map, `pnpm icons:sync` is the fix: add the entry.
+
+**Licence terms that matter here:** the repository must stay private, the icon
+source must not be redistributed, and a shipped build must not let users
+extract the original source. The console build emits no sourcemaps; check that
+before enabling them or publishing Storybook publicly.
 
 ## Two decisions still open
 

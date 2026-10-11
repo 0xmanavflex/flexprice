@@ -8,7 +8,7 @@ import {
   Trash2Icon,
   TrendingUpIcon,
   PlusIcon,
-} from 'lucide-react'
+} from '@ui/icons'
 import {
   COST_SHEET_SORT_LABEL,
   COST_SHEET_STATUS_LABEL,

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Controller, useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { XIcon } from 'lucide-react'
+import { XIcon } from '@ui/icons'
 import {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,

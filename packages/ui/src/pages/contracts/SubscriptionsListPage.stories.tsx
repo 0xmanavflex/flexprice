@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { RefreshCwIcon } from 'lucide-react'
+import { RefreshCwIcon } from '@ui/icons'
 import {
   DEFAULT_SUBSCRIPTION_QUERY,
   SubscriptionStatus,

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
-import { PlusIcon } from 'lucide-react'
+import { PlusIcon } from '@ui/icons'
 import {
   type CreateTaxAssociation,
   type EditTaxAssociation,
