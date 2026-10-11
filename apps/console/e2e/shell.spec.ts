@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test'
 
+import { CatalogListPage } from './pages/catalog'
 import { ShellPage } from './pages/shell'
 
 /** Seed the mock demo session (see catalog.spec.ts) — the guard now requires a
@@ -138,6 +139,26 @@ test.describe('the shell', () => {
 
     await expect(dialog).toBeHidden()
     await expect(shell.environment).toContainText(`${before} renamed`)
+  })
+
+  test('switching environment leaves an id-addressed page for its list', async ({ page }) => {
+    const shell = new ShellPage(page)
+    await shell.goto('/customers')
+    await expect(shell.environment).not.toContainText('Loading environments')
+    const current = await shell.currentEnvironment()
+    const other = current.includes('Production') ? 'Sandbox' : 'Production'
+
+    const list = new CatalogListPage(page, { heading: 'Customers', searchLabel: 'Search customers' })
+    await expect(list.rows().first()).toBeVisible({ timeout: 20_000 })
+    await list.openFirstRow()
+    await expect(page).toHaveURL(/\/customers\/(?!new)[^/]+$/)
+
+    await shell.switchEnvironment(other)
+    await expect(page).toHaveURL(atPath('/customers'))
+
+    // A page with no id in its address is valid in every environment and stays.
+    await shell.switchEnvironment(current)
+    await expect(page).toHaveURL(atPath('/customers'))
   })
 
   test('a Product Catalogue parent routes to its first child rather than a dead end', async ({

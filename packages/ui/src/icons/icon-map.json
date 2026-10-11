@@ -1,5 +1,5 @@
 {
-  "$comment": "Source of truth for the icon system. Key = the lucide-style name the code imports (without the Icon suffix); reui = ReUI Motion Icons item (outline style); animated = use the animated variant; rotate = degrees to turn the icon. Edit this file, then run `pnpm --filter @fp/ui icons:sync`.",
+  "$comment": "Source of truth for the icon system. Key = the lucide-style name the code imports (without the Icon suffix); reui = ReUI Motion Icons item (outline style unless the entry sets style); animated = use the animated variant; rotate = degrees to turn the icon. Edit this file, then run `pnpm --filter @fp/ui icons:sync`.",
   "style": "outline",
   "icons": {
     "Activity": { "reui": "pulse" },
@@ -32,10 +32,10 @@
     "CalendarClock": { "reui": "calendar-dots" },
     "Check": { "reui": "check" },
     "CheckCircle2": { "reui": "check-circle" },
-    "ChevronDown": { "reui": "chevron-right-outline", "rotate": 90 },
-    "ChevronLeft": { "reui": "chevron-right-outline", "rotate": 180 },
-    "ChevronRight": { "reui": "chevron-right-outline" },
-    "ChevronUp": { "reui": "chevron-right-outline", "rotate": 270 },
+    "ChevronDown": { "reui": "right", "style": "filled", "rotate": 90 },
+    "ChevronLeft": { "reui": "right", "style": "filled", "rotate": 180 },
+    "ChevronRight": { "reui": "right", "style": "filled" },
+    "ChevronUp": { "reui": "right", "style": "filled", "rotate": 270 },
     "ChevronsUpDown": { "reui": "chevrons-up-down" },
     "Circle": { "reui": "circle-ring" },
     "CircleAlert": { "reui": "exclamation-circle" },

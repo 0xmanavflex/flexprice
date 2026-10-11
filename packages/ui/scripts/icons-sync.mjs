@@ -30,10 +30,16 @@ const style = map.style
 const entries = Object.entries(map.icons).sort(([a], [b]) => a.localeCompare(b))
 
 const variantOf = (icon) => (icon.animated ? 'animated' : 'default')
-const fileOf = (variant, name) => resolve(vendorDir, variant, style, `${name}.tsx`)
+const styleOf = (icon) => icon.style ?? style
+const fileOf = (variant, iconStyle, name) => resolve(vendorDir, variant, iconStyle, `${name}.tsx`)
 
+// Keyed by variant/style/name; an icon may override the map's default style.
 const wanted = new Map()
-for (const [, icon] of entries) wanted.set(`${variantOf(icon)}/${icon.reui}`, [variantOf(icon), icon.reui])
+for (const [, icon] of entries) {
+  const variant = variantOf(icon)
+  const iconStyle = styleOf(icon)
+  wanted.set(`${variant}/${iconStyle}/${icon.reui}`, [variant, iconStyle, icon.reui])
+}
 
 const failures = []
 for (const [key] of Object.entries(map.icons)) {
@@ -42,10 +48,12 @@ for (const [key] of Object.entries(map.icons)) {
 
 if (!args.has('--offline')) {
   const missing = [...wanted.values()].filter(
-    ([variant, name]) => args.has('--force') || !existsSync(fileOf(variant, name)),
+    ([variant, iconStyle, name]) => args.has('--force') || !existsSync(fileOf(variant, iconStyle, name)),
   )
   for (let i = 0; i < missing.length; i += 20) {
-    const items = missing.slice(i, i + 20).map(([variant, name]) => `@reui/icons/${variant}/${style}/${name}`)
+    const items = missing
+      .slice(i, i + 20)
+      .map(([variant, iconStyle, name]) => `@reui/icons/${variant}/${iconStyle}/${name}`)
     execFileSync('pnpm', ['dlx', 'shadcn@latest', 'add', ...items, '--yes', '--overwrite'], {
       cwd: root,
       stdio: 'inherit',
@@ -59,8 +67,8 @@ const HEADER = `// @ts-nocheck — vendored from the ReUI registry (Motion Icons
 // Regenerate with: pnpm icons:sync   (see scripts/icons-sync.mjs)
 `
 
-for (const [variant, name] of wanted.values()) {
-  if (!existsSync(fileOf(variant, name))) failures.push(`not installed: ${variant}/${style}/${name}`)
+for (const [variant, iconStyle, name] of wanted.values()) {
+  if (!existsSync(fileOf(variant, iconStyle, name))) failures.push(`not installed: ${variant}/${iconStyle}/${name}`)
 }
 
 // Normalise every vendored icon: the registry source imports `cn` by a bare
@@ -75,28 +83,27 @@ for (const file of globSync('**/*.tsx', { cwd: vendorDir })) {
 
 // Drop icons the map no longer uses, so the vendored folder mirrors the map.
 for (const file of globSync('**/*.tsx', { cwd: vendorDir })) {
-  const [variant, , name] = file.replace(/\.tsx$/, '').split('/')
-  if (!wanted.has(`${variant}/${name}`)) {
+  if (!wanted.has(file.replace(/\.tsx$/, ''))) {
     rmSync(resolve(vendorDir, file))
     console.log(`  removed unused ${relative(root, resolve(vendorDir, file))}`)
   }
 }
 
-const identifier = (variant, name) =>
-  `${variant === 'animated' ? 'animated' : 'static'}_${name.replaceAll(/-(\w)/g, (_, c) => c.toUpperCase()).replaceAll(/\W/g, '_')}`
+const identifier = (variant, iconStyle, name) =>
+  `${variant === 'animated' ? 'animated' : 'static'}_${iconStyle === style ? '' : `${iconStyle}_`}${name.replaceAll(/-(\w)/g, (_, c) => c.toUpperCase()).replaceAll(/\W/g, '_')}`
 
 const imports = [...wanted.values()]
-  .sort(([av, an], [bv, bn]) => `${av}/${an}`.localeCompare(`${bv}/${bn}`))
+  .sort(([av, as, an], [bv, bs, bn]) => `${av}/${as}/${an}`.localeCompare(`${bv}/${bs}/${bn}`))
   .map(
-    ([variant, name]) =>
-      `import ${identifier(variant, name)} from '../reui/icons/${variant}/${style}/${name}'`,
+    ([variant, iconStyle, name]) =>
+      `import ${identifier(variant, iconStyle, name)} from '../reui/icons/${variant}/${iconStyle}/${name}'`,
   )
 
 const exports = entries.map(([key, icon]) => {
   const variant = variantOf(icon)
   const factory = icon.animated ? 'animatedIcon' : 'staticIcon'
   const rotate = icon.rotate === undefined ? '' : `, ${icon.rotate}`
-  return `export const ${key}: IconComponent = ${factory}(${identifier(variant, icon.reui)}, '${key}'${rotate})
+  return `export const ${key}: IconComponent = ${factory}(${identifier(variant, styleOf(icon), icon.reui)}, '${key}'${rotate})
 export { ${key} as ${key}Icon }`
 })
 

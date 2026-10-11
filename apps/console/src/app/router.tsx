@@ -6,6 +6,7 @@ import {
   stripSearchParams,
   useCanGoBack,
   useNavigate,
+  useParams,
   useRouter,
   useRouterState,
   useSearch,
@@ -16,6 +17,7 @@ import { AppFailure, LoadingRows } from '@fp/ui/compositions'
 import { useCurrentUser } from '@fp/query'
 import { ConsoleShell } from './shell/ConsoleShell'
 import { hasSession, needsSignIn, useSession } from './session'
+import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
 import type { InvoiceQuery } from '@fp/domain'
 const InvoiceFormPage = lazy(() =>
@@ -280,6 +282,7 @@ import { SignInPage } from '@/pages/auth/SignInPage'
 function ShellLayout() {
   const navigate = useNavigate()
   const { pathname, searchStr } = useRouterState({ select: (state) => state.location })
+  const params = useParams({ strict: false })
   const environments = useEnvironments()
   const { session, signOut } = useSession()
   /*
@@ -306,7 +309,13 @@ function ShellLayout() {
       }}
       environment={environments.current}
       environments={environments.environments}
-      onEnvironmentChange={environments.select}
+      onEnvironmentChange={(id) => {
+        if (id === environments.current.id) return
+        environments.select(id)
+        // An id from the old environment does not exist in the new one.
+        const list = listPathAfterEnvironmentSwitch(pathname, params)
+        if (list) void navigate({ to: list, search: {} as never })
+      }}
       /*
        * The email is the name until `/users/me` says otherwise: it is the one
        * thing the person definitely recognises as theirs, and it is what they
