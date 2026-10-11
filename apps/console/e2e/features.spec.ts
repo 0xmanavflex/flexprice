@@ -107,13 +107,14 @@ test.describe('the features list', () => {
     await expect(dialog).toBeHidden()
   })
 
-  test('opens the create page from /features/new and edits from the detail page', async ({
-    page,
-  }) => {
+  test('opens the create page at /features/new', async ({ page }) => {
     await page.goto('/features/new')
     await expect(page.getByRole('heading', { name: 'Create product' })).toBeVisible()
+  })
 
+  test('edits from the detail page', async ({ page }) => {
     await page.goto('/features')
+    await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
     await list(page).rows().first().getByRole('cell').nth(2).click()
     await expect(page).toHaveURL(/\/features\/[^/?#]+$/)
 
