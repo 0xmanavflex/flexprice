@@ -17,7 +17,20 @@
  * above this layer sees a `WalletResponse`.
  */
 export { queryKeys } from './keys'
-export { createQueryClient, shouldRetry } from './client'
+export {
+  MAX_RETRY_AFTER_MS,
+  createQueryClient,
+  createQueryKeyHash,
+  retryDelay,
+  shouldRetry,
+  shouldThrowOnError,
+} from './client'
+export type { QueryClientOptions } from './client'
+
+export { describeFreshness } from './freshness'
+export type { Freshness, FreshnessSource } from './freshness'
+
+export { useDebouncedValue } from './useDebouncedValue'
 
 // Re-exported so a component can branch on failure without importing `@fp/api`,
 // which the boundary rule forbids. The error shape is part of the door.
@@ -438,8 +451,8 @@ export {
 } from './alertSettings'
 export type { AlertSettingPage, AlertSettingWire } from './alertSettings'
 
-export { useNavCounts } from './counts'
-export { useFeatureLinkage } from './featureLinkage'
+export { useCount, useInvoiceCount, useNavCounts } from './counts'
+export { COUNT_CONCURRENCY, mapBounded, useFeatureLinkage } from './featureLinkage'
 export type { FeatureLinkage } from './featureLinkage'
 export type { CountableId } from './counts'
 

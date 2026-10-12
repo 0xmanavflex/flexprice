@@ -1,4 +1,12 @@
-import { ApiError, ErrorKind, kindForStatus, readErrorBody, toApiError } from './errors'
+import {
+  ApiError,
+  ErrorKind,
+  kindForStatus,
+  parseRetryAfter,
+  readErrorBody,
+  toApiError,
+} from './errors'
+import { fetchWithTimeout, transportError } from './timeout'
 
 /**
  * Session bootstrap: the calls the SDK cannot make.
@@ -72,15 +80,15 @@ async function request(
 
   let response: Response
   try {
-    response = await fetch(url, {
+    response = await fetchWithTimeout(url, {
       method: init.method,
       headers,
       ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
     })
   } catch (cause) {
-    // `fetch` rejects only for transport: offline, DNS, CORS, abort. There is
-    // no status to classify, so the kind is decided here rather than guessed.
-    throw new ApiError(ErrorKind.Network, 'Could not reach Flexprice.', { cause })
+    // `fetch` rejects only for transport: offline, DNS, CORS, abort, deadline.
+    // There is no status to classify, so the kind is read off the rejection.
+    throw transportError(cause)
   }
 
   const text = await response.text()
@@ -90,9 +98,11 @@ async function request(
       text,
       response.statusText || `The request failed (${response.status}).`,
     )
+    const retryAfterMs = parseRetryAfter(response.headers.get('retry-after'))
     throw new ApiError(kindForStatus(response.status), message, {
       status: response.status,
       ...(details ? { details } : {}),
+      ...(response.status === 429 && retryAfterMs !== undefined ? { retryAfterMs } : {}),
     })
   }
 

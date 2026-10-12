@@ -1,5 +1,7 @@
-import { useQueries } from '@tanstack/react-query'
-import { type Flexprice, call } from '@fp/api'
+import { useQueries, useQuery } from '@tanstack/react-query'
+import { type CallOptions, type Flexprice, call } from '@fp/api'
+import { type InvoiceStatus } from '@fp/domain'
+import { isServerFilterable, toInvoiceFilter } from './invoices'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
@@ -43,19 +45,91 @@ export type CountableId = 'features' | 'plans' | 'customers' | 'subscriptions' |
  * than lossy, because `fetchCount` reads exactly one field off it and that
  * field is on all five.
  */
-const COUNTERS: Record<CountableId, (client: Flexprice) => Promise<unknown>> = {
-  features: (client) => client.features.queryFeature({ limit: 1 } as never),
-  plans: (client) => client.plans.queryPlan({ limit: 1 } as never),
-  customers: (client) => client.customers.queryCustomer({ limit: 1 } as never),
-  subscriptions: (client) => client.subscriptions.querySubscription({ limit: 1 } as never),
-  invoices: (client) => client.invoices.queryInvoice({ limit: 1 } as never),
-}
+const COUNTERS: Record<CountableId, (client: Flexprice, options: CallOptions) => Promise<unknown>> =
+  {
+    features: (client, options) => client.features.queryFeature({ limit: 1 } as never, options),
+    plans: (client, options) => client.plans.queryPlan({ limit: 1 } as never, options),
+    customers: (client, options) => client.customers.queryCustomer({ limit: 1 } as never, options),
+    subscriptions: (client, options) =>
+      client.subscriptions.querySubscription({ limit: 1 } as never, options),
+    invoices: (client, options) => client.invoices.queryInvoice({ limit: 1 } as never, options),
+  }
 
-async function fetchCount(client: Flexprice, id: CountableId): Promise<number> {
-  const response = (await call(() => COUNTERS[id](client))) as {
+async function fetchCount(
+  client: Flexprice,
+  id: CountableId,
+  signal?: AbortSignal,
+): Promise<number> {
+  const response = (await call((options) => COUNTERS[id](client, options), signal)) as {
     pagination?: { total?: number }
   }
   return response.pagination?.total ?? 0
+}
+
+const COUNT_STALE_MS = 5 * 60_000
+
+/**
+ * One count, under the same cache entry {@link useNavCounts} fills.
+ *
+ * This is the cheap way to ask "how many?": a `limit: 1` request whose answer
+ * is `pagination.total`. A screen that needs only a total (a stat tile, a
+ * "12 customers" caption) must use this instead of fetching a page of rows and
+ * reading its `total` — that is a hundred rows moved to display one number.
+ *
+ * The key is shared, so the sidebar's count and a page's count are one request
+ * and one answer. Absent (`undefined`) while unknown or failed, never zero.
+ */
+export function useCount(id: CountableId, options: { enabled?: boolean } = {}) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.counts.of(id),
+    queryFn: ({ signal }) => fetchCount(client, id, signal),
+    enabled: options.enabled ?? true,
+    staleTime: COUNT_STALE_MS,
+    retry: false,
+  })
+}
+
+/**
+ * How many invoices carry the given statuses, exactly, for one row of
+ * response.
+ *
+ * Only statuses the API can filter on are accepted — a derived status
+ * (overdue, paid) is computed on the client from a due date and a balance, and
+ * asking the server for it would silently return the wrong number. Passing one
+ * disables the query rather than answering with a lie; read it off the rows
+ * already loaded.
+ */
+export function useInvoiceCount(
+  statuses: readonly InvoiceStatus[],
+  options: { enabled?: boolean } = {},
+) {
+  const client = useFlexprice()
+  const serverSide = statuses.length > 0 && statuses.every(isServerFilterable)
+  const sorted = [...statuses].sort()
+
+  return useQuery({
+    queryKey: [...queryKeys.counts.of('invoices'), 'status', sorted] as const,
+    queryFn: async ({ signal }) => {
+      const filter = toInvoiceFilter({
+        page: 1,
+        pageSize: 1,
+        sortBy: 'issuedAt',
+        sortDirection: 'desc',
+        search: '',
+        statuses: sorted,
+      } as never)
+      const response = (await call(
+        (callOptions) => client.invoices.queryInvoice(filter as never, callOptions),
+        signal,
+      )) as { pagination?: { total?: number } }
+      return response.pagination?.total ?? 0
+    },
+    enabled: (options.enabled ?? true) && serverSide,
+    staleTime: COUNT_STALE_MS,
+    retry: false,
+  })
 }
 
 /**
@@ -71,8 +145,8 @@ export function useNavCounts(ids: readonly CountableId[]): Partial<Record<string
   const results = useQueries({
     queries: ids.map((id) => ({
       queryKey: queryKeys.counts.of(id),
-      queryFn: () => fetchCount(client, id),
-      staleTime: 5 * 60_000,
+      queryFn: ({ signal }) => fetchCount(client, id, signal),
+      staleTime: COUNT_STALE_MS,
       // A sidebar count is not worth a retry storm; the list itself will
       // surface a real outage the moment someone navigates.
       retry: false,

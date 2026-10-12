@@ -82,9 +82,11 @@ export interface CustomerPage {
 export async function fetchCustomers(
   client: Flexprice,
   query: CustomerQuery,
+  signal?: AbortSignal,
 ): Promise<CustomerPage> {
-  const response = await call(() =>
-    client.customers.queryCustomer(toCustomerFilter(query) as never),
+  const response = await call(
+    (options) => client.customers.queryCustomer(toCustomerFilter(query) as never, options),
+    signal,
   )
   const customers = (response.items ?? []).map((item) => toCustomer(item as CustomerWire))
 
@@ -115,7 +117,7 @@ export function useCustomers(query: CustomerQuery, options: { enabled?: boolean 
 
   return useQuery({
     queryKey: queryKeys.customers.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchCustomers(client, query),
+    queryFn: ({ signal }) => fetchCustomers(client, query, signal),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -163,8 +165,12 @@ export function toCustomerDetail(wire: CustomerDetailWire): CustomerDetail {
   }
 }
 
-export async function fetchCustomer(client: Flexprice, id: string): Promise<CustomerDetail> {
-  const response = await call(() => client.customers.getCustomer(id))
+export async function fetchCustomer(
+  client: Flexprice,
+  id: string,
+  signal?: AbortSignal,
+): Promise<CustomerDetail> {
+  const response = await call((options) => client.customers.getCustomer(id, options), signal)
   return toCustomerDetail(response as CustomerDetailWire)
 }
 
@@ -180,7 +186,7 @@ export function useCustomer(id: string) {
 
   return useQuery({
     queryKey: queryKeys.customers.detail(id),
-    queryFn: () => fetchCustomer(client, id),
+    queryFn: ({ signal }) => fetchCustomer(client, id, signal),
     enabled: id.length > 0,
   })
 }

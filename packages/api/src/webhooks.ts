@@ -1,4 +1,5 @@
 import { ApiError, ErrorKind, kindForStatus, toApiError } from './errors'
+import { fetchWithTimeout, transportError } from './timeout'
 
 /**
  * The tenant's webhook portal, spoken to directly.
@@ -112,7 +113,7 @@ export async function svixRequest(
 
   let response: Response
   try {
-    response = await fetch(url, {
+    response = await fetchWithTimeout(url, {
       method: init.method,
       headers: {
         Accept: 'application/json',
@@ -122,7 +123,10 @@ export async function svixRequest(
       ...(init.body === undefined ? {} : { body: JSON.stringify(init.body) }),
     })
   } catch (cause) {
-    throw new ApiError(ErrorKind.Network, 'Could not reach the webhook service.', { cause })
+    const failure = transportError(cause)
+    throw failure.kind === ErrorKind.Network
+      ? new ApiError(ErrorKind.Network, 'Could not reach the webhook service.', { cause })
+      : failure
   }
 
   const text = await response.text()

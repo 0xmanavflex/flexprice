@@ -13,9 +13,17 @@
  * Off-limits to components — import from `@fp/query`. ESLint enforces it.
  */
 export { call, createFlexpriceClient } from './client'
-export type { AuthSource, ClientOptions } from './client'
+export type { AuthSource, CallOptions, ClientOptions } from './client'
+export { DEFAULT_REQUEST_TIMEOUT_MS } from './timeout'
 
-export { ApiError, ErrorKind, kindForStatus, readErrorBody, toApiError } from './errors'
+export {
+  ApiError,
+  ErrorKind,
+  kindForStatus,
+  parseRetryAfter,
+  readErrorBody,
+  toApiError,
+} from './errors'
 
 /**
  * Session bootstrap — the four routes missing from the OpenAPI document, and

@@ -6,7 +6,13 @@ import { AppFailure, ThemeProvider } from '@fp/ui/compositions'
 import { FlexpriceProvider, createQueryClient } from '@fp/query'
 import './styles.css'
 import { router } from './app/router'
-import { SessionProvider, bypassesSignIn, useAuthSource, useSession } from './app/session'
+import {
+  SessionProvider,
+  bypassesSignIn,
+  getActiveEnvironmentId,
+  useAuthSource,
+  useSession,
+} from './app/session'
 import { env } from './env'
 
 const container = document.getElementById('root')
@@ -67,7 +73,7 @@ if (env.problem) {
  * harmless — `useQueryClient()` finds the nearer provider, and both hold the
  * identical client, so there is exactly one cache no matter which one answers.
  */
-const queryClient = createQueryClient()
+const queryClient = createQueryClient({ getEnvironmentId: getActiveEnvironmentId })
 
 function ConsoleApp() {
   const auth = useAuthSource()

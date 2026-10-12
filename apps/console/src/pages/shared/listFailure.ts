@@ -20,6 +20,8 @@ export interface ListFailure {
 export function toListFailure(error: unknown, noun: string): ListFailure | null {
   if (!error) return null
   if (error instanceof ApiError) {
+    // A superseded request is not a failure and must never be shown as one.
+    if (error.kind === 'cancelled') return null
     switch (error.kind) {
       case 'forbidden':
         return {

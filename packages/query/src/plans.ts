@@ -99,8 +99,15 @@ export interface PlanPage {
   total: number
 }
 
-export async function fetchPlans(client: Flexprice, query: PlanQuery): Promise<PlanPage> {
-  const response = await call(() => client.plans.queryPlan(toPlanFilter(query) as never))
+export async function fetchPlans(
+  client: Flexprice,
+  query: PlanQuery,
+  signal?: AbortSignal,
+): Promise<PlanPage> {
+  const response = await call(
+    (options) => client.plans.queryPlan(toPlanFilter(query) as never, options),
+    signal,
+  )
   const plans = (response.items ?? []).map((item) => toPlan(item as PlanWire))
 
   return {
@@ -122,7 +129,7 @@ export function usePlans(query: PlanQuery, options: { enabled?: boolean } = {}) 
 
   return useQuery({
     queryKey: queryKeys.plans.list({ ...key, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchPlans(client, query),
+    queryFn: ({ signal }) => fetchPlans(client, query, signal),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -190,8 +197,8 @@ export function usePlan(id: string) {
 
   return useQuery({
     queryKey: queryKeys.plans.detail(id),
-    queryFn: async () => {
-      const wire = await call(() => client.plans.getPlan(id))
+    queryFn: async ({ signal }) => {
+      const wire = await call((options) => client.plans.getPlan(id, options), signal)
       return toPlan(wire as PlanWire)
     },
     enabled: id.length > 0,

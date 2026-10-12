@@ -322,9 +322,12 @@ export interface SubscriptionPage {
 export async function fetchSubscriptions(
   client: Flexprice,
   query: SubscriptionQuery,
+  signal?: AbortSignal,
 ): Promise<SubscriptionPage> {
-  const response = await call(() =>
-    client.subscriptions.querySubscription(toSubscriptionFilter(query) as never),
+  const response = await call(
+    (options) =>
+      client.subscriptions.querySubscription(toSubscriptionFilter(query) as never, options),
+    signal,
   )
   const subscriptions = (response.items ?? []).map((item) =>
     toSubscription(item as SubscriptionWire),
@@ -361,7 +364,7 @@ export function useSubscriptions(query: SubscriptionQuery) {
 
   return useQuery({
     queryKey: queryKeys.subscriptions.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchSubscriptions(client, query),
+    queryFn: ({ signal }) => fetchSubscriptions(client, query, signal),
     placeholderData: (previous) => previous,
   })
 }
@@ -439,14 +442,19 @@ export function useSubscription(id: string) {
 
   return useQuery({
     queryKey: queryKeys.subscriptions.detail(id),
-    queryFn: async () => {
-      const response = await call(() =>
-        client.subscriptions.querySubscription({
-          subscriptionIds: [id],
-          expand: 'customer,plan',
-          limit: 1,
-          offset: 0,
-        } as never),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.subscriptions.querySubscription(
+            {
+              subscriptionIds: [id],
+              expand: 'customer,plan',
+              limit: 1,
+              offset: 0,
+            } as never,
+            options,
+          ),
+        signal,
       )
       const [item] = response.items ?? []
       return item ? toSubscriptionDetail(item as SubscriptionWire) : null
@@ -467,7 +475,8 @@ function useSubscriptionFull<T>(
 
   return useQuery({
     queryKey: queryKeys.subscriptions.lines(id),
-    queryFn: () => call(() => client.subscriptions.getSubscription(id)),
+    queryFn: ({ signal }) =>
+      call((options) => client.subscriptions.getSubscription(id, options), signal),
     select,
     enabled: id.length > 0,
   })

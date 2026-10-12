@@ -262,8 +262,15 @@ export interface FeaturePage {
   total: number
 }
 
-export async function fetchFeatures(client: Flexprice, query: FeatureQuery): Promise<FeaturePage> {
-  const response = await call(() => client.features.queryFeature(toFeatureFilter(query) as never))
+export async function fetchFeatures(
+  client: Flexprice,
+  query: FeatureQuery,
+  signal?: AbortSignal,
+): Promise<FeaturePage> {
+  const response = await call(
+    (options) => client.features.queryFeature(toFeatureFilter(query) as never, options),
+    signal,
+  )
   const features = (response.items ?? []).map((item) => toFeature(item as FeatureWire))
 
   // Type and status are not server-side filters on FeatureFilter, so they are
@@ -292,7 +299,7 @@ export function useFeatures(query: FeatureQuery, options: { enabled?: boolean } 
       types: [...query.types].sort(),
       statuses: [...query.statuses].sort(),
     }),
-    queryFn: () => fetchFeatures(client, query),
+    queryFn: ({ signal }) => fetchFeatures(client, query, signal),
     enabled: options.enabled ?? true,
     placeholderData: (previous) => previous,
   })
@@ -304,9 +311,14 @@ export function useFeature(id: string) {
 
   return useQuery({
     queryKey: queryKeys.features.detail(id),
-    queryFn: async () => {
-      const response = await call(() =>
-        client.features.queryFeature({ featureIds: [id], limit: 1, expand: 'meters' } as never),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.features.queryFeature(
+            { featureIds: [id], limit: 1, expand: 'meters' } as never,
+            options,
+          ),
+        signal,
       )
       const first = (response.items ?? [])[0]
       return first ? toFeature(first as FeatureWire) : null

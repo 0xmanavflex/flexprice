@@ -88,8 +88,15 @@ export interface PaymentPage {
   total: number
 }
 
-export async function fetchPayments(client: Flexprice, query: PaymentQuery): Promise<PaymentPage> {
-  const response = await call(() => client.payments.listPayments(toPaymentFilter(query) as never))
+export async function fetchPayments(
+  client: Flexprice,
+  query: PaymentQuery,
+  signal?: AbortSignal,
+): Promise<PaymentPage> {
+  const response = await call(
+    (options) => client.payments.listPayments(toPaymentFilter(query) as never, options),
+    signal,
+  )
   const payments = (response.items ?? []).map((item) => toPayment(item as PaymentWire))
 
   // Neither status nor search is a server-side filter on this endpoint, so both
@@ -121,7 +128,7 @@ export function usePayments(query: PaymentQuery) {
 
   return useQuery({
     queryKey: queryKeys.payments.list({ ...query, statuses: [...query.statuses].sort() }),
-    queryFn: () => fetchPayments(client, query),
+    queryFn: ({ signal }) => fetchPayments(client, query, signal),
     // Keeps the previous page on screen while the next one loads, so paging does
     // not blank the grid. TanStack's replacement for keepPreviousData.
     placeholderData: (previous) => previous,
@@ -204,8 +211,13 @@ export function usePayment(id: string) {
 
   return useQuery({
     queryKey: queryKeys.payments.detail(id),
-    queryFn: async () =>
-      toPaymentDetail((await call(() => client.payments.getPayment(id))) as PaymentDetailWire),
+    queryFn: async ({ signal }) =>
+      toPaymentDetail(
+        (await call(
+          (options) => client.payments.getPayment(id, options),
+          signal,
+        )) as PaymentDetailWire,
+      ),
   })
 }
 

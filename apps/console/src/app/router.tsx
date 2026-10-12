@@ -1,4 +1,6 @@
+import { useQueryErrorResetBoundary } from '@tanstack/react-query'
 import {
+  type ErrorComponentProps,
   createRootRoute,
   createRoute,
   createRouter,
@@ -13,8 +15,9 @@ import {
 } from '@tanstack/react-router'
 import { Outlet } from '@tanstack/react-router'
 import { lazy, Suspense, type ReactNode } from 'react'
-import { AppFailure, LoadingRows } from '@fp/ui/compositions'
+import { AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { useCurrentUser } from '@fp/query'
+import { toListFailure } from '@/pages/shared/listFailure'
 import { ConsoleShell } from './shell/ConsoleShell'
 import { hasSession, needsSignIn, useSession } from './session'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
@@ -332,16 +335,66 @@ function ShellLayout() {
       }}
     >
       {/* A route's chunk is fetched on navigation; this is what shows meanwhile. */}
-      <Suspense
-        fallback={
-          <div className="p-6">
-            <LoadingRows />
-          </div>
-        }
-      >
+      {/*
+        Keyed by environment, so switching remounts the page. Cached rows are
+        already kept apart by environment; what the key protects is page state —
+        a half-filled form or an open dialog that belongs to an entity of the
+        environment just left must not survive into one where that entity does
+        not exist, and be saved there.
+      */}
+      <Suspense key={environments.current.id} fallback={<PageLoadingState />}>
         <Outlet />
       </Suspense>
     </ConsoleShell>
+  )
+}
+
+/**
+ * What a route that threw renders, in place of the page.
+ *
+ * Two things reach here: a query that failed with a server fault and had no
+ * data to fall back on (`throwOnError`, see `@fp/query`), and everything else —
+ * a render bug, a chunk that no longer exists. Both get the same screen,
+ * because from the chair it is the same event: this page did not load.
+ *
+ * It is the router's `defaultErrorComponent`, so the boundary is *per route*
+ * and sits inside the shell: the sidebar and the environment picker stay
+ * usable, and one broken page is never the whole console.
+ *
+ * Retry has to undo two things. The router's own match is in the error state,
+ * and TanStack Query remembers that the query errored and would rethrow it on
+ * the next render; resetting only one leaves the page failing instantly again.
+ * The failure's `kind` picks the words and withholds the retry button where it
+ * cannot help (a permission error never offers one).
+ */
+function RouteError({ error, reset }: ErrorComponentProps) {
+  const router = useRouter()
+  const queryErrors = useQueryErrorResetBoundary()
+  const failure = toListFailure(error, 'this page')
+
+  const retry = () => {
+    queryErrors.reset()
+    reset()
+    void router.invalidate()
+  }
+
+  return (
+    <ErrorState
+      variant="page"
+      title={
+        failure?.kind === 'denied'
+          ? 'You do not have access to this page'
+          : 'This page could not be loaded'
+      }
+      description={
+        failure?.kind === 'generic' || failure?.kind === undefined
+          ? 'The rest of the console still works. Try again, or pick another page.'
+          : failure.message
+      }
+      kind={failure?.kind ?? 'generic'}
+      {...(failure?.canRetry === false ? {} : { onRetry: retry })}
+      retryAfterMs={failure?.retryAfterMs}
+    />
   )
 }
 
@@ -368,16 +421,7 @@ const rootRoute = createRootRoute({
       detail="The link may be out of date, or the address mistyped. Everything in the sidebar still works."
     />
   ),
-  errorComponent: ({ error, reset }) => (
-    <AppFailure
-      title="This page could not be loaded"
-      detail="The rest of the console still works. Try again, or pick another page."
-      onRetry={reset}
-      {...(import.meta.env.DEV && error instanceof Error
-        ? { technical: error.stack ?? error.message }
-        : {})}
-    />
-  ),
+  errorComponent: RouteError,
 })
 
 /**
@@ -2138,7 +2182,11 @@ export const routeTree = rootRoute.addChildren([
   ]),
 ])
 
-export const router = createRouter({ routeTree })
+export const router = createRouter({
+  routeTree,
+  // Per-route boundaries inside the shell, so a broken page is not a blank console.
+  defaultErrorComponent: RouteError,
+})
 
 declare module '@tanstack/react-router' {
   interface Register {

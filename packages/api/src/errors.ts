@@ -17,8 +17,13 @@ import {
  * nothing above this layer imports an SDK error type.
  */
 export const ErrorKind = {
-  /** No usable response — offline, DNS, CORS, aborted. */
+  /** No usable response — offline, DNS, CORS. */
   Network: 'network',
+  /**
+   * The caller abandoned the request (a query was cancelled, a component
+   * unmounted). Not a failure: nothing should be shown and nothing retried.
+   */
+  Cancelled: 'cancelled',
   /** The request outlived its deadline. Safe to retry; says "slow", not "offline". */
   Timeout: 'timeout',
   /** 429 — too many requests. Retry only after `retryAfterMs`. */
@@ -36,6 +41,31 @@ export const ErrorKind = {
 } as const
 
 export type ErrorKind = (typeof ErrorKind)[keyof typeof ErrorKind]
+
+/**
+ * A `Retry-After` header as milliseconds.
+ *
+ * The header is either whole seconds ("30") or an HTTP date. Anything else is
+ * undefined rather than guessed, and a date already in the past is zero, which
+ * means "retry now". Browsers only expose the header to a cross-origin page if
+ * the API lists it in `Access-Control-Expose-Headers`; when it does not, this
+ * is simply undefined and callers fall back to their own backoff.
+ */
+export function parseRetryAfter(
+  value: string | null | undefined,
+  now = Date.now(),
+): number | undefined {
+  if (value === null || value === undefined) return undefined
+  const text = value.trim()
+  if (text.length === 0) return undefined
+  if (/^\d+(\.\d+)?$/.test(text)) return Math.round(Number(text) * 1000)
+  // An HTTP date always names its month; this rejects "-5" and similar, which
+  // Date.parse would otherwise read as a year in the distant past.
+  if (!/[a-z]/i.test(text)) return undefined
+  const at = Date.parse(text)
+  if (Number.isNaN(at)) return undefined
+  return Math.max(0, at - now)
+}
 
 export class ApiError extends Error {
   readonly kind: ErrorKind
@@ -161,18 +191,28 @@ export function toApiError(cause: unknown): ApiError {
       cause.body,
       cause.rawResponse.statusText || 'The request failed.',
     )
+    const retryAfterMs =
+      cause.statusCode === 429 || cause.statusCode === 503
+        ? parseRetryAfter(cause.rawResponse.headers.get('retry-after'))
+        : undefined
     return new ApiError(kindForStatus(cause.statusCode), message, {
       status: cause.statusCode,
       ...(details ? { details } : {}),
+      ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
       cause,
     })
   }
 
-  if (
-    cause instanceof ConnectionError ||
-    cause instanceof RequestTimeoutError ||
-    cause instanceof RequestAbortedError
-  ) {
+  // The three transport outcomes are different things to a person: the network
+  // is down, the API is slow, or the caller walked away. Only the first two are
+  // ever shown, and only the second says "slow" rather than "offline".
+  if (cause instanceof RequestTimeoutError) {
+    return new ApiError(ErrorKind.Timeout, 'Flexprice took too long to respond.', { cause })
+  }
+  if (cause instanceof RequestAbortedError) {
+    return new ApiError(ErrorKind.Cancelled, 'The request was cancelled.', { cause })
+  }
+  if (cause instanceof ConnectionError) {
     return new ApiError(ErrorKind.Network, cause.message, { cause })
   }
 
