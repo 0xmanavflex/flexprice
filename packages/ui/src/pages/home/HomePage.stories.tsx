@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { money } from '@fp/domain'
 import { DashboardHome } from '@ui/pages/home/DashboardHome'
 import type { DashboardHomeProps, PanelStatus } from '@ui/pages/home/DashboardHome'
 import { PAGE_STORY_PARAMETERS, PageShell } from '../shared/shellFixtures'
@@ -10,14 +9,6 @@ const RANGE_OPTIONS = [
   { id: '7d', label: 'Last 7 days' },
   { id: '30d', label: 'Last 30 days' },
 ]
-const GRANULARITY_OPTIONS = [
-  { id: 'daily', label: 'Daily' },
-  { id: 'hourly', label: 'Hourly' },
-]
-const CUSTOMER_OPTIONS = [
-  { id: 'all', label: 'All customers' },
-  { id: 'cus_1', label: 'Globex 1' },
-]
 const PANEL_STATUSES: PanelStatus[] = ['ready', 'loading', 'empty', 'unavailable']
 const PLAN_POOL = ['Studio', 'Growth', 'Starter', 'Platform']
 
@@ -25,32 +16,20 @@ interface HomePageProps {
   /** Every panel's state at once: ready, loading, empty or unavailable. */
   status: PanelStatus
   range: string
-  granularity: string
-  customer: string
-  /** Buckets on the events chart and the contracts stack. */
+  /** Buckets on the contracts stack. */
   dayCount: number
-  eventsPerDay: number
   plansShown: number
-  newCustomersPerDay: number
   paid: number
   open: number
   overdue: number
 }
 
-/** Builds the four panels. Panels that are not ready carry no data, as on the real page. */
-function makePanels(
-  args: HomePageProps,
-): Pick<DashboardHomeProps, 'events' | 'customers' | 'subscriptions' | 'invoices'> {
+/** Builds the two panels. Panels that are not ready carry no data, as on the real page. */
+function makePanels(args: HomePageProps): Pick<DashboardHomeProps, 'subscriptions' | 'invoices'> {
   const ready = args.status === 'ready'
   const labels = Array.from({ length: args.dayCount }, (_, index) => `Day ${index + 1}`)
   const plans = PLAN_POOL.slice(0, args.plansShown)
 
-  const points = ready
-    ? labels.map((label, index) => ({
-        label,
-        events: Math.round(args.eventsPerDay * (0.8 + ((index * 7) % 5) * 0.1)),
-      }))
-    : []
   const days =
     ready && plans.length > 0
       ? labels.map((label, index) => ({
@@ -66,26 +45,7 @@ function makePanels(
   }))
   const subscriptionTotal = planCounts.reduce((sum, plan) => sum + plan.count, 0)
 
-  const customerPoints = ready
-    ? labels.map((label, index) => ({
-        label,
-        customers: Math.round(args.newCustomersPerDay * (0.6 + ((index * 3) % 5) * 0.2)),
-      }))
-    : []
-
   return {
-    events: {
-      status: args.status,
-      points,
-      total: ready ? points.reduce((sum, point) => sum + point.events, 0) : null,
-      revenue: ready ? money('184210.00', 'USD') : null,
-    },
-    customers: {
-      status: args.status,
-      newCount: ready ? customerPoints.reduce((sum, point) => sum + point.customers, 0) : null,
-      partial: false,
-      points: customerPoints,
-    },
     subscriptions: {
       status: args.status,
       total: subscriptionTotal,
@@ -103,14 +63,10 @@ function makePanels(
   }
 }
 
-/** The home route as the console composes it: shell, then the overview with its three live filters. */
+/** The home route as the console composes it: shell, then the overview with its live range filter. */
 function HomePage(args: HomePageProps) {
   const [range, setRange] = useState(args.range)
-  const [granularity, setGranularity] = useState(args.granularity)
-  const [customer, setCustomer] = useState(args.customer)
   useEffect(() => setRange(args.range), [args.range])
-  useEffect(() => setGranularity(args.granularity), [args.granularity])
-  useEffect(() => setCustomer(args.customer), [args.customer])
 
   const rangeLabel = (
     RANGE_OPTIONS.find((option) => option.id === range)?.label ?? range
@@ -122,12 +78,6 @@ function HomePage(args: HomePageProps) {
         rangeOptions={RANGE_OPTIONS}
         range={range}
         onRangeChange={setRange}
-        granularityOptions={GRANULARITY_OPTIONS}
-        granularity={granularity}
-        onGranularityChange={setGranularity}
-        customerOptions={CUSTOMER_OPTIONS}
-        customer={customer}
-        onCustomerChange={setCustomer}
         rangeLabel={rangeLabel}
         {...makePanels(args)}
         onNavigate={fn()}
@@ -144,12 +94,8 @@ const meta = {
   args: {
     status: 'ready',
     range: '7d',
-    granularity: 'daily',
-    customer: 'all',
     dayCount: 7,
-    eventsPerDay: 750_000,
     plansShown: 4,
-    newCustomersPerDay: 12,
     paid: 34,
     open: 15,
     overdue: 7,
@@ -157,15 +103,8 @@ const meta = {
   argTypes: {
     status: { control: 'select', options: PANEL_STATUSES },
     range: { control: 'inline-radio', options: RANGE_OPTIONS.map((option) => option.id) },
-    granularity: {
-      control: 'inline-radio',
-      options: GRANULARITY_OPTIONS.map((option) => option.id),
-    },
-    customer: { control: 'inline-radio', options: CUSTOMER_OPTIONS.map((option) => option.id) },
     dayCount: { control: { type: 'range', min: 0, max: 30, step: 1 } },
-    eventsPerDay: { control: { type: 'number', min: 0, max: 5_000_000, step: 50_000 } },
     plansShown: { control: { type: 'range', min: 0, max: PLAN_POOL.length, step: 1 } },
-    newCustomersPerDay: { control: { type: 'number', min: 0, max: 500, step: 1 } },
     paid: { control: { type: 'number', min: 0, max: 500, step: 1 } },
     open: { control: { type: 'number', min: 0, max: 500, step: 1 } },
     overdue: { control: { type: 'number', min: 0, max: 500, step: 1 } },
