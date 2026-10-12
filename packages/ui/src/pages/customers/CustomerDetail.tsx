@@ -575,6 +575,7 @@ function ContractsTable({
             {
               key: 'contract',
               header: 'Contract',
+              width: 140,
               sortBy: (s) => s.id,
               cell: (s) =>
                 onOpenContract ? (
@@ -588,6 +589,7 @@ function ContractsTable({
             {
               key: 'plan',
               header: 'Plan',
+              width: 160,
               sortBy: (s) => s.planName,
               cell: (s) =>
                 onOpenPlan ? (
@@ -599,18 +601,21 @@ function ContractsTable({
             {
               key: 'status',
               header: 'Status',
+              width: 120,
               sortBy: (s) => SUBSCRIPTION_STATUS_LABEL[s.status],
               cell: (s) => <Status value={SUBSCRIPTION_STATUS_LABEL[s.status]} />,
             },
             {
               key: 'billing',
               header: 'Billing',
+              width: 120,
               sortBy: (s) => s.billingPeriodLabel,
               cell: (s) => <Muted>{s.billingPeriodLabel}</Muted>,
             },
             {
               key: 'period',
               header: 'Current period',
+              width: 240,
               sortBy: (s) => Number(new Date(s.currentPeriodStart ?? 0)),
               cell: (s) => (
                 <Muted>
@@ -710,6 +715,7 @@ function InvoiceTable({
           {
             key: 'number',
             header: 'Invoice number',
+            width: 160,
             sortBy: (invoice) => invoice.number,
             cell: (invoice) => (
               <span
@@ -722,24 +728,28 @@ function InvoiceTable({
           {
             key: 'issued',
             header: 'Issue date',
+            width: 140,
             sortBy: (invoice) => Number(new Date(invoice.issuedAt ?? 0)),
             cell: (invoice) => <Muted>{formatDate(invoice.issuedAt)}</Muted>,
           },
           {
             key: 'due',
             header: 'Due date',
+            width: 140,
             sortBy: (invoice) => Number(new Date(invoice.dueDate ?? 0)),
             cell: (invoice) => <Muted>{formatDate(invoice.dueDate)}</Muted>,
           },
           {
             key: 'status',
             header: 'Status',
+            width: 130,
             sortBy: (invoice) => invoiceDocument(invoice),
             cell: (invoice) => <Status value={invoiceDocument(invoice)} />,
           },
           {
             key: 'payment',
             header: 'Payment',
+            width: 150,
             sortBy: (invoice) => invoicePayment(invoice).label,
             cell: (invoice) => {
               const payment = invoicePayment(invoice)
@@ -749,6 +759,7 @@ function InvoiceTable({
           {
             key: 'total',
             header: 'Amount',
+            width: 110,
             sortBy: (invoice) => Number(invoice.total.amount),
             cell: (invoice) => <Money value={invoice.total} />,
           },
