@@ -37,7 +37,10 @@ function makeWallets(
       realTimeBalance: money(live, currency),
       conversionRate: '0.01',
       topupConversionRate: '0.01',
-      autoTopup: i % 2 === 1,
+      autoTopup:
+        i % 2 === 1
+          ? { enabled: true, threshold: '100', amount: '500', invoicing: true }
+          : { enabled: false, threshold: '', amount: '', invoicing: true },
       createdAt: new Date('2026-03-04T00:00:00Z'),
     }
   })
@@ -78,6 +81,7 @@ const meta = {
     onCreateWallet: asyncOk(),
     onTopUp: asyncOk(),
     onTerminate: asyncOk(),
+    onSaveAutoTopup: asyncOk(),
     onRetry: fn(),
     onResetErrors: fn(),
   },
@@ -90,6 +94,7 @@ const meta = {
     onCreateWallet: { control: false },
     onTopUp: { control: false },
     onTerminate: { control: false },
+    onSaveAutoTopup: { control: false },
     onResetErrors: { control: false },
     isLoading: { control: 'boolean' },
     failed: { control: 'boolean' },
@@ -97,6 +102,7 @@ const meta = {
     createError: { control: 'text' },
     topUpError: { control: 'text' },
     terminateError: { control: 'text' },
+    autoTopupError: { control: 'text' },
   },
 } satisfies Meta<typeof CustomerWalletView>
 
@@ -160,6 +166,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       onCreateWallet={asyncOk()}
       onTopUp={asyncOk()}
       onTerminate={asyncOk()}
+      onSaveAutoTopup={asyncOk()}
       onResetErrors={fn()}
     />
   ),
@@ -171,6 +178,8 @@ export const Default: Story = {
     await expect(canvas.getByText('Real-time balance')).toBeInTheDocument()
     await expect(canvas.getByText('Last invoiced balance')).toBeInTheDocument()
     await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
+    await expect(canvas.getByText('Top-up rate')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: /auto top-up off/i })).toBeEnabled()
     await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /top up wallet/i })).toBeEnabled()
   },
@@ -253,5 +262,62 @@ export const ConfirmsTerminate: Story = {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'Wallet actions' }))
     await userEvent.click(await screen.findByRole('menuitem', { name: /terminate wallet/i }))
     await expect(await screen.findByText('Terminate this wallet?')).toBeInTheDocument()
+  },
+}
+
+const AUTO_TOPUP_ON = { enabled: true, threshold: '100', amount: '500', invoicing: true }
+
+/** Auto top-up on: the chip says how much is added and when. */
+export const AutoTopupOn: Story = {
+  args: {
+    wallets: makeWallets(1, WalletStatus.Active, 10000, 7500).map((wallet) => ({
+      ...wallet,
+      autoTopup: AUTO_TOPUP_ON,
+    })),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole('button', { name: /auto top-up on/i }),
+    ).toHaveTextContent('500 credits below 100')
+  },
+}
+
+/** The chip opens the settings; turning it on needs a threshold and an amount, then saves them. */
+export const SavesAutoTopup: Story = {
+  play: async ({ canvasElement, args }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /auto top-up off/i }))
+    const dialog = await screen.findByRole('dialog', { name: 'Auto top-up' })
+    const inside = within(dialog)
+    await userEvent.click(inside.getByRole('switch', { name: 'Top up automatically' }))
+    await userEvent.click(inside.getByRole('button', { name: 'Save' }))
+    await expect(await inside.findByRole('alert')).toHaveTextContent('credit balance that triggers')
+    await userEvent.type(inside.getByLabelText('Below'), '100')
+    await userEvent.type(inside.getByLabelText('Add'), '500')
+    await userEvent.click(inside.getByRole('button', { name: 'Save' }))
+    await expect(args.onSaveAutoTopup).toHaveBeenCalledWith({
+      enabled: true,
+      threshold: '100',
+      amount: '500',
+      invoicing: true,
+    })
+  },
+}
+
+/** A failed save keeps the dialog open and says why. */
+export const AutoTopupError: Story = {
+  args: { autoTopupError: 'Could not update auto top-up. Try again.' },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /auto top-up off/i }))
+    await expect(await screen.findByRole('dialog', { name: 'Auto top-up' })).toHaveTextContent(
+      'Could not update auto top-up.',
+    )
+  },
+}
+
+/** A terminated wallet cannot change its auto top-up. */
+export const TerminatedAutoTopupLocked: Story = {
+  args: { wallets: makeWallets(1, WalletStatus.Closed, 0, 0) },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('button', { name: /auto top-up/i })).toBeDisabled()
   },
 }

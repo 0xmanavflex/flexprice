@@ -10,6 +10,24 @@ export const WALLET_STATUS_LABEL: Record<WalletStatus, string> = {
   closed: 'Terminated',
 }
 
+/** When a wallet refills itself: below the threshold, add the amount. Credits stay decimal strings. */
+export interface AutoTopup {
+  enabled: boolean
+  /** Refill when the balance falls to this many credits. */
+  threshold: string
+  /** Credits added on each refill. */
+  amount: string
+  /** Raise an invoice for the refill instead of granting it. */
+  invoicing: boolean
+}
+
+export const emptyAutoTopup = (): AutoTopup => ({
+  enabled: false,
+  threshold: '',
+  amount: '',
+  invoicing: true,
+})
+
 /** One prepaid wallet. Balances stay decimal strings; the API owns the arithmetic. */
 export interface Wallet {
   id: string
@@ -26,7 +44,7 @@ export interface Wallet {
   /** Currency per credit. */
   conversionRate: string
   topupConversionRate: string
-  autoTopup: boolean
+  autoTopup: AutoTopup
   createdAt: Date | null
 }
 
@@ -78,3 +96,26 @@ export const topUpWalletSchema = z.object({
 export type TopUpWallet = z.infer<typeof topUpWalletSchema>
 
 export const emptyTopUp = (): TopUpWallet => ({ kind: 'purchased', credits: '', description: '' })
+
+export const autoTopupSchema = z
+  .object({
+    enabled: z.boolean(),
+    threshold: z.string().trim(),
+    amount: z.string().trim(),
+    invoicing: z.boolean(),
+  })
+  .superRefine((value, ctx) => {
+    if (!value.enabled) return
+    if (!positive(value.threshold))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['threshold'],
+        message: 'Enter the credit balance that triggers a top-up',
+      })
+    if (!positive(value.amount))
+      ctx.addIssue({
+        code: 'custom',
+        path: ['amount'],
+        message: 'Enter how many credits to add',
+      })
+  })

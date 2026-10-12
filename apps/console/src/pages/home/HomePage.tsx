@@ -17,6 +17,8 @@ import {
 import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
 import { DashboardHome } from '@fp/ui/pages'
 import type {
+  AttentionItem,
+  AttentionPanel,
   CustomersPanel,
   EventsPanel,
   FilterOption,
@@ -216,6 +218,9 @@ export function HomePage() {
     sortBy: 'issuedAt',
     sortDirection: 'desc',
   })
+  // Draft is an API status, so the server counts it exactly. Overdue is derived from a due date
+  // and cannot be asked for, so it is read off the invoices already fetched above.
+  const draftInvoices = useInvoices({ ...ATTENTION_QUERY, statuses: [InvoiceStatus.Draft] })
   // Parked with the API panel until quota-based metrics land.
   // const apiKeys = useApiKeys()
 
@@ -285,6 +290,11 @@ export function HomePage() {
    * )
    */
 
+  const attentionPanel = useMemo<AttentionPanel>(
+    () => toAttentionPanel(invoices, draftInvoices),
+    [invoices, draftInvoices],
+  )
+
   const customerOptions: FilterOption[] = [
     { id: ALL_CUSTOMERS, label: 'All customers' },
     ...(customers.data?.customers ?? []).map((entry) => ({ id: entry.id, label: entry.name })),
@@ -306,7 +316,12 @@ export function HomePage() {
       customers={customersPanel}
       subscriptions={subscriptionsPanel}
       invoices={invoicesPanel}
-      onNavigate={(path) => void navigate({ to: path, search: {} as never })}
+      attention={attentionPanel}
+      onNavigate={(path) => {
+        // A task links to a filtered list, so the query string rides along.
+        const [to = path, query = ''] = path.split('?')
+        void navigate({ to, search: Object.fromEntries(new URLSearchParams(query)) as never })
+      }}
     />
   )
 }
@@ -532,6 +547,63 @@ function toInvoicesPanel(
     open: count(InvoiceStatus.Open),
     overdue: count(InvoiceStatus.Overdue),
   }
+}
+
+const ATTENTION_QUERY = { ...DEFAULT_INVOICE_QUERY, pageSize: 3 }
+
+interface InvoiceRows {
+  data?: { invoices: Invoice[]; total: number } | undefined
+  isPending: boolean
+  isError: boolean
+}
+
+/** "Acme, Globex and 2 more" — who the records belong to, from the few rows read. */
+function whoseInvoices(rows: Invoice[], total: number): string | undefined {
+  const names = [...new Set(rows.map((row) => row.customerName))].slice(0, 3)
+  if (names.length === 0) return undefined
+  const rest = total - names.length
+  return rest > 0 ? `${names.join(', ')} and ${rest} more` : names.join(', ')
+}
+
+const plural = (count: number, noun: string) =>
+  `${count.toLocaleString()} ${noun}${count === 1 ? '' : 's'}`
+
+/** One row per kind of task that has records, most urgent first. Empty only when the API said so. */
+function toAttentionPanel(recent: InvoiceRows, drafts: InvoiceRows): AttentionPanel {
+  if (recent.isError || drafts.isError) return { status: 'unavailable', items: [] }
+  if (recent.isPending || drafts.isPending) return { status: 'loading', items: [] }
+
+  const items: AttentionItem[] = []
+
+  const loaded = recent.data?.invoices ?? []
+  const overdue = loaded.filter((row) => row.status === InvoiceStatus.Overdue)
+  if (overdue.length > 0) {
+    // Counted among the newest page only; say so when there are invoices beyond it.
+    const partial = (recent.data?.total ?? 0) > loaded.length
+    const who = whoseInvoices(overdue, overdue.length)
+    items.push({
+      id: 'overdue',
+      title: plural(overdue.length, 'overdue invoice'),
+      detail: [who, partial ? `among the latest ${loaded.length}` : undefined]
+        .filter(Boolean)
+        .join(' · '),
+      tone: 'critical',
+      path: `/invoices?status=${InvoiceStatus.Overdue}`,
+    })
+  }
+
+  const draftTotal = drafts.data?.total ?? 0
+  if (draftTotal > 0) {
+    items.push({
+      id: 'draft',
+      title: plural(draftTotal, 'draft invoice'),
+      detail: whoseInvoices(drafts.data?.invoices ?? [], draftTotal),
+      tone: 'neutral',
+      path: `/invoices?status=${InvoiceStatus.Draft}`,
+    })
+  }
+
+  return { status: 'ready', items }
 }
 
 /*

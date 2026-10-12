@@ -567,12 +567,15 @@ export {
   WALLET_STATUS_LABEL,
   WalletStatus,
   WalletTopUpKind,
+  autoTopupSchema,
   createWalletSchema,
+  emptyAutoTopup,
   emptyTopUp,
   emptyWallet,
   topUpWalletSchema,
 } from './wallet'
 export type {
+  AutoTopup,
   CreateWallet,
   TopUpWallet,
   Wallet,

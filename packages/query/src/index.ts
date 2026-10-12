@@ -470,12 +470,14 @@ export type { ConnectionWire } from './integrations'
 export {
   toCreateWalletRequest,
   toTopUpRequest,
+  toUpdateAutoTopupRequest,
   toWallet,
   toWalletTransaction,
   useCreateWallet,
   useCustomerWallets,
   useTerminateWallet,
   useTopUpWallet,
+  useUpdateAutoTopup,
   useWalletTransactions,
 } from './wallets'
 export type { WalletTransactionWire, WalletWire } from './wallets'

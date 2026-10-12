@@ -2697,6 +2697,17 @@ export const handlers = [
     )
     return HttpResponse.json({ wallet, wallet_transaction: walletTransactionStore[0] })
   }),
+  http.put(`${BASE}/wallets/:id`, async ({ request, params }) => {
+    const wallet = walletStore.find((w) => w['id'] === String(params['id']))
+    if (!wallet) return HttpResponse.json({ message: 'Wallet not found' }, { status: 404 })
+    const body = await readBody(request)
+    const next = body['auto_topup'] as Record<string, unknown> | undefined
+    if (next) {
+      const current = (wallet['auto_topup'] ?? {}) as Record<string, unknown>
+      wallet['auto_topup'] = { ...current, ...next }
+    }
+    return HttpResponse.json(wallet)
+  }),
   http.post(`${BASE}/wallets/:id/terminate`, ({ params }) => {
     const wallet = walletStore.find((w) => w['id'] === String(params['id']))
     if (!wallet) return HttpResponse.json({ message: 'Wallet not found' }, { status: 404 })

@@ -146,6 +146,7 @@
         "MeterTrack",
         "MetricChart",
         "Money",
+        "NeedAttention",
         "Panel",
         "PillColumns",
         "SegmentMeter"
@@ -395,6 +396,7 @@
         "CustomerWalletView",
         "DashboardHome",
         "RelatedCard",
+        "ShellNav",
         "UsageCard"
       ],
       "story": null
@@ -1546,6 +1548,7 @@
         "ChoiceCards",
         "Composer",
         "ConfirmDialog",
+        "DetailPills",
         "DetailTable",
         "EmptyState",
         "Field",
@@ -1581,6 +1584,7 @@
         "MeterTrack",
         "MetricChart",
         "Money",
+        "NeedAttention",
         "Panel",
         "PillColumns",
         "SegmentMeter"
@@ -1709,6 +1713,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "CustomerWalletView",
         "DetailBreadcrumb",
         "DetailHeader",
         "DetailShell",
@@ -3720,6 +3725,19 @@
       "usedBy": [],
       "story": null
     },
+    "NeedAttention": {
+      "file": "src/pages/home/NeedAttention.tsx",
+      "layer": "surface",
+      "composes": [
+        "Panel"
+      ],
+      "usedBy": [
+        "ApiCard",
+        "DashboardHome",
+        "UsageCard"
+      ],
+      "story": "./src/pages/home/NeedAttention.stories.tsx"
+    },
     "NotificationIcon": {
       "file": "src/reui/icons/default/outline/notification.tsx",
       "layer": "other",
@@ -3899,6 +3917,7 @@
         "ApiCard",
         "ChartBox",
         "DashboardHome",
+        "NeedAttention",
         "RevenueDashboard",
         "UsageCard"
       ],
@@ -4897,7 +4916,9 @@
     "ShellNav": {
       "file": "src/compositions/shell/ShellNav.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "ArrowUpRightIcon"
+      ],
       "usedBy": [
         "AppShell"
       ],
@@ -5544,6 +5565,7 @@
         "MeterTrack",
         "MetricChart",
         "Money",
+        "NeedAttention",
         "Panel",
         "PillColumns",
         "SegmentMeter"
@@ -6727,6 +6749,13 @@
       "uses": [
         "DashboardHome",
         "PageShell"
+      ]
+    },
+    "./src/pages/home/NeedAttention.stories.tsx": {
+      "title": "7 overdue invoices",
+      "component": "NeedAttention",
+      "uses": [
+        "NeedAttention"
       ]
     },
     "./src/pages/integrations/IntegrationsBlock.stories.tsx": {

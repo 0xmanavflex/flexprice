@@ -5,16 +5,19 @@ import {
   InfoIcon,
   MoreHorizontalIcon,
   PlusIcon,
+  RepeatIcon,
   WalletIcon,
   XCircleIcon,
 } from '@ui/icons'
 import {
+  type AutoTopup,
   type CreateWallet,
   type TopUpWallet,
   type Wallet,
   type WalletTransaction,
   WALLET_STATUS_LABEL,
   WalletStatus,
+  autoTopupSchema,
   createWalletSchema,
   emptyTopUp,
   emptyWallet,
@@ -23,6 +26,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
+import { Switch } from '@ui/components/primitives/switch'
 import { Field } from '@ui/components/primitives/field'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
 import {
@@ -50,6 +54,7 @@ import {
   Section,
 } from '../../compositions'
 import { ChoiceCards, Composer, SplitMeter } from '../../compositions/detail/DetailKit'
+import { DetailPills } from '../../compositions/detail/pillSize'
 import { Pill, type PillTone } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
 
@@ -69,11 +74,13 @@ export interface CustomerWalletViewProps {
   topUpError?: string | null
   onTerminate: () => Promise<unknown>
   terminateError?: string | null
+  onSaveAutoTopup: (draft: AutoTopup) => Promise<unknown>
+  autoTopupError?: string | null
   /** Called when a dialog opens, so a stale error from the last attempt is cleared. */
   onResetErrors?: () => void
 }
 
-type Dialog = 'create' | 'top-up' | 'terminate' | null
+type Dialog = 'create' | 'top-up' | 'auto-topup' | 'terminate' | null
 
 const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR'].map((code) => ({ value: code, label: code }))
 
@@ -99,13 +106,17 @@ export function CustomerWalletView({
   topUpError = null,
   onTerminate,
   terminateError = null,
+  onSaveAutoTopup,
+  autoTopupError = null,
   onResetErrors,
 }: CustomerWalletViewProps) {
   const [dialog, setDialog] = useState<Dialog>(null)
   const [pending, setPending] = useState(false)
+  const [autoTopupOpens, setAutoTopupOpens] = useState(0)
 
   const open = (next: Exclude<Dialog, null>) => {
     onResetErrors?.()
+    if (next === 'auto-topup') setAutoTopupOpens((count) => count + 1)
     setDialog(next)
   }
   const close = () => setDialog(null)
@@ -208,6 +219,10 @@ export function CustomerWalletView({
               <MoreHorizontalIcon aria-hidden="true" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-52">
+              <DropdownMenuItem disabled={closed} onClick={() => open('auto-topup')}>
+                <RepeatIcon className="text-muted-foreground" aria-hidden="true" />
+                Auto top-up settings
+              </DropdownMenuItem>
               <DropdownMenuItem onClick={() => open('create')}>
                 <WalletIcon className="text-muted-foreground" aria-hidden="true" />
                 Create wallet
@@ -225,6 +240,35 @@ export function CustomerWalletView({
           </DropdownMenu>
         </div>
       </div>
+
+      <DetailPills className="-mt-2">
+        <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+        <Pill>
+          <span className="text-muted-foreground font-normal">Consumption rate</span>1 credit ={' '}
+          {wallet.conversionRate} {wallet.currency}
+        </Pill>
+        <Pill>
+          <span className="text-muted-foreground font-normal">Top-up rate</span>1 credit ={' '}
+          {wallet.topupConversionRate} {wallet.currency}
+        </Pill>
+        <button
+          type="button"
+          disabled={closed}
+          onClick={() => open('auto-topup')}
+          aria-label={`Auto top-up ${wallet.autoTopup.enabled ? 'on' : 'off'}. Edit settings`}
+          className="focus-visible:ring-ring/50 rounded-full outline-none focus-visible:ring-3 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <Pill
+            icon={<RepeatIcon aria-hidden="true" />}
+            className="hover:bg-muted/50 cursor-pointer transition-colors"
+          >
+            <span className="text-muted-foreground font-normal">Auto top-up</span>
+            {wallet.autoTopup.enabled
+              ? `${credits(wallet.autoTopup.amount)} credits below ${credits(wallet.autoTopup.threshold)}`
+              : 'Off'}
+          </Pill>
+        </button>
+      </DetailPills>
 
       <section className="bg-background rounded-xl border">
         {/* Balances on the left, usage since the last invoice on the right: one row, equal halves. */}
@@ -271,24 +315,6 @@ export function CustomerWalletView({
             </div>
           </div>
         </div>
-        <dl className="text-muted-foreground grid gap-4 border-t px-6 py-4 text-xs sm:grid-cols-4">
-          <div>
-            <dt>Status</dt>
-            <dd className="mt-1">
-              <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
-            </dd>
-          </div>
-          {[
-            ['Consumption rate', `1 credit = ${wallet.conversionRate} ${wallet.currency}`],
-            ['Top-up rate', `1 credit = ${wallet.topupConversionRate} ${wallet.currency}`],
-            ['Auto top-up', wallet.autoTopup ? 'On' : 'Off'],
-          ].map(([label, value]) => (
-            <div key={label}>
-              <dt>{label}</dt>
-              <dd className="text-foreground mt-0.5 text-[13px]">{value}</dd>
-            </div>
-          ))}
-        </dl>
       </section>
 
       <Section table title="Top-ups">
@@ -346,6 +372,16 @@ export function CustomerWalletView({
         pending={pending}
         error={topUpError}
         onSubmit={(draft) => run(() => onTopUp(draft))}
+      />
+      <AutoTopupDialog
+        key={`${wallet.id}:${autoTopupOpens}`}
+        open={dialog === 'auto-topup'}
+        onClose={close}
+        pending={pending}
+        error={autoTopupError}
+        initial={wallet.autoTopup}
+        currency={wallet.currency}
+        onSubmit={(draft) => run(() => onSaveAutoTopup(draft))}
       />
       <ConfirmDialog
         open={dialog === 'terminate'}
@@ -554,6 +590,122 @@ function TopUpDialog({
               onChange={(event) => set({ description: event.target.value })}
             />
           </Field>
+        </div>
+        {problem || error ? (
+          <p role="alert" className="text-destructive text-sm">
+            {problem ?? error}
+          </p>
+        ) : null}
+      </Composer>
+    </FormDialog>
+  )
+}
+
+function AutoTopupDialog({
+  open,
+  onClose,
+  pending,
+  error,
+  initial,
+  currency,
+  onSubmit,
+}: {
+  open: boolean
+  onClose: () => void
+  pending: boolean
+  error: string | null
+  initial: AutoTopup
+  currency: string
+  onSubmit: (draft: AutoTopup) => void
+}) {
+  const [draft, setDraft] = useState<AutoTopup>(initial)
+  const [problem, setProblem] = useState<string | null>(null)
+  const set = (patch: Partial<AutoTopup>) => setDraft((current) => ({ ...current, ...patch }))
+
+  return (
+    <FormDialog
+      open={open}
+      onOpenChange={(next) => (next ? undefined : onClose())}
+      title="Auto top-up"
+    >
+      <Composer
+        submitLabel="Save"
+        onCancel={onClose}
+        submitting={pending}
+        onSubmit={() => {
+          const parsed = autoTopupSchema.safeParse(draft)
+          if (!parsed.success)
+            return setProblem(parsed.error.issues[0]?.message ?? 'Check the form')
+          setProblem(null)
+          onSubmit(parsed.data)
+        }}
+      >
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <label htmlFor="auto-topup-enabled" className="text-sm font-medium">
+              Top up automatically
+            </label>
+            <p className="text-muted-foreground text-xs">
+              Add credits whenever the balance runs low, so usage is never cut off.
+            </p>
+          </div>
+          <Switch
+            id="auto-topup-enabled"
+            checked={draft.enabled}
+            onCheckedChange={(enabled) => set({ enabled })}
+          />
+        </div>
+        <div className="grid gap-5 sm:grid-cols-2">
+          <Field>
+            <LabelWithHint
+              htmlFor="auto-topup-threshold"
+              hint="When the balance falls to this many credits, a top-up is triggered."
+            >
+              Below
+            </LabelWithHint>
+            <InputGroup className="h-9">
+              <InputGroupInput
+                id="auto-topup-threshold"
+                inputMode="decimal"
+                value={draft.threshold}
+                onChange={(event) => set({ threshold: event.target.value })}
+              />
+              <InputGroupAddon align="inline-end">credits</InputGroupAddon>
+            </InputGroup>
+          </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="auto-topup-amount"
+              hint="How many credits each automatic top-up adds."
+            >
+              Add
+            </LabelWithHint>
+            <InputGroup className="h-9">
+              <InputGroupInput
+                id="auto-topup-amount"
+                inputMode="decimal"
+                value={draft.amount}
+                onChange={(event) => set({ amount: event.target.value })}
+              />
+              <InputGroupAddon align="inline-end">credits</InputGroupAddon>
+            </InputGroup>
+          </Field>
+        </div>
+        <div className="flex items-center justify-between gap-4">
+          <div className="space-y-0.5">
+            <label htmlFor="auto-topup-invoicing" className="text-sm font-medium">
+              Invoice each top-up
+            </label>
+            <p className="text-muted-foreground text-xs">
+              Charge the customer in {currency} for the credits. Off grants them as free credits.
+            </p>
+          </div>
+          <Switch
+            id="auto-topup-invoicing"
+            checked={draft.invoicing}
+            disabled={!draft.enabled}
+            onCheckedChange={(invoicing) => set({ invoicing })}
+          />
         </div>
         {problem || error ? (
           <p role="alert" className="text-destructive text-sm">

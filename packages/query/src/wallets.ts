@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { call } from '@fp/api'
 import {
+  type AutoTopup,
   type CreateWallet,
   type TopUpWallet,
   type Wallet,
@@ -29,7 +30,14 @@ export interface WalletWire {
   realTimeBalance?: string | undefined
   conversionRate?: string | undefined
   topupConversionRate?: string | undefined
-  autoTopup?: { enabled?: boolean | undefined } | undefined
+  autoTopup?:
+    | {
+        enabled?: boolean | undefined
+        threshold?: number | string | undefined
+        amount?: number | string | undefined
+        invoicing?: boolean | undefined
+      }
+    | undefined
   createdAt?: Date | undefined
 }
 
@@ -64,7 +72,12 @@ export function toWallet(wire: WalletWire): Wallet {
     realTimeBalance: moneyOr(wire.realTimeBalance ?? amount, currency),
     conversionRate: wire.conversionRate ?? '1',
     topupConversionRate: wire.topupConversionRate ?? wire.conversionRate ?? '1',
-    autoTopup: wire.autoTopup?.enabled === true,
+    autoTopup: {
+      enabled: wire.autoTopup?.enabled === true,
+      threshold: String(wire.autoTopup?.threshold ?? ''),
+      amount: String(wire.autoTopup?.amount ?? ''),
+      invoicing: wire.autoTopup?.invoicing ?? true,
+    },
     createdAt: wire.createdAt ?? null,
   }
 }
@@ -122,6 +135,19 @@ export function toTopUpRequest(draft: TopUpWallet): Record<string, unknown> {
   }
 }
 
+/** Builds the `autoTopup` body of `PUT /wallets/{id}`. Off sends only the switch, so saved values survive. */
+export function toUpdateAutoTopupRequest(draft: AutoTopup): Record<string, unknown> {
+  if (!draft.enabled) return { autoTopup: { enabled: false } }
+  return {
+    autoTopup: {
+      enabled: true,
+      threshold: Number(draft.threshold),
+      amount: Number(draft.amount),
+      invoicing: draft.invoicing,
+    },
+  }
+}
+
 /** A customer's wallets — `GET /customers/{id}/wallets`. */
 export function useCustomerWallets(customerId: string) {
   const client = useFlexprice()
@@ -174,6 +200,17 @@ export function useTopUpWallet(walletId: string) {
   return useMutation({
     mutationFn: (draft: TopUpWallet) =>
       call(() => client.wallets.topUpWallet(walletId, toTopUpRequest(draft) as never)),
+    onSuccess: invalidate,
+  })
+}
+
+export function useUpdateAutoTopup(walletId: string) {
+  const client = useFlexprice()
+  const invalidate = useInvalidateWallets()
+
+  return useMutation({
+    mutationFn: (draft: AutoTopup) =>
+      call(() => client.wallets.updateWallet(walletId, toUpdateAutoTopupRequest(draft) as never)),
     onSuccess: invalidate,
   })
 }

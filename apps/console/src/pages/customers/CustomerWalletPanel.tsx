@@ -5,6 +5,7 @@ import {
   useCustomerWallets,
   useTerminateWallet,
   useTopUpWallet,
+  useUpdateAutoTopup,
   useWalletTransactions,
 } from '@fp/query'
 import { CustomerWalletView, toast } from '@fp/ui/pages'
@@ -13,7 +14,7 @@ export interface CustomerWalletPanelProps {
   customerId: string
 }
 
-/** Wires a customer's wallets: reads them, and runs create, top-up and terminate. */
+/** Wires a customer's wallets: reads them, and runs create, top-up, auto top-up and terminate. */
 export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
   const wallets = useCustomerWallets(customerId)
   const [chosen, setChosen] = useState<string | null>(null)
@@ -22,6 +23,7 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
 
   const create = useCreateWallet(customerId)
   const topUp = useTopUpWallet(selected?.id ?? '')
+  const autoTopup = useUpdateAutoTopup(selected?.id ?? '')
   const terminate = useTerminateWallet()
 
   return (
@@ -48,6 +50,13 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
         })
       }
       topUpError={failure(topUp.error, 'top up the wallet')}
+      onSaveAutoTopup={(draft) =>
+        autoTopup.mutateAsync(draft).then((result) => {
+          toast.success(draft.enabled ? 'Auto top-up saved' : 'Auto top-up turned off')
+          return result
+        })
+      }
+      autoTopupError={failure(autoTopup.error, 'update auto top-up')}
       onTerminate={() =>
         terminate.mutateAsync(selected?.id ?? '').then((result) => {
           toast.success('Wallet terminated')
@@ -58,6 +67,7 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
       onResetErrors={() => {
         create.reset()
         topUp.reset()
+        autoTopup.reset()
         terminate.reset()
       }}
     />

@@ -38,6 +38,19 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await expect(page.getByText('1,250 credits').first()).toBeVisible()
   await expect(page.getByText('Purchased credits')).toBeVisible()
 
+  await expect(page.getByText('Consumption rate')).toBeVisible()
+  await page.getByRole('button', { name: /auto top-up off/i }).click()
+  const auto = page.getByRole('dialog', { name: 'Auto top-up' })
+  await auto.getByRole('switch', { name: 'Top up automatically' }).click()
+  await auto.getByRole('button', { name: 'Save' }).click()
+  await expect(auto.getByRole('alert')).toContainText('credit balance that triggers')
+  await auto.getByLabel('Below').fill('100')
+  await auto.getByLabel('Add').fill('500')
+  await auto.getByRole('button', { name: 'Save' }).click()
+  await expect(page.getByRole('button', { name: /auto top-up on/i })).toContainText(
+    '500 credits below 100',
+  )
+
   await page.getByRole('button', { name: 'Wallet actions' }).click()
   await page.getByRole('menuitem', { name: 'Terminate wallet' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Terminate wallet' }).click()

@@ -2,9 +2,16 @@ import { describe, expect, it } from 'vitest'
 import {
   CreateWalletRequest$outboundSchema,
   TopUpWalletRequest$outboundSchema,
+  UpdateWalletRequest$outboundSchema,
 } from '@flexprice/sdk/sdk/models'
-import { emptyTopUp, emptyWallet } from '@fp/domain'
-import { toCreateWalletRequest, toTopUpRequest, toWallet, toWalletTransaction } from './wallets'
+import { autoTopupSchema, emptyAutoTopup, emptyTopUp, emptyWallet } from '@fp/domain'
+import {
+  toCreateWalletRequest,
+  toTopUpRequest,
+  toUpdateAutoTopupRequest,
+  toWallet,
+  toWalletTransaction,
+} from './wallets'
 
 describe('wallet requests', () => {
   it('maps a create form to a valid CreateWalletRequest', () => {
@@ -29,6 +36,55 @@ describe('wallet requests', () => {
     expect(purchased.transaction_reason).toBe('PURCHASED_CREDIT_DIRECT')
     expect(purchased.credits_to_add).toBe('100')
     expect(free.transaction_reason).toBe('FREE_CREDIT_GRANT')
+  })
+})
+
+describe('auto top-up', () => {
+  it('sends the threshold, amount and invoicing when on', () => {
+    const body = UpdateWalletRequest$outboundSchema.parse(
+      toUpdateAutoTopupRequest({
+        enabled: true,
+        threshold: '100',
+        amount: '500',
+        invoicing: false,
+      }),
+    )
+    expect(body.auto_topup).toMatchObject({
+      enabled: true,
+      threshold: 100,
+      amount: 500,
+      invoicing: false,
+    })
+  })
+
+  it('sends only the switch when off, so saved values survive', () => {
+    expect(
+      toUpdateAutoTopupRequest({ ...emptyAutoTopup(), threshold: '10', amount: '20' }),
+    ).toEqual({ autoTopup: { enabled: false } })
+  })
+
+  it('requires a threshold and an amount only when on', () => {
+    expect(autoTopupSchema.safeParse(emptyAutoTopup()).success).toBe(true)
+    expect(autoTopupSchema.safeParse({ ...emptyAutoTopup(), enabled: true }).success).toBe(false)
+    expect(
+      autoTopupSchema.safeParse({ ...emptyAutoTopup(), enabled: true, threshold: '0', amount: '5' })
+        .success,
+    ).toBe(false)
+    expect(
+      autoTopupSchema.safeParse({
+        ...emptyAutoTopup(),
+        enabled: true,
+        threshold: '50',
+        amount: '5',
+      }).success,
+    ).toBe(true)
+  })
+
+  it('reads the saved settings off a wallet', () => {
+    expect(
+      toWallet({ id: 'w', autoTopup: { enabled: true, threshold: 100, amount: 500 } }).autoTopup,
+    ).toEqual({ enabled: true, threshold: '100', amount: '500', invoicing: true })
+    expect(toWallet({ id: 'w' }).autoTopup.enabled).toBe(false)
   })
 })
 

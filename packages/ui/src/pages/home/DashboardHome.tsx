@@ -21,6 +21,7 @@ import type { DonutSlice } from '../shared/HalfDonut'
 import { Money } from '../shared/Money'
 import { PillColumns } from '../shared/PillColumns'
 import type { PillColumn, PillSeries } from '../shared/PillColumns'
+import { NeedAttention, type AttentionPanel } from './NeedAttention'
 import { MeterTrack, SegmentMeter } from '../shared/SegmentMeter'
 import type { SegmentMeterRow } from '../shared/SegmentMeter'
 
@@ -222,6 +223,8 @@ export interface DashboardHomeProps {
   customers: CustomersPanel
   subscriptions: SubscriptionsPanel
   invoices: InvoicesPanel
+  /** Things a person has to act on. Omitted, the task list is not shown. */
+  attention?: AttentionPanel | undefined
   /**
    * Usage by feature and API key health. Not rendered at the moment — both
    * panels are parked until quota-based metrics land (see `DashboardHome`) —
@@ -845,6 +848,7 @@ export function DashboardHome({
   customers,
   subscriptions,
   invoices,
+  attention,
   onNavigate,
 }: DashboardHomeProps) {
   const go = (path: string) => onNavigate?.(path)
@@ -853,6 +857,8 @@ export function DashboardHome({
     <div className="flex flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
       {/* The visible title lives in the shell's breadcrumb; the outline still needs one. */}
       <h1 className="sr-only">Overview</h1>
+
+      {attention ? <NeedAttention attention={attention} onOpen={go} /> : null}
 
       <MetricsSection
         events={events}
