@@ -17,8 +17,12 @@ import {
  * nothing above this layer imports an SDK error type.
  */
 export const ErrorKind = {
-  /** No usable response — offline, DNS, CORS, timeout, aborted. */
+  /** No usable response — offline, DNS, CORS, aborted. */
   Network: 'network',
+  /** The request outlived its deadline. Safe to retry; says "slow", not "offline". */
+  Timeout: 'timeout',
+  /** 429 — too many requests. Retry only after `retryAfterMs`. */
+  RateLimited: 'rate_limited',
   /** 401 — the session is gone or was never valid. */
   Unauthorized: 'unauthorized',
   /** 403 — authenticated, but not allowed. Often a missing environment. */
@@ -38,22 +42,34 @@ export class ApiError extends Error {
   readonly status: number | undefined
   /** Field-level messages, when the API sent them. Feeds form error mapping. */
   readonly details: Record<string, string> | undefined
+  /** From a `Retry-After` header on a 429, in milliseconds. */
+  readonly retryAfterMs: number | undefined
 
   constructor(
     kind: ErrorKind,
     message: string,
-    options: { status?: number; details?: Record<string, string>; cause?: unknown } = {},
+    options: {
+      status?: number
+      details?: Record<string, string>
+      cause?: unknown
+      retryAfterMs?: number
+    } = {},
   ) {
     super(message, options.cause === undefined ? undefined : { cause: options.cause })
     this.name = 'ApiError'
     this.kind = kind
     this.status = options.status
     this.details = options.details
+    this.retryAfterMs = options.retryAfterMs
   }
 
   /** True when retrying the identical request could plausibly succeed. */
   get retryable(): boolean {
-    return this.kind === ErrorKind.Network || this.kind === ErrorKind.Server
+    return (
+      this.kind === ErrorKind.Network ||
+      this.kind === ErrorKind.Timeout ||
+      this.kind === ErrorKind.Server
+    )
   }
 }
 
@@ -61,6 +77,7 @@ export function kindForStatus(status: number): ErrorKind {
   if (status === 401) return ErrorKind.Unauthorized
   if (status === 403) return ErrorKind.Forbidden
   if (status === 404) return ErrorKind.NotFound
+  if (status === 429) return ErrorKind.RateLimited
   if (status >= 500) return ErrorKind.Server
   if (status >= 400) return ErrorKind.Invalid
   return ErrorKind.Unknown
