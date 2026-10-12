@@ -2,7 +2,6 @@ import { type Addon, type AddonQuery } from '@fp/domain'
 import { useAddons } from '@fp/query'
 import { AddonGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { PuzzleIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
 
@@ -49,7 +48,6 @@ export function AddonListPage({
         onRetry={() => void addons.refetch()}
         onClearFilters={clearFilters}
         createAction={<Button onClick={onCreateAddon}>New add-on</Button>}
-        emptyIcon={<PuzzleIcon aria-hidden />}
         emptyTitle="No add-ons yet"
         emptyDescription="Add-ons are optional extras customers buy alongside a plan — extra seats, priority support. Create the first to offer one."
       >

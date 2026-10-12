@@ -72,8 +72,13 @@ export {
 } from './invoices'
 export type { InvoiceDetailWire, InvoicePage, InvoiceWire } from './invoices'
 
-export { summariseCollections, useCollectionsSummary } from './collections'
-export type { CollectionsSummary } from './collections'
+export {
+  summariseCollections,
+  summariseDunning,
+  useCollectionsSummary,
+  useDunning,
+} from './collections'
+export type { CollectionsSummary, DunningRow, DunningSummary } from './collections'
 
 export { toOverrideLineItem } from './priceOverrides'
 export type { OverrideLineItem } from './priceOverrides'
@@ -272,6 +277,7 @@ export {
   toPaymentDetail,
   toPaymentFilter,
   toRecordPaymentRequest,
+  useCustomerPayments,
   useDeletePayment,
   useInvoicePayments,
   usePayment,

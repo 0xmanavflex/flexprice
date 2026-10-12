@@ -2,7 +2,6 @@ import { type PriceUnit, type PriceUnitQuery } from '@fp/domain'
 import { usePriceUnits } from '@fp/query'
 import { PriceUnitGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { CoinsIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
 
@@ -49,7 +48,6 @@ export function PriceUnitListPage({
         onRetry={() => void priceUnits.refetch()}
         onClearFilters={clearFilters}
         createAction={<Button onClick={onCreatePriceUnit}>New price unit</Button>}
-        emptyIcon={<CoinsIcon aria-hidden />}
         emptyTitle="No price units yet"
         emptyDescription="Price units let you charge in credits, tokens or minutes instead of a currency, each pinned to a base currency by a conversion rate. Create the first to price in one."
       >

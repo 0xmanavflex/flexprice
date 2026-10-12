@@ -580,6 +580,7 @@ export type {
   CreateWallet,
   TopUpWallet,
   Wallet,
+  WalletConsumption,
   WalletTransaction,
   WalletTransactionDirection,
 } from './wallet'

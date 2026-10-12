@@ -4,7 +4,6 @@ import { ApiError, useDeleteGroup, useGroups } from '@fp/query'
 import { GroupGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { LayersIcon } from '@fp/ui/icons'
 import { toListFailure } from '../shared/listFailure'
 
 export interface GroupListPageProps {
@@ -58,7 +57,6 @@ export function GroupListPage({
           onRetry={() => void groups.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateGroup}>New group</Button>}
-          emptyIcon={<LayersIcon aria-hidden />}
           emptyTitle="No groups yet"
           emptyDescription="Groups bundle prices or features so they report and invoice together — a product line, a region. Create the first to start."
         >

@@ -316,6 +316,13 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     ready: { heading: 'Payments', rows: true },
   },
   {
+    name: 'dunning-list',
+    route: '/dunning',
+    reference: 'pages/billing.tsx',
+    pattern: 'list',
+    ready: { heading: 'Dunning' },
+  },
+  {
     name: 'credit-notes-list',
     route: '/credit-notes',
     reference: 'pages/billing.tsx',

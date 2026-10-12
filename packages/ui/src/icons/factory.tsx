@@ -47,8 +47,11 @@ export function staticIcon(Source: StaticSource, name: string, rotate?: number):
       stroke: _stroke,
       strokeWidth: _strokeWidth,
       fill: _fill,
+      // Base UI's `Select.Icon` and similar slots inject a text child ("▼");
+      // cloning it onto the svg would replace the glyph's paths with that text.
+      children: _children,
       ...rest
-    } = props
+    } = props as IconProps & { children?: unknown }
     const svg = Source(className === undefined ? {} : { className })
     const dimensions = size === undefined ? undefined : { width: size, height: size }
     return cloneElement(svg, {

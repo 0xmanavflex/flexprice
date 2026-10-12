@@ -21,8 +21,17 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import { type EntityColumn, EmDash, dateColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
-import { IntegrationMarks } from './IntegrationMark'
+import {
+  type EntityColumn,
+  EmDash,
+  dateColumn,
+  idColumn,
+  numberColumn,
+  pillColumn,
+  textColumn,
+} from '../shared/cells'
+import { CopyValue } from '../shared/CopyValue'
+import { IntegrationChips } from './IntegrationMark'
 
 /**
  * The customer list, on the shared `EntityList`.
@@ -126,6 +135,8 @@ export interface CustomerGridProps {
   onClearFilters?: () => void
   /** Locale for dates. Supplied by the app, never read from a global. */
   locale?: string
+  /** Contracts per customer id, when the page has counted them; absent customers show an em dash. */
+  contractCounts?: Record<string, number>
 }
 
 export function CustomerGrid({
@@ -142,10 +153,11 @@ export function CustomerGrid({
   onDelete,
   onClearFilters,
   locale,
+  contractCounts,
 }: CustomerGridProps) {
   const columns = useMemo<EntityColumn<Customer>[]>(
     () => [
-      textColumn<Customer>('name', 'Customer', (row) => row.name, {
+      textColumn<Customer>('name', 'Name', (row) => row.name, {
         width: 240,
         sortable: true,
         sortValue: CustomerSortField.Name,
@@ -153,44 +165,69 @@ export function CustomerGrid({
         // attributes belonging to nobody.
         hideable: false,
       }),
-      {
-        id: 'integration',
-        header: 'Integration',
-        width: 140,
-        text: (row) => row.integrations.map((integration) => integration.name).join(', '),
-        cell: (row) =>
-          row.integrations.length === 0 ? (
-            <EmDash />
-          ) : (
-            <IntegrationMarks integrations={row.integrations} />
-          ),
-      },
       // Its own column rather than a subtitle under the name. Stacked, it was
       // unsortable, unexportable and clipped twice as often; beside the name
       // it is a value like any other — and it is the field support actually
       // searches by.
       textColumn<Customer>('email', 'Email', (row) => row.email, { width: 220 }),
-      idColumn<Customer>('externalId', 'External ID', (row) => row.externalId, { width: 180 }),
+      {
+        ...idColumn<Customer>('externalId', 'External ID', (row) => row.externalId, { width: 170 }),
+        cell: (row) =>
+          row.externalId ? <CopyValue value={row.externalId} label="external ID" /> : <EmDash />,
+      },
+      {
+        id: 'integrations',
+        header: 'Integrations',
+        width: 280,
+        text: (row) =>
+          row.integrations
+            .map((integration) =>
+              integration.providerEntityId
+                ? `${integration.name} (${integration.providerEntityId})`
+                : integration.name,
+            )
+            .join(', '),
+        cell: (row) =>
+          row.integrations.length === 0 ? (
+            <EmDash />
+          ) : (
+            <IntegrationChips integrations={row.integrations} />
+          ),
+      },
+      // The list endpoint returns no subscription count, so this reads from
+      // `contractCounts` when the page has one and is an em dash otherwise —
+      // never a zero that nobody counted.
+      numberColumn<Customer>('contracts', 'Contracts', (row) => contractCounts?.[row.id], {
+        width: 110,
+        ...(locale ? { locale } : {}),
+      }),
+      dateColumn<Customer>('createdAt', 'Created on', (row) => row.createdAt, {
+        width: 140,
+        sortable: true,
+        sortValue: CustomerSortField.CreatedAt,
+        ...(locale ? { locale } : {}),
+      }),
+      // Optional columns: off by default, available from the column menu.
+      // Status stays a filter above the table as well.
+      pillColumn<Customer>(
+        'status',
+        'Status',
+        (row) => ({
+          label: CUSTOMER_STATUS_LABEL[row.status],
+          tone: row.status === CustomerStatus.Published ? 'success' : 'neutral',
+        }),
+        { hiddenByDefault: true },
+      ),
       // Uppercased because ISO 3166-1 alpha-2 is uppercase; the API is not
       // always consistent about sending it that way.
       textColumn<Customer>(
         'country',
         'Country',
         (row) => (row.addressCountry ? row.addressCountry.toUpperCase() : null),
-        { width: 100 },
+        { width: 100, hiddenByDefault: true },
       ),
-      pillColumn<Customer>('status', 'Status', (row) => ({
-        label: CUSTOMER_STATUS_LABEL[row.status],
-        tone: row.status === CustomerStatus.Published ? 'success' : 'neutral',
-      })),
-      dateColumn<Customer>('createdAt', 'Created', (row) => row.createdAt, {
-        width: 140,
-        sortable: true,
-        sortValue: CustomerSortField.CreatedAt,
-        ...(locale ? { locale } : {}),
-      }),
     ],
-    [locale],
+    [locale, contractCounts],
   )
 
   const isDefaultSort =

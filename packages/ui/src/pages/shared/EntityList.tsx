@@ -484,7 +484,7 @@ function TableScroller({
     <>
       <div
         ref={ref}
-        className="w-full min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        className="w-full min-w-0 [scrollbar-width:none] overflow-x-auto [&::-webkit-scrollbar]:hidden"
         style={{ '--table-min': `${minWidth}px` } as React.CSSProperties}
       >
         {children}
@@ -980,7 +980,18 @@ export function EntityList<T extends object>({
           </DropdownMenu>
         ) : null}
 
-        {primaryAction}
+        {primaryAction ? (
+          // Text buttons take the height of the icon buttons beside them,
+          // whatever size the caller asked for.
+          <div
+            className={cn(
+              'flex items-center gap-2',
+              compact ? '[&_[data-slot=button]]:h-8' : '[&_[data-slot=button]]:h-9',
+            )}
+          >
+            {primaryAction}
+          </div>
+        ) : null}
       </div>
     </div>
   )

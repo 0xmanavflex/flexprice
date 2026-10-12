@@ -195,16 +195,51 @@ function withDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
   const id = typeof row['id'] === 'string' ? row['id'] : ''
   let hash = 0
   for (const char of id) hash += char.charCodeAt(0)
-  const sets = [
-    [{ provider_type: 'stripe', status: 'published', provider_entity_id: 'cus_stripe_demo' }],
-    [
-      { provider_type: 'stripe', status: 'published', provider_entity_id: 'cus_stripe_demo' },
-      { provider_type: 'quickbooks', status: 'published', provider_entity_id: 'qb_demo' },
-    ],
-    [],
-  ]
+  // Provider ids differ per customer, as the real mappings do.
+  const suffix = id
+    .replace(/[^a-z0-9]/gi, '')
+    .slice(-14)
+    .toLowerCase()
+  const stripe = {
+    provider_type: 'stripe',
+    status: 'published',
+    provider_entity_id: `cus_${suffix}`,
+  }
+  const quickbooks = {
+    provider_type: 'quickbooks',
+    status: 'published',
+    provider_entity_id: `qb_${suffix.slice(0, 8)}`,
+  }
+  const sets = [[stripe], [stripe, quickbooks], []]
   const integrations = sets[hash % sets.length] ?? []
   return integrations.length > 0 ? { ...row, integrations } : row
+}
+
+/**
+ * The payment an invoice's `amount_paid` stands for: one card payment, taken
+ * through Stripe when the invoice was issued. Unpaid invoices have none.
+ */
+function invoicePayments(invoiceId: string): Record<string, unknown>[] {
+  const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === invoiceId)
+  if (!invoice) return []
+  const paid = Number(readString(invoice, 'amount_paid') || 0)
+  if (!(paid > 0)) return []
+  const at = readString(invoice, 'issue_date') || readString(invoice, 'created_at')
+  return [
+    {
+      id: `pay_${invoiceId}`,
+      destination_id: invoiceId,
+      destination_type: 'INVOICE',
+      invoice_number: readString(invoice, 'invoice_number'),
+      amount: readString(invoice, 'amount_paid'),
+      currency: readString(invoice, 'currency') || 'USD',
+      payment_status: 'SUCCEEDED',
+      payment_method_type: 'CARD',
+      payment_gateway: 'stripe',
+      created_at: at,
+      succeeded_at: at,
+    },
+  ]
 }
 
 const search = (path: string, key: string) =>
@@ -1464,8 +1499,65 @@ function recordWalletCredit(
     credit_amount: String(Math.abs(credits)),
     amount: String(Math.abs(credits) * rate),
     currency: wallet['currency'],
+    // A fresh credit is wholly unspent; a debit has nothing left to spend.
+    credits_available: credits < 0 ? '0' : String(credits),
     created_at: new Date().toISOString(),
   })
+}
+
+/**
+ * One wallet with history, authored for the second customer so the first stays
+ * empty (the wallet e2e starts from "No wallet yet"). It shows every column of
+ * the top-ups table: spent-down credits, ones that never expire, and one that
+ * lapses in five days. The API sends no per-product breakdown, so none is seeded.
+ */
+{
+  const day = 86_400_000
+  const ago = (days: number) => new Date(Date.now() - days * day).toISOString()
+  const ahead = (days: number) => new Date(Date.now() + days * day).toISOString()
+  walletStore.push({
+    id: 'wal_demo_01',
+    customer_id: 'cus_synth_0001',
+    currency: 'usd',
+    description: 'Prepaid credits',
+    conversion_rate: '0.01',
+    topup_conversion_rate: '0.009',
+    wallet_status: 'active',
+    wallet_type: 'PRE_PAID',
+    credit_balance: '126000',
+    balance: '1260',
+    real_time_credit_balance: '118000',
+    real_time_balance: '1180',
+    auto_topup: { enabled: true, threshold: 20000, amount: 100000, invoicing: true },
+    created_at: ago(90),
+  })
+  const topUp = (
+    id: string,
+    reason: string,
+    description: string,
+    credits: number,
+    available: number,
+    createdDaysAgo: number,
+    expiresInDays: number | null,
+  ) => ({
+    id,
+    wallet_id: 'wal_demo_01',
+    type: 'credit',
+    transaction_reason: reason,
+    description,
+    credit_amount: String(credits),
+    credits_available: String(available),
+    amount: String(credits * 0.01),
+    currency: 'usd',
+    created_at: ago(createdDaysAgo),
+    ...(expiresInDays === null ? {} : { expiry_date: ahead(expiresInDays) }),
+  })
+  walletTransactionStore.push(
+    topUp('wtx_demo_4', 'FREE_CREDIT_GRANT', 'Launch promotion', 25000, 25000, 3, 5),
+    topUp('wtx_demo_3', 'PURCHASED_CREDIT_INVOICED', 'Invoice INV-0042', 100000, 93000, 12, null),
+    topUp('wtx_demo_2', 'SUBSCRIPTION_CREDIT_GRANT', 'Annual commit', 100000, 8000, 45, 60),
+    topUp('wtx_demo_1', 'CREDIT_NOTE', 'Billing correction', 20000, 0, 80, null),
+  )
 }
 
 const contractLineStore = new Map<string, Record<string, unknown>[]>()
@@ -2080,6 +2172,17 @@ export const handlers = [
       offset: Number(url.searchParams.get('offset') ?? 0),
     }
     if (demoEmpty()) return HttpResponse.json(emptyPage(window))
+    const destinationId = url.searchParams.get('destination_id')
+    if (destinationId) {
+      const items = [
+        ...paymentStore.filter((row) => readString(row, 'destination_id') === destinationId),
+        ...invoicePayments(destinationId),
+      ]
+      return HttpResponse.json({
+        items,
+        pagination: { total: items.length, limit: window.limit, offset: window.offset },
+      })
+    }
     const base = page(corpus['invoices'] as Corpus, window) as {
       items: Record<string, unknown>[]
       pagination: { total: number }

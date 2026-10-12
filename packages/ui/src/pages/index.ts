@@ -224,6 +224,8 @@ export type {
   CollectionsSummaryCell,
   CollectionsSummaryProps,
 } from './collections/payments/CollectionsSummary'
+export { DunningGrid, DunningGridProvenance } from './collections/dunning/DunningGrid'
+export type { DunningCustomer, DunningGridProps } from './collections/dunning/DunningGrid'
 export { PaymentGrid, PaymentGridProvenance } from './collections/payments/PaymentGrid'
 export type { PaymentGridProps } from './collections/payments/PaymentGrid'
 export { PaymentForm, PaymentFormProvenance } from './collections/payments/PaymentForm'

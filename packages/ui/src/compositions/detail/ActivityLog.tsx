@@ -79,7 +79,7 @@ export function ActivitySection({
       ) : (
         <div
           role="region"
-          aria-label="Activity"
+          aria-label="Activity history"
           tabIndex={0}
           className={`${ACTIVITY_MAX_HEIGHT} overflow-y-auto`}
         >

@@ -28,7 +28,6 @@ import {
   DialogTitle,
   Input,
 } from '@fp/ui/primitives'
-import { UsersIcon } from '@fp/ui/icons'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
@@ -83,11 +82,7 @@ export function MembersPanel() {
     )
   }
 
-  const invite = (
-    <Button size="sm" onClick={() => setIsInviting(true)}>
-      Invite member
-    </Button>
-  )
+  const invite = <Button onClick={() => setIsInviting(true)}>Invite member</Button>
 
   return (
     <WidePanel>
@@ -102,7 +97,6 @@ export function MembersPanel() {
         empty={
           <EmptyState
             size="inline"
-            icon={<UsersIcon aria-hidden />}
             title="Nobody else is on your team yet"
             description="Invite a teammate by email and choose their roles. They can sign in as soon as the account exists."
             action={invite}

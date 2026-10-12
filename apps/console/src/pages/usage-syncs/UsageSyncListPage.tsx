@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { WaypointsIcon } from '@fp/ui/icons'
 import { type UsageSync, type UsageSyncQuery } from '@fp/domain'
 import { useUsageSyncs } from '@fp/query'
 import { UsageSyncDetailSheet, UsageSyncGrid } from '@fp/ui/pages'
@@ -38,7 +37,6 @@ export function UsageSyncListPage({ query, onQueryChange }: UsageSyncListPagePro
         isFiltered={isFiltered}
         onRetry={() => void usageSyncs.refetch()}
         onClearFilters={clearFilters}
-        emptyIcon={<WaypointsIcon aria-hidden />}
         emptyTitle="No usage has been recorded yet"
         emptyDescription="Usage that bills through a cloud marketplace is recorded per billing period, and where it was reported shows here."
       >

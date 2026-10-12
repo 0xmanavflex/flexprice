@@ -4,7 +4,6 @@ import { ApiError, useCustomers, useDeleteCustomer } from '@fp/query'
 import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { UsersIcon } from '@fp/ui/icons'
 import { toListFailure } from '../shared/listFailure'
 
 export interface CustomerListPageProps {
@@ -62,7 +61,6 @@ export function CustomerListPage({
           onRetry={() => void customers.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateCustomer}>New customer</Button>}
-          emptyIcon={<UsersIcon aria-hidden />}
           emptyTitle="No customers yet"
           emptyDescription="Customers are who you bill. Each carries contracts, invoices and a payment history."
         >

@@ -84,7 +84,7 @@ export function EntitlementTable({
 }: EntitlementTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
-    <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
+    <Button type="button" onClick={onAdd}>
       <PlusIcon aria-hidden />
       Add entitlement
     </Button>

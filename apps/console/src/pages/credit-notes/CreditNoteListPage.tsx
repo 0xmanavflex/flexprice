@@ -1,4 +1,3 @@
-import { FileMinusIcon } from '@fp/ui/icons'
 import { type CreditNote, type CreditNoteQuery } from '@fp/domain'
 import { useCreditNotes } from '@fp/query'
 import { CreditNoteGrid } from '@fp/ui/pages'
@@ -40,7 +39,6 @@ export function CreditNoteListPage({
         isFiltered={isFiltered}
         onRetry={() => void creditNotes.refetch()}
         onClearFilters={clearFilters}
-        emptyIcon={<FileMinusIcon aria-hidden />}
         emptyTitle="No credit notes yet"
         emptyDescription="Credit notes refund or adjust an invoice after it has been issued."
       >

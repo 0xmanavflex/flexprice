@@ -49,13 +49,15 @@ export interface WalletTransactionWire {
   creditAmount?: string | undefined
   amount?: string | undefined
   currency?: string | undefined
+  creditsAvailable?: string | undefined
+  expiryDate?: Date | undefined
   createdAt?: Date | undefined
 }
 
 const STATUSES = new Set<string>(Object.values(WalletStatus))
 
 export function toWallet(wire: WalletWire): Wallet {
-  const currency = wire.currency || 'USD'
+  const currency = (wire.currency || 'USD').toUpperCase()
   const credits = wire.creditBalance ?? '0'
   const amount = wire.balance ?? '0'
   return {
@@ -106,6 +108,8 @@ export function toWalletTransaction(wire: WalletTransactionWire, index = 0): Wal
     credits: wire.creditAmount ?? '0',
     amount: moneyOr(wire.amount, wire.currency),
     createdAt: wire.createdAt ?? null,
+    creditsAvailable: wire.creditsAvailable ?? null,
+    expiresAt: wire.expiryDate ?? null,
   }
 }
 

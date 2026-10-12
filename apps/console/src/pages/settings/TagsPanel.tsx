@@ -21,7 +21,6 @@ import {
   DialogTitle,
   Input,
 } from '@fp/ui/primitives'
-import { TagIcon } from '@fp/ui/icons'
 import {
   ActionError,
   PanelError,
@@ -67,11 +66,7 @@ export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }
     )
   }
 
-  const create = (
-    <Button size="sm" onClick={() => setIsCreating(true)}>
-      New tag
-    </Button>
-  )
+  const create = <Button onClick={() => setIsCreating(true)}>New tag</Button>
 
   return (
     <WidePanel>
@@ -86,7 +81,6 @@ export function TagsPanel({ onOpenPage }: { onOpenPage: (href: string) => void }
         empty={
           <EmptyState
             size="inline"
-            icon={<TagIcon aria-hidden />}
             title="No tags yet"
             description="A tag collects prices or features under one name, like a product line or a region, so you can filter and report on them together."
             action={create}

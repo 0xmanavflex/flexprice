@@ -1,4 +1,3 @@
-import { WorkflowIcon } from '@fp/ui/icons'
 import { type WorkflowQuery } from '@fp/domain'
 import { useWorkflowRuns } from '@fp/query'
 import { WorkflowGrid } from '@fp/ui/pages'
@@ -33,7 +32,6 @@ export function WorkflowListPage({ query, onQueryChange }: WorkflowListPageProps
         isFiltered={isFiltered}
         onRetry={() => void workflows.refetch()}
         onClearFilters={clearFilters}
-        emptyIcon={<WorkflowIcon aria-hidden />}
         emptyTitle="No workflows yet"
         emptyDescription="Background work such as syncs, exports and billing runs is recorded here as it happens."
       >

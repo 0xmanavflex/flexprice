@@ -85,34 +85,30 @@ function manyPayments(count: number): Payment[] {
 export const Default: Story = {}
 
 /**
- * Method and Gateway are different facts, and both are real fields.
+ * Method is a real field; a payment recorded by hand has none and dashes.
  *
- * "Card" is what the customer presented; Stripe is who charged it. A payment
- * recorded by hand has neither and dashes on both.
+ * "Card" is what the customer presented; the wire's screaming snake case is
+ * made readable without a lookup table that would render an unknown method
+ * blank.
  */
-export const MethodAndGateway: Story = {
+export const PaymentMethod: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
     await expect(await canvas.findByText('INV-1041')).toBeInTheDocument()
     await expect(canvas.getAllByText('Card').length).toBeGreaterThan(0)
-    // Two rows were taken through Stripe, one through Razorpay.
-    await expect(canvas.getAllByText('Stripe')).toHaveLength(2)
-    await expect(canvas.getByText('Razorpay')).toBeInTheDocument()
-    // The wire's screaming snake case, made readable without a lookup table
-    // that would render an unknown method blank.
     await expect(canvas.getByText('Ach Debit')).toBeInTheDocument()
     await expect(canvas.getAllByText('—').length).toBeGreaterThanOrEqual(3)
   },
 }
 
 /**
- * Customer is not a column, because `PaymentResponse` has no customer.
+ * Customer and Receipt number are columns, and every cell is a dash.
  *
- * Not a name, not even a `customer_id` — only `destination_id`, which is the
- * invoice. The Invoice column is the honest version of the same lookup.
+ * `PaymentResponse` has no customer and no receipt number, so the table says
+ * so rather than omitting the columns or inventing values.
  */
-export const NoCustomerColumn: Story = {
+export const CustomerAndReceiptNotAvailable: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('INV-1041')
@@ -120,9 +116,16 @@ export const NoCustomerColumn: Story = {
     const headers = Array.from(canvasElement.querySelectorAll('thead th')).map((th) =>
       (th.textContent ?? '').trim().toLowerCase(),
     )
-    await expect(headers).not.toContain('customer')
-    await expect(headers).toContain('invoice')
-    await expect(headers).toContain('gateway')
+    await expect(headers).toEqual(
+      expect.arrayContaining([
+        'customer',
+        'receipt number',
+        'invoice number',
+        'amount',
+        'payment method',
+        'status',
+      ]),
+    )
   },
 }
 

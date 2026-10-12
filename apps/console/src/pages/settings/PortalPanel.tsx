@@ -30,7 +30,7 @@ import {
   SortableList,
 } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { EyeIcon, EyeOffIcon, LayoutPanelLeftIcon } from '@fp/ui/icons'
+import { EyeIcon, EyeOffIcon } from '@fp/ui/icons'
 import { useSession } from '@/app/session'
 import {
   ActionError,
@@ -179,7 +179,6 @@ function PortalForm({
           {sections.length === 0 ? (
             <EmptyState
               size="inline"
-              icon={<LayoutPanelLeftIcon aria-hidden />}
               title="This portal has no sections"
               description="Resetting to defaults asks the server for its standard layout, which is the only place a starting tree can honestly come from."
             />

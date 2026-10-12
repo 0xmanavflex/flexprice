@@ -833,6 +833,7 @@
         "CopyChip",
         "CopyEmail",
         "CopyId",
+        "CopyValue",
         "DetailHeaderCluster",
         "DetailMoreMenu",
         "DetailTabs",
@@ -1203,6 +1204,7 @@
         "CopyChip",
         "CopyEmail",
         "CopyId",
+        "CopyValue",
         "CostSheetGrid",
         "CouponGrid",
         "CreditNoteGrid",
@@ -1253,6 +1255,21 @@
       "layer": "other",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "CopyValue": {
+      "file": "src/pages/shared/CopyValue.tsx",
+      "layer": "surface",
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
+      "usedBy": [
+        "CustomerGrid",
+        "IntegrationChips",
+        "IntegrationMark",
+        "IntegrationMarks"
+      ],
       "story": null
     },
     "CornerDownRight": {
@@ -1555,9 +1572,10 @@
       "composes": [
         "BookOpenIcon",
         "CopyIcon",
+        "CopyValue",
         "EmDash",
         "EntityList",
-        "IntegrationMarks",
+        "IntegrationChips",
         "PencilIcon",
         "PlusIcon",
         "UserIcon"
@@ -1593,8 +1611,6 @@
         "ChoiceCards",
         "Composer",
         "ConfirmDialog",
-        "DetailPills",
-        "DetailTable",
         "EmptyState",
         "Field",
         "FormDialog",
@@ -1606,7 +1622,8 @@
         "Section",
         "SplitMeter",
         "SubTabState",
-        "WalletIcon"
+        "WalletIcon",
+        "WalletLedgerTable"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerWalletView.stories.tsx"
@@ -1806,7 +1823,6 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "CustomerWalletView",
         "DetailBreadcrumb",
         "DetailHeader",
         "DetailShell",
@@ -1853,7 +1869,7 @@
         "CustomerDetail",
         "CustomerEventsGrid",
         "CustomerTaxSection",
-        "CustomerWalletView",
+        "DunningGrid",
         "EntitlementTable",
         "FeatureDetailView",
         "GroupMembersView",
@@ -1862,6 +1878,7 @@
         "PlanEntitlementsView",
         "RevenueDashboard",
         "SubscriptionDetailView",
+        "WalletLedgerTable",
         "WebhookEndpointDetail"
       ],
       "story": "./src/pages/shared/DetailTable.stories.tsx"
@@ -1963,6 +1980,16 @@
       "usedBy": [],
       "story": null
     },
+    "DunningGrid": {
+      "file": "src/pages/collections/dunning/DunningGrid.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable",
+        "EmDash"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/collections/dunning/DunningGrid.stories.tsx"
+    },
     "EditableCard": {
       "file": "src/compositions/forms/EditableCard.tsx",
       "layer": "composition",
@@ -2017,6 +2044,7 @@
       ],
       "usedBy": [
         "CustomerGrid",
+        "DunningGrid",
         "EntitlementTable",
         "EventGrid",
         "EventTypeName",
@@ -3218,20 +3246,34 @@
       "usedBy": [],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
+    "IntegrationChips": {
+      "file": "src/pages/customers/IntegrationMark.tsx",
+      "layer": "surface",
+      "composes": [
+        "CopyValue"
+      ],
+      "usedBy": [
+        "CustomerGrid"
+      ],
+      "story": null
+    },
     "IntegrationMark": {
       "file": "src/pages/customers/IntegrationMark.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "CopyValue"
+      ],
       "usedBy": [],
       "story": null
     },
     "IntegrationMarks": {
       "file": "src/pages/customers/IntegrationMark.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "CopyValue"
+      ],
       "usedBy": [
-        "CustomerDetail",
-        "CustomerGrid"
+        "CustomerDetail"
       ],
       "story": null
     },
@@ -4165,8 +4207,7 @@
         "CopyIcon",
         "CreditCardIcon",
         "EmDash",
-        "EntityList",
-        "Tag"
+        "EntityList"
       ],
       "usedBy": [],
       "story": "./src/pages/collections/payments/PaymentGrid.stories.tsx"
@@ -5614,7 +5655,6 @@
       "composes": [],
       "usedBy": [
         "EventGrid",
-        "PaymentGrid",
         "PlanGrid"
       ],
       "story": null
@@ -5992,6 +6032,17 @@
         "InvoiceDetailView",
         "InvoiceGrid",
         "PageShell"
+      ],
+      "story": null
+    },
+    "WalletLedgerTable": {
+      "file": "src/pages/customers/WalletLedgerTable.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable"
+      ],
+      "usedBy": [
+        "CustomerWalletView"
       ],
       "story": null
     },
@@ -6845,6 +6896,13 @@
         "ListState",
         "PageBody",
         "PageShell"
+      ]
+    },
+    "./src/pages/collections/dunning/DunningGrid.stories.tsx": {
+      "title": "App/Collections/Dunning/Dunning table",
+      "component": "DunningGrid",
+      "uses": [
+        "DunningGrid"
       ]
     },
     "./src/pages/collections/payments/CollectionsSummary.stories.tsx": {
@@ -7886,8 +7944,18 @@
         "ConfirmDialog",
         "CustomerGrid",
         "ListState",
-        "PageBody",
-        "UsersIcon"
+        "PageBody"
+      ]
+    },
+    "DunningListPage": {
+      "file": "apps/console/src/pages/dunning/DunningListPage.tsx",
+      "pattern": "List",
+      "route": "/dunning",
+      "uses": [
+        "CollectionsSummary",
+        "DunningGrid",
+        "ListState",
+        "PageBody"
       ]
     },
     "EnvironmentFormPage": {
@@ -8069,8 +8137,6 @@
       "pattern": "List",
       "route": "/payments",
       "uses": [
-        "CollectionsSummary",
-        "CreditCardIcon",
         "ListState",
         "PageBody",
         "PaymentGrid"
@@ -8120,7 +8186,6 @@
       "route": "/plans",
       "uses": [
         "ListState",
-        "PackageIcon",
         "PageBody",
         "PlanGrid"
       ]

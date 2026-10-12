@@ -1,5 +1,4 @@
 import { EmptyState } from '@fp/ui/compositions'
-import { PlugZapIcon } from '@fp/ui/icons'
 import { SettingsBlock } from './panelKit'
 import type { SettingsTabSpec } from './sections'
 
@@ -49,7 +48,6 @@ export function SettingsUnavailable({ tab, what, workaround }: SettingsUnavailab
     <SettingsBlock label={tab.label}>
       <EmptyState
         size="inline"
-        icon={<PlugZapIcon aria-hidden />}
         title={`${tab.label} is not enabled on this deployment`}
         description={
           `${what} This Flexprice deployment reports it as switched off, so there is ` +

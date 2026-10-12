@@ -3,7 +3,6 @@ import { type CloneFeature, type Feature, type FeatureQuery } from '@fp/domain'
 import { useCloneFeature, useDeleteFeature, useFeatureLinkage, useFeatures } from '@fp/query'
 import { FeatureCloneDialog, FeatureGrid, type ProductLinkage } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
-import { GaugeIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 import { toSubmitError } from './featureMessages'
 import { toListFailure } from '../shared/listFailure'
@@ -104,7 +103,6 @@ export function FeatureListPage({
           onRetry={() => void features.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreate}>New product</Button>}
-          emptyIcon={<GaugeIcon aria-hidden />}
           emptyTitle="Nothing is being measured yet"
           emptyDescription="A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
         >

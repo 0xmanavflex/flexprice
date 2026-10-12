@@ -15,8 +15,6 @@ import {
   type EntityColumn,
   type PillTone,
   EmDash,
-  Tag,
-  dateColumn,
   idColumn,
   moneyColumn,
   pillColumn,
@@ -28,29 +26,21 @@ import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared
 /**
  * The payment list, on the shared `EntityList`.
  *
- * ## Customer is not here
+ * ## Customer and Receipt number are dashes
  *
- * The redesign asks for it, and it is the column a collections desk would
- * most like. `PaymentResponse` does not carry a customer: not a name, not
- * even a `customer_id`. What it carries is `destination_id` plus
- * `destination_type` — the thing the money was paid *against*, which for
- * every payment this list shows is an invoice. Resolving a name therefore
- * means fetching each row's invoice and reading the customer off that: a
- * join, per row, per page.
+ * The brief asks for both. `PaymentResponse` carries neither: no customer name,
+ * not even a `customer_id` — only `destination_id`, the invoice the money was
+ * paid against — and no receipt number at all. A name would mean fetching each
+ * row's invoice, a join per row per page, and a receipt number has no source,
+ * so both columns show an em dash until the API grows the fields. The
+ * **Invoice number** column is the honest version of the same lookup: it is a
+ * real field, and the thing you would click to find the customer anyway.
  *
- * Omitted rather than dashed, on the rule the billing grids share — a column
- * no row can ever fill is removed, because a column of em dashes reads as
- * "these payments happen to have no customer" rather than "we cannot tell you
- * yet". The **Invoice** column is here instead, and it is the honest version
- * of the same lookup: it is a real field, and it is the thing you would click
- * to find the customer anyway.
+ * ## Method is the customer's, not the processor's
  *
- * ## Gateway is here, and was not before
- *
- * `paymentGateway` has been on `PaymentResponse` all along and the read model
- * simply was not asking for it. It is a different fact from **Method**:
- * "card" is what the customer presented, Stripe is who charged it, and a
- * failure you are chasing needs the second to know where to go and look.
+ * "Card" is what the customer presented; who charged it (Stripe, Razorpay) is
+ * `paymentGateway`, still on the payment and its detail page but not a column
+ * here.
  */
 export const PaymentGridProvenance = provenance({
   source: 'composition',
@@ -159,40 +149,36 @@ export function PaymentGrid({
 }: PaymentGridProps) {
   const columns = useMemo<EntityColumn<Payment>[]>(
     () => [
-      idColumn<Payment>('id', 'Payment ID', (row) => row.id, {
+      // The API sends neither: see the note on this file.
+      {
+        id: 'customer',
+        header: 'Customer',
+        cell: () => <EmDash />,
+        text: () => '',
         width: 200,
-        // The only thing that identifies the row at all.
+      },
+      {
+        id: 'receipt',
+        header: 'Receipt number',
+        cell: () => <EmDash />,
+        text: () => '',
+        width: 160,
+      },
+      idColumn<Payment>('invoice', 'Invoice number', (row) => row.invoiceNumber, {
+        width: 160,
         hideable: false,
       }),
       moneyColumn<Payment>('amount', 'Amount', (row) => row.amount, {
         width: 150,
         ...(locale ? { locale } : {}),
       }),
+      textColumn<Payment>('method', 'Payment method', (row) => humanise(row.methodType), {
+        width: 150,
+      }),
       pillColumn<Payment>('status', 'Status', (row) => ({
         label: PAYMENT_STATUS_LABEL[row.status],
         tone: STATUS_TONE[row.status],
       })),
-      textColumn<Payment>('method', 'Method', (row) => humanise(row.methodType), { width: 130 }),
-      {
-        id: 'gateway',
-        header: 'Gateway',
-        cell: (row) => {
-          const gateway = humanise(row.gateway)
-          return gateway ? <Tag>{gateway}</Tag> : <EmDash />
-        },
-        text: (row) => humanise(row.gateway) ?? '',
-        width: 130,
-      },
-      idColumn<Payment>('invoice', 'Invoice', (row) => row.invoiceNumber, { width: 160 }),
-      // When it was taken, not when it landed: `succeededAt` is null for
-      // everything still in flight and for everything that failed, which is
-      // exactly the half of this list anyone is looking for.
-      dateColumn<Payment>('createdAt', 'Date', (row) => row.createdAt, {
-        width: 140,
-        sortable: true,
-        sortValue: PaymentSortField.CreatedAt,
-        ...(locale ? { locale } : {}),
-      }),
     ],
     [locale],
   )

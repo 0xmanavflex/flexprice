@@ -78,8 +78,6 @@ export interface FeatureDetailViewProps {
   onRetryEntitlements?: (() => void) | undefined
   /** Charges tab CTA: price this feature on a plan. Omitted, no button is shown. */
   onAddPlan?: () => void
-  /** Entitlements tab CTA: grant this feature on a plan. Omitted, no button is shown. */
-  onAddEntitlement?: () => void
   /** Saves the whole metadata map. Omitted, the Metadata section is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
 }
@@ -198,7 +196,6 @@ export function FeatureDetailView({
   entitlementsErrorKind,
   onRetryEntitlements,
   onAddPlan,
-  onAddEntitlement,
   onSaveMetadata,
 }: FeatureDetailViewProps) {
   const isMetered = feature.type === FeatureType.Metered
@@ -319,7 +316,6 @@ export function FeatureDetailView({
           error={entitlementsError}
           errorKind={entitlementsErrorKind}
           onRetry={onRetryEntitlements}
-          {...(onAddEntitlement ? { onAdd: onAddEntitlement } : {})}
         />
       ) : null}
 
@@ -459,16 +455,13 @@ function EntitlementsTab({
   error,
   errorKind,
   onRetry,
-  onAdd,
 }: {
   rows: FeatureEntitlementLink[]
   isLoading: boolean
   error: string | null
   errorKind?: ErrorKind | undefined
   onRetry?: (() => void) | undefined
-  onAdd?: () => void
 }) {
-  const add = onAdd ? <AddButton label="Add entitlement" onClick={onAdd} /> : undefined
   if (rows.length === 0) {
     return (
       <Section title="Entitlements" flush>
@@ -483,7 +476,6 @@ function EntitlementsTab({
           empty={{
             title: 'No entitlements yet',
             description: 'No plan includes this feature yet.',
-            action: add,
           }}
         >
           {null}
@@ -497,7 +489,6 @@ function EntitlementsTab({
         compact
         label="Entitlements"
         noun="entitlements"
-        action={add}
         rows={rows}
         getRowId={(row) => row.entitlement.id}
         facets={[

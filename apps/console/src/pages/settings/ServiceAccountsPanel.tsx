@@ -19,7 +19,6 @@ import {
 } from '@fp/query'
 import { ConfirmDialog, Field, FormDialog } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { BotIcon } from '@fp/ui/icons'
 import { RoleList, RolePicker } from './RolePicker'
 import {
   ActionError,
@@ -78,7 +77,7 @@ export function ServiceAccountsPanel() {
       <h1 className="sr-only">Service accounts</h1>
       {firstRun ? (
         <PanelFirstRun
-          icon={<BotIcon aria-hidden />}
+          scene="developers"
           title="No service accounts yet"
           description="A service account lets one of your systems hold its own roles instead of borrowing a person’s. Create one, then issue it an API key."
           action={<Button onClick={() => setIsCreating(true)}>New service account</Button>}
@@ -92,11 +91,7 @@ export function ServiceAccountsPanel() {
           rows={rows}
           isLoading={accounts.isPending}
           getRowId={(account) => account.id}
-          action={
-            <Button size="sm" onClick={() => setIsCreating(true)}>
-              New service account
-            </Button>
-          }
+          action={<Button onClick={() => setIsCreating(true)}>New service account</Button>}
           // First run is handled above; the table only ever renders with rows
           // or while loading.
           empty={null}

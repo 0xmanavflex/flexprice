@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { ScrollTextIcon } from '@fp/ui/icons'
 import { type RawEvent, type RawEventQuery } from '@fp/domain'
 import { useRawEvents } from '@fp/query'
 import { EventDetailSheet, EventGrid } from '@fp/ui/pages'
@@ -70,7 +69,6 @@ export function EventListPage({ query, onQueryChange }: EventListPageProps) {
         isFiltered={isFiltered}
         onRetry={() => void events.refetch()}
         onClearFilters={clearFilters}
-        emptyIcon={<ScrollTextIcon aria-hidden />}
         emptyTitle={copy.title}
         emptyDescription={copy.description}
       >

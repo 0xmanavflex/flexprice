@@ -1,12 +1,20 @@
 import { useQuery } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
-import { type Money, InvoiceStatus, PaymentStatus, isZeroMoney, money } from '@fp/domain'
+import {
+  type Invoice,
+  type Money,
+  InvoiceStatus,
+  PaymentStatus,
+  isZeroMoney,
+  money,
+} from '@fp/domain'
 import { toInvoice, type InvoiceWire } from './invoices'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 
 /**
- * What customers owe, for the strip above the Payments list.
+ * What customers owe, for the Dunning page: the two totals and the customers
+ * behind the overdue one.
  *
  * The API has a per-customer invoice summary but no tenant-wide one, so this
  * reads the finalized invoices and adds up what is still unpaid. That is the
@@ -43,11 +51,12 @@ function addDecimals(values: readonly string[]): string {
   return scale === 0 ? `${sign}${text}` : `${sign}${text.slice(0, -scale)}.${text.slice(-scale)}`
 }
 
-export function summariseCollections(
-  wires: readonly InvoiceWire[],
-  isPartial = false,
-  now?: Date,
-): CollectionsSummary {
+function isLate(invoice: Invoice): boolean {
+  return invoice.status === InvoiceStatus.Overdue || invoice.paymentStatus === PaymentStatus.Failed
+}
+
+/** The unpaid invoices in the currency most of them are in; the rest are only counted. */
+function unpaidInLeadCurrency(wires: readonly InvoiceWire[], now?: Date) {
   const unpaid = wires
     .map((wire) => toInvoice(wire, now))
     .filter(
@@ -63,6 +72,16 @@ export function summariseCollections(
   }
   // The currency most invoices are in leads; the rest are counted, not mixed in.
   const lead = [...counts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0]
+  const inLead = lead ? unpaid.filter((invoice) => invoice.amountRemaining.currency === lead) : []
+  return { lead, inLead, otherCurrencies: unpaid.length - inLead.length }
+}
+
+export function summariseCollections(
+  wires: readonly InvoiceWire[],
+  isPartial = false,
+  now?: Date,
+): CollectionsSummary {
+  const { lead, inLead, otherCurrencies } = unpaidInLeadCurrency(wires, now)
   if (!lead) {
     return {
       outstanding: null,
@@ -74,22 +93,76 @@ export function summariseCollections(
     }
   }
 
-  const inLead = unpaid.filter((invoice) => invoice.amountRemaining.currency === lead)
-  const late = inLead.filter(
-    (invoice) =>
-      invoice.status === InvoiceStatus.Overdue || invoice.paymentStatus === PaymentStatus.Failed,
-  )
+  const late = inLead.filter(isLate)
   return {
     outstanding: money(addDecimals(inLead.map((invoice) => invoice.amountRemaining.amount)), lead),
     overdue: money(addDecimals(late.map((invoice) => invoice.amountRemaining.amount)), lead),
     unpaidCount: inLead.length,
     overdueCount: late.length,
-    otherCurrencies: unpaid.length - inLead.length,
+    otherCurrencies,
     isPartial,
   }
 }
 
-async function fetchCollections(client: Flexprice): Promise<CollectionsSummary> {
+/** One customer with something past due, for the Dunning table. */
+export interface DunningRow {
+  customerId: string
+  customerName: string
+  overdueCount: number
+  overdue: Money
+  /** The earliest due date among the overdue invoices; null when none of them carries one. */
+  oldestDueDate: Date | null
+  /** Everything this customer has unpaid, overdue or not. */
+  outstanding: Money
+}
+
+export interface DunningSummary extends CollectionsSummary {
+  /** Largest overdue amount first. */
+  rows: DunningRow[]
+}
+
+/**
+ * The customers behind the overdue total, grouped from the same invoices and
+ * in the same currency as the totals, so the rows add up to the cards.
+ */
+export function summariseDunning(
+  wires: readonly InvoiceWire[],
+  isPartial = false,
+  now?: Date,
+): DunningSummary {
+  const summary = summariseCollections(wires, isPartial, now)
+  const { lead, inLead } = unpaidInLeadCurrency(wires, now)
+  if (!lead) return { ...summary, rows: [] }
+
+  const byCustomer = new Map<string, Invoice[]>()
+  for (const invoice of inLead) {
+    const key = invoice.customerId || invoice.customerName
+    byCustomer.set(key, [...(byCustomer.get(key) ?? []), invoice])
+  }
+
+  const rows: DunningRow[] = []
+  for (const [key, invoices] of byCustomer) {
+    const late = invoices.filter(isLate)
+    if (late.length === 0) continue
+    const dueDates = late.flatMap((invoice) => (invoice.dueDate ? [invoice.dueDate.getTime()] : []))
+    rows.push({
+      customerId: key,
+      customerName: invoices[0]?.customerName ?? key,
+      overdueCount: late.length,
+      overdue: money(addDecimals(late.map((invoice) => invoice.amountRemaining.amount)), lead),
+      oldestDueDate: dueDates.length > 0 ? new Date(Math.min(...dueDates)) : null,
+      outstanding: money(
+        addDecimals(invoices.map((invoice) => invoice.amountRemaining.amount)),
+        lead,
+      ),
+    })
+  }
+  // Sorting only: the figures shown stay the exact decimal strings.
+  rows.sort((a, b) => Number(b.overdue.amount) - Number(a.overdue.amount))
+  return { ...summary, rows }
+}
+
+async function fetchCollections(client: Flexprice): Promise<DunningSummary> {
   const wires: InvoiceWire[] = []
   let total = 0
   for (let page = 0; page < MAX_PAGES; page += 1) {
@@ -106,7 +179,7 @@ async function fetchCollections(client: Flexprice): Promise<CollectionsSummary> 
     total = response.pagination?.total ?? wires.length
     if (items.length < PAGE || wires.length >= total) break
   }
-  return summariseCollections(wires, wires.length < total)
+  return summariseDunning(wires, wires.length < total)
 }
 
 export function useCollectionsSummary() {
@@ -115,7 +188,12 @@ export function useCollectionsSummary() {
     queryKey: [...queryKeys.invoices.all(), 'collections'] as const,
     queryFn: () => fetchCollections(client),
     staleTime: 60_000,
-    // A header figure is not worth a retry storm; the list below surfaces a real outage.
+    // A summary is not worth a retry storm; the error state offers a retry.
     retry: false,
   })
+}
+
+/** The totals and the customers behind the overdue one: one read, shared through the cache. */
+export function useDunning() {
+  return useCollectionsSummary()
 }

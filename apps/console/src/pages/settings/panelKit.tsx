@@ -1,7 +1,13 @@
 import { type ReactNode, useId } from 'react'
 import { ArrowUpRightIcon, InfoIcon } from '@fp/ui/icons'
 import { ApiError } from '@fp/query'
-import { EMPTY_CATALOGUE, EmptyState, ErrorState, TableSkeleton } from '@fp/ui/compositions'
+import {
+  EMPTY_CATALOGUE,
+  EmptyState,
+  ErrorState,
+  TableSkeleton,
+  type EmptyScene,
+} from '@fp/ui/compositions'
 import { DetailTable, type DetailColumn } from '@fp/ui/pages'
 import { Button, Tooltip, TooltipContent, TooltipTrigger } from '@fp/ui/primitives'
 import { type ListFailure, toListFailure } from '../shared/listFailure'
@@ -302,14 +308,14 @@ export function WidePanel({ children, fill = false }: { children: ReactNode; fil
  * once, and inside `<WidePanel fill>` so it has a height to centre in.
  */
 export function PanelFirstRun({
-  icon,
+  scene = 'settings',
   title,
   description,
   action,
   docsHref,
   docsLabel = 'Read the docs',
 }: {
-  icon: ReactNode
+  scene?: EmptyScene
   title: string
   description: string
   action: ReactNode
@@ -319,7 +325,7 @@ export function PanelFirstRun({
   return (
     <EmptyState
       size="page"
-      icon={icon}
+      scene={scene}
       title={title}
       description={description}
       action={action}

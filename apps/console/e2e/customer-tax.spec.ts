@@ -15,7 +15,7 @@ test.beforeEach(async ({ context }) => {
 
 test('attaches a tax rate to a customer, edits it, then removes it', async ({ page }) => {
   await page.goto('/customers')
-  await page.getByRole('row').nth(1).click()
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
   await page.getByRole('tab', { name: 'Information' }).click()
 
   await expect(page.getByText('No tax rates attached')).toBeVisible()

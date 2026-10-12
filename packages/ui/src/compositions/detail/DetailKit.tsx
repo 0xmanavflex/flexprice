@@ -276,7 +276,7 @@ export function Properties({
       {items.map((item) => (
         <div key={item.label} className="min-w-0 space-y-1">
           <dt className="text-muted-foreground text-xs">{item.label}</dt>
-          <dd className="truncate text-sm">{item.value}</dd>
+          <dd className="text-sm break-words">{item.value}</dd>
         </div>
       ))}
     </dl>

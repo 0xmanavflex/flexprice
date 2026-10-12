@@ -4,7 +4,6 @@ import { ApiError, useDeleteTaxRate, useTaxRates } from '@fp/query'
 import { TaxRateGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { PercentIcon } from '@fp/ui/icons'
 import { toListFailure } from '../shared/listFailure'
 
 export interface TaxListPageProps {
@@ -59,7 +58,6 @@ export function TaxListPage({
           onRetry={() => void taxRates.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateTaxRate}>Add tax</Button>}
-          emptyIcon={<PercentIcon aria-hidden />}
           emptyTitle="No taxes set up yet"
           emptyDescription="Taxes are the percentages added on top of an invoice, like VAT or GST. Add a tax, then attach it to the customers, plans or charges it applies to."
         >

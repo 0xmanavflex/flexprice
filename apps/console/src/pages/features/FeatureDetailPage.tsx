@@ -91,9 +91,6 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
         {...(entitlementsState.onRetry ? { onRetryEntitlements: entitlementsState.onRetry } : {})}
         // A charge is priced on a plan: start a new one.
         onAddPlan={() => void navigate({ to: '/plans/new' })}
-        // An entitlement is granted on a plan: pick the plan from the list,
-        // as the product list's "Add entitlement" does.
-        onAddEntitlement={() => void navigate({ to: '/plans', search: {} as never })}
         onSaveMetadata={(metadata) =>
           update.mutateAsync({ id: data.id, draft: { name: data.name, metadata } })
         }

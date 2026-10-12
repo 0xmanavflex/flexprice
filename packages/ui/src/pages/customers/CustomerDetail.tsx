@@ -7,6 +7,8 @@ import {
   SUBSCRIPTION_STATUS_LABEL,
   type Invoice,
   InvoiceStatus,
+  PAYMENT_STATUS_LABEL,
+  type Payment,
   PaymentStatus,
   compareMoney,
   formatMoney,
@@ -107,6 +109,15 @@ export interface CustomerDetailProps {
   /** Refetch the invoices; the Invoices error panel offers it as Try again. */
   onRetryInvoices?: () => void
   /**
+   * The customer's recent payments, newest first. Omitted, the Overview leaves
+   * the Recent payments section out rather than claim there are none.
+   */
+  payments?: Payment[] | undefined
+  paymentsLoading?: boolean | undefined
+  /** The payments read failed — shown as such, never as "no payments". */
+  paymentsError?: boolean | undefined
+  onRetryPayments?: (() => void) | undefined
+  /**
    * The Events tab's contents (the customer's recent ingested events). It is a
    * slot because the events read has its own loading and failure states. Omitted,
    * the tab says events are not available here yet.
@@ -166,6 +177,10 @@ export function CustomerDetail({
   invoicesLoading = false,
   invoicesError = false,
   onRetryInvoices,
+  payments,
+  paymentsLoading = false,
+  paymentsError = false,
+  onRetryPayments,
   events,
   usage,
   wallet,
@@ -197,7 +212,7 @@ export function CustomerDetail({
           {
             id: 'create-invoice',
             label: 'Create invoice',
-            icon: <ReceiptIcon className="text-muted-foreground" aria-hidden="true" />,
+            icon: <ReceiptIcon className="text-muted-foreground size-4" aria-hidden="true" />,
             onSelect: onCreateInvoice,
           },
         ]
@@ -278,6 +293,10 @@ export function CustomerDetail({
             invoicesLoading={invoicesLoading}
             invoicesError={invoicesError}
             onRetryInvoices={onRetryInvoices}
+            payments={payments}
+            paymentsLoading={paymentsLoading}
+            paymentsError={paymentsError}
+            onRetryPayments={onRetryPayments}
             formatDate={formatDate}
             locale={locale}
             onOpenInvoice={onOpenInvoice}
@@ -414,6 +433,10 @@ function OverviewTab({
   invoicesLoading,
   invoicesError,
   onRetryInvoices,
+  payments,
+  paymentsLoading,
+  paymentsError,
+  onRetryPayments,
   formatDate,
   locale,
   onOpenInvoice,
@@ -430,6 +453,10 @@ function OverviewTab({
   invoicesLoading: boolean
   invoicesError: boolean
   onRetryInvoices: (() => void) | undefined
+  payments: Payment[] | undefined
+  paymentsLoading: boolean
+  paymentsError: boolean
+  onRetryPayments: (() => void) | undefined
   formatDate: FormatDate
   locale: string | undefined
   onOpenInvoice: ((invoiceId: string) => void) | undefined
@@ -511,12 +538,114 @@ function OverviewTab({
             onOpenInvoice={onOpenInvoice}
           />
         </Section>
+        {payments ? (
+          <Section table showTitle title="Recent payments">
+            <PaymentTable
+              payments={payments.slice(0, 5)}
+              isLoading={paymentsLoading}
+              isError={paymentsError}
+              onRetry={onRetryPayments}
+              formatDate={formatDate}
+            />
+          </Section>
+        ) : null}
       </div>
       <ActivitySection
         entries={activityEntries(customer, subscriptions, invoices, locale)}
         className="xl:sticky xl:top-6"
       />
     </div>
+  )
+}
+
+/** "CARD" / "ACH_DEBIT" as words; empty when the API sent none. */
+function paymentMethod(value: string): string {
+  return value
+    .toLowerCase()
+    .split(/[_\s]+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ')
+}
+
+/**
+ * The short Overview list of a customer's payments. Receipt number is in the
+ * column set the redesign asks for but the payments API does not return one,
+ * so it reads as an em dash rather than a made-up reference.
+ */
+function PaymentTable({
+  payments,
+  isLoading,
+  isError,
+  onRetry,
+  formatDate,
+}: {
+  payments: Payment[]
+  isLoading: boolean
+  isError: boolean
+  onRetry: (() => void) | undefined
+  formatDate: FormatDate
+}) {
+  return (
+    <SubTabState
+      hasData={payments.length > 0}
+      isLoading={isLoading}
+      error={isError ? "Payments couldn't be loaded" : null}
+      onRetry={onRetry}
+      columns={6}
+      loadingLabel="Loading payments"
+      empty={{
+        title: 'No payments yet',
+        description: 'Payments collected against this customer’s invoices appear here.',
+      }}
+    >
+      <DetailTable
+        compact
+        toolbar={false}
+        label="Recent payments"
+        noun="payments"
+        rows={payments}
+        columns={[
+          {
+            key: 'receipt',
+            header: 'Receipt number',
+            width: 150,
+            cell: () => <Muted>—</Muted>,
+          },
+          {
+            key: 'invoice',
+            header: 'Invoice number',
+            width: 160,
+            cell: (payment) => (payment.invoiceNumber ? payment.invoiceNumber : <Muted>—</Muted>),
+          },
+          {
+            key: 'amount',
+            header: 'Amount',
+            width: 110,
+            cell: (payment) => <Money value={payment.amount} />,
+          },
+          {
+            key: 'method',
+            header: 'Payment method',
+            width: 150,
+            cell: (payment) =>
+              payment.methodType ? paymentMethod(payment.methodType) : <Muted>—</Muted>,
+          },
+          {
+            key: 'status',
+            header: 'Status',
+            width: 130,
+            cell: (payment) => <Status value={PAYMENT_STATUS_LABEL[payment.status]} />,
+          },
+          {
+            key: 'date',
+            header: 'Date',
+            width: 130,
+            cell: (payment) => <Muted>{formatDate(payment.createdAt)}</Muted>,
+          },
+        ]}
+      />
+    </SubTabState>
   )
 }
 

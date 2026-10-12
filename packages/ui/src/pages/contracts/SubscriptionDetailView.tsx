@@ -328,12 +328,19 @@ export function SubscriptionDetailView({
           label="Contract actions"
           items={[
             ...(canActivate && onActivate
-              ? [{ id: 'activate', label: 'Activate', icon: <PlayIcon />, onSelect: onActivate }]
+              ? [
+                  {
+                    id: 'activate',
+                    label: 'Activate',
+                    icon: <PlayIcon aria-hidden="true" className="size-4" />,
+                    onSelect: onActivate,
+                  },
+                ]
               : []),
             {
               id: 'cancel',
               label: 'Cancel contract',
-              icon: <XCircleIcon />,
+              icon: <XCircleIcon aria-hidden="true" className="size-4" />,
               destructive: true,
               disabled: !canCancel || !onCancel,
               onSelect: () => onCancel?.(),
@@ -435,7 +442,7 @@ export function SubscriptionDetailView({
                 )}
               </PartSection>
 
-              <div className="grid items-start gap-6 lg:grid-cols-2">
+              <div className="grid gap-6 lg:grid-cols-2">
                 <Section title="Contract">
                   <Properties
                     columns={2}

@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query'
 import type { Flexprice } from '@fp/api'
 import { call } from '@fp/api'
 import {
@@ -165,6 +165,37 @@ export function useInvoicePayments(invoiceId: string) {
     queryKey: queryKeys.payments.list({ invoiceId }),
     queryFn: () => fetchInvoicePayments(client, invoiceId),
     enabled: invoiceId.length > 0,
+  })
+}
+
+/**
+ * A customer's recent payments, for the Overview.
+ *
+ * `GET /payments` has no customer filter, but every payment is collected
+ * against an invoice and the invoice list *is* scoped to the customer. So this
+ * reads the payments of the customer's most recent invoices and merges them,
+ * newest first. Older invoices are not read: the result is "recent", not a
+ * complete ledger, and the caller says so.
+ */
+export function useCustomerPayments(invoiceIds: readonly string[]) {
+  const client = useFlexprice()
+
+  return useQueries({
+    queries: invoiceIds.map((invoiceId) => ({
+      queryKey: queryKeys.payments.list({ invoiceId }),
+      queryFn: () => fetchInvoicePayments(client, invoiceId),
+    })),
+    combine: (results) => ({
+      payments: results
+        .flatMap((result) => result.data ?? [])
+        .sort(
+          (left, right) => (right.createdAt?.getTime() ?? 0) - (left.createdAt?.getTime() ?? 0),
+        ),
+      isLoading: results.some((result) => result.isLoading),
+      // Failed only when nothing arrived: one bad invoice should not blank the rest.
+      isError: results.length > 0 && results.every((result) => result.isError),
+      refetch: () => results.forEach((result) => void result.refetch()),
+    }),
   })
 }
 

@@ -15,7 +15,7 @@ test.beforeEach(async ({ context }) => {
 
 test('creates, tops up and terminates a wallet', async ({ page }) => {
   await page.goto('/customers')
-  await page.getByRole('row').nth(1).click()
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
   await expect(page).toHaveURL(/\/customers\/[^/?]+/)
   await page.getByRole('tab', { name: 'Wallet' }).click()
 
@@ -48,7 +48,7 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await auto.getByLabel('Add').fill('500')
   await auto.getByRole('button', { name: 'Save' }).click()
   await expect(page.getByRole('button', { name: /auto top-up on/i })).toContainText(
-    '500 credits below 100',
+    'Below 100 credits, add 500',
   )
 
   await page.getByRole('button', { name: 'Wallet actions' }).click()

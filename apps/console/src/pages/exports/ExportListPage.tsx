@@ -1,4 +1,3 @@
-import { DownloadCloudIcon } from '@fp/ui/icons'
 import { type DataExportQuery, EXPORT_STATE } from '@fp/domain'
 import { useDataExports } from '@fp/query'
 import { DataExportGrid } from '@fp/ui/pages'
@@ -34,7 +33,6 @@ export function ExportListPage({ query, onQueryChange }: ExportListPageProps) {
         isFiltered={isFiltered}
         onRetry={() => void exports.refetch()}
         onClearFilters={clearFilters}
-        emptyIcon={<DownloadCloudIcon aria-hidden />}
         emptyTitle="No exports yet"
         emptyDescription="Exports send billing data to your own storage on a schedule."
       >

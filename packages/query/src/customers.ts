@@ -34,6 +34,7 @@ import { type FeatureUsageWire, toFeatureUsage } from './tenant'
 /** One row of the customer's `integrations` array, after the SDK camelCases it. */
 export interface CustomerIntegrationWire {
   providerType?: string | undefined
+  providerEntityId?: string | undefined
   status?: string | undefined
 }
 
@@ -66,6 +67,7 @@ export function toCustomerIntegrations(
       id: spec?.id ?? providerType,
       name: spec?.name ?? providerType,
       providerType,
+      ...(wire.providerEntityId?.trim() ? { providerEntityId: wire.providerEntityId.trim() } : {}),
     })
   }
   return integrations

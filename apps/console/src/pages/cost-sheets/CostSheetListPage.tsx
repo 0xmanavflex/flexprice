@@ -4,7 +4,6 @@ import { ApiError, useCostSheets, useDeleteCostSheet } from '@fp/query'
 import { CostSheetGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
-import { SheetIcon } from '@fp/ui/icons'
 import { toListFailure } from '../shared/listFailure'
 
 export interface CostSheetListPageProps {
@@ -59,7 +58,6 @@ export function CostSheetListPage({
           onRetry={() => void costSheets.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={onCreateCostSheet}>New cost sheet</Button>}
-          emptyIcon={<SheetIcon aria-hidden />}
           emptyTitle="No cost sheets yet"
           emptyDescription="Cost sheets record what usage costs you, so margin can be measured against what you charge. Create the first to start."
         >

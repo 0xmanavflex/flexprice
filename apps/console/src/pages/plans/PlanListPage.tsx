@@ -2,7 +2,6 @@ import { type PlanQuery } from '@fp/domain'
 import { usePlans } from '@fp/query'
 import { PlanGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { PackageIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
 
@@ -47,7 +46,6 @@ export function PlanListPage({
           onRetry={() => void plans.refetch()}
           onClearFilters={clearFilters}
           createAction={<Button onClick={() => onCreatePlan()}>New plan</Button>}
-          emptyIcon={<PackageIcon aria-hidden />}
           emptyTitle="No plans yet"
           emptyDescription="Plans are what customers subscribe to. Each one carries charges, entitlements and credit grants — create the first to start selling."
         >

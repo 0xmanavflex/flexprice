@@ -36,6 +36,8 @@ export interface CustomerIntegration {
   id: string
   name: string
   providerType: string
+  /** The customer's id at the provider (`cus_…`). Absent when the mapping carries none. */
+  providerEntityId?: string | undefined
 }
 
 /** The read model the list renders. */

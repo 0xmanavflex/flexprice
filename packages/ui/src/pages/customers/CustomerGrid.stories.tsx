@@ -96,7 +96,14 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Published,
       createdAt: new Date('2025-04-19T00:00:00Z'),
       updatedAt: new Date('2026-09-01T00:00:00Z'),
-      integrations: [{ id: 'stripe', name: 'Stripe', providerType: 'stripe' }],
+      integrations: [
+        {
+          id: 'stripe',
+          name: 'Stripe',
+          providerType: 'stripe',
+          providerEntityId: 'cus_Qx83mKd02aZpL',
+        },
+      ],
     },
     {
       id: 'cus_02',
@@ -108,8 +115,18 @@ function customerFixtures(): Customer[] {
       createdAt: new Date('2025-06-02T00:00:00Z'),
       updatedAt: new Date('2026-08-11T00:00:00Z'),
       integrations: [
-        { id: 'stripe', name: 'Stripe', providerType: 'stripe' },
-        { id: 'quickbooks', name: 'QuickBooks', providerType: 'quickbooks' },
+        {
+          id: 'stripe',
+          name: 'Stripe',
+          providerType: 'stripe',
+          providerEntityId: 'cus_Rt41vNb77cWqE',
+        },
+        {
+          id: 'quickbooks',
+          name: 'QuickBooks',
+          providerType: 'quickbooks',
+          providerEntityId: 'qb_1042',
+        },
       ],
     },
     {
@@ -161,10 +178,7 @@ export const Populated: Story = {
 
     await expect(await canvas.findByText('Acme Robotics')).toBeInTheDocument()
     await expect(canvas.getByText('billing@acme.example')).toBeInTheDocument()
-    // Lowercase on the wire, uppercase in the cell: ISO 3166-1 alpha-2 is
-    // uppercase and the API is not consistent about sending it that way.
-    await expect(canvas.getByText('CA')).toBeInTheDocument()
-    // Initech carries no email, external id or country.
+    // Initech carries no email, external id or integrations.
     await expect(canvas.getAllByText('—').length).toBeGreaterThanOrEqual(3)
   },
 }
@@ -189,7 +203,7 @@ export const NoInventedColumns: Story = {
     for (const absent of ['mrr', 'plan', 'wallet balance', 'subscriptions']) {
       await expect(headers).not.toContain(absent)
     }
-    await expect(headers).toContain('customer')
+    await expect(headers).toContain('name')
   },
 }
 

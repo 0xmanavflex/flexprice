@@ -2,7 +2,6 @@ import { type SubscriptionQuery } from '@fp/domain'
 import { useSubscriptions } from '@fp/query'
 import { SubscriptionGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
-import { RefreshCwIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
 
@@ -51,7 +50,6 @@ export function SubscriptionListPage({
           onRetry={() => void subscriptions.refetch()}
           onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
           createAction={<Button onClick={onCreate}>New contract</Button>}
-          emptyIcon={<RefreshCwIcon aria-hidden />}
           emptyTitle="No contracts yet"
           emptyDescription="A contract puts a customer on a plan and starts their billing cycle."
         >

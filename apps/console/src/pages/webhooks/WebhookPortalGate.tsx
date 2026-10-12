@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { WebhookIcon } from '@fp/ui/icons'
 import { useWebhookPortal } from '@fp/query'
 import {
   EMPTY_CATALOGUE,
@@ -83,7 +82,6 @@ export function WebhookPortalGate({
     return (
       <PageBody>
         <EmptyState
-          icon={<WebhookIcon aria-hidden />}
           title="Webhooks are not enabled here"
           description="This deployment has no Svix integration configured, so there are no endpoints to manage and no events to deliver. Ask whoever runs it to enable webhooks."
           secondaryAction={

@@ -215,6 +215,8 @@ const preview: Preview = {
             ],
             'Collections',
             [
+              'Dunning',
+              ['Dunning table'],
               'Payments',
               ['Payment table', 'Payment form', 'Collections summary', 'Payment status badge'],
             ],

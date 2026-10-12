@@ -27,7 +27,6 @@ import {
 } from '@fp/query'
 import { EmptyState, Field } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
-import { WorkflowIcon } from '@fp/ui/icons'
 import { useSession } from '@/app/session'
 import {
   ActionError,
@@ -208,7 +207,6 @@ function OnboardingForm({
           <SettingsBlock label="Steps">
             <EmptyState
               size="inline"
-              icon={<WorkflowIcon aria-hidden />}
               title="No onboarding steps"
               description="Steps run in order the first time Flexprice sees a new customer. Add one below to open a wallet, start a contract or roll out a price automatically."
             />

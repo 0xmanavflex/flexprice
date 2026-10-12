@@ -1,6 +1,5 @@
 import { type Invoice, type InvoiceQuery, isStoredInvoiceStatus } from '@fp/domain'
 import { useInvoices } from '@fp/query'
-import { ReceiptIcon } from '@fp/ui/icons'
 import { InvoiceGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { toListFailure } from '../shared/listFailure'
@@ -94,7 +93,6 @@ export function InvoiceListPage({
           isRetrying={invoices.isFetching && invoices.isError}
           {...(failure ? { failureKind: failure.kind } : {})}
           onRetry={() => void invoices.refetch()}
-          emptyIcon={<ReceiptIcon aria-hidden />}
           emptyTitle="No invoices yet"
           emptyDescription="Invoices are produced when a contract's billing period closes. Create a plan and subscribe a customer, and the first one will appear here."
           onClearFilters={clearFilters}

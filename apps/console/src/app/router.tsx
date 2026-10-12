@@ -139,6 +139,9 @@ const SubscriptionDetailPage = lazy(() =>
 )
 import { parseSubscriptionSearch } from './subscriptionSearch'
 import { DEFAULT_SUBSCRIPTION_QUERY, type SubscriptionQuery } from '@fp/domain'
+const DunningListPage = lazy(() =>
+  import('@/pages/dunning/DunningListPage').then((m) => ({ default: m.DunningListPage })),
+)
 const PaymentListPage = lazy(() =>
   import('@/pages/payments/PaymentListPage').then((m) => ({ default: m.PaymentListPage })),
 )
@@ -1553,6 +1556,28 @@ function SubscriptionsRouteComponent() {
   )
 }
 
+const dunningRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/dunning',
+  component: DunningRouteComponent,
+})
+
+function DunningRouteComponent() {
+  const navigate = useNavigate()
+
+  return (
+    <DunningListPage
+      onCustomerClick={(customer) =>
+        void navigate({
+          to: '/customers/$customerId',
+          params: { customerId: customer.customerId },
+          search: {} as never,
+        })
+      }
+    />
+  )
+}
+
 const paymentsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/payments',
@@ -2155,6 +2180,7 @@ export const routeTree = rootRoute.addChildren([
     invoiceCreateRoute,
     invoiceEditRoute,
     invoiceDetailRoute,
+    dunningRoute,
     paymentsRoute,
     paymentCreateRoute,
     paymentDetailRoute,

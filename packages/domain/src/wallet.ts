@@ -50,6 +50,16 @@ export interface Wallet {
 
 export type WalletTransactionDirection = 'in' | 'out'
 
+/** Credits one product drew from a top-up. The wallet API does not send these today. */
+export interface WalletConsumption {
+  id: string
+  product: string
+  contract: string
+  /** Credits drawn, as a positive decimal string. */
+  credits: string
+  amount: Money
+}
+
 export interface WalletTransaction {
   id: string
   direction: WalletTransactionDirection
@@ -59,6 +69,12 @@ export interface WalletTransaction {
   credits: string
   amount: Money
   createdAt: Date | null
+  /** Credits of this top-up not yet drawn down; null when the API did not say. */
+  creditsAvailable: string | null
+  /** When the credits lapse; null for credits that never expire. */
+  expiresAt: Date | null
+  /** Per-product draw-down of this top-up. Absent unless the API reports it. */
+  consumption?: WalletConsumption[]
 }
 
 const decimal = /^\d+(\.\d+)?$/

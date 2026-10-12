@@ -12,6 +12,9 @@ const REASONS = [
   'Invoice payment',
 ]
 const CURRENCIES = ['USD', 'EUR', 'GBP']
+/** Fixed so "in 5 days" and the expiring-soon call-out read the same on every run. */
+const NOW = new Date('2026-10-12T00:00:00Z')
+const inDays = (days: number) => new Date(NOW.getTime() + days * 86_400_000)
 
 /** Deterministic wallets: the same count and balances always give the same cards. */
 function makeWallets(
@@ -46,11 +49,12 @@ function makeWallets(
   })
 }
 
-/** Deterministic ledger rows, newest first. */
+/** Deterministic ledger rows, newest first. Top-ups are the credit rows; one expires in 5 days. */
 function makeTransactions(count: number): WalletTransaction[] {
   return Array.from({ length: count }, (_, i) => {
     const credit = i % 3 === 0
     const credits = String(((i * 173) % 4000) + 120)
+    const left = credit ? String(Math.round(Number(credits) * [1, 0.6, 0.05][(i / 3) % 3]!)) : null
     return {
       id: `wtx_${count - i}`,
       direction: credit ? 'in' : 'out',
@@ -59,8 +63,52 @@ function makeTransactions(count: number): WalletTransaction[] {
       credits,
       amount: money((Number(credits) / 100).toFixed(2), 'USD'),
       createdAt: new Date(Date.UTC(2026, 8, 30 - (i % 28))),
+      creditsAvailable: left,
+      expiresAt: !credit || i % 2 === 0 ? null : i === 3 ? inDays(5) : inDays(90),
     }
   })
+}
+
+/** A top-up the API says nothing about beyond its amount. */
+const BARE_TOP_UP: WalletTransaction = {
+  id: 'wtx_bare',
+  direction: 'in',
+  reason: 'Credit note',
+  description: '',
+  credits: '200',
+  amount: money('100.00', 'USD'),
+  createdAt: new Date('2026-09-20T00:00:00Z'),
+  creditsAvailable: null,
+  expiresAt: null,
+}
+
+/** A top-up with a per-product draw-down, which the wallet API does not send today. */
+const WITH_BREAKDOWN: WalletTransaction = {
+  id: 'wtx_breakdown',
+  direction: 'in',
+  reason: 'Subscription grant',
+  description: 'Annual commit',
+  credits: '100000',
+  amount: money('50000.00', 'USD'),
+  createdAt: new Date('2026-09-01T00:00:00Z'),
+  creditsAvailable: '8000',
+  expiresAt: inDays(5),
+  consumption: [
+    {
+      id: 'c1',
+      product: 'Voice minutes',
+      contract: 'Acme annual 2026',
+      credits: '60000',
+      amount: money('30000.00', 'USD'),
+    },
+    {
+      id: 'c2',
+      product: 'Messages',
+      contract: 'Acme annual 2026',
+      credits: '32000',
+      amount: money('16000.00', 'USD'),
+    },
+  ],
 }
 
 const asyncOk = () => fn(async () => undefined)
@@ -78,6 +126,7 @@ const meta = {
     selectedId: 'wallet_1',
     onSelect: fn(),
     transactions: makeTransactions(8),
+    now: NOW,
     onCreateWallet: asyncOk(),
     onTopUp: asyncOk(),
     onTerminate: asyncOk(),
@@ -160,6 +209,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       transactions={makeTransactions(a.transactions)}
       isLoading={a.isLoading}
       failed={a.failed}
+      now={NOW}
       transactionsLoading={a.transactionsLoading}
       topUpError={a.topUpError || null}
       onRetry={fn()}
@@ -177,8 +227,12 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Real-time balance')).toBeInTheDocument()
     await expect(canvas.getByText('Last invoiced balance')).toBeInTheDocument()
+    await expect(canvas.getByText('Status')).toBeInTheDocument()
+    await expect(canvas.getByText('Active')).toBeInTheDocument()
     await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
     await expect(canvas.getByText('Top-up rate')).toBeInTheDocument()
+    await expect(canvas.getAllByText(/1 credit = \$0\.01/)).toHaveLength(2)
+    await expect(canvas.getByText('Expiring soon')).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /auto top-up off/i })).toBeEnabled()
     await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /top up wallet/i })).toBeEnabled()
@@ -254,6 +308,33 @@ export const NoTransactions: Story = {
   },
 }
 
+/** Remaining, consumed and expiry from the API; a top-up without them shows dashes. */
+export const LedgerColumns: Story = {
+  args: { transactions: [WITH_BREAKDOWN, ...makeTransactions(4).slice(0, 1), BARE_TOP_UP] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Remaining')).toBeInTheDocument()
+    await expect(canvas.getByText('Consumed')).toBeInTheDocument()
+    await expect(canvas.getByText('Expires')).toBeInTheDocument()
+    await expect(canvas.getByText('in 5 days')).toBeInTheDocument()
+    await expect(canvas.getByRole('img', { name: '92% consumed' })).toBeInTheDocument()
+  },
+}
+
+/** A top-up with a per-product breakdown opens to show what drew it down. */
+export const ExpandsConsumption: Story = {
+  args: { transactions: [WITH_BREAKDOWN, BARE_TOP_UP] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByText('Voice minutes')).toBeNull()
+    await userEvent.click(await canvas.findByRole('button', { name: /expand subscription grant/i }))
+    await expect(await canvas.findByText('Voice minutes')).toBeInTheDocument()
+    await expect(canvas.getByText('Messages')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: /collapse subscription grant/i }))
+    await expect(canvas.queryByText('Voice minutes')).toBeNull()
+  },
+}
+
 export const LongLedger: Story = { args: { transactions: makeTransactions(40) } }
 
 /** A terminated wallet cannot be topped up. */
@@ -307,7 +388,7 @@ export const ConfirmsTerminate: Story = {
 
 const AUTO_TOPUP_ON = { enabled: true, threshold: '100', amount: '500', invoicing: true }
 
-/** Auto top-up on: the chip says how much is added and when. */
+/** Auto top-up on: the details row says how much is added and when. */
 export const AutoTopupOn: Story = {
   args: {
     wallets: makeWallets(1, WalletStatus.Active, 10000, 7500).map((wallet) => ({
@@ -318,11 +399,11 @@ export const AutoTopupOn: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole('button', { name: /auto top-up on/i }),
-    ).toHaveTextContent('500 credits below 100')
+    ).toHaveTextContent('Below 100 credits, add 500')
   },
 }
 
-/** The chip opens the settings; turning it on needs a threshold and an amount, then saves them. */
+/** The auto top-up value opens the settings; turning it on needs a threshold and an amount, then saves them. */
 export const SavesAutoTopup: Story = {
   play: async ({ canvasElement, args }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /auto top-up off/i }))

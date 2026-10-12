@@ -102,4 +102,23 @@ describe('wallet mapping', () => {
     ).toBe('out')
     expect(toWalletTransaction({ type: 'credit' }).reason).toBe('Wallet activity')
   })
+
+  it('carries what is left of a top-up and when it expires, null when unsent', () => {
+    const expiry = new Date('2026-10-17T00:00:00Z')
+    const topUp = toWalletTransaction({
+      type: 'credit',
+      creditAmount: '1000',
+      creditsAvailable: '250',
+      expiryDate: expiry,
+    })
+    expect(topUp.creditsAvailable).toBe('250')
+    expect(topUp.expiresAt).toBe(expiry)
+    const bare = toWalletTransaction({ type: 'credit', creditAmount: '1000' })
+    expect(bare.creditsAvailable).toBeNull()
+    expect(bare.expiresAt).toBeNull()
+  })
+
+  it('shows the wallet currency in capitals', () => {
+    expect(toWallet({ id: 'w1', currency: 'usd' }).currency).toBe('USD')
+  })
 })

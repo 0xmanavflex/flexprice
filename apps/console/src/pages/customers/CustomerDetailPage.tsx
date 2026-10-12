@@ -4,6 +4,7 @@ import type { TenantFeatureUsage } from '@fp/domain'
 import {
   useCustomer,
   useCustomerInvoices,
+  useCustomerPayments,
   useCustomerSubscriptions,
   useCustomerUsageSummary,
   useDeleteCustomer,
@@ -59,6 +60,10 @@ export function CustomerDetailPage({
   const externalId = customer.data?.externalId ?? ''
   const subscriptions = useCustomerSubscriptions(externalId)
   const invoices = useCustomerInvoices(externalId)
+  // No customer filter on the payments API: read the payments of the most recent invoices.
+  const payments = useCustomerPayments(
+    (invoices.data?.invoices ?? []).slice(0, 10).map((invoice) => invoice.id),
+  )
   // Keyed on the *internal* id: `GET /customers/usage` takes that, unlike the
   // subscription and invoice reads above, which are scoped by the external one.
   const usage = useCustomerUsageSummary(customerId)
@@ -124,6 +129,10 @@ export function CustomerDetailPage({
         invoicesLoading={invoices.isLoading}
         invoicesError={invoices.isError && !invoices.data}
         onRetryInvoices={() => void invoices.refetch()}
+        payments={invoices.data ? payments.payments : undefined}
+        paymentsLoading={invoices.isLoading || payments.isLoading}
+        paymentsError={payments.isError}
+        onRetryPayments={payments.refetch}
         events={
           customer.data.externalId ? (
             <CustomerEventsPanel externalId={customer.data.externalId} />
