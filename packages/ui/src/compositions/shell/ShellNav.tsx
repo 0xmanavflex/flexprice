@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react'
-import { ChevronRightIcon } from '@ui/icons'
+import { ArrowUpRightIcon, ChevronRightIcon } from '@ui/icons'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -97,7 +97,7 @@ function CollapsedParent({
 function NavIcon({ children }: { children: ReactNode }) {
   if (!children) return null
   return (
-    <span className="inline-flex shrink-0 transition-transform duration-200 ease-out group-hover/menu-button:-rotate-6 group-hover/menu-button:scale-110 group-data-active/menu-button:scale-110 motion-reduce:transform-none motion-reduce:transition-none">
+    <span className="inline-flex shrink-0 transition-transform duration-200 ease-out group-hover/menu-button:scale-110 group-hover/menu-button:-rotate-6 group-data-active/menu-button:scale-110 motion-reduce:transform-none motion-reduce:transition-none">
       {children}
     </span>
   )
@@ -117,7 +117,11 @@ function Leaf({
       <SidebarMenuButton
         tooltip={item.label}
         isActive={isActive}
-        onClick={() => onNavigate(item.id)}
+        {...(item.href
+          ? {
+              render: <a href={item.href} target="_blank" rel="noopener noreferrer" />,
+            }
+          : { onClick: () => onNavigate(item.id) })}
         aria-current={isActive ? 'page' : undefined}
         // Always named from the item, never inferred from its text: in the icon
         // rail the label is clipped away entirely.
@@ -125,6 +129,12 @@ function Leaf({
       >
         <NavIcon>{item.icon}</NavIcon>
         <span>{item.label}</span>
+        {item.href ? (
+          <ArrowUpRightIcon
+            aria-hidden="true"
+            className="text-muted-foreground ml-auto size-3.5 in-data-[state=collapsed]:hidden"
+          />
+        ) : null}
       </SidebarMenuButton>
     </SidebarMenuItem>
   )

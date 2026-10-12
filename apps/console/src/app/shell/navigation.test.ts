@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  DOCS_URL,
   FOOTER_NAV,
   NAV,
   SECONDARY,
@@ -74,9 +75,9 @@ describe('toNavGroups', () => {
 })
 
 describe('the tree itself', () => {
-  it('gives every entry either a path or children, never neither', () => {
+  it('gives every entry a path, a link out, or children, never none', () => {
     for (const entry of [...NAV, ...FOOTER_NAV]) {
-      expect(entry.path ?? entry.children, entry.id).toBeDefined()
+      expect(entry.path ?? entry.external ?? entry.children, entry.id).toBeDefined()
     }
   })
 
@@ -122,7 +123,8 @@ describe('the sidebar layout', () => {
   // Not in the rail, but still real routes: the command palette and the
   // breadcrumb resolve against them.
   it('keeps unlisted pages reachable', () => {
-    expect(pathForNavId('docs')).toBe('/docs')
+    expect(pathForNavId('docs')).toBeUndefined()
+    expect(hrefForNavId('docs')).toBe(DOCS_URL)
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
       'settings',
       'settings-discounts',

@@ -97,8 +97,10 @@ test.describe('the shell', () => {
 
     await shell.go('Integrations')
     await expect(page).toHaveURL(atPath('/integrations'))
-    await shell.go('Documentation')
-    await expect(page).toHaveURL(atPath('/docs'))
+    // Documentation leaves the console: a link to Flexprice's own docs, new tab.
+    const docs = page.getByRole('link', { name: 'Documentation' })
+    await expect(docs).toHaveAttribute('href', /^https:\/\/docs\.flexprice\.io\//)
+    await expect(docs).toHaveAttribute('target', '_blank')
 
     // Documentation has one home: the footer, not the account menu as well.
     await page.getByRole('button', { name: /^account:/i }).click()
@@ -148,7 +150,10 @@ test.describe('the shell', () => {
     const current = await shell.currentEnvironment()
     const other = current.includes('Production') ? 'Sandbox' : 'Production'
 
-    const list = new CatalogListPage(page, { heading: 'Customers', searchLabel: 'Search customers' })
+    const list = new CatalogListPage(page, {
+      heading: 'Customers',
+      searchLabel: 'Search customers',
+    })
     await expect(list.rows().first()).toBeVisible({ timeout: 20_000 })
     await list.openFirstRow()
     await expect(page).toHaveURL(/\/customers\/(?!new)[^/]+$/)

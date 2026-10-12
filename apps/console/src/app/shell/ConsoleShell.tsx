@@ -149,10 +149,15 @@ export function ConsoleShell({
   const searchItems = useMemo(() => destinations.items.map(withSearchIcon), [destinations])
   const searchResults = useMemo(() => found.results.map(withSearchIcon), [found.results])
 
+  const open = (href: string) => {
+    if (/^https?:\/\//.test(href)) window.open(href, '_blank', 'noopener,noreferrer')
+    else onNavigate(href)
+  }
+
   const goTo = (id: string) => {
     const href = hrefForNavId(id)
     if (href) {
-      onNavigate(href)
+      open(href)
       return
     }
     // A parent: go to its first child rather than doing nothing.
@@ -262,7 +267,7 @@ export function ConsoleShell({
           onTermChange: setSearchTerm,
           onSelect: (item) => {
             const path = destinations.paths.get(item.id) ?? found.paths.get(item.id)
-            if (path) onNavigate(path)
+            if (path) open(path)
           },
         }}
       >

@@ -19,7 +19,7 @@ export function searchableDestinations(): { items: ShellSearchItem[]; paths: Map
   const paths = new Map<string, string>()
 
   for (const entry of [...NAV, ...FOOTER_NAV, ...SECONDARY]) {
-    const rows = entry.path ? [entry] : []
+    const rows = entry.path || entry.external ? [entry] : []
     for (const row of [...rows, ...(entry.children ?? [])]) {
       const href = hrefForNavId(row.id)
       if (!href) continue

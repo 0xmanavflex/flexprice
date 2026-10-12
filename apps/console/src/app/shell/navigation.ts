@@ -25,12 +25,17 @@ export interface NavEntry {
   label: string
   /** Absent for a parent: it expands, and clicking it goes to its first child. */
   path?: string
+  /** A page outside the console: the row is a link that opens it in a new tab. */
+  external?: string
   /** Search params that select this row on a page shared with others (Settings tabs). */
   query?: Record<string, string>
   /** Which `query` keys decide whether the row is active. Defaults to all of them. */
   match?: readonly string[]
   children?: NavEntry[]
 }
+
+/** Flexprice's own documentation, where the Documentation row sends you. */
+export const DOCS_URL = 'https://docs.flexprice.io/docs/overview'
 
 export const NAV: NavEntry[] = [
   { id: 'home', label: 'Home', path: '/' },
@@ -84,7 +89,7 @@ export const NAV: NavEntry[] = [
  */
 export const FOOTER_NAV: NavEntry[] = [
   { id: 'integrations', label: 'Integrations', path: '/integrations' },
-  { id: 'docs', label: 'Documentation', path: '/docs' },
+  { id: 'docs', label: 'Documentation', external: DOCS_URL },
 ]
 
 /**
@@ -150,7 +155,10 @@ export function navEntryForPath(pathname: string, search = ''): string | undefin
 
 /** The link for an entry: its path, with the search that selects it. */
 export function hrefForNavId(id: string): string | undefined {
-  const entry = leaves().find((candidate) => candidate.id === id)
+  const entry = [...leaves(), ...ALL.filter((candidate) => candidate.external)].find(
+    (candidate) => candidate.id === id,
+  )
+  if (entry?.external) return entry.external
   if (!entry?.path) return undefined
   return entry.query ? `${entry.path}?${new URLSearchParams(entry.query).toString()}` : entry.path
 }
@@ -197,6 +205,7 @@ function toItems(entries: NavEntry[], icons: Record<string, React.ReactNode>): S
     id: entry.id,
     label: entry.label,
     ...(icons[entry.id] ? { icon: icons[entry.id] } : {}),
+    ...(entry.external ? { href: entry.external } : {}),
     ...(entry.children ? { items: toItems(entry.children, {}) } : {}),
   }))
 }
