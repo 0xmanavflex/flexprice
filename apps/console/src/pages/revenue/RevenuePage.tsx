@@ -6,6 +6,8 @@ import { DEFAULT_INVOICE_QUERY, InvoiceStatus } from '@fp/domain'
 import type { Invoice } from '@fp/domain'
 import { RevenueDashboard } from '@fp/ui/pages'
 import type { MetricTab, RevenueDashboardProps } from '@fp/ui/pages'
+import { qualityOf, withoutData } from '../home/queryView'
+import type { QueryView } from '../home/queryView'
 
 /**
  * Revenue — wired to what the API can actually answer, and explicit about the
@@ -67,7 +69,12 @@ function dayStart(daysAgo: number): Date {
   return date
 }
 
-const dayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
+// Days are cut at midnight UTC (`dayStart`), so they are labelled in UTC too.
+const dayLabel = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+})
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
 
@@ -195,46 +202,13 @@ export function RevenuePage() {
     sortDirection: 'desc',
   })
 
-  const chart = useMemo<RevenueDashboardProps['chart']>(
-    () => ({
-      ...toChartPanel(
-        analytics.data,
-        priorAnalytics.data,
-        invoices.data?.invoices ?? [],
-        windows,
-        analytics.isPending || invoices.isPending,
-        analytics.isError,
-      ),
-      activeTab,
-      onTabChange: setActiveTab,
-    }),
-    [
-      analytics.data,
-      analytics.isPending,
-      analytics.isError,
-      priorAnalytics.data,
-      invoices.data,
-      invoices.isPending,
-      windows,
-      activeTab,
-    ],
-  )
-
-  const mix = useMemo<RevenueDashboardProps['mix']>(
-    () => toMixPanel(analytics.data, analytics.isPending, analytics.isError),
-    [analytics.data, analytics.isPending, analytics.isError],
-  )
-
-  const collections = useMemo<RevenueDashboardProps['collections']>(
-    () =>
-      toCollectionsPanel(
-        invoices.data?.invoices ?? [],
-        windows.current,
-        invoices.isPending,
-        invoices.isError,
-      ),
-    [invoices.data, invoices.isPending, invoices.isError, windows],
-  )
+  const chart: RevenueDashboardProps['chart'] = {
+    ...toChartPanel(analytics, priorAnalytics, invoices, windows),
+    activeTab,
+    onTabChange: setActiveTab,
+  }
+  const mix = toMixPanel(analytics)
+  const collections = toCollectionsPanel(invoices, windows.current)
 
   return (
     <RevenueDashboard
@@ -269,6 +243,39 @@ function issuedIn(rows: Invoice[], window: Window): Invoice[] {
   )
 }
 
+type InvoiceView = QueryView<{ invoices: Invoice[]; total: number }>
+
+/** The earliest issue date among loaded invoices, or `null` when none has one. */
+function oldestIssued(rows: Invoice[]): Date | null {
+  let min: Date | null = null
+  for (const row of rows) {
+    if (row.issuedAt !== null && (min === null || row.issuedAt < min)) min = row.issuedAt
+  }
+  return min
+}
+
+/**
+ * What the invoice list can vouch for.
+ *
+ * The page is newest-first and capped. When the server holds more rows than
+ * came back and the oldest one loaded is still inside a window, older members
+ * of that window were never fetched, so any count over it is a floor.
+ */
+function invoiceCoverage(page: { invoices: Invoice[]; total: number }, windows: Windows) {
+  const truncated = page.total > page.invoices.length
+  const oldest = oldestIssued(page.invoices)
+  return {
+    current: !truncated || (oldest !== null && oldest < windows.current.start),
+    prior: !truncated || (oldest !== null && oldest < windows.prior.start),
+    note: `Based on the latest ${page.invoices.length.toLocaleString()} invoices.`,
+  }
+}
+
+interface Windows {
+  current: Window
+  prior: Window
+}
+
 /**
  * The tab strip and its three series.
  *
@@ -276,72 +283,159 @@ function issuedIn(rows: Invoice[], window: Window): Invoice[] {
  * change is the same metric measured over the window before this one. None of
  * the three is money, and that is the finding rather than an omission: see the
  * file header.
+ *
+ * Each tab has its own status, because two queries feed the strip and they can
+ * disagree: metered usage can be on screen while the invoice list has failed,
+ * and that tab then says so and offers a retry instead of drawing a dash. The
+ * strip as a whole is `loading` or `unavailable` only when nothing has loaded,
+ * and `empty` (the first-run message) only when both sources answered and both
+ * were empty.
  */
 function toChartPanel(
-  data: UsageAnalytics | undefined,
-  prior: UsageAnalytics | undefined,
-  invoiceRows: Invoice[],
-  windows: { current: Window; prior: Window },
-  isPending: boolean,
-  isError: boolean,
+  analytics: QueryView<UsageAnalytics>,
+  priorAnalytics: QueryView<UsageAnalytics>,
+  invoices: InvoiceView,
+  windows: Windows,
 ): Omit<RevenueDashboardProps['chart'], 'activeTab' | 'onTabChange'> {
-  if (isError) return { status: 'unavailable', tabs: [] }
-  if (isPending || data === undefined) return { status: 'loading', tabs: [] }
-  if (data.points.length === 0) return { status: 'empty', tabs: [] }
+  const data = analytics.data
+  const page = invoices.data
+  const usageStatus = data !== undefined ? 'ready' : withoutData(analytics)
+  const invoiceStatus = page !== undefined ? 'ready' : withoutData(invoices)
 
-  const usage = data.points.reduce((sum, point) => sum + point.usage, 0)
-  const priorUsage = prior?.points.reduce((sum, point) => sum + point.usage, 0) ?? 0
+  const aQuality = qualityOf(analytics)
+  const iQuality = qualityOf(invoices)
+  const updated = [aQuality.updatedAt, iQuality.updatedAt].filter(
+    (at): at is number => at !== undefined,
+  )
+  const quality = {
+    onRetry: () => {
+      // Only ask again for what failed; an in-flight or good source stays.
+      if (usageStatus === 'unavailable' || aQuality.stale) aQuality.onRetry()
+      if (invoiceStatus === 'unavailable' || iQuality.stale) iQuality.onRetry()
+    },
+    isRetrying: aQuality.isRetrying || iQuality.isRetrying,
+    refreshing: aQuality.refreshing || iQuality.refreshing,
+    provisional: aQuality.provisional || iQuality.provisional,
+    stale: aQuality.stale || iQuality.stale,
+    // The older of the two, so "updated" never claims fresher than the stalest figure.
+    updatedAt: updated.length > 0 ? Math.min(...updated) : undefined,
+  }
 
-  // One bucket per day of the window, oldest first, so a quiet day is a gap in
-  // the line rather than a day that silently leaves the axis.
-  const invoiceBuckets: { label: string; value: number }[] = []
-  const issued = issuedIn(invoiceRows, windows.current)
-  for (let offset = RANGE_DAYS - 1; offset >= 0; offset -= 1) {
-    const start = dayStart(offset)
-    const end = new Date(start.getTime() + DAY_MS)
-    invoiceBuckets.push({
-      label: dayLabel.format(start),
-      value: issued.filter(
-        (row) => row.issuedAt !== null && row.issuedAt >= start && row.issuedAt < end,
-      ).length,
+  if (data === undefined && page === undefined) {
+    // Nothing on screen. Homogeneous states collapse to one; mixed ones fall
+    // through to a strip whose tabs say which source is which.
+    if (usageStatus === 'loading' && invoiceStatus === 'loading') {
+      return { ...quality, status: 'loading', tabs: [] }
+    }
+    if (usageStatus === 'unavailable' && invoiceStatus === 'unavailable') {
+      return { ...quality, status: 'unavailable', tabs: [] }
+    }
+  }
+
+  const issued = page ? issuedIn(page.invoices, windows.current) : []
+  if (data?.points.length === 0 && page !== undefined && issued.length === 0) {
+    return { ...quality, status: 'empty', tabs: [] }
+  }
+
+  const coverage = page ? invoiceCoverage(page, windows) : undefined
+  // A prior window that is itself a held-over copy of another window is not a comparison.
+  const priorData =
+    priorAnalytics.data !== undefined && !priorAnalytics.isPlaceholderData
+      ? priorAnalytics.data
+      : undefined
+
+  const tabs: MetricTab[] = []
+
+  if (data === undefined) {
+    // No data for this source: say whether it is loading or failed, per tab.
+    for (const [id, label] of [
+      ['usage', 'Metered usage'],
+      ['events', 'Events ingested'],
+    ] as const) {
+      tabs.push({
+        id,
+        label,
+        value: '',
+        points: [],
+        status: usageStatus,
+        onRetry: () => void analytics.refetch(),
+      })
+    }
+  } else {
+    const usage = data.points.reduce((sum, point) => sum + point.usage, 0)
+    const priorUsage = priorData?.points.reduce((sum, point) => sum + point.usage, 0) ?? 0
+    tabs.push(
+      {
+        id: 'usage',
+        label: 'Metered usage',
+        value: compact.format(usage),
+        changePercent: change(usage, priorUsage) ?? undefined,
+        points: data.points.map((point) => ({
+          label: dayLabel.format(point.timestamp),
+          value: point.usage,
+        })),
+        format: (value) => compact.format(value),
+        emptyMessage: 'No metered usage in this period',
+      },
+      {
+        id: 'events',
+        label: 'Events ingested',
+        value: compact.format(data.eventCount),
+        changePercent: change(data.eventCount, priorData?.eventCount ?? 0) ?? undefined,
+        points: data.points.map((point) => ({
+          label: dayLabel.format(point.timestamp),
+          value: point.eventCount,
+        })),
+        format: (value) => compact.format(value),
+        emptyMessage: 'No events ingested in this period',
+      },
+    )
+  }
+
+  if (page === undefined) {
+    tabs.push({
+      id: 'invoices',
+      label: 'Invoices issued',
+      value: '',
+      points: [],
+      status: invoiceStatus,
+      onRetry: () => void invoices.refetch(),
+    })
+  } else {
+    // One bucket per day of the window, oldest first, so a quiet day is a gap in
+    // the line rather than a day that silently leaves the axis.
+    const invoiceBuckets: { label: string; value: number }[] = []
+    for (let offset = RANGE_DAYS - 1; offset >= 0; offset -= 1) {
+      const start = dayStart(offset)
+      const end = new Date(start.getTime() + DAY_MS)
+      invoiceBuckets.push({
+        label: dayLabel.format(start),
+        value: issued.filter(
+          (row) => row.issuedAt !== null && row.issuedAt >= start && row.issuedAt < end,
+        ).length,
+      })
+    }
+    const complete = coverage?.current ?? true
+    tabs.push({
+      id: 'invoices',
+      label: 'Invoices issued',
+      // A floor is written as one, never as the total.
+      value: `${whole.format(issued.length)}${complete ? '' : '+'}`,
+      changePercent:
+        complete && coverage?.prior
+          ? (change(issued.length, issuedIn(page.invoices, windows.prior).length) ?? undefined)
+          : undefined,
+      points: invoiceBuckets,
+      format: (value) => whole.format(value),
     })
   }
 
-  const tabs: MetricTab[] = [
-    {
-      id: 'usage',
-      label: 'Metered usage',
-      value: compact.format(usage),
-      changePercent: change(usage, priorUsage) ?? undefined,
-      points: data.points.map((point) => ({
-        label: dayLabel.format(point.timestamp),
-        value: point.usage,
-      })),
-      format: (value) => compact.format(value),
-    },
-    {
-      id: 'events',
-      label: 'Events ingested',
-      value: compact.format(data.eventCount),
-      changePercent: change(data.eventCount, prior?.eventCount ?? 0) ?? undefined,
-      points: data.points.map((point) => ({
-        label: dayLabel.format(point.timestamp),
-        value: point.eventCount,
-      })),
-      format: (value) => compact.format(value),
-    },
-    {
-      id: 'invoices',
-      label: 'Invoices issued',
-      value: whole.format(issued.length),
-      changePercent:
-        change(issued.length, issuedIn(invoiceRows, windows.prior).length) ?? undefined,
-      points: invoiceBuckets,
-      format: (value) => whole.format(value),
-    },
-  ]
-
-  return { status: 'ready', tabs }
+  return {
+    ...quality,
+    status: 'ready',
+    tabs,
+    basedOn: coverage && !coverage.current ? coverage.note : undefined,
+  }
 }
 
 /**
@@ -358,18 +452,17 @@ function toChartPanel(
  * for; at a phone's width, four feature names run into each other. A legend
  * that cannot be read is worse than a tail that has been folded into "other".
  */
-function toMixPanel(
-  data: UsageAnalytics | undefined,
-  isPending: boolean,
-  isError: boolean,
-): RevenueDashboardProps['mix'] {
-  if (isError) return { status: 'unavailable', slices: [], total: 0 }
-  if (isPending || data === undefined) return { status: 'loading', slices: [], total: 0 }
+function toMixPanel(view: QueryView<UsageAnalytics>): RevenueDashboardProps['mix'] {
+  const quality = qualityOf(view)
+  const data = view.data
+  if (data === undefined) {
+    return { ...quality, status: withoutData(view), slices: [], total: 0 }
+  }
 
   const ranked = [...data.features]
     .filter((feature) => feature.eventCount > 0)
     .sort((a, b) => b.eventCount - a.eventCount)
-  if (ranked.length === 0) return { status: 'empty', slices: [], total: 0 }
+  if (ranked.length === 0) return { ...quality, status: 'empty', slices: [], total: 0 }
 
   const named = ranked.length <= 3 ? ranked : ranked.slice(0, 2)
   const slices = named.map((feature) => ({
@@ -382,6 +475,7 @@ function toMixPanel(
   if (rest > 0) slices.push({ id: 'other', label: 'Other features', value: rest })
 
   return {
+    ...quality,
     status: 'ready',
     slices,
     // The sum of the slices, not `data.eventCount`: features with no events in
@@ -392,24 +486,31 @@ function toMixPanel(
 }
 
 function toCollectionsPanel(
-  rows: Invoice[],
+  view: InvoiceView,
   window: Window,
-  isPending: boolean,
-  isError: boolean,
 ): RevenueDashboardProps['collections'] {
+  const quality = qualityOf(view)
   const blank = { paid: 0, open: 0, overdue: 0 }
-  if (isError) return { status: 'unavailable', ...blank }
-  if (isPending) return { status: 'loading', ...blank }
+  const page = view.data
+  if (page === undefined) return { ...quality, status: withoutData(view), ...blank }
 
-  const issued = issuedIn(rows, window)
-  if (issued.length === 0) return { status: 'empty', ...blank }
+  const issued = issuedIn(page.invoices, window)
+  if (issued.length === 0) return { ...quality, status: 'empty', ...blank }
 
   const count = (status: string) => issued.filter((row) => row.status === status).length
 
+  const truncated = page.total > page.invoices.length
+  const oldest = oldestIssued(page.invoices)
+  const complete = !truncated || (oldest !== null && oldest < window.start)
+
   return {
+    ...quality,
     status: 'ready',
     paid: count(InvoiceStatus.Paid),
     open: count(InvoiceStatus.Open),
     overdue: count(InvoiceStatus.Overdue),
+    basedOn: complete
+      ? undefined
+      : `Based on the latest ${page.invoices.length.toLocaleString()} invoices.`,
   }
 }

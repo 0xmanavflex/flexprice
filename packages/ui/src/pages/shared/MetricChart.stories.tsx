@@ -229,3 +229,79 @@ export const WithoutTrend: Story = {
     tabs: tabs.map(({ changePercent: _unused, ...tab }) => tab),
   },
 }
+
+/**
+ * Still loading: the headline is a placeholder and the plot a shapeless
+ * skeleton. Neither a "0" nor a flat line is drawn for a figure not yet known.
+ */
+export const Loading: Story = {
+  args: {
+    tabs: tabs.map(({ id, label }) => ({ id, label, value: '', points: [], status: 'loading' })),
+    activeTab: 'events',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByRole('status').length).toBeGreaterThan(0)
+    await expect(canvas.queryByText('0')).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('img', { name: /no data/i })).not.toBeInTheDocument()
+  },
+}
+
+/** A failed tab says so, offers a retry, and does not claim the window was empty. */
+export const Unavailable: Story = {
+  args: {
+    tabs: tabs.map((tab, index) =>
+      index === 0
+        ? {
+            id: tab.id,
+            label: tab.label,
+            value: '',
+            points: [],
+            status: 'unavailable',
+            onRetry: fn(),
+          }
+        : tab,
+    ),
+    activeTab: 'events',
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('alert')).toHaveTextContent(/couldn.t be loaded/i)
+    await expect(canvas.queryByText(/no events in this period/i)).not.toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.tabs[0]?.onRetry).toHaveBeenCalled()
+  },
+}
+
+/** A ready tab with no series can say something truer than "No events in this period". */
+export const CustomEmptyMessage: Story = {
+  args: {
+    tabs: tabs.map((tab) => ({
+      ...tab,
+      points: [],
+      emptyMessage: 'No usage for this customer in this period',
+    })),
+    activeTab: 'events',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('img', { name: /no usage for this customer in this period/i }),
+    ).toBeInTheDocument()
+  },
+}
+
+/** Arrow keys, Home and End move between tabs, as a tablist is expected to. */
+export const KeyboardNavigation: Story = {
+  render: Controlled.render!,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    canvas.getByRole('tab', { name: /events/i }).focus()
+    await userEvent.keyboard('{ArrowRight}')
+    await expect(args.onTabChange).toHaveBeenLastCalledWith('invoices')
+    await userEvent.keyboard('{End}')
+    await expect(args.onTabChange).toHaveBeenLastCalledWith('subscriptions')
+    await userEvent.keyboard('{Home}')
+    await expect(args.onTabChange).toHaveBeenLastCalledWith('events')
+  },
+}

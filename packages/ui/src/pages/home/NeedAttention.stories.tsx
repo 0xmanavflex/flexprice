@@ -56,12 +56,23 @@ export const NothingWaiting: Story = {
 
 export const Loading: Story = { args: { attention: { status: 'loading', items: [] } } }
 
-/** Not "nothing waiting": the question could not be asked. */
+/** Not "nothing waiting": the question could not be asked, and it can be asked again. */
 export const Unavailable: Story = {
-  args: { attention: { status: 'unavailable', items: [] } },
+  args: { attention: { status: 'unavailable', items: [], onRetry: fn() } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Tasks could not be loaded.')
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.attention.onRetry).toHaveBeenCalled()
+  },
+}
+
+/** A failed refresh keeps the last good rows on screen and says they may be old. */
+export const StaleKeepsRows: Story = {
+  args: { attention: { status: 'ready', items: ITEMS, stale: true, onRetry: fn() } },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('status')).toHaveTextContent(
-      'Tasks could not be loaded.',
-    )
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('status')).toHaveTextContent('out of date')
+    await expect(canvas.getByRole('button', { name: /7 overdue invoices/i })).toBeInTheDocument()
   },
 }

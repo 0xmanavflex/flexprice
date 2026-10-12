@@ -49,15 +49,28 @@ const SENTIMENT_TEXT: Record<Sentiment, string> = {
 
 export function Metric({ label, value, hint, change, isLoading = false }: MetricProps) {
   return (
-    <div className="bg-background flex flex-col gap-1 rounded-xl border p-4">
-      <span className="text-muted-foreground text-xs">{label}</span>
+    <div className="bg-background flex min-w-0 flex-col gap-1 rounded-xl border p-4">
+      <span className="text-muted-foreground truncate text-xs" title={label}>
+        {label}
+      </span>
 
       {isLoading ? (
-        <div aria-hidden className="bg-muted h-7 w-24 animate-pulse rounded" />
+        <div aria-hidden className="bg-muted h-7 w-24 rounded motion-safe:animate-pulse" />
       ) : (
-        <span className="text-2xl font-medium tabular-nums">{value}</span>
+        <span
+          className="min-w-0 truncate text-2xl font-medium tabular-nums"
+          {...(typeof value === 'string' || typeof value === 'number'
+            ? { title: String(value) }
+            : {})}
+        >
+          {value}
+        </span>
       )}
-      {isLoading ? <span className="sr-only">Loading {label}</span> : null}
+      {isLoading ? (
+        <span role="status" className="sr-only">
+          Loading {label}
+        </span>
+      ) : null}
 
       {change && !isLoading ? (
         <span

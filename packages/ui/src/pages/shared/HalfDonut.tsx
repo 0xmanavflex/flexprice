@@ -2,6 +2,8 @@ import type { ReactNode } from 'react'
 import { Cell, Pie, PieChart } from 'recharts'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@ui/components/primitives/chart'
 import type { ChartConfig } from '@ui/components/primitives/chart'
+import { RetryAction } from '@ui/compositions/feedback/RetryAction'
+import { ValuePlaceholder } from '@ui/compositions/feedback/Skeletons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { formatWhole, toneColor } from './charts'
@@ -25,10 +27,16 @@ import type { ChartTone } from './charts'
  * A window where everything is zero draws a single muted ring rather than
  * nothing. An empty box reads as a chart that failed to load; a complete ring
  * with `0` in the middle reads as the answer, which is what it is.
+ *
+ * That only holds when the window really is empty. `status` lets a caller say
+ * the figures are still `loading`, `error`ed, or `empty` without ever drawing a
+ * 0: loading shows bars where the numbers go, an error says "Unavailable" and
+ * offers a retry, and `empty` shows an em dash. Omitted, `status` is `ready`
+ * and the all-zero ring above applies, so existing callers are unchanged.
  */
 export const HalfDonutProvenance = provenance({
   source: 'composition',
-  composes: ['ui/chart'],
+  composes: ['ui/chart', 'compositions/feedback/RetryAction', 'compositions/feedback/Skeletons'],
   note: 'chart-12 half-donut geometry over real slices, tones from the validated palette, centre total and footer legend. Lineage: @reui/chart-12.',
 })
 
@@ -61,6 +69,14 @@ export interface HalfDonutProps {
   /** Accessible name for the plot. */
   label: string
   className?: string | undefined
+  /**
+   * What the figures are. `loading` and `error` draw the empty ring with no
+   * numbers; `empty` draws it with an em dash instead of the centre value.
+   */
+  status?: 'ready' | 'loading' | 'error' | 'empty' | undefined
+  /** Offered in the `error` state. */
+  onRetry?: (() => void) | undefined
+  isRetrying?: boolean | undefined
 }
 
 export function HalfDonut({
@@ -70,9 +86,15 @@ export function HalfDonut({
   format = formatWhole,
   label,
   className,
+  status = 'ready',
+  onRetry,
+  isRetrying,
 }: HalfDonutProps) {
   const total = slices.reduce((sum, slice) => sum + Math.max(slice.value, 0), 0)
-  const empty = total <= 0
+  const loading = status === 'loading'
+  const failed = status === 'error'
+  const unknown = loading || failed
+  const empty = unknown || status === 'empty' || total <= 0
 
   // Recharts needs something with a non-zero value to draw an arc at all, so an
   // all-zero window is drawn as one full muted ring — the track, not a slice.
@@ -85,7 +107,12 @@ export function HalfDonut({
   ) satisfies ChartConfig
 
   return (
-    <div className={cn('flex flex-col gap-6', className)}>
+    <div className={cn('flex flex-col gap-6', className)} aria-busy={loading || undefined}>
+      {loading ? (
+        <span role="status" className="sr-only">
+          Loading {label}
+        </span>
+      ) : null}
       <div className="relative mx-auto h-[150px] w-full max-w-[290px]">
         <ChartContainer
           config={config}
@@ -93,11 +120,15 @@ export function HalfDonut({
           initialDimension={{ width: 290, height: 150 }}
           role="img"
           aria-label={
-            empty
-              ? `${label}: nothing in this period`
-              : `${label}: ${slices
-                  .map((slice) => `${slice.label} ${format(slice.value)}`)
-                  .join(', ')}`
+            loading
+              ? `${label}: loading`
+              : failed
+                ? `${label}: unavailable`
+                : empty
+                  ? `${label}: nothing in this period`
+                  : `${label}: ${slices
+                      .map((slice) => `${slice.label} ${format(slice.value)}`)
+                      .join(', ')}`
           }
         >
           <PieChart accessibilityLayer margin={{ top: 0, right: 0, bottom: 0, left: 0 }}>
@@ -147,9 +178,25 @@ export function HalfDonut({
 
         <div className="pointer-events-none absolute inset-x-0 top-[78px] flex flex-col items-center">
           <span className="text-muted-foreground text-xs">{centerLabel}</span>
-          <span className="text-2xl font-medium tabular-nums">{centerValue}</span>
+          <span className="text-2xl font-medium tabular-nums">
+            {loading ? (
+              <ValuePlaceholder width={5} label={`Loading ${centerLabel}`} />
+            ) : failed ? (
+              <span className="text-muted-foreground text-sm font-normal">Unavailable</span>
+            ) : status === 'empty' ? (
+              <span className="text-muted-foreground">{'\u2014'}</span>
+            ) : (
+              centerValue
+            )}
+          </span>
         </div>
       </div>
+
+      {failed && onRetry ? (
+        <div className="flex justify-center">
+          <RetryAction onRetry={onRetry} {...(isRetrying !== undefined ? { isRetrying } : {})} />
+        </div>
+      ) : null}
 
       {/* The legend, and the numeric readout, in one row. */}
       <ul
@@ -170,7 +217,17 @@ export function HalfDonut({
               />
               <span className="truncate">{slice.label}</span>
             </span>
-            <span className="text-[15px] font-medium tabular-nums">{format(slice.value)}</span>
+            {unknown ? (
+              loading ? (
+                <ValuePlaceholder width={4} label={`Loading ${slice.label}`} />
+              ) : (
+                <span className="text-muted-foreground text-xs">Unavailable</span>
+              )
+            ) : status === 'empty' ? (
+              <span className="text-muted-foreground text-[15px]">{'\u2014'}</span>
+            ) : (
+              <span className="text-[15px] font-medium tabular-nums">{format(slice.value)}</span>
+            )}
           </li>
         ))}
       </ul>

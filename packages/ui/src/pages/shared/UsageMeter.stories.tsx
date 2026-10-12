@@ -54,6 +54,17 @@ export const Playground = {
   ),
 } satisfies StoryObj<PlaygroundArgs>
 
+/** 99.5% floors to 99: a full bar means the limit has been reached. */
+export const JustUnderTheLimit: Story = {
+  args: { used: 9950 },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('progressbar')).toHaveAttribute(
+      'aria-valuenow',
+      '99',
+    )
+  },
+}
+
 export const NearLimit: Story = { args: { used: 9600 } }
 
 /** The bar caps; the number does not. */

@@ -422,6 +422,15 @@ export const Populated: Story = {
 
     // No "Configure" shortcut: the filters are the only controls up top.
     await expect(canvas.queryByRole('button', { name: 'Configure' })).toBeNull()
+
+    // The customer filter's reach and the day boundary are said, not implied.
+    await expect(
+      canvas.getByText(/customer filter applies to usage and revenue only/i),
+    ).toBeInTheDocument()
+    await expect(canvas.getByText(/Days run from 00:00/)).toBeInTheDocument()
+    await expect(canvas.getByRole('combobox', { name: 'Customer' })).toHaveAccessibleDescription(
+      /usage and revenue only/i,
+    )
   },
 }
 
@@ -451,8 +460,14 @@ export const UnavailableMetricsStayAbsent: Story = {
       canvas.getByText('Flexprice does not expose an ingestion-lag metric.'),
     ).toBeInTheDocument()
 
-    // Processing lag: one dash, no invented number.
-    await expect(canvas.getAllByText('—')).toHaveLength(1)
+    // Processing lag: stated as not measured, never a dash that reads as "no
+    // value" and never a number.
+    await expect(canvas.getByText('Not measured')).toBeInTheDocument()
+    await expect(canvas.queryAllByText('—')).toHaveLength(0)
+    await expect(canvas.queryByText(/no processing lag/i)).toBeNull()
+    await expect(
+      canvas.getByText('Processing lag isn’t measured, so there is nothing to plot.'),
+    ).toBeInTheDocument()
   },
 }
 
@@ -490,13 +505,14 @@ export const LinksToInvoices: Story = {
 }
 
 /**
- * Nothing ingested yet.
- *
- * The full first-run variant: dashes in the stat strip, the invitation over a
- * dimmed chart, and greyed bars.
+ * Nothing ingested yet, over the widest range on offer, so "no usage" can be
+ * read as "never": the first-run invitation, dashes in the stat strip and a
+ * dimmed chart.
  */
 export const FirstRun: Story = {
   args: {
+    range: '30d',
+    rangeLabel: 'last 30 days',
     events: { status: 'empty', points: [], total: null, revenue: null },
     customers: { status: 'empty', newCount: 0, partial: false, points: [] },
     subscriptions: { status: 'empty', total: 0, changePercent: null, days: [], plans: [] },
@@ -505,14 +521,15 @@ export const FirstRun: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await expect(canvas.getByText('No events yet')).toBeInTheDocument()
-    await expect(
-      canvas.getByText('Contracts created in this period appear here, by plan.'),
-    ).toBeInTheDocument()
+    await expect(canvas.getByText('No events received yet')).toBeInTheDocument()
+    await expect(canvas.queryByText('No usage in this period')).toBeNull()
+    await expect(canvas.getByText('No contracts were created in this period.')).toBeInTheDocument()
+    await expect(canvas.getByText('No invoices in this period.')).toBeInTheDocument()
 
-    // Nothing is claimed: every headline figure is a dash or a zero, and the
-    // quickstart is offered rather than a number being guessed.
-    await expect(canvas.getByRole('button', { name: 'Quickstart' })).toBeInTheDocument()
+    // Nothing is claimed: no "0 new contracts", no "0" in the invoice ring, and
+    // the test event is offered rather than a number being guessed.
+    await expect(canvas.queryByText('0')).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Send a test event' })).toBeInTheDocument()
 
     // The message sits *over* a chart rather than instead of one, and that
     // chart is decoration three ways over — out of the accessibility tree, out
@@ -524,18 +541,137 @@ export const FirstRun: Story = {
   },
 }
 
-/** Every query failed. The panels say so rather than rendering zeroes. */
-export const Unavailable: Story = {
+/**
+ * The window is empty but a wider one might not be: this is a period message,
+ * not a first-run one, and it offers the wider range rather than a quickstart.
+ */
+export const PeriodEmpty: Story = {
   args: {
-    events: { status: 'unavailable', points: [], total: null, revenue: null },
-    customers: { status: 'unavailable', newCount: null, partial: false, points: [] },
-    subscriptions: { status: 'unavailable', total: 0, changePercent: null, days: [], plans: [] },
-    invoices: { status: 'unavailable', total: 0, paid: 0, open: 0, overdue: 0 },
+    events: { status: 'empty', points: [], total: null, revenue: null },
+    customers: { status: 'empty', newCount: 0, partial: false, points: [] },
+    subscriptions: { status: 'empty', total: 0, changePercent: null, days: [], plans: [] },
+    invoices: { status: 'empty', total: 0, paid: 0, open: 0, overdue: 0 },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('No usage in this period')).toBeInTheDocument()
+    await expect(canvas.queryByText('No events received yet')).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Send a test event' })).toBeNull()
+    await userEvent.click(canvas.getAllByRole('button', { name: 'Show last 30 days' })[0]!)
+    await expect(args.onRangeChange).toHaveBeenCalledWith('30d')
+  },
+}
+
+/** A customer is picked and has no usage: the message says so, and offers all customers. */
+export const CustomerFilteredEmpty: Story = {
+  args: {
+    customer: 'cus_1',
+    range: '30d',
+    events: { status: 'empty', points: [], total: null, revenue: null },
+    customers: { status: 'empty', newCount: 0, partial: false, points: [] },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('No usage for this customer in this period')).toBeInTheDocument()
+    await expect(canvas.queryByText('No events received yet')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: 'Show all customers' }))
+    await expect(args.onCustomerChange).toHaveBeenCalledWith('all')
+  },
+}
+
+/**
+ * Every query is in flight. Bars where the numbers go, a skeleton where the
+ * chart goes, no first-run invitation and no zeroes.
+ */
+export const Loading: Story = {
+  args: {
+    events: { status: 'loading', points: [], total: null, revenue: null },
+    customers: { status: 'loading', newCount: null, partial: false, points: [] },
+    subscriptions: { status: 'loading', total: 0, changePercent: null, days: [], plans: [] },
+    invoices: { status: 'loading', total: 0, paid: 0, open: 0, overdue: 0 },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Usage analytics unavailable')).toBeInTheDocument()
+    await expect(canvas.getByRole('img', { name: 'Loading Revenue' })).toBeInTheDocument()
+    await expect(canvas.getByRole('img', { name: 'Loading new contracts' })).toBeInTheDocument()
+    await expect(canvas.getAllByRole('status').length).toBeGreaterThan(0)
+    await expect(canvas.queryByText('0')).toBeNull()
+    await expect(canvas.queryByText('—')).toBeNull()
+    await expect(canvas.queryByText('No events received yet')).toBeNull()
+    await expect(canvas.queryByText('No usage in this period')).toBeNull()
+    await expect(canvasElement.querySelector('[inert]')).toBeNull()
+  },
+}
+
+/**
+ * Part of the page failed. The events tabs say so with a retry while the
+ * customer count and the invoice ring, which loaded, stay on screen.
+ */
+export const PartialFailure: Story = {
+  args: {
+    events: { status: 'unavailable', points: [], total: null, revenue: null, onRetry: fn() },
+    invoices: { ...invoices, basedOn: 'Based on the latest 100 invoices.' },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Revenue couldn’t be loaded.')).toBeInTheDocument()
+    await expect(canvas.getByText('14')).toBeInTheDocument()
+    await expect(canvas.getByText('56')).toBeInTheDocument()
+    await expect(canvas.getByText('Based on the latest 100 invoices.')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.events.onRetry).toHaveBeenCalled()
+  },
+}
+
+/** A refresh failed over good data: the figures stay, with their age and a retry. */
+export const StaleKeepsData: Story = {
+  args: {
+    events: { ...events, stale: true, updatedAt: Date.now() - 5 * 60_000, onRetry: fn() },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/Couldn’t refresh/)).toBeInTheDocument()
+    await expect(canvas.getByText('5.1M')).toBeInTheDocument()
+    await expect(canvas.queryByText('Revenue couldn’t be loaded.')).toBeNull()
+  },
+}
+
+/** Every query failed. The panels say so, with a way to ask again, rather than rendering zeroes. */
+export const Unavailable: Story = {
+  args: {
+    events: { status: 'unavailable', points: [], total: null, revenue: null, onRetry: fn() },
+    customers: {
+      status: 'unavailable',
+      newCount: null,
+      partial: false,
+      points: [],
+      onRetry: fn(),
+    },
+    subscriptions: {
+      status: 'unavailable',
+      total: 0,
+      changePercent: null,
+      days: [],
+      plans: [],
+      onRetry: fn(),
+    },
+    invoices: {
+      status: 'unavailable',
+      total: 0,
+      paid: 0,
+      open: 0,
+      overdue: 0,
+      onRetry: fn(),
+    },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Revenue couldn’t be loaded.')).toBeInTheDocument()
     await expect(canvas.getByText('Contracts could not be loaded.')).toBeInTheDocument()
     await expect(canvas.getByText('Invoices could not be loaded.')).toBeInTheDocument()
+    await expect(canvas.queryByText('0')).toBeNull()
+    await expect(canvas.queryByText('No events received yet')).toBeNull()
+    await userEvent.click(canvas.getAllByRole('button', { name: /try again/i })[0]!)
+    await expect(args.events.onRetry).toHaveBeenCalled()
   },
 }

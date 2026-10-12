@@ -42,6 +42,20 @@ export interface MoneyProps {
   className?: string
 }
 
+/**
+ * `Intl.NumberFormat` throws a RangeError on a currency code it does not know.
+ * A malformed code from the API must not take the page down, and must not be
+ * silently shown as another currency: fall back to the plain number and the
+ * code as sent.
+ */
+function safeFormat(value: MoneyValue, locale?: string): string {
+  try {
+    return formatMoney(value, locale)
+  } catch {
+    return `${value.amount} ${value.currency}`.trim()
+  }
+}
+
 export function Money({
   value,
   locale,
@@ -52,7 +66,7 @@ export function Money({
 }: MoneyProps) {
   const zero = isZeroMoney(value)
   const negative = isNegativeMoney(value)
-  const formatted = formatMoney(value, locale)
+  const formatted = safeFormat(value, locale)
 
   return (
     <span

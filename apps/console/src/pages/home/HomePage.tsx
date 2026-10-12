@@ -16,6 +16,8 @@ import {
 } from '@fp/domain'
 import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
 import { DashboardHome } from '@fp/ui/pages'
+import { failed, qualityOf, withoutData } from './queryView'
+import type { QueryView } from './queryView'
 import type {
   AttentionItem,
   AttentionPanel,
@@ -86,7 +88,16 @@ function dayStart(daysAgo: number): Date {
   return date
 }
 
-const dayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short' })
+/*
+ * Every label is cut in UTC, because every window is: `dayStart` buckets on
+ * midnight UTC, so a label in the browser's zone would put a bucket's events
+ * under the wrong date. The page says "UTC" next to the filters.
+ */
+const dayLabel = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  timeZone: 'UTC',
+})
 /*
  * The subscription matrix's axis, which carries the day alone.
  *
@@ -96,8 +107,8 @@ const dayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'sh
  * seven times spends the only horizontal room the axis has on the one part
  * that does not change.
  */
-const columnDayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric' })
-const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric' })
+const columnDayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', timeZone: 'UTC' })
+const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric', timeZone: 'UTC' })
 // Parked with `toUsagePanel` until quota-based metrics land.
 // const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
@@ -157,14 +168,24 @@ export function HomePage() {
     return { current: { start, end }, prior: { start: priorStart, end: priorEnd } }
   }, [range.days])
 
-  // Customers for the filter. One page is plenty for a picker.
+  /*
+   * One customers request serves the picker, the external-id lookup for the
+   * usage filter and the "new customers" count. It used to be two requests
+   * (pageSize 50 by name, pageSize 100 by date) for the same table.
+   *
+   * Newest first, so once a row falls before the window every row after it is
+   * older still — which makes the count exact, unless the whole page is inside
+   * the window, in which case the panel says the figure is a floor. The picker
+   * is sorted by name below; it only offers these rows, which is a known limit
+   * until the picker can search the server.
+   */
   const customers = useCustomers({
     page: 1,
-    pageSize: 50,
+    pageSize: 100,
     search: '',
     statuses: [],
-    sortBy: 'name',
-    sortDirection: 'asc',
+    sortBy: CustomerSortField.CreatedAt,
+    sortDirection: 'desc',
   })
 
   const externalCustomerId =
@@ -187,24 +208,11 @@ export function HomePage() {
   })
 
   /*
-   * Newest first, so once a row falls before the window every row after it is
-   * older still — which makes the count exact, unless the whole page is inside
-   * the window, in which case the panel says the figure is a floor.
-   */
-  const recentCustomers = useCustomers({
-    page: 1,
-    pageSize: 100,
-    search: '',
-    statuses: [],
-    sortBy: CustomerSortField.CreatedAt,
-    sortDirection: 'desc',
-  })
-
-  /*
    * A page large enough that every row inside the window is on it. Sorted
    * newest-first by the server, so once the rows fall out of the window the
    * rest are older still — which is what makes counting them here exact rather
-   * than a sample.
+   * than a sample. When the page is full and still inside the window, the
+   * panel says so (`basedOn`) instead of presenting a floor as a total.
    */
   const subscriptions = useSubscriptions({
     ...DEFAULT_SUBSCRIPTION_QUERY,
@@ -224,80 +232,31 @@ export function HomePage() {
   // Parked with the API panel until quota-based metrics land.
   // const apiKeys = useApiKeys()
 
-  const eventsPanel = useMemo<EventsPanel>(
-    () =>
-      toEventsPanel(
-        analytics.data,
-        priorAnalytics.data,
-        analytics.isPending,
-        analytics.isError,
-        granularityId,
-      ),
-    [analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError, granularityId],
-  )
-
-  const customersPanel = useMemo<CustomersPanel>(
-    () =>
-      toCustomersPanel(
-        recentCustomers.data?.customers ?? [],
-        recentCustomers.data?.total ?? null,
-        windows,
-        range.days,
-        recentCustomers.isPending,
-        recentCustomers.isError,
-      ),
-    [recentCustomers.data, recentCustomers.isPending, recentCustomers.isError, windows, range.days],
-  )
+  const eventsPanel = toEventsPanel(analytics, priorAnalytics, granularityId)
+  const customersPanel = toCustomersPanel(customers, windows, range.days)
 
   /*
    * Parked until quota-based metrics land.
    *
-   * const usagePanel = useMemo<UsagePanel>(
-   *   () => toUsagePanel(analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError),
-   *   [analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError],
-   * )
+   * const usagePanel = toUsagePanel(analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError)
    */
 
-  const subscriptionsPanel = useMemo<SubscriptionsPanel>(
-    () =>
-      toSubscriptionsPanel(
-        subscriptions.data?.subscriptions ?? [],
-        windows,
-        range.days,
-        subscriptions.isPending,
-        subscriptions.isError,
-      ),
-    [subscriptions.data, subscriptions.isPending, subscriptions.isError, windows, range.days],
-  )
-
-  const invoicesPanel = useMemo<InvoicesPanel>(
-    () =>
-      toInvoicesPanel(
-        invoices.data?.invoices ?? [],
-        windows.current,
-        invoices.isPending,
-        invoices.isError,
-      ),
-    [invoices.data, invoices.isPending, invoices.isError, windows],
-  )
+  const subscriptionsPanel = toSubscriptionsPanel(subscriptions, windows, range.days)
+  const invoicesPanel = toInvoicesPanel(invoices, windows)
 
   /*
    * Parked until quota-based metrics land.
    *
-   * const apiPanel = useMemo<ApiPanel>(
-   *   () => toApiPanel(apiKeys.data?.keys ?? [], apiKeys.isPending, apiKeys.isError),
-   *   [apiKeys.data, apiKeys.isPending, apiKeys.isError],
-   * )
+   * const apiPanel = toApiPanel(apiKeys.data?.keys ?? [], apiKeys.isPending, apiKeys.isError)
    */
 
-  const attentionPanel = useMemo<AttentionPanel>(
-    () => toAttentionPanel(invoices, draftInvoices),
-    [invoices, draftInvoices],
-  )
+  const attentionPanel = toAttentionPanel(invoices, draftInvoices)
 
   const customerOptions: FilterOption[] = [
     { id: ALL_CUSTOMERS, label: 'All customers' },
-    ...(customers.data?.customers ?? []).map((entry) => ({ id: entry.id, label: entry.name })),
+    ...[...(customers.data?.customers ?? [])]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((entry) => ({ id: entry.id, label: entry.name })),
   ]
 
   return (
@@ -312,6 +271,7 @@ export function HomePage() {
       customer={customerId}
       onCustomerChange={setCustomerId}
       rangeLabel={range.label.toLowerCase()}
+      timeZoneLabel="UTC"
       events={eventsPanel}
       customers={customersPanel}
       subscriptions={subscriptionsPanel}
@@ -329,23 +289,26 @@ export function HomePage() {
 /* ---- Shaping the panels -------------------------------------------------- */
 
 function toEventsPanel(
-  data: UsageAnalytics | undefined,
-  prior: UsageAnalytics | undefined,
-  isPending: boolean,
-  isError: boolean,
+  view: QueryView<UsageAnalytics>,
+  prior: QueryView<UsageAnalytics>,
   granularityId: string,
 ): EventsPanel {
-  if (isError) return { status: 'unavailable', points: [], total: null, revenue: null }
-  if (isPending || data === undefined) {
-    return { status: 'loading', points: [], total: null, revenue: null }
+  const meta = qualityOf(view)
+  const data = view.data
+  if (data === undefined) {
+    return { ...meta, status: withoutData(view), points: [], total: null, revenue: null }
   }
   if (data.points.length === 0) {
-    return { status: 'empty', points: [], total: null, revenue: null }
+    return { ...meta, status: 'empty', points: [], total: null, revenue: null }
   }
 
   const format = granularityId === 'hourly' ? hourLabel : dayLabel
+  // A change is two real measurements compared. A prior window that is itself
+  // a held-over copy of another window is not one.
+  const priorData = prior.data !== undefined && !prior.isPlaceholderData ? prior.data : undefined
 
   return {
+    ...meta,
     status: 'ready',
     points: data.points.map((point) => ({
       label: format.format(point.timestamp),
@@ -353,8 +316,14 @@ function toEventsPanel(
     })),
     total: data.eventCount,
     revenue: data.revenue,
-    totalChangePercent: prior === undefined ? null : change(data.eventCount, prior.eventCount),
-    revenueChangePercent: revenueChange(data.revenue, prior?.revenue ?? null),
+    totalChangePercent:
+      priorData === undefined || view.isPlaceholderData
+        ? null
+        : change(data.eventCount, priorData.eventCount),
+    revenueChangePercent:
+      priorData === undefined || view.isPlaceholderData
+        ? null
+        : revenueChange(data.revenue, priorData.revenue),
   }
 }
 
@@ -402,25 +371,39 @@ function revenueChange(current: Money | null, prior: Money | null): number | nul
   return change(Number(current.amount), Number(prior.amount))
 }
 
-function toCustomersPanel(
-  rows: Customer[],
-  total: number | null,
-  windows: { current: { start: Date; end: Date }; prior: { start: Date; end: Date } },
-  days: number,
-  isPending: boolean,
-  isError: boolean,
-): CustomersPanel {
-  const window = windows.current
-  const blank: CustomersPanel = { status: 'loading', newCount: null, partial: false, points: [] }
-  if (isError) return { ...blank, status: 'unavailable' }
-  if (isPending) return blank
+interface Windows {
+  current: { start: Date; end: Date }
+  prior: { start: Date; end: Date }
+}
 
+/** The earliest of a set of dates, or `null` when there are none. */
+function earliest(dates: (Date | null)[]): Date | null {
+  let min: Date | null = null
+  for (const at of dates) {
+    if (at !== null && (min === null || at < min)) min = at
+  }
+  return min
+}
+
+function toCustomersPanel(
+  view: QueryView<{ customers: Customer[]; total: number }>,
+  windows: Windows,
+  days: number,
+): CustomersPanel {
+  const meta = qualityOf(view)
+  const blank = { newCount: null, partial: false, points: [] }
+  const page = view.data
+  if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
+
+  const rows = page.customers
+  const total = page.total
+  const window = windows.current
   const dates = rows.map((row) => row.createdAt).filter((at): at is Date => at !== null)
   const created = dates.filter((at) => at >= window.start && at < window.end)
-  if (created.length === 0) return { ...blank, status: 'empty', newCount: 0 }
+  if (created.length === 0) return { ...meta, ...blank, status: 'empty', newCount: 0 }
 
   // Every row on the page is new and the server holds more: the count is a floor.
-  const partial = created.length === rows.length && total !== null && total > rows.length
+  const partial = created.length === rows.length && total > rows.length
 
   // A point per day, oldest first, so a quiet day is a zero rather than a gap.
   const points = Array.from({ length: days + 1 }, (_, index) => {
@@ -438,42 +421,58 @@ function toCustomersPanel(
    * customer. Otherwise the earlier count would be a floor posing as a total,
    * and no change is shown.
    */
-  const priorComplete =
-    (total !== null && total <= rows.length) || dates.some((at) => at < windows.prior.start)
+  const priorComplete = total <= rows.length || dates.some((at) => at < windows.prior.start)
   const priorCount = dates.filter(
     (at) => at >= windows.prior.start && at < windows.prior.end,
   ).length
   const changePercent = partial || !priorComplete ? null : change(created.length, priorCount)
 
-  return { status: 'ready', newCount: created.length, partial, points, changePercent }
+  return {
+    ...meta,
+    status: 'ready',
+    newCount: created.length,
+    partial,
+    points,
+    changePercent,
+    basedOn: partial
+      ? `Counted from the newest ${rows.length.toLocaleString()} customers.`
+      : undefined,
+  }
 }
 
 function toSubscriptionsPanel(
-  rows: Subscription[],
-  windows: { current: { start: Date; end: Date }; prior: { start: Date; end: Date } },
+  view: QueryView<{ subscriptions: Subscription[]; total: number }>,
+  windows: Windows,
   days: number,
-  isPending: boolean,
-  isError: boolean,
 ): SubscriptionsPanel {
-  const blank: SubscriptionsPanel = {
-    status: 'loading',
-    total: 0,
-    changePercent: null,
-    days: [],
-    plans: [],
-  }
-  if (isError) return { ...blank, status: 'unavailable' }
-  if (isPending) return blank
+  const meta = qualityOf(view)
+  const blank = { total: 0, changePercent: null, days: [], plans: [] }
+  const page = view.data
+  if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
+
+  const rows = page.subscriptions
 
   /** A subscription's own start date is what "new in this period" means. */
+  const startedAt = (row: Subscription) => row.startDate ?? row.createdAt
   const startedIn = (window: { start: Date; end: Date }) =>
     rows.filter((row) => {
-      const at = row.startDate ?? row.createdAt
+      const at = startedAt(row)
       return at !== null && at >= window.start && at < window.end
     })
 
   const current = startedIn(windows.current)
-  if (current.length === 0) return { ...blank, status: 'empty' }
+  if (current.length === 0) return { ...meta, ...blank, status: 'empty' }
+
+  /*
+   * The page is newest first and the server holds more than it returned: a
+   * window the oldest loaded row is still inside may have older members that
+   * were never fetched. Then the figure is a floor and its change against the
+   * prior window is not computable.
+   */
+  const truncated = page.total > rows.length
+  const oldest = earliest(rows.map(startedAt))
+  const currentComplete = !truncated || (oldest !== null && oldest < windows.current.start)
+  const priorComplete = !truncated || (oldest !== null && oldest < windows.prior.start)
 
   const byPlanTotal = new Map<string, number>()
   for (const row of current) {
@@ -504,7 +503,7 @@ function toSubscriptionsPanel(
     const end = new Date(last.getTime() + DAY_MS)
     const byPlan: Record<string, number> = {}
     for (const row of current) {
-      const at = row.startDate ?? row.createdAt
+      const at = startedAt(row)
       if (at === null || at < start || at >= end) continue
       if (!drawn.has(row.planName)) continue
       byPlan[row.planName] = (byPlan[row.planName] ?? 0) + 1
@@ -513,49 +512,61 @@ function toSubscriptionsPanel(
   }
 
   return {
+    ...meta,
     status: 'ready',
     total: current.length,
-    changePercent: change(current.length, startedIn(windows.prior).length),
+    changePercent:
+      currentComplete && priorComplete
+        ? change(current.length, startedIn(windows.prior).length)
+        : null,
     days: buckets,
     plans,
+    basedOn: currentComplete
+      ? undefined
+      : `Based on the latest ${rows.length.toLocaleString()} subscriptions; older ones may also fall in this period.`,
   }
 }
 
 function toInvoicesPanel(
-  rows: Invoice[],
-  window: { start: Date; end: Date },
-  isPending: boolean,
-  isError: boolean,
+  view: QueryView<{ invoices: Invoice[]; total: number }>,
+  windows: Windows,
 ): InvoicesPanel {
-  const blank: InvoicesPanel = { status: 'loading', total: 0, paid: 0, open: 0, overdue: 0 }
-  if (isError) return { ...blank, status: 'unavailable' }
-  if (isPending) return blank
+  const meta = qualityOf(view)
+  const blank = { total: 0, paid: 0, open: 0, overdue: 0 }
+  const page = view.data
+  if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
 
+  const window = windows.current
   // Issued inside the window — "finalized in the last 7 days", in the domain's
   // vocabulary. A draft has no issue date and is not finalized, so it is out.
-  const issued = rows.filter(
+  const issued = page.invoices.filter(
     (row) => row.issuedAt !== null && row.issuedAt >= window.start && row.issuedAt < window.end,
   )
-  if (issued.length === 0) return { ...blank, status: 'empty' }
+  if (issued.length === 0) return { ...meta, ...blank, status: 'empty' }
 
   const count = (status: string) => issued.filter((row) => row.status === status).length
 
+  // Newest first by issue date: a window the oldest loaded row is still inside
+  // may continue past the page, so the split is of "the latest N" and says so.
+  const oldest = earliest(page.invoices.map((row) => row.issuedAt))
+  const complete = page.total <= page.invoices.length || (oldest !== null && oldest < window.start)
+
   return {
+    ...meta,
     status: 'ready',
     total: issued.length,
     paid: count(InvoiceStatus.Paid),
     open: count(InvoiceStatus.Open),
     overdue: count(InvoiceStatus.Overdue),
+    basedOn: complete
+      ? undefined
+      : `Based on the latest ${page.invoices.length.toLocaleString()} invoices.`,
   }
 }
 
 const ATTENTION_QUERY = { ...DEFAULT_INVOICE_QUERY, pageSize: 3 }
 
-interface InvoiceRows {
-  data?: { invoices: Invoice[]; total: number } | undefined
-  isPending: boolean
-  isError: boolean
-}
+type InvoiceRows = QueryView<{ invoices: Invoice[]; total: number }>
 
 /** "Acme, Globex and 2 more" — who the records belong to, from the few rows read. */
 function whoseInvoices(rows: Invoice[], total: number): string | undefined {
@@ -568,23 +579,32 @@ function whoseInvoices(rows: Invoice[], total: number): string | undefined {
 const plural = (count: number, noun: string) =>
   `${count.toLocaleString()} ${noun}${count === 1 ? '' : 's'}`
 
-/** One row per kind of task that has records, most urgent first. Empty only when the API said so. */
+/**
+ * One row per kind of task that has records, most urgent first.
+ *
+ * Empty only when every source answered and found nothing. A source that has
+ * no data yet cannot rule a task out, so the list is never declared empty on
+ * the strength of a request that failed or has not finished: with rows from the
+ * other source they stay (marked stale if one failed), otherwise the panel is
+ * loading or unavailable.
+ */
 function toAttentionPanel(recent: InvoiceRows, drafts: InvoiceRows): AttentionPanel {
-  if (recent.isError || drafts.isError) return { status: 'unavailable', items: [] }
-  if (recent.isPending || drafts.isPending) return { status: 'loading', items: [] }
+  const sources = [recent, drafts]
+  const missing = sources.filter((source) => source.data === undefined)
+  const broken = sources.filter(failed)
 
   const items: AttentionItem[] = []
 
   const loaded = recent.data?.invoices ?? []
   const overdue = loaded.filter((row) => row.status === InvoiceStatus.Overdue)
+  // Overdue is derived client-side, so it is only known for the page read.
+  const recentTruncated = recent.data !== undefined && recent.data.total > loaded.length
   if (overdue.length > 0) {
-    // Counted among the newest page only; say so when there are invoices beyond it.
-    const partial = (recent.data?.total ?? 0) > loaded.length
     const who = whoseInvoices(overdue, overdue.length)
     items.push({
       id: 'overdue',
       title: plural(overdue.length, 'overdue invoice'),
-      detail: [who, partial ? `among the latest ${loaded.length}` : undefined]
+      detail: [who, recentTruncated ? `among the latest ${loaded.length}` : undefined]
         .filter(Boolean)
         .join(' · '),
       tone: 'critical',
@@ -603,7 +623,42 @@ function toAttentionPanel(recent: InvoiceRows, drafts: InvoiceRows): AttentionPa
     })
   }
 
-  return { status: 'ready', items }
+  /*
+   * "Nothing overdue" is only a claim about the newest page. When older
+   * invoices exist, say what was checked rather than leave the list empty.
+   */
+  if (overdue.length === 0 && recentTruncated) {
+    items.push({
+      id: 'overdue-checked',
+      title: `No overdue invoices among the latest ${loaded.length}`,
+      detail: 'Older invoices were not checked',
+      tone: 'neutral',
+      path: `/invoices?status=${InvoiceStatus.Overdue}`,
+    })
+  }
+
+  const retry = () => {
+    for (const source of broken.length > 0 ? broken : sources) void source.refetch()
+  }
+  const meta = {
+    onRetry: retry,
+    isRetrying: sources.some((source) => source.isFetching),
+  }
+
+  if (missing.length > 0 && items.length === 0) {
+    return {
+      ...meta,
+      status: broken.some((source) => source.data === undefined) ? 'unavailable' : 'loading',
+      items: [],
+    }
+  }
+
+  return {
+    ...meta,
+    status: 'ready',
+    items,
+    stale: broken.length > 0,
+  }
 }
 
 /*

@@ -149,10 +149,35 @@ export const FilteredEmpty: Story = {
     onClearFilters: fn(),
   },
   play: async ({ canvasElement }) => {
-    await expect(
-      await within(canvasElement).findByText(/no payments match these filters/i),
-    ).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    // Empty here means "none on this page", never "none in the ledger".
+    await expect(await canvas.findByText(/no matching payments on this page/i)).toBeInTheDocument()
+    await expect(canvas.getByText(/other pages may have matches/i)).toBeInTheDocument()
   },
+}
+
+/** A status filter over a page that still has hits: the caveat sits above the toolbar. */
+export const FilteredWithinLoadedRows: Story = {
+  args: {
+    payments: paymentFixtures().slice(1, 2),
+    total: 40,
+    query: { ...DEFAULT_PAYMENT_QUERY, statuses: [PaymentStatus.Failed] },
+    onClearFilters: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/filtered within the loaded rows/i)).toBeVisible()
+    await expect(canvas.getByText(/the count below is every payment/i)).toBeVisible()
+  },
+}
+
+/** Rows stay put while the next page loads; they are dimmed, not blanked. */
+export const Refreshing: Story = { args: { isRefreshing: true } }
+
+/** Held rows are dimmed on purpose, so they are not asserted against the contrast floor. */
+export const ProvisionalPage: Story = {
+  args: { isProvisional: true, isRefreshing: true },
+  parameters: { a11y: { config: { rules: [{ id: 'color-contrast', enabled: false }] } } },
 }
 
 export const FirstRun: Story = {

@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BanknoteIcon, CopyIcon, CreditCardIcon, ReceiptIcon } from '@ui/icons'
+import { BanknoteIcon, CopyIcon, CreditCardIcon, InfoIcon, ReceiptIcon } from '@ui/icons'
 import {
   DEFAULT_PAYMENT_QUERY,
   PAYMENT_SORT_LABEL,
@@ -127,6 +127,12 @@ export interface PaymentGridProps {
   /** Already a message; the grid does not know what an ApiError is. */
   error?: string | null
   onRetry?: () => void
+  /** A retry is in flight. */
+  isRetrying?: boolean
+  /** A background refetch is updating the rows on screen. */
+  isRefreshing?: boolean
+  /** The rows belong to the previous page or filter. */
+  isProvisional?: boolean
   onPaymentClick?: (payment: Payment) => void
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
@@ -143,6 +149,9 @@ export function PaymentGrid({
   isLoading = false,
   error = null,
   onRetry,
+  isRetrying = false,
+  isRefreshing = false,
+  isProvisional = false,
   onPaymentClick,
   onCreate,
   onClearFilters,
@@ -209,66 +218,95 @@ export function PaymentGrid({
     return actions
   }
 
+  /*
+   * `GET /payments` filters neither status nor search, so both narrow only the
+   * page that came back. That is true whenever either is set, and it changes
+   * what an empty result and the record count mean: "none on this page", and a
+   * count of every payment rather than the matching ones.
+   */
+  const isFiltered = query.search.length > 0 || query.statuses.length > 0
+
   return (
-    <EntityList<Payment>
-      label="Payments"
-      noun="payments"
-      rows={payments}
-      total={total}
-      columns={columns}
-      getRowId={(payment) => payment.id}
-      page={query.page}
-      pageSize={query.pageSize}
-      onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
-      search={query.search}
-      onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search by invoice number…"
-      /*
-       * Every real state, not the redesign's five. `Overpaid` and `Voided`
-       * are values the domain can hold and rows can arrive in; leaving them
-       * out of the dropdown would make those rows visible in the list but
-       * unreachable from the control that exists to find them.
-       *
-       * No counts: `GET /payments` filters neither status nor search, so
-       * `fetchPayments` narrows the page it received. There is no per-status
-       * server total to read, and counting the rows on screen would be a
-       * number about this page dressed up as a number about the ledger.
-       */
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
-      })}
-      sort={{
-        options: SORT_OPTIONS,
-        field: query.sortBy,
-        direction: query.sortDirection,
-        activeCount: isDefaultSort ? 0 : 1,
-        onChange: (sortBy, sortDirection) =>
-          onQueryChange({
-            ...query,
-            sortBy: sortBy as PaymentSortField,
-            sortDirection,
-            page: 1,
-          }),
-      }}
-      rowActions={rowActions}
-      exportFileName="payments"
-      {...(onCreate ? { primaryAction: <Button onClick={onCreate}>Record payment</Button> } : {})}
-      {...(onPaymentClick ? { onRowClick: onPaymentClick } : {})}
-      isLoading={isLoading}
-      error={error}
-      {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
-      {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No payments match these filters"
-      empty={{
-        title: 'No money has moved yet',
-        description:
-          'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
-        ...(onCreate ? { actions: <Button onClick={onCreate}>Record payment</Button> } : {}),
-        guides: GUIDES,
-      }}
-    />
+    <div className="flex min-w-0 flex-col gap-3">
+      {isFiltered ? (
+        <p
+          role="status"
+          className="text-muted-foreground flex items-start gap-2 text-xs leading-relaxed"
+        >
+          <InfoIcon aria-hidden className="mt-px size-3.5 shrink-0" />
+          <span>
+            <span className="text-foreground font-medium">Filtered within the loaded rows.</span>{' '}
+            Showing {payments.length} matching on this page. Search and status are applied to the
+            payments already loaded, not asked of the server; the count below is every payment, not
+            only matching ones. Page through to see the rest.
+          </span>
+        </p>
+      ) : null}
+      <EntityList<Payment>
+        label="Payments"
+        noun="payments"
+        rows={payments}
+        total={total}
+        columns={columns}
+        getRowId={(payment) => payment.id}
+        page={query.page}
+        pageSize={query.pageSize}
+        onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
+        search={query.search}
+        onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
+        searchPlaceholder="Search loaded rows by invoice number…"
+        /*
+         * Every real state, not the redesign's five. `Overpaid` and `Voided`
+         * are values the domain can hold and rows can arrive in; leaving them
+         * out of the dropdown would make those rows visible in the list but
+         * unreachable from the control that exists to find them.
+         *
+         * No counts: `GET /payments` filters neither status nor search, so
+         * `fetchPayments` narrows the page it received. There is no per-status
+         * server total to read, and counting the rows on screen would be a
+         * number about this page dressed up as a number about the ledger.
+         */
+        filter={statusFilter({
+          values: query.statuses,
+          choices: STATUS_CHOICES,
+          onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+        })}
+        sort={{
+          options: SORT_OPTIONS,
+          field: query.sortBy,
+          direction: query.sortDirection,
+          activeCount: isDefaultSort ? 0 : 1,
+          onChange: (sortBy, sortDirection) =>
+            onQueryChange({
+              ...query,
+              sortBy: sortBy as PaymentSortField,
+              sortDirection,
+              page: 1,
+            }),
+        }}
+        rowActions={rowActions}
+        exportFileName="payments"
+        {...(onCreate ? { primaryAction: <Button onClick={onCreate}>Record payment</Button> } : {})}
+        {...(onPaymentClick ? { onRowClick: onPaymentClick } : {})}
+        isLoading={isLoading}
+        error={error}
+        {...(onRetry ? { onRetry } : {})}
+        isRetrying={isRetrying}
+        isRefreshing={isRefreshing}
+        isProvisional={isProvisional}
+        isPageLocalFilter={isFiltered}
+        isFiltered={isFiltered}
+        {...(onClearFilters ? { onClearFilters } : {})}
+        filteredEmptyTitle="No matching payments on this page"
+        filteredEmptyDescription="Search and status only narrow the payments loaded on this page. Other pages may have matches; go to another page, or clear the filters."
+        empty={{
+          title: 'No money has moved yet',
+          description:
+            'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',
+          ...(onCreate ? { actions: <Button onClick={onCreate}>Record payment</Button> } : {}),
+          guides: GUIDES,
+        }}
+      />
+    </div>
   )
 }

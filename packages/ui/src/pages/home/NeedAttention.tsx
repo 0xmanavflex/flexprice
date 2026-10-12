@@ -1,11 +1,12 @@
 import { CircleCheckIcon, ChevronRightIcon } from '@ui/icons'
+import { RetryAction } from '@ui/compositions/feedback/RetryAction'
 import { Panel } from '@ui/compositions/layout/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
 export const NeedAttentionProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/Section'],
+  composes: ['compositions/Section', 'compositions/feedback/RetryAction'],
   note: 'The task list on Home: each row is one thing a person has to act on, with how many and where to go. The dot carries urgency, the only colour on the row. Empty means the API answered and nothing is waiting; unavailable means it could not be asked.',
 })
 
@@ -26,6 +27,14 @@ export interface AttentionItem {
 export interface AttentionPanel {
   status: 'loading' | 'ready' | 'unavailable'
   items: AttentionItem[]
+  /** Retry for an `unavailable` list, or for a `stale` one. Omitted, no button is drawn. */
+  onRetry?: (() => void) | undefined
+  isRetrying?: boolean | undefined
+  /**
+   * The last refresh failed and `items` is the previous good copy. Keeps the
+   * rows on screen (data beats an error) and says they may be out of date.
+   */
+  stale?: boolean | undefined
 }
 
 const DOT: Record<AttentionTone, string> = {
@@ -70,54 +79,94 @@ export function NeedAttention({ attention, onOpen, className }: NeedAttentionPro
           {[0, 1].map((row) => (
             <div key={row} className="flex items-center gap-3 px-5 py-3.5">
               <span className="bg-muted size-2 rounded-full" aria-hidden="true" />
-              <span className="bg-muted h-3.5 w-48 animate-pulse rounded" aria-hidden="true" />
+              <span
+                className="bg-muted h-3.5 w-48 rounded motion-safe:animate-pulse"
+                aria-hidden="true"
+              />
             </div>
           ))}
         </div>
       ) : attention.status === 'unavailable' ? (
-        <p role="status" className="text-muted-foreground px-5 py-4 text-xs">
-          Tasks could not be loaded.
-        </p>
+        <div
+          role="alert"
+          className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 px-5 py-4 text-xs"
+        >
+          <span>Tasks could not be loaded. Nothing is being claimed either way.</span>
+          {attention.onRetry ? (
+            <RetryAction
+              onRetry={attention.onRetry}
+              {...(attention.isRetrying !== undefined ? { isRetrying: attention.isRetrying } : {})}
+            />
+          ) : null}
+        </div>
       ) : count === 0 ? (
         <p
           role="status"
           className="text-muted-foreground flex items-center gap-2 px-5 py-4 text-sm"
         >
           <CircleCheckIcon className="size-4" aria-hidden="true" />
-          Nothing needs attention.
+          {attention.stale
+            ? 'Nothing needed attention when last checked. Couldn’t refresh.'
+            : 'Nothing needs attention.'}
+          {attention.stale && attention.onRetry ? (
+            <RetryAction
+              onRetry={attention.onRetry}
+              variant="ghost"
+              {...(attention.isRetrying !== undefined ? { isRetrying: attention.isRetrying } : {})}
+            />
+          ) : null}
         </p>
       ) : (
-        <ul className="divide-y">
-          {attention.items.map((item) => (
-            <li key={item.id}>
-              <button
-                type="button"
-                onClick={() => onOpen(item.path)}
-                className="hover:bg-muted/50 focus-visible:ring-ring/50 group flex w-full items-center gap-3 px-5 py-3.5 text-left outline-none first:rounded-t-lg last:rounded-b-lg focus-visible:ring-3 focus-visible:ring-inset"
-              >
-                <span
-                  aria-hidden="true"
-                  className={cn('size-2 shrink-0 rounded-full', DOT[item.tone])}
+        <>
+          {attention.stale ? (
+            <div
+              role="status"
+              className="text-muted-foreground flex flex-wrap items-center justify-between gap-3 border-b px-5 py-2 text-xs"
+            >
+              <span>Couldn’t refresh. These tasks may be out of date.</span>
+              {attention.onRetry ? (
+                <RetryAction
+                  onRetry={attention.onRetry}
+                  variant="ghost"
+                  {...(attention.isRetrying !== undefined
+                    ? { isRetrying: attention.isRetrying }
+                    : {})}
                 />
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-sm font-medium">{item.title}</span>
-                  {item.detail ? (
-                    <span className="text-muted-foreground block truncate text-xs">
-                      {item.detail}
-                    </span>
-                  ) : null}
-                </span>
-                <span className="text-muted-foreground shrink-0 text-xs">
-                  {TONE_LABEL[item.tone]}
-                </span>
-                <ChevronRightIcon
-                  className="text-muted-foreground size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
-                  aria-hidden="true"
-                />
-              </button>
-            </li>
-          ))}
-        </ul>
+              ) : null}
+            </div>
+          ) : null}
+          <ul className="divide-y">
+            {attention.items.map((item) => (
+              <li key={item.id}>
+                <button
+                  type="button"
+                  onClick={() => onOpen(item.path)}
+                  className="hover:bg-muted/50 focus-visible:ring-ring/50 group flex w-full items-center gap-3 px-5 py-3.5 text-left outline-none first:rounded-t-lg last:rounded-b-lg focus-visible:ring-3 focus-visible:ring-inset"
+                >
+                  <span
+                    aria-hidden="true"
+                    className={cn('size-2 shrink-0 rounded-full', DOT[item.tone])}
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-sm font-medium">{item.title}</span>
+                    {item.detail ? (
+                      <span className="text-muted-foreground block truncate text-xs">
+                        {item.detail}
+                      </span>
+                    ) : null}
+                  </span>
+                  <span className="text-muted-foreground shrink-0 text-xs">
+                    {TONE_LABEL[item.tone]}
+                  </span>
+                  <ChevronRightIcon
+                    className="text-muted-foreground size-4 shrink-0 transition-transform group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </Panel>
   )

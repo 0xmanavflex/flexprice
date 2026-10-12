@@ -167,6 +167,35 @@ export const AllZero: Story = {
   },
 }
 
+/** Still loading: the ring and the legend keep their shape, but no number is drawn, least of all a 0. */
+export const Loading: Story = {
+  args: { status: 'loading', centerValue: '0' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByRole('img', { name: /Invoice payment status: loading/i }),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('0')).toBeNull()
+    await expect(canvas.queryByText('412')).toBeNull()
+  },
+}
+
+/** The request failed: "Unavailable" with a retry, never a zero ring. */
+export const ErrorState: Story = {
+  args: { status: 'error', centerValue: '0', onRetry: () => undefined },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText('Unavailable').length).toBeGreaterThan(0)
+    await expect(canvas.getByRole('button', { name: /try again/i })).toBeInTheDocument()
+    await expect(canvas.queryByText('0')).toBeNull()
+  },
+}
+
+/** The window is genuinely empty: an em dash, not a counted zero. */
+export const EmptyStatus: Story = {
+  args: { status: 'empty', centerValue: '0', slices: invoices.map((s) => ({ ...s, value: 0 })) },
+}
+
 /**
  * A long label ellipses inside its column instead of overflowing into the next.
  *

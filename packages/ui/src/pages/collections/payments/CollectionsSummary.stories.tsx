@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { money, formatMoney } from '@fp/domain'
 import { CollectionsSummary } from './CollectionsSummary'
 
@@ -54,8 +54,14 @@ export const Playground = {
     notCounted: false,
   },
   argTypes: {
-    outstanding: { control: 'text', description: 'Plain decimal string; invalid reads as 0.' },
-    overdue: { control: 'text', description: 'Plain decimal string; invalid reads as 0.' },
+    outstanding: {
+      control: 'text',
+      description: 'Plain decimal string; anything else shows a dash, never a zero.',
+    },
+    overdue: {
+      control: 'text',
+      description: 'Plain decimal string; anything else shows a dash, never a zero.',
+    },
     currency: { control: 'select', options: ['USD', 'EUR', 'GBP', 'INR', 'JPY'] },
     unpaidCount: { control: { type: 'number', min: 0, max: 999, step: 1 } },
     overdueCount: { control: { type: 'number', min: 0, max: 999, step: 1 } },
@@ -88,7 +94,7 @@ export const Playground = {
     notCounted,
   }) => {
     const format = (amount: string) =>
-      notCounted ? null : formatMoney(money(isDecimal(amount) ? amount : '0', currency), 'en-US')
+      notCounted || !isDecimal(amount) ? null : formatMoney(money(amount, currency), 'en-US')
     return (
       <CollectionsSummary
         isLoading={isLoading}
@@ -122,13 +128,87 @@ export const Default: Story = {
   },
 }
 
-export const Loading: Story = { args: { isLoading: true } }
+export const Loading: Story = {
+  args: { isLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Announced once, and never a figure: a zero that means "not loaded" is a lie.
+    await expect(canvas.getByRole('status')).toHaveTextContent(/loading collections summary/i)
+    await expect(canvas.queryByText(/\$0\.00/)).toBeNull()
+  },
+}
+
+/** No earlier copy and the read failed: the word, not a zero, with a way back. */
+export const Unavailable: Story = {
+  args: { isUnavailable: true, onRetry: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText('Unavailable')).toHaveLength(2)
+    await expect(canvas.queryByText(/unpaid invoice/i)).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
+  },
+}
+
+/** The refresh failed; the previous figures stay, dimmed, with when they are from. */
+export const StaleKeepsFigures: Story = {
+  args: { stale: true, updatedAt: Date.now() - 4 * 60_000, onRetry: fn() },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('$18,420.00')).toBeVisible()
+    await expect(canvas.getByText(/couldn.t refresh/i)).toBeVisible()
+  },
+}
+
+export const Refreshing: Story = { args: { refreshing: true, updatedAt: Date.now() } }
+
+/** Invoices in other currencies are named, not folded into the lead total. */
+export const MultipleCurrencies: Story = {
+  args: {
+    cells: [
+      {
+        label: 'Total outstanding',
+        value: '$18,420.00',
+        hint: '12 unpaid invoices in USD',
+      },
+      {
+        label: 'Total overdue',
+        value: '$4,310.50',
+        hint: '3 past their due date or failed, in USD',
+        tone: 'danger',
+      },
+    ],
+    notes: [
+      'Multiple currencies: totals are in USD only. 5 unpaid invoices in other currencies are not included.',
+    ],
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText(/multiple currencies/i)).toBeVisible()
+  },
+}
+
+/** More finalized invoices than were read: a floor, and it says so. */
+export const PartialRead: Story = {
+  args: {
+    cells: [
+      { label: 'Total outstanding', value: '$18,420.00', hint: 'at least 12 unpaid invoices' },
+      {
+        label: 'Total overdue',
+        value: '$4,310.50',
+        hint: 'at least 3 invoices past their due date or failed',
+        tone: 'danger',
+      },
+    ],
+    notes: ['Based on the newest finalized invoices only; older unpaid invoices are not included.'],
+  },
+}
 
 export const NothingOwed: Story = {
   args: {
     cells: [
-      { label: 'Total outstanding', value: '$0.00', hint: '0 unpaid invoices' },
-      { label: 'Total overdue', value: '$0.00', hint: '0 past their due date or failed' },
+      // Genuinely empty: a dash and a plain statement, with no currency invented.
+      { label: 'Total outstanding', value: null, hint: 'No unpaid invoices' },
+      { label: 'Total overdue', value: null, hint: 'No invoices past their due date' },
     ],
   },
 }
