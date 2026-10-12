@@ -83,7 +83,7 @@ export function Section({
             {title}
           </Heading>
         )}
-        <div className={cn('bg-background overflow-hidden rounded-xl border', bodyClassName)}>
+        <div className={cn('bg-background min-w-0 overflow-hidden rounded-xl border', bodyClassName)}>
           {children}
         </div>
       </section>

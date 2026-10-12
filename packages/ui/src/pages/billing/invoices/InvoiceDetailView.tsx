@@ -331,7 +331,6 @@ export function InvoiceDetailView({
                   at: event.at,
                   summary: event.summary,
                 }))}
-                note="Key dates from this invoice. A full activity log, with who did what, is not available yet."
                 emptyText="No dates recorded yet."
               />
               <MetadataCard metadata={invoice.metadata ?? {}} />

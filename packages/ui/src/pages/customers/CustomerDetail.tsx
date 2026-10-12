@@ -509,11 +509,6 @@ function OverviewTab({
       </div>
       <ActivitySection
         entries={activityEntries(customer, subscriptions, invoices, locale)}
-        {...(contractsKnown && invoicesKnown
-          ? {}
-          : {
-              note: 'Incomplete: contracts or invoices are still loading or could not be loaded, so some activity is missing.',
-            })}
         className="xl:sticky xl:top-6"
       />
     </div>

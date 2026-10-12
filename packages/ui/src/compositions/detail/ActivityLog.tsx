@@ -1,11 +1,9 @@
-import { ScrollArea } from '@ui/components/primitives/scroll-area'
-import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { Section } from '../layout/Section'
 
 export const ActivityLogProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/section', 'ui/scroll-area'],
+  composes: ['compositions/section'],
   note: 'Colourless activity log: one neutral dot for every item, full date and time on its own line, the acted-on record highlighted, "By name" only when a person did it.',
 })
 
@@ -59,7 +57,9 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
   )
 }
 
-/** The "Activity" panel in a detail page's right rail: fixed height, scrolls. */
+/** The "Activity" panel. It grows with its entries, and scrolls once it is taller than the rail. */
+const ACTIVITY_MAX_HEIGHT = 'max-h-[420px]'
+
 export function ActivitySection({
   entries,
   className,
@@ -68,10 +68,7 @@ export function ActivitySection({
 }: {
   entries: ActivityLogEntry[]
   className?: string
-  /**
-   * What this log is, when it is not a full audit trail: "Key dates from this
-   * invoice. A full activity log isn't available yet."
-   */
+  /** Optional line under the log. */
   note?: string
   emptyText?: string
 }) {
@@ -80,11 +77,11 @@ export function ActivitySection({
       {entries.length === 0 ? (
         <p className="text-muted-foreground px-6 py-5 text-[13px]">{emptyText}</p>
       ) : (
-        <ScrollArea className={cn('h-[420px]')}>
+        <div className={`${ACTIVITY_MAX_HEIGHT} overflow-y-auto`}>
           <div className="p-6">
             <ActivityLog entries={entries} />
           </div>
-        </ScrollArea>
+        </div>
       )}
       {note ? <p className="text-muted-foreground border-t px-6 py-3 text-xs">{note}</p> : null}
     </Section>

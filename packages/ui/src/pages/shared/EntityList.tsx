@@ -636,10 +636,13 @@ export function EntityList<T extends object>({
             // the loose state slot and then reads as *no pinning at all* — the
             // table asks for `start.length` and gets `undefined`.
             start: selectable ? [SELECT_ID] : [],
-            end: rowActions ? [ACTIONS_ID] : [],
+            end: [
+              ...visibleColumns.filter((column) => column.fixed).map((column) => column.id),
+              ...(rowActions ? [ACTIONS_ID] : []),
+            ],
           }
         : { start: [], end: [] },
-    [overflows, selectable, rowActions],
+    [overflows, selectable, rowActions, visibleColumns],
   )
 
   const table = useTable({
@@ -994,9 +997,9 @@ export function EntityList<T extends object>({
                 ),
               }}
             >
-              <DataGridContainer className="flex flex-col border-0 bg-transparent">
+              <DataGridContainer className="flex min-w-0 flex-col border-0 bg-transparent">
                 <div
-                  className="w-full overflow-x-auto"
+                  className="w-full min-w-0 overflow-x-auto"
                   style={{ '--table-min': `${tableMin}px` } as React.CSSProperties}
                 >
                   <DataGridTable />
