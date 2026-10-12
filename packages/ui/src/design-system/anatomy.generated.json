@@ -107,6 +107,7 @@
       "layer": "surface",
       "composes": [
         "DetailTable",
+        "EmptyState",
         "Section",
         "Status"
       ],
@@ -142,6 +143,9 @@
         "ArrowUpRightIcon",
         "BlurredEmpty",
         "CalendarIcon",
+        "ChartSkeleton",
+        "DataFreshness",
+        "DataRegion",
         "HalfDonut",
         "MeterTrack",
         "MetricChart",
@@ -149,7 +153,9 @@
         "NeedAttention",
         "Panel",
         "PillColumns",
-        "SegmentMeter"
+        "RetryAction",
+        "SegmentMeter",
+        "ValuePlaceholder"
       ],
       "usedBy": [],
       "story": "./src/pages/home/DashboardHome.stories.tsx"
@@ -523,7 +529,11 @@
     "BlurredEmpty": {
       "file": "src/pages/shared/charts.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "ChartSkeleton",
+        "RetryAction",
+        "ValuePlaceholder"
+      ],
       "usedBy": [
         "ApiCard",
         "DashboardHome",
@@ -538,8 +548,10 @@
       "composes": [],
       "usedBy": [
         "ErrorState",
+        "IntegrationsBlock",
         "ListState",
-        "LoadingRows"
+        "LoadingRows",
+        "RevenueDashboard"
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
@@ -723,7 +735,7 @@
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty"
+        "SubTabState"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/charges/ChargeTable.stories.tsx"
@@ -769,7 +781,15 @@
       "file": "src/compositions/feedback/Skeletons.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "ApiCard",
+        "BlurredEmpty",
+        "DashboardHome",
+        "MetricChart",
+        "TrendBadge",
+        "UsageCard",
+        "WebhookActivity"
+      ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
     "Check": {
@@ -1017,7 +1037,12 @@
     "CollectionsSummary": {
       "file": "src/pages/collections/payments/CollectionsSummary.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "DataFreshness",
+        "RetryAction",
+        "SkeletonRegion",
+        "ValuePlaceholder"
+      ],
       "usedBy": [],
       "story": "./src/pages/collections/payments/CollectionsSummary.stories.tsx"
     },
@@ -1255,6 +1280,7 @@
       "file": "src/pages/settings/cost-sheets/CostMarginCard.tsx",
       "layer": "surface",
       "composes": [
+        "EmptyState",
         "Section"
       ],
       "usedBy": [],
@@ -1334,6 +1360,7 @@
       "layer": "surface",
       "composes": [
         "DetailTable",
+        "EmptyState",
         "Section"
       ],
       "usedBy": [],
@@ -1401,7 +1428,7 @@
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty"
+        "SubTabState"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/credit-grants/CreditGrantTable.stories.tsx"
@@ -1475,14 +1502,12 @@
       "composes": [
         "ActivitySection",
         "ArchiveIcon",
-        "CustomerEventsGrid",
         "DetailTable",
         "DetailTabs",
         "EditableCard",
         "EmptyState",
         "EntityHeader",
         "EntityLink",
-        "LoadingRows",
         "MetadataCard",
         "Money",
         "OverviewTiles",
@@ -1490,8 +1515,8 @@
         "Pill",
         "PlusIcon",
         "Section",
-        "SectionEmpty",
         "Status",
+        "SubTabState",
         "WalletIcon"
       ],
       "usedBy": [],
@@ -1503,11 +1528,10 @@
       "composes": [
         "DetailTable",
         "Section",
-        "Sheet"
+        "Sheet",
+        "SubTabState"
       ],
-      "usedBy": [
-        "CustomerDetail"
-      ],
+      "usedBy": [],
       "story": "./src/pages/customers/CustomerEventsGrid.stories.tsx"
     },
     "CustomerForm": {
@@ -1578,6 +1602,7 @@
         "PlusIcon",
         "Section",
         "SplitMeter",
+        "SubTabState",
         "WalletIcon"
       ],
       "usedBy": [],
@@ -1598,6 +1623,9 @@
         "ArrowUpRightIcon",
         "BlurredEmpty",
         "CalendarIcon",
+        "ChartSkeleton",
+        "DataFreshness",
+        "DataRegion",
         "HalfDonut",
         "MeterTrack",
         "MetricChart",
@@ -1605,7 +1633,9 @@
         "NeedAttention",
         "Panel",
         "PillColumns",
-        "SegmentMeter"
+        "RetryAction",
+        "SegmentMeter",
+        "ValuePlaceholder"
       ],
       "usedBy": [],
       "story": "./src/pages/home/DashboardHome.stories.tsx"
@@ -1634,7 +1664,13 @@
       "composes": [
         "RetryAction"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "ApiCard",
+        "CollectionsSummary",
+        "DashboardHome",
+        "RevenueDashboard",
+        "UsageCard"
+      ],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
     },
     "DataRegion": {
@@ -1644,9 +1680,14 @@
         "RetryAction"
       ],
       "usedBy": [
+        "ApiCard",
+        "DashboardHome",
+        "EntityList",
         "ErrorState",
         "ListState",
-        "LoadingRows"
+        "LoadingRows",
+        "RevenueDashboard",
+        "UsageCard"
       ],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
     },
@@ -1999,14 +2040,19 @@
         "Figure"
       ],
       "usedBy": [
+        "AddonSubscriptionsView",
+        "CostMarginCard",
+        "CouponRedemptionsView",
         "CustomerDetail",
         "CustomerTaxSection",
         "CustomerWalletView",
         "EntityList",
+        "FeatureDetailView",
+        "GroupMembersView",
+        "IntegrationsBlock",
         "PricingCatalogBlock",
         "SettingsShell",
         "SubscriptionForm",
-        "WebhookActivity",
         "WebhookEventCatalog"
       ],
       "story": "./src/compositions/feedback/EmptyState.stories.tsx"
@@ -2056,7 +2102,7 @@
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty"
+        "SubTabState"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/entitlements/EntitlementTable.stories.tsx"
@@ -2112,7 +2158,9 @@
         "ArrowDownIcon",
         "ArrowUpDownIcon",
         "ArrowUpIcon",
+        "DataRegion",
         "EmptyState",
+        "ErrorState",
         "FilterBar",
         "FilterIcon",
         "GuidedEmptyState",
@@ -2193,7 +2241,12 @@
         "SkeletonRegion"
       ],
       "usedBy": [
-        "PlanChargesView"
+        "EntityList",
+        "IntegrationsBlock",
+        "PlanChargesView",
+        "SubTabState",
+        "WebhookActivity",
+        "WebhookEventCatalog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
     },
@@ -2315,17 +2368,16 @@
         "DetailTable",
         "DetailTabs",
         "EditableCard",
+        "EmptyState",
         "FeatureTypePill",
-        "LoadingRows",
         "MetadataCard",
-        "MetricChart",
         "PencilIcon",
         "Pill",
         "PlusIcon",
         "Properties",
         "Section",
-        "SectionEmpty",
-        "Status"
+        "Status",
+        "SubTabState"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureDetailView.stories.tsx"
@@ -2989,6 +3041,7 @@
       "layer": "surface",
       "composes": [
         "DetailTable",
+        "EmptyState",
         "Section"
       ],
       "usedBy": [],
@@ -3019,7 +3072,10 @@
     "HalfDonut": {
       "file": "src/pages/shared/HalfDonut.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "RetryAction",
+        "ValuePlaceholder"
+      ],
       "usedBy": [
         "ApiCard",
         "DashboardHome",
@@ -3160,7 +3216,11 @@
       "file": "src/pages/integrations/IntegrationsBlock.tsx",
       "layer": "surface",
       "composes": [
-        "ConnectorCard"
+        "Bone",
+        "ConnectorCard",
+        "EmptyState",
+        "ErrorState",
+        "SkeletonRegion"
       ],
       "usedBy": [],
       "story": "./src/pages/integrations/IntegrationsBlock.stories.tsx"
@@ -3214,14 +3274,13 @@
         "DetailTable",
         "DetailTabs",
         "LinkIcon",
-        "LoadingRows",
         "MetadataCard",
         "PencilIcon",
         "Pill",
         "RelatedCard",
         "Section",
-        "SectionEmpty",
         "Status",
+        "SubTabState",
         "WalletIcon"
       ],
       "usedBy": [],
@@ -3542,11 +3601,8 @@
         "SkeletonRegion"
       ],
       "usedBy": [
-        "CustomerDetail",
         "CustomerTaxSection",
         "CustomerWalletView",
-        "FeatureDetailView",
-        "InvoiceDetailView",
         "PlanChargesView",
         "SubscriptionDetailView"
       ],
@@ -3720,12 +3776,15 @@
     "MetricChart": {
       "file": "src/pages/shared/charts.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "ChartSkeleton",
+        "RetryAction",
+        "ValuePlaceholder"
+      ],
       "usedBy": [
         "ApiCard",
         "CustomerAnalyticsView",
         "DashboardHome",
-        "FeatureDetailView",
         "RevenueDashboard",
         "UsageCard",
         "WebhookActivity"
@@ -3834,7 +3893,8 @@
       "file": "src/pages/home/NeedAttention.tsx",
       "layer": "surface",
       "composes": [
-        "Panel"
+        "Panel",
+        "RetryAction"
       ],
       "usedBy": [
         "ApiCard",
@@ -4282,7 +4342,7 @@
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty"
+        "SubTabState"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanCreditGrantsView.stories.tsx"
@@ -4305,7 +4365,7 @@
         "PlusIcon",
         "RowActionsMenu",
         "Section",
-        "SectionEmpty"
+        "SubTabState"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanEntitlementsView.stories.tsx"
@@ -4709,14 +4769,24 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ApiCard",
+        "BlurredEmpty",
+        "CollectionsSummary",
+        "DashboardHome",
         "DataFreshness",
         "DataRegion",
         "Deferred",
         "ErrorState",
+        "HalfDonut",
         "ListState",
         "LoadingRows",
+        "MetricChart",
+        "NeedAttention",
         "PartialDataNotice",
-        "RefreshingIndicator"
+        "RefreshingIndicator",
+        "RevenueDashboard",
+        "TrendBadge",
+        "UsageCard"
       ],
       "story": null
     },
@@ -4726,13 +4796,19 @@
       "composes": [
         "ArcGauge",
         "BlurredEmpty",
+        "Bone",
         "CalendarIcon",
+        "DataFreshness",
+        "DataRegion",
         "DetailTable",
         "HalfDonut",
         "MetricChart",
         "Money",
         "Panel",
-        "SplitMeter"
+        "RetryAction",
+        "SkeletonRegion",
+        "SplitMeter",
+        "ValuePlaceholder"
       ],
       "usedBy": [],
       "story": "./src/pages/revenue/RevenueDashboard.stories.tsx"
@@ -4897,15 +4973,8 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "ChargeTable",
-        "CreditGrantTable",
-        "CustomerDetail",
-        "EntitlementTable",
-        "FeatureDetailView",
-        "InvoiceDetailView",
         "PlanChargesView",
-        "PlanCreditGrantsView",
-        "PlanEntitlementsView",
+        "SubTabState",
         "SubscriptionDetailView"
       ],
       "story": "./src/compositions/feedback/SectionEmpty.stories.tsx"
@@ -5180,9 +5249,12 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "CollectionsSummary",
         "ErrorState",
+        "IntegrationsBlock",
         "ListState",
-        "LoadingRows"
+        "LoadingRows",
+        "RevenueDashboard"
       ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
@@ -5448,6 +5520,28 @@
       ],
       "story": "./src/pages/contracts/SubscriptionStatusBadge.stories.tsx"
     },
+    "SubTabState": {
+      "file": "src/compositions/detail/SubTabState.tsx",
+      "layer": "composition",
+      "composes": [
+        "ErrorState",
+        "SectionEmpty",
+        "TableSkeleton"
+      ],
+      "usedBy": [
+        "ChargeTable",
+        "CreditGrantTable",
+        "CustomerDetail",
+        "CustomerEventsGrid",
+        "CustomerWalletView",
+        "EntitlementTable",
+        "FeatureDetailView",
+        "InvoiceDetailView",
+        "PlanCreditGrantsView",
+        "PlanEntitlementsView"
+      ],
+      "story": "./src/compositions/detail/SubTabState.stories.tsx"
+    },
     "SummaryRow": {
       "file": "src/compositions/detail/DetailKit.tsx",
       "layer": "composition",
@@ -5488,7 +5582,9 @@
       "file": "src/compositions/feedback/Skeletons.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "SubTabState"
+      ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
     "Tag": {
@@ -5668,7 +5764,11 @@
     "TrendBadge": {
       "file": "src/pages/shared/charts.tsx",
       "layer": "surface",
-      "composes": [],
+      "composes": [
+        "ChartSkeleton",
+        "RetryAction",
+        "ValuePlaceholder"
+      ],
       "usedBy": [],
       "story": "./src/pages/shared/TrendBadge.stories.tsx"
     },
@@ -5729,6 +5829,9 @@
         "ArrowUpRightIcon",
         "BlurredEmpty",
         "CalendarIcon",
+        "ChartSkeleton",
+        "DataFreshness",
+        "DataRegion",
         "HalfDonut",
         "MeterTrack",
         "MetricChart",
@@ -5736,7 +5839,9 @@
         "NeedAttention",
         "Panel",
         "PillColumns",
-        "SegmentMeter"
+        "RetryAction",
+        "SegmentMeter",
+        "ValuePlaceholder"
       ],
       "usedBy": [],
       "story": "./src/pages/home/DashboardHome.stories.tsx"
@@ -5836,7 +5941,17 @@
       "file": "src/compositions/feedback/Skeletons.tsx",
       "layer": "composition",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "ApiCard",
+        "BlurredEmpty",
+        "CollectionsSummary",
+        "DashboardHome",
+        "HalfDonut",
+        "MetricChart",
+        "RevenueDashboard",
+        "TrendBadge",
+        "UsageCard"
+      ],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
     "Wallet": {
@@ -5886,7 +6001,8 @@
       "file": "src/pages/developers/webhooks/WebhookActivity.tsx",
       "layer": "surface",
       "composes": [
-        "EmptyState",
+        "ChartSkeleton",
+        "ErrorState",
         "MetricChart"
       ],
       "usedBy": [],
@@ -5957,6 +6073,7 @@
       "layer": "surface",
       "composes": [
         "EmptyState",
+        "ErrorState",
         "Pill",
         "Section"
       ],
@@ -6141,6 +6258,13 @@
       "component": "MetricRail",
       "uses": [
         "MetricRail"
+      ]
+    },
+    "./src/compositions/detail/SubTabState.stories.tsx": {
+      "title": "Building blocks/Detail pages/SubTabState",
+      "component": "SubTabState",
+      "uses": [
+        "SubTabState"
       ]
     },
     "./src/compositions/feedback/AppFailure.stories.tsx": {
@@ -6778,10 +6902,10 @@
       "title": "App/Customers/Customer detail",
       "component": null,
       "uses": [
-        "AppFailure",
         "CustomerDetail",
-        "LoadingRows",
+        "ErrorState",
         "PageBody",
+        "PageLoadingState",
         "PageShell"
       ]
     },
@@ -7553,7 +7677,6 @@
       "route": "/addons/$addonId",
       "uses": [
         "AddonSubscriptionsView",
-        "AppFailure",
         "ArchiveIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
@@ -7567,8 +7690,6 @@
         "EntitlementEditForm",
         "EntitlementTable",
         "FormDialog",
-        "LoadingRows",
-        "PageBody",
         "PencilIcon",
         "Pill"
       ]
@@ -7607,7 +7728,6 @@
       "pattern": "Detail",
       "route": "/cost-sheets/$costSheetId",
       "uses": [
-        "AppFailure",
         "ArchiveIcon",
         "CalculatorIcon",
         "CatalogDetailFrame",
@@ -7616,13 +7736,9 @@
         "ConfirmDialog",
         "CostMarginCard",
         "EditableCard",
-        "LoadingRows",
         "MetadataCard",
-        "PageBody",
         "PencilIcon",
-        "Pill",
-        "Section",
-        "SectionEmpty"
+        "Pill"
       ]
     },
     "CostSheetFormPage": {
@@ -7652,7 +7768,6 @@
       "pattern": "Detail",
       "route": "/coupons/$couponId",
       "uses": [
-        "AppFailure",
         "ArchiveIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
@@ -7660,7 +7775,6 @@
         "CouponRedemptionMeter",
         "CouponRedemptionsView",
         "EditableCard",
-        "LoadingRows",
         "MetadataCard",
         "Money",
         "PencilIcon",
@@ -7696,13 +7810,10 @@
       "pattern": "Detail",
       "route": "/credit-notes/$creditNoteId",
       "uses": [
-        "AppFailure",
         "CatalogDetailFrame",
         "ConfirmDialog",
         "EditableCard",
         "EntityLink",
-        "LoadingRows",
-        "PageBody",
         "Pill",
         "Status"
       ]
@@ -7732,11 +7843,9 @@
       "uses": [
         "AppFailure",
         "ConfirmDialog",
-        "CustomerAnalyticsView",
         "CustomerDetail",
         "EmptyState",
         "LoadingRows",
-        "PageBody",
         "QuotaCard",
         "Section"
       ]
@@ -7746,10 +7855,7 @@
       "pattern": "Form",
       "route": "/customers/$customerId/edit",
       "uses": [
-        "AppFailure",
-        "CustomerForm",
-        "LoadingRows",
-        "PageBody"
+        "CustomerForm"
       ]
     },
     "CustomerListPage": {
@@ -7785,6 +7891,7 @@
       "pattern": "List",
       "route": "/events",
       "uses": [
+        "DataFreshness",
         "EventDetailSheet",
         "EventGrid",
         "ListState",
@@ -7806,12 +7913,9 @@
       "pattern": "Detail",
       "route": "/features/$featureId",
       "uses": [
-        "AppFailure",
         "ConfirmDialog",
         "FeatureCloneDialog",
-        "FeatureDetailView",
-        "LoadingRows",
-        "PageBody"
+        "FeatureDetailView"
       ]
     },
     "FeatureFormPage": {
@@ -7842,13 +7946,10 @@
       "pattern": "Detail",
       "route": "/groups/$groupId",
       "uses": [
-        "AppFailure",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
         "EditableCard",
         "GroupMembersView",
-        "LoadingRows",
-        "PageBody",
         "PencilIcon",
         "Pill"
       ]
@@ -7893,11 +7994,8 @@
       "pattern": "Detail",
       "route": "/invoices/$invoiceId",
       "uses": [
-        "AppFailure",
         "ConfirmDialog",
-        "InvoiceDetailView",
-        "LoadingRows",
-        "PageBody"
+        "InvoiceDetailView"
       ]
     },
     "InvoiceFormPage": {
@@ -7964,7 +8062,6 @@
       "route": "/plans/$planId",
       "uses": [
         "AddChargeDialog",
-        "AppFailure",
         "ArchiveIcon",
         "ConfirmDialog",
         "CopyIcon",
@@ -7976,7 +8073,6 @@
         "EntitlementCreateForm",
         "EntitlementEditForm",
         "FormDialog",
-        "LoadingRows",
         "PencilIcon",
         "Pill",
         "PlanChargesView",
@@ -8013,13 +8109,11 @@
       "pattern": "Detail",
       "route": "/price-units/$priceUnitId",
       "uses": [
-        "AppFailure",
         "ArchiveIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
         "ConfirmDialog",
         "EditableCard",
-        "LoadingRows",
         "PencilIcon",
         "Pill",
         "Section"
@@ -8084,12 +8178,9 @@
       "pattern": "Detail",
       "route": "/subscriptions/$subscriptionId",
       "uses": [
-        "AppFailure",
         "ConfirmDialog",
         "DateInput",
-        "LoadingRows",
         "OptionSelect",
-        "PageBody",
         "SubscriptionDetailView"
       ]
     },
@@ -8158,8 +8249,8 @@
       "pattern": "Detail",
       "route": "/webhooks/$endpointId",
       "uses": [
-        "AppFailure",
-        "LoadingRows",
+        "ErrorState",
+        "PageLoadingState",
         "WebhookAttemptList",
         "WebhookEndpointDetail"
       ]
