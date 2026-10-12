@@ -10,6 +10,7 @@ import {
   createTaxRateSchema,
   editTaxRateSchema,
   emptyTaxRate,
+  suggestTaxCode,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
@@ -74,6 +75,17 @@ export function TaxRateCreateForm({
     mode: 'onTouched',
   })
 
+  const nameField = form.register('name', {
+    onChange: (event: { target: { value: string } }) => {
+      // The code follows the name until the person types one of their own.
+      if (!form.getFieldState('code').isDirty) {
+        form.setValue('code', suggestTaxCode(event.target.value), {
+          shouldValidate: form.formState.isSubmitted,
+        })
+      }
+    },
+  })
+
   const errors = form.formState.errors
 
   return (
@@ -103,7 +115,7 @@ export function TaxRateCreateForm({
             error={errors.name?.message}
           >
             {({ id, ...field }) => (
-              <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+              <Input id={id} disabled={isSubmitting} {...field} {...nameField} />
             )}
           </FormRow>
           <FormRow

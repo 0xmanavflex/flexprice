@@ -48,6 +48,8 @@ test.describe('the customers list', () => {
     await expect(page.getByLabel('Phone')).toHaveCount(0)
 
     await page.getByLabel('Name', { exact: false }).first().fill('Acme Robotics')
+    // The external ID is filled from the name until you type your own.
+    await expect(page.getByLabel('External ID')).toHaveValue('cust-acme-robotics')
     await page.getByLabel('External ID').fill('acme_robotics')
 
     const request = page.waitForRequest(isWrite('POST', /\/v1\/customers$/))

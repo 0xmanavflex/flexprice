@@ -69,11 +69,30 @@ export const Create: Story = {
     await expect(args.onSubmit).not.toHaveBeenCalled()
 
     await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), 'Acme Corp')
-    await userEvent.type(canvas.getByRole('textbox', { name: /external id/i }), 'acme')
+    const externalId = canvas.getByRole('textbox', { name: /external id/i })
+    await userEvent.clear(externalId)
+    await userEvent.type(externalId, 'acme')
     await userEvent.click(canvas.getByRole('button', { name: 'Create customer' }))
     await expect(args.onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ name: 'Acme Corp', externalId: 'acme' }),
     )
+  },
+}
+
+/** The external ID is filled from the name until the person types their own. */
+export const ExternalIdFollowsName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const name = canvas.getByRole('textbox', { name: /^name/i })
+    const externalId = canvas.getByRole('textbox', { name: /external id/i })
+
+    await userEvent.type(name, 'Acme Corp')
+    await expect(externalId).toHaveValue('cust-acme-corp')
+
+    await userEvent.clear(externalId)
+    await userEvent.type(externalId, 'acme')
+    await userEvent.type(name, ' Robotics')
+    await expect(externalId).toHaveValue('acme')
   },
 }
 
@@ -89,6 +108,9 @@ export const Edit: Story = {
     await expect(canvas.getByRole('textbox', { name: /^name/i })).toHaveValue('Acme Corp')
     await expect(canvas.queryByRole('complementary')).toBeNull()
     await expect(canvas.getByRole('textbox', { name: /city/i })).toBeInTheDocument()
+    // Renaming a saved customer never rewrites its external ID.
+    await userEvent.type(canvas.getByRole('textbox', { name: /^name/i }), ' Ltd')
+    await expect(canvas.getByRole('textbox', { name: /external id/i })).toHaveValue('acme')
     await userEvent.click(canvas.getByRole('button', { name: 'Save changes' }))
     await expect(args.onSubmit).toHaveBeenCalled()
   },

@@ -88,7 +88,7 @@ export const createAddonSchema = z.object({
     .string()
     .trim()
     .min(1, 'Enter a lookup key')
-    .regex(/^[a-z0-9_]+$/, 'Use lowercase letters, numbers and underscores'),
+    .regex(/^[a-z0-9_-]+$/, 'Use lowercase letters, numbers, hyphens and underscores'),
   description: z.string().trim().optional(),
 })
 

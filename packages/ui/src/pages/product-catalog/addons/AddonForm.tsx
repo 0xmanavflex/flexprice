@@ -1,6 +1,6 @@
 import { useForm, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
-import { type CreateAddon, createAddonSchema, emptyAddon } from '@fp/domain'
+import { type CreateAddon, createAddonSchema, emptyAddon, KEY_PREFIX, suggestKey } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Textarea } from '@ui/components/primitives/textarea'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -63,6 +63,17 @@ export function AddonForm({
   const errors = form.formState.errors
   const isEdit = mode === 'edit'
 
+  const nameField = form.register('name', {
+    onChange: (event: { target: { value: string } }) => {
+      // The lookupKey follows the name until the person types one of their own.
+      if (!isEdit && !form.getFieldState('lookupKey').isDirty) {
+        form.setValue('lookupKey', suggestKey(KEY_PREFIX.addon, event.target.value), {
+          shouldValidate: form.formState.isSubmitted,
+        })
+      }
+    },
+  })
+
   const formEl = (
     <form id={FORM_ID} onSubmit={form.handleSubmit((values) => onSubmit(values))} noValidate>
       <FormCard title="Add-on details" status="required">
@@ -73,7 +84,7 @@ export function AddonForm({
           error={errors.name?.message}
         >
           {({ id, ...field }) => (
-            <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
+            <Input id={id} disabled={isSubmitting} {...field} {...nameField} />
           )}
         </FormRow>
 
@@ -100,7 +111,7 @@ export function AddonForm({
           hint={
             isEdit
               ? 'Fixed once set — integrations key off it.'
-              : 'Stable identifier used by the API. Lowercase, numbers and underscores.'
+              : 'Stable identifier used by the API. Lowercase, numbers, hyphens and underscores.'
           }
           error={errors.lookupKey?.message}
         >

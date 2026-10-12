@@ -79,11 +79,13 @@ export const RejectsAMalformedLookupKey: Story = {
     const canvas = within(canvasElement)
 
     await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Pro')
-    await userEvent.type(canvas.getByLabelText('Lookup key'), 'Pro Plan')
+    const lookupKey = canvas.getByLabelText('Lookup key')
+    await userEvent.clear(lookupKey)
+    await userEvent.type(lookupKey, 'Pro Plan')
     await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
 
     await expect(
-      await canvas.findByText('Use lowercase letters, numbers and underscores'),
+      await canvas.findByText('Use lowercase letters, numbers, hyphens and underscores'),
     ).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },
@@ -107,6 +109,22 @@ export const CreatesWithDetailsOnly: Story = {
         creditGrants: [],
       }),
     )
+  },
+}
+
+/** The lookup key is filled from the name until the person types their own. */
+export const LookupKeyFollowsName: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const field = canvas.getByRole('textbox', { name: /^lookup key/i })
+
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), 'Acme Pro')
+    await expect(field).toHaveValue('plan-acme-pro')
+
+    await userEvent.clear(field)
+    await userEvent.type(field, 'mine')
+    await userEvent.type(canvas.getByRole('textbox', { name: /^Name/ }), ' Plus')
+    await expect(field).toHaveValue('mine')
   },
 }
 

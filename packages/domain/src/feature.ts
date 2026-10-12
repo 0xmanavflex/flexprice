@@ -1,5 +1,6 @@
 import { z } from 'zod'
 import { alertSettingConfigSchema } from './alertSetting'
+import { KEY_PREFIX, suggestKey } from './suggestKey'
 
 /**
  * A feature, and the rules for creating one.
@@ -212,18 +213,9 @@ export function emptyFeature(type: FeatureType): CreateFeature {
   return { ...base, type }
 }
 
-/**
- * The lookup key V1 derives from a name: `feat-` plus the name, lowercased and
- * hyphenated. Anything the key's alphabet does not allow collapses to a hyphen.
- * Returns `''` for a blank name so the create form can leave the field empty.
- */
+/** The lookup key V1 derives from a feature's name (`feat-api-calls`). */
 export function defaultFeatureLookupKey(name: string): string {
-  const slug = name
-    .trim()
-    .toLowerCase()
-    .replace(/[^a-z0-9_]+/g, '-')
-    .replace(/^-+|-+$/g, '')
-  return slug ? `feat-${slug}` : ''
+  return suggestKey(KEY_PREFIX.feature, name)
 }
 
 /**

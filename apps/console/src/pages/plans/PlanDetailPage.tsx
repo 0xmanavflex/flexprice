@@ -164,10 +164,7 @@ export function PlanDetailPage({
       <DetailHeader
         breadcrumb={
           <DetailBreadcrumb
-            trail={[
-              { label: 'Plans', onClick: onNavigateToList },
-              { label: 'Plan details' },
-            ]}
+            trail={[{ label: 'Plans', onClick: onNavigateToList }, { label: 'Plan details' }]}
           />
         }
         icon={<LayersIcon />}
@@ -650,9 +647,9 @@ function InformationTab({
             placeholder: 'No lookup key',
             display: <span className="font-mono text-[13px]">{lookupKey || '—'}</span>,
             validate: (next) =>
-              next === '' || /^[a-z0-9_]+$/.test(next)
+              next === '' || /^[a-z0-9_-]+$/.test(next)
                 ? null
-                : 'Use lowercase letters, numbers and underscores',
+                : 'Use lowercase letters, numbers, hyphens and underscores',
           },
           { key: 'created', label: 'Created', value: formatDate(createdAt), readOnly: true },
           { key: 'updated', label: 'Updated', value: formatDate(updatedAt), readOnly: true },

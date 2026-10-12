@@ -6,6 +6,8 @@ import {
   CustomerTaxTreatment,
   createCustomerSchema,
   emptyCustomer,
+  KEY_PREFIX,
+  suggestKey,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -125,6 +127,17 @@ export function CustomerForm({
     mode: 'onTouched',
   })
 
+  const nameField = form.register('name', {
+    onChange: (event: { target: { value: string } }) => {
+      // The externalId follows the name until the person types one of their own.
+      if (!isEdit && !form.getFieldState('externalId').isDirty) {
+        form.setValue('externalId', suggestKey(KEY_PREFIX.customer, event.target.value), {
+          shouldValidate: form.formState.isSubmitted,
+        })
+      }
+    },
+  })
+
   const errors = form.formState.errors
 
   const submitAll = form.handleSubmit((values) => onSubmit(values))
@@ -137,9 +150,7 @@ export function CustomerForm({
         required
         error={errors.name?.message}
       >
-        {({ id, ...field }) => (
-          <Input id={id} disabled={isSubmitting} {...field} {...form.register('name')} />
-        )}
+        {({ id, ...field }) => <Input id={id} disabled={isSubmitting} {...field} {...nameField} />}
       </FormRow>
       <FormRow
         label="External ID"

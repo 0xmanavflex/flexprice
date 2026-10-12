@@ -112,7 +112,7 @@ export const createPlanSchema = z.object({
   lookupKey: z
     .string()
     .trim()
-    .regex(/^[a-z0-9_]*$/, 'Use lowercase letters, numbers and underscores')
+    .regex(/^[a-z0-9_-]*$/, 'Use lowercase letters, numbers, hyphens and underscores')
     .optional(),
   description: z.string().trim().optional(),
 })
