@@ -77,7 +77,12 @@ export function ActivitySection({
       {entries.length === 0 ? (
         <p className="text-muted-foreground px-6 py-5 text-[13px]">{emptyText}</p>
       ) : (
-        <div className={`${ACTIVITY_MAX_HEIGHT} overflow-y-auto`}>
+        <div
+          role="region"
+          aria-label="Activity"
+          tabIndex={0}
+          className={`${ACTIVITY_MAX_HEIGHT} overflow-y-auto`}
+        >
           <div className="p-6">
             <ActivityLog entries={entries} />
           </div>

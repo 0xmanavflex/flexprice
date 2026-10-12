@@ -145,6 +145,7 @@ export function DataExportGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No exports match these filters"
       empty={{
+        scene: 'developers',
         title: 'No exports yet',
         description:
           'Exports send billing data to your own storage on a schedule, so it can be joined with the rest of your data.',

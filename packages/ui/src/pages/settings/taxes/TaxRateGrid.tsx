@@ -244,6 +244,7 @@ export function TaxRateGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No tax rates match these filters"
       empty={{
+        scene: 'settings',
         title: 'No taxes set up yet',
         description:
           'Taxes are the percentages added on top of an invoice, like VAT or GST. Add a tax, then attach it to the customers, plans or charges it applies to.',

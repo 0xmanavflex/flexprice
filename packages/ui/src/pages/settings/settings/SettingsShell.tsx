@@ -155,6 +155,7 @@ export function SettingsShell({
 function Unavailable({ title, reason }: { title: string; reason?: string }) {
   return (
     <EmptyState
+      scene="settings"
       size="inline"
       title={title}
       description={reason ?? 'It cannot be opened from here yet.'}

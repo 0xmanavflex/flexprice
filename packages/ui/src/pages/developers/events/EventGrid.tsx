@@ -246,6 +246,7 @@ export function EventGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No events match these filters"
       empty={{
+        scene: 'developers',
         title: EMPTY_CATALOGUE.events.title,
         description:
           'Usage events sent by your systems appear here as they arrive, so a bill can be traced to what caused it.',

@@ -259,6 +259,7 @@ export function CostSheetGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No cost sheets match these filters"
       empty={{
+        scene: 'settings',
         title: 'No cost sheets yet',
         description:
           'A cost sheet records what each unit of usage costs you, so margin can be measured against what you charge for it.',

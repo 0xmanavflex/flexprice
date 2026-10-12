@@ -25,6 +25,7 @@ export function GroupMembersView({
     return (
       <Section title="Members">
         <EmptyState
+          scene="settings"
           size="inline"
           title={`The ${kind} in this group are not listed yet`}
           description="Flexprice does not list a group's members yet. The count on the tab is real; the names are not available."

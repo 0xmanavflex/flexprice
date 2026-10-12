@@ -23,6 +23,7 @@ export function CouponRedemptionsView({
     return (
       <Section title="Redemptions">
         <EmptyState
+          scene="settings"
           size="inline"
           title="Redemption history is not available yet"
           description="Flexprice does not report who has redeemed a coupon, so none are shown."

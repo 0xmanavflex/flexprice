@@ -184,6 +184,12 @@ export {
 } from './detail/DetailKit'
 export type { Choice, DetailMenuItem, DetailTabSpec, SimpleColumn } from './detail/DetailKit'
 export { GuidedEmptyState } from './feedback/GuidedEmptyState'
+export {
+  SceneIllustration,
+  SceneIllustrationProvenance,
+  EMPTY_SCENES,
+} from './feedback/SceneIllustration'
+export type { EmptyScene, SceneIllustrationProps } from './feedback/SceneIllustration'
 export type { GuideCard, GuidedEmptyStateProps } from './feedback/GuidedEmptyState'
 export { ConnectorCard } from './layout/ConnectorCard'
 export type { ConnectorCardProps } from './layout/ConnectorCard'

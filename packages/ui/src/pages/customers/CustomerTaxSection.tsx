@@ -113,6 +113,7 @@ export function CustomerTaxSection({
       ) : associations.length === 0 ? (
         <div className="p-6">
           <EmptyState
+            scene="settings"
             size="inline"
             title="No tax rates attached"
             description="Add a rate to have it applied when this customer is invoiced."

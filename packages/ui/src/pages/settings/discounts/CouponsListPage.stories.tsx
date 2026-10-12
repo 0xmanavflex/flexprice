@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { TicketPercentIcon } from '@ui/icons'
 import { CouponStatus, DEFAULT_COUPON_QUERY, type CouponQuery } from '@fp/domain'
 import { ListState, PageBody } from '@ui/compositions'
 import { CouponGrid } from '@ui/pages/settings/discounts/CouponGrid'
@@ -63,7 +62,6 @@ function CouponsListBody({
         onRetry={fn()}
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New coupon</Button>}
-        emptyIcon={<TicketPercentIcon aria-hidden />}
         emptyTitle="No coupons yet"
         emptyDescription="Coupons apply a discount to a contract or an invoice — once, for a set number of periods, or forever. Create the first to offer one."
       >

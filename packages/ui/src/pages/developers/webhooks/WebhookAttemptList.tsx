@@ -158,6 +158,7 @@ export function WebhookAttemptList({
       headingAs="h3"
       compact
       empty={{
+        scene: 'developers',
         title: 'No messages sent yet',
         description:
           'Messages appear here once an event this endpoint subscribes to happens. Send an example from the Testing tab to see one now.',

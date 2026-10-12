@@ -65,6 +65,7 @@ import { DataRegion } from '@ui/compositions/feedback/DataBoundary'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
 import { GuidedEmptyState } from '@ui/compositions/feedback/GuidedEmptyState'
+import type { EmptyScene } from '@ui/compositions/feedback/SceneIllustration'
 import { FilterBar, type FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { SortMenu, type SortOption } from '@ui/compositions/tables/SortMenu'
 import { cn } from '@ui/lib/cn'
@@ -214,6 +215,8 @@ export interface EntityEmpty {
   actions?: ReactNode
   /** Three cards. Each ends in "Read docs". */
   guides?: EntityGuide[] | undefined
+  /** The drawing for this area of the product. Defaults to the table figure. */
+  scene?: EmptyScene | undefined
 }
 
 export interface EntityListProps<T> {
@@ -1014,6 +1017,7 @@ export function EntityList<T extends object>({
               description={empty.description}
               actions={empty.actions}
               guides={empty.guides}
+              scene={empty.scene}
               label={`${label}: nothing here yet`}
             />
           ) : (
@@ -1028,6 +1032,7 @@ export function EntityList<T extends object>({
                   <EmptyState
                     size="inline"
                     isFiltered
+                    {...(empty?.scene ? { scene: empty.scene } : {})}
                     title="This page is out of range"
                     description={`There are ${total} ${noun}, but none on page ${page}. Your records are all still here.`}
                     onClearFilters={
@@ -1040,6 +1045,7 @@ export function EntityList<T extends object>({
                   <EmptyState
                     size="inline"
                     isFiltered
+                    {...(empty?.scene ? { scene: empty.scene } : {})}
                     title={filteredEmptyTitle ?? `No ${noun} match these filters`}
                     description={
                       filteredEmptyDescription ??
@@ -1067,6 +1073,7 @@ export function EntityList<T extends object>({
                   <EmptyState
                     size="inline"
                     isFiltered
+                    {...(empty?.scene ? { scene: empty.scene } : {})}
                     title={empty?.title ?? `No ${noun}`}
                     {...(empty?.description ? { description: empty.description } : {})}
                   />

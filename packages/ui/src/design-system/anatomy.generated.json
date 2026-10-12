@@ -531,6 +531,7 @@
       "composes": [
         "ChartSkeleton",
         "RetryAction",
+        "SceneIllustration",
         "ValuePlaceholder"
       ],
       "usedBy": [
@@ -1507,6 +1508,7 @@
         "EmptyState",
         "EntityHeader",
         "EntityLink",
+        "IntegrationMarks",
         "MetadataCard",
         "Money",
         "OverviewTiles",
@@ -1553,7 +1555,9 @@
       "composes": [
         "BookOpenIcon",
         "CopyIcon",
+        "EmDash",
         "EntityList",
+        "IntegrationMarks",
         "PencilIcon",
         "PlusIcon",
         "UserIcon"
@@ -1738,7 +1742,8 @@
         "MetricRail"
       ],
       "usedBy": [
-        "EntityHeader"
+        "EntityHeader",
+        "FeatureDetailView"
       ],
       "story": "./src/compositions/detail/DetailShell.stories.tsx"
     },
@@ -2011,6 +2016,7 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "CustomerGrid",
         "EntitlementTable",
         "EventGrid",
         "EventTypeName",
@@ -2035,7 +2041,8 @@
       "file": "src/compositions/feedback/EmptyState.tsx",
       "layer": "composition",
       "composes": [
-        "Figure"
+        "Figure",
+        "SceneIllustration"
       ],
       "usedBy": [
         "AddonSubscriptionsView",
@@ -2361,6 +2368,7 @@
       "composes": [
         "ArchiveIcon",
         "CopyIcon",
+        "DetailBreadcrumb",
         "DetailHeader",
         "DetailMoreMenu",
         "DetailTable",
@@ -3050,7 +3058,7 @@
       "layer": "composition",
       "composes": [
         "ArrowRightIcon",
-        "ProjectsEmptyIllustration"
+        "SceneIllustration"
       ],
       "usedBy": [
         "EntityList"
@@ -3062,7 +3070,7 @@
       "layer": "composition",
       "composes": [
         "ArrowRightIcon",
-        "ProjectsEmptyIllustration"
+        "SceneIllustration"
       ],
       "usedBy": [],
       "story": "./src/compositions/feedback/GuidedEmptyState.stories.tsx"
@@ -3209,6 +3217,23 @@
       "composes": [],
       "usedBy": [],
       "story": "./src/compositions/feedback/Skeletons.stories.tsx"
+    },
+    "IntegrationMark": {
+      "file": "src/pages/customers/IntegrationMark.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "IntegrationMarks": {
+      "file": "src/pages/customers/IntegrationMark.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "CustomerDetail",
+        "CustomerGrid"
+      ],
+      "story": null
     },
     "IntegrationsBlock": {
       "file": "src/pages/integrations/IntegrationsBlock.tsx",
@@ -3534,7 +3559,8 @@
       "file": "src/compositions/feedback/EmptyState.tsx",
       "layer": "composition",
       "composes": [
-        "Figure"
+        "Figure",
+        "SceneIllustration"
       ],
       "usedBy": [
         "ErrorState",
@@ -3777,6 +3803,7 @@
       "composes": [
         "ChartSkeleton",
         "RetryAction",
+        "SceneIllustration",
         "ValuePlaceholder"
       ],
       "usedBy": [
@@ -4622,10 +4649,7 @@
       "file": "src/components/blocks/empty-state-3/components/projects-empty-illustration.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "GuideGrid",
-        "GuidedEmptyState"
-      ],
+      "usedBy": [],
       "story": null
     },
     "Properties": {
@@ -4879,6 +4903,21 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "SceneIllustration": {
+      "file": "src/compositions/feedback/SceneIllustration.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "BlurredEmpty",
+        "EmptyState",
+        "GuideGrid",
+        "GuidedEmptyState",
+        "ListOfferProvider",
+        "MetricChart",
+        "TrendBadge"
+      ],
+      "story": "./src/compositions/feedback/SceneIllustration.stories.tsx"
     },
     "ScreenIcon": {
       "file": "src/reui/icons/default/outline/screen.tsx",
@@ -5749,6 +5788,7 @@
       "composes": [
         "ChartSkeleton",
         "RetryAction",
+        "SceneIllustration",
         "ValuePlaceholder"
       ],
       "usedBy": [],
@@ -6301,6 +6341,14 @@
         "CodeIcon",
         "GuideGrid",
         "GuidedEmptyState"
+      ]
+    },
+    "./src/compositions/feedback/SceneIllustration.stories.tsx": {
+      "title": "Building blocks/Feedback & states/SceneIllustration",
+      "component": "SceneIllustration",
+      "uses": [
+        "GuidedEmptyState",
+        "SceneIllustration"
       ]
     },
     "./src/compositions/feedback/SectionEmpty.stories.tsx": {
@@ -6918,8 +6966,7 @@
         "CustomerGrid",
         "ListState",
         "PageBody",
-        "PageShell",
-        "UsersIcon"
+        "PageShell"
       ]
     },
     "./src/pages/customers/CustomerTaxSection.stories.tsx": {
@@ -7248,7 +7295,6 @@
       "component": null,
       "uses": [
         "ListState",
-        "PackageIcon",
         "PageBody",
         "PageShell",
         "PlanGrid"
@@ -8041,6 +8087,7 @@
         "CopyIcon",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
+        "DetailBreadcrumb",
         "DetailHeader",
         "DetailTabs",
         "EditableCard",

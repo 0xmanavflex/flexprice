@@ -16,6 +16,7 @@ export function CostMarginCard({ margin }: { margin?: CostMargin | undefined }) 
     return (
       <Section title="Margin">
         <EmptyState
+          scene="settings"
           size="inline"
           title="Margin is not available yet"
           description="Flexprice does not report revenue or cost totals for a cost sheet, so no margin is shown."

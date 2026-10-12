@@ -243,6 +243,7 @@ export function WebhookEndpointGrid({
       filteredEmptyTitle="No endpoints match this search"
       headingAs="h3"
       empty={{
+        scene: 'developers',
         title: 'No endpoints yet',
         description:
           'An endpoint is a URL Flexprice sends events to. Add one to start receiving invoice, payment and subscription events as they happen.',

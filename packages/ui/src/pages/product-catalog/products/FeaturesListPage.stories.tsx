@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { GaugeIcon } from '@ui/icons'
 import { DEFAULT_FEATURE_QUERY, FeatureStatus, FeatureType, type FeatureQuery } from '@fp/domain'
 import { ListState, PageBody } from '@ui/compositions'
 import { FeatureGrid } from '@ui/pages/product-catalog/products/FeatureGrid'
@@ -72,7 +71,6 @@ function FeaturesListBody({
         onRetry={fn()}
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New product</Button>}
-        emptyIcon={<GaugeIcon aria-hidden />}
         emptyTitle="Nothing is being measured yet"
         emptyDescription="A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
       >

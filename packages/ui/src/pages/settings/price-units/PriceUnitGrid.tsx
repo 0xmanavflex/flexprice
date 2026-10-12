@@ -226,6 +226,7 @@ export function PriceUnitGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No price units match these filters"
       empty={{
+        scene: 'settings',
         title: 'No price units yet',
         description:
           'A price unit lets you charge in something other than a currency — credits, tokens, minutes — by pinning a code and a symbol to a base currency through a rate.',

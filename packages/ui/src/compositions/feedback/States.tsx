@@ -194,8 +194,6 @@ export interface ListStateProps {
   onClearFilters?: () => void
   emptyTitle: string
   emptyDescription?: string
-  /** The glyph for the first-run state. Sits inside the illustration. */
-  emptyIcon?: ReactNode
   /** Beside the primary action — an import, a link to the docs. */
   emptySecondaryAction?: ReactNode
   /** Rows are on screen (real or from the previous page/filter). An error then keeps them. */
@@ -233,7 +231,6 @@ export function ListState({
   createAction,
   emptyTitle,
   emptyDescription,
-  emptyIcon,
   emptySecondaryAction,
   hasRows = false,
   isRefreshing = false,
@@ -281,7 +278,6 @@ export function ListState({
     isFirstRun: isEmpty && !isFiltered,
     title: emptyTitle,
     description: emptyDescription,
-    ...(emptyIcon ? { icon: emptyIcon } : {}),
     ...(emptySecondaryAction ? { secondaryAction: emptySecondaryAction } : {}),
     ...(createAction ? { action: createAction } : {}),
   }

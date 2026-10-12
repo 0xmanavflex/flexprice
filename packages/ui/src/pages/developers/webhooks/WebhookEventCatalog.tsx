@@ -87,6 +87,7 @@ export function WebhookEventCatalog({
   if (!isLoading && eventTypes.length === 0) {
     return (
       <EmptyState
+        scene="developers"
         size="inline"
         title="No event types yet"
         description="Event types appear here once Flexprice registers them for this environment."
@@ -144,6 +145,7 @@ export function WebhookEventCatalog({
           Array.from({ length: 3 }, (_, index) => <Skeleton key={index} className="h-32 w-full" />)
         ) : visible.length === 0 ? (
           <EmptyState
+            scene="developers"
             size="inline"
             isFiltered
             title="No event types match"

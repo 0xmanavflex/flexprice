@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, within } from 'storybook/test'
-import { UsersIcon } from '@ui/icons'
 import {
   type Customer,
   CustomerStatus,
@@ -112,7 +111,6 @@ function CustomersListBody({
         onRetry={fn()}
         onClearFilters={clearFilters}
         createAction={<Button onClick={fn()}>New customer</Button>}
-        emptyIcon={<UsersIcon aria-hidden />}
         emptyTitle="No customers yet"
         emptyDescription="Customers are who you bill. Each carries contracts, invoices and a payment history."
       >

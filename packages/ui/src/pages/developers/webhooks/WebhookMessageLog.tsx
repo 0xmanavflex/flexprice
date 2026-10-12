@@ -167,6 +167,7 @@ export function WebhookMessageLog({
       filteredEmptyTitle="No messages match these filters"
       headingAs="h3"
       empty={{
+        scene: 'developers',
         title: 'No messages yet',
         description:
           'Every event Flexprice sends to your endpoints is logged here, with its payload and each delivery attempt.',

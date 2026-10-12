@@ -254,6 +254,7 @@ export function GroupGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No groups match these filters"
       empty={{
+        scene: 'settings',
         title: 'No groups yet',
         description:
           'A group bundles prices or features so they can be filtered, reported and invoiced together — a product line, a region, a tier.',

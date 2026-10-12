@@ -7,6 +7,7 @@ import { Button } from '@ui/components/primitives/button'
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from '@ui/components/primitives/chart'
 import type { ChartConfig } from '@ui/components/primitives/chart'
 import { RetryAction } from '@ui/compositions/feedback/RetryAction'
+import { SceneIllustration, type EmptyScene } from '@ui/compositions/feedback/SceneIllustration'
 import { ChartSkeleton, ValuePlaceholder } from '@ui/compositions/feedback/Skeletons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -525,6 +526,8 @@ export interface BlurredEmptyProps {
   action?: BlurredEmptyAction | undefined
   /** Beside the primary — docs, an import, a sample. */
   secondaryAction?: BlurredEmptyAction | undefined
+  /** A small drawing above the message. Omit it on a page that is mostly chart. */
+  scene?: EmptyScene | undefined
   className?: string | undefined
 }
 
@@ -555,6 +558,7 @@ export function BlurredEmpty({
   description,
   action,
   secondaryAction,
+  scene,
   className,
 }: BlurredEmptyProps) {
   return (
@@ -569,6 +573,7 @@ export function BlurredEmpty({
 
       <div className="absolute inset-0 flex items-center justify-center p-6">
         <div className="bg-background/95 flex max-w-sm flex-col items-center gap-4 rounded-xl border px-7 py-6 text-center shadow-[0_8px_24px_-12px_rgba(15,42,61,0.18)]">
+          {scene ? <SceneIllustration scene={scene} className="w-36" /> : null}
           <div className="space-y-1">
             <p className="text-sm font-medium">{title}</p>
             <p className="text-muted-foreground text-[13px]/relaxed">{description}</p>

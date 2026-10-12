@@ -277,6 +277,7 @@ export function CouponGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No coupons match these filters"
       empty={{
+        scene: 'settings',
         title: 'No coupons yet',
         description:
           'A coupon takes an amount or a percentage off a contract — once, for a few periods, or forever. Create one and apply it at checkout or on an existing contract.',

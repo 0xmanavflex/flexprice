@@ -566,6 +566,7 @@ function MetricsSection({
          * shifting everything below it the moment data arrives.
          */
         <BlurredEmpty
+          scene="home"
           title={periodEmpty ? periodCopy.title : firstRunCopy.title}
           description={periodEmpty ? periodCopy.description : firstRunCopy.description}
           action={
