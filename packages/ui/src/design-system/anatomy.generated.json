@@ -397,6 +397,7 @@
       "composes": [],
       "usedBy": [
         "ApiCard",
+        "ConnectIntegrationSheet",
         "ConnectorCard",
         "CustomerWalletView",
         "DashboardHome",
@@ -548,6 +549,7 @@
       "composes": [],
       "usedBy": [
         "ErrorState",
+        "IntegrationLogo",
         "IntegrationsBlock",
         "ListState",
         "LoadingRows",
@@ -830,6 +832,7 @@
       "usedBy": [
         "ChoiceCards",
         "Composer",
+        "ConnectorCard",
         "CopyChip",
         "CopyEmail",
         "CopyId",
@@ -1078,17 +1081,36 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
+        "ManageConnectionSheet",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/feedback/ConfirmDialog.stories.tsx"
+    },
+    "ConnectIntegrationSheet": {
+      "file": "src/pages/integrations/ConnectIntegrationSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowUpRightIcon",
+        "Field",
+        "Sheet",
+        "SpecField",
+        "SyncOptions",
+        "TriangleAlert",
+        "WebhookGuide",
+        "WorkflowStepper"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/integrations/ConnectIntegrationSheet.stories.tsx"
     },
     "ConnectorCard": {
       "file": "src/compositions/layout/ConnectorCard.tsx",
       "layer": "composition",
       "composes": [
-        "ArrowUpRightIcon"
+        "ArrowUpRightIcon",
+        "CheckIcon"
       ],
       "usedBy": [
+        "IntegrationLogo",
         "IntegrationsBlock"
       ],
       "story": "./src/compositions/layout/ConnectorCard.stories.tsx"
@@ -1265,6 +1287,7 @@
         "CopyIcon"
       ],
       "usedBy": [
+        "CustomerDetail",
         "CustomerGrid",
         "IntegrationChips",
         "IntegrationMark",
@@ -1519,12 +1542,14 @@
       "composes": [
         "ActivitySection",
         "ArchiveIcon",
+        "CopyValue",
         "DetailTable",
         "DetailTabs",
         "EditableCard",
         "EmptyState",
         "EntityHeader",
         "EntityLink",
+        "IntegrationMark",
         "IntegrationMarks",
         "MetadataCard",
         "Money",
@@ -2082,6 +2107,7 @@
         "EntityList",
         "FeatureDetailView",
         "GroupMembersView",
+        "IntegrationLogo",
         "IntegrationsBlock",
         "PricingCatalogBlock",
         "SettingsShell",
@@ -2275,6 +2301,7 @@
       ],
       "usedBy": [
         "EntityList",
+        "IntegrationLogo",
         "IntegrationsBlock",
         "PlanChargesView",
         "SubTabState",
@@ -2361,7 +2388,10 @@
       "usedBy": [
         "AcceptInvitationForm",
         "SignInForm",
-        "WebhookEndpointDetail"
+        "SpecField",
+        "SyncOptions",
+        "WebhookEndpointDetail",
+        "WebhookGuide"
       ],
       "story": null
     },
@@ -2496,6 +2526,7 @@
       "usedBy": [
         "AcceptInvitationForm",
         "ChargeForm",
+        "ConnectIntegrationSheet",
         "ContractAddChargeForm",
         "ContractChargeDialog",
         "ContractQuantityDialog",
@@ -2512,11 +2543,15 @@
         "FormCard",
         "FormRow",
         "InvoiceForm",
+        "ManageConnectionSheet",
         "MeteredEntitlementFields",
         "PriceOverrideForm",
         "SignInForm",
+        "SpecField",
+        "SyncOptions",
         "UsageTermsFields",
-        "WebhookEndpointDetail"
+        "WebhookEndpointDetail",
+        "WebhookGuide"
       ],
       "story": "./src/compositions/forms/Field.stories.tsx"
     },
@@ -3257,13 +3292,28 @@
       ],
       "story": null
     },
+    "IntegrationLogo": {
+      "file": "src/pages/integrations/IntegrationsBlock.tsx",
+      "layer": "surface",
+      "composes": [
+        "Bone",
+        "ConnectorCard",
+        "EmptyState",
+        "ErrorState",
+        "SkeletonRegion"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/integrations/IntegrationsBlock.stories.tsx"
+    },
     "IntegrationMark": {
       "file": "src/pages/customers/IntegrationMark.tsx",
       "layer": "surface",
       "composes": [
         "CopyValue"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "CustomerDetail"
+      ],
       "story": null
     },
     "IntegrationMarks": {
@@ -3716,6 +3766,21 @@
       "usedBy": [],
       "story": null
     },
+    "ManageConnectionSheet": {
+      "file": "src/pages/integrations/ManageConnectionSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "ConfirmDialog",
+        "Field",
+        "Sheet",
+        "SpecField",
+        "SyncOptions",
+        "TriangleAlert",
+        "WebhookGuide"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/integrations/ManageConnectionSheet.stories.tsx"
+    },
     "Mark": {
       "file": "src/compositions/shell/EnvironmentSwitcher.tsx",
       "layer": "composition",
@@ -4034,11 +4099,14 @@
         "GroupForm",
         "MeteredEntitlementFields",
         "PaymentForm",
+        "SpecField",
         "SubscriptionForm",
+        "SyncOptions",
         "TaxRateCreateForm",
         "TaxRateEditForm",
         "UsageTermsFields",
-        "WebhookEndpointDetail"
+        "WebhookEndpointDetail",
+        "WebhookGuide"
       ],
       "story": "./src/compositions/forms/OptionSelect.stories.tsx"
     },
@@ -5149,8 +5217,10 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ConnectIntegrationSheet",
         "CustomerEventsGrid",
         "EventDetailSheet",
+        "ManageConnectionSheet",
         "UsageSyncDetailSheet",
         "WebhookMessageSheet"
       ],
@@ -5313,6 +5383,7 @@
       "usedBy": [
         "CollectionsSummary",
         "ErrorState",
+        "IntegrationLogo",
         "IntegrationsBlock",
         "ListState",
         "LoadingRows",
@@ -5399,6 +5470,20 @@
       "layer": "other",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "SpecField": {
+      "file": "src/pages/integrations/ConnectionFields.tsx",
+      "layer": "surface",
+      "composes": [
+        "EyeIcon",
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "ConnectIntegrationSheet",
+        "ManageConnectionSheet"
+      ],
       "story": null
     },
     "SpendingLimit": {
@@ -5640,6 +5725,20 @@
       "usedBy": [],
       "story": null
     },
+    "SyncOptions": {
+      "file": "src/pages/integrations/ConnectionFields.tsx",
+      "layer": "surface",
+      "composes": [
+        "EyeIcon",
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "ConnectIntegrationSheet",
+        "ManageConnectionSheet"
+      ],
+      "story": null
+    },
     "TableSkeleton": {
       "file": "src/compositions/feedback/Skeletons.tsx",
       "layer": "composition",
@@ -5852,7 +5951,10 @@
       "file": "src/icons/index.ts",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "ConnectIntegrationSheet",
+        "ManageConnectionSheet"
+      ],
       "story": null
     },
     "TriangleSplitIcon": {
@@ -6164,6 +6266,20 @@
       ],
       "story": "./src/pages/developers/webhooks/WebhookEventTypePicker.stories.tsx"
     },
+    "WebhookGuide": {
+      "file": "src/pages/integrations/ConnectionFields.tsx",
+      "layer": "surface",
+      "composes": [
+        "EyeIcon",
+        "Field",
+        "OptionSelect"
+      ],
+      "usedBy": [
+        "ConnectIntegrationSheet",
+        "ManageConnectionSheet"
+      ],
+      "story": null
+    },
     "WebhookMessageLog": {
       "file": "src/pages/developers/webhooks/WebhookMessageLog.tsx",
       "layer": "surface",
@@ -6236,6 +6352,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ConnectIntegrationSheet",
         "FormPage",
         "FormSteps"
       ],
@@ -7169,11 +7286,27 @@
         "PageShell"
       ]
     },
+    "./src/pages/integrations/ConnectIntegrationSheet.stories.tsx": {
+      "title": "App/Integrations/Connect sheet",
+      "component": "ConnectIntegrationSheet",
+      "uses": [
+        "ConnectIntegrationSheet",
+        "IntegrationLogo"
+      ]
+    },
     "./src/pages/integrations/IntegrationsBlock.stories.tsx": {
       "title": "App/Integrations/Integrations",
       "component": "IntegrationsBlock",
       "uses": [
         "IntegrationsBlock"
+      ]
+    },
+    "./src/pages/integrations/ManageConnectionSheet.stories.tsx": {
+      "title": "App/Integrations/Manage connection sheet",
+      "component": "ManageConnectionSheet",
+      "uses": [
+        "IntegrationLogo",
+        "ManageConnectionSheet"
       ]
     },
     "./src/pages/product-catalog/addons/AddonForm.stories.tsx": {
@@ -8074,7 +8207,20 @@
       "pattern": "List",
       "route": null,
       "uses": [
-        "IntegrationsBlock"
+        "ConnectIntegrationSheet",
+        "IntegrationLogo",
+        "IntegrationsBlock",
+        "ManageConnectionSheet"
+      ]
+    },
+    "OAuthCallbackPage": {
+      "file": "apps/console/src/pages/integrations/OAuthCallbackPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "ErrorState",
+        "PageBody",
+        "PageLoadingState"
       ]
     },
     "InvoiceDetailPage": {

@@ -1,7 +1,6 @@
 import type { ReactNode } from 'react'
-import { ArrowUpRightIcon, SettingsIcon } from '@ui/icons'
+import { ArrowUpRightIcon, CheckIcon, SettingsIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
-import { Switch } from '@ui/components/primitives/switch'
 import { cn } from '@ui/lib/cn'
 
 export interface ConnectorCardProps {
@@ -10,21 +9,17 @@ export interface ConnectorCardProps {
   logo: ReactNode
   docsUrl?: string | undefined
   connected: boolean
-  /** Whether the on/off switch is on (an enabled connector can be paused). */
-  enabled: boolean
   onConnect: () => void
-  onDisconnect: () => void
   onConfigure: () => void
-  onEnabledChange: (enabled: boolean) => void
   testId?: string
   className?: string
 }
 
 /**
  * A connector: a muted tray holding a white card (logo, name, description,
- * docs link), with the actions in the tray footer — one on/off switch (turning
- * it on connects an unconnected connector), plus Disconnect and Configure once connected. The reference's connector card, markup for
- * markup. Purely presentational; every action is a prop.
+ * docs link), with one action in the tray footer. Unconnected shows Connect;
+ * connected shows a Connected marker and Configure, where disconnecting lives.
+ * Purely presentational; every action is a prop.
  */
 export function ConnectorCard({
   name,
@@ -32,11 +27,8 @@ export function ConnectorCard({
   logo,
   docsUrl,
   connected,
-  enabled,
   onConnect,
-  onDisconnect,
   onConfigure,
-  onEnabledChange,
   testId,
   className,
 }: ConnectorCardProps) {
@@ -70,16 +62,11 @@ export function ConnectorCard({
 
       <div className="flex items-center justify-between gap-3 px-3 py-2.5">
         {connected ? (
-          <div className="flex items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              className="h-7 px-2.5"
-              onClick={onDisconnect}
-            >
-              Disconnect
-            </Button>
+          <>
+            <span className="text-foreground inline-flex items-center gap-1.5 text-[13px] font-medium">
+              <CheckIcon className="size-3.5" aria-hidden="true" />
+              Connected
+            </span>
             <Button
               type="button"
               size="sm"
@@ -91,15 +78,22 @@ export function ConnectorCard({
               <SettingsIcon aria-hidden="true" />
               Configure
             </Button>
-          </div>
+          </>
         ) : (
-          <span className="text-muted-foreground text-[13px]">Not connected</span>
+          <>
+            <span className="text-muted-foreground text-[13px]">Not connected</span>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="h-7 px-2.5"
+              aria-label={`Connect ${name}`}
+              onClick={onConnect}
+            >
+              Connect
+            </Button>
+          </>
         )}
-        <Switch
-          checked={connected && enabled}
-          aria-label={`${name} enabled`}
-          onCheckedChange={(on) => (connected ? onEnabledChange(on) : on ? onConnect() : undefined)}
-        />
       </div>
     </article>
   )

@@ -155,7 +155,8 @@ test.describe('the shell', () => {
       searchLabel: 'Search customers',
     })
     await expect(list.rows().first()).toBeVisible({ timeout: 20_000 })
-    await list.openFirstRow()
+    // The Email cell is plain text; the External ID cell beside it is a copy button.
+    await list.rows().first().getByRole('cell').nth(1).click()
     await expect(page).toHaveURL(/\/customers\/(?!new)[^/]+$/)
 
     await shell.switchEnvironment(other)

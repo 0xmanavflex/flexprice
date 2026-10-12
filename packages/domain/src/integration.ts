@@ -151,6 +151,20 @@ export const INTEGRATION_CATALOG: IntegrationSpec[] = [
 ]
 
 /** An integration as the grid shows it: the catalogue entry plus this environment's connection count. */
+/** A published connection. Secrets never come back from the API, so none are here. */
+export interface IntegrationConnection {
+  id: string
+  name: string
+  providerType: string
+  /** Entity → which directions are on, as the connection was saved. */
+  syncConfig: Record<string, { inbound?: boolean; outbound?: boolean }>
+  /** The non-secret settings saved with it (environment, redirect URLs). */
+  metadata: Record<string, string>
+  createdAt?: string | undefined
+}
+
 export interface Integration extends IntegrationSpec {
   connections: number
+  /** The environment's connection for this provider, when there is one. */
+  connection?: IntegrationConnection | undefined
 }

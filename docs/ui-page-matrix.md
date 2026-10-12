@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-56 route pages.
+57 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -39,7 +39,8 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | GroupForm |
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, ListState, PageBody |
 | home | `HomePage` | Dashboard | Panel | DashboardHome |
-| integrations | `IntegrationListPage` | List | ConnectorCard, EmptyState | IntegrationsBlock |
+| integrations | `IntegrationListPage` | List | ConfirmDialog, ConnectorCard, EmptyState, Field, WorkflowStepper | ConnectIntegrationSheet, ConnectionContext, IntegrationLogo, IntegrationsBlock, ManageConnectionSheet |
+| integrations | `OAuthCallbackPage` | Other | — | Button, ErrorState, PageBody, PageLoadingState |
 | invoices | `InvoiceDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, Section | InvoiceDetailView, InvoicePendingAction, Toaster |
 | invoices | `InvoiceFormPage` | Form | Field | AppFailure, InvoiceForm, LoadingRows, PageBody |
 | invoices | `InvoiceListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | InvoiceGrid, ListState, PageBody |

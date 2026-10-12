@@ -1,5 +1,4 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { Toaster } from 'sonner'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import { INTEGRATION_CATALOG, type Integration } from '@fp/domain'
 import { IntegrationsBlock } from './IntegrationsBlock'
@@ -23,14 +22,6 @@ const meta = {
   title: 'App/Integrations/Integrations',
   component: IntegrationsBlock,
   parameters: { layout: 'fullscreen' },
-  decorators: [
-    (Story) => (
-      <>
-        <Story />
-        <Toaster />
-      </>
-    ),
-  ],
   args: { integrations: makeIntegrations(INTEGRATION_CATALOG.length, 2) },
 } satisfies Meta<typeof IntegrationsBlock>
 
@@ -126,13 +117,6 @@ export const Forbidden: Story = {
   },
 }
 
-/** Connecting is a preview and says so before anyone clicks. */
-export const PreviewIsLabelled: Story = {
-  play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByRole('note')).toHaveTextContent(/Preview/)
-  },
-}
-
 export const ManyIntegrations: Story = {
   args: { integrations: makeIntegrations(40, 6) },
 }
@@ -153,13 +137,28 @@ export const SearchFilters: Story = {
   },
 }
 
-/** Connecting is local state: the card moves to Connected. */
+/** Connect hands the integration to the page, which opens the connect sheet. */
 export const ConnectsAnIntegration: Story = {
-  args: { integrations: makeIntegrations(INTEGRATION_CATALOG.length, 0) },
-  play: async ({ canvasElement }) => {
+  args: {
+    integrations: makeIntegrations(INTEGRATION_CATALOG.length, 0),
+    onConnect: fn(),
+    onConfigure: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('switch', { name: 'Stripe enabled' }))
-    await expect(await canvas.findByRole('heading', { name: 'Connected' })).toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'Disconnect' })).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Connect Stripe' }))
+    await expect(args.onConnect).toHaveBeenCalledWith(expect.objectContaining({ id: 'stripe' }))
+    await expect(canvas.queryByRole('heading', { name: 'Connected' })).toBeNull()
+  },
+}
+
+/** Configure on a connected card hands it to the page, which opens the manage sheet. */
+export const ConfiguresAConnection: Story = {
+  args: { onConnect: fn(), onConfigure: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const [configure] = canvas.getAllByRole('button', { name: /^Configure / })
+    await userEvent.click(configure!)
+    await expect(args.onConfigure).toHaveBeenCalledOnce()
   },
 }

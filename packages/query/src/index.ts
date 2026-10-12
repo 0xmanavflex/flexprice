@@ -482,10 +482,16 @@ export type { DataExportPage, DataExportWire } from './dataExports'
 export {
   countConnections,
   fetchIntegrations,
+  toIntegrationConnection,
   toIntegrations,
+  useCompleteOAuth,
+  useConnectIntegration,
+  useDisconnectIntegration,
   useIntegrations,
+  useStartOAuth,
+  useUpdateConnection,
 } from './integrations'
-export type { ConnectionWire } from './integrations'
+export type { ConnectionWire, OAuthStart } from './integrations'
 export {
   toCreateWalletRequest,
   toTopUpRequest,

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react'
 import { SearchIcon } from '@ui/icons'
-import { toast } from 'sonner'
 import type { Integration } from '@fp/domain'
 import { ConnectorCard } from '@ui/compositions/layout/ConnectorCard'
 import { Button } from '@ui/components/primitives/button'
@@ -28,10 +27,9 @@ import { provenance } from '@ui/provenance'
  * `components/blocks/settings-13`; the live page renders its layout (heading
  * and three-up grid) with the real catalogue through `ConnectorCard`.
  *
- * Connection state is real (`connections > 0`). Connect, Disconnect, Configure
- * and the on/off switch have no API yet, so they are a labelled preview: they
- * update local state only, a note above the gallery says so, and each toast
- * starts with "Preview". Nothing is sent and nothing survives a reload.
+ * Connection state is real (`connections > 0`). Connect and Configure are
+ * callbacks: the page opens the connect or manage sheet, so this block holds no
+ * connection state of its own.
  *
  * The page's query state is its own to show: loading is a grid of card-shaped
  * placeholders, a failure is an `ErrorState` with a retry, an empty catalogue
@@ -46,7 +44,7 @@ export const IntegrationsBlockProvenance = provenance({
     'compositions/feedback/Skeletons',
     'compositions/feedback/States',
   ],
-  note: 'The settings-13 gallery layout over the live catalogue, with loading, error, first-run and filtered-empty states. Connect actions are a labelled preview.',
+  note: 'The settings-13 gallery layout over the live catalogue, with loading, error, first-run and filtered-empty states. Connect and Configure are callbacks.',
 })
 
 const ALL = 'All'
@@ -64,6 +62,10 @@ export interface IntegrationsBlockProps {
   isLoading?: boolean
   /** The catalogue request failed. Shown in place of the gallery when there is nothing to show. */
   error?: IntegrationsFailure | null
+  /** Open the connect flow for an unconnected integration. */
+  onConnect?: ((integration: Integration) => void) | undefined
+  /** Open the manage sheet for a connected integration. */
+  onConfigure?: ((integration: Integration) => void) | undefined
   onRetry?: (() => void) | undefined
   isRetrying?: boolean | undefined
 }
@@ -86,7 +88,7 @@ function GallerySkeleton() {
           </div>
           <div className="flex items-center justify-between px-3 py-2.5">
             <Bone className="h-4 w-24" />
-            <Bone className="h-5 w-9 rounded-full" />
+            <Bone className="h-7 w-16 rounded-md" />
           </div>
         </div>
       ))}
@@ -94,7 +96,8 @@ function GallerySkeleton() {
   )
 }
 
-function Logo({ integration }: { integration: Integration }) {
+/** The provider's logo, or its initial when there is none. */
+export function IntegrationLogo({ integration }: { integration: Integration }) {
   const src = INTEGRATION_LOGOS[integration.id]
   return src ? (
     <img src={src} alt="" className="max-h-full max-w-full object-contain" />
@@ -109,11 +112,11 @@ export function IntegrationsBlock({
   integrations,
   isLoading = false,
   error = null,
+  onConnect,
+  onConfigure,
   onRetry,
   isRetrying,
 }: IntegrationsBlockProps) {
-  const [connectedOverride, setConnected] = useState<Record<string, boolean>>({})
-  const [disabled, setDisabled] = useState<Record<string, boolean>>({})
   const [query, setQuery] = useState('')
   const [category, setCategory] = useState(ALL)
 
@@ -135,7 +138,7 @@ export function IntegrationsBlock({
     const needle = query.trim().toLowerCase()
     return needle === '' || `${i.name} ${i.description}`.toLowerCase().includes(needle)
   })
-  const isConnected = (i: Integration) => connectedOverride[i.id] ?? i.connections > 0
+  const isConnected = (i: Integration) => i.connections > 0
   const connected = visible.filter(isConnected)
   const available = visible.filter((i) => !isConnected(i))
 
@@ -146,19 +149,10 @@ export function IntegrationsBlock({
       name={integration.name}
       description={integration.description}
       docsUrl={integration.docsUrl}
-      logo={<Logo integration={integration} />}
+      logo={<IntegrationLogo integration={integration} />}
       connected={isConnected(integration)}
-      enabled={!disabled[integration.id]}
-      onConnect={() => {
-        setConnected((s) => ({ ...s, [integration.id]: true }))
-        toast(`Preview: ${integration.name} was not connected. No request was sent.`)
-      }}
-      onDisconnect={() => {
-        setConnected((s) => ({ ...s, [integration.id]: false }))
-        toast(`Preview: ${integration.name} was not disconnected. No request was sent.`)
-      }}
-      onConfigure={() => toast(`Preview: configuring ${integration.name} is not available yet.`)}
-      onEnabledChange={(on) => setDisabled((s) => ({ ...s, [integration.id]: !on }))}
+      onConnect={() => onConnect?.(integration)}
+      onConfigure={() => onConfigure?.(integration)}
     />
   )
 
@@ -207,13 +201,6 @@ export function IntegrationsBlock({
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       {failure}
-      <p
-        role="note"
-        className="text-muted-foreground bg-muted/50 rounded-lg border px-3 py-2 text-[13px]"
-      >
-        <span className="text-foreground font-medium">Preview.</span> Connecting and disconnecting
-        are not wired up yet: changes here stay on this page and are not saved.
-      </p>
       <div className="flex flex-wrap items-center gap-2">
         <InputGroup className="h-9 w-72">
           <InputGroupAddon align="inline-start">

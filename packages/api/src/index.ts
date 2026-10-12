@@ -74,7 +74,21 @@ export type * as FlexpriceModels from '@flexprice/sdk/sdk/models'
 export type { Flexprice } from '@flexprice/sdk'
 export { searchUsageRecords } from './usageRecords'
 export type { SearchUsageRecordsParams } from './usageRecords'
-export { listConnections } from './connections'
+export {
+  listConnections,
+  createConnection,
+  getConnection,
+  updateConnection,
+  deleteConnection,
+  oauthInit,
+  oauthComplete,
+} from './connections'
+export type {
+  ConnectionRequest,
+  ConnectionUpdate,
+  OAuthInitRequest,
+  OAuthCompleteRequest,
+} from './connections'
 
 /**
  * The tenant's Svix webhook portal, called directly with the app-portal token

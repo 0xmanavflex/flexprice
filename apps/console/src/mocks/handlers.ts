@@ -185,10 +185,37 @@ function applyFeatureExpand(result: ReturnType<typeof page>, expand: string | un
 }
 
 /**
+ * The environment's connections. Mutable so the integrations page can connect,
+ * edit and disconnect, and so customers pick the change up: a customer shows a
+ * provider only while that provider has a published connection. QuickBooks has
+ * a draft, which must not count.
+ */
+const connectionRows: Record<string, unknown>[] = [
+  {
+    id: 'conn_stripe',
+    name: 'Stripe',
+    provider_type: 'stripe',
+    connection_status: 'published',
+    metadata: {},
+    sync_config: { invoice: { outbound: true }, payment: { inbound: true } },
+    created_at: '2026-08-12T09:30:00Z',
+  },
+  { id: 'conn_qb', name: 'QuickBooks', provider_type: 'quickbooks', connection_status: 'draft' },
+]
+let connectionSeq = 0
+const pendingOAuth = new Map<string, { name: unknown; provider: string; metadata: unknown }>()
+
+function publishedProviders(): string[] {
+  return connectionRows
+    .filter((row) => row['connection_status'] === 'published')
+    .map((row) => String(row['provider_type']))
+}
+
+/**
  * The corpus has no per-customer integration mappings. A stable slice of the
- * catalogue is attached so the list column and the detail header can show the
- * same marks the integrations page uses. Rows that already carry mappings are
- * left alone.
+ * connected providers is attached so the list column and the detail page can
+ * show the same marks the integrations page uses. Rows that already carry
+ * mappings are left alone.
  */
 function withDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
   if (Array.isArray(row['integrations'])) return row
@@ -200,18 +227,14 @@ function withDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
     .replace(/[^a-z0-9]/gi, '')
     .slice(-14)
     .toLowerCase()
-  const stripe = {
-    provider_type: 'stripe',
-    status: 'published',
-    provider_entity_id: `cus_${suffix}`,
-  }
-  const quickbooks = {
-    provider_type: 'quickbooks',
-    status: 'published',
-    provider_entity_id: `qb_${suffix.slice(0, 8)}`,
-  }
-  const sets = [[stripe], [stripe, quickbooks], []]
-  const integrations = sets[hash % sets.length] ?? []
+  const prefix: Record<string, string> = { stripe: 'cus_', quickbooks: 'qb_', hubspot: 'hs_' }
+  const integrations = publishedProviders()
+    .filter((_, index) => (hash + index) % 3 !== 2)
+    .map((provider) => ({
+      provider_type: provider,
+      status: 'published',
+      provider_entity_id: `${prefix[provider] ?? `${provider}_`}${suffix}`,
+    }))
   return integrations.length > 0 ? { ...row, integrations } : row
 }
 
@@ -2712,18 +2735,96 @@ export const handlers = [
   }),
 
   /*
-   * `GET /connections` — which integrations the environment has connected.
-   * Stripe is published, QuickBooks has a draft (which must not count).
+   * `/connections` and the OAuth pair — connect, edit and disconnect a
+   * provider. Like the real API: one published connection per provider, a
+   * duplicate is refused, secrets are accepted and never echoed, and DELETE
+   * archives.
    */
   http.get(`${BASE}/connections`, () =>
     HttpResponse.json({
-      connections: [
-        { id: 'conn_stripe', provider_type: 'stripe', connection_status: 'published' },
-        { id: 'conn_qb', provider_type: 'quickbooks', connection_status: 'draft' },
-      ],
-      pagination: { total: 2, limit: 100, offset: 0 },
+      connections: connectionRows.filter((row) => row['connection_status'] !== 'archived'),
+      pagination: { total: connectionRows.length, limit: 100, offset: 0 },
     }),
   ),
+
+  http.post(`${BASE}/connections`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const provider = String(body['provider_type'] ?? '')
+    if (publishedProviders().includes(provider) && provider !== 's3' && provider !== 'gcs') {
+      return HttpResponse.json(
+        { message: `A connection for ${provider} already exists in this environment` },
+        { status: 409 },
+      )
+    }
+    const row = {
+      id: `conn_mock_${++connectionSeq}`,
+      name: body['name'],
+      provider_type: provider,
+      connection_status: 'published',
+      metadata: body['metadata'] ?? {},
+      sync_config: body['sync_config'] ?? {},
+      created_at: new Date().toISOString(),
+    }
+    connectionRows.push(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+
+  http.put(`${BASE}/connections/:id`, async ({ params, request }) => {
+    const row = connectionRows.find((item) => item['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Connection not found' }, { status: 404 })
+    const body = (await request.json()) as Record<string, unknown>
+    if (typeof body['name'] === 'string') row['name'] = body['name']
+    if (body['metadata']) row['metadata'] = body['metadata']
+    if (body['sync_config']) row['sync_config'] = body['sync_config']
+    return HttpResponse.json(row)
+  }),
+
+  http.delete(`${BASE}/connections/:id`, ({ params }) => {
+    const row = connectionRows.find((item) => item['id'] === params['id'])
+    if (!row) return HttpResponse.json({ message: 'Connection not found' }, { status: 404 })
+    row['connection_status'] = 'archived'
+    return new HttpResponse(null, { status: 204 })
+  }),
+
+  http.post(`${BASE}/oauth/init`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const provider = String(body['provider'] ?? '')
+    if (publishedProviders().includes(provider)) {
+      return HttpResponse.json(
+        { message: `A connection for ${provider} already exists in this environment` },
+        { status: 409 },
+      )
+    }
+    const sessionId = `oauth_mock_${++connectionSeq}`
+    // The real flow leaves the reader at the provider; the mock sends them
+    // straight back to the console's callback with a code.
+    const callback = new URL('/tools/integrations/oauth/callback', new URL(request.url).origin)
+    callback.searchParams.set('code', 'mock-code')
+    callback.searchParams.set('state', sessionId)
+    if (provider === 'quickbooks') callback.searchParams.set('realmId', 'mock-realm')
+    pendingOAuth.set(sessionId, { name: body['name'], provider, metadata: body['metadata'] })
+    return HttpResponse.json({ oauth_url: callback.toString(), session_id: sessionId })
+  }),
+
+  http.post(`${BASE}/oauth/complete`, async ({ request }) => {
+    const body = (await request.json()) as Record<string, unknown>
+    const pending = pendingOAuth.get(String(body['session_id']))
+    if (!pending) {
+      return HttpResponse.json({ message: 'OAuth session expired' }, { status: 400 })
+    }
+    pendingOAuth.delete(String(body['session_id']))
+    const row = {
+      id: `conn_mock_${++connectionSeq}`,
+      name: pending.name,
+      provider_type: pending.provider,
+      connection_status: 'published',
+      metadata: pending.metadata ?? {},
+      sync_config: {},
+      created_at: new Date().toISOString(),
+    }
+    connectionRows.push(row)
+    return HttpResponse.json({ success: true, connection_id: row.id })
+  }),
 
   /*
    * `GET /tasks/scheduled` — the Exports list. `enabled` is the server-side

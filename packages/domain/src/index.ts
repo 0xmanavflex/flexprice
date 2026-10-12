@@ -563,7 +563,8 @@ export {
 } from './dataExport'
 export type { DataExport, DataExportQuery, ExportEntity, ExportState } from './dataExport'
 export { INTEGRATION_CATALOG } from './integration'
-export type { Integration, IntegrationSpec } from './integration'
+export type { Integration, IntegrationConnection, IntegrationSpec } from './integration'
+export * from './integrationConnect'
 export {
   WALLET_STATUS_LABEL,
   WalletStatus,

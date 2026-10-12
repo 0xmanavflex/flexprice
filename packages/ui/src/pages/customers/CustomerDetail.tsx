@@ -30,7 +30,8 @@ import { provenance } from '@ui/provenance'
 import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { cn } from '@ui/lib/cn'
 import { DetailTable } from '../shared/DetailTable'
-import { IntegrationMarks } from './IntegrationMark'
+import { IntegrationMark, IntegrationMarks } from './IntegrationMark'
+import { CopyValue } from '../shared/CopyValue'
 
 /**
  * A customer's detail page: an avatar-tile `EntityHeader` (name; on the right
@@ -1014,11 +1015,44 @@ function InformationTab({
       </div>
 
       <div className="flex flex-col gap-5">
+        <IntegrationsCard integrations={customer.integrations} />
         <MetadataCard
           metadata={customer.metadata}
           {...(onUpdateMetadata ? { onSave: onUpdateMetadata } : {})}
         />
       </div>
     </div>
+  )
+}
+
+/** Where this customer is mirrored: one row per connected provider, with the customer's id there. */
+function IntegrationsCard({ integrations }: { integrations: CustomerDetailModel['integrations'] }) {
+  return (
+    <Section title="Integrations" flush>
+      {integrations.length === 0 ? (
+        <p className="text-muted-foreground px-6 py-5 text-[13px]">
+          Not mirrored to any connected integration.
+        </p>
+      ) : (
+        <ul className="divide-y">
+          {integrations.map((integration) => (
+            <li
+              key={integration.providerType}
+              className="flex items-center justify-between gap-3 px-6 py-3"
+            >
+              <span className="flex min-w-0 items-center gap-2.5">
+                <IntegrationMark integration={integration} />
+                <span className="truncate text-sm font-medium">{integration.name}</span>
+              </span>
+              {integration.providerEntityId ? (
+                <CopyValue value={integration.providerEntityId} label={`${integration.name} ID`} />
+              ) : (
+                <span className="text-muted-foreground text-xs">No provider ID</span>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+    </Section>
   )
 }

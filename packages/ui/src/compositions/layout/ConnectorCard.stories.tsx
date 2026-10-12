@@ -1,41 +1,7 @@
-import { useEffect, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { CreditCardIcon } from '@ui/icons'
-import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
-import { ConnectorCard, type ConnectorCardProps } from './ConnectorCard'
-
-/** Mirrors the real page: connecting, pausing and disconnecting all move the card. */
-function ConnectorCardDemo(props: ConnectorCardProps) {
-  const [connected, setConnected] = useState(props.connected)
-  const [enabled, setEnabled] = useState(props.enabled)
-  useEffect(() => {
-    setConnected(props.connected)
-    setEnabled(props.enabled)
-  }, [props.connected, props.enabled])
-  return (
-    <div className="max-w-sm">
-      <ConnectorCard
-        {...props}
-        connected={connected}
-        enabled={enabled}
-        onConnect={() => {
-          props.onConnect()
-          setConnected(true)
-          setEnabled(true)
-        }}
-        onDisconnect={() => {
-          props.onDisconnect()
-          setConnected(false)
-          setEnabled(false)
-        }}
-        onEnabledChange={(next) => {
-          props.onEnabledChange(next)
-          setEnabled(next)
-        }}
-      />
-    </div>
-  )
-}
+import { expect, fn, userEvent, within } from 'storybook/test'
+import { ConnectorCard } from './ConnectorCard'
 
 const meta = {
   title: 'Building blocks/Layout/ConnectorCard',
@@ -46,12 +12,9 @@ const meta = {
     description: { control: 'text' },
     docsUrl: { control: 'text' },
     connected: { control: 'boolean' },
-    enabled: { control: 'boolean' },
     logo: { control: false },
     onConnect: { control: false },
-    onDisconnect: { control: false },
     onConfigure: { control: false },
-    onEnabledChange: { control: false },
     testId: { control: false },
     className: { control: 'text' },
   },
@@ -61,64 +24,41 @@ const meta = {
     logo: <CreditCardIcon className="size-full" aria-hidden />,
     docsUrl: 'https://docs.example.com/connectors/stripe',
     connected: false,
-    enabled: false,
     onConnect: fn(),
-    onDisconnect: fn(),
     onConfigure: fn(),
-    onEnabledChange: fn(),
   },
-  render: (args) => <ConnectorCardDemo {...args} />,
+  render: (args) => (
+    <div className="max-w-sm">
+      <ConnectorCard {...args} />
+    </div>
+  ),
 } satisfies Meta<typeof ConnectorCard>
 
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** Flip `connected`, `enabled` and the docs link; the switch and buttons also work in place. */
+/** Flip `connected` and the docs link. */
 export const Playground: Story = {}
 
-/** Not connected: only the switch is offered, and turning it on starts the connect flow. */
+/** Not connected: one Connect button, which starts the connect flow. */
 export const NotConnected: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Not connected')).toBeVisible()
-    await expect(canvas.queryByRole('button', { name: 'Disconnect' })).not.toBeInTheDocument()
-    await userEvent.click(canvas.getByRole('switch', { name: 'Stripe enabled' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Connect Stripe' }))
     await expect(args.onConnect).toHaveBeenCalledOnce()
-    await waitFor(() => expect(canvas.getByRole('button', { name: 'Disconnect' })).toBeVisible())
   },
 }
 
-/** Connected and on: Disconnect and Configure sit beside the switch. */
-export const ConnectedEnabled: Story = {
-  args: { connected: true, enabled: true },
+/** Connected: a Connected marker and Configure, where disconnecting lives. */
+export const Connected: Story = {
+  args: { connected: true },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('switch', { name: 'Stripe enabled' })).toBeChecked()
+    await expect(canvas.getByText('Connected')).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Connect Stripe' })).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'Configure Stripe' }))
     await expect(args.onConfigure).toHaveBeenCalledOnce()
-  },
-}
-
-/** Connected but paused: the switch is off while the connection stays. */
-export const ConnectedPaused: Story = {
-  args: { connected: true, enabled: false },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    const toggle = canvas.getByRole('switch', { name: 'Stripe enabled' })
-    await expect(toggle).not.toBeChecked()
-    await userEvent.click(toggle)
-    await expect(args.onEnabledChange).toHaveBeenCalledWith(true)
-  },
-}
-
-/** Disconnecting returns the card to its not-connected footer. */
-export const Disconnects: Story = {
-  args: { connected: true, enabled: true },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Disconnect' }))
-    await expect(args.onDisconnect).toHaveBeenCalledOnce()
-    await waitFor(() => expect(canvas.getByText('Not connected')).toBeVisible())
   },
 }
 
@@ -138,6 +78,5 @@ export const LongDescription: Story = {
     description:
       'Collect card, bank-debit and wallet payments, reconcile payouts against invoices automatically, handle disputes and refunds from one place, and keep customers and payment methods in sync in both directions.',
     connected: true,
-    enabled: true,
   },
 }

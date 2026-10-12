@@ -363,7 +363,21 @@ export { CustomerForm, CustomerFormProvenance } from './customers/CustomerForm'
 export type { CustomerFormProps } from './customers/CustomerForm'
 export { DataExportGrid, DataExportGridProvenance } from './developers/exports/DataExportGrid'
 export type { DataExportGridProps } from './developers/exports/DataExportGrid'
-export { IntegrationsBlock } from './integrations/IntegrationsBlock'
+export { IntegrationsBlock, IntegrationLogo } from './integrations/IntegrationsBlock'
+export type { IntegrationsFailure, IntegrationsBlockProps } from './integrations/IntegrationsBlock'
+export {
+  ConnectIntegrationSheet,
+  ConnectIntegrationSheetProvenance,
+} from './integrations/ConnectIntegrationSheet'
+export type {
+  ConnectionContext,
+  ConnectIntegrationSheetProps,
+} from './integrations/ConnectIntegrationSheet'
+export {
+  ManageConnectionSheet,
+  ManageConnectionSheetProvenance,
+} from './integrations/ManageConnectionSheet'
+export type { ManageConnectionSheetProps } from './integrations/ManageConnectionSheet'
 export { PricingCatalogBlock } from './product-catalog/pricing-widget/PricingCatalogBlock'
 export { toast, Toaster } from 'sonner'
 

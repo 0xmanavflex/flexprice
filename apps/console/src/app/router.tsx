@@ -159,6 +159,11 @@ const PricingWidgetPage = lazy(() =>
     default: m.PricingWidgetPage,
   })),
 )
+const OAuthCallbackPage = lazy(() =>
+  import('@/pages/integrations/OAuthCallbackPage').then((m) => ({
+    default: m.OAuthCallbackPage,
+  })),
+)
 const IntegrationListPage = lazy(() =>
   import('@/pages/integrations/IntegrationListPage').then((m) => ({
     default: m.IntegrationListPage,
@@ -1840,6 +1845,13 @@ const integrationsRoute = createRoute({
   component: IntegrationListPage,
 })
 
+// The redirect URI QuickBooks and Zoho are registered with; the API config fixes the path.
+const oauthCallbackRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/tools/integrations/oauth/callback',
+  component: OAuthCallbackPage,
+})
+
 const pricingWidgetRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/pricing-widget',
@@ -2190,6 +2202,7 @@ export const routeTree = rootRoute.addChildren([
     workflowsRoute,
     exportsRoute,
     integrationsRoute,
+    oauthCallbackRoute,
     pricingWidgetRoute,
     usageSyncsRoute,
     taxesRoute,

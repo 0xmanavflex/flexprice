@@ -22,4 +22,28 @@ describe('toIntegrations', () => {
     expect(all.find((i) => i.id === 'stripe')?.connections).toBe(0)
     expect(all.length).toBeGreaterThan(10)
   })
+
+  it('attaches the published connection with its sync switches, and no secrets', () => {
+    const all = toIntegrations([
+      {
+        id: 'conn_1',
+        name: 'Stripe (live)',
+        provider_type: 'stripe',
+        connection_status: 'published',
+        sync_config: { invoice: { outbound: true }, plan: { inbound: false } },
+        metadata: { region: 'eu', ignored: 3 as unknown as string },
+        created_at: '2026-10-01T00:00:00Z',
+      },
+      { id: 'conn_2', name: 'Old', provider_type: 'razorpay', connection_status: 'archived' },
+    ])
+    expect(all.find((i) => i.id === 'stripe')?.connection).toEqual({
+      id: 'conn_1',
+      name: 'Stripe (live)',
+      providerType: 'stripe',
+      syncConfig: { invoice: { outbound: true }, plan: { inbound: false } },
+      metadata: { region: 'eu' },
+      createdAt: '2026-10-01T00:00:00Z',
+    })
+    expect(all.find((i) => i.id === 'razorpay')?.connection).toBeUndefined()
+  })
 })

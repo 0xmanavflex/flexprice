@@ -1,6 +1,23 @@
-import { useQuery } from '@tanstack/react-query'
-import { ApiError, type AuthSource, ErrorKind, listConnections } from '@fp/api'
-import { INTEGRATION_CATALOG, type Integration } from '@fp/domain'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import {
+  ApiError,
+  type AuthSource,
+  type ConnectionUpdate,
+  type OAuthCompleteRequest,
+  ErrorKind,
+  createConnection,
+  deleteConnection,
+  listConnections,
+  oauthComplete,
+  oauthInit,
+  updateConnection,
+} from '@fp/api'
+import {
+  INTEGRATION_CATALOG,
+  type ConnectionPayload,
+  type Integration,
+  type IntegrationConnection,
+} from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
@@ -12,8 +29,39 @@ import { useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 export interface ConnectionWire {
   id?: string
+  name?: string
   provider_type?: string
   connection_status?: string
+  metadata?: Record<string, unknown> | null
+  sync_config?: Record<string, { inbound?: boolean; outbound?: boolean } | undefined> | null
+  created_at?: string
+}
+
+function isPublished(wire: ConnectionWire): boolean {
+  return !wire.connection_status || wire.connection_status === 'published'
+}
+
+export function toIntegrationConnection(wire: ConnectionWire): IntegrationConnection {
+  const syncConfig: IntegrationConnection['syncConfig'] = {}
+  for (const [entity, value] of Object.entries(wire.sync_config ?? {})) {
+    if (value && typeof value === 'object')
+      syncConfig[entity] = {
+        ...(typeof value.inbound === 'boolean' ? { inbound: value.inbound } : {}),
+        ...(typeof value.outbound === 'boolean' ? { outbound: value.outbound } : {}),
+      }
+  }
+  const metadata: Record<string, string> = {}
+  for (const [key, value] of Object.entries(wire.metadata ?? {})) {
+    if (typeof value === 'string') metadata[key] = value
+  }
+  return {
+    id: wire.id ?? '',
+    name: wire.name ?? '',
+    providerType: wire.provider_type ?? '',
+    syncConfig,
+    metadata,
+    createdAt: wire.created_at,
+  }
 }
 
 /** Published connections per `provider_type`; drafts and archived ones do not count. */
@@ -21,7 +69,7 @@ export function countConnections(wires: ConnectionWire[]): Map<string, number> {
   const counts = new Map<string, number>()
   for (const wire of wires) {
     if (!wire.provider_type) continue
-    if (wire.connection_status && wire.connection_status !== 'published') continue
+    if (!isPublished(wire)) continue
     counts.set(wire.provider_type, (counts.get(wire.provider_type) ?? 0) + 1)
   }
   return counts
@@ -29,10 +77,14 @@ export function countConnections(wires: ConnectionWire[]): Map<string, number> {
 
 export function toIntegrations(wires: ConnectionWire[]): Integration[] {
   const counts = countConnections(wires)
-  return INTEGRATION_CATALOG.map((spec) => ({
-    ...spec,
-    connections: counts.get(spec.providerType) ?? 0,
-  }))
+  return INTEGRATION_CATALOG.map((spec) => {
+    const first = wires.find((w) => w.id && w.provider_type === spec.providerType && isPublished(w))
+    return {
+      ...spec,
+      connections: counts.get(spec.providerType) ?? 0,
+      connection: first ? toIntegrationConnection(first) : undefined,
+    }
+  })
 }
 
 export async function fetchIntegrations(
@@ -54,5 +106,117 @@ export function useIntegrations() {
   return useQuery({
     queryKey: queryKeys.integrations.all(),
     queryFn: () => fetchIntegrations(serverURL, auth),
+  })
+}
+
+/** Token and environment for a write, or the error a signed-out caller should see. */
+async function credentials(auth: AuthSource) {
+  const [token, environmentId] = await Promise.all([auth.getToken(), auth.getEnvironmentId()])
+  if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to manage integrations.')
+  return { token, environmentId: environmentId ?? '' }
+}
+
+function useRefreshConnections() {
+  const queryClient = useQueryClient()
+  return () => {
+    void queryClient.invalidateQueries({ queryKey: queryKeys.integrations.all() })
+    // A connected provider adds a column of marks to every customer.
+    void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
+  }
+}
+
+/** Connects a provider that needs only credentials. */
+export function useConnectIntegration() {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const refresh = useRefreshConnections()
+
+  return useMutation({
+    mutationFn: async (payload: ConnectionPayload) => {
+      const { token, environmentId } = await credentials(auth)
+      return toIntegrationConnection(
+        (await createConnection(serverURL, token, environmentId, payload)) as ConnectionWire,
+      )
+    },
+    onSuccess: refresh,
+  })
+}
+
+/** Name, metadata and sync settings, plus the few secrets the API lets a connection rotate. */
+export function useUpdateConnection() {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const refresh = useRefreshConnections()
+
+  return useMutation({
+    mutationFn: async ({ id, ...body }: ConnectionUpdate & { id: string }) => {
+      const { token, environmentId } = await credentials(auth)
+      return toIntegrationConnection(
+        (await updateConnection(serverURL, token, environmentId, id, body)) as ConnectionWire,
+      )
+    },
+    onSuccess: refresh,
+  })
+}
+
+/** Archives the connection; the provider becomes connectable again. */
+export function useDisconnectIntegration() {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const refresh = useRefreshConnections()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { token, environmentId } = await credentials(auth)
+      await deleteConnection(serverURL, token, environmentId, id)
+    },
+    onSuccess: refresh,
+  })
+}
+
+export interface OAuthStart {
+  oauthUrl: string
+  sessionId: string
+}
+
+/** Saves the form and returns where to send the reader to approve access. */
+export function useStartOAuth() {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const refresh = useRefreshConnections()
+
+  return useMutation({
+    mutationFn: async (payload: ConnectionPayload): Promise<OAuthStart> => {
+      const { token, environmentId } = await credentials(auth)
+      const { provider_type, encrypted_secret_data, ...rest } = payload
+      const body = (await oauthInit(serverURL, token, environmentId, {
+        provider: provider_type,
+        credentials: encrypted_secret_data,
+        ...rest,
+      })) as { oauth_url?: string; session_id?: string } | null
+      if (!body?.oauth_url || !body.session_id)
+        throw new ApiError(ErrorKind.Server, 'The provider did not return a sign-in address.')
+      return { oauthUrl: body.oauth_url, sessionId: body.session_id }
+    },
+    // oauth/init saves an incomplete connection straight away.
+    onSuccess: refresh,
+  })
+}
+
+/** Finishes consent on the callback page, with what the provider put in the address. */
+export function useCompleteOAuth() {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const refresh = useRefreshConnections()
+
+  return useMutation({
+    mutationFn: async (request: OAuthCompleteRequest) => {
+      const { token, environmentId } = await credentials(auth)
+      const body = (await oauthComplete(serverURL, token, environmentId, request)) as {
+        connection_id?: string
+      } | null
+      return { connectionId: body?.connection_id ?? '' }
+    },
+    onSuccess: refresh,
   })
 }
