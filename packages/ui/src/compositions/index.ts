@@ -59,7 +59,48 @@ export { AppFailure, AppFailureProvenance } from './feedback/AppFailure'
 export type { AppFailureProps } from './feedback/AppFailure'
 
 export { ErrorState, ListState, LoadingRows, StatesProvenance } from './feedback/States'
-export type { ErrorStateProps, ListStateProps } from './feedback/States'
+export type { ErrorKind, ErrorStateProps, ListStateProps } from './feedback/States'
+
+export { Figure, FigureProvenance, FIGURE_NAMES } from './feedback/Figures'
+export type { FigureMotion, FigureName, FigureProps } from './feedback/Figures'
+export {
+  Bone,
+  ChartSkeleton,
+  InlineLoadingState,
+  MetricCardSkeleton,
+  PageLoadingState,
+  SkeletonRegion,
+  SkeletonsProvenance,
+  TableSkeleton,
+  ValuePlaceholder,
+} from './feedback/Skeletons'
+export type {
+  ChartSkeletonProps,
+  MetricCardSkeletonProps,
+  PageLoadingStateProps,
+  SkeletonCellKind,
+  SkeletonColumn,
+  TableSkeletonProps,
+} from './feedback/Skeletons'
+export {
+  DataFreshness,
+  DataBoundaryProvenance,
+  DataRegion,
+  Deferred,
+  PartialDataNotice,
+  RefreshingIndicator,
+} from './feedback/DataBoundary'
+export type { DataFreshnessProps, PartialDataNoticeProps } from './feedback/DataBoundary'
+export { RetryAction, RetryActionProvenance } from './feedback/RetryAction'
+export type { RetryActionProps } from './feedback/RetryAction'
+export { useLoadingPhase } from './feedback/useLoadingPhase'
+export { resolveDataState } from './feedback/dataState'
+export type { DataState, DataStateInput, DataStateKind } from './feedback/dataState'
+export { formatAge } from './feedback/freshness'
+export { LOADING_DEFAULTS } from './feedback/loadingGate'
+export type { LoadingPhase } from './feedback/loadingGate'
+export { EMPTY_CATALOGUE, filterMissCopy, searchMissCopy } from './feedback/emptyCatalogue'
+export type { EmptyCopy, EmptyKind } from './feedback/emptyCatalogue'
 
 export { DetailList, DetailListProvenance } from './tables/DetailList'
 export type { DetailItem, DetailListProps } from './tables/DetailList'

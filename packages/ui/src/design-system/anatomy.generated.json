@@ -532,6 +532,17 @@
       ],
       "story": "./src/pages/shared/BlurredEmpty.stories.tsx"
     },
+    "Bone": {
+      "file": "src/compositions/feedback/Skeletons.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "ErrorState",
+        "ListState",
+        "LoadingRows"
+      ],
+      "story": "./src/compositions/feedback/Skeletons.stories.tsx"
+    },
     "BookOpen": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -753,6 +764,13 @@
       ],
       "usedBy": [],
       "story": "./src/compositions/charts/ChartBox.stories.tsx"
+    },
+    "ChartSkeleton": {
+      "file": "src/compositions/feedback/Skeletons.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
     "Check": {
       "file": "src/icons/index.ts",
@@ -1610,6 +1628,28 @@
       "usedBy": [],
       "story": "./src/pages/developers/exports/DataExportGrid.stories.tsx"
     },
+    "DataFreshness": {
+      "file": "src/compositions/feedback/DataBoundary.tsx",
+      "layer": "composition",
+      "composes": [
+        "RetryAction"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
+    },
+    "DataRegion": {
+      "file": "src/compositions/feedback/DataBoundary.tsx",
+      "layer": "composition",
+      "composes": [
+        "RetryAction"
+      ],
+      "usedBy": [
+        "ErrorState",
+        "ListState",
+        "LoadingRows"
+      ],
+      "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
+    },
     "DateInput": {
       "file": "src/compositions/forms/DateInput.tsx",
       "layer": "composition",
@@ -1633,6 +1673,15 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "Deferred": {
+      "file": "src/compositions/feedback/DataBoundary.tsx",
+      "layer": "composition",
+      "composes": [
+        "RetryAction"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
     },
     "DeleteFilesIcon": {
       "file": "src/reui/icons/default/outline/delete-files.tsx",
@@ -1946,7 +1995,9 @@
     "EmptyState": {
       "file": "src/compositions/feedback/EmptyState.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "Figure"
+      ],
       "usedBy": [
         "CustomerDetail",
         "CustomerTaxSection",
@@ -2133,7 +2184,13 @@
       "file": "src/compositions/feedback/States.tsx",
       "layer": "composition",
       "composes": [
-        "ListOfferProvider"
+        "Bone",
+        "DataRegion",
+        "Figure",
+        "ListOfferProvider",
+        "PartialDataNotice",
+        "RetryAction",
+        "SkeletonRegion"
       ],
       "usedBy": [
         "PlanChargesView"
@@ -2376,6 +2433,19 @@
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/Field.stories.tsx"
+    },
+    "Figure": {
+      "file": "src/compositions/feedback/Figures.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "EmptyState",
+        "ErrorState",
+        "ListOfferProvider",
+        "ListState",
+        "LoadingRows"
+      ],
+      "story": "./src/compositions/feedback/Figures.stories.tsx"
     },
     "FileJson": {
       "file": "src/icons/index.ts",
@@ -3079,6 +3149,13 @@
       ],
       "story": "./src/compositions/forms/InlineField.stories.tsx"
     },
+    "InlineLoadingState": {
+      "file": "src/compositions/feedback/Skeletons.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/Skeletons.stories.tsx"
+    },
     "IntegrationsBlock": {
       "file": "src/pages/integrations/IntegrationsBlock.tsx",
       "layer": "surface",
@@ -3399,7 +3476,9 @@
     "ListOfferProvider": {
       "file": "src/compositions/feedback/EmptyState.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "Figure"
+      ],
       "usedBy": [
         "ErrorState",
         "ListState",
@@ -3411,7 +3490,13 @@
       "file": "src/compositions/feedback/States.tsx",
       "layer": "composition",
       "composes": [
-        "ListOfferProvider"
+        "Bone",
+        "DataRegion",
+        "Figure",
+        "ListOfferProvider",
+        "PartialDataNotice",
+        "RetryAction",
+        "SkeletonRegion"
       ],
       "usedBy": [],
       "story": "./src/compositions/feedback/States.stories.tsx"
@@ -3430,6 +3515,13 @@
       "usedBy": [],
       "story": null
     },
+    "LoadingGate": {
+      "file": "src/compositions/feedback/loadingGate.ts",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "LoadingIcon": {
       "file": "src/reui/icons/default/outline/loading.tsx",
       "layer": "other",
@@ -3441,7 +3533,13 @@
       "file": "src/compositions/feedback/States.tsx",
       "layer": "composition",
       "composes": [
-        "ListOfferProvider"
+        "Bone",
+        "DataRegion",
+        "Figure",
+        "ListOfferProvider",
+        "PartialDataNotice",
+        "RetryAction",
+        "SkeletonRegion"
       ],
       "usedBy": [
         "CustomerDetail",
@@ -3611,6 +3709,13 @@
         "StatCards"
       ],
       "story": "./src/pages/shared/Metric.stories.tsx"
+    },
+    "MetricCardSkeleton": {
+      "file": "src/compositions/feedback/Skeletons.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
     "MetricChart": {
       "file": "src/pages/shared/charts.tsx",
@@ -3878,6 +3983,13 @@
       "usedBy": [],
       "story": "./src/compositions/layout/Page.stories.tsx"
     },
+    "PageLoadingState": {
+      "file": "src/compositions/feedback/Skeletons.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/Skeletons.stories.tsx"
+    },
     "PageShell": {
       "file": "src/pages/shared/shellFixtures.tsx",
       "layer": "surface",
@@ -3943,6 +4055,19 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "PartialDataNotice": {
+      "file": "src/compositions/feedback/DataBoundary.tsx",
+      "layer": "composition",
+      "composes": [
+        "RetryAction"
+      ],
+      "usedBy": [
+        "ErrorState",
+        "ListState",
+        "LoadingRows"
+      ],
+      "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
     },
     "Pattern": {
       "file": "src/components/examples/c-badge-20.tsx",
@@ -4543,6 +4668,15 @@
       "usedBy": [],
       "story": null
     },
+    "RefreshingIndicator": {
+      "file": "src/compositions/feedback/DataBoundary.tsx",
+      "layer": "composition",
+      "composes": [
+        "RetryAction"
+      ],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
+    },
     "RelatedCard": {
       "file": "src/compositions/detail/RelatedCard.tsx",
       "layer": "composition",
@@ -4569,6 +4703,22 @@
       "composes": [],
       "usedBy": [],
       "story": "./src/compositions/layout/ResourceNavigation.stories.tsx"
+    },
+    "RetryAction": {
+      "file": "src/compositions/feedback/RetryAction.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "DataFreshness",
+        "DataRegion",
+        "Deferred",
+        "ErrorState",
+        "ListState",
+        "LoadingRows",
+        "PartialDataNotice",
+        "RefreshingIndicator"
+      ],
+      "story": null
     },
     "RevenueDashboard": {
       "file": "src/pages/revenue/RevenueDashboard.tsx",
@@ -5025,6 +5175,17 @@
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
+    "SkeletonRegion": {
+      "file": "src/compositions/feedback/Skeletons.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "ErrorState",
+        "ListState",
+        "LoadingRows"
+      ],
+      "story": "./src/compositions/feedback/Skeletons.stories.tsx"
+    },
     "SlidersHorizontal": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -5322,6 +5483,13 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "TableSkeleton": {
+      "file": "src/compositions/feedback/Skeletons.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/Skeletons.stories.tsx"
     },
     "Tag": {
       "file": "src/icons/index.ts",
@@ -5664,6 +5832,13 @@
       ],
       "story": null
     },
+    "ValuePlaceholder": {
+      "file": "src/compositions/feedback/Skeletons.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": "./src/compositions/feedback/Skeletons.stories.tsx"
+    },
     "Wallet": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -5982,6 +6157,19 @@
         "ConfirmDialog"
       ]
     },
+    "./src/compositions/feedback/DataBoundary.stories.tsx": {
+      "title": "Building blocks/Feedback & states/Data boundary",
+      "component": null,
+      "uses": [
+        "DataFreshness",
+        "DataRegion",
+        "Deferred",
+        "ErrorState",
+        "PartialDataNotice",
+        "RetryAction",
+        "TableSkeleton"
+      ]
+    },
     "./src/compositions/feedback/EmptyState.stories.tsx": {
       "title": "Building blocks/Feedback & states/EmptyState",
       "component": "EmptyState",
@@ -5990,6 +6178,14 @@
         "EmptyState",
         "ListOfferProvider",
         "PageBody"
+      ]
+    },
+    "./src/compositions/feedback/Figures.stories.tsx": {
+      "title": "Building blocks/Feedback & states/Figures",
+      "component": "Figure",
+      "uses": [
+        "EmptyState",
+        "Figure"
       ]
     },
     "./src/compositions/feedback/GuidedEmptyState.stories.tsx": {
@@ -6008,6 +6204,18 @@
       "uses": [
         "PlusIcon",
         "SectionEmpty"
+      ]
+    },
+    "./src/compositions/feedback/Skeletons.stories.tsx": {
+      "title": "Building blocks/Feedback & states/Skeletons",
+      "component": "TableSkeleton",
+      "uses": [
+        "ChartSkeleton",
+        "InlineLoadingState",
+        "MetricCardSkeleton",
+        "PageLoadingState",
+        "TableSkeleton",
+        "ValuePlaceholder"
       ]
     },
     "./src/compositions/feedback/States.stories.tsx": {

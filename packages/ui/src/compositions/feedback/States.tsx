@@ -1,8 +1,11 @@
 import type { ReactNode } from 'react'
-import { Button } from '@ui/components/primitives/button'
-import { Skeleton } from '@ui/components/primitives/skeleton'
-import { ListOfferProvider, type ListOffer } from './EmptyState'
+import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { DataRegion, PartialDataNotice } from './DataBoundary'
+import { ListOfferProvider, type ListOffer } from './EmptyState'
+import { Figure, type FigureName } from './Figures'
+import { RetryAction } from './RetryAction'
+import { Bone, SkeletonRegion } from './Skeletons'
 
 /**
  * The five states every screen has, designed once.
@@ -20,7 +23,7 @@ import { provenance } from '@ui/provenance'
  */
 export const StatesProvenance = provenance({
   source: 'composition',
-  composes: ['ui/button', 'ui/skeleton'],
+  composes: ['compositions/feedback/Skeletons', 'compositions/feedback/RetryAction'],
   note: 'The five screen states, defined once so screens cannot invent their own.',
 })
 
@@ -32,22 +35,50 @@ export const StatesProvenance = provenance({
  */
 export function LoadingRows({ rows = 8, columns = 5 }: { rows?: number; columns?: number }) {
   return (
-    <div className="flex flex-col gap-2" aria-busy="true" aria-live="polite">
-      <span className="sr-only">Loading</span>
+    <SkeletonRegion className="flex flex-col gap-2">
       {Array.from({ length: rows }, (_, row) => (
         <div key={row} className="flex gap-3">
           {Array.from({ length: columns }, (_, column) => (
-            <Skeleton
+            <Bone
               key={column}
               className="h-9 flex-1"
               // The first column is usually a name and reads longer.
-              style={column === 0 ? { flex: 2 } : undefined}
+              {...(column === 0 ? { style: { flex: 2 } } : {})}
             />
           ))}
         </div>
       ))}
-    </div>
+    </SkeletonRegion>
   )
+}
+
+/**
+ * Why a request failed, in terms that change what the screen says and offers.
+ * `denied` never offers a retry; `rate-limited` offers one after a cooldown.
+ */
+export type ErrorKind =
+  'generic' | 'network' | 'timeout' | 'server' | 'rate-limited' | 'denied' | 'unavailable'
+
+const ERROR_COPY: Record<ErrorKind, { figure: FigureName; description: string }> = {
+  generic: { figure: 'fault', description: 'Something went wrong loading this.' },
+  network: {
+    figure: 'plug',
+    description: 'We couldn’t reach Flexprice. Check your connection and try again.',
+  },
+  timeout: {
+    figure: 'signal',
+    description: 'The request took too long. Your data is safe; try again in a moment.',
+  },
+  server: {
+    figure: 'fault',
+    description: 'Flexprice had a problem on its side. Trying again usually works.',
+  },
+  'rate-limited': {
+    figure: 'signal',
+    description: 'Too many requests in a short time. Wait a moment, then try again.',
+  },
+  denied: { figure: 'padlock', description: 'Ask an administrator if you need access to this.' },
+  unavailable: { figure: 'drawer', description: 'This isn’t available for your workspace.' },
 }
 
 export interface ErrorStateProps {
@@ -61,9 +92,61 @@ export interface ErrorStateProps {
    */
   onRetry?: () => void
   action?: ReactNode
+  /** Picks the default description and figure, and withholds retry for `denied`. */
+  kind?: ErrorKind
+  isRetrying?: boolean
+  /** Cooldown before retry is allowed, from a `Retry-After` header. */
+  retryAfterMs?: number | undefined
+  /** Quoted to support, never shown as the explanation. */
+  requestId?: string | undefined
+  /** `panel` is the inline box; `page` is centred with a figure, for a whole screen. */
+  variant?: 'panel' | 'page'
 }
 
-export function ErrorState({ title, description, onRetry, action }: ErrorStateProps) {
+export function ErrorState({
+  title,
+  description,
+  onRetry,
+  action,
+  kind,
+  isRetrying,
+  retryAfterMs,
+  requestId,
+  variant = 'panel',
+}: ErrorStateProps) {
+  const copy = kind ? ERROR_COPY[kind] : null
+  const body = description ?? copy?.description
+  const canRetry = onRetry && kind !== 'denied' && kind !== 'unavailable'
+  const retry = canRetry ? (
+    <RetryAction
+      onRetry={onRetry}
+      {...(isRetrying !== undefined ? { isRetrying } : {})}
+      {...(retryAfterMs !== undefined ? { retryAfterMs } : {})}
+    />
+  ) : null
+  const reference = requestId ? (
+    <p className="text-muted-foreground text-xs">Reference: {requestId}</p>
+  ) : null
+
+  if (variant === 'page') {
+    return (
+      <div role="alert" className="flex flex-col items-center gap-4 px-6 py-14 text-center">
+        <Figure name={copy?.figure ?? 'fault'} motion="interactive" />
+        <div className="flex max-w-[27rem] flex-col items-center gap-1.5">
+          <p className="text-lg font-medium tracking-tight">{title}</p>
+          {body ? (
+            <p className="text-muted-foreground text-sm/relaxed text-balance">{body}</p>
+          ) : null}
+        </div>
+        <div className="flex gap-2">
+          {retry}
+          {action}
+        </div>
+        {reference}
+      </div>
+    )
+  }
+
   return (
     <div
       role="alert"
@@ -78,15 +161,12 @@ export function ErrorState({ title, description, onRetry, action }: ErrorStatePr
       <p className="text-destructive-foreground dark:text-destructive text-sm font-medium">
         {title}
       </p>
-      {description ? <p className="text-foreground/80 text-sm">{description}</p> : null}
+      {body ? <p className="text-foreground/80 text-sm">{body}</p> : null}
       <div className="flex gap-2">
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
+        {retry}
         {action}
       </div>
+      {reference}
     </div>
   )
 }
@@ -118,6 +198,15 @@ export interface ListStateProps {
   emptyIcon?: ReactNode
   /** Beside the primary action — an import, a link to the docs. */
   emptySecondaryAction?: ReactNode
+  /** Rows are on screen (real or from the previous page/filter). An error then keeps them. */
+  hasRows?: boolean
+  /** A background request is updating the rows on screen. */
+  isRefreshing?: boolean
+  /** The rows on screen belong to the previous page or filter. */
+  isProvisional?: boolean
+  /** Why the failure happened; picks the copy and withholds retry for `denied`. */
+  failureKind?: ErrorKind
+  isRetrying?: boolean
   children: ReactNode
 }
 
@@ -146,21 +235,32 @@ export function ListState({
   emptyDescription,
   emptyIcon,
   emptySecondaryAction,
+  hasRows = false,
+  isRefreshing = false,
+  isProvisional = false,
+  failureKind,
+  isRetrying,
   children,
 }: ListStateProps) {
-  if (error) {
+  // A failed refresh must not take away rows that were true a moment ago: they
+  // stay, with a plain note that they are the last good copy.
+  const failedRefresh = error !== null && hasRows
+
+  if (error && !failedRefresh) {
     return (
       <ErrorState
         title={error.message}
+        {...(failureKind ? { kind: failureKind } : {})}
         {...(error.canRetry && onRetry ? { onRetry } : {})}
-        {...(error.canRetry
+        {...(isRetrying !== undefined ? { isRetrying } : {})}
+        {...(error.canRetry || failureKind
           ? {}
           : { description: 'Ask an administrator if you need access to this.' })}
       />
     )
   }
 
-  if (isLoading) return <LoadingRows />
+  if (isLoading && !hasRows) return <LoadingRows />
 
   /*
    * Empty does *not* mean "render something else instead".
@@ -186,5 +286,21 @@ export function ListState({
     ...(createAction ? { action: createAction } : {}),
   }
 
-  return <ListOfferProvider value={offer}>{children}</ListOfferProvider>
+  return (
+    <ListOfferProvider value={offer}>
+      <DataRegion
+        state={{ refreshing: isRefreshing, provisional: isProvisional }}
+        className={cn('flex min-w-0 flex-col gap-4')}
+      >
+        {failedRefresh && error.canRetry ? (
+          <PartialDataNotice
+            failed={['The latest results']}
+            {...(onRetry ? { onRetry } : {})}
+            {...(isRetrying !== undefined ? { isRetrying } : {})}
+          />
+        ) : null}
+        {children}
+      </DataRegion>
+    </ListOfferProvider>
+  )
 }

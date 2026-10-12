@@ -10,6 +10,7 @@ import {
 } from '@ui/components/primitives/empty'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { Figure, type FigureMotion, type FigureName } from './Figures'
 
 /**
  * Nothing here — and what to do about it.
@@ -107,6 +108,13 @@ export interface EmptyStateProps {
   size?: 'page' | 'inline'
   /** A short row of links under the actions, as `empty-state-1` has it. */
   guides?: ReactNode
+  /**
+   * A line drawing in place of the layered glyph. See `EMPTY_CATALOGUE` for
+   * which figure and motion each kind of emptiness uses.
+   */
+  figure?: FigureName
+  /** Defaults to `interactive` on a page and `static` inline. */
+  motion?: FigureMotion
 }
 
 export function EmptyState({
@@ -119,6 +127,8 @@ export function EmptyState({
   icon,
   size = 'page',
   guides,
+  figure,
+  motion,
 }: EmptyStateProps) {
   const isPage = size === 'page'
 
@@ -164,7 +174,15 @@ export function EmptyState({
       )}
     >
       <EmptyHeader className={cn('max-w-[27rem]', isPage ? 'gap-4' : 'gap-2')}>
-        {isPage ? (
+        {figure ? (
+          <EmptyMedia className="mb-0">
+            <Figure
+              name={figure}
+              motion={motion ?? (isPage ? 'interactive' : 'static')}
+              className={isPage ? 'w-40' : 'w-24'}
+            />
+          </EmptyMedia>
+        ) : isPage ? (
           <EmptyMedia className="mb-0">
             <IconStack aria-hidden>{shown.icon}</IconStack>
           </EmptyMedia>
