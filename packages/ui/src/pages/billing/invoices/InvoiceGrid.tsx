@@ -274,11 +274,13 @@ export function InvoiceGrid({
         onSelect: () => onInvoiceClick(invoice),
       })
     }
-    actions.push({
-      label: 'Copy invoice number',
-      icon: <CopyIcon aria-hidden className="size-4" />,
-      onSelect: () => void navigator.clipboard?.writeText(invoice.number),
-    })
+    if (invoice.number) {
+      actions.push({
+        label: 'Copy invoice number',
+        icon: <CopyIcon aria-hidden className="size-4" />,
+        onSelect: () => void navigator.clipboard?.writeText(invoice.number),
+      })
+    }
     return actions
   }
 

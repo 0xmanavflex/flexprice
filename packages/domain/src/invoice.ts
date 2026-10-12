@@ -22,7 +22,7 @@ import type { TenantAddress } from './tenant'
  */
 export interface Invoice {
   id: string
-  /** Human-facing number. Falls back to the id when the API has not issued one. */
+  /** Human-facing number. Empty when the API has not issued one. */
   number: string
   customerId: string
   /** Display name, already resolved. The UI never joins data. */

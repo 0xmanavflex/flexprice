@@ -103,10 +103,10 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
                       {
                         key: 'invoice',
                         label: 'Invoice',
-                        value: data.invoiceNumber || data.invoiceId,
+                        value: data.invoiceNumber || '—',
                         display: (
                           <EntityLink
-                            label={data.invoiceNumber || data.invoiceId}
+                            label={data.invoiceNumber || '—'}
                             onOpen={() => onOpenInvoice(data.invoiceId)}
                           />
                         ),

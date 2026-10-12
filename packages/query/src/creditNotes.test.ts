@@ -30,7 +30,7 @@ describe('toCreditNote', () => {
   it('falls back to short ids and a draft status', () => {
     const note = toCreditNote({ id: 'cn_0123456789', invoice_id: 'inv_abcdefghij' })
     expect(note.number).toBe('cn_01234')
-    expect(note.invoiceNumber).toBe('inv_abcd')
+    expect(note.invoiceNumber).toBe('')
     expect(note.status).toBe(CreditNoteStatus.Draft)
     expect(note.type).toBeNull()
   })

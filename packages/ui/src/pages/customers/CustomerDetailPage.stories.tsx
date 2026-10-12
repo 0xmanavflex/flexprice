@@ -64,7 +64,10 @@ function makeInvoices(count: number, status: InvoiceStatus): Invoice[] {
     const paid = status === InvoiceStatus.Paid
     return {
       id: `inv_${index + 1}`,
-      number: `INV-2026-${String(1000 + index).padStart(5, '0')}`,
+      number:
+        status === InvoiceStatus.Draft
+          ? ''
+          : `INV-2026-${String(1000 + index).padStart(5, '0')}`,
       customerId: CUSTOMER.id,
       customerName: CUSTOMER.name,
       status,

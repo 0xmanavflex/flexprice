@@ -2561,7 +2561,7 @@ export const handlers = [
       total_amount: String(total),
       invoice_id: invoiceId,
       invoice: {
-        invoice_number: invoice ? (readString(invoice, 'invoice_number') ?? invoiceId) : invoiceId,
+        invoice_number: invoice ? readString(invoice, 'invoice_number') : '',
       },
       customer_id: invoice ? readString(invoice, 'customer_id') : undefined,
       customer: { id: 'cust_0', name: 'Acme Corp' },

@@ -89,9 +89,11 @@ describe('toInvoice — a narrow model out of a 45-field optional response', () 
     expect(toInvoice({ ...wire, customer: undefined }).customerName).toBe('cus_1')
   })
 
-  it('shows the id when a draft has no number yet', () => {
-    expect(toInvoice({ ...wire, invoiceNumber: undefined }).number).toBe('inv_1')
-    expect(toInvoice({ ...wire, invoiceNumber: '' }).number).toBe('inv_1')
+  it('leaves the number blank when the API has not issued one', () => {
+    expect(toInvoice({ ...wire, invoiceNumber: undefined }).number).toBe('')
+    expect(toInvoice({ ...wire, invoiceNumber: '' }).number).toBe('')
+    expect(toInvoice({ ...wire, invoiceNumber: '   ' }).number).toBe('')
+    expect(toInvoice({ ...wire, invoiceNumber: undefined }).id).toBe('inv_1')
   })
 
   // Every field on InvoiceResponse is optional. The grid must still get a row.

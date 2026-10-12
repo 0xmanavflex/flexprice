@@ -82,6 +82,13 @@ describe('subscription detail additions', () => {
     expect(detail.lookupKey).toBe('acme-pro')
   })
 
+  it('keeps a latest invoice with no number', () => {
+    const detail = toSubscriptionDetail({
+      latestInvoice: { id: 'inv_1' },
+    })
+    expect(detail.latestInvoice).toEqual({ id: 'inv_1', number: '' })
+  })
+
   it('treats a zero or absent commitment and invoice as none', () => {
     const detail = toSubscriptionDetail({ commitmentAmount: '0' })
     expect(detail.commitmentAmount).toBeNull()

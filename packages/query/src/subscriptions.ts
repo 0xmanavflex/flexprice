@@ -141,7 +141,7 @@ export function toSubscriptionDetail(wire: SubscriptionWire): SubscriptionDetail
     latestInvoice: wire.latestInvoice?.id
       ? {
           id: wire.latestInvoice.id,
-          number: wire.latestInvoice.invoiceNumber || wire.latestInvoice.id,
+          number: wire.latestInvoice.invoiceNumber?.trim() || '',
         }
       : null,
   }
