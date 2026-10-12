@@ -16,7 +16,10 @@ export { NeedAttention, NeedAttentionProvenance } from './home/NeedAttention'
 export type { AttentionItem, AttentionPanel, AttentionTone } from './home/NeedAttention'
 export type {
   ApiPanel,
+  CustomersPanel,
   DashboardHomeProps,
+  EventPoint,
+  EventsPanel,
   FilterOption,
   InvoicesPanel,
   PanelMeta,

@@ -1,14 +1,28 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
-import { useInvoices, useSubscriptions } from '@fp/query'
-import { DEFAULT_INVOICE_QUERY, DEFAULT_SUBSCRIPTION_QUERY, InvoiceStatus } from '@fp/domain'
-import type { Invoice, Subscription } from '@fp/domain'
+import {
+  useCustomers,
+  useInvoices,
+  useSubscriptions,
+  useUsageAnalytics,
+  UsageWindowSize,
+} from '@fp/query'
+import type { UsageAnalytics } from '@fp/query'
+import {
+  CustomerSortField,
+  DEFAULT_INVOICE_QUERY,
+  DEFAULT_SUBSCRIPTION_QUERY,
+  InvoiceStatus,
+} from '@fp/domain'
+import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
 import { DashboardHome } from '@fp/ui/pages'
 import { failed, qualityOf, withoutData } from './queryView'
 import type { QueryView } from './queryView'
 import type {
   AttentionItem,
   AttentionPanel,
+  CustomersPanel,
+  EventsPanel,
   FilterOption,
   InvoicesPanel,
   SubscriptionsPanel,
@@ -23,8 +37,13 @@ import type {
  * the rule it follows is that a number reaches the screen only if a request
  * returned it.
  *
- * Three panels are read from live queries:
+ * Four panels are read from live queries:
  *
+ *   - **Revenue and usage ingestion** from `useUsageAnalytics`, the hook over
+ *     `POST /events/analytics`. It is the only time-series the platform
+ *     exposes.
+ *   - **Customers** from `useCustomers`, newest first, counted and bucketed
+ *     here by creation date.
  *   - **Recent subscriptions** from `useSubscriptions`, bucketed here by start
  *     date. Note the deliberate use of `total` from the *rows*, not from the
  *     page: `SubscriptionPage.total` is the unfiltered server total, so a
@@ -32,6 +51,10 @@ import type {
  *     created as new this week.
  *   - **Invoice payment status** from `useInvoices`, bucketed by the domain's
  *     own derived status.
+ *
+ * And the number that is simply not available anywhere — processing lag — is
+ * rendered as absent by the surface itself, with the reason. See
+ * `DashboardHome`.
  *
  * Usage by feature and API key health are parked until quota-based metrics
  * land: the surface no longer renders them, so their queries and shaping are
@@ -50,6 +73,14 @@ const RANGES: RangeSpec[] = [
   { id: '90d', label: 'Last 90 days', days: 90 },
 ]
 
+const GRANULARITIES: (FilterOption & { windowSize: UsageWindowSize })[] = [
+  { id: 'hourly', label: 'Hourly', windowSize: UsageWindowSize.Hour },
+  { id: 'daily', label: 'Daily', windowSize: UsageWindowSize.Day },
+  { id: 'weekly', label: 'Weekly', windowSize: UsageWindowSize.Week },
+]
+
+const ALL_CUSTOMERS = 'all'
+
 /** Midnight UTC `daysAgo` days back — the boundary every window is cut on. */
 function dayStart(daysAgo: number): Date {
   const date = new Date(Date.now() - daysAgo * DAY_MS)
@@ -59,8 +90,8 @@ function dayStart(daysAgo: number): Date {
 
 /*
  * Every label is cut in UTC, because every window is: `dayStart` buckets on
- * midnight UTC, so a label in the browser's zone would put a bucket's rows
- * under the wrong date.
+ * midnight UTC, so a label in the browser's zone would put a bucket's events
+ * under the wrong date. The page says "UTC" next to the filters.
  */
 const dayLabel = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
@@ -77,6 +108,7 @@ const dayLabel = new Intl.DateTimeFormat(undefined, {
  * that does not change.
  */
 const columnDayLabel = new Intl.DateTimeFormat(undefined, { day: 'numeric', timeZone: 'UTC' })
+const hourLabel = new Intl.DateTimeFormat(undefined, { hour: 'numeric', timeZone: 'UTC' })
 // Parked with `toUsagePanel` until quota-based metrics land.
 // const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 
@@ -117,8 +149,11 @@ function change(current: number, prior: number): number | null {
 export function HomePage() {
   const navigate = useNavigate()
   const [rangeId, setRangeId] = useState('7d')
+  const [granularityId, setGranularityId] = useState('daily')
+  const [customerId, setCustomerId] = useState(ALL_CUSTOMERS)
 
   const range = RANGES.find((entry) => entry.id === rangeId) ?? RANGES[0]!
+  const granularity = GRANULARITIES.find((entry) => entry.id === granularityId) ?? GRANULARITIES[1]!
 
   /*
    * Both windows are derived from one `now` per render pass, so the current and
@@ -132,6 +167,45 @@ export function HomePage() {
     const priorStart = new Date(start.getTime() - range.days * DAY_MS)
     return { current: { start, end }, prior: { start: priorStart, end: priorEnd } }
   }, [range.days])
+
+  /*
+   * One customers request serves the picker, the external-id lookup for the
+   * usage filter and the "new customers" count. It used to be two requests
+   * (pageSize 50 by name, pageSize 100 by date) for the same table.
+   *
+   * Newest first, so once a row falls before the window every row after it is
+   * older still — which makes the count exact, unless the whole page is inside
+   * the window, in which case the panel says the figure is a floor. The picker
+   * is sorted by name below; it only offers these rows, which is a known limit
+   * until the picker can search the server.
+   */
+  const customers = useCustomers({
+    page: 1,
+    pageSize: 100,
+    search: '',
+    statuses: [],
+    sortBy: CustomerSortField.CreatedAt,
+    sortDirection: 'desc',
+  })
+
+  const externalCustomerId =
+    customerId === ALL_CUSTOMERS
+      ? undefined
+      : (customers.data?.customers.find((entry) => entry.id === customerId)?.externalId ??
+        undefined)
+
+  const analytics = useUsageAnalytics({
+    window: windows.current,
+    windowSize: granularity.windowSize,
+    ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
+  })
+  // The window before this one, so the tab strip's changes are two real
+  // measurements compared. The granularity is irrelevant to the totals it feeds.
+  const priorAnalytics = useUsageAnalytics({
+    window: windows.prior,
+    windowSize: UsageWindowSize.Day,
+    ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
+  })
 
   /*
    * A page large enough that every row inside the window is on it. Sorted
@@ -158,9 +232,11 @@ export function HomePage() {
   // Parked with the API panel until quota-based metrics land.
   // const apiKeys = useApiKeys()
 
+  const eventsPanel = toEventsPanel(analytics, priorAnalytics, granularityId)
+  const customersPanel = toCustomersPanel(customers, windows, range.days)
+
   /*
-   * Parked until quota-based metrics land, with the usage queries it reads
-   * (`useUsageAnalytics` for the window and the one before it).
+   * Parked until quota-based metrics land.
    *
    * const usagePanel = toUsagePanel(analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError)
    */
@@ -176,12 +252,28 @@ export function HomePage() {
 
   const attentionPanel = toAttentionPanel(invoices, draftInvoices)
 
+  const customerOptions: FilterOption[] = [
+    { id: ALL_CUSTOMERS, label: 'All customers' },
+    ...[...(customers.data?.customers ?? [])]
+      .sort((a, b) => a.name.localeCompare(b.name))
+      .map((entry) => ({ id: entry.id, label: entry.name })),
+  ]
+
   return (
     <DashboardHome
       rangeOptions={RANGES.map(({ id, label }) => ({ id, label }))}
       range={rangeId}
       onRangeChange={setRangeId}
+      granularityOptions={GRANULARITIES.map(({ id, label }) => ({ id, label }))}
+      granularity={granularityId}
+      onGranularityChange={setGranularityId}
+      customerOptions={customerOptions}
+      customer={customerId}
+      onCustomerChange={setCustomerId}
       rangeLabel={range.label.toLowerCase()}
+      timeZoneLabel="UTC"
+      events={eventsPanel}
+      customers={customersPanel}
       subscriptions={subscriptionsPanel}
       invoices={invoicesPanel}
       attention={attentionPanel}
@@ -195,6 +287,45 @@ export function HomePage() {
 }
 
 /* ---- Shaping the panels -------------------------------------------------- */
+
+function toEventsPanel(
+  view: QueryView<UsageAnalytics>,
+  prior: QueryView<UsageAnalytics>,
+  granularityId: string,
+): EventsPanel {
+  const meta = qualityOf(view)
+  const data = view.data
+  if (data === undefined) {
+    return { ...meta, status: withoutData(view), points: [], total: null, revenue: null }
+  }
+  if (data.points.length === 0) {
+    return { ...meta, status: 'empty', points: [], total: null, revenue: null }
+  }
+
+  const format = granularityId === 'hourly' ? hourLabel : dayLabel
+  // A change is two real measurements compared. A prior window that is itself
+  // a held-over copy of another window is not one.
+  const priorData = prior.data !== undefined && !prior.isPlaceholderData ? prior.data : undefined
+
+  return {
+    ...meta,
+    status: 'ready',
+    points: data.points.map((point) => ({
+      label: format.format(point.timestamp),
+      events: point.eventCount,
+    })),
+    total: data.eventCount,
+    revenue: data.revenue,
+    totalChangePercent:
+      priorData === undefined || view.isPlaceholderData
+        ? null
+        : change(data.eventCount, priorData.eventCount),
+    revenueChangePercent:
+      priorData === undefined || view.isPlaceholderData
+        ? null
+        : revenueChange(data.revenue, priorData.revenue),
+  }
+}
 
 /*
  * Parked until quota-based metrics land, with the usage-by-feature panel.
@@ -230,6 +361,16 @@ export function HomePage() {
  * }
  */
 
+/**
+ * Change between two priced subtotals. Only comparable in one currency, and
+ * the server's two decimal strings are compared as a ratio — never summed or
+ * displayed — so the browser does no money arithmetic.
+ */
+function revenueChange(current: Money | null, prior: Money | null): number | null {
+  if (current === null || prior === null || current.currency !== prior.currency) return null
+  return change(Number(current.amount), Number(prior.amount))
+}
+
 interface Windows {
   current: { start: Date; end: Date }
   prior: { start: Date; end: Date }
@@ -242,6 +383,61 @@ function earliest(dates: (Date | null)[]): Date | null {
     if (at !== null && (min === null || at < min)) min = at
   }
   return min
+}
+
+function toCustomersPanel(
+  view: QueryView<{ customers: Customer[]; total: number }>,
+  windows: Windows,
+  days: number,
+): CustomersPanel {
+  const meta = qualityOf(view)
+  const blank = { newCount: null, partial: false, points: [] }
+  const page = view.data
+  if (page === undefined) return { ...meta, ...blank, status: withoutData(view) }
+
+  const rows = page.customers
+  const total = page.total
+  const window = windows.current
+  const dates = rows.map((row) => row.createdAt).filter((at): at is Date => at !== null)
+  const created = dates.filter((at) => at >= window.start && at < window.end)
+  if (created.length === 0) return { ...meta, ...blank, status: 'empty', newCount: 0 }
+
+  // Every row on the page is new and the server holds more: the count is a floor.
+  const partial = created.length === rows.length && total > rows.length
+
+  // A point per day, oldest first, so a quiet day is a zero rather than a gap.
+  const points = Array.from({ length: days + 1 }, (_, index) => {
+    const start = dayStart(days - index)
+    const end = new Date(start.getTime() + DAY_MS)
+    return {
+      label: dayLabel.format(start),
+      customers: created.filter((at) => at >= start && at < end).length,
+    }
+  })
+
+  /*
+   * The prior window is only countable when the page reaches back past its
+   * start (newest first, so nothing older is hiding) or already holds every
+   * customer. Otherwise the earlier count would be a floor posing as a total,
+   * and no change is shown.
+   */
+  const priorComplete = total <= rows.length || dates.some((at) => at < windows.prior.start)
+  const priorCount = dates.filter(
+    (at) => at >= windows.prior.start && at < windows.prior.end,
+  ).length
+  const changePercent = partial || !priorComplete ? null : change(created.length, priorCount)
+
+  return {
+    ...meta,
+    status: 'ready',
+    newCount: created.length,
+    partial,
+    points,
+    changePercent,
+    basedOn: partial
+      ? `Counted from the newest ${rows.length.toLocaleString()} customers.`
+      : undefined,
+  }
 }
 
 function toSubscriptionsPanel(

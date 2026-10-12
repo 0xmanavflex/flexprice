@@ -1,5 +1,7 @@
+import { useId, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowUpRightIcon, CalendarIcon } from '@ui/icons'
+import type { Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   Select,
@@ -9,14 +11,18 @@ import {
   SelectValue,
 } from '@ui/components/primitives/select'
 import { DataFreshness, DataRegion } from '@ui/compositions/feedback/DataBoundary'
+import { EMPTY_CATALOGUE } from '@ui/compositions/feedback/emptyCatalogue'
 import { RetryAction } from '@ui/compositions/feedback/RetryAction'
 import { ChartSkeleton, ValuePlaceholder } from '@ui/compositions/feedback/Skeletons'
 import { Panel } from '@ui/compositions/layout/Section'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { ArcGauge } from '../shared/ArcGauge'
+import { BlurredEmpty, MetricChart } from '../shared/charts'
+import type { MetricTab, MetricTabStatus } from '../shared/charts'
 import { HalfDonut } from '../shared/HalfDonut'
 import type { DonutSlice } from '../shared/HalfDonut'
+import { Money } from '../shared/Money'
 import { PillColumns } from '../shared/PillColumns'
 import type { PillColumn, PillSeries } from '../shared/PillColumns'
 import { NeedAttention, type AttentionPanel } from './NeedAttention'
@@ -35,7 +41,7 @@ import type { SegmentMeterRow } from '../shared/SegmentMeter'
  *
  * So the rule this surface is built to is: **every number on it is either read
  * from the API or absent.** There is no third category. Where Flexprice has no
- * endpoint — request latency, error counts — the panel says so
+ * endpoint — processing lag, request latency, error counts — the panel says so
  * in words rather than showing a plausible figure. That is the same choice
  * `SettingsUnavailable` and `ShellSearch` already made, and it is the only way
  * a dashboard stays trustworthy once one number on it is wrong.
@@ -46,9 +52,10 @@ import type { SegmentMeterRow } from '../shared/SegmentMeter'
  * rather than as whatever the network happened to do.
  *
  * Every mark on it now comes from the shared chart library rather than from a
- * ReUI block adapted in place: `PillColumns` for the per-day subscription
- * stack, `HalfDonut` for the invoice gauge, `SegmentMeter` for the per-feature
- * usage rows and `ArcGauge` for key health. The
+ * ReUI block adapted in place: `MetricChart` for the revenue, customer and
+ * usage-ingestion strip and the series it switches between, `PillColumns` for the per-day subscription stack,
+ * `HalfDonut` for the invoice gauge, `SegmentMeter` for the per-feature usage
+ * rows, `ArcGauge` for key health, and `BlurredEmpty` for the first run. The
  * blocks those components were composed from are declared there; what this file
  * keeps is the *wiring* — which panel is ready, empty or unavailable, and which
  * numbers are allowed on screen at all.
@@ -73,10 +80,11 @@ export const DashboardHomeProvenance = provenance({
     'ui/select',
     'compositions/Section',
     'compositions/feedback/DataBoundary',
+    'compositions/feedback/emptyCatalogue',
     'compositions/feedback/RetryAction',
     'compositions/feedback/Skeletons',
   ],
-  note: 'Billing overview: needs-attention tasks, contracts and invoice payment status (metered usage and API keys parked), drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable.',
+  note: 'Billing overview: revenue, customers and usage ingestion, contracts and invoice payment status (metered usage and API keys parked), drawn with the shared chart library. Every figure is API-sourced or explicitly unavailable. Lineage: pages/shared/MetricChart, pages/shared/BlurredEmpty.',
 })
 
 /* ---- What the page is told ---------------------------------------------- */
@@ -106,7 +114,7 @@ export interface PanelMeta {
   /** A refetch is running over data already on screen. */
   refreshing?: boolean | undefined
   /**
-   * The figures belong to a previous window and are
+   * The figures belong to a previous window, filter or granularity and are
    * held on screen until the new ones arrive. They are dimmed and marked busy
    * so nobody reads last window's total as this window's.
    */
@@ -122,6 +130,26 @@ export interface PanelMeta {
 export interface FilterOption {
   id: string
   label: string
+}
+
+/** One bucket of the ingestion series. */
+export interface EventPoint {
+  /** Axis label, already formatted for the chosen granularity. */
+  label: string
+  events: number
+}
+
+export interface EventsPanel extends PanelMeta {
+  status: PanelStatus
+  points: EventPoint[]
+  /** Events ingested across the window. */
+  total: number | null
+  /** What the server priced this usage at. `null` when it sent no subtotal. */
+  revenue: MoneyValue | null
+  /** Change in `total` against the window before this one. Omitted or `null` when there is no prior window to compare. */
+  totalChangePercent?: number | null | undefined
+  /** Change in `revenue` against the window before this one, in the same currency. Omitted or `null` when not comparable. */
+  revenueChangePercent?: number | null | undefined
 }
 
 /**
@@ -156,6 +184,28 @@ export interface InvoicesPanel extends PanelMeta {
   paid: number
   open: number
   overdue: number
+}
+
+/**
+ * New customers across the window, for the Customers tab.
+ *
+ * Counted by the page from the customers' own creation dates, so the headline
+ * and the series are the same measurement and always agree.
+ */
+export interface CustomersPanel extends PanelMeta {
+  status: PanelStatus
+  /** Customers created inside the window. `null` when it could not be counted. */
+  newCount: number | null
+  /**
+   * `true` when the page could only see the newest customers and every one of
+   * them fell inside the window — so `newCount` is a floor, not a total, and is
+   * shown with a `+` rather than as an exact figure.
+   */
+  partial: boolean
+  /** New customers per bucket, oldest first. */
+  points: { label: string; customers: number }[]
+  /** Change in `newCount` against the window before this one. Omitted or `null` when that window was not fully read. */
+  changePercent?: number | null | undefined
 }
 
 export interface UsageRow {
@@ -194,9 +244,19 @@ export interface DashboardHomeProps {
   range: string
   onRangeChange: (range: string) => void
 
+  granularityOptions: FilterOption[]
+  granularity: string
+  onGranularityChange: (granularity: string) => void
+
+  customerOptions: FilterOption[]
+  customer: string
+  onCustomerChange: (customer: string) => void
+
   /** Words for the window, e.g. "last 7 days". Used in the panels' subtitles. */
   rangeLabel: string
 
+  events: EventsPanel
+  customers: CustomersPanel
   subscriptions: SubscriptionsPanel
   invoices: InvoicesPanel
   /** Things a person has to act on. Omitted, the task list is not shown. */
@@ -210,12 +270,16 @@ export interface DashboardHomeProps {
   usage?: UsagePanel | undefined
   api?: ApiPanel | undefined
 
+  /** The zone days are cut in, named beside the filters. The page decides the zone; this only says it. Default "UTC". */
+  timeZoneLabel?: string | undefined
+
   /** Where a link on the overview leads. No-op by default, so the surface renders in isolation. */
   onNavigate?: (path: string) => void
 }
 
 /* ---- Formatting --------------------------------------------------------- */
 
+const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
 
 /** The dash a number takes when there is nothing true to put there. */
@@ -237,7 +301,7 @@ function Unavailable({ what, className }: { what: string; className?: string }) 
   )
 }
 
-/* ---- 1. Range ----------------------------------------------------------- */
+/* ---- 1. Filters --------------------------------------------------------- */
 
 interface Filter {
   label: string
@@ -245,6 +309,8 @@ interface Filter {
   options: FilterOption[]
   onChange: (value: string) => void
   icon?: ReactNode
+  /** Id of a line of text that explains what this filter does and does not affect. */
+  describedBy?: string
 }
 
 function FilterSelect({ filter }: { filter: Filter }) {
@@ -262,7 +328,10 @@ function FilterSelect({ filter }: { filter: Filter }) {
         if (value !== null) filter.onChange(value)
       }}
     >
-      <SelectTrigger aria-label={filter.label}>
+      <SelectTrigger
+        aria-label={filter.label}
+        {...(filter.describedBy ? { 'aria-describedby': filter.describedBy } : {})}
+      >
         {filter.icon}
         <SelectValue />
       </SelectTrigger>
@@ -278,9 +347,11 @@ function FilterSelect({ filter }: { filter: Filter }) {
 }
 
 /**
- * The range picker.
+ * The filter rows.
  *
- * It cuts the contracts and invoices panels to the same window.
+ * One row: granularity and customer on the left, the range pinned to the
+ * right end. The range still cuts every panel on the page — the metrics, the
+ * contracts and the invoices — to the same window.
  *
  * The design also drew an "+ Add filter" control. It is left out rather than
  * drawn dead: this console already learned from a global search box that
@@ -305,13 +376,319 @@ function RangeFilter(props: {
   )
 }
 
-/** A way out of an empty window: widen the range. */
+function ChartFilters(props: {
+  granularityOptions: FilterOption[]
+  granularity: string
+  onGranularityChange: (value: string) => void
+  customerOptions: FilterOption[]
+  customer: string
+  onCustomerChange: (value: string) => void
+  /** The range picker, pinned to the right end of the same row. */
+  range: ReactNode
+  timeZoneLabel: string
+}) {
+  const noteId = useId()
+  const filters: Filter[] = [
+    {
+      label: 'Granularity',
+      value: props.granularity,
+      options: props.granularityOptions,
+      onChange: props.onGranularityChange,
+    },
+    {
+      label: 'Customer',
+      value: props.customer,
+      options: props.customerOptions,
+      onChange: props.onCustomerChange,
+      describedBy: noteId,
+    },
+  ]
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center gap-2">
+        {filters.map((filter) => (
+          <FilterSelect key={filter.label} filter={filter} />
+        ))}
+        <div className="ml-auto">{props.range}</div>
+      </div>
+      {/* The customer filter narrows usage events only; contracts, invoices and new customers
+          stay account-wide. Said out loud so a filtered chart is never read as a filtered page. */}
+      <p id={noteId} className="text-muted-foreground text-xs">
+        The customer filter applies to usage and revenue only. Days run from 00:00{' '}
+        {props.timeZoneLabel}.
+      </p>
+    </div>
+  )
+}
+
+/* ---- 2. Key metrics ---------------------------------------------------- */
+
+const METRIC_REVENUE = 'revenue'
+const METRIC_CUSTOMERS = 'customers'
+const METRIC_EVENTS = 'events'
+const METRIC_LAG = 'lag'
+
+/**
+ * The shape behind the first-run message.
+ *
+ * It is not data and never becomes data: `BlurredEmpty` renders its children
+ * `aria-hidden`, `inert` and blurred, and `MetricChart` hides its y-axis, so
+ * this is a line with no scale, no axis and no tooltip — a texture that says
+ * "a chart goes here". The tab headlines above it stay dashes, because those
+ * *are* legible. It is only ever drawn once the API has answered "nothing":
+ * while a panel is loading or has failed, the chart says that instead.
+ */
+const PLACEHOLDER_SHAPE = [46, 61, 54, 72, 65, 83, 74, 91, 86, 104, 97, 112].map((value) => ({
+  label: '',
+  value,
+}))
+
+/** A tab's `changePercent`, present only when a real prior window produced one. */
+function changeOf(percent: number | null | undefined): { changePercent?: number } {
+  return percent === null || percent === undefined ? {} : { changePercent: percent }
+}
+
+/** A panel's status as a tab's: an empty answer is still an answer, so it is `ready`. */
+function tabStatus(status: PanelStatus): MetricTabStatus {
+  return status === 'loading' ? 'loading' : status === 'unavailable' ? 'unavailable' : 'ready'
+}
+
+/**
+ * One freshness reading across several panels: refreshing if any is, stale if
+ * any is (with the oldest copy's age), and a retry that targets a stale one.
+ * Computed here rather than read off a query so the component stays
+ * presentational.
+ */
+function freshnessOf(...panels: PanelMeta[]) {
+  const stamps = panels.flatMap((panel) => (panel.updatedAt === undefined ? [] : [panel.updatedAt]))
+  const staleOne = panels.find((panel) => panel.stale && panel.onRetry)
+  return {
+    updatedAt: stamps.length > 0 ? Math.min(...stamps) : undefined,
+    refreshing: panels.some((panel) => panel.refreshing),
+    provisional: panels.some((panel) => panel.provisional),
+    stale: panels.some((panel) => panel.stale),
+    retrying: panels.some((panel) => panel.isRetrying),
+    onRetry: staleOne?.onRetry,
+  }
+}
+
+/** A way out of an empty window: widen the range, or drop the customer filter. */
 interface Exit {
   label: string
   run: () => void
 }
 
-/* ---- 2. Recent subscriptions -------------------------------------------- */
+function MetricsSection({
+  events,
+  customers,
+  rangeLabel,
+  filters,
+  onQuickstart,
+  widen,
+  clearCustomer,
+}: {
+  events: EventsPanel
+  customers: CustomersPanel
+  rangeLabel: string
+  /** The chart's own filters (granularity, customer), drawn above it. */
+  filters: ReactNode
+  onQuickstart: () => void
+  /** Widens the range, or `null` when it is already the widest on offer. */
+  widen: Exit | null
+  /** Clears the customer filter, or `null` when no customer is picked. */
+  clearCustomer: Exit | null
+}) {
+  // Which metric you are looking at is view state, not data, so it lives here
+  // rather than in the props. `MetricChart` holds none of its own. Revenue is
+  // what the overview is opened for, so it is the tab you land on.
+  const [metric, setMetric] = useState(METRIC_REVENUE)
+
+  const eventsReady = events.status === 'ready'
+  const customersReady = customers.status === 'ready'
+  // The first-run invitation is for an account whose sources *both* answered
+  // "nothing". A source that is still loading or failed is not empty, and
+  // saying "no events yet" over it would be a claim nobody has checked.
+  const nothingYet = events.status === 'empty' && customers.status === 'empty'
+  const revenueKnown = eventsReady && events.revenue !== null
+
+  /**
+   * The tab strip is the stat strip, in the order the overview is read:
+   * Revenue, Customers, Usage ingestion — then Processing lag.
+   *
+   * Each tab carries its own status, because they come from different
+   * requests: Revenue and Usage ingestion from events, Customers from the
+   * customer list. A tab whose source is loading shows a placeholder bar and a
+   * skeleton, one that failed says so with a retry, and neither ever shows a
+   * dash or a zero. The dash is kept for a figure that is genuinely empty.
+   *
+   * Two of them have no series to plot: the usage API prices a window as a
+   * whole rather than per bucket, and processing lag is not measured anywhere
+   * in the stack. Both keep their tab — dropping them would make "not plotted"
+   * and "not a thing we track" look identical — and `emptyMessage` says which.
+   */
+  const tabs: MetricTab[] = [
+    {
+      id: METRIC_REVENUE,
+      label: 'Revenue',
+      status: tabStatus(events.status),
+      onRetry: events.onRetry,
+      // The server's own subtotal, or nothing. `Money` has no `add`, and
+      // summing prices across currencies in the browser would be the wrong
+      // answer rendered confidently.
+      value: revenueKnown && events.revenue !== null ? <Money value={events.revenue} /> : NOTHING,
+      ...changeOf(revenueKnown ? events.revenueChangePercent : null),
+      points: [],
+      // Never "No revenue in this period" beside a headline that has one.
+      emptyMessage: revenueKnown
+        ? 'Revenue is one total for the window, so there is no series to plot.'
+        : events.status === 'empty'
+          ? 'Nothing was priced in this period.'
+          : 'Nothing to plot for this window.',
+    },
+    {
+      id: METRIC_CUSTOMERS,
+      label: 'Customers',
+      status: tabStatus(customers.status),
+      onRetry: customers.onRetry,
+      value:
+        customersReady && customers.newCount !== null
+          ? `${whole.format(customers.newCount)}${customers.partial ? '+' : ''}`
+          : NOTHING,
+      ...changeOf(customersReady ? customers.changePercent : null),
+      points: customersReady
+        ? customers.points.map((point) => ({ label: point.label, value: point.customers }))
+        : [],
+      emptyMessage: 'No new customers in this period.',
+    },
+    {
+      id: METRIC_EVENTS,
+      label: 'Usage ingestion',
+      status: tabStatus(events.status),
+      onRetry: events.onRetry,
+      value: eventsReady && events.total !== null ? compact.format(events.total) : NOTHING,
+      ...changeOf(eventsReady && events.total !== null ? events.totalChangePercent : null),
+      points: eventsReady
+        ? events.points.map((point) => ({ label: point.label, value: point.events }))
+        : [],
+      emptyMessage: EMPTY_CATALOGUE['usage-period'].title,
+    },
+    {
+      /*
+       * Processing lag has no endpoint anywhere in the stack — not in
+       * `@fp/query`, not in `@fp/api`, and not in the SDK, which exposes
+       * per-event debugging but no aggregate. It is shown as absent, with the
+       * reason, rather than dropped — and it never says "no lag", which would
+       * be a measurement.
+       */
+      id: METRIC_LAG,
+      label: 'Processing lag',
+      value: 'Not measured',
+      points: [],
+      emptyMessage: 'Processing lag isn’t measured, so there is nothing to plot.',
+    },
+  ]
+
+  const caption =
+    metric === METRIC_REVENUE
+      ? 'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.'
+      : metric === METRIC_CUSTOMERS
+        ? `New customers, ${rangeLabel}.`
+        : metric === METRIC_EVENTS
+          ? `Usage events received, ${rangeLabel}.`
+          : undefined
+
+  const placeholder: MetricTab[] = tabs.map((tab) =>
+    tab.id === METRIC_REVENUE ? { ...tab, points: PLACEHOLDER_SHAPE } : tab,
+  )
+
+  const fresh = freshnessOf(events, customers)
+  const basedOn =
+    metric === METRIC_CUSTOMERS
+      ? customers.basedOn
+      : metric === METRIC_LAG
+        ? undefined
+        : events.basedOn
+
+  // Period-empty ("this window has nothing; earlier data is unchanged") is a
+  // different message from first-run ("nothing has ever arrived"). A narrower
+  // range or a customer filter means we cannot claim the latter.
+  const periodEmpty = widen !== null || clearCustomer !== null
+  const firstRunCopy = EMPTY_CATALOGUE.events
+  const periodCopy = EMPTY_CATALOGUE['usage-period']
+  const exits = [widen, clearCustomer].filter((exit): exit is Exit => exit !== null)
+
+  return (
+    <section aria-label="Key metrics" className="flex min-w-0 flex-col gap-3">
+      <h2 className="sr-only">Key metrics</h2>
+      {filters}
+      {nothingYet ? (
+        /*
+         * The invitation sits over a blurred chart rather than replacing it, so
+         * the shape of what will appear is visible while it is still empty —
+         * the design's own choice, and it keeps the panel from collapsing and
+         * shifting everything below it the moment data arrives.
+         */
+        <BlurredEmpty
+          title={
+            periodEmpty
+              ? clearCustomer !== null
+                ? 'No usage for this customer in this period'
+                : periodCopy.title
+              : firstRunCopy.title
+          }
+          description={periodEmpty ? periodCopy.description : firstRunCopy.description}
+          action={
+            periodEmpty
+              ? exits[0]
+                ? { label: exits[0].label, onClick: exits[0].run }
+                : undefined
+              : { label: firstRunCopy.primaryLabel ?? 'Send a test event', onClick: onQuickstart }
+          }
+          secondaryAction={
+            periodEmpty && exits[1] ? { label: exits[1].label, onClick: exits[1].run } : undefined
+          }
+        >
+          <MetricChart
+            tabs={placeholder}
+            activeTab={METRIC_REVENUE}
+            onTabChange={() => {}}
+            height={240}
+          />
+        </BlurredEmpty>
+      ) : (
+        <DataRegion state={{ refreshing: fresh.refreshing, provisional: fresh.provisional }}>
+          <MetricChart
+            tabs={tabs}
+            activeTab={metric}
+            onTabChange={setMetric}
+            caption={caption}
+            height={240}
+          />
+        </DataRegion>
+      )}
+
+      {basedOn ? <p className="text-muted-foreground text-xs">{basedOn}</p> : null}
+      {fresh.stale ? (
+        <DataFreshness
+          updatedAt={fresh.updatedAt}
+          stale
+          refreshing={fresh.retrying}
+          {...(fresh.onRetry ? { onRefresh: fresh.onRetry } : {})}
+        />
+      ) : null}
+
+      {eventsReady && events.revenue === null ? (
+        <Unavailable what="The usage API returned no priced subtotal for this window." />
+      ) : null}
+      {metric === METRIC_LAG ? (
+        <Unavailable what="Flexprice does not expose an ingestion-lag metric." />
+      ) : null}
+    </section>
+  )
+}
+
+/* ---- 3. Recent subscriptions -------------------------------------------- */
 
 function SubscriptionsCard({
   subscriptions,
@@ -435,7 +812,7 @@ function SubscriptionsCard({
   )
 }
 
-/* ---- 3. Invoice payment status ------------------------------------------ */
+/* ---- 4. Invoice payment status ------------------------------------------ */
 
 /**
  * The half-donut over real invoice counts.
@@ -534,7 +911,7 @@ function InvoicesCard({
   )
 }
 
-/* ---- 4. Usage by feature ------------------------------------------------ */
+/* ---- 5. Usage by feature ------------------------------------------------ */
 
 /*
  * Parked: not rendered until quota-based metrics land (see `DashboardHome`).
@@ -588,7 +965,7 @@ export function UsageCard({
   )
 }
 
-/* ---- 5. API ------------------------------------------------------------- */
+/* ---- 6. API ------------------------------------------------------------- */
 
 /**
  * Key health, as an arc.
@@ -670,10 +1047,19 @@ export function DashboardHome({
   rangeOptions,
   range,
   onRangeChange,
+  granularityOptions,
+  granularity,
+  onGranularityChange,
+  customerOptions,
+  customer,
+  onCustomerChange,
   rangeLabel,
+  events,
+  customers,
   subscriptions,
   invoices,
   attention,
+  timeZoneLabel = 'UTC',
   onNavigate,
 }: DashboardHomeProps) {
   const go = (path: string) => onNavigate?.(path)
@@ -685,6 +1071,12 @@ export function DashboardHome({
     widest !== undefined && widest.id !== range
       ? { label: `Show ${widest.label.toLowerCase()}`, run: () => onRangeChange(widest.id) }
       : null
+  // The first customer option is "all customers"; anything else is a filter.
+  const allCustomers = customerOptions[0]
+  const clearCustomer: Exit | null =
+    allCustomers !== undefined && customer !== allCustomers.id
+      ? { label: 'Show all customers', run: () => onCustomerChange(allCustomers.id) }
+      : null
 
   return (
     <div className="flex flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
@@ -693,9 +1085,32 @@ export function DashboardHome({
 
       {attention ? <NeedAttention attention={attention} onOpen={go} /> : null}
 
-      <div className="flex justify-end">
-        <RangeFilter rangeOptions={rangeOptions} range={range} onRangeChange={onRangeChange} />
-      </div>
+      <MetricsSection
+        events={events}
+        customers={customers}
+        rangeLabel={rangeLabel}
+        filters={
+          <ChartFilters
+            granularityOptions={granularityOptions}
+            granularity={granularity}
+            onGranularityChange={onGranularityChange}
+            customerOptions={customerOptions}
+            customer={customer}
+            onCustomerChange={onCustomerChange}
+            timeZoneLabel={timeZoneLabel}
+            range={
+              <RangeFilter
+                rangeOptions={rangeOptions}
+                range={range}
+                onRangeChange={onRangeChange}
+              />
+            }
+          />
+        }
+        onQuickstart={() => go('/features')}
+        widen={widen}
+        clearCustomer={clearCustomer}
+      />
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <SubscriptionsCard

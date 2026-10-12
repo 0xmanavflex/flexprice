@@ -141,12 +141,15 @@
       "composes": [
         "ArcGauge",
         "ArrowUpRightIcon",
+        "BlurredEmpty",
         "CalendarIcon",
         "ChartSkeleton",
         "DataFreshness",
         "DataRegion",
         "HalfDonut",
         "MeterTrack",
+        "MetricChart",
+        "Money",
         "NeedAttention",
         "Panel",
         "PillColumns",
@@ -532,7 +535,10 @@
         "ValuePlaceholder"
       ],
       "usedBy": [
-        "RevenueDashboard"
+        "ApiCard",
+        "DashboardHome",
+        "RevenueDashboard",
+        "UsageCard"
       ],
       "story": "./src/pages/shared/BlurredEmpty.stories.tsx"
     },
@@ -1615,12 +1621,15 @@
       "composes": [
         "ArcGauge",
         "ArrowUpRightIcon",
+        "BlurredEmpty",
         "CalendarIcon",
         "ChartSkeleton",
         "DataFreshness",
         "DataRegion",
         "HalfDonut",
         "MeterTrack",
+        "MetricChart",
+        "Money",
         "NeedAttention",
         "Panel",
         "PillColumns",
@@ -3773,8 +3782,11 @@
         "ValuePlaceholder"
       ],
       "usedBy": [
+        "ApiCard",
         "CustomerAnalyticsView",
+        "DashboardHome",
         "RevenueDashboard",
+        "UsageCard",
         "WebhookActivity"
       ],
       "story": "./src/pages/shared/MetricChart.stories.tsx"
@@ -3810,7 +3822,9 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
+        "ApiCard",
         "CustomerDetail",
+        "DashboardHome",
         "EmDash",
         "EntityCell",
         "EntityLink",
@@ -3819,7 +3833,8 @@
         "Formula",
         "Pill",
         "RevenueDashboard",
-        "Status"
+        "Status",
+        "UsageCard"
       ],
       "story": "./src/pages/shared/Money.stories.tsx"
     },
@@ -5812,12 +5827,15 @@
       "composes": [
         "ArcGauge",
         "ArrowUpRightIcon",
+        "BlurredEmpty",
         "CalendarIcon",
         "ChartSkeleton",
         "DataFreshness",
         "DataRegion",
         "HalfDonut",
         "MeterTrack",
+        "MetricChart",
+        "Money",
         "NeedAttention",
         "Panel",
         "PillColumns",
