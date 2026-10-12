@@ -220,7 +220,7 @@ export const ConfigFeature: Story = {
   args: { featureType: FeatureType.Config, tab: 'information' },
 }
 
-/** An archived feature locks the General card and shows an Archived badge. */
+/** An archived feature locks the Feature details card and shows an Archived badge. */
 export const Archived: Story = {
   args: { featureStatus: FeatureStatus.Archived, tab: 'information' },
 }
@@ -243,7 +243,9 @@ export const EditFromMenu: Story = {
     await expect(canvas.queryByRole('button', { name: 'Edit' })).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
     await userEvent.click(
-      await within(canvasElement.ownerDocument.body).findByRole('menuitem', { name: 'Edit' }),
+      await within(canvasElement.ownerDocument.body).findByRole('menuitem', {
+        name: 'Edit details',
+      }),
     )
     await expect(args.onEditConfiguration).toHaveBeenCalled()
   },

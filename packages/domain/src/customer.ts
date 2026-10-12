@@ -21,7 +21,7 @@ export const CustomerStatus = {
 export type CustomerStatus = (typeof CustomerStatus)[keyof typeof CustomerStatus]
 
 export const CUSTOMER_STATUS_LABEL: Record<CustomerStatus, string> = {
-  [CustomerStatus.Published]: 'Published',
+  [CustomerStatus.Published]: 'Active',
   [CustomerStatus.Archived]: 'Archived',
 }
 
@@ -44,8 +44,7 @@ export const CustomerTaxTreatment = {
   Taxable: 'taxable',
   Exempt: 'exempt',
 } as const
-export type CustomerTaxTreatment =
-  (typeof CustomerTaxTreatment)[keyof typeof CustomerTaxTreatment]
+export type CustomerTaxTreatment = (typeof CustomerTaxTreatment)[keyof typeof CustomerTaxTreatment]
 
 export const CUSTOMER_TAX_TREATMENT_LABEL: Record<CustomerTaxTreatment, string> = {
   [CustomerTaxTreatment.Taxable]: 'Taxable',

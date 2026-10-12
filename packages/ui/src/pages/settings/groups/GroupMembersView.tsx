@@ -23,8 +23,9 @@ export function GroupMembersView({
   members?: GroupMember[]
 }) {
   return (
-    <Section title="Members" flush bare>
+    <Section table title="Members">
       <DetailTable
+        compact
         label="Members"
         noun="members"
         rows={members}

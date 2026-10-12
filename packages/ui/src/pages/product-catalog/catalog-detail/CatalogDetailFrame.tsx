@@ -16,7 +16,7 @@ export interface CatalogDetailFrameProps {
   onBack: () => void
   icon: ReactNode
   title: string
-  /** Status and type chips, shown in the header's right-hand cluster. */
+  /** Small pills under the title: status first, then the facts that identify the record. */
   badges?: ReactNode
   /** Copyable identifier. */
   id: string
@@ -36,7 +36,7 @@ export interface CatalogDetailFrameProps {
 
 /**
  * The shared shell for catalog detail pages (coupon, add-on, cost sheet, group):
- * `DetailShell` (icon tile, title; right cluster of chips, "ID" copy chip and a
+ * `DetailShell` (icon tile, title, small pills under it, "ID" copy chip and a
  * single ⋯ menu holding every action), then line `DetailTabs`.
  */
 export function CatalogDetailFrame({

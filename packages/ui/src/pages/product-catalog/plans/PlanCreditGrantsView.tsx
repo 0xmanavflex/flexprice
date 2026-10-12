@@ -34,9 +34,9 @@ export function PlanCreditGrantsView({
   onEdit,
   onDelete,
 }: PlanCreditGrantsViewProps) {
-  return (
-    <Section title="Credit grants" flush bare={grants.length > 0}>
-      {grants.length === 0 ? (
+  if (grants.length === 0) {
+    return (
+      <Section title="Credit grants" flush>
         <SectionEmpty
           title="No credit grants yet"
           description="Subscribers start with an empty wallet."
@@ -47,68 +47,71 @@ export function PlanCreditGrantsView({
             </Button>
           }
         />
-      ) : (
-        <DetailTable
-          label="Credit grants"
-          action={
-            <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
-              <PlusIcon aria-hidden />
-              Add grant
-            </Button>
-          }
-          noun="credit grants"
-          rows={grants}
-          columns={[
-            {
-              key: 'name',
-              header: 'Grant',
-              sortBy: (g) => g.name,
-              cell: (g) => (
-                <span className="flex items-center gap-2.5">
-                  <CoinsIcon aria-hidden className="text-muted-foreground size-4" />
-                  <span className="font-medium">{g.name}</span>
-                </span>
-              ),
-            },
-            {
-              key: 'credits',
-              header: 'Credits',
-              sortBy: (g) => Number(g.credits),
-              cell: (g) => (
-                <span className="tabular-nums">{Number(g.credits).toLocaleString()}</span>
-              ),
-            },
-            { key: 'granted', header: 'Granted', cell: (g) => grantedLabel(g) },
-            {
-              key: 'expires',
-              header: 'Expires',
-              cell: (g) => (
-                <span className="text-muted-foreground">
-                  {CREDIT_GRANT_EXPIRY_TYPE_LABEL[g.expirationType]}
-                </span>
-              ),
-            },
-            {
-              key: 'priority',
-              header: 'Priority',
-              sortBy: (g) => Number(g.priority),
-              cell: (g) => <span className="text-muted-foreground">{g.priority}</span>,
-            },
-            {
-              key: 'actions',
-              header: '',
-              className: 'w-12',
-              cell: (g) => (
-                <RowActionsMenu
-                  label={g.name}
-                  onEdit={() => onEdit(g)}
-                  onRemove={() => onDelete(g)}
-                />
-              ),
-            },
-          ]}
-        />
-      )}
+      </Section>
+    )
+  }
+
+  return (
+    <Section table title="Credit grants">
+      <DetailTable
+        compact
+        label="Credit grants"
+        action={
+          <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
+            <PlusIcon aria-hidden />
+            Add grant
+          </Button>
+        }
+        noun="credit grants"
+        rows={grants}
+        columns={[
+          {
+            key: 'name',
+            header: 'Grant',
+            sortBy: (g) => g.name,
+            cell: (g) => (
+              <span className="flex items-center gap-2.5">
+                <CoinsIcon aria-hidden className="text-muted-foreground size-4" />
+                <span className="font-medium">{g.name}</span>
+              </span>
+            ),
+          },
+          {
+            key: 'credits',
+            header: 'Credits',
+            sortBy: (g) => Number(g.credits),
+            cell: (g) => <span className="tabular-nums">{Number(g.credits).toLocaleString()}</span>,
+          },
+          { key: 'granted', header: 'Granted', cell: (g) => grantedLabel(g) },
+          {
+            key: 'expires',
+            header: 'Expires',
+            cell: (g) => (
+              <span className="text-muted-foreground">
+                {CREDIT_GRANT_EXPIRY_TYPE_LABEL[g.expirationType]}
+              </span>
+            ),
+          },
+          {
+            key: 'priority',
+            header: 'Priority',
+            sortBy: (g) => Number(g.priority),
+            cell: (g) => <span className="text-muted-foreground">{g.priority}</span>,
+          },
+          {
+            key: 'actions',
+            header: '',
+            className: 'w-12',
+            cell: (g) => (
+              <RowActionsMenu
+                label={g.name}
+                onEdit={() => onEdit(g)}
+                onRemove={() => onDelete(g)}
+              />
+            ),
+          },
+        ]}
+      />
     </Section>
   )
 }

@@ -5,6 +5,7 @@ import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { MetricRail, type DetailMetric } from './MetricRail'
 import { DetailHeaderCluster } from './DetailKit'
+import { DetailPills } from './pillSize'
 
 /**
  * The one shell every detail page opens with.
@@ -12,7 +13,7 @@ import { DetailHeaderCluster } from './DetailKit'
  * Before this, detail pages used two different headers with two different
  * breadcrumb styles, and only some got a summary strip — so the flagship plan
  * page looked unlike the rest. This is the single opening: a breadcrumb, a large
- * title, a right-hand cluster (primary actions, status chips, "ID" copy chip,
+ * title, status pills under the title, a right-hand cluster ("ID" copy chip,
  * More menu; see `DetailHeaderCluster`), and — the
  * part that makes a detail page worth visiting — a **metric rail** of how the
  * record is doing. The body (tabs or sections) is `children`.
@@ -86,7 +87,7 @@ export interface DetailShellProps {
   title: string
   /** Icon shown in the tile left of the title (reference DetailHeader). */
   icon?: ReactNode
-  /** Status and type chips, shown in the right-hand cluster (never beside the name). */
+  /** Status and type pills, shown small under the title (status first). */
   badges?: ReactNode
   /** The record id, rendered as an "ID" copy chip on the right. */
   id?: string
@@ -163,11 +164,13 @@ export function DetailShell({
                 {icon}
               </span>
             ) : null}
-            <h1 className="min-w-0 truncate text-xl font-medium tracking-tight">{title}</h1>
+            <div className="min-w-0">
+              <h1 className="min-w-0 truncate text-xl font-medium tracking-tight">{title}</h1>
+              <DetailPills>{badges}</DetailPills>
+            </div>
           </div>
           <DetailHeaderCluster
             primary={primary}
-            badges={badges}
             id={id ?? identifier}
             email={email}
             more={actions}

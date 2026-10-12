@@ -168,7 +168,10 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Current balance')).toBeInTheDocument()
+    await expect(canvas.getByText('Real-time balance')).toBeInTheDocument()
+    await expect(canvas.getByText('Last invoiced balance')).toBeInTheDocument()
+    await expect(canvas.getByText('Consumption rate')).toBeInTheDocument()
+    await expect(canvas.getByRole('combobox', { name: 'Wallet' })).toBeInTheDocument()
     await expect(canvas.getByRole('button', { name: /top up wallet/i })).toBeEnabled()
   },
 }
@@ -198,7 +201,7 @@ export const TransactionsLoading: Story = { args: { transactionsLoading: true } 
 export const NoTransactions: Story = {
   args: { transactions: [] },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('No transactions yet.')).toBeInTheDocument()
+    await expect(await within(canvasElement).findByText('No top-ups yet.')).toBeInTheDocument()
   },
 }
 
@@ -214,7 +217,7 @@ export const Terminated: Story = {
   },
 }
 
-/** Several wallets add a picker; choosing one switches the balances. */
+/** The picker is always shown; with several wallets, choosing one switches the balances. */
 export const MultipleWallets: Story = {
   render: (args) => <Controlled {...args} />,
   args: { wallets: makeWallets(3, WalletStatus.Active, 10000, 7500) },

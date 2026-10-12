@@ -1,22 +1,22 @@
 import { type ReactNode } from 'react'
-import { PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from '@ui/icons'
+import { ArchiveIcon, FileTextIcon, PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from '@ui/icons'
 import {
   type CustomerDetail as CustomerDetailModel,
+  CUSTOMER_STATUS_LABEL,
   CUSTOMER_TAX_TREATMENT_LABEL,
   SUBSCRIPTION_STATUS_LABEL,
   type Invoice,
   InvoiceStatus,
   PaymentStatus,
   compareMoney,
+  formatMoney,
   isZeroMoney,
   SubscriptionStatus,
   type Subscription,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { ScrollArea } from '@ui/components/primitives/scroll-area'
-import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
-import type { ActivityEvent } from '@ui/components/blocks/solution-billing-4/components/data'
-import { DetailTabs, type DetailMenuItem } from '@ui/compositions/detail/DetailKit'
+import { ActivitySection, type ActivityLogEntry } from '@ui/compositions/detail/ActivityLog'
+import { DetailTabs, OverviewTiles, type DetailMenuItem } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
 import { EditableCard } from '@ui/compositions/forms/EditableCard'
 import { MetadataCard } from '@ui/compositions/detail/MetadataCard'
@@ -30,7 +30,6 @@ import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
 import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { cn } from '@ui/lib/cn'
 import { DetailTable } from '../shared/DetailTable'
-import { SubscriptionCard } from './SubscriptionCard'
 
 /**
  * A customer's detail page: an avatar-tile `EntityHeader` (name; on the right
@@ -43,16 +42,14 @@ import { SubscriptionCard } from './SubscriptionCard'
  */
 export const CustomerDetailProvenance = provenance({
   source: 'composition',
-  composes: ['pages/shared/EntityHeader', 'blocks/solution-billing-4', 'pages/shared/Money'],
-  note: 'Customer detail: EntityHeader + DetailTabs; Overview from solution-billing-4, Information as single-pencil EditableCards. Lineage: ui/detail-kit, ui/section, ui/editable-card.',
+  composes: ['pages/shared/EntityHeader', 'compositions/activity-log', 'pages/shared/Money'],
+  note: 'Customer detail: EntityHeader + DetailTabs; Overview from OverviewTiles, a Contracts table and the activity log, Information as single-pencil EditableCards. Lineage: ui/detail-kit, ui/section, ui/editable-card.',
 })
 
-export type CustomerTab =
-  'overview' | 'subscriptions' | 'invoices' | 'wallet' | 'usage' | 'events' | 'information'
+export type CustomerTab = 'overview' | 'invoices' | 'wallet' | 'usage' | 'events' | 'information'
 
 export const CUSTOMER_TABS = [
   'overview',
-  'subscriptions',
   'invoices',
   'wallet',
   'usage',
@@ -70,10 +67,12 @@ export interface CustomerDetailProps {
   onBack: () => void
   /** Adds "Create invoice" to the header menu and a "New invoice" button on the Invoices tab; omitted, neither is shown. */
   onCreateInvoice?: () => void
-  /** Adds a "Create contract" button to the Contracts tab table; omitted, it is not shown. */
+  /** Adds "Create contract" to the header menu and the Overview Contracts table; omitted, neither is shown. */
   onCreateContract?: () => void
   /** Open the stepped Edit page: address and billing configuration. */
   onEdit?: () => void
+  /** Adds "Archive customer" to the header menu; the caller confirms and acts. */
+  onArchive?: () => void
   /**
    * Save one of the simple fields in place (name, email, phone). Omitted, the
    * Information tab is read-only. Resolve to commit; reject with an Error to
@@ -133,6 +132,7 @@ export function CustomerDetail({
   onCreateInvoice,
   onCreateContract,
   onEdit,
+  onArchive,
   onUpdateField,
   onUpdateMetadata,
   onOpenInvoice,
@@ -156,6 +156,16 @@ export function CustomerDetail({
       .join('') || '?'
 
   const menu: DetailMenuItem[] = [
+    ...(onCreateContract
+      ? [
+          {
+            id: 'create-contract',
+            label: 'Create contract',
+            icon: <FileTextIcon className="text-muted-foreground" aria-hidden="true" />,
+            onSelect: onCreateContract,
+          },
+        ]
+      : []),
     ...(onCreateInvoice
       ? [
           {
@@ -170,7 +180,7 @@ export function CustomerDetail({
       ? [
           {
             id: 'edit',
-            label: onUpdateField ? 'Edit billing details' : 'Edit customer',
+            label: 'Edit customer',
             icon: <PencilIcon className="text-muted-foreground" aria-hidden="true" />,
             onSelect: onEdit,
           },
@@ -182,6 +192,17 @@ export function CustomerDetail({
       icon: <WalletIcon className="text-muted-foreground" aria-hidden="true" />,
       onSelect: () => onTabChange('wallet'),
     },
+    ...(onArchive
+      ? [
+          {
+            id: 'archive',
+            label: 'Archive customer',
+            icon: <ArchiveIcon aria-hidden="true" />,
+            onSelect: onArchive,
+            destructive: true,
+          },
+        ]
+      : []),
   ]
 
   return (
@@ -190,6 +211,7 @@ export function CustomerDetail({
         trail={[{ label: 'Customers', onClick: onBack }, { label: customer.name }]}
         icon={<span className="text-xs font-medium">{initials}</span>}
         title={customer.name}
+        badges={<Status value={CUSTOMER_STATUS_LABEL[customer.status]} />}
         id={customer.externalId || customer.id}
         {...(customer.email ? { email: customer.email } : {})}
         menuLabel="Customer actions"
@@ -201,7 +223,6 @@ export function CustomerDetail({
           onValueChange={(next) => onTabChange(next as CustomerTab)}
           tabs={[
             { value: 'overview', label: 'Overview' },
-            { value: 'subscriptions', label: 'Contracts', count: subscriptions.length },
             { value: 'invoices', label: 'Invoices', count: invoices.length },
             { value: 'wallet', label: 'Wallet' },
             { value: 'usage', label: 'Analytics' },
@@ -212,27 +233,18 @@ export function CustomerDetail({
 
         {tab === 'overview' ? (
           <OverviewTab
+            customer={customer}
             subscriptions={subscriptions}
             subscriptionsLoading={subscriptionsLoading}
             subscriptionsError={subscriptionsError}
-            onViewSubscriptions={() => onTabChange('subscriptions')}
-            onOpenContract={onOpenContract}
-            invoices={invoices}
-            invoicesLoading={invoicesLoading}
-            formatDate={formatDate}
-            onOpenInvoice={onOpenInvoice}
-          />
-        ) : null}
-
-        {tab === 'subscriptions' ? (
-          <SubscriptionsTab
-            subscriptions={subscriptions}
-            isLoading={subscriptionsLoading}
-            isError={subscriptionsError}
-            formatDate={formatDate}
             onOpenPlan={onOpenPlan}
             onOpenContract={onOpenContract}
             onCreateContract={onCreateContract}
+            invoices={invoices}
+            invoicesLoading={invoicesLoading}
+            formatDate={formatDate}
+            locale={locale}
+            onOpenInvoice={onOpenInvoice}
           />
         ) : null}
 
@@ -292,122 +304,135 @@ export function CustomerDetail({
   )
 }
 
-/** Demo activity feed for the Overview timeline. */
-const DEMO_ACTIVITY: ActivityEvent[] = [
-  {
-    id: 6,
-    title: 'Usage threshold reached',
-    at: 'Today, 09:14',
-    status: 'issue',
-    summary: '80% of the monthly API calls allowance used.',
-    labels: [{ id: 'a', label: 'Product', hint: 'api_call', variant: 'secondary' }],
-  },
-  {
-    id: 5,
-    title: 'Invoice finalized',
-    at: 'Yesterday',
-    status: 'completed',
-    summary: 'Invoice sent to the billing contact.',
-    labels: [],
-  },
-  {
-    id: 4,
-    title: 'Payment received',
-    at: 'Sep 28',
-    status: 'completed',
-    summary: 'Card payment settled.',
-    labels: [],
-  },
-  {
-    id: 3,
-    title: 'Wallet top-up',
-    at: 'Sep 20',
-    status: 'completed',
-    summary: 'Credits added to the prepaid wallet.',
-    labels: [],
-  },
-  {
-    id: 2,
-    title: 'Contract renewed',
-    at: 'Sep 1',
-    status: 'completed',
-    summary: 'Billing period rolled over.',
-    labels: [],
-  },
-  {
-    id: 1,
-    title: 'Customer created',
-    at: 'Aug 12',
-    status: 'completed',
-    summary: 'Record created in Flexprice.',
-    labels: [],
-  },
-]
-
 const RUNNING: readonly SubscriptionStatus[] = [
   SubscriptionStatus.Active,
   SubscriptionStatus.Trialing,
   SubscriptionStatus.Paused,
 ]
-const MAX_CARDS = 4
+const BILLING: readonly SubscriptionStatus[] = [
+  SubscriptionStatus.Active,
+  SubscriptionStatus.Trialing,
+]
+const NOT_ISSUED: readonly InvoiceStatus[] = [
+  InvoiceStatus.Draft,
+  InvoiceStatus.Void,
+  InvoiceStatus.Skipped,
+]
+const time = (date: Date) => date.getTime()
+
+/**
+ * The activity the page already holds: when the customer, each contract and each
+ * issued invoice came to exist. There is no customer activity feed in the API.
+ */
+function activityEntries(
+  customer: CustomerDetailModel,
+  subscriptions: Subscription[],
+  invoices: Invoice[],
+  locale: string | undefined,
+): ActivityLogEntry[] {
+  const stamp = new Intl.DateTimeFormat(locale, { dateStyle: 'medium', timeStyle: 'short' })
+  const dated: Array<{ when: Date; entry: ActivityLogEntry }> = []
+  const add = (when: Date | null, entry: Omit<ActivityLogEntry, 'at'>) => {
+    if (when) dated.push({ when, entry: { ...entry, at: stamp.format(when) } })
+  }
+  add(customer.createdAt, { id: `customer-${customer.id}`, title: 'Customer created' })
+  for (const s of subscriptions) {
+    add(s.createdAt ?? s.startDate, {
+      id: `contract-${s.id}`,
+      title: 'Contract created',
+      record: s.id,
+      summary: `on ${s.planName}`,
+    })
+  }
+  for (const i of invoices) {
+    if (NOT_ISSUED.includes(i.status)) continue
+    add(i.issuedAt, {
+      id: `invoice-${i.id}`,
+      title: 'Invoice issued',
+      record: i.number,
+      summary: formatMoney(i.total),
+    })
+  }
+  return dated.sort((x, y) => time(y.when) - time(x.when)).map((d) => d.entry)
+}
 
 function OverviewTab({
+  customer,
   subscriptions,
   subscriptionsLoading,
   subscriptionsError,
-  onViewSubscriptions,
+  onOpenPlan,
   onOpenContract,
+  onCreateContract,
   invoices,
   invoicesLoading,
   formatDate,
+  locale,
   onOpenInvoice,
 }: {
+  customer: CustomerDetailModel
   subscriptions: Subscription[]
   subscriptionsLoading: boolean
   subscriptionsError: boolean
-  onViewSubscriptions: () => void
+  onOpenPlan: ((planId: string) => void) | undefined
   onOpenContract: ((subscriptionId: string) => void) | undefined
+  onCreateContract: (() => void) | undefined
   invoices: Invoice[]
   invoicesLoading: boolean
   formatDate: FormatDate
+  locale: string | undefined
   onOpenInvoice: ((invoiceId: string) => void) | undefined
 }) {
-  const running = subscriptions.filter((s) => RUNNING.includes(s.status))
-  const shown = running.slice(0, MAX_CARDS)
+  const live = subscriptions.filter((s) => RUNNING.includes(s.status))
+  const lastInvoice = invoices
+    .filter((i) => i.issuedAt && !NOT_ISSUED.includes(i.status))
+    .sort((x, y) => time(y.issuedAt!) - time(x.issuedAt!))[0]
+  const nextBilling = subscriptions
+    .filter((s) => BILLING.includes(s.status) && s.currentPeriodEnd)
+    .sort((x, y) => time(x.currentPeriodEnd!) - time(y.currentPeriodEnd!))[0]
+
   return (
     <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_360px]">
       <div className="flex min-w-0 flex-col gap-8">
-        <section aria-label="Running contracts">
-          {subscriptionsLoading ? (
-            <LoadingRows />
-          ) : shown.length > 0 ? (
-            <div className={cn('grid gap-4', shown.length > 1 && 'md:grid-cols-2')}>
-              {shown.map((s, index) => (
-                <SubscriptionCard
-                  key={s.id}
-                  subscription={s}
-                  formatDate={formatDate}
-                  onOpen={onOpenContract ? () => onOpenContract(s.id) : onViewSubscriptions}
-                  className={shown.length % 2 === 1 && index === 0 ? 'md:col-span-2' : ''}
-                />
-              ))}
-              {running.length > MAX_CARDS ? (
-                <button
-                  type="button"
-                  onClick={onViewSubscriptions}
-                  className="text-muted-foreground hover:bg-muted/40 hover:text-foreground rounded-xl border border-dashed py-3 text-[13px] md:col-span-2"
-                >
-                  View all {running.length} contracts
-                </button>
-              ) : null}
-            </div>
-          ) : (
-            <p className="text-muted-foreground rounded-xl border border-dashed px-6 py-10 text-center text-[13px]">
-              {subscriptionsError ? "Contracts couldn't be loaded." : 'No active contracts.'}
-            </p>
-          )}
-        </section>
-        <Section table title="Recent invoices">
+        <OverviewTiles
+          tiles={[
+            {
+              label: 'ARR',
+              value: '—',
+              detail: `Not reported · ${live.length} live ${live.length === 1 ? 'contract' : 'contracts'}`,
+            },
+            {
+              label: 'Days sales outstanding',
+              value: '—',
+              detail: 'Average time from invoice to payment',
+            },
+            {
+              label: 'Last invoice',
+              value: lastInvoice ? formatDate(lastInvoice.issuedAt) : '—',
+              detail: lastInvoice
+                ? `${formatMoney(lastInvoice.total)} · ${lastInvoice.number}`
+                : 'No invoices issued yet',
+            },
+            {
+              label: 'Next invoice',
+              value: nextBilling ? formatDate(nextBilling.currentPeriodEnd) : '—',
+              detail: nextBilling
+                ? `Current period of ${nextBilling.id} ends`
+                : 'No contract is billing',
+            },
+          ]}
+        />
+        <ContractsTable
+          showTitle
+          subscriptions={subscriptions}
+          isLoading={subscriptionsLoading}
+          isError={subscriptionsError}
+          formatDate={formatDate}
+          onOpenPlan={onOpenPlan}
+          onOpenContract={onOpenContract}
+          onCreateContract={onCreateContract}
+        />
+        <Section table showTitle title="Recent invoices">
           <InvoiceTable
             compactList
             invoices={invoices.slice(0, 5)}
@@ -417,18 +442,16 @@ function OverviewTab({
           />
         </Section>
       </div>
-      <Section title="Activity" flush className="xl:sticky xl:top-6">
-        <ScrollArea className="h-[560px]">
-          <div className="p-5">
-            <AccountActivityRail events={DEMO_ACTIVITY} />
-          </div>
-        </ScrollArea>
-      </Section>
+      <ActivitySection
+        entries={activityEntries(customer, subscriptions, invoices, locale)}
+        className="xl:sticky xl:top-6"
+      />
     </div>
   )
 }
 
-function SubscriptionsTab({
+function ContractsTable({
+  showTitle,
   subscriptions,
   isLoading,
   isError,
@@ -437,6 +460,7 @@ function SubscriptionsTab({
   onOpenContract,
   onCreateContract,
 }: {
+  showTitle: boolean
   subscriptions: Subscription[]
   isLoading: boolean
   isError: boolean
@@ -446,7 +470,21 @@ function SubscriptionsTab({
   onCreateContract: (() => void) | undefined
 }) {
   return (
-    <Section table title="Contracts">
+    <Section
+      table
+      showTitle={showTitle}
+      title="Contracts"
+      {...(onCreateContract
+        ? {
+            action: (
+              <Button size="sm" className="h-8 px-3" onClick={onCreateContract}>
+                <PlusIcon aria-hidden="true" />
+                Create contract
+              </Button>
+            ),
+          }
+        : {})}
+    >
       {isLoading ? (
         <div className="px-4 py-4">
           <LoadingRows />
@@ -460,14 +498,6 @@ function SubscriptionsTab({
         <SectionEmpty
           title="No contracts yet"
           description="A contract puts this customer on a plan. Create one to start billing them."
-          action={
-            onCreateContract ? (
-              <Button size="sm" className="h-8 px-3" onClick={onCreateContract}>
-                <PlusIcon aria-hidden="true" />
-                Create contract
-              </Button>
-            ) : undefined
-          }
         />
       ) : (
         <DetailTable
@@ -528,20 +558,18 @@ function SubscriptionsTab({
             },
           ]}
           {...(onOpenContract ? { onRowClick: (s: Subscription) => onOpenContract(s.id) } : {})}
-          {...(onCreateContract
-            ? {
-                action: (
-                  <Button size="sm" className="h-8 px-3" onClick={onCreateContract}>
-                    <PlusIcon aria-hidden="true" />
-                    Create contract
-                  </Button>
-                ),
-              }
-            : {})}
         />
       )}
     </Section>
   )
+}
+
+/** The document state of an invoice: Draft, Finalized or Void. */
+function invoiceDocument(invoice: Invoice): string {
+  if (invoice.status === InvoiceStatus.Draft) return 'Draft'
+  if (invoice.status === InvoiceStatus.Void) return 'Void'
+  if (invoice.status === InvoiceStatus.Skipped) return 'Skipped'
+  return 'Finalized'
 }
 
 /** The collection state of an invoice as a simple chip. */
@@ -568,7 +596,7 @@ function InvoiceTable({
   onOpenInvoice,
   action,
 }: {
-  /** The short list on the Overview: no search row and no Period column. */
+  /** The short list on the Overview: no toolbar. */
   compactList?: boolean
   invoices: Invoice[]
   isLoading: boolean
@@ -601,7 +629,7 @@ function InvoiceTable({
       columns={[
         {
           key: 'number',
-          header: 'Invoice',
+          header: 'Invoice number',
           sortBy: (invoice) => invoice.number,
           cell: (invoice) => (
             <span className={cn(invoice.status === InvoiceStatus.Draft && 'text-muted-foreground')}>
@@ -609,22 +637,24 @@ function InvoiceTable({
             </span>
           ),
         },
-        ...(compactList
-          ? []
-          : [
-              {
-                key: 'period',
-                header: 'Period',
-                sortBy: (invoice: Invoice) => Number(new Date(invoice.periodStart ?? 0)),
-                cell: (invoice: Invoice) => (
-                  <Muted>
-                    {invoice.periodStart && invoice.periodEnd
-                      ? `${formatDate(invoice.periodStart)} – ${formatDate(invoice.periodEnd)}`
-                      : '—'}
-                  </Muted>
-                ),
-              },
-            ]),
+        {
+          key: 'issued',
+          header: 'Issue date',
+          sortBy: (invoice) => Number(new Date(invoice.issuedAt ?? 0)),
+          cell: (invoice) => <Muted>{formatDate(invoice.issuedAt)}</Muted>,
+        },
+        {
+          key: 'due',
+          header: 'Due date',
+          sortBy: (invoice) => Number(new Date(invoice.dueDate ?? 0)),
+          cell: (invoice) => <Muted>{formatDate(invoice.dueDate)}</Muted>,
+        },
+        {
+          key: 'status',
+          header: 'Status',
+          sortBy: (invoice) => invoiceDocument(invoice),
+          cell: (invoice) => <Status value={invoiceDocument(invoice)} />,
+        },
         {
           key: 'payment',
           header: 'Payment',
@@ -635,14 +665,8 @@ function InvoiceTable({
           },
         },
         {
-          key: 'due',
-          header: 'Due',
-          sortBy: (invoice) => Number(new Date(invoice.dueDate ?? 0)),
-          cell: (invoice) => <Muted>{formatDate(invoice.dueDate)}</Muted>,
-        },
-        {
           key: 'total',
-          header: 'Total',
+          header: 'Amount',
           sortBy: (invoice) => Number(invoice.total.amount),
           cell: (invoice) => <Money value={invoice.total} />,
         },

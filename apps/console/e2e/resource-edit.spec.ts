@@ -13,32 +13,33 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('edits an add-on through the full form from its detail page', async ({ page }) => {
+test('edits an add-on in place from its detail page', async ({ page }) => {
   await page.goto('/addons')
   await page.getByRole('row').nth(1).click()
   await expect(page).toHaveURL(/\/addons\/[^/]+$/)
 
   await page.getByRole('button', { name: 'Add-on actions' }).click()
-  await page.getByRole('menuitem', { name: 'Edit add-on' }).click()
-  await expect(page).toHaveURL(/\/addons\/[^/]+\/edit$/)
+  await page.getByRole('menuitem', { name: 'Edit details' }).click()
+  await page.getByRole('button', { name: 'Edit add-on details' }).click()
 
-  await page.getByLabel('Name').fill('Renamed add-on')
-  await page.getByRole('button', { name: 'Save changes' }).click()
+  await page.getByLabel('Name', { exact: true }).fill('Renamed add-on')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page).toHaveURL(/\/addons\/[^/]+$/)
+  await expect(page.getByRole('heading', { name: 'Renamed add-on' })).toBeVisible()
 })
 
-test('opens the coupon and cost sheet edit forms from their detail pages', async ({ page }) => {
+test('edits a coupon and a cost sheet in place from their detail pages', async ({ page }) => {
   await page.goto('/coupons')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Coupon actions' }).click()
-  await page.getByRole('menuitem', { name: 'Edit coupon' }).click()
-  await expect(page).toHaveURL(/\/coupons\/[^/]+\/edit$/)
-  await expect(page.getByRole('button', { name: 'Save changes' })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Edit details' }).click()
+  await page.getByRole('button', { name: 'Edit coupon details' }).click()
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible()
 
   await page.goto('/cost-sheets')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Cost sheet actions' }).click()
-  await page.getByRole('menuitem', { name: 'Edit cost sheet' }).click()
-  await expect(page).toHaveURL(/\/cost-sheets\/[^/]+\/edit$/)
-  await expect(page.getByRole('button', { name: 'Save changes' })).toBeVisible()
+  await page.getByRole('menuitem', { name: 'Edit details' }).click()
+  await page.getByRole('button', { name: 'Edit cost sheet details' }).click()
+  await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible()
 })

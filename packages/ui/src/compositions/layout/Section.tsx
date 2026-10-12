@@ -38,6 +38,11 @@ export interface SectionProps {
    * action belongs on the table toolbar beside the filter, not above the box.
    */
   table?: boolean
+  /**
+   * With `table`: a small visible title above the box, with the action on its
+   * right. For tables on an Overview tab; a dedicated tab keeps no visible title.
+   */
+  showTitle?: boolean
   /** A line under the title. */
   description?: string
   /** Heading level, so a page's outline stays correct. */
@@ -54,6 +59,7 @@ export function Section({
   flush,
   bare,
   table,
+  showTitle,
   description,
   as: Heading = 'h2',
 }: SectionProps) {
@@ -63,9 +69,20 @@ export function Section({
   if (table) {
     return (
       <section aria-labelledby={id} className={cn('flex flex-col gap-3', className)}>
-        <Heading id={id} className="sr-only">
-          {title}
-        </Heading>
+        {showTitle ? (
+          <div className="flex items-center justify-between gap-4">
+            <Heading id={id} className="text-sm font-medium">
+              {title}
+            </Heading>
+            {headerAction ? (
+              <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
+            ) : null}
+          </div>
+        ) : (
+          <Heading id={id} className="sr-only">
+            {title}
+          </Heading>
+        )}
         <div className={cn('bg-background overflow-hidden rounded-xl border', bodyClassName)}>
           {children}
         </div>

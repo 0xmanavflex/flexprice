@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
-import { ApiError, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
+import { ApiError, useDeletePriceUnit, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, Pill } from '@fp/ui/pages'
-import { AppFailure, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
-import { CoinsIcon } from '@fp/ui/icons'
+import { AppFailure, ConfirmDialog, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
+import { ArchiveIcon, CoinsIcon, PencilIcon } from '@fp/ui/icons'
 
 export interface PriceUnitDetailPageProps {
   priceUnitId: string
@@ -36,6 +36,8 @@ export function PriceUnitDetailPage({
 }: PriceUnitDetailPageProps) {
   const priceUnit = usePriceUnit(priceUnitId)
   const update = useUpdatePriceUnit()
+  const remove = useDeletePriceUnit()
+  const [archiving, setArchiving] = useState(false)
   const [tab, setTab] = useState(startEditing ? 'information' : 'overview')
 
   if (priceUnit.isPending) {
@@ -83,17 +85,32 @@ export function PriceUnitDetailPage({
       title={data.name}
       badges={
         <>
+          <CatalogStatusBadge status={data.status} />
           <Pill>
             {baseCurrency && data.conversionRate
               ? `1 ${codeLabel} = ${data.conversionRate} ${baseCurrency}`
               : 'Custom pricing unit'}
           </Pill>
-          {data.status === 'archived' ? <CatalogStatusBadge status={data.status} /> : null}
         </>
       }
       id={data.code || data.id}
       menuLabel="Price unit actions"
-      menu={[{ id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') }]}
+      menu={[
+        {
+          id: 'edit-details',
+          label: 'Edit details',
+          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setTab('information'),
+        },
+        {
+          id: 'archive',
+          label: 'Archive',
+          icon: <ArchiveIcon aria-hidden />,
+          destructive: true,
+          disabled: data.status === 'archived',
+          onSelect: () => setArchiving(true),
+        },
+      ]}
       tab={tab}
       onTabChange={setTab}
       tabs={[
@@ -158,13 +175,6 @@ export function PriceUnitDetailPage({
                   readOnly: true,
                 },
                 {
-                  key: 'status',
-                  label: 'Status',
-                  value: data.status,
-                  display: <CatalogStatusBadge status={data.status} />,
-                  readOnly: true,
-                },
-                {
                   key: 'id',
                   label: 'Price unit ID',
                   value: data.id,
@@ -200,7 +210,31 @@ export function PriceUnitDetailPage({
           ),
         },
       ]}
-    />
+    >
+      <ConfirmDialog
+        open={archiving}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiving(false)
+            remove.reset()
+          }
+        }}
+        title="Archive price unit"
+        description={`Archive ${data.name}? Prices already using it keep working.`}
+        confirmLabel="Archive price unit"
+        destructive
+        isPending={remove.isPending}
+        error={remove.isError ? 'Could not archive the price unit. Try again.' : null}
+        onConfirm={() =>
+          remove.mutate(data.id, {
+            onSuccess: () => {
+              setArchiving(false)
+              onNavigateToList()
+            },
+          })
+        }
+      />
+    </CatalogDetailFrame>
   )
 }
 

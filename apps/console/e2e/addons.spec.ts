@@ -68,7 +68,7 @@ test.describe('the add-ons list', () => {
     await expect(page.getByLabel('Description', { exact: true })).toBeHidden()
   })
 
-  test('the General pencil edits in place without navigating', async ({ page }) => {
+  test('the Add-on details pencil edits in place without navigating', async ({ page }) => {
     await page.goto('/addons')
     await expect(list(page).rows().first()).toBeVisible({ timeout: 45_000 })
     await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()

@@ -139,9 +139,9 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
         onOpenChange={(open) => {
           if (!open) closeDelete()
         }}
-        title="Delete feature"
-        description={`Delete ${data.name}? Plans and entitlements that use it lose it.`}
-        confirmLabel="Delete feature"
+        title="Archive feature"
+        description={`Archive ${data.name}? Plans and entitlements that use it lose it.`}
+        confirmLabel="Archive feature"
         destructive
         isPending={remove.isPending}
         error={toSubmitError(remove.error, 'delete')}

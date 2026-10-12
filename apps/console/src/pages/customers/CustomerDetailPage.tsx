@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import type { TenantFeatureUsage } from '@fp/domain'
 import {
@@ -6,6 +7,7 @@ import {
   useCustomerInvoices,
   useCustomerSubscriptions,
   useCustomerUsageSummary,
+  useDeleteCustomer,
   useUpdateCustomer,
 } from '@fp/query'
 import {
@@ -18,13 +20,22 @@ import {
 } from '@fp/ui/pages'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
-import { AppFailure, EmptyState, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
+import {
+  AppFailure,
+  ConfirmDialog,
+  EmptyState,
+  LoadingRows,
+  PageBody,
+  Section,
+} from '@fp/ui/compositions'
 
 /**
  * Turns whatever is in `?tab=` into a real section, defaulting to Overview.
  *
  * Exported so the route can validate its search param against the same list the
- * page renders — one source of truth for which sections exist.
+ * page renders — one source of truth for which sections exist. The retired
+ * `?tab=subscriptions` is not in that list, so it lands on Overview, where the
+ * contracts now live.
  */
 export function parseCustomerTab(value: unknown): CustomerTab {
   return typeof value === 'string' && (CUSTOMER_TABS as readonly string[]).includes(value)
@@ -65,6 +76,8 @@ export function CustomerDetailPage({
   // subscription and invoice reads above, which are scoped by the external one.
   const usage = useCustomerUsageSummary(customerId)
   const update = useUpdateCustomer()
+  const remove = useDeleteCustomer()
+  const [archiving, setArchiving] = useState(false)
   const navigate = useNavigate()
 
   if (customer.isPending) {
@@ -100,63 +113,89 @@ export function CustomerDetailPage({
   }
 
   return (
-    <CustomerDetail
-      customer={customer.data}
-      subscriptions={subscriptions.data ?? []}
-      invoices={invoices.data?.invoices ?? []}
-      tab={tab}
-      onTabChange={onTabChange}
-      onBack={onNavigateToList}
-      onCreateInvoice={() => void navigate({ to: '/invoices/new' })}
-      onCreateContract={() =>
-        void navigate({
-          to: '/customers/$customerId/subscriptions/new',
-          params: { customerId: customer.data.id },
-        })
-      }
-      onEdit={() => onEdit(customer.data.id)}
-      onOpenInvoice={(invoiceId) =>
-        void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
-      }
-      onOpenPlan={(planId) =>
-        void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
-      }
-      onOpenContract={(subscriptionId) =>
-        void navigate({
-          to: '/subscriptions/$subscriptionId',
-          params: { subscriptionId },
-          search: {} as never,
-        })
-      }
-      onUpdateField={(patch) =>
-        update.mutateAsync({
-          id: customer.data.id,
-          draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
-        })
-      }
-      onUpdateMetadata={(metadata) =>
-        update.mutateAsync({
-          id: customer.data.id,
-          draft: { externalId: customer.data.externalId, name: customer.data.name, metadata },
-        })
-      }
-      subscriptionsLoading={subscriptions.isLoading}
-      subscriptionsError={subscriptions.isError}
-      invoicesLoading={invoices.isLoading}
-      wallet={<CustomerWalletPanel customerId={customer.data.id} />}
-      taxes={<CustomerTaxPanel customerId={customer.data.id} />}
-      usage={
-        <div className="flex flex-col gap-8">
-          <CustomerAnalyticsView features={DEMO_FEATURE_ANALYTICS} />
-          <UsageSection
-            features={usage.data?.features ?? []}
-            isLoading={usage.isLoading}
-            failed={usage.error !== null}
-            onRetry={() => void usage.refetch()}
-          />
-        </div>
-      }
-    />
+    <>
+      <CustomerDetail
+        customer={customer.data}
+        subscriptions={subscriptions.data ?? []}
+        invoices={invoices.data?.invoices ?? []}
+        tab={tab}
+        onTabChange={onTabChange}
+        onBack={onNavigateToList}
+        onCreateInvoice={() => void navigate({ to: '/invoices/new' })}
+        onCreateContract={() =>
+          void navigate({
+            to: '/customers/$customerId/subscriptions/new',
+            params: { customerId: customer.data.id },
+          })
+        }
+        onEdit={() => onEdit(customer.data.id)}
+        onArchive={() => setArchiving(true)}
+        onOpenInvoice={(invoiceId) =>
+          void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
+        }
+        onOpenPlan={(planId) =>
+          void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
+        }
+        onOpenContract={(subscriptionId) =>
+          void navigate({
+            to: '/subscriptions/$subscriptionId',
+            params: { subscriptionId },
+            search: {} as never,
+          })
+        }
+        onUpdateField={(patch) =>
+          update.mutateAsync({
+            id: customer.data.id,
+            draft: { externalId: customer.data.externalId, name: customer.data.name, ...patch },
+          })
+        }
+        onUpdateMetadata={(metadata) =>
+          update.mutateAsync({
+            id: customer.data.id,
+            draft: { externalId: customer.data.externalId, name: customer.data.name, metadata },
+          })
+        }
+        subscriptionsLoading={subscriptions.isLoading}
+        subscriptionsError={subscriptions.isError}
+        invoicesLoading={invoices.isLoading}
+        wallet={<CustomerWalletPanel customerId={customer.data.id} />}
+        taxes={<CustomerTaxPanel customerId={customer.data.id} />}
+        usage={
+          <div className="flex flex-col gap-8">
+            <CustomerAnalyticsView features={DEMO_FEATURE_ANALYTICS} />
+            <UsageSection
+              features={usage.data?.features ?? []}
+              isLoading={usage.isLoading}
+              failed={usage.error !== null}
+              onRetry={() => void usage.refetch()}
+            />
+          </div>
+        }
+      />
+      <ConfirmDialog
+        open={archiving}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiving(false)
+            remove.reset()
+          }
+        }}
+        title={`Archive ${customer.data.name}?`}
+        description="The customer is removed from your billing. This cannot be undone."
+        confirmLabel="Archive customer"
+        onConfirm={() =>
+          remove.mutate(customer.data.id, {
+            onSuccess: () => {
+              setArchiving(false)
+              onNavigateToList()
+            },
+          })
+        }
+        isPending={remove.isPending}
+        destructive
+        error={remove.error ? 'Could not archive the customer. Try again.' : null}
+      />
+    </>
   )
 }
 

@@ -11,20 +11,20 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
 | PlaceholderPage.tsx | `PlaceholderPage` | Other | EmptyState, PageHeader | Button, PageBody |
-| addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailShell, DetailTabs, EntityList, Field, FormActions, FormDialog, MetricRail, Properties, RowActionsMenu, Section | AddonSubscriptionsView, AppFailure, CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, LoadingRows, PageBody, Pill, PuzzleIcon |
+| addons | `AddonDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailShell, DetailTabs, EntityList, Field, FormActions, FormDialog, MetricRail, RowActionsMenu, Section | AddonSubscriptionsView, AppFailure, ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CreditGrantCreateForm, CreditGrantEditForm, CreditGrantTable, EditableCard, EntitlementCreateForm, EntitlementEditForm, EntitlementTable, FeatureOption, LoadingRows, PageBody, PencilIcon, Pill, PuzzleIcon |
 | addons | `AddonFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AddonForm, AppFailure, LoadingRows, PageBody |
 | addons | `AddonListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | AddonGrid, Button, ListState, PageBody, PuzzleIcon |
 | auth | `SignInPage` | Other | Field | SignInScreen |
-| cost-sheets | `CostSheetDetailPage` | Detail | DetailShell, DetailTabs, EmptyState, EntityList, MetricRail, RowActionsMenu, Section | AppFailure, CalculatorIcon, CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CostMarginCard, EditableCard, LoadingRows, PageBody, Pill, ReceiptIcon |
+| cost-sheets | `CostSheetDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, RowActionsMenu, Section | AppFailure, ArchiveIcon, CalculatorIcon, CatalogDetailFrame, CatalogStatusBadge, ChargeTable, CostMarginCard, EditableCard, LoadingRows, MetadataCard, PageBody, PencilIcon, Pill, SectionEmpty |
 | cost-sheets | `CostSheetFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, CostSheetForm, LoadingRows, PageBody |
 | cost-sheets | `CostSheetListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CostSheetGrid, ListState, PageBody, SheetIcon |
-| coupons | `CouponDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, Properties, Section | AppFailure, CatalogDetailFrame, CatalogStatusBadge, CouponRedemptionMeter, CouponRedemptionsView, EditableCard, LoadingRows, Money, Pill, TicketPercentIcon |
+| coupons | `CouponDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, Properties, Section | AppFailure, ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CouponRedemptionMeter, CouponRedemptionsView, EditableCard, LoadingRows, MetadataCard, Money, PencilIcon, Pill, TicketPercentIcon |
 | coupons | `CouponFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, CouponCreateForm, CouponForm, LoadingRows, PageBody |
 | coupons | `CouponListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | Button, CouponGrid, ListState, PageBody, TicketPercentIcon |
 | credit-notes | `CreditNoteDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section | AppFailure, CatalogDetailFrame, EditableCard, EntityLink, FileMinusIcon, LoadingRows, PageBody, Pill, Status |
 | credit-notes | `CreditNoteFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | CreditNoteForm |
 | credit-notes | `CreditNoteListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | CreditNoteGrid, FileMinusIcon, ListState, PageBody |
-| customers | `CustomerDetailPage` | Detail | DetailTabs, EmptyState, EntityList, Section | AppFailure, CUSTOMER_TABS, CustomerAnalyticsView, CustomerDetail, CustomerTab, DEMO_FEATURE_ANALYTICS, LoadingRows, PageBody, QuotaCard |
+| customers | `CustomerDetailPage` | Detail | ConfirmDialog, DetailTabs, EmptyState, EntityList, Section | AppFailure, CUSTOMER_TABS, CustomerAnalyticsView, CustomerDetail, CustomerTab, DEMO_FEATURE_ANALYTICS, LoadingRows, PageBody, QuotaCard |
 | customers | `CustomerFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, CustomerForm, LoadingRows, PageBody |
 | customers | `CustomerListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CustomerGrid, ListState, PageBody, UsersIcon |
 | environments | `EnvironmentFormPage` | Form | Field, FormDialog | EnvironmentForm |
@@ -34,7 +34,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, Properties, Section | AppFailure, FeatureCloneDialog, FeatureDetailView, FeatureTab, LoadingRows, PageBody |
 | features | `FeatureFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, FeatureForm, LoadingRows, PageBody |
 | features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, GaugeIcon, ListState, PageBody, ProductLinkage |
-| groups | `GroupDetailPage` | Detail | DetailShell, DetailTabs, EntityList, MetricRail, Section | AppFailure, CatalogDetailFrame, CatalogStatusBadge, EditableCard, GroupMembersView, LayersIcon, LoadingRows, PageBody, Pill |
+| groups | `GroupDetailPage` | Detail | DetailShell, DetailTabs, EntityList, MetricRail, Section | AppFailure, CatalogDetailFrame, CatalogStatusBadge, EditableCard, GroupMembersView, LayersIcon, LoadingRows, PageBody, PencilIcon, Pill |
 | groups | `GroupFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | GroupForm |
 | groups | `GroupListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, GroupGrid, LayersIcon, ListState, PageBody |
 | home | `HomePage` | Dashboard | Panel | DashboardHome |
@@ -45,10 +45,10 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | payments | `PaymentDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section | AppFailure, CatalogDetailFrame, CreditCardIcon, EditableCard, EntityLink, LoadingRows, PageBody, PaymentStatusBadge, Pill |
 | payments | `PaymentFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | PaymentForm |
 | payments | `PaymentListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | CollectionsSummary, CreditCardIcon, ListState, PageBody, PaymentGrid |
-| plans | `PlanDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, Properties, RowActionsMenu, Section | AddChargeDialog, AppFailure, ArchiveIcon, Button, CopyIcon, CreditGrantCreateForm, CreditGrantEditForm, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EditableCard, EntitlementCreateForm, EntitlementEditForm, FeatureOption, LayersIcon, LoadingRows, MoreHorizontalIcon, PencilIcon, Pill, PlanChargesView, PlanCreditGrantsView, PlanCustomerPreview, PlanEntitlementsView, RefreshCwIcon, Status |
+| plans | `PlanDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, RowActionsMenu, Section | AddChargeDialog, AppFailure, ArchiveIcon, Button, CopyIcon, CreditGrantCreateForm, CreditGrantEditForm, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger, EditableCard, EntitlementCreateForm, EntitlementEditForm, FeatureOption, LayersIcon, LoadingRows, MoreHorizontalIcon, PencilIcon, Pill, PlanChargesView, PlanCreditGrantsView, PlanCustomerPreview, PlanEntitlementsView, RefreshCwIcon, Status |
 | plans | `PlanFormPage` | Form | ChoiceCards, Field, FormActions, FormCard, FormPage, Section, WorkflowStepper | AppFailure, LoadingRows, PageBody, PlanForm, PlanFormValue |
 | plans | `PlanListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PackageIcon, PageBody, PlanGrid |
-| price-units | `PriceUnitDetailPage` | Detail | DetailShell, DetailTabs, MetricRail, Section | AppFailure, CatalogDetailFrame, CatalogStatusBadge, CoinsIcon, EditableCard, LoadingRows, Pill |
+| price-units | `PriceUnitDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section | AppFailure, ArchiveIcon, CatalogDetailFrame, CatalogStatusBadge, CoinsIcon, EditableCard, LoadingRows, PencilIcon, Pill |
 | price-units | `PriceUnitFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | PriceUnitForm |
 | price-units | `PriceUnitListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | Button, CoinsIcon, ListState, PageBody, PriceUnitGrid |
 | pricing-widget | `PricingWidgetPage` | Other | EmptyState | PricingCatalogBlock |
@@ -62,6 +62,6 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | taxes | `TaxListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, ListState, PageBody, PercentIcon, TaxRateGrid |
 | usage-syncs | `UsageSyncListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | ListState, PageBody, UsageSyncDetailSheet, UsageSyncGrid, WaypointsIcon |
 | webhooks | `WebhookEndpointCreatePage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | WebhookEndpointForm |
-| webhooks | `WebhookEndpointDetailPage` | Detail | ConfirmDialog, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, Section, SimpleTable, SortMenu | AppFailure, LoadingRows, WebhookAttemptList, WebhookEndpointDetail |
+| webhooks | `WebhookEndpointDetailPage` | Detail | ConfirmDialog, DetailList, DetailShell, DetailTabs, EmptyState, EntityList, Field, FilterBar, FormDialog, Section, SortMenu | AppFailure, LoadingRows, WebhookAttemptList, WebhookEndpointDetail |
 | webhooks | `WebhooksPage` | Other | ConfirmDialog, EmptyState, EntityList, FilterBar, ResourceNavigation, Section, SortMenu | PageBody, WebhookActivity, WebhookEndpointGrid, WebhookEventCatalog, WebhookMessageLog |
 | workflows | `WorkflowListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | ListState, PageBody, WorkflowGrid, WorkflowIcon |

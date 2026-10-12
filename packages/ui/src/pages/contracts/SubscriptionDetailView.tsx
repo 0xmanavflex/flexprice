@@ -32,17 +32,16 @@ import {
   type SubscriptionUsageCharge,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { ScrollArea } from '@ui/components/primitives/scroll-area'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { Badge } from '@ui/components/reui/badge'
-import { AccountActivityRail } from '@ui/components/blocks/solution-billing-4/components/account-activity-rail'
 import { provenance } from '@ui/provenance'
 import {
   DetailMoreMenu,
   DetailTabs,
+  OverviewTiles,
   Properties,
-  SummaryRow,
 } from '../../compositions/detail/DetailKit'
+import { ActivitySection, type ActivityLogEntry } from '../../compositions/detail/ActivityLog'
 import { DetailShell } from '../../compositions/detail/DetailShell'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../compositions/detail/RelatedCard'
@@ -50,9 +49,10 @@ import { Section } from '../../compositions/layout/Section'
 import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
 import { LoadingRows } from '../../compositions/feedback/States'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
-import { EntityLink } from '../shared/cells'
+import { EntityLink, Pill } from '../shared/cells'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
 import { InvoiceStatusBadge } from '../shared/StatusBadge'
+import { PaymentStatusBadge } from '../collections/payments/PaymentStatusBadge'
 import type { InvoiceActivity } from '../billing/invoices/invoiceDocument'
 import type { MeterOption, PriceUnitOption } from '../product-catalog/charges/ChargeForm'
 import { ContractQuantityDialog } from './ContractQuantityDialog'
@@ -67,9 +67,9 @@ export const SubscriptionDetailViewProvenance = provenance({
     'compositions/RelatedCard',
     '@reui/alert',
     '@reui/badge',
-    'blocks/solution-billing-4',
+    'compositions/ActivityLog',
   ],
-  note: 'Contract detail (read-only): DetailShell header with every action in More, lifecycle banners, a summary row, five tabs (Overview, Pricing, Usage, Invoices, Entitlements and credits) and an Activity, Metadata, Related rail.',
+  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Pricing, Usage, Invoices, Entitlements and credits) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners and the summary tiles lead the Overview tab.',
 })
 
 /** One section's data with its own loading and failure state, so a slow tab never blocks the page. */
@@ -137,14 +137,18 @@ const LINE_SOURCE_LABEL: Record<SubscriptionLine['source'], string> = {
 const isEnded = (line: SubscriptionLine) =>
   line.endDate !== null && line.endDate.getTime() <= Date.now()
 
+const invoiceTime = (invoice: Invoice) =>
+  (invoice.issuedAt ?? invoice.dueDate ?? invoice.periodStart)?.getTime() ?? 0
+
 const words = (value: string) => value.replaceAll('_', ' ').toLowerCase()
 
 /**
  * One contract (the API's subscription), read-only. The header carries only the
- * ID and badges, with every action in More. Lifecycle state (not started,
- * cancelling, cancelled, paused, trialing, a queued change) is a banner above
- * the summary; the Incomplete banner is the one place an action sits outside
- * More. The rail is Activity, Metadata, Related, as on invoices.
+ * ID and badges, with every action in More. Tabs sit directly under it.
+ * Lifecycle state (not started, cancelling, cancelled, paused, trialing, a
+ * queued change) is a banner at the top of Overview; the Incomplete banner is
+ * the one place an action sits outside More. The rail is Activity, Metadata,
+ * Related, on Overview only.
  */
 export function SubscriptionDetailView({
   subscription,
@@ -237,8 +241,9 @@ export function SubscriptionDetailView({
   }
 
   const usageData = usage.data
-  const latestInvoice =
-    invoices.data?.find((invoice) => invoice.id === s.latestInvoice?.id) ?? invoices.data?.[0]
+  const recentInvoices = [...(invoices.data ?? [])]
+    .sort((a, b) => invoiceTime(b) - invoiceTime(a))
+    .slice(0, 5)
   const entitlementCount = (entitlements.data?.length ?? 0) + (creditGrants.data?.length ?? 0)
 
   const related: RelatedItem[] = [
@@ -266,6 +271,42 @@ export function SubscriptionDetailView({
       : []),
   ]
 
+  const addChargeButton = canAddCharge ? (
+    <Button size="sm" onClick={() => setDialog({ mode: 'add' })}>
+      <PlusIcon aria-hidden="true" />
+      Add charge
+    </Button>
+  ) : undefined
+
+  const chargeColumns = (withType: boolean): DetailColumn<SubscriptionLine>[] => [
+    { key: 'name', header: 'Charge', cell: (line) => line.name },
+    { key: 'source', header: 'Source', cell: (line) => <LineSourceBadge line={line} /> },
+    ...(withType
+      ? [
+          {
+            key: 'kind',
+            header: 'Type',
+            cell: (line: SubscriptionLine) => (line.kind === 'usage' ? 'Usage' : 'Fixed'),
+          },
+        ]
+      : []),
+    { key: 'quantity', header: 'Quantity', cell: (line) => line.quantity || '—' },
+    { key: 'period', header: 'Billed', cell: (line) => line.billingPeriodLabel },
+    {
+      key: 'amount',
+      header: 'Price',
+      cell: (line) => <span className="tabular-nums">{formatMoney(line.amount)}</span>,
+    },
+    ...chargeActionColumns,
+  ]
+
+  const activityEntries: ActivityLogEntry[] = activity.map((event) => ({
+    id: event.id,
+    title: event.title,
+    at: event.at,
+    summary: event.summary,
+  }))
+
   return (
     <DetailShell
       trail={[{ label: 'Contracts', ...(onBack ? { onClick: onBack } : {}) }, { label: title }]}
@@ -275,12 +316,8 @@ export function SubscriptionDetailView({
       badges={
         <>
           <SubscriptionStatusBadge status={s.status} />
-          <Badge variant="outline" size="lg" radius="full">
-            {s.billingPeriodLabel}
-          </Badge>
-          <Badge variant="outline" size="lg" radius="full">
-            {s.currency || 'No currency'}
-          </Badge>
+          <Pill>{s.billingPeriodLabel}</Pill>
+          <Pill>{s.currency || 'No currency'}</Pill>
         </>
       }
       actions={
@@ -302,71 +339,71 @@ export function SubscriptionDetailView({
         />
       }
     >
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <div className="flex min-w-0 flex-col gap-6">
-          <Banners
-            subscription={s}
-            schedules={schedules.data ?? []}
-            {...(canActivate && onActivate ? { onActivate } : {})}
-          />
+      <div className="flex min-w-0 flex-col gap-6">
+        <DetailTabs
+          value={tab}
+          onChange={(next) => setTab(next as SubscriptionTab)}
+          tabs={[
+            { value: 'overview', label: 'Overview' },
+            {
+              value: 'pricing',
+              label: 'Pricing',
+              ...(lines.data ? { count: lines.data.length } : {}),
+            },
+            { value: 'usage', label: 'Usage' },
+            {
+              value: 'invoices',
+              label: 'Invoices',
+              ...(invoices.data ? { count: invoices.data.length } : {}),
+            },
+            {
+              value: 'entitlements',
+              label: 'Entitlements & credits',
+              ...(entitlements.data && creditGrants.data ? { count: entitlementCount } : {}),
+            },
+          ]}
+        />
 
-          <SummaryRow
-            items={[
-              { label: 'Billing cycle', value: s.billingPeriodLabel, hint: s.currency },
-              {
-                label: endLabel,
-                value: day(endsOn),
-                hint: s.currentPeriodStart
-                  ? `Period began ${day(s.currentPeriodStart)}`
-                  : undefined,
-              },
-              {
-                label: 'Usage this period',
-                value: usageData ? formatMoney(usageData.total) : '—',
-                hint:
-                  usageData?.hasOverage && usageData.overage ? (
-                    <>Overage {formatMoney(usageData.overage)}</>
-                  ) : undefined,
-              },
-              {
-                label: 'Commitment',
-                value: s.commitmentAmount ? formatMoney(s.commitmentAmount) : 'None',
-                hint:
-                  usageData?.commitmentUtilized && s.commitmentAmount ? (
-                    <>{formatMoney(usageData.commitmentUtilized)} used</>
-                  ) : undefined,
-              },
-            ]}
-          />
+        {tab === 'overview' ? (
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
+            <div className="flex min-w-0 flex-col gap-6">
+              <Banners
+                subscription={s}
+                schedules={schedules.data ?? []}
+                {...(canActivate && onActivate ? { onActivate } : {})}
+              />
 
-          <DetailTabs
-            value={tab}
-            onChange={(next) => setTab(next as SubscriptionTab)}
-            tabs={[
-              { value: 'overview', label: 'Overview' },
-              {
-                value: 'pricing',
-                label: 'Pricing',
-                ...(lines.data ? { count: lines.data.length } : {}),
-              },
-              { value: 'usage', label: 'Usage' },
-              {
-                value: 'invoices',
-                label: 'Invoices',
-                ...(invoices.data ? { count: invoices.data.length } : {}),
-              },
-              {
-                value: 'entitlements',
-                label: 'Entitlements & credits',
-                ...(entitlements.data && creditGrants.data ? { count: entitlementCount } : {}),
-              },
-            ]}
-          />
+              <OverviewTiles
+                tiles={[
+                  { label: 'Billing cycle', value: s.billingPeriodLabel, detail: s.currency },
+                  {
+                    label: endLabel,
+                    value: day(endsOn),
+                    detail: s.currentPeriodStart
+                      ? `Period began ${day(s.currentPeriodStart)}`
+                      : undefined,
+                  },
+                  {
+                    label: 'Usage this period',
+                    value: usageData ? formatMoney(usageData.total) : '—',
+                    detail: usageData
+                      ? `${usageData.charges.length} usage ${usageData.charges.length === 1 ? 'charge' : 'charges'}`
+                      : undefined,
+                  },
+                  {
+                    label: 'Commitment',
+                    value: s.commitmentAmount ? formatMoney(s.commitmentAmount) : 'None',
+                    detail:
+                      usageData?.commitmentUtilized && s.commitmentAmount
+                        ? `${formatMoney(usageData.commitmentUtilized)} used`
+                        : undefined,
+                  },
+                ]}
+              />
 
-          {tab === 'overview' ? (
-            <>
               <PartSection
                 title="Charges"
+                showTitle
                 part={lines}
                 failure="Charges could not be loaded"
                 emptyTitle="No charges"
@@ -383,43 +420,16 @@ export function SubscriptionDetailView({
                   </Button>
                 }
               >
-                {(rows) => {
-                  const live = rows.filter((line) => !isEnded(line))
-                  return (
-                    <DetailTable<SubscriptionLine>
-                      label="Charges"
-                      noun="charges"
-                      rows={live.slice(0, 5)}
-                      toolbar={false}
-                      columns={[
-                        { key: 'name', header: 'Charge', cell: (line) => line.name },
-                        {
-                          key: 'source',
-                          header: 'Source',
-                          cell: (line) => <LineSourceBadge line={line} />,
-                        },
-                        {
-                          key: 'quantity',
-                          header: 'Quantity',
-                          cell: (line) => line.quantity || '—',
-                        },
-                        {
-                          key: 'period',
-                          header: 'Billed',
-                          cell: (line) => line.billingPeriodLabel,
-                        },
-                        {
-                          key: 'amount',
-                          header: 'Price',
-                          cell: (line) => (
-                            <span className="tabular-nums">{formatMoney(line.amount)}</span>
-                          ),
-                        },
-                        ...chargeActionColumns,
-                      ]}
-                    />
-                  )
-                }}
+                {(rows) => (
+                  <DetailTable<SubscriptionLine>
+                    compact
+                    label="Charges"
+                    noun="charges"
+                    rows={rows.filter((line) => !isEnded(line)).slice(0, 5)}
+                    toolbar={false}
+                    columns={chargeColumns(false)}
+                  />
+                )}
               </PartSection>
 
               <div className="grid items-start gap-6 lg:grid-cols-2">
@@ -492,368 +502,300 @@ export function SubscriptionDetailView({
                 </Section>
               </div>
 
-              {latestInvoice ? (
-                <Section
-                  title="Latest invoice"
-                  action={
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-3"
-                      onClick={() => setTab('invoices')}
-                    >
-                      All invoices
-                    </Button>
-                  }
-                >
-                  <Properties
-                    columns={4}
-                    items={[
-                      {
-                        label: 'Invoice',
-                        value: onOpenInvoice ? (
-                          <EntityLink
-                            label={latestInvoice.number}
-                            onOpen={() => onOpenInvoice(latestInvoice.id)}
-                          />
-                        ) : (
-                          latestInvoice.number
-                        ),
-                      },
-                      {
-                        label: 'Status',
-                        value: <InvoiceStatusBadge status={latestInvoice.status} />,
-                      },
-                      { label: 'Total', value: formatMoney(latestInvoice.total) },
-                      { label: 'Due', value: day(latestInvoice.dueDate) },
-                    ]}
-                  />
-                </Section>
-              ) : null}
-            </>
-          ) : null}
-
-          {tab === 'pricing' ? (
-            <>
-              <PartSection
-                title="Pricing"
-                part={lines}
-                failure="Pricing could not be loaded"
-                emptyTitle="No priced lines"
-                emptyDescription="This contract has no priced lines."
-                isEmpty={(rows) => rows.length === 0}
-                {...(canAddCharge
-                  ? {
-                      action: (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="h-8 px-3"
-                          onClick={() => setDialog({ mode: 'add' })}
-                        >
-                          <PlusIcon aria-hidden="true" />
-                          Add charge
-                        </Button>
-                      ),
-                    }
-                  : {})}
-              >
-                {(rows) => (
-                  <DetailTable<SubscriptionLine>
-                    label="Pricing"
-                    noun="lines"
-                    rows={rows}
+              {recentInvoices.length > 0 ? (
+                <Section table showTitle title="Recent invoices">
+                  <DetailTable<Invoice>
+                    compact
+                    label="Recent invoices"
+                    noun="invoices"
+                    rows={recentInvoices}
                     toolbar={false}
+                    {...(onOpenInvoice ? { onRowClick: (row) => onOpenInvoice(row.id) } : {})}
                     columns={[
-                      { key: 'name', header: 'Charge', cell: (line) => line.name },
                       {
-                        key: 'source',
-                        header: 'Source',
-                        cell: (line) => <LineSourceBadge line={line} />,
+                        key: 'number',
+                        header: 'Invoice',
+                        cell: (row) => <span className="font-mono text-xs">{row.number}</span>,
                       },
                       {
-                        key: 'kind',
-                        header: 'Type',
-                        cell: (line) => (line.kind === 'usage' ? 'Usage' : 'Fixed'),
+                        key: 'payment',
+                        header: 'Payment',
+                        cell: (row) => <PaymentCell row={row} />,
                       },
                       {
-                        key: 'quantity',
-                        header: 'Quantity',
-                        cell: (line) => line.quantity || '—',
-                      },
-                      { key: 'period', header: 'Billed', cell: (line) => line.billingPeriodLabel },
-                      {
-                        key: 'amount',
-                        header: 'Price',
-                        cell: (line) => (
-                          <span className="tabular-nums">{formatMoney(line.amount)}</span>
+                        key: 'due',
+                        header: 'Due',
+                        cell: (row) => (
+                          <span className="text-muted-foreground">{day(row.dueDate)}</span>
                         ),
                       },
-                      ...chargeActionColumns,
-                    ]}
-                  />
-                )}
-              </PartSection>
-              {lines.data?.some((line) => line.source === 'plan') ? (
-                <p className="text-muted-foreground flex flex-wrap items-center gap-x-1 px-1 text-[13px]">
-                  Charges marked From plan are shared by every contract on {s.planName}. Editing
-                  them here changes this contract only.
-                  {onOpenPlan ? (
-                    <>
-                      {' '}
-                      To change them for everyone,{' '}
-                      <EntityLink label="edit the plan" onOpen={onOpenPlan} />.
-                    </>
-                  ) : null}
-                </p>
-              ) : null}
-            </>
-          ) : null}
-
-          {tab === 'usage' ? (
-            <>
-              <PartSection
-                title="This period"
-                part={usage}
-                failure="Usage could not be loaded"
-                emptyTitle="No usage yet"
-                emptyDescription="Nothing has been consumed this period."
-                isEmpty={() => false}
-                padded
-              >
-                {(data) => (
-                  <Properties
-                    columns={4}
-                    items={[
                       {
-                        label: 'Period',
-                        value: `${day(data.periodStart)} – ${day(data.periodEnd)}`,
-                      },
-                      { label: 'Usage to date', value: formatMoney(data.total) },
-                      {
-                        label: 'Commitment',
-                        value: data.commitment ? formatMoney(data.commitment) : 'None',
-                      },
-                      {
-                        label: 'Overage',
-                        value: data.overage ? formatMoney(data.overage) : 'None',
+                        key: 'total',
+                        header: 'Total',
+                        cell: (row) => (
+                          <span className="tabular-nums">{formatMoney(row.total)}</span>
+                        ),
                       },
                     ]}
                   />
-                )}
-              </PartSection>
-              {usage.data ? (
-                <Section title="Charges" flush bare={usage.data.charges.length > 0}>
-                  {usage.data.charges.length === 0 ? (
-                    <SectionEmpty
-                      title="No metered charges"
-                      description="This contract has no usage-based charges this period."
-                    />
-                  ) : (
-                    <DetailTable<SubscriptionUsageCharge>
-                      label="Usage charges"
-                      noun="charges"
-                      rows={usage.data.charges}
-                      toolbar={false}
-                      columns={[
-                        {
-                          key: 'name',
-                          header: 'Charge',
-                          cell: (charge) => (
-                            <span className="flex items-center gap-2">
-                              {charge.name}
-                              {charge.isOverage ? (
-                                <Badge variant="outline" size="sm" radius="full">
-                                  Overage
-                                </Badge>
-                              ) : null}
-                            </span>
-                          ),
-                        },
-                        {
-                          key: 'quantity',
-                          header: 'Quantity',
-                          cell: (charge) => (
-                            <span className="tabular-nums">
-                              {charge.quantity.toLocaleString('en-US')}
-                            </span>
-                          ),
-                        },
-                        {
-                          key: 'amount',
-                          header: 'Amount',
-                          cell: (charge) => (
-                            <span className="tabular-nums">{formatMoney(charge.amount)}</span>
-                          ),
-                        },
-                      ]}
-                    />
-                  )}
                 </Section>
               ) : null}
-            </>
-          ) : null}
+            </div>
 
-          {tab === 'invoices' ? (
+            <div className="flex flex-col gap-5 xl:sticky xl:top-6">
+              <ActivitySection entries={activityEntries} />
+              <MetadataCard metadata={s.metadata} />
+              <RelatedCard items={related} />
+            </div>
+          </div>
+        ) : null}
+
+        {tab === 'pricing' ? (
+          <>
             <PartSection
-              title="Invoices"
-              part={invoices}
-              failure="Invoices could not be loaded"
-              emptyTitle="No invoices yet"
-              emptyDescription="Invoices for this contract appear here once a billing period closes."
+              title="Pricing"
+              part={lines}
+              failure="Pricing could not be loaded"
+              emptyTitle="No priced lines"
+              emptyDescription="This contract has no priced lines."
+              emptyAction={addChargeButton}
               isEmpty={(rows) => rows.length === 0}
             >
               {(rows) => (
-                <DetailTable<Invoice>
-                  label="Contract invoices"
-                  noun="invoices"
+                <DetailTable<SubscriptionLine>
+                  compact
+                  label="Pricing"
+                  noun="lines"
                   rows={rows}
-                  toolbar={false}
-                  {...(onOpenInvoice ? { onRowClick: (row) => onOpenInvoice(row.id) } : {})}
+                  action={addChargeButton}
+                  columns={chargeColumns(true)}
+                />
+              )}
+            </PartSection>
+            {lines.data?.some((line) => line.source === 'plan') ? (
+              <p className="text-muted-foreground flex flex-wrap items-center gap-x-1 px-1 text-[13px]">
+                Charges marked From plan are shared by every contract on {s.planName}. Editing them
+                here changes this contract only.
+                {onOpenPlan ? (
+                  <>
+                    {' '}
+                    To change them for everyone,{' '}
+                    <EntityLink label="edit the plan" onOpen={onOpenPlan} />.
+                  </>
+                ) : null}
+              </p>
+            ) : null}
+          </>
+        ) : null}
+
+        {tab === 'usage' ? (
+          <>
+            {usageData ? (
+              <OverviewTiles
+                tiles={[
+                  {
+                    label: 'Period',
+                    value: `${day(usageData.periodStart)} – ${day(usageData.periodEnd)}`,
+                  },
+                  { label: 'Usage to date', value: formatMoney(usageData.total) },
+                  {
+                    label: 'Commitment',
+                    value: usageData.commitment ? formatMoney(usageData.commitment) : 'None',
+                  },
+                  {
+                    label: 'Overage',
+                    value: usageData.overage ? formatMoney(usageData.overage) : 'None',
+                  },
+                ]}
+              />
+            ) : null}
+            <PartSection
+              title="Usage charges"
+              part={usage}
+              failure="Usage could not be loaded"
+              emptyTitle="No metered charges"
+              emptyDescription="This contract has no usage-based charges this period."
+              isEmpty={(data) => data.charges.length === 0}
+            >
+              {(data) => (
+                <DetailTable<SubscriptionUsageCharge>
+                  compact
+                  label="Usage charges"
+                  noun="charges"
+                  rows={data.charges}
                   columns={[
                     {
-                      key: 'number',
-                      header: 'Invoice',
-                      cell: (row) => <span className="font-mono text-xs">{row.number}</span>,
-                    },
-                    {
-                      key: 'status',
-                      header: 'Status',
-                      cell: (row) => <InvoiceStatusBadge status={row.status} />,
-                    },
-                    {
-                      key: 'period',
-                      header: 'Period',
-                      cell: (row) => (
-                        <span className="text-muted-foreground">
-                          {day(row.periodStart)} – {day(row.periodEnd)}
+                      key: 'name',
+                      header: 'Charge',
+                      cell: (charge) => (
+                        <span className="flex items-center gap-2">
+                          {charge.name}
+                          {charge.isOverage ? (
+                            <Badge variant="outline" size="sm" radius="full">
+                              Overage
+                            </Badge>
+                          ) : null}
                         </span>
                       ),
                     },
                     {
-                      key: 'due',
-                      header: 'Due',
-                      cell: (row) => (
-                        <span className="text-muted-foreground">{day(row.dueDate)}</span>
+                      key: 'quantity',
+                      header: 'Quantity',
+                      cell: (charge) => (
+                        <span className="tabular-nums">
+                          {charge.quantity.toLocaleString('en-US')}
+                        </span>
                       ),
                     },
                     {
-                      key: 'total',
-                      header: 'Total',
-                      cell: (row) => <span className="tabular-nums">{formatMoney(row.total)}</span>,
-                    },
-                    {
-                      key: 'due-amount',
-                      header: 'Amount due',
-                      cell: (row) => (
-                        <span className="tabular-nums">{formatMoney(row.amountDue)}</span>
+                      key: 'amount',
+                      header: 'Amount',
+                      cell: (charge) => (
+                        <span className="tabular-nums">{formatMoney(charge.amount)}</span>
                       ),
                     },
                   ]}
                 />
               )}
             </PartSection>
-          ) : null}
+          </>
+        ) : null}
 
-          {tab === 'entitlements' ? (
-            <>
-              <PartSection
-                title="Entitlements"
-                part={entitlements}
-                failure="Entitlements could not be loaded"
-                emptyTitle="No features"
-                emptyDescription="This contract includes no features."
-                isEmpty={(rows) => rows.length === 0}
-              >
-                {(rows) => (
-                  <DetailTable<SubscriptionEntitlement>
-                    label="Entitlements"
-                    noun="features"
-                    rows={rows}
-                    toolbar={false}
-                    getRowId={(row) => row.featureId || row.name}
-                    columns={[
-                      { key: 'feature', header: 'Feature', cell: (row) => row.name },
-                      {
-                        key: 'access',
-                        header: 'Access',
-                        cell: (row) => (row.enabled ? 'Included' : 'Not included'),
-                      },
-                      {
-                        key: 'limit',
-                        header: 'Limit',
-                        cell: (row) =>
-                          row.usageLimit === null
-                            ? 'Unlimited'
-                            : `${row.usageLimit.toLocaleString('en-US')}${row.softLimit ? ' (soft)' : ''}${row.resetPeriodLabel ? ` / ${row.resetPeriodLabel.toLowerCase()}` : ''}`,
-                      },
-                    ]}
-                  />
-                )}
-              </PartSection>
-              <PartSection
-                title="Credit grants"
-                part={creditGrants}
-                failure="Credit grants could not be loaded"
-                emptyTitle="No credit grants"
-                emptyDescription="This contract has no credit grants."
-                isEmpty={(rows) => rows.length === 0}
-              >
-                {(rows) => (
-                  <DetailTable<CreditGrant>
-                    label="Credit grants"
-                    noun="grants"
-                    rows={rows}
-                    toolbar={false}
-                    columns={[
-                      { key: 'name', header: 'Grant', cell: (row) => row.name },
-                      {
-                        key: 'credits',
-                        header: 'Credits',
-                        cell: (row) => <span className="tabular-nums">{row.credits}</span>,
-                      },
-                      {
-                        key: 'cadence',
-                        header: 'Cadence',
-                        cell: (row) =>
-                          row.cadence === CreditGrantCadence.Recurring && row.period
-                            ? `${CREDIT_GRANT_CADENCE_LABEL[row.cadence]} · ${CREDIT_GRANT_PERIOD_LABEL[row.period].toLowerCase()}`
-                            : CREDIT_GRANT_CADENCE_LABEL[row.cadence],
-                      },
-                      {
-                        key: 'expiry',
-                        header: 'Expiry',
-                        cell: (row) => (
-                          <span className="text-muted-foreground">
-                            {CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}
-                          </span>
-                        ),
-                      },
-                    ]}
-                  />
-                )}
-              </PartSection>
-            </>
-          ) : null}
-        </div>
-
-        <div className="flex flex-col gap-5 xl:sticky xl:top-6">
-          <Section title="Activity" flush>
-            {activity.length === 0 ? (
-              <p className="text-muted-foreground px-6 py-5 text-[13px]">No activity yet.</p>
-            ) : (
-              <ScrollArea className="max-h-[420px]">
-                <div className="p-5">
-                  <AccountActivityRail
-                    events={activity.map((event) => ({ ...event, labels: [] }))}
-                  />
-                </div>
-              </ScrollArea>
+        {tab === 'invoices' ? (
+          <PartSection
+            title="Invoices"
+            part={invoices}
+            failure="Invoices could not be loaded"
+            emptyTitle="No invoices yet"
+            emptyDescription="Invoices for this contract appear here once a billing period closes."
+            isEmpty={(rows) => rows.length === 0}
+          >
+            {(rows) => (
+              <DetailTable<Invoice>
+                compact
+                label="Contract invoices"
+                noun="invoices"
+                rows={rows}
+                {...(onOpenInvoice ? { onRowClick: (row) => onOpenInvoice(row.id) } : {})}
+                columns={[
+                  {
+                    key: 'number',
+                    header: 'Invoice number',
+                    cell: (row) => <span className="font-mono text-xs">{row.number}</span>,
+                  },
+                  {
+                    key: 'issued',
+                    header: 'Issue date',
+                    cell: (row) => (
+                      <span className="text-muted-foreground">{day(row.issuedAt)}</span>
+                    ),
+                  },
+                  {
+                    key: 'due',
+                    header: 'Due date',
+                    cell: (row) => (
+                      <span className="text-muted-foreground">{day(row.dueDate)}</span>
+                    ),
+                  },
+                  {
+                    key: 'status',
+                    header: 'Status',
+                    cell: (row) => <InvoiceStatusBadge status={row.status} />,
+                  },
+                  { key: 'payment', header: 'Payment', cell: (row) => <PaymentCell row={row} /> },
+                  {
+                    key: 'amount',
+                    header: 'Amount',
+                    cell: (row) => <span className="tabular-nums">{formatMoney(row.total)}</span>,
+                  },
+                ]}
+              />
             )}
-          </Section>
-          <MetadataCard metadata={s.metadata} />
-          <RelatedCard items={related} />
-        </div>
+          </PartSection>
+        ) : null}
+
+        {tab === 'entitlements' ? (
+          <>
+            <PartSection
+              title="Entitlements"
+              showTitle
+              part={entitlements}
+              failure="Entitlements could not be loaded"
+              emptyTitle="No features"
+              emptyDescription="This contract includes no features."
+              isEmpty={(rows) => rows.length === 0}
+            >
+              {(rows) => (
+                <DetailTable<SubscriptionEntitlement>
+                  compact
+                  label="Entitlements"
+                  noun="features"
+                  rows={rows}
+                  getRowId={(row) => row.featureId || row.name}
+                  columns={[
+                    { key: 'feature', header: 'Feature', cell: (row) => row.name },
+                    {
+                      key: 'access',
+                      header: 'Access',
+                      cell: (row) => (row.enabled ? 'Included' : 'Not included'),
+                    },
+                    {
+                      key: 'limit',
+                      header: 'Limit',
+                      cell: (row) =>
+                        row.usageLimit === null
+                          ? 'Unlimited'
+                          : `${row.usageLimit.toLocaleString('en-US')}${row.softLimit ? ' (soft)' : ''}${row.resetPeriodLabel ? ` / ${row.resetPeriodLabel.toLowerCase()}` : ''}`,
+                    },
+                  ]}
+                />
+              )}
+            </PartSection>
+            <PartSection
+              title="Credit grants"
+              showTitle
+              part={creditGrants}
+              failure="Credit grants could not be loaded"
+              emptyTitle="No credit grants"
+              emptyDescription="This contract has no credit grants."
+              isEmpty={(rows) => rows.length === 0}
+            >
+              {(rows) => (
+                <DetailTable<CreditGrant>
+                  compact
+                  label="Credit grants"
+                  noun="grants"
+                  rows={rows}
+                  columns={[
+                    { key: 'name', header: 'Grant', cell: (row) => row.name },
+                    {
+                      key: 'credits',
+                      header: 'Credits',
+                      cell: (row) => <span className="tabular-nums">{row.credits}</span>,
+                    },
+                    {
+                      key: 'cadence',
+                      header: 'Cadence',
+                      cell: (row) =>
+                        row.cadence === CreditGrantCadence.Recurring && row.period
+                          ? `${CREDIT_GRANT_CADENCE_LABEL[row.cadence]} · ${CREDIT_GRANT_PERIOD_LABEL[row.period].toLowerCase()}`
+                          : CREDIT_GRANT_CADENCE_LABEL[row.cadence],
+                    },
+                    {
+                      key: 'expiry',
+                      header: 'Expiry',
+                      cell: (row) => (
+                        <span className="text-muted-foreground">
+                          {CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}
+                        </span>
+                      ),
+                    },
+                  ]}
+                />
+              )}
+            </PartSection>
+          </>
+        ) : null}
       </div>
       {onPreviewQuantity && onChangeQuantity ? (
         <ContractQuantityDialog
@@ -886,7 +828,7 @@ export function SubscriptionDetailView({
 }
 
 /**
- * The lifecycle banners above the summary. At most one of the state banners
+ * The lifecycle banners at the top of Overview. At most one of the state banners
  * (not started, cancelled, cancelling, paused, trialing) shows, in that order of
  * importance; queued changes follow, one per schedule.
  */
@@ -977,6 +919,14 @@ function Banners({
   return <div className="flex flex-col gap-3">{banners}</div>
 }
 
+function PaymentCell({ row }: { row: Invoice }) {
+  return row.paymentStatus ? (
+    <PaymentStatusBadge status={row.paymentStatus} />
+  ) : (
+    <span className="text-muted-foreground">—</span>
+  )
+}
+
 /** Where a charge comes from; an ended charge also says when it ended. */
 function LineSourceBadge({ line }: { line: SubscriptionLine }) {
   return (
@@ -995,15 +945,20 @@ function LineSourceBadge({ line }: { line: SubscriptionLine }) {
   )
 }
 
-/** A titled section whose body is one part of the page: loading, failed, empty, or the data. */
+/**
+ * A table section whose body is one part of the page: loading, failed, empty, or
+ * the data. The table sits in a bordered box; `showTitle` puts a small visible
+ * title above it (Overview), otherwise the name is for assistive tech only.
+ */
 function PartSection<T>({
   title,
   part,
   failure,
   emptyTitle,
   emptyDescription,
+  emptyAction,
   isEmpty,
-  padded = false,
+  showTitle = false,
   action,
   children,
 }: {
@@ -1012,23 +967,26 @@ function PartSection<T>({
   failure: string
   emptyTitle: string
   emptyDescription: string
+  emptyAction?: ReactNode
   isEmpty: (data: T) => boolean
-  /** The body is not a table, so it keeps the section's own inset. */
-  padded?: boolean
+  showTitle?: boolean
   action?: ReactNode
   children: (data: T) => ReactNode
 }) {
   const { data } = part
+  const frame = { table: true, title, showTitle, action } as const
   if (part.isLoading || (!data && !part.isError)) {
     return (
-      <Section title={title} action={action}>
-        <LoadingRows />
+      <Section {...frame}>
+        <div className="p-4">
+          <LoadingRows />
+        </div>
       </Section>
     )
   }
   if (part.isError || !data) {
     return (
-      <Section title={title} flush action={action}>
+      <Section {...frame}>
         <SectionEmpty
           title={failure}
           description="The rest of the page still works."
@@ -1045,18 +1003,10 @@ function PartSection<T>({
   }
   if (isEmpty(data)) {
     return (
-      <Section title={title} flush action={action}>
-        <SectionEmpty title={emptyTitle} description={emptyDescription} />
+      <Section {...frame}>
+        <SectionEmpty title={emptyTitle} description={emptyDescription} action={emptyAction} />
       </Section>
     )
   }
-  return padded ? (
-    <Section title={title} action={action}>
-      {children(data)}
-    </Section>
-  ) : (
-    <Section title={title} flush bare={!action} action={action}>
-      {children(data)}
-    </Section>
-  )
+  return <Section {...frame}>{children(data)}</Section>
 }

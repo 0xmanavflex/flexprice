@@ -123,28 +123,17 @@ export function WebhookAttemptList({
         setPage(1)
       }}
       searchPlaceholder="Search by event type or message ID…"
-      filter={{
-        ...singleChoiceFilter<WebhookStatusFilter>({
-          id: 'status',
-          label: 'Status',
-          value: status,
-          empty: 'all',
-          choices: WEBHOOK_STATUS_CHOICES,
-          onChange: (next) => {
-            onStatusChange(next)
-            setPage(1)
-          },
-        }),
-        quick: {
-          label: 'Status',
-          value: status,
-          options: WEBHOOK_STATUS_CHOICES,
-          onChange: (next) => {
-            onStatusChange(next as WebhookStatusFilter)
-            setPage(1)
-          },
+      filter={singleChoiceFilter<WebhookStatusFilter>({
+        id: 'status',
+        label: 'Status',
+        value: status,
+        empty: 'all',
+        choices: WEBHOOK_STATUS_CHOICES,
+        onChange: (next) => {
+          onStatusChange(next)
+          setPage(1)
         },
-      }}
+      })}
       {...(onRefresh
         ? {
             primaryAction: (

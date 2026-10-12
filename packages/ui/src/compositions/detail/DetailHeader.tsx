@@ -1,13 +1,14 @@
 import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
 import { DetailHeaderCluster } from './DetailKit'
+import { DetailPills } from './pillSize'
 
 /**
  * A detail page's header (reference `DetailHeader`): icon tile and record name
- * on the left; on the right, in this order, the primary actions (at most two),
- * the status and type chips, the "ID" (and email) copy chips, and the More menu.
+ * on the left; the status and type pills in a small row directly under it; on the
+ * right the "ID" (and email) copy chips and the More menu.
  *
- * There is no subtitle line, and no chip sits beside the name.
+ * There is no subtitle line.
  * `identifier` remains as an alias of `id`.
  */
 export const DetailHeaderProvenance = provenance({
@@ -20,7 +21,7 @@ export interface DetailHeaderProps {
   title: string
   /** Icon shown in the tile left of the title. */
   icon?: ReactNode
-  /** Status and type chips, shown in the right-hand cluster. */
+  /** Status and type pills, shown small under the title (status first). */
   badges?: ReactNode
   /** The record id, rendered as an "ID" copy chip. */
   id?: string
@@ -56,15 +57,12 @@ export function DetailHeader({
               {icon}
             </span>
           ) : null}
-          <h1 className="min-w-0 truncate text-xl font-medium tracking-tight">{title}</h1>
+          <div className="min-w-0">
+            <h1 className="min-w-0 truncate text-xl font-medium tracking-tight">{title}</h1>
+            <DetailPills>{badges}</DetailPills>
+          </div>
         </div>
-        <DetailHeaderCluster
-          primary={primary}
-          badges={badges}
-          id={id ?? identifier}
-          email={email}
-          more={actions}
-        />
+        <DetailHeaderCluster primary={primary} id={id ?? identifier} email={email} more={actions} />
       </div>
     </header>
   )

@@ -1,4 +1,4 @@
-import { type ReactNode, useState } from 'react'
+import { useState } from 'react'
 import {
   COUPON_CADENCE_LABEL,
   type Coupon,
@@ -19,12 +19,13 @@ import {
 import {
   AppFailure,
   ConfirmDialog,
-  Properties,
   EditableCard,
   LoadingRows,
+  MetadataCard,
+  Properties,
   Section,
 } from '@fp/ui/compositions'
-import { TicketPercentIcon } from '@fp/ui/icons'
+import { ArchiveIcon, PencilIcon, TicketPercentIcon } from '@fp/ui/icons'
 
 type CouponTab = 'overview' | 'redemptions' | 'information'
 
@@ -33,8 +34,6 @@ export interface CouponDetailPageProps {
   onBack: () => void
   /** Open with the details already in edit mode. */
   startEditing?: boolean
-  /** Open the full edit form. */
-  onEdit?: () => void
 }
 
 /**
@@ -57,7 +56,6 @@ export function CouponDetailPage({
   couponId,
   onBack,
   startEditing = false,
-  onEdit,
 }: CouponDetailPageProps) {
   const coupon = useCoupon(couponId)
   const update = useUpdateCoupon()
@@ -100,22 +98,27 @@ export function CouponDetailPage({
       title={record.name}
       badges={
         <>
+          <CatalogStatusBadge status={record.status} />
           <Pill>{discountText(record)}</Pill>
           <Pill>{cadenceText(record)}</Pill>
-          {isArchived ? <CatalogStatusBadge status={record.status} /> : null}
         </>
       }
       id={record.code || record.id}
       menuLabel="Coupon actions"
       menu={[
-        { id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') },
+        {
+          id: 'edit-details',
+          label: 'Edit details',
+          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setTab('information'),
+        },
         ...(isArchived
           ? []
           : [
-              ...(onEdit ? [{ id: 'edit', label: 'Edit coupon', onSelect: onEdit }] : []),
               {
                 id: 'archive',
                 label: 'Archive',
+                icon: <ArchiveIcon aria-hidden />,
                 destructive: true,
                 onSelect: () => setArchiving(true),
               },
@@ -142,7 +145,7 @@ export function CouponDetailPage({
             <div className="grid gap-5 xl:grid-cols-3">
               <EditableCard
                 className="xl:col-span-2"
-                title="General"
+                title="Coupon details"
                 locked={isArchived}
                 fields={[
                   { key: 'name', label: 'Name', value: record.name, required: true },
@@ -151,13 +154,6 @@ export function CouponDetailPage({
                     label: 'Coupon ID',
                     value: record.id,
                     display: <span className="font-mono text-[13px]">{record.id}</span>,
-                    readOnly: true,
-                  },
-                  {
-                    key: 'status',
-                    label: 'Status',
-                    value: record.status,
-                    display: <CatalogStatusBadge status={record.status} />,
                     readOnly: true,
                   },
                   {
@@ -180,13 +176,7 @@ export function CouponDetailPage({
                   })
                 }
               />
-              <Section title="Metadata">
-                {record.metadata ? (
-                  <Properties columns={2} items={metadataItems(record.metadata)} />
-                ) : (
-                  <p className="text-muted-foreground text-sm">This coupon carries no metadata.</p>
-                )}
-              </Section>
+              <MetadataCard metadata={record.metadata ?? {}} />
             </div>
           ),
         },
@@ -273,14 +263,6 @@ function formatDate(value: Date | null): string {
 function formatDay(value: Date | null): string {
   if (!value) return 'Not set'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-/** Metadata as readable rows, not a raw JSON dump. */
-function metadataItems(metadata: Record<string, string>): { label: string; value: ReactNode }[] {
-  return Object.entries(metadata).map(([key, value]) => ({
-    label: key,
-    value: <span className="break-words">{value}</span>,
-  }))
 }
 
 function toFailure(error: unknown): { message: string; canRetry: boolean } {

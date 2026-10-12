@@ -14,11 +14,7 @@
       "file": "src/components/blocks/solution-billing-4/components/account-activity-rail.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "CustomerDetail",
-        "InvoiceDetailView",
-        "SubscriptionDetailView"
-      ],
+      "usedBy": [],
       "story": null
     },
     "AccountHeader": {
@@ -40,6 +36,28 @@
       "layer": "other",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "ActivityLog": {
+      "file": "src/compositions/detail/ActivityLog.tsx",
+      "layer": "composition",
+      "composes": [
+        "Section"
+      ],
+      "usedBy": [],
+      "story": null
+    },
+    "ActivitySection": {
+      "file": "src/compositions/detail/ActivityLog.tsx",
+      "layer": "composition",
+      "composes": [
+        "Section"
+      ],
+      "usedBy": [
+        "CustomerDetail",
+        "InvoiceDetailView",
+        "SubscriptionDetailView"
+      ],
       "story": null
     },
     "AddChargeDialog": {
@@ -191,6 +209,7 @@
       "composes": [],
       "usedBy": [
         "CouponGrid",
+        "CustomerDetail",
         "FeatureDetailView",
         "PlanGrid"
       ],
@@ -231,9 +250,7 @@
       "file": "src/reui/icons/default/outline/arrow-down-right.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [
-        "CustomerWalletView"
-      ],
+      "usedBy": [],
       "story": null
     },
     "ArrowLeft": {
@@ -783,6 +800,7 @@
         "EnvironmentSwitcher",
         "InvoiceForm",
         "Mark",
+        "OverviewTiles",
         "PlanPreviewCard",
         "Properties",
         "SegmentMeter",
@@ -1154,6 +1172,7 @@
         "FeatureGrid",
         "GroupGrid",
         "InvoiceGrid",
+        "OverviewTiles",
         "PaymentGrid",
         "PlanGrid",
         "PriceUnitGrid",
@@ -1434,7 +1453,8 @@
       "file": "src/pages/customers/CustomerDetail.tsx",
       "layer": "surface",
       "composes": [
-        "AccountActivityRail",
+        "ActivitySection",
+        "ArchiveIcon",
         "CustomerEventsGrid",
         "DetailTable",
         "DetailTabs",
@@ -1445,13 +1465,13 @@
         "LoadingRows",
         "MetadataCard",
         "Money",
+        "OverviewTiles",
         "PencilIcon",
         "Pill",
         "PlusIcon",
         "Section",
         "SectionEmpty",
         "Status",
-        "SubscriptionCard",
         "WalletIcon"
       ],
       "usedBy": [],
@@ -1522,17 +1542,18 @@
       "layer": "surface",
       "composes": [
         "AppFailure",
-        "ArrowDownRightIcon",
         "ArrowUpRightIcon",
         "ChoiceCards",
         "Composer",
         "ConfirmDialog",
+        "DetailTable",
         "EmptyState",
         "Field",
         "FormDialog",
         "LabelWithHint",
         "LoadingRows",
         "OptionSelect",
+        "Pill",
         "PlusIcon",
         "Section",
         "SplitMeter",
@@ -1621,6 +1642,7 @@
       "layer": "composition",
       "composes": [
         "DetailHeaderCluster",
+        "DetailPills",
         "MetricRail"
       ],
       "usedBy": [
@@ -1632,7 +1654,8 @@
       "file": "src/compositions/detail/DetailHeader.tsx",
       "layer": "composition",
       "composes": [
-        "DetailHeaderCluster"
+        "DetailHeaderCluster",
+        "DetailPills"
       ],
       "usedBy": [
         "FeatureDetailView"
@@ -1681,11 +1704,24 @@
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
+    "DetailPills": {
+      "file": "src/compositions/detail/pillSize.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [
+        "DetailBreadcrumb",
+        "DetailHeader",
+        "DetailShell",
+        "EntityHeader"
+      ],
+      "story": null
+    },
     "DetailShell": {
       "file": "src/compositions/detail/DetailShell.tsx",
       "layer": "composition",
       "composes": [
         "DetailHeaderCluster",
+        "DetailPills",
         "MetricRail"
       ],
       "usedBy": [
@@ -1719,6 +1755,7 @@
         "CustomerDetail",
         "CustomerEventsGrid",
         "CustomerTaxSection",
+        "CustomerWalletView",
         "EntitlementTable",
         "FeatureDetailView",
         "GroupMembersView",
@@ -1726,7 +1763,8 @@
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "RevenueDashboard",
-        "SubscriptionDetailView"
+        "SubscriptionDetailView",
+        "WebhookEndpointDetail"
       ],
       "story": "./src/pages/shared/DetailTable.stories.tsx"
     },
@@ -1988,7 +2026,8 @@
       "composes": [
         "DetailBreadcrumb",
         "DetailHeaderCluster",
-        "DetailMoreMenu"
+        "DetailMoreMenu",
+        "DetailPills"
       ],
       "usedBy": [
         "CustomerDetail"
@@ -3087,7 +3126,7 @@
       "file": "src/pages/billing/invoices/InvoiceDetailView.tsx",
       "layer": "surface",
       "composes": [
-        "AccountActivityRail",
+        "ActivitySection",
         "CalculatorIcon",
         "DetailShell",
         "DetailTable",
@@ -3096,6 +3135,7 @@
         "LoadingRows",
         "MetadataCard",
         "PencilIcon",
+        "Pill",
         "RelatedCard",
         "Section",
         "SectionEmpty",
@@ -3766,6 +3806,19 @@
       ],
       "story": "./src/compositions/forms/OptionSelect.stories.tsx"
     },
+    "OverviewTiles": {
+      "file": "src/compositions/detail/DetailKit.tsx",
+      "layer": "composition",
+      "composes": [
+        "CheckIcon",
+        "CopyIcon"
+      ],
+      "usedBy": [
+        "CustomerDetail",
+        "SubscriptionDetailView"
+      ],
+      "story": "./src/compositions/detail/DetailKit.stories.tsx"
+    },
     "Package": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -3917,7 +3970,9 @@
       "composes": [
         "Pill"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
       "story": "./src/pages/collections/payments/PaymentStatusBadge.stories.tsx"
     },
     "Pencil": {
@@ -3997,13 +4052,16 @@
       "usedBy": [
         "CatalogStatusBadge",
         "CustomerDetail",
+        "CustomerWalletView",
         "EventTypeName",
         "FeatureDetailView",
         "FeatureGrid",
         "FeatureTypeBadge",
         "GlyphBadge",
+        "InvoiceDetailView",
         "InvoiceStatusBadge",
         "PaymentStatusBadge",
+        "SubscriptionDetailView",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
         "WebhookEventCatalog",
@@ -4022,6 +4080,13 @@
         "UsageCard"
       ],
       "story": "./src/pages/shared/PillColumns.stories.tsx"
+    },
+    "PillSizeContext": {
+      "file": "src/compositions/detail/pillSize.tsx",
+      "layer": "composition",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "Pin": {
       "file": "src/icons/index.ts",
@@ -4628,6 +4693,8 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ActivityLog",
+        "ActivitySection",
         "AddonSubscriptionsView",
         "ChargeTable",
         "ContextualSection",
@@ -4933,8 +5000,7 @@
       ],
       "usedBy": [
         "PriceOverrideForm",
-        "TierTable",
-        "WebhookEndpointDetail"
+        "TierTable"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -5128,16 +5194,14 @@
       "composes": [
         "CopyIcon"
       ],
-      "usedBy": [
-        "CustomerDetail"
-      ],
+      "usedBy": [],
       "story": "./src/pages/customers/SubscriptionCard.stories.tsx"
     },
     "SubscriptionDetailView": {
       "file": "src/pages/contracts/SubscriptionDetailView.tsx",
       "layer": "surface",
       "composes": [
-        "AccountActivityRail",
+        "ActivitySection",
         "ContractChargeDialog",
         "ContractQuantityDialog",
         "DetailMoreMenu",
@@ -5148,14 +5212,16 @@
         "InvoiceStatusBadge",
         "LoadingRows",
         "MetadataCard",
+        "OverviewTiles",
+        "PaymentStatusBadge",
+        "Pill",
         "PlusIcon",
         "Properties",
         "RelatedCard",
         "RowActionsMenu",
         "Section",
         "SectionEmpty",
-        "SubscriptionStatusBadge",
-        "SummaryRow"
+        "SubscriptionStatusBadge"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionDetailView.stories.tsx"
@@ -5209,8 +5275,7 @@
       ],
       "usedBy": [
         "DetailStats",
-        "MetricRail",
-        "SubscriptionDetailView"
+        "MetricRail"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -5648,6 +5713,7 @@
         "ConfirmDialog",
         "CopyIcon",
         "DetailList",
+        "DetailTable",
         "EditableCard",
         "EyeIcon",
         "Field",
@@ -5657,7 +5723,6 @@
         "Pill",
         "PlusIcon",
         "Section",
-        "SimpleTable",
         "SplitMeter",
         "WebhookEventTypePicker",
         "WebhookTime"
@@ -7252,6 +7317,7 @@
       "uses": [
         "AddonSubscriptionsView",
         "AppFailure",
+        "ArchiveIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
         "ChargeTable",
@@ -7266,9 +7332,8 @@
         "FormDialog",
         "LoadingRows",
         "PageBody",
-        "Pill",
-        "Properties",
-        "Section"
+        "PencilIcon",
+        "Pill"
       ]
     },
     "AddonFormPage": {
@@ -7306,17 +7371,21 @@
       "route": "/cost-sheets/$costSheetId",
       "uses": [
         "AppFailure",
+        "ArchiveIcon",
         "CalculatorIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
         "ChargeTable",
+        "ConfirmDialog",
         "CostMarginCard",
         "EditableCard",
-        "EmptyState",
         "LoadingRows",
+        "MetadataCard",
         "PageBody",
+        "PencilIcon",
         "Pill",
-        "Section"
+        "Section",
+        "SectionEmpty"
       ]
     },
     "CostSheetFormPage": {
@@ -7347,6 +7416,7 @@
       "route": "/coupons/$couponId",
       "uses": [
         "AppFailure",
+        "ArchiveIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
         "ConfirmDialog",
@@ -7354,7 +7424,9 @@
         "CouponRedemptionsView",
         "EditableCard",
         "LoadingRows",
+        "MetadataCard",
         "Money",
+        "PencilIcon",
         "Pill",
         "Properties",
         "Section"
@@ -7422,6 +7494,7 @@
       "route": "/customers/$customerId",
       "uses": [
         "AppFailure",
+        "ConfirmDialog",
         "CustomerAnalyticsView",
         "CustomerDetail",
         "EmptyState",
@@ -7539,6 +7612,7 @@
         "GroupMembersView",
         "LoadingRows",
         "PageBody",
+        "PencilIcon",
         "Pill"
       ]
     },
@@ -7672,8 +7746,6 @@
         "PlanCreditGrantsView",
         "PlanCustomerPreview",
         "PlanEntitlementsView",
-        "Properties",
-        "Section",
         "Status"
       ]
     },
@@ -7705,10 +7777,13 @@
       "route": "/price-units/$priceUnitId",
       "uses": [
         "AppFailure",
+        "ArchiveIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
+        "ConfirmDialog",
         "EditableCard",
         "LoadingRows",
+        "PencilIcon",
         "Pill",
         "Section"
       ]

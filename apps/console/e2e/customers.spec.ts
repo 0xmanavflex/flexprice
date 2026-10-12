@@ -119,7 +119,7 @@ test.describe('a customer detail page', () => {
   test('opens the billing edit page from the header', async ({ page }) => {
     await openFirstCustomer(page)
     await page.getByRole('button', { name: 'Customer actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit billing details' }).click()
+    await page.getByRole('menuitem', { name: 'Edit customer' }).click()
     await expect(page).toHaveURL(/\/customers\/[^/]+\/edit/)
   })
 })

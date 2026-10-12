@@ -5,13 +5,14 @@ import {
   DetailMoreMenu,
   type DetailMenuItem,
 } from '../../compositions/detail/DetailKit'
+import { DetailPills } from '../../compositions/detail/pillSize'
 
 export interface EntityHeaderProps {
   trail: DetailCrumb[]
   /** Glyph shown inside the neutral icon tile. */
   icon: ReactNode
   title: string
-  /** Status and type chips, shown in the right-hand cluster (never beside the name). */
+  /** Status and type pills, shown small under the title (status first). */
   badges?: ReactNode
   /** Copyable identifier, shown as an "ID" copy chip. */
   id?: string
@@ -25,8 +26,8 @@ export interface EntityHeaderProps {
 
 /**
  * The detail-page header for records that need a custom tile (an avatar, say):
- * the tile and the name on the left; on the right the shared
- * `DetailHeaderCluster` — chips, "ID"/email copy chips, then a single More menu
+ * the tile, the name and the small pills under it on the left; on the right the
+ * shared `DetailHeaderCluster` — "ID"/email copy chips, then a single More menu
  * that holds every action (no inline buttons).
  * There is no subtitle line. The trail is published to the shell's header
  * breadcrumb, not drawn here.
@@ -52,12 +53,14 @@ export function EntityHeader({
           >
             {icon}
           </span>
-          <h1 className="min-w-0 truncate text-xl leading-tight font-medium tracking-tight">
-            {title}
-          </h1>
+          <div className="min-w-0">
+            <h1 className="min-w-0 truncate text-xl leading-tight font-medium tracking-tight">
+              {title}
+            </h1>
+            <DetailPills>{badges}</DetailPills>
+          </div>
         </div>
         <DetailHeaderCluster
-          badges={badges}
           id={id}
           email={email}
           more={<DetailMoreMenu label={menuLabel} items={menu} />}

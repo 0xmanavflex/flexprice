@@ -27,6 +27,8 @@ export type { ResourceNavItem, ResourceNavigationProps } from './layout/Resource
 
 export { EmptyState, EmptyStateProvenance } from './feedback/EmptyState'
 export type { EmptyStateProps } from './feedback/EmptyState'
+export { SectionEmpty } from './feedback/SectionEmpty'
+export type { SectionEmptyProps } from './feedback/SectionEmpty'
 
 export { Toolbar, ToolbarProvenance } from './tables/Toolbar'
 export type { ToolbarProps } from './tables/Toolbar'

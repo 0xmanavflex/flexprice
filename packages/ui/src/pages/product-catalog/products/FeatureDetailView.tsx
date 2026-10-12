@@ -229,7 +229,7 @@ export function FeatureDetailView({
   const menu: DetailMenuItem[] = [
     {
       id: 'edit',
-      label: 'Edit',
+      label: 'Edit details',
       icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
       onSelect: onEditConfiguration,
     },
@@ -246,8 +246,8 @@ export function FeatureDetailView({
     ...(onDelete
       ? [
           {
-            id: 'delete',
-            label: 'Delete feature',
+            id: 'archive',
+            label: 'Archive',
             icon: <ArchiveIcon aria-hidden />,
             destructive: true,
             onSelect: onDelete,
@@ -264,8 +264,8 @@ export function FeatureDetailView({
         id={feature.lookupKey || feature.id}
         badges={
           <>
+            <Status value={FEATURE_STATUS_LABEL[feature.status]} />
             <FeatureTypePill type={feature.type} label={FEATURE_TYPE_LABEL[feature.type]} />
-            {archived ? <Status value="archived" /> : null}
           </>
         }
         actions={<DetailMoreMenu label="More actions" items={menu} />}
@@ -588,9 +588,10 @@ function OverviewTab({
               <LoadingRows />
             </div>
           ) : charges.length === 0 ? (
-            <p className="text-muted-foreground px-6 py-10 text-center text-[13px]">
-              No plan prices this feature yet.
-            </p>
+            <SectionEmpty
+              title="No plans attached yet"
+              description="No plan prices this feature yet."
+            />
           ) : (
             <ul className="divide-border/50 flex flex-1 flex-col divide-y">
               {charges.slice(0, 4).map((row) => (
@@ -706,7 +707,7 @@ function InformationTab({
     <div className="grid gap-5 xl:grid-cols-3">
       <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
         <EditableCard
-          title="General"
+          title="Feature details"
           locked={archived}
           fields={[
             { key: 'name', label: 'Name', value: feature.name, required: true },
@@ -724,13 +725,6 @@ function InformationTab({
               display: (
                 <FeatureTypePill type={feature.type} label={FEATURE_TYPE_LABEL[feature.type]} />
               ),
-              readOnly: true,
-            },
-            {
-              key: 'status',
-              label: 'Status',
-              value: FEATURE_STATUS_LABEL[feature.status],
-              display: <Status value={feature.status} />,
               readOnly: true,
             },
             {

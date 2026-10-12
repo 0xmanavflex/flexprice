@@ -40,6 +40,6 @@ test('opens an invoice from the list and shows real lines', async ({ page }) => 
   await page.goto('/invoices')
   await page.getByRole('row').nth(1).click()
   await expect(page).toHaveURL(/\/invoices\/[^/]+$/)
-  await expect(page.getByText('Items', { exact: true })).toBeVisible()
+  await expect(page.getByText('Amount due', { exact: true }).first()).toBeVisible()
   await expect(page.getByText('Orchid Ledger Group')).toHaveCount(0)
 })

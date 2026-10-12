@@ -30,8 +30,9 @@ export function AddonSubscriptionsView({
   subscriptions?: AddonSubscriber[]
 }) {
   return (
-    <Section title="Contracts" flush bare>
+    <Section table title="Contracts">
       <DetailTable
+        compact
         label="Contracts"
         facet={{ label: 'Status', value: (s) => s.status }}
         noun="subscriptions"

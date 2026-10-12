@@ -48,35 +48,38 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
   await expect(page.getByText(id).first()).toBeVisible()
 })
 
-test('add-on edit form saves and the detail reflects it', async ({ page }) => {
+test('add-on in-place edit saves and the detail reflects it', async ({ page }) => {
   await page.goto('/addons')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Add-on actions' }).click()
-  await page.getByRole('menuitem', { name: 'Edit add-on' }).click()
-  await page.getByLabel('Name').fill('Renamed add-on')
-  await page.getByRole('button', { name: 'Save changes' }).click()
+  await page.getByRole('menuitem', { name: 'Edit details' }).click()
+  await page.getByRole('button', { name: 'Edit add-on details' }).click()
+  await page.getByLabel('Name', { exact: true }).fill('Renamed add-on')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page).toHaveURL(/\/addons\/[^/]+$/)
   await expect(page.getByRole('heading', { name: 'Renamed add-on' })).toBeVisible()
 })
 
-test('coupon edit form saves and the detail reflects it', async ({ page }) => {
+test('coupon in-place edit saves and the detail reflects it', async ({ page }) => {
   await page.goto('/coupons')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Coupon actions' }).click()
-  await page.getByRole('menuitem', { name: 'Edit coupon' }).click()
-  await page.getByLabel('Name').fill('Renamed coupon')
-  await page.getByRole('button', { name: 'Save changes' }).click()
+  await page.getByRole('menuitem', { name: 'Edit details' }).click()
+  await page.getByRole('button', { name: 'Edit coupon details' }).click()
+  await page.getByLabel('Name', { exact: true }).fill('Renamed coupon')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page).toHaveURL(/\/coupons\/[^/]+$/)
   await expect(page.getByRole('heading', { name: 'Renamed coupon' })).toBeVisible()
 })
 
-test('cost sheet edit form saves and the detail reflects it', async ({ page }) => {
+test('cost sheet in-place edit saves and the detail reflects it', async ({ page }) => {
   await page.goto('/cost-sheets')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Cost sheet actions' }).click()
-  await page.getByRole('menuitem', { name: 'Edit cost sheet' }).click()
-  await page.getByLabel('Name').fill('Renamed sheet')
-  await page.getByRole('button', { name: 'Save changes' }).click()
+  await page.getByRole('menuitem', { name: 'Edit details' }).click()
+  await page.getByRole('button', { name: 'Edit cost sheet details' }).click()
+  await page.getByLabel('Name', { exact: true }).fill('Renamed sheet')
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
   await expect(page).toHaveURL(/\/cost-sheets\/[^/]+$/)
   await expect(page.getByRole('heading', { name: 'Renamed sheet' })).toBeVisible()
 })

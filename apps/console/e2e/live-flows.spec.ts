@@ -308,7 +308,7 @@ test.describe('live flows', () => {
     await row(name).getByText(`E2E${tag}`).click()
     await expect(page.getByRole('heading', { name: name })).toBeVisible()
     await page.getByRole('button', { name: 'Coupon actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Edit details' }).click()
     await fill(main, 'Name', `${name}-edited`)
     await saveInPlace(/\/v1\/coupons\/[^/]+$/)
     await expect(page.getByRole('heading', { name: `${name}-edited` })).toBeVisible({

@@ -118,17 +118,17 @@ test.describe('the features list', () => {
     await list(page).rows().first().getByRole('cell').nth(2).click()
     await expect(page).toHaveURL(/\/features\/[^/?#]+$/)
 
-    // The General card's pencil edits in place: fields become inputs, the URL does not change.
+    // The Feature details card's pencil edits in place: fields become inputs, the URL does not change.
     const url = page.url()
     await page.getByRole('tab', { name: 'Information' }).click()
-    await page.getByRole('button', { name: 'Edit general' }).click()
+    await page.getByRole('button', { name: 'Edit feature details' }).click()
     await expect(page.getByLabel('Name')).toBeVisible()
     await expect(page).toHaveURL(url)
     await page.getByRole('button', { name: 'Cancel' }).click()
 
     // The header menu's Edit item opens the dedicated edit page.
     await page.getByRole('button', { name: 'More actions' }).click()
-    await page.getByRole('menuitem', { name: 'Edit', exact: true }).click()
+    await page.getByRole('menuitem', { name: 'Edit details' }).click()
     await expect(page).toHaveURL(/\/edit$/)
   })
 })

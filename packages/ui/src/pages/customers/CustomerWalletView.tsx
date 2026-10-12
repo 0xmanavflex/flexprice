@@ -1,7 +1,6 @@
 import { useState } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
 import {
-  ArrowDownRightIcon,
   ArrowUpRightIcon,
   InfoIcon,
   MoreHorizontalIcon,
@@ -26,7 +25,6 @@ import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
 import { Field } from '@ui/components/primitives/field'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
-import { cn } from '@ui/lib/cn'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -52,6 +50,8 @@ import {
   Section,
 } from '../../compositions'
 import { ChoiceCards, Composer, SplitMeter } from '../../compositions/detail/DetailKit'
+import { Pill, type PillTone } from '../shared/cells'
+import { DetailTable } from '../shared/DetailTable'
 
 export interface CustomerWalletViewProps {
   wallets: Wallet[]
@@ -103,7 +103,6 @@ export function CustomerWalletView({
 }: CustomerWalletViewProps) {
   const [dialog, setDialog] = useState<Dialog>(null)
   const [pending, setPending] = useState(false)
-  const [filter, setFilter] = useState<'all' | 'in' | 'out'>('all')
 
   const open = (next: Exclude<Dialog, null>) => {
     onResetErrors?.()
@@ -159,7 +158,9 @@ export function CustomerWalletView({
   }
 
   const closed = wallet.status === WalletStatus.Closed
-  const rows = transactions.filter((t) => filter === 'all' || t.direction === filter)
+  const topUps = transactions
+    .filter((t) => t.direction === 'in')
+    .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
   const current = Number(wallet.creditBalance) || 0
   const ongoing = Number(wallet.realTimeCreditBalance) || 0
   const pendingUsage = Math.max(0, current - ongoing)
@@ -169,32 +170,25 @@ export function CustomerWalletView({
   return (
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {wallets.length > 1 ? (
-          <Select value={wallet.id} onValueChange={(value) => value !== null && onSelect(value)}>
-            <SelectTrigger className="h-9 w-64" aria-label="Wallet">
-              <SelectValue>
-                {(value) => {
-                  const chosen = wallets.find((candidate) => candidate.id === value)
-                  return chosen
-                    ? `${chosen.description || 'Prepaid credits'} · ${chosen.currency}`
-                    : value
-                }}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="start">
-              {wallets.map((candidate) => (
-                <SelectItem key={candidate.id} value={candidate.id}>
-                  {candidate.description || 'Prepaid credits'} · {candidate.currency}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <div className="space-y-0.5">
-            <p className="text-sm font-medium">{wallet.description || 'Prepaid credits'}</p>
-            <p className="text-muted-foreground text-xs">{wallet.currency}</p>
-          </div>
-        )}
+        <Select value={wallet.id} onValueChange={(value) => value !== null && onSelect(value)}>
+          <SelectTrigger className="h-9 w-64" aria-label="Wallet">
+            <SelectValue>
+              {(value) => {
+                const chosen = wallets.find((candidate) => candidate.id === value)
+                return chosen
+                  ? `${chosen.description || 'Prepaid credits'} · ${chosen.currency}`
+                  : value
+              }}
+            </SelectValue>
+          </SelectTrigger>
+          <SelectContent align="start">
+            {wallets.map((candidate) => (
+              <SelectItem key={candidate.id} value={candidate.id}>
+                {candidate.description || 'Prepaid credits'} · {candidate.currency}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2">
           <Button className="h-8 px-3.5" onClick={() => open('top-up')} disabled={closed}>
             <PlusIcon aria-hidden="true" />
@@ -238,18 +232,18 @@ export function CustomerWalletView({
           <div className="grid grid-cols-2 divide-x">
             <div className="p-6">
               <Balance
-                label="Current balance"
-                hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
-                credits={wallet.creditBalance}
-                value={formatMoney(wallet.balance)}
+                label="Real-time balance"
+                hint="Last invoiced balance minus usage recorded since the last invoice. This is what the next charge draws from."
+                credits={wallet.realTimeCreditBalance}
+                value={formatMoney(wallet.realTimeBalance)}
               />
             </div>
             <div className="p-6">
               <Balance
-                label="Ongoing balance"
-                hint="Current balance minus usage recorded since the last invoice. This is what the next charge draws from."
-                credits={wallet.realTimeCreditBalance}
-                value={formatMoney(wallet.realTimeBalance)}
+                label="Last invoiced balance"
+                hint="Balance when the most recent invoice was finalized. It does not include usage recorded after that."
+                credits={wallet.creditBalance}
+                value={formatMoney(wallet.balance)}
               />
             </div>
           </div>
@@ -278,9 +272,14 @@ export function CustomerWalletView({
           </div>
         </div>
         <dl className="text-muted-foreground grid gap-4 border-t px-6 py-4 text-xs sm:grid-cols-4">
+          <div>
+            <dt>Status</dt>
+            <dd className="mt-1">
+              <Pill tone={STATUS_TONE[wallet.status]}>{WALLET_STATUS_LABEL[wallet.status]}</Pill>
+            </dd>
+          </div>
           {[
-            ['Status', WALLET_STATUS_LABEL[wallet.status]],
-            ['Conversion', `1 credit = ${wallet.conversionRate} ${wallet.currency}`],
+            ['Consumption rate', `1 credit = ${wallet.conversionRate} ${wallet.currency}`],
             ['Top-up rate', `1 credit = ${wallet.topupConversionRate} ${wallet.currency}`],
             ['Auto top-up', wallet.autoTopup ? 'On' : 'Off'],
           ].map(([label, value]) => (
@@ -292,43 +291,52 @@ export function CustomerWalletView({
         </dl>
       </section>
 
-      <Section
-        title="Transactions"
-        flush
-        action={
-          <Select
-            value={filter}
-            onValueChange={(value) => value !== null && setFilter(value as 'all' | 'in' | 'out')}
-          >
-            <SelectTrigger className="h-8 w-40" aria-label="Filter transactions">
-              <SelectValue>
-                {(value) =>
-                  ({ all: 'All activity', in: 'Credits in', out: 'Debits out' })[value as 'all'] ??
-                  value
-                }
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent align="end">
-              <SelectItem value="all">All activity</SelectItem>
-              <SelectItem value="in">Credits in</SelectItem>
-              <SelectItem value="out">Debits out</SelectItem>
-            </SelectContent>
-          </Select>
-        }
-      >
-        {transactionsLoading ? (
-          <LoadingRows />
-        ) : rows.length === 0 ? (
-          <p className="text-muted-foreground px-6 py-10 text-center text-sm">
-            No transactions yet.
-          </p>
-        ) : (
-          <ul className="divide-border/50 divide-y">
-            {rows.map((row) => (
-              <LedgerRow key={row.id} row={row} />
-            ))}
-          </ul>
-        )}
+      <Section table title="Top-ups">
+        <DetailTable
+          compact
+          label="Top-ups"
+          noun="top-ups"
+          rows={topUps}
+          isLoading={transactionsLoading}
+          empty="No top-ups yet."
+          columns={[
+            {
+              key: 'topup',
+              header: 'Top-up',
+              cell: (row) => (
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-medium">{row.reason}</p>
+                  <p className="text-muted-foreground truncate text-xs">
+                    {[row.description, row.createdAt ? `added ${day(row.createdAt)}` : '']
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </p>
+                </div>
+              ),
+            },
+            {
+              key: 'credits',
+              header: 'Credits',
+              sortBy: (row) => Number(row.credits),
+              cell: (row) => (
+                <div>
+                  <p className="text-success text-sm font-medium tabular-nums">
+                    +{credits(row.credits)}
+                  </p>
+                  <p className="text-muted-foreground text-xs tabular-nums">
+                    {formatMoney(row.amount)}
+                  </p>
+                </div>
+              ),
+            },
+            { key: 'remaining', header: 'Remaining', cell: () => <NotTracked /> },
+            { key: 'consumed', header: 'Consumed', cell: () => <NotTracked /> },
+            { key: 'expires', header: 'Expires', cell: () => <NotTracked /> },
+          ]}
+        />
+        <p className="text-muted-foreground border-t px-6 py-3 text-xs">
+          Usage draws on the top-up that expires soonest, among those it is allowed to use.
+        </p>
       </Section>
 
       {createDialog}
@@ -354,47 +362,14 @@ export function CustomerWalletView({
   )
 }
 
-/** list-5 row: tone tile, reason and detail, date, signed amount with credits underneath. */
-function LedgerRow({ row }: { row: WalletTransaction }) {
-  const credit = row.direction === 'in'
-  const sign = credit ? '+' : '−'
-  return (
-    <li className="flex items-center gap-4 px-6 py-4">
-      <span
-        aria-hidden="true"
-        className={cn(
-          'border-background flex size-9 shrink-0 items-center justify-center rounded-lg border-2 shadow-[0_1px_3px_0_rgba(0,0,0,0.12)] [&_svg]:size-4',
-          credit ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive',
-        )}
-      >
-        {credit ? <ArrowUpRightIcon /> : <ArrowDownRightIcon />}
-      </span>
-      <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="text-sm font-medium">{row.reason}</p>
-        {row.description ? (
-          <p className="text-muted-foreground truncate text-xs">{row.description}</p>
-        ) : null}
-      </div>
-      <span className="text-muted-foreground hidden w-28 text-xs sm:block">
-        {day(row.createdAt)}
-      </span>
-      <div className="w-32 space-y-0.5">
-        <p
-          className={cn(
-            'text-[15px] font-medium tabular-nums',
-            credit ? 'text-success' : 'text-destructive',
-          )}
-        >
-          {sign} {formatMoney(row.amount)}
-        </p>
-        <p className="text-muted-foreground text-xs tabular-nums">
-          {sign}
-          {credits(row.credits)} credits
-        </p>
-      </div>
-    </li>
-  )
+const STATUS_TONE: Record<WalletStatus, PillTone> = {
+  [WalletStatus.Active]: 'success',
+  [WalletStatus.Frozen]: 'warning',
+  [WalletStatus.Closed]: 'neutral',
 }
+
+/** The API reports no per-top-up remaining, consumed or expiry, so these read as absent. */
+const NotTracked = () => <span className="text-muted-foreground">—</span>
 
 function CreateWalletDialog({
   open,
@@ -612,8 +587,11 @@ function Balance({
           <TooltipContent className="max-w-60">{hint}</TooltipContent>
         </Tooltip>
       </p>
-      <p className="text-3xl font-medium tabular-nums">{value}</p>
-      <p className="text-muted-foreground text-xs tabular-nums">{credits(creditValue)} credits</p>
+      <p className="text-3xl font-medium tabular-nums">
+        {credits(creditValue)}{' '}
+        <span className="text-muted-foreground text-base font-normal">credits</span>
+      </p>
+      <p className="text-muted-foreground text-sm tabular-nums">{value}</p>
     </div>
   )
 }

@@ -34,8 +34,9 @@ export function CouponRedemptionsView({
   redemptions?: CouponRedemption[]
 }) {
   return (
-    <Section title="Redemptions" flush bare>
+    <Section table title="Redemptions">
       <DetailTable
+        compact
         label="Redemptions"
         noun="redemptions"
         rows={redemptions}

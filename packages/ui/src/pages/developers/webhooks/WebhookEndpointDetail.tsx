@@ -36,7 +36,6 @@ import {
 } from '@ui/components/primitives/input-group'
 import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
 import { DetailList } from '@ui/compositions/tables/DetailList'
-import { SimpleTable } from '@ui/compositions/detail/DetailKit'
 import { EditableCard } from '@ui/compositions/forms/EditableCard'
 import { Field } from '@ui/compositions/forms/Field'
 import { FormDialog } from '@ui/compositions/forms/FormDialog'
@@ -45,6 +44,7 @@ import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { Section } from '@ui/compositions/layout/Section'
 import { provenance } from '@ui/provenance'
 import { CatalogDetailFrame } from '../../product-catalog/catalog-detail/CatalogDetailFrame'
+import { DetailTable } from '../../shared/DetailTable'
 import { Pill } from '../../shared/cells'
 import { SplitMeter } from '../../shared/SplitMeter'
 import { WebhookEventTypePicker } from './WebhookEventTypePicker'
@@ -716,10 +716,15 @@ function CustomHeaders({
       description="Sent with every delivery to this endpoint. Values Svix marks sensitive, such as Authorization, are never shown again."
       flush
     >
-      <SimpleTable<WebhookHeader>
+      <DetailTable<WebhookHeader>
+        compact
+        toolbar={false}
+        label="Custom headers"
+        noun="headers"
         getRowId={(row) => row.name}
         rows={headers}
-        empty={isLoading ? 'Loading headers…' : 'No custom headers.'}
+        isLoading={isLoading}
+        empty="No custom headers."
         columns={[
           {
             key: 'name',

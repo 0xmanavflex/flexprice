@@ -30,6 +30,8 @@ export interface EntitlementTableProps {
   onOpenFeature?: (featureId: string) => void
   /** Section heading; defaults to "Entitlements". */
   title?: string
+  /** Show the heading above the box, for a tab that stacks this table with another. */
+  showTitle?: boolean
 }
 
 const TYPE_ICON: Record<FeatureType, typeof GaugeIcon> = {
@@ -67,6 +69,7 @@ export function EntitlementTable({
   onDelete,
   onOpenFeature,
   title = 'Entitlements',
+  showTitle,
 }: EntitlementTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
@@ -89,8 +92,9 @@ export function EntitlementTable({
   }
 
   return (
-    <Section title={title} flush bare>
+    <Section table title={title} {...(showTitle ? { showTitle } : {})}>
       <DetailTable
+        compact
         {...(addButton ? { action: addButton } : {})}
         label="Entitlements"
         facet={{ label: 'Type', value: (entitlement) => TYPE_LABEL[entitlement.featureType] }}

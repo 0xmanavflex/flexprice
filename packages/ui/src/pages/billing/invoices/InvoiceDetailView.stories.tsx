@@ -27,7 +27,7 @@ interface InvoiceShape {
 
 type PlaygroundArgs = Omit<InvoiceDetailViewProps, 'invoice'> & InvoiceShape
 
-/** Every line is a whole-dollar amount, and every fifth is zero so "show zero" has something to reveal. */
+/** Every line is a whole-dollar amount, and every fifth is zero so the always-hidden zero lines have something to hide. */
 function makeInvoice(args: InvoiceShape): InvoiceDocument {
   const lines = Array.from({ length: args.lineCount }, (_, index) => {
     const zero = index % 5 === 4
@@ -109,7 +109,7 @@ function InvoiceDetailPlayground({
   return <InvoiceDetailView invoice={invoice} {...handlers} />
 }
 
-/** One invoice as a document, with Payments and Credit notes tabs and an Activity, Metadata, Related rail. */
+/** One invoice: Invoice details (document plus Activity, Metadata, Related rail), Payments and Credit notes tabs. */
 const meta = {
   title: 'App/Billing/Invoices/Invoice detail view',
   component: InvoiceDetailPlayground,
@@ -128,7 +128,6 @@ const meta = {
     isFinalizing: false,
     paymentsLoading: false,
     creditNotesLoading: false,
-    showZeroAmounts: false,
     onBack: fn(),
     onEdit: fn(),
     onFinalize: fn(),
@@ -158,7 +157,6 @@ const meta = {
     isFinalizing: { control: 'boolean' },
     paymentsLoading: { control: 'boolean' },
     creditNotesLoading: { control: 'boolean' },
-    showZeroAmounts: { control: 'boolean' },
     onBack: { control: false },
     onEdit: { control: false },
     onFinalize: { control: false },
@@ -189,7 +187,7 @@ type Story = StoryObj<typeof meta>
 /** Status, payment status, and line, payment, credit-note and event counts as controls. */
 export const Playground: Story = {}
 
-/** Plain "Invoice" title; an open invoice whose last payment failed, with status chips, ID chip and the More menu on the right. */
+/** Plain "Invoice" title; an open invoice whose last payment failed, with status pills, ID chip and the More menu on the right. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -206,8 +204,13 @@ export const Default: Story = {
     await expect(canvas.getByText('Date of issue')).toBeVisible()
     await expect(canvas.getByText('Bill from')).toBeVisible()
     await expect(canvas.getByText('Unit price')).toBeVisible()
-    // Only two tabs; the rail is Activity, Metadata, Related.
-    await expect(canvas.getAllByRole('tab')).toHaveLength(2)
+    // Three tabs, Invoice details first and selected; the rail is on that tab only.
+    const tabs = canvas.getAllByRole('tab')
+    await expect(tabs).toHaveLength(3)
+    await expect(tabs[0]).toHaveTextContent('Invoice details')
+    await expect(tabs[0]).toHaveAttribute('aria-selected', 'true')
+    await expect(canvas.queryByText('Invoice number')).toBeNull()
+    await expect(canvas.getByText('Amount due', { selector: 'p' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Related' })).toBeVisible()
@@ -273,7 +276,7 @@ export const Open: Story = {
   args: { status: InvoiceStatus.Open, paymentStatus: 'none', paymentCount: 0 },
 }
 
-/** Overdue reads as a subtle red chip beside Finalized. */
+/** Overdue reads as a danger pill beside Finalized. */
 export const Overdue: Story = {
   args: { status: InvoiceStatus.Overdue, paymentStatus: PaymentStatus.Pending },
   play: async ({ canvasElement }) => {
@@ -299,7 +302,9 @@ export const Paid: Story = {
     paymentCount: 1,
   },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('Paid in full')).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    await expect(within(canvas.getByRole('banner')).getByText('Paid')).toBeVisible()
+    await expect(canvas.getByText('Paid in full.')).toBeInTheDocument()
   },
 }
 
@@ -341,6 +346,7 @@ export const NoPayments: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: /Payments/ }))
     await expect(await canvas.findByText('No payments yet')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Record payment' })).toBeVisible()
   },
 }
 
@@ -358,27 +364,26 @@ export const NoCreditNotes: Story = {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: /Credit notes/ }))
     await expect(await canvas.findByText('No credit notes yet')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Issue credit note' })).toBeVisible()
   },
 }
 
-/** The zero-amount line stays hidden until "show zero" is switched on. */
-export const ShowsZeroLines: Story = {
+/** Zero-amount lines are always hidden, and there is no Items label or switch. */
+export const HidesZeroLines: Story = {
   args: { lineCount: 5 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.queryByText('Support add-on')).toBeNull()
-    await userEvent.click(canvas.getByRole('switch', { name: /Show zero amounts/ }))
-    await expect(await canvas.findByText('Support add-on')).toBeInTheDocument()
+    await expect(canvas.queryByRole('switch')).toBeNull()
+    await expect(canvas.queryByText('Items')).toBeNull()
   },
 }
 
-/** Zero lines shown from the start; the items table sits clear of the toggle row above it. */
-export const ZeroAmountsShown: Story = {
-  args: { lineCount: 5, showZeroAmounts: true },
+/** A draft has no payment note strip. */
+export const DraftHasNoNote: Story = {
+  args: { status: InvoiceStatus.Draft, paymentStatus: 'none', paymentCount: 0, eventCount: 1 },
   play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByRole('switch', { name: /Show zero amounts/ })).toBeChecked()
-    await expect(canvas.getByText('Support add-on')).toBeVisible()
+    await expect(within(canvasElement).queryByText(/Finalizing assigns/)).toBeNull()
   },
 }
 

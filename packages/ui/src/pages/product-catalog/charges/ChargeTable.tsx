@@ -130,8 +130,9 @@ export function ChargeTable({
   }
 
   return (
-    <Section title={title} flush bare>
+    <Section table title={title}>
       <DetailTable
+        compact
         label="Charges"
         {...(addButton ? { action: addButton } : {})}
         facet={{ label: 'Billing model', value: (charge) => modelLabel(charge) }}

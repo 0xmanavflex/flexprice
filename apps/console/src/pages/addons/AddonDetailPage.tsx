@@ -23,6 +23,7 @@ import {
   useCreateBulkEntitlements,
   useCreateCreditGrant,
   useCreditGrants,
+  useDeleteAddon,
   useDeleteCreditGrant,
   useDeleteEntitlement,
   useEntitlements,
@@ -54,17 +55,13 @@ import {
   FormDialog,
   LoadingRows,
   PageBody,
-  Properties,
-  Section,
 } from '@fp/ui/compositions'
-import { PuzzleIcon } from '@fp/ui/icons'
+import { ArchiveIcon, PencilIcon, PuzzleIcon } from '@fp/ui/icons'
 
 export interface AddonDetailPageProps {
   addonId: string
   /** Open with the details already in edit mode (the list row's Edit). */
   startEditing?: boolean
-  /** Open the full edit form. */
-  onEdit?: () => void
   onNavigateToList: () => void
 }
 
@@ -93,16 +90,17 @@ type AddonTab = 'charges' | 'entitlements' | 'subscriptions' | 'information'
 export function AddonDetailPage({
   addonId,
   startEditing = false,
-  onEdit,
   onNavigateToList,
 }: AddonDetailPageProps) {
   const addon = useAddon(addonId)
   const update = useUpdateAddon()
+  const remove = useDeleteAddon()
   // Fetched here too (deduped by react-query) so the rail can carry real counts.
   const prices = usePrices(PriceEntityType.Addon, addonId)
   const entitlements = useEntitlements(EntitlementEntityType.Addon, addonId)
 
   const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'charges')
+  const [archiving, setArchiving] = useState(false)
 
   if (addon.isPending) {
     return (
@@ -143,13 +141,10 @@ export function AddonDetailPage({
   const entitlementCount = (entitlements.data ?? []).length
   const badges = (
     <>
+      <CatalogStatusBadge status={data.status} />
       <Pill>
         {chargeCount} {chargeCount === 1 ? 'charge' : 'charges'}
       </Pill>
-      <Pill>
-        {entitlementCount} {entitlementCount === 1 ? 'entitlement' : 'entitlements'}
-      </Pill>
-      {data.status === 'archived' ? <CatalogStatusBadge status={data.status} /> : null}
     </>
   )
 
@@ -163,14 +158,20 @@ export function AddonDetailPage({
       id={data.lookupKey || data.id}
       menuLabel="Add-on actions"
       menu={[
-        { id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') },
-        ...(onEdit ? [{ id: 'edit', label: 'Edit add-on', onSelect: onEdit }] : []),
         {
-          id: 'entitlements',
-          label: 'Manage entitlements',
-          onSelect: () => setTab('entitlements'),
+          id: 'edit-details',
+          label: 'Edit details',
+          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setTab('information'),
         },
-        { id: 'charges', label: 'View charges', onSelect: () => setTab('charges') },
+        {
+          id: 'archive',
+          label: 'Archive',
+          icon: <ArchiveIcon aria-hidden />,
+          destructive: true,
+          disabled: data.status === 'archived',
+          onSelect: () => setArchiving(true),
+        },
       ]}
       tab={tab}
       onTabChange={(next) => setTab(next as AddonTab)}
@@ -216,7 +217,31 @@ export function AddonDetailPage({
           ),
         },
       ]}
-    />
+    >
+      <ConfirmDialog
+        open={archiving}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiving(false)
+            remove.reset()
+          }
+        }}
+        title="Archive add-on"
+        description={`Archive ${data.name}? Subscriptions already using it keep it, but it can no longer be added.`}
+        confirmLabel="Archive add-on"
+        destructive
+        isPending={remove.isPending}
+        error={remove.isError ? 'Could not archive the add-on. Try again.' : null}
+        onConfirm={() =>
+          remove.mutate(data.id, {
+            onSuccess: () => {
+              setArchiving(false)
+              onNavigateToList()
+            },
+          })
+        }
+      />
+    </CatalogDetailFrame>
   )
 }
 
@@ -339,6 +364,7 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   return (
     <>
       <EntitlementTable
+        showTitle
         entitlements={entitlements.data ?? []}
         onAdd={() => setAdding(true)}
         onEdit={(entitlement) => setEditing(entitlement)}
@@ -427,6 +453,7 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   return (
     <>
       <CreditGrantTable
+        showTitle
         grants={grants.data ?? []}
         onAdd={() => setAdding(true)}
         onEdit={(grant) => setEditing(grant)}
@@ -474,7 +501,7 @@ function InformationTab({
   return (
     <div className="grid gap-5 xl:grid-cols-3">
       <EditableCard
-        className="xl:col-span-2"
+        className="xl:col-span-3"
         title="Add-on details"
         locked={addon.status === 'archived'}
         fields={[
@@ -485,18 +512,6 @@ function InformationTab({
             label: 'Lookup key',
             value: addon.lookupKey,
             display: <span className="font-mono text-[13px]">{addon.lookupKey}</span>,
-            readOnly: true,
-          },
-          {
-            key: 'status',
-            label: 'Status',
-            value: addon.status,
-            // The pill is taller than a text line; this keeps its row as tall as its neighbours.
-            display: (
-              <span className="flex h-5 items-center">
-                <CatalogStatusBadge status={addon.status} />
-              </span>
-            ),
             readOnly: true,
           },
           { key: 'created', label: 'Created', value: formatDate(addon.createdAt), readOnly: true },
@@ -511,19 +526,6 @@ function InformationTab({
         ]}
         onSave={(changes) => onSave(changes)}
       />
-      <div className="flex flex-col gap-5">
-        <Section title="Metadata">
-          <Properties
-            columns={2}
-            items={[
-              {
-                label: 'Add-on ID',
-                value: <span className="font-mono text-[13px]">{addon.id}</span>,
-              },
-            ]}
-          />
-        </Section>
-      </div>
     </div>
   )
 }

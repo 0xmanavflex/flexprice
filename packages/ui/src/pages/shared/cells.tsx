@@ -6,6 +6,7 @@ import { Input } from '@ui/components/primitives/input'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
+import { usePillSize } from '../../compositions/detail/pillSize'
 import { Money } from './Money'
 
 /**
@@ -139,7 +140,9 @@ export interface PillProps {
  * dot in it can be found without reading. The label is always spelled out beside
  * the dot, so the tone is never the only thing saying what the status is.
  */
-export function Pill({ tone = 'neutral', size = 'default', icon, children, className }: PillProps) {
+export function Pill({ tone = 'neutral', size, icon, children, className }: PillProps) {
+  const inherited = usePillSize()
+  size ??= inherited
   return (
     <span
       className={cn(

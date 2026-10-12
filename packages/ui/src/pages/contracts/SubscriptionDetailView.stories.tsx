@@ -358,6 +358,8 @@ export const Default: Story = {
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Related' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
+    await expect(canvas.getByText('Billing cycle')).toBeVisible()
     await expect(canvas.queryByRole('alert')).toBeNull()
   },
 }
@@ -465,6 +467,8 @@ export const PricingTab: Story = {
     await expect(canvas.getAllByText('From plan')).toHaveLength(2)
     await expect(canvas.getByText('Contract only')).toBeVisible()
     await expect(canvas.getByText(/shared by every contract on Scale/)).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Activity' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Metadata' })).toBeNull()
   },
 }
 
@@ -803,8 +807,8 @@ export const UsageOverage: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Overage $400.00')).toBeVisible()
     await userEvent.click(canvas.getByRole('tab', { name: 'Usage' }))
+    await expect(await canvas.findByText('Usage to date')).toBeVisible()
     await expect((await canvas.findAllByText('Overage')).length).toBeGreaterThan(0)
   },
 }

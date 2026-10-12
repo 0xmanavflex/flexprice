@@ -3,7 +3,7 @@ import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
 import { ApiError, useGroup } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView, Pill } from '@fp/ui/pages'
 import { AppFailure, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
-import { LayersIcon } from '@fp/ui/icons'
+import { LayersIcon, PencilIcon } from '@fp/ui/icons'
 
 export interface GroupDetailPageProps {
   groupId: string
@@ -74,15 +74,24 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
       title={data.name}
       badges={
         <>
-          <Pill>{noun} group</Pill>
+          <CatalogStatusBadge status={data.status} />
+          <Pill>{noun.replace(/s$/, '')}</Pill>
           <Pill>
-            {new Intl.NumberFormat().format(data.entityCount)} {kind}
+            {new Intl.NumberFormat().format(data.entityCount)}{' '}
+            {data.entityCount === 1 ? 'member' : 'members'}
           </Pill>
         </>
       }
       id={data.lookupKey || data.id}
       menuLabel="Group actions"
-      menu={[{ id: 'edit-details', label: 'Edit', onSelect: () => setTab('information') }]}
+      menu={[
+        {
+          id: 'edit-details',
+          label: 'Edit details',
+          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
+          onSelect: () => setTab('information'),
+        },
+      ]}
       tab={tab}
       onTabChange={setTab}
       tabs={[
@@ -110,13 +119,6 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
                   readOnly: true,
                 },
                 { key: 'holds', label: 'Holds', value: noun, readOnly: true },
-                {
-                  key: 'status',
-                  label: 'Status',
-                  value: data.status,
-                  display: <CatalogStatusBadge status={data.status} />,
-                  readOnly: true,
-                },
                 {
                   key: 'id',
                   label: 'Group ID',

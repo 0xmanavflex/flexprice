@@ -945,7 +945,7 @@ export function EntityList<T extends object>({
               >
                 <DataGridTable />
               </div>
-              {total > 0 && (!compact || total > pageSize) ? (
+              {total > 0 ? (
                 <div
                   className={cn(
                     'border-border/60 border-t',

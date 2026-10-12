@@ -193,9 +193,9 @@ export const Playground: Story = {
   },
 }
 
-/** `/customers/$customerId?tab=subscriptions`, opened and switched from the tab strip. */
-export const ContractsTab: Story = {
-  args: { activeTab: 'subscriptions' },
+/** `/customers/$customerId?tab=invoices`, switched to from the tab strip. */
+export const InvoicesTab: Story = {
+  args: { activeTab: 'overview' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(await canvas.findByRole('tab', { name: /Invoices/ }))

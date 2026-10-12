@@ -1024,7 +1024,6 @@ function AddonDetailRouteComponent() {
     <AddonDetailPage
       addonId={addonId}
       startEditing={edit === true}
-      onEdit={() => void navigate({ to: '/addons/$addonId/edit', params: { addonId } })}
       onNavigateToList={() => void navigate({ to: '/addons', search: {} as never })}
     />
   )
@@ -1080,7 +1079,6 @@ function CouponDetailRouteComponent() {
     <CouponDetailPage
       couponId={couponId}
       startEditing={edit === true}
-      onEdit={() => void navigate({ to: '/coupons/$couponId/edit', params: { couponId } })}
       onBack={() => void navigate({ to: '/coupons', search: {} as never })}
     />
   )
@@ -1296,9 +1294,6 @@ function CostSheetDetailRouteComponent() {
     <CostSheetDetailPage
       costSheetId={costSheetId}
       startEditing={edit === true}
-      onEdit={() =>
-        void navigate({ to: '/cost-sheets/$costSheetId/edit', params: { costSheetId } })
-      }
       onNavigateToList={() => void navigate({ to: '/cost-sheets', search: {} as never })}
     />
   )
@@ -1418,7 +1413,7 @@ function CustomerEditRouteComponent() {
  *
  * `/customers/$customerId/subscriptions/new` — the id is the path, so the form
  * does not ask which customer this is. Cancel returns to that customer's
- * Subscriptions tab.
+ * Overview tab.
  */
 const customerSubscriptionCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
@@ -1433,7 +1428,7 @@ function CustomerSubscriptionCreateRouteComponent() {
     void navigate({
       to: '/customers/$customerId',
       params: { customerId },
-      search: { tab: 'subscriptions' },
+      search: { tab: 'overview' },
     })
 
   return <CustomerSubscriptionFormPage customerId={customerId} onCancel={back} />

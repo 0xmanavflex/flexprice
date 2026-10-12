@@ -33,7 +33,7 @@ interface DraftRow {
  */
 export function MetadataCard({
   title = 'Metadata',
-  description = 'Your own key/value fields, returned with this record in the API.',
+  description,
   metadata,
   onSave,
   className,
@@ -45,6 +45,10 @@ export function MetadataCard({
   const [pending, setPending] = useState(false)
   const entries = Object.entries(metadata)
   const formId = useId()
+  // Read-only cards say nothing about editing; only an editable one explains the fields.
+  const shownDescription =
+    description ??
+    (onSave ? 'Your own key/value fields, returned with this record in the API.' : undefined)
 
   const start = () => {
     setRows(entries.map(([key, value], index) => ({ id: index, key, value })))
@@ -94,12 +98,7 @@ export function MetadataCard({
       </Button>
     </>
   ) : onSave ? (
-    <Button
-      variant="outline"
-      size="sm"
-      onClick={start}
-      aria-label={`Edit ${title.toLowerCase()}`}
-    >
+    <Button variant="outline" size="sm" onClick={start} aria-label={`Edit ${title.toLowerCase()}`}>
       Edit
     </Button>
   ) : undefined
@@ -107,7 +106,7 @@ export function MetadataCard({
   return (
     <Section
       title={title}
-      description={description}
+      {...(shownDescription ? { description: shownDescription } : {})}
       actions={actions}
       flush
       {...(className ? { className } : {})}

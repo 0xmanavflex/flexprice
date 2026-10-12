@@ -65,8 +65,6 @@ import {
   EditableCard,
   FormDialog,
   LoadingRows,
-  Properties,
-  Section,
 } from '@fp/ui/compositions'
 import {
   Button,
@@ -181,9 +179,9 @@ export function PlanDetailPage({
         id={record.lookupKey || record.id}
         badges={
           <>
+            <Status value={PLAN_STATUS_LABEL[record.status]} />
             {charges.isSuccess ? <Pill>{planKind(charged)}</Pill> : null}
             {billedLabel(charged) ? <Pill>{billedLabel(charged)}</Pill> : null}
-            {isArchived ? <Status value={PLAN_STATUS_LABEL[record.status]} /> : null}
           </>
         }
         actions={
@@ -262,9 +260,7 @@ export function PlanDetailPage({
         <InformationTab
           name={record.name}
           lookupKey={record.lookupKey}
-          planId={record.id}
           description={record.description}
-          status={PLAN_STATUS_LABEL[record.status]}
           createdAt={record.createdAt}
           updatedAt={record.updatedAt}
           readOnly={isArchived}
@@ -631,9 +627,7 @@ function CreditGrantsTab({ planId }: { planId: string }) {
 function InformationTab({
   name,
   lookupKey,
-  planId,
   description,
-  status,
   createdAt,
   updatedAt,
   readOnly,
@@ -641,9 +635,7 @@ function InformationTab({
 }: {
   name: string
   lookupKey: string
-  planId: string
   description: string
-  status: string
   createdAt: Date | null
   updatedAt: Date | null
   readOnly: boolean
@@ -652,7 +644,7 @@ function InformationTab({
   return (
     <div className="grid gap-5 xl:grid-cols-3">
       <EditableCard
-        className="xl:col-span-2"
+        className="xl:col-span-3"
         title="Plan details"
         locked={readOnly}
         fields={[
@@ -668,7 +660,6 @@ function InformationTab({
                 ? null
                 : 'Use lowercase letters, numbers and underscores',
           },
-          { key: 'status', label: 'Status', value: status, readOnly: true },
           { key: 'created', label: 'Created', value: formatDate(createdAt), readOnly: true },
           { key: 'updated', label: 'Updated', value: formatDate(updatedAt), readOnly: true },
           {
@@ -681,16 +672,6 @@ function InformationTab({
         ]}
         onSave={(changes) => onSave(changes)}
       />
-      <div className="flex flex-col gap-5">
-        <Section title="Metadata">
-          <Properties
-            columns={2}
-            items={[
-              { label: 'Plan ID', value: <span className="font-mono text-[13px]">{planId}</span> },
-            ]}
-          />
-        </Section>
-      </div>
     </div>
   )
 }
