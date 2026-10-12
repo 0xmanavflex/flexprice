@@ -5,6 +5,7 @@ import { TaxRateGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { PercentIcon } from '@fp/ui/icons'
+import { toListFailure } from '../shared/listFailure'
 
 export interface TaxListPageProps {
   query: TaxRateQuery
@@ -32,7 +33,7 @@ export function TaxListPage({
 
   const [deleting, setDeleting] = useState<TaxRate | null>(null)
 
-  const failure = toFailure(taxRates.error)
+  const failure = toListFailure(taxRates.error, 'tax rates')
   const rows = taxRates.data?.taxRates ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
@@ -48,7 +49,12 @@ export function TaxListPage({
         <ListState
           isLoading={taxRates.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (taxRates.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={taxRates.isFetching && !taxRates.isPending}
+          isProvisional={taxRates.isPlaceholderData}
+          isRetrying={taxRates.isFetching && taxRates.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void taxRates.refetch()}
           onClearFilters={clearFilters}
@@ -87,26 +93,6 @@ export function TaxListPage({
       />
     </>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to tax rates here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading tax rates.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading tax rates.', canRetry: true }
 }
 
 /** A save failure, as a sentence the form can show inline. */

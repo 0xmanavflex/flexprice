@@ -1,4 +1,4 @@
-import { Section } from '../../../compositions'
+import { EmptyState, Section } from '../../../compositions'
 
 import { Status } from '../../shared/cells'
 import { DetailTable } from '../../shared/DetailTable'
@@ -11,24 +11,28 @@ export interface AddonSubscriber {
   status: string
 }
 
-/** DEMO data: no add-on subscriptions endpoint exists yet. Replace with a query when one does. */
-export const DEMO_ADDON_SUBSCRIPTIONS: AddonSubscriber[] = [
-  { id: 's1', customer: 'Acme Corp', plan: 'Pro monthly', since: 'Aug 2, 2026', status: 'Active' },
-  { id: 's2', customer: 'Globex', plan: 'Scale annual', since: 'Jul 14, 2026', status: 'Active' },
-  {
-    id: 's3',
-    customer: 'Umbrella',
-    plan: 'Pro monthly',
-    since: 'Jun 30, 2026',
-    status: 'Cancelled',
-  },
-]
-
+/**
+ * The contracts using an add-on. Flexprice has no add-on contracts endpoint
+ * yet, so the console passes no `subscriptions` and this says so; it never
+ * shows sample rows. Pass the rows (an empty array means none) once a source
+ * exists.
+ */
 export function AddonSubscriptionsView({
-  subscriptions = DEMO_ADDON_SUBSCRIPTIONS,
+  subscriptions,
 }: {
-  subscriptions?: AddonSubscriber[]
+  subscriptions?: AddonSubscriber[] | undefined
 }) {
+  if (!subscriptions) {
+    return (
+      <Section title="Contracts">
+        <EmptyState
+          size="inline"
+          title="Contracts using this add-on are not available yet"
+          description="Flexprice does not list the contracts that use an add-on, so none are shown."
+        />
+      </Section>
+    )
+  }
   return (
     <Section table title="Contracts">
       <DetailTable

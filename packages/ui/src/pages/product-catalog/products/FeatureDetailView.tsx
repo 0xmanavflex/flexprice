@@ -1,5 +1,3 @@
-import { useState } from 'react'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
 import { toast } from 'sonner'
 import {
   type AggregationType,
@@ -22,7 +20,9 @@ import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon, PlusIcon } from '@
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
 import { EditableCard } from '../../../compositions/forms/EditableCard'
-import { LoadingRows } from '../../../compositions'
+import { EmptyState } from '../../../compositions/feedback/EmptyState'
+import { SubTabState, knownCount } from '../../../compositions/detail/SubTabState'
+import type { ErrorKind } from '../../../compositions/feedback/States'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { Section } from '../../../compositions/layout/Section'
 import {
@@ -31,7 +31,6 @@ import {
   Properties,
   type DetailMenuItem,
 } from '../../../compositions/detail/DetailKit'
-import { MetricChart, type MetricPoint } from '../../shared/charts'
 import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../../shared/cells'
 import { DetailTable } from '../../shared/DetailTable'
 
@@ -68,24 +67,20 @@ export interface FeatureDetailViewProps {
   charges?: FeatureChargeLink[]
   chargesLoading?: boolean
   chargesError?: string | null
+  chargesErrorKind?: ErrorKind | undefined
+  onRetryCharges?: (() => void) | undefined
   /** Plans and add-ons that grant this feature. */
   entitlements?: FeatureEntitlementLink[]
   entitlementsLoading?: boolean
   entitlementsError?: string | null
+  entitlementsErrorKind?: ErrorKind | undefined
+  onRetryEntitlements?: (() => void) | undefined
   /** Charges tab CTA: price this feature on a plan. Omitted, no button is shown. */
   onAddPlan?: () => void
   /** Entitlements tab CTA: grant this feature on a plan. Omitted, no button is shown. */
   onAddEntitlement?: () => void
   /** Saves the whole metadata map. Omitted, the Metadata section is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
-}
-
-/** Thirty days of plausible-looking usage. Demo only: no usage read exists for a feature yet. */
-export function demoUsagePoints(): MetricPoint[] {
-  return Array.from({ length: 30 }, (_, index) => ({
-    label: `Day ${index + 1}`,
-    value: Math.round(3200 + index * 90 + Math.sin(index / 2.2) * 900 + ((index * 37) % 7) * 120),
-  }))
 }
 
 /**
@@ -193,9 +188,13 @@ export function FeatureDetailView({
   charges = [],
   chargesLoading = false,
   chargesError = null,
+  chargesErrorKind,
+  onRetryCharges,
   entitlements = [],
   entitlementsLoading = false,
   entitlementsError = null,
+  entitlementsErrorKind,
+  onRetryEntitlements,
   onAddPlan,
   onAddEntitlement,
   onSaveMetadata,
@@ -214,14 +213,21 @@ export function FeatureDetailView({
           {
             value: 'charges',
             label: 'Charges',
-            ...(chargesLoading ? {} : { count: charges.length }),
+            ...withCount(
+              knownCount(charges.length, { isLoading: chargesLoading, error: chargesError }),
+            ),
           },
         ]
       : []),
     {
       value: 'entitlements',
       label: 'Entitlements',
-      ...(entitlementsLoading ? {} : { count: entitlements.length }),
+      ...withCount(
+        knownCount(entitlements.length, {
+          isLoading: entitlementsLoading,
+          error: entitlementsError,
+        }),
+      ),
     },
     { value: 'information', label: 'Information' },
   ]
@@ -278,6 +284,9 @@ export function FeatureDetailView({
           feature={feature}
           charges={charges}
           chargesLoading={chargesLoading}
+          chargesError={chargesError}
+          chargesErrorKind={chargesErrorKind}
+          onRetryCharges={onRetryCharges}
           onSeeCharges={() => onTabChange('charges')}
         />
       ) : null}
@@ -287,6 +296,8 @@ export function FeatureDetailView({
           rows={charges}
           isLoading={chargesLoading}
           error={chargesError}
+          errorKind={chargesErrorKind}
+          onRetry={onRetryCharges}
           {...(onAddPlan ? { onAdd: onAddPlan } : {})}
         />
       ) : null}
@@ -296,6 +307,8 @@ export function FeatureDetailView({
           rows={entitlements}
           isLoading={entitlementsLoading}
           error={entitlementsError}
+          errorKind={entitlementsErrorKind}
+          onRetry={onRetryEntitlements}
           {...(onAddEntitlement ? { onAdd: onAddEntitlement } : {})}
         />
       ) : null}
@@ -327,32 +340,37 @@ function ChargesTab({
   rows,
   isLoading,
   error,
+  errorKind,
+  onRetry,
   onAdd,
 }: {
   rows: FeatureChargeLink[]
   isLoading: boolean
   error: string | null
+  errorKind?: ErrorKind | undefined
+  onRetry?: (() => void) | undefined
   onAdd?: () => void
 }) {
   const add = onAdd ? <AddButton label="Add plan" onClick={onAdd} /> : undefined
-  if (error) return <p className="text-destructive p-6 text-sm">{error}</p>
-  if (isLoading) {
-    return (
-      <Section title="Charges" flush>
-        <div className="p-4">
-          <LoadingRows />
-        </div>
-      </Section>
-    )
-  }
   if (rows.length === 0) {
     return (
       <Section title="Charges" flush>
-        <SectionEmpty
-          title="No charges yet"
-          description="No plan or add-on prices this feature yet."
-          action={add}
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading}
+          error={error}
+          errorKind={errorKind}
+          onRetry={onRetry}
+          columns={5}
+          loadingLabel="Loading charges"
+          empty={{
+            title: 'No charges yet',
+            description: 'No plan or add-on prices this feature yet.',
+            action: add,
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }
@@ -429,32 +447,37 @@ function EntitlementsTab({
   rows,
   isLoading,
   error,
+  errorKind,
+  onRetry,
   onAdd,
 }: {
   rows: FeatureEntitlementLink[]
   isLoading: boolean
   error: string | null
+  errorKind?: ErrorKind | undefined
+  onRetry?: (() => void) | undefined
   onAdd?: () => void
 }) {
   const add = onAdd ? <AddButton label="Add entitlement" onClick={onAdd} /> : undefined
-  if (error) return <p className="text-destructive p-6 text-sm">{error}</p>
-  if (isLoading) {
-    return (
-      <Section title="Entitlements" flush>
-        <div className="p-4">
-          <LoadingRows />
-        </div>
-      </Section>
-    )
-  }
   if (rows.length === 0) {
     return (
       <Section title="Entitlements" flush>
-        <SectionEmpty
-          title="No entitlements yet"
-          description="No plan includes this feature yet."
-          action={add}
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading}
+          error={error}
+          errorKind={errorKind}
+          onRetry={onRetry}
+          columns={4}
+          loadingLabel="Loading entitlements"
+          empty={{
+            title: 'No entitlements yet',
+            description: 'No plan includes this feature yet.',
+            action: add,
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }
@@ -517,59 +540,37 @@ function EntitlementsTab({
   )
 }
 
+/** A tab count as a spread: present only when known. */
+function withCount(count: number | undefined): { count?: number } {
+  return count === undefined ? {} : { count }
+}
+
 function OverviewTab({
   feature,
   charges,
   chargesLoading,
+  chargesError,
+  chargesErrorKind,
+  onRetryCharges,
   onSeeCharges,
 }: {
   feature: Feature
   charges: FeatureChargeLink[]
   chargesLoading: boolean
+  chargesError: string | null
+  chargesErrorKind?: ErrorKind | undefined
+  onRetryCharges?: (() => void) | undefined
   onSeeCharges: () => void
 }) {
-  const [metric, setMetric] = useState('usage')
-  const usage = demoUsagePoints()
-  const total = usage.reduce((sum, point) => sum + point.value, 0)
-  const unit = feature.unitPlural || 'units'
-  const compact = new Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 1 })
-  const chartTabs = [
-    {
-      id: 'usage',
-      label: 'Usage, last 30 days',
-      value: (
-        <>
-          {compact.format(total)}
-          <span className="text-muted-foreground ms-1.5 text-sm font-normal">{unit}</span>
-        </>
-      ),
-      points: usage,
-    },
-    {
-      id: 'customers',
-      label: 'Customers reporting',
-      value: '212',
-      points: usage.map((point, index) => ({
-        ...point,
-        value: 150 + Math.round(point.value / 160) + (index % 5),
-      })),
-    },
-    {
-      id: 'billed',
-      label: 'Billed from this feature',
-      value: '$18,420',
-      points: usage.map((point) => ({ ...point, value: Math.round(point.value / 6) })),
-    },
-  ]
-
   return (
     <div className="flex flex-col gap-5">
-      <MetricChart
-        tabs={chartTabs}
-        activeTab={metric}
-        onTabChange={setMetric}
-        caption="Demo data: real usage is not wired yet"
-      />
+      <Section title="Usage">
+        <EmptyState
+          size="inline"
+          title="Usage for this feature is not available yet"
+          description="Flexprice does not report usage, customers or billed amounts per feature, so none are shown."
+        />
+      </Section>
       <div className="grid gap-5 xl:grid-cols-5">
         <Section
           className="xl:col-span-3"
@@ -583,15 +584,22 @@ function OverviewTab({
           }
         >
           {/* Rows share the height of the panel so both overview panels line up. */}
-          {chargesLoading ? (
-            <div className="p-4">
-              <LoadingRows />
-            </div>
-          ) : charges.length === 0 ? (
-            <SectionEmpty
-              title="No plans attached yet"
-              description="No plan prices this feature yet."
-            />
+          {charges.length === 0 ? (
+            <SubTabState
+              hasData={false}
+              isLoading={chargesLoading}
+              error={chargesError}
+              errorKind={chargesErrorKind}
+              onRetry={onRetryCharges}
+              columns={3}
+              loadingLabel="Loading plans"
+              empty={{
+                title: 'No plans attached yet',
+                description: 'No plan prices this feature yet.',
+              }}
+            >
+              {null}
+            </SubTabState>
           ) : (
             <ul className="divide-border/50 flex flex-1 flex-col divide-y">
               {charges.slice(0, 4).map((row) => (

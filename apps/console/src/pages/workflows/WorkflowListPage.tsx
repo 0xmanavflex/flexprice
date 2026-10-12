@@ -1,8 +1,9 @@
 import { WorkflowIcon } from '@fp/ui/icons'
 import { type WorkflowQuery } from '@fp/domain'
-import { ApiError, useWorkflowRuns } from '@fp/query'
+import { useWorkflowRuns } from '@fp/query'
 import { WorkflowGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
+import { toListFailure } from '../shared/listFailure'
 
 export interface WorkflowListPageProps {
   query: WorkflowQuery
@@ -12,6 +13,7 @@ export interface WorkflowListPageProps {
 /** The wiring layer: fetch, turn an error into a sentence, hand the grid plain props. */
 export function WorkflowListPage({ query, onQueryChange }: WorkflowListPageProps) {
   const workflows = useWorkflowRuns(query)
+  const failure = toListFailure(workflows.error, 'workflows')
 
   const rows = workflows.data?.runs ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -21,8 +23,13 @@ export function WorkflowListPage({ query, onQueryChange }: WorkflowListPageProps
     <PageBody>
       <ListState
         isLoading={workflows.isPending}
-        error={toFailure(workflows.error)}
-        isEmpty={rows.length === 0 && !isFiltered}
+        error={failure}
+        isEmpty={rows.length === 0 && (workflows.data?.total ?? 0) === 0 && !isFiltered}
+        hasRows={rows.length > 0}
+        isRefreshing={workflows.isFetching && !workflows.isPending}
+        isProvisional={workflows.isPlaceholderData}
+        isRetrying={workflows.isFetching && workflows.isError}
+        {...(failure ? { failureKind: failure.kind } : {})}
         isFiltered={isFiltered}
         onRetry={() => void workflows.refetch()}
         onClearFilters={clearFilters}
@@ -41,24 +48,4 @@ export function WorkflowListPage({ query, onQueryChange }: WorkflowListPageProps
       </ListState>
     </PageBody>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to workflows here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading workflows.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading workflows.', canRetry: true }
 }

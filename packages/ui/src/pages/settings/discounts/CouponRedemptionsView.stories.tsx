@@ -33,8 +33,18 @@ export const Playground: StoryObj<{ rows: number }> = {
   render: ({ rows }) => <CouponRedemptionsView redemptions={makeRedemptions(rows)} />,
 }
 
-/** The demo data the container ships with until an endpoint exists. */
+/** No redemption-history endpoint exists: the tab says so instead of listing sample rows. */
 export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Redemption history is not available yet')).toBeInTheDocument()
+    await expect(canvas.queryByText('Acme Robotics')).toBeNull()
+  },
+}
+
+/** Real rows, once a source exists. */
+export const WithRows: Story = {
+  args: { redemptions: makeRedemptions(3) },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('Acme Robotics')).toBeInTheDocument()
   },

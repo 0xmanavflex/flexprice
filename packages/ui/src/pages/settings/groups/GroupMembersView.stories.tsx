@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, within } from 'storybook/test'
-import { DEMO_GROUP_MEMBERS, GroupMembersView, type GroupMember } from './GroupMembersView'
+import { GroupMembersView, type GroupMember } from './GroupMembersView'
 
 const KINDS = ['Metered feature', 'Static feature', 'Boolean feature', 'Config feature']
 
@@ -31,11 +31,22 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-/** The default demo rows the console shows today. */
+/** No member-entities read exists: the tab says so instead of listing sample rows. */
 export const Default: Story = {
-  args: { members: DEMO_GROUP_MEMBERS },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('API requests')).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByText('The features in this group are not listed yet'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('API requests')).toBeNull()
+  },
+}
+
+/** Real members, once a source exists. */
+export const WithMembers: Story = {
+  args: { members: makeMembers(3) },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByText('Feature 01')).toBeInTheDocument()
   },
 }
 

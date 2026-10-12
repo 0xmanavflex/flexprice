@@ -2,7 +2,6 @@ import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import type { TenantFeatureUsage } from '@fp/domain'
 import {
-  ApiError,
   useCustomer,
   useCustomerInvoices,
   useCustomerSubscriptions,
@@ -10,24 +9,12 @@ import {
   useDeleteCustomer,
   useUpdateCustomer,
 } from '@fp/query'
-import {
-  CUSTOMER_TABS,
-  CustomerAnalyticsView,
-  CustomerDetail,
-  DEMO_FEATURE_ANALYTICS,
-  QuotaCard,
-  type CustomerTab,
-} from '@fp/ui/pages'
+import { CUSTOMER_TABS, CustomerDetail, QuotaCard, type CustomerTab } from '@fp/ui/pages'
+import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
-import {
-  AppFailure,
-  ConfirmDialog,
-  EmptyState,
-  LoadingRows,
-  PageBody,
-  Section,
-} from '@fp/ui/compositions'
+import { AppFailure, ConfirmDialog, EmptyState, LoadingRows, Section } from '@fp/ui/compositions'
+import { detailGate } from '@/pages/shared/detailGate'
 
 /**
  * Turns whatever is in `?tab=` into a real section, defaulting to Overview.
@@ -80,36 +67,12 @@ export function CustomerDetailPage({
   const [archiving, setArchiving] = useState(false)
   const navigate = useNavigate()
 
-  if (customer.isPending) {
-    return (
-      <div className="p-6">
-        <LoadingRows />
-      </div>
-    )
-  }
-
-  if (customer.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(customer.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void customer.refetch()}
-        />
-      </PageBody>
-    )
-  }
-
   if (!customer.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This customer no longer exists"
-          detail="It may have been deleted. Everything else in billing still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(customer, {
+      noun: 'this customer',
+      listName: 'customers',
+      onBack: onNavigateToList,
+    })
   }
 
   return (
@@ -156,13 +119,32 @@ export function CustomerDetailPage({
           })
         }
         subscriptionsLoading={subscriptions.isLoading}
-        subscriptionsError={subscriptions.isError}
+        subscriptionsError={subscriptions.isError && !subscriptions.data}
+        onRetrySubscriptions={() => void subscriptions.refetch()}
         invoicesLoading={invoices.isLoading}
+        invoicesError={invoices.isError && !invoices.data}
+        onRetryInvoices={() => void invoices.refetch()}
+        events={
+          customer.data.externalId ? (
+            <CustomerEventsPanel externalId={customer.data.externalId} />
+          ) : (
+            <EmptyState
+              title="No external ID"
+              description="Events are matched to a customer by external ID, and this customer has none."
+            />
+          )
+        }
         wallet={<CustomerWalletPanel customerId={customer.data.id} />}
         taxes={<CustomerTaxPanel customerId={customer.data.id} />}
         usage={
           <div className="flex flex-col gap-8">
-            <CustomerAnalyticsView features={DEMO_FEATURE_ANALYTICS} />
+            <Section title="Analytics">
+              <EmptyState
+                size="inline"
+                title="Revenue and cost by feature are not available yet"
+                description="Flexprice does not report revenue or cost per feature for a customer, so none is shown. Allowances and consumption are below."
+              />
+            </Section>
             <UsageSection
               features={usage.data?.features ?? []}
               isLoading={usage.isLoading}
@@ -199,23 +181,6 @@ export function CustomerDetailPage({
   )
 }
 
-/** An API error, as a sentence a person can act on. */
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this customer'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice'
-      default:
-        return 'This customer could not be loaded'
-    }
-  }
-  return 'This customer could not be loaded'
-}
-
 /**
  * A customer's entitlement quotas, one `QuotaCard` per entitled feature.
  *
@@ -249,7 +214,7 @@ function UsageSection({
   failed: boolean
   onRetry: () => void
 }) {
-  if (isLoading) {
+  if (features.length === 0 && isLoading) {
     return (
       <Section title="Usage">
         <LoadingRows />
@@ -257,7 +222,7 @@ function UsageSection({
     )
   }
 
-  if (failed) {
+  if (features.length === 0 && failed) {
     return (
       <Section title="Usage">
         <AppFailure

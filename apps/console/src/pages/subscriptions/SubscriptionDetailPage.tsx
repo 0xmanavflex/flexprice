@@ -18,17 +18,11 @@ import {
   useUpdateSubscriptionLineItem,
 } from '@fp/query'
 import { SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
-import {
-  AppFailure,
-  ConfirmDialog,
-  DateInput,
-  LoadingRows,
-  OptionSelect,
-  PageBody,
-} from '@fp/ui/compositions'
+import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input } from '@fp/ui/primitives'
 import { usePlanFormOptions } from '../plans/planFormOptions'
-import { mockSubscriptionActivity } from './subscriptionActivityMock'
+import { subscriptionLifecycle } from './subscriptionLifecycle'
+import { detailGate } from '../shared/detailGate'
 
 export interface SubscriptionDetailPageProps {
   subscriptionId: string
@@ -96,30 +90,16 @@ export function SubscriptionDetailPage({
   const [startDate, setStartDate] = useState(today())
 
   const activity = useMemo(
-    () => (subscription.data ? mockSubscriptionActivity(subscription.data) : []),
+    () => (subscription.data ? subscriptionLifecycle(subscription.data) : []),
     [subscription.data],
   )
 
-  if (subscription.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (subscription.error || !subscription.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={subscription.error ? 'This contract could not be loaded' : 'Contract not found'}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={subscription.error ? () => void subscription.refetch() : onNavigateToList}
-        />
-      </PageBody>
-    )
+  if (!subscription.data) {
+    return detailGate(subscription, {
+      noun: 'this contract',
+      listName: 'contracts',
+      onBack: onNavigateToList,
+    })
   }
 
   const data = subscription.data

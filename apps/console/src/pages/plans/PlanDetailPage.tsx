@@ -58,13 +58,11 @@ import {
   pricingSummary,
 } from '@fp/ui/pages'
 import {
-  AppFailure,
   ConfirmDialog,
   DetailHeader,
   DetailTabs,
   EditableCard,
   FormDialog,
-  LoadingRows,
 } from '@fp/ui/compositions'
 import {
   Button,
@@ -83,6 +81,8 @@ import {
   RefreshCwIcon,
 } from '@fp/ui/icons'
 import { usePlanFormOptions } from './planFormOptions'
+import { detailGate } from '../shared/detailGate'
+import { subTab } from '../shared/subTab'
 
 /**
  * A plan's detail page — the hub where a plan is completed.
@@ -134,6 +134,7 @@ export function PlanDetailPage({
   onArchived,
   onDuplicated,
   onEdit,
+  onNavigateToList,
 }: PlanDetailPageProps) {
   const plan = usePlan(planId)
   const update = useUpdatePlan()
@@ -148,22 +149,8 @@ export function PlanDetailPage({
 
   const [archiving, setArchiving] = useState(false)
 
-  if (plan.isPending) {
-    return (
-      <div className="px-10 pt-8 pb-16 2xl:px-14">
-        <LoadingRows />
-      </div>
-    )
-  }
-
-  if (plan.error || !plan.data) {
-    return (
-      <AppFailure
-        title="This plan could not be loaded"
-        detail="It may have been archived, or the link may be out of date."
-        onRetry={() => void plan.refetch()}
-      />
-    )
+  if (!plan.data) {
+    return detailGate(plan, { noun: 'this plan', listName: 'plans', onBack: onNavigateToList })
   }
 
   const record = plan.data
@@ -440,8 +427,6 @@ function EntitlementsTab({ planId }: { planId: string }) {
       })
     : undefined
 
-  if (entitlements.isPending) return <LoadingRows />
-
   const usagePrice = (entitlement: Entitlement): string | null => {
     if (entitlement.featureType !== FeatureType.Metered) return null
     const meterId = allFeatures.find((f) => f.id === entitlement.featureId)?.meterId
@@ -464,6 +449,7 @@ function EntitlementsTab({ planId }: { planId: string }) {
     <>
       <PlanEntitlementsView
         entitlements={entitlements.data ?? []}
+        {...subTab(entitlements, 'entitlements')}
         usagePrice={usagePrice}
         onAdd={() => setForm('add')}
         onEdit={(entitlement) => setForm(entitlement)}
@@ -548,8 +534,6 @@ function CreditGrantsTab({ planId }: { planId: string }) {
   const [form, setForm] = useState<'add' | CreditGrant | null>(null)
   const [removing, setRemoving] = useState<CreditGrant | null>(null)
 
-  if (grants.isPending) return <LoadingRows />
-
   const editing = form !== null && form !== 'add' ? form : null
   const close = () => {
     setForm(null)
@@ -561,6 +545,7 @@ function CreditGrantsTab({ planId }: { planId: string }) {
     <>
       <PlanCreditGrantsView
         grants={grants.data ?? []}
+        {...subTab(grants, 'credit grants')}
         onAdd={() => setForm('add')}
         onEdit={(grant) => setForm(grant)}
         onDelete={(grant) => setRemoving(grant)}

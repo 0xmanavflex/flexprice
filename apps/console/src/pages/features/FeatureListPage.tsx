@@ -1,17 +1,12 @@
 import { useMemo, useState } from 'react'
 import { type CloneFeature, type Feature, type FeatureQuery } from '@fp/domain'
-import {
-  ApiError,
-  useCloneFeature,
-  useDeleteFeature,
-  useFeatureLinkage,
-  useFeatures,
-} from '@fp/query'
+import { useCloneFeature, useDeleteFeature, useFeatureLinkage, useFeatures } from '@fp/query'
 import { FeatureCloneDialog, FeatureGrid, type ProductLinkage } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { GaugeIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
 import { toSubmitError } from './featureMessages'
+import { toListFailure } from '../shared/listFailure'
 
 export interface FeatureListPageProps {
   query: FeatureQuery
@@ -55,7 +50,7 @@ export function FeatureListPage({
   const submitClone = (draft: CloneFeature) => {
     if (cloning) clone.mutate({ id: cloning.id, draft }, { onSuccess: closeClone })
   }
-  const failure = toFailure(features.error)
+  const failure = toListFailure(features.error, 'products')
   const rows = useMemo(() => features.data?.features ?? [], [features.data])
 
   /*
@@ -99,7 +94,12 @@ export function FeatureListPage({
         <ListState
           isLoading={features.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (features.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={features.isFetching && !features.isPending}
+          isProvisional={features.isPlaceholderData}
+          isRetrying={features.isFetching && features.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void features.refetch()}
           onClearFilters={clearFilters}
@@ -159,30 +159,4 @@ export function FeatureListPage({
       />
     </>
   )
-}
-
-/**
- * A failure, as a sentence and a judgement about whether retrying can help.
- *
- * `canRetry` is the important half: a permission error offers no retry, because
- * pressing the button again cannot change the answer.
- */
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to products here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading products.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading products.', canRetry: true }
 }

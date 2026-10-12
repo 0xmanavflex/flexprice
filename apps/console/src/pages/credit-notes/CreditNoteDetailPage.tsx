@@ -10,7 +10,8 @@ import {
 } from '@fp/domain'
 import { ApiError, useCreditNote, useFinalizeCreditNote, useVoidCreditNote } from '@fp/query'
 import { CatalogDetailFrame, EntityLink, Pill, Status } from '@fp/ui/pages'
-import { AppFailure, ConfirmDialog, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { ConfirmDialog, EditableCard } from '@fp/ui/compositions'
+import { detailGate } from '../shared/detailGate'
 
 export interface CreditNoteDetailPageProps {
   creditNoteId: string
@@ -38,26 +39,8 @@ export function CreditNoteDetailPage({
   const voidNote = useVoidCreditNote()
   const [dialog, setDialog] = useState<'finalize' | 'void' | null>(null)
 
-  if (note.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (note.error || !note.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={note.error ? 'This credit note could not be loaded' : 'Credit note not found'}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={note.error ? () => void note.refetch() : onBack}
-        />
-      </PageBody>
-    )
+  if (!note.data) {
+    return detailGate(note, { noun: 'this credit note', listName: 'credit notes', onBack: onBack })
   }
 
   const data = note.data

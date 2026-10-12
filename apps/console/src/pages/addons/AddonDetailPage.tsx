@@ -18,7 +18,6 @@ import {
   entitlementToEdit,
 } from '@fp/domain'
 import {
-  ApiError,
   useAddon,
   useCreateBulkEntitlements,
   useCreateCreditGrant,
@@ -48,15 +47,10 @@ import {
   type FeatureOption,
   Pill,
 } from '@fp/ui/pages'
-import {
-  AppFailure,
-  ConfirmDialog,
-  EditableCard,
-  FormDialog,
-  LoadingRows,
-  PageBody,
-} from '@fp/ui/compositions'
+import { ConfirmDialog, EditableCard, FormDialog } from '@fp/ui/compositions'
 import { ArchiveIcon, PencilIcon, PuzzleIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
+import { subTab } from '../shared/subTab'
 
 export interface AddonDetailPageProps {
   addonId: string
@@ -102,38 +96,8 @@ export function AddonDetailPage({
   const [tab, setTab] = useState<AddonTab>(startEditing ? 'information' : 'charges')
   const [archiving, setArchiving] = useState(false)
 
-  if (addon.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (addon.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(addon.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void addon.refetch()}
-        />
-      </PageBody>
-    )
-  }
-
   if (!addon.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This add-on no longer exists"
-          detail="It may have been deleted. Everything else in the catalogue still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(addon, { noun: 'this add-on', listName: 'add-ons', onBack: onNavigateToList })
   }
 
   const data = addon.data
@@ -179,13 +143,13 @@ export function AddonDetailPage({
         {
           value: 'charges',
           label: 'Charges',
-          ...(prices.isPending ? {} : { count: chargeCount }),
+          ...(prices.data ? { count: chargeCount } : {}),
           content: <PricesTab addonId={addonId} />,
         },
         {
           value: 'entitlements',
           label: 'Entitlements',
-          ...(entitlements.isPending ? {} : { count: entitlementCount }),
+          ...(entitlements.data ? { count: entitlementCount } : {}),
           content: (
             <div className="flex flex-col gap-5">
               <EntitlementsTab addonId={addonId} />
@@ -251,8 +215,6 @@ function PricesTab({ addonId }: { addonId: string }) {
   const terminate = useTerminatePrice()
   const [target, setTarget] = useState<Charge | null>(null)
 
-  if (charges.isPending) return <LoadingRows />
-
   const close = () => {
     setTarget(null)
     terminate.reset()
@@ -269,6 +231,7 @@ function PricesTab({ addonId }: { addonId: string }) {
       */}
       <ChargeTable
         charges={charges.data ?? []}
+        {...subTab(charges, 'charges')}
         emptyDescription="This add-on bills nothing until it has a charge."
         onTerminate={(charge) => setTarget(charge)}
       />
@@ -314,8 +277,6 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
   const allFeatures = features.data?.features ?? []
   const options = allFeatures.filter((f) => !granted.has(f.id)).map(toOption)
   const editingFeature = editing ? allFeatures.find((f) => f.id === editing.featureId) : undefined
-
-  if (entitlements.isPending) return <LoadingRows />
 
   const submit = (draft: CreateEntitlement) => {
     create.mutate(
@@ -366,6 +327,7 @@ function EntitlementsTab({ addonId }: { addonId: string }) {
       <EntitlementTable
         showTitle
         entitlements={entitlements.data ?? []}
+        {...subTab(entitlements, 'entitlements')}
         onAdd={() => setAdding(true)}
         onEdit={(entitlement) => setEditing(entitlement)}
         onDelete={(entitlement) => setTarget(entitlement)}
@@ -414,8 +376,6 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   const [editing, setEditing] = useState<CreditGrant | null>(null)
   const [target, setTarget] = useState<CreditGrant | null>(null)
 
-  if (grants.isPending) return <LoadingRows />
-
   const submit = (grant: CreateCreditGrant) => {
     create.mutate(
       { scope: CreditGrantScope.Addon, id: addonId, grant },
@@ -455,6 +415,7 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
       <CreditGrantTable
         showTitle
         grants={grants.data ?? []}
+        {...subTab(grants, 'credit grants')}
         onAdd={() => setAdding(true)}
         onEdit={(grant) => setEditing(grant)}
         onDelete={(grant) => setTarget(grant)}
@@ -533,20 +494,4 @@ function InformationTab({
 function formatDate(value: Date | null): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this add-on.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This add-on could not be loaded.'
-    }
-  }
-  return 'This add-on could not be loaded.'
 }

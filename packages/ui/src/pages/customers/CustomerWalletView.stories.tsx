@@ -188,7 +188,7 @@ export const Default: Story = {
 export const Loading: Story = { args: { isLoading: true } }
 
 export const Failed: Story = {
-  args: { failed: true },
+  args: { failed: true, wallets: [], transactions: [], selectedId: null },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('Wallets could not be loaded')).toBeInTheDocument()
@@ -205,12 +205,52 @@ export const NoWallet: Story = {
   },
 }
 
-export const TransactionsLoading: Story = { args: { transactionsLoading: true } }
+/** The ledger is loading: a shaped skeleton, never "No top-ups yet". */
+export const TransactionsLoading: Story = {
+  args: { transactions: [], transactionsLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Loading top-ups')).toBeInTheDocument()
+    await expect(canvas.queryByText('No top-ups yet')).toBeNull()
+  },
+}
+
+/** The ledger read failed: an error with retry in the Top-ups section, never "No top-ups yet". */
+export const TransactionsFailed: Story = {
+  args: {
+    transactions: [],
+    transactionsError: 'Flexprice had a problem loading wallet transactions.',
+    transactionsErrorKind: 'server',
+    onRetryTransactions: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText(/problem loading wallet transactions/)).toBeVisible()
+    await expect(canvas.queryByText('No top-ups yet')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetryTransactions).toHaveBeenCalledOnce()
+  },
+}
+
+/** An unreadable balance is shown as unknown: no meter, no 0% used, no 0 credits. */
+export const UnreadableBalance: Story = {
+  args: {
+    wallets: makeWallets(1, WalletStatus.Active, 10000, 7500).map((wallet) => ({
+      ...wallet,
+      realTimeCreditBalance: 'n/a',
+    })),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/balance could not be read/)).toBeVisible()
+    await expect(canvas.queryByText(/% used/)).toBeNull()
+  },
+}
 
 export const NoTransactions: Story = {
   args: { transactions: [] },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('No top-ups yet.')).toBeInTheDocument()
+    await expect(await within(canvasElement).findByText('No top-ups yet')).toBeInTheDocument()
   },
 }
 
@@ -300,6 +340,20 @@ export const SavesAutoTopup: Story = {
       amount: '500',
       invoicing: true,
     })
+  },
+}
+
+/** Closing and reopening a dialog starts clean: the last draft and message are gone. */
+export const ReopenedDialogIsClean: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Top up wallet' }))
+    let dialog = await screen.findByRole('dialog', { name: 'Top up wallet' })
+    await userEvent.type(within(dialog).getByLabelText('Credits'), '123')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Top up wallet' }))
+    dialog = await screen.findByRole('dialog', { name: 'Top up wallet' })
+    await expect(within(dialog).getByLabelText('Credits')).toHaveValue('')
   },
 }
 

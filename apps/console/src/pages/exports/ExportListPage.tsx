@@ -1,8 +1,9 @@
 import { DownloadCloudIcon } from '@fp/ui/icons'
 import { type DataExportQuery, EXPORT_STATE } from '@fp/domain'
-import { ApiError, useDataExports } from '@fp/query'
+import { useDataExports } from '@fp/query'
 import { DataExportGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
+import { toListFailure } from '../shared/listFailure'
 
 export interface ExportListPageProps {
   query: DataExportQuery
@@ -12,6 +13,7 @@ export interface ExportListPageProps {
 /** The wiring layer: fetch, turn an error into a sentence, hand the grid plain props. */
 export function ExportListPage({ query, onQueryChange }: ExportListPageProps) {
   const exports = useDataExports(query)
+  const failure = toListFailure(exports.error, 'exports')
 
   const rows = exports.data?.exports ?? []
   const isFiltered = query.search.length > 0 || query.state !== EXPORT_STATE.All
@@ -22,8 +24,13 @@ export function ExportListPage({ query, onQueryChange }: ExportListPageProps) {
     <PageBody>
       <ListState
         isLoading={exports.isPending}
-        error={toFailure(exports.error)}
-        isEmpty={rows.length === 0 && !isFiltered}
+        error={failure}
+        isEmpty={rows.length === 0 && (exports.data?.total ?? 0) === 0 && !isFiltered}
+        hasRows={rows.length > 0}
+        isRefreshing={exports.isFetching && !exports.isPending}
+        isProvisional={exports.isPlaceholderData}
+        isRetrying={exports.isFetching && exports.isError}
+        {...(failure ? { failureKind: failure.kind } : {})}
         isFiltered={isFiltered}
         onRetry={() => void exports.refetch()}
         onClearFilters={clearFilters}
@@ -42,24 +49,4 @@ export function ExportListPage({ query, onQueryChange }: ExportListPageProps) {
       </ListState>
     </PageBody>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to exports here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading exports.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading exports.', canRetry: true }
 }

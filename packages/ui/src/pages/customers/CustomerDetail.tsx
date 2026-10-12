@@ -21,12 +21,10 @@ import { Section } from '@ui/compositions/layout/Section'
 import { EditableCard } from '@ui/compositions/forms/EditableCard'
 import { MetadataCard } from '@ui/compositions/detail/MetadataCard'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
-import { LoadingRows } from '@ui/compositions/feedback/States'
+import { SubTabState, truncationNote } from '@ui/compositions/detail/SubTabState'
 import { Money } from '../shared/Money'
 import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
-import { CustomerEventsGrid, DEMO_CUSTOMER_EVENTS } from './CustomerEventsGrid'
 import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { cn } from '@ui/lib/cn'
 import { DetailTable } from '../shared/DetailTable'
@@ -37,14 +35,24 @@ import { DetailTable } from '../shared/DetailTable'
  * over line `DetailTabs`; the active tab renders as reference-style sections. It is presentational: the page fetches and hands data in.
  *
  * It shows only what the API has. A customer record carries no plan, currency or
- * payment method, so the header does not invent them; sections with no read model
- * yet (wallet, per-feature analytics, events) render demo data until wired.
+ * payment method, so the header does not invent them; sections with no read
+ * model yet (per-feature revenue and cost) say "not available yet" rather than
+ * show sample figures. A contracts or invoices read that is loading or failed is
+ * shown as that, never as "none yet" or a zero.
  */
 export const CustomerDetailProvenance = provenance({
   source: 'composition',
-  composes: ['pages/shared/EntityHeader', 'compositions/activity-log', 'pages/shared/Money'],
+  composes: [
+    'pages/shared/EntityHeader',
+    'compositions/activity-log',
+    'pages/shared/Money',
+    'compositions/SubTabState',
+  ],
   note: 'Customer detail: EntityHeader + DetailTabs; Overview from OverviewTiles, a Contracts table and the activity log, Information as single-pencil EditableCards. Lineage: ui/detail-kit, ui/section, ui/editable-card.',
 })
+
+/** How many invoices the customer page asks for; at this count the list may be cut. */
+export const CUSTOMER_INVOICES_LIMIT = 50
 
 export type CustomerTab = 'overview' | 'invoices' | 'wallet' | 'usage' | 'events' | 'information'
 
@@ -89,7 +97,19 @@ export interface CustomerDetailProps {
   subscriptionsLoading?: boolean
   /** The contracts read failed — shown as such, never as "no contracts". */
   subscriptionsError?: boolean
+  /** Refetch the contracts; the Contracts error panel offers it as Try again. */
+  onRetrySubscriptions?: () => void
   invoicesLoading?: boolean
+  /** The invoices read failed — shown as such, never as "no invoices" or a count of 0. */
+  invoicesError?: boolean
+  /** Refetch the invoices; the Invoices error panel offers it as Try again. */
+  onRetryInvoices?: () => void
+  /**
+   * The Events tab's contents (the customer's recent ingested events). It is a
+   * slot because the events read has its own loading and failure states. Omitted,
+   * the tab says events are not available here yet.
+   */
+  events?: ReactNode
   /**
    * The Usage section's contents — the per-feature quota cards.
    *
@@ -140,7 +160,11 @@ export function CustomerDetail({
   onOpenContract,
   subscriptionsLoading = false,
   subscriptionsError = false,
+  onRetrySubscriptions,
   invoicesLoading = false,
+  invoicesError = false,
+  onRetryInvoices,
+  events,
   usage,
   wallet,
   taxes,
@@ -223,7 +247,11 @@ export function CustomerDetail({
           onValueChange={(next) => onTabChange(next as CustomerTab)}
           tabs={[
             { value: 'overview', label: 'Overview' },
-            { value: 'invoices', label: 'Invoices', count: invoices.length },
+            {
+              value: 'invoices',
+              label: 'Invoices',
+              ...(invoicesLoading || invoicesError ? {} : { count: invoices.length }),
+            },
             { value: 'wallet', label: 'Wallet' },
             { value: 'usage', label: 'Analytics' },
             { value: 'events', label: 'Events' },
@@ -237,11 +265,14 @@ export function CustomerDetail({
             subscriptions={subscriptions}
             subscriptionsLoading={subscriptionsLoading}
             subscriptionsError={subscriptionsError}
+            onRetrySubscriptions={onRetrySubscriptions}
             onOpenPlan={onOpenPlan}
             onOpenContract={onOpenContract}
             onCreateContract={onCreateContract}
             invoices={invoices}
             invoicesLoading={invoicesLoading}
+            invoicesError={invoicesError}
+            onRetryInvoices={onRetryInvoices}
             formatDate={formatDate}
             locale={locale}
             onOpenInvoice={onOpenInvoice}
@@ -253,6 +284,8 @@ export function CustomerDetail({
             <InvoiceTable
               invoices={invoices}
               isLoading={invoicesLoading}
+              isError={invoicesError}
+              onRetry={onRetryInvoices}
               formatDate={formatDate}
               onOpenInvoice={onOpenInvoice}
               {...(onCreateInvoice
@@ -272,8 +305,8 @@ export function CustomerDetail({
         {tab === 'wallet'
           ? (wallet ?? (
               <EmptyState
-                title="No wallet connected"
-                description="A customer's credit balance, top-ups and transactions will appear here once a wallet is set up."
+                title="Wallet not available here"
+                description="This view has no wallet data to show. A customer's credit balance, top-ups and transactions appear here when it is provided."
               />
             ))
           : null}
@@ -281,13 +314,20 @@ export function CustomerDetail({
         {tab === 'usage'
           ? (usage ?? (
               <EmptyState
-                title="No usage to show yet"
-                description="Metered events for this customer appear here as they are ingested, so a charge can be traced to what caused it."
+                title="Usage not available here"
+                description="This view has no usage data to show. Per-feature allowances and consumption appear here when it is provided."
               />
             ))
           : null}
 
-        {tab === 'events' ? <CustomerEventsGrid events={DEMO_CUSTOMER_EVENTS} /> : null}
+        {tab === 'events'
+          ? (events ?? (
+              <EmptyState
+                title="Events not available here"
+                description="This view has no event feed to show. Events ingested for this customer appear here when it is provided."
+              />
+            ))
+          : null}
 
         {tab === 'information' ? (
           <InformationTab
@@ -361,11 +401,14 @@ function OverviewTab({
   subscriptions,
   subscriptionsLoading,
   subscriptionsError,
+  onRetrySubscriptions,
   onOpenPlan,
   onOpenContract,
   onCreateContract,
   invoices,
   invoicesLoading,
+  invoicesError,
+  onRetryInvoices,
   formatDate,
   locale,
   onOpenInvoice,
@@ -374,15 +417,22 @@ function OverviewTab({
   subscriptions: Subscription[]
   subscriptionsLoading: boolean
   subscriptionsError: boolean
+  onRetrySubscriptions: (() => void) | undefined
   onOpenPlan: ((planId: string) => void) | undefined
   onOpenContract: ((subscriptionId: string) => void) | undefined
   onCreateContract: (() => void) | undefined
   invoices: Invoice[]
   invoicesLoading: boolean
+  invoicesError: boolean
+  onRetryInvoices: (() => void) | undefined
   formatDate: FormatDate
   locale: string | undefined
   onOpenInvoice: ((invoiceId: string) => void) | undefined
 }) {
+  // A loading or failed read is "not known", never "none": the tiles and the
+  // activity note say so rather than count what has not arrived.
+  const contractsKnown = !subscriptionsLoading && !subscriptionsError
+  const invoicesKnown = !invoicesLoading && !invoicesError
   const live = subscriptions.filter((s) => RUNNING.includes(s.status))
   const lastInvoice = invoices
     .filter((i) => i.issuedAt && !NOT_ISSUED.includes(i.status))
@@ -397,28 +447,40 @@ function OverviewTab({
         <OverviewTiles
           tiles={[
             {
-              label: 'ARR',
-              value: '—',
-              detail: `Not reported · ${live.length} live ${live.length === 1 ? 'contract' : 'contracts'}`,
+              label: 'Customer since',
+              value: formatDate(customer.createdAt),
+              detail: customer.createdAt ? 'Date this customer was created' : 'Not recorded',
             },
             {
-              label: 'Days sales outstanding',
-              value: '—',
-              detail: 'Average time from invoice to payment',
+              label: 'Live contracts',
+              value: contractsKnown ? String(live.length) : '—',
+              detail: contractsKnown
+                ? `${live.length === 1 ? 'Contract' : 'Contracts'} active, trialing or paused`
+                : subscriptionsError
+                  ? 'Could not load contracts'
+                  : 'Loading contracts…',
             },
             {
               label: 'Last invoice',
-              value: lastInvoice ? formatDate(lastInvoice.issuedAt) : '—',
-              detail: lastInvoice
-                ? `${formatMoney(lastInvoice.total)} · ${lastInvoice.number}`
-                : 'No invoices issued yet',
+              value: invoicesKnown && lastInvoice ? formatDate(lastInvoice.issuedAt) : '—',
+              detail: !invoicesKnown
+                ? invoicesError
+                  ? 'Could not load invoices'
+                  : 'Loading invoices…'
+                : lastInvoice
+                  ? `${formatMoney(lastInvoice.total)} · ${lastInvoice.number}`
+                  : 'No invoices issued yet',
             },
             {
               label: 'Next invoice',
-              value: nextBilling ? formatDate(nextBilling.currentPeriodEnd) : '—',
-              detail: nextBilling
-                ? `Current period of ${nextBilling.id} ends`
-                : 'No contract is billing',
+              value: contractsKnown && nextBilling ? formatDate(nextBilling.currentPeriodEnd) : '—',
+              detail: !contractsKnown
+                ? subscriptionsError
+                  ? 'Could not load contracts'
+                  : 'Loading contracts…'
+                : nextBilling
+                  ? `Current period of ${nextBilling.id} ends`
+                  : 'No contract is billing',
             },
           ]}
         />
@@ -427,6 +489,7 @@ function OverviewTab({
           subscriptions={subscriptions}
           isLoading={subscriptionsLoading}
           isError={subscriptionsError}
+          onRetry={onRetrySubscriptions}
           formatDate={formatDate}
           onOpenPlan={onOpenPlan}
           onOpenContract={onOpenContract}
@@ -437,6 +500,8 @@ function OverviewTab({
             compactList
             invoices={invoices.slice(0, 5)}
             isLoading={invoicesLoading}
+            isError={invoicesError}
+            onRetry={onRetryInvoices}
             formatDate={formatDate}
             onOpenInvoice={onOpenInvoice}
           />
@@ -444,6 +509,11 @@ function OverviewTab({
       </div>
       <ActivitySection
         entries={activityEntries(customer, subscriptions, invoices, locale)}
+        note={
+          contractsKnown && invoicesKnown
+            ? 'Built from the dates on this customer, their contracts and their invoices. A full activity log is not available yet.'
+            : 'Incomplete: contracts or invoices are still loading or could not be loaded, so some activity is missing.'
+        }
         className="xl:sticky xl:top-6"
       />
     </div>
@@ -455,6 +525,7 @@ function ContractsTable({
   subscriptions,
   isLoading,
   isError,
+  onRetry,
   formatDate,
   onOpenPlan,
   onOpenContract,
@@ -464,6 +535,7 @@ function ContractsTable({
   subscriptions: Subscription[]
   isLoading: boolean
   isError: boolean
+  onRetry: (() => void) | undefined
   formatDate: FormatDate
   onOpenPlan: ((planId: string) => void) | undefined
   onOpenContract: ((subscriptionId: string) => void) | undefined
@@ -485,21 +557,18 @@ function ContractsTable({
           }
         : {})}
     >
-      {isLoading ? (
-        <div className="px-4 py-4">
-          <LoadingRows />
-        </div>
-      ) : isError ? (
-        <SectionEmpty
-          title="Contracts couldn't be loaded"
-          description="Something went wrong fetching this customer's contracts. Refresh to try again."
-        />
-      ) : subscriptions.length === 0 ? (
-        <SectionEmpty
-          title="No contracts yet"
-          description="A contract puts this customer on a plan. Create one to start billing them."
-        />
-      ) : (
+      <SubTabState
+        hasData={subscriptions.length > 0}
+        isLoading={isLoading}
+        error={isError ? "Contracts couldn't be loaded" : null}
+        onRetry={onRetry}
+        columns={5}
+        loadingLabel="Loading contracts"
+        empty={{
+          title: 'No contracts yet',
+          description: 'A contract puts this customer on a plan. Create one to start billing them.',
+        }}
+      >
         <DetailTable
           compact
           label="Contracts"
@@ -559,7 +628,7 @@ function ContractsTable({
           ]}
           {...(onOpenContract ? { onRowClick: (s: Subscription) => onOpenContract(s.id) } : {})}
         />
-      )}
+      </SubTabState>
     </Section>
   )
 }
@@ -592,6 +661,8 @@ function InvoiceTable({
   compactList = false,
   invoices,
   isLoading,
+  isError,
+  onRetry,
   formatDate,
   onOpenInvoice,
   action,
@@ -600,78 +671,96 @@ function InvoiceTable({
   compactList?: boolean
   invoices: Invoice[]
   isLoading: boolean
+  isError: boolean
+  onRetry: (() => void) | undefined
   formatDate: FormatDate
   onOpenInvoice: ((invoiceId: string) => void) | undefined
   /** Sits on the toolbar, to the right of the filter. Omitted on the short overview list. */
   action?: ReactNode
 }) {
-  if (isLoading) {
+  // Rows win; otherwise a failed read is an error with retry, a pending one a
+  // skeleton, and only a finished empty read says "no invoices".
+  if (invoices.length === 0 && (isLoading || isError)) {
     return (
       <div>
         {action ? <div className="flex justify-end px-6 py-3">{action}</div> : null}
-        <div className="px-4 pb-4">
-          <LoadingRows />
-        </div>
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading}
+          error={isError ? "Invoices couldn't be loaded" : null}
+          onRetry={onRetry}
+          columns={6}
+          loadingLabel="Loading invoices"
+          empty={{ title: 'No invoices yet' }}
+        >
+          {null}
+        </SubTabState>
       </div>
     )
   }
+  const capped = compactList ? null : truncationNote(invoices.length, CUSTOMER_INVOICES_LIMIT)
   return (
-    <DetailTable
-      compact
-      toolbar={!compactList}
-      label="Invoices"
-      {...(action ? { action } : {})}
-      facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
-      noun="invoices"
-      rows={invoices}
-      {...(onOpenInvoice ? { onRowClick: (invoice: Invoice) => onOpenInvoice(invoice.id) } : {})}
-      empty="No invoices yet. Invoices are created automatically from contracts, or raised by hand."
-      columns={[
-        {
-          key: 'number',
-          header: 'Invoice number',
-          sortBy: (invoice) => invoice.number,
-          cell: (invoice) => (
-            <span className={cn(invoice.status === InvoiceStatus.Draft && 'text-muted-foreground')}>
-              {invoice.status === InvoiceStatus.Draft ? 'Draft' : invoice.number}
-            </span>
-          ),
-        },
-        {
-          key: 'issued',
-          header: 'Issue date',
-          sortBy: (invoice) => Number(new Date(invoice.issuedAt ?? 0)),
-          cell: (invoice) => <Muted>{formatDate(invoice.issuedAt)}</Muted>,
-        },
-        {
-          key: 'due',
-          header: 'Due date',
-          sortBy: (invoice) => Number(new Date(invoice.dueDate ?? 0)),
-          cell: (invoice) => <Muted>{formatDate(invoice.dueDate)}</Muted>,
-        },
-        {
-          key: 'status',
-          header: 'Status',
-          sortBy: (invoice) => invoiceDocument(invoice),
-          cell: (invoice) => <Status value={invoiceDocument(invoice)} />,
-        },
-        {
-          key: 'payment',
-          header: 'Payment',
-          sortBy: (invoice) => invoicePayment(invoice).label,
-          cell: (invoice) => {
-            const payment = invoicePayment(invoice)
-            return <Pill tone={payment.tone}>{payment.label}</Pill>
+    <>
+      <DetailTable
+        compact
+        toolbar={!compactList}
+        label="Invoices"
+        {...(action ? { action } : {})}
+        facet={{ label: 'Payment', value: (invoice) => invoicePayment(invoice).label }}
+        noun="invoices"
+        rows={invoices}
+        {...(onOpenInvoice ? { onRowClick: (invoice: Invoice) => onOpenInvoice(invoice.id) } : {})}
+        empty="No invoices yet. Invoices are created automatically from contracts, or raised by hand."
+        columns={[
+          {
+            key: 'number',
+            header: 'Invoice number',
+            sortBy: (invoice) => invoice.number,
+            cell: (invoice) => (
+              <span
+                className={cn(invoice.status === InvoiceStatus.Draft && 'text-muted-foreground')}
+              >
+                {invoice.status === InvoiceStatus.Draft ? 'Draft' : invoice.number}
+              </span>
+            ),
           },
-        },
-        {
-          key: 'total',
-          header: 'Amount',
-          sortBy: (invoice) => Number(invoice.total.amount),
-          cell: (invoice) => <Money value={invoice.total} />,
-        },
-      ]}
-    />
+          {
+            key: 'issued',
+            header: 'Issue date',
+            sortBy: (invoice) => Number(new Date(invoice.issuedAt ?? 0)),
+            cell: (invoice) => <Muted>{formatDate(invoice.issuedAt)}</Muted>,
+          },
+          {
+            key: 'due',
+            header: 'Due date',
+            sortBy: (invoice) => Number(new Date(invoice.dueDate ?? 0)),
+            cell: (invoice) => <Muted>{formatDate(invoice.dueDate)}</Muted>,
+          },
+          {
+            key: 'status',
+            header: 'Status',
+            sortBy: (invoice) => invoiceDocument(invoice),
+            cell: (invoice) => <Status value={invoiceDocument(invoice)} />,
+          },
+          {
+            key: 'payment',
+            header: 'Payment',
+            sortBy: (invoice) => invoicePayment(invoice).label,
+            cell: (invoice) => {
+              const payment = invoicePayment(invoice)
+              return <Pill tone={payment.tone}>{payment.label}</Pill>
+            },
+          },
+          {
+            key: 'total',
+            header: 'Amount',
+            sortBy: (invoice) => Number(invoice.total.amount),
+            cell: (invoice) => <Money value={invoice.total} />,
+          },
+        ]}
+      />
+      {capped ? <p className="text-muted-foreground border-t px-6 py-3 text-xs">{capped}</p> : null}
+    </>
   )
 }
 

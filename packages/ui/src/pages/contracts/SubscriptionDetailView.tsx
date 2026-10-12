@@ -543,7 +543,10 @@ export function SubscriptionDetailView({
             </div>
 
             <div className="flex flex-col gap-5 xl:sticky xl:top-6">
-              <ActivitySection entries={activityEntries} />
+              <ActivitySection
+                entries={activityEntries}
+                note="Only the subscription's key dates are listed. A full change history is not available yet."
+              />
               <MetadataCard metadata={s.metadata} />
               <RelatedCard items={related} />
             </div>

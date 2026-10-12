@@ -16,16 +16,9 @@ import {
   Money,
   Pill,
 } from '@fp/ui/pages'
-import {
-  AppFailure,
-  ConfirmDialog,
-  EditableCard,
-  LoadingRows,
-  MetadataCard,
-  Properties,
-  Section,
-} from '@fp/ui/compositions'
+import { ConfirmDialog, EditableCard, MetadataCard, Properties, Section } from '@fp/ui/compositions'
 import { ArchiveIcon, PencilIcon, TicketPercentIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
 
 type CouponTab = 'overview' | 'redemptions' | 'information'
 
@@ -64,23 +57,8 @@ export function CouponDetailPage({
   const [archiving, setArchiving] = useState(false)
   const [tab, setTab] = useState<CouponTab>(startEditing ? 'information' : 'overview')
 
-  if (coupon.isPending) {
-    return (
-      <div className="p-6">
-        <LoadingRows />
-      </div>
-    )
-  }
-
-  if (coupon.error || !coupon.data) {
-    const failure = toFailure(coupon.error)
-    return (
-      <AppFailure
-        title="This coupon could not be loaded"
-        detail={failure.message}
-        {...(failure.canRetry ? { onRetry: () => void coupon.refetch() } : {})}
-      />
-    )
+  if (!coupon.data) {
+    return detailGate(coupon, { noun: 'this coupon', listName: 'coupons', onBack })
   }
 
   const record = coupon.data
@@ -263,26 +241,6 @@ function formatDate(value: Date | null): string {
 function formatDay(value: Date | null): string {
   if (!value) return 'Not set'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'not_found':
-        return { message: 'This coupon does not exist, or was deleted.', canRetry: false }
-      case 'forbidden':
-        return { message: 'You do not have access to this coupon.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading this coupon.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading this coupon.', canRetry: true }
 }
 
 function toSubmitError(error: unknown): string | null {

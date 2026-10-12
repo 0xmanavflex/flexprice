@@ -1,9 +1,10 @@
 import { type SubscriptionQuery } from '@fp/domain'
-import { ApiError, useSubscriptions } from '@fp/query'
+import { useSubscriptions } from '@fp/query'
 import { SubscriptionGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { RefreshCwIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
+import { toListFailure } from '../shared/listFailure'
 
 export interface SubscriptionListPageProps {
   query: SubscriptionQuery
@@ -30,7 +31,7 @@ export function SubscriptionListPage({
 }: SubscriptionListPageProps) {
   const subscriptions = useSubscriptions(query)
 
-  const failure = toFailure(subscriptions.error)
+  const failure = toListFailure(subscriptions.error, 'contracts')
   const rows = subscriptions.data?.subscriptions ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
@@ -40,7 +41,12 @@ export function SubscriptionListPage({
         <ListState
           isLoading={subscriptions.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (subscriptions.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={subscriptions.isFetching && !subscriptions.isPending}
+          isProvisional={subscriptions.isPlaceholderData}
+          isRetrying={subscriptions.isFetching && subscriptions.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void subscriptions.refetch()}
           onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
@@ -64,24 +70,4 @@ export function SubscriptionListPage({
       </PageBody>
     </>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to contracts here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading contracts.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading contracts.', canRetry: true }
 }

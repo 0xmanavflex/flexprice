@@ -97,9 +97,7 @@ export const DerivedStatusSaysSo: Story = {
   args: { query: { ...fixtureQuery, statuses: [InvoiceStatus.Overdue] } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      await canvas.findByText(/narrows the invoices already loaded, not the whole ledger/i),
-    ).toBeInTheDocument()
+    await expect(await canvas.findByText(/filtered within this page/i)).toBeInTheDocument()
   },
 }
 
@@ -109,7 +107,7 @@ export const StoredStatusIsSilent: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('INV-1041')
-    await expect(canvas.queryByText(/narrows the invoices already loaded/i)).not.toBeInTheDocument()
+    await expect(canvas.queryByText(/filtered within this page/i)).not.toBeInTheDocument()
   },
 }
 

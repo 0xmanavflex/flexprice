@@ -52,7 +52,9 @@ import {
   SelectValue,
 } from '@ui/components/primitives/select'
 import { Skeleton } from '@ui/components/primitives/skeleton'
+import { DataRegion } from '@ui/compositions/feedback/DataBoundary'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
 import { GuidedEmptyState } from '@ui/compositions/feedback/GuidedEmptyState'
 import { FilterBar, type FlatFilter } from '@ui/compositions/tables/FilterBar'
 import { SortMenu, type SortOption } from '@ui/compositions/tables/SortMenu'
@@ -109,7 +111,7 @@ import type { EntityColumn } from './cells'
  */
 export const EntityListProvenance = provenance({
   source: 'composition',
-  composes: ['@reui/data-grid', '@reui/filters', 'ui/select'],
+  composes: ['@reui/data-grid', '@reui/filters', 'ui/select', 'compositions/feedback/States'],
   note: 'The one list table: borderless (or bordered via `border`), 44px header, 60px rows, auto-width columns, pin-on-overflow. Lineage: @reui/empty-state-3.',
 })
 
@@ -246,7 +248,20 @@ export interface EntityListProps<T> {
   /* --- states --- */
   isLoading?: boolean | undefined
   error?: string | null | undefined
+  /** Why `error` happened; picks the figure and withholds retry for `denied`. */
+  errorKind?: ErrorKind | undefined
   onRetry?: (() => void) | undefined
+  /**
+   * The rows were narrowed in the browser from the page fetched, so zero rows
+   * on a later page means "none here", not "this page is past the end".
+   */
+  isPageLocalFilter?: boolean | undefined
+  /** A retry is in flight. Disables the retry button. */
+  isRetrying?: boolean | undefined
+  /** A background request is updating the rows on screen: they stay, a thin bar says so. */
+  isRefreshing?: boolean | undefined
+  /** The rows on screen belong to the previous page or filter; they are dimmed. */
+  isProvisional?: boolean | undefined
   /** True when a search or filter is what emptied the list, not the catalogue
    *  being empty. Only the page can tell these apart. */
   isFiltered?: boolean | undefined
@@ -406,7 +421,12 @@ export function EntityList<T extends object>({
   onSelectionChange,
   isLoading = false,
   error = null,
+  errorKind,
   onRetry,
+  isRetrying,
+  isPageLocalFilter = false,
+  isRefreshing = false,
+  isProvisional = false,
   isFiltered = false,
   onClearFilters,
   empty,
@@ -664,23 +684,26 @@ export function EntityList<T extends object>({
          offers controls that cannot do anything --- */
   if (error) {
     return (
-      <div
-        role="alert"
-        className="border-destructive/20 bg-destructive/10 flex flex-col items-start gap-3 rounded-xl border p-6"
-      >
-        <p className="text-destructive-foreground dark:text-destructive text-sm font-medium">
-          {error}
-        </p>
-        {onRetry ? (
-          <Button type="button" variant="outline" size="sm" onClick={onRetry}>
-            Try again
-          </Button>
-        ) : null}
-      </div>
+      <ErrorState
+        title={error}
+        {...(errorKind ? { kind: errorKind } : {})}
+        {...(onRetry ? { onRetry } : {})}
+        {...(isRetrying !== undefined ? { isRetrying } : {})}
+      />
     )
   }
 
-  const showFirstRun = !isLoading && rows.length === 0 && !isFiltered && empty !== undefined
+  /*
+   * "Nothing exists" is a fact about the *total*, not about this page's rows.
+   * Keyed off `rows.length`, page 3 of a 60-record list that came back empty
+   * (a deleted tail, a stale URL) read as "create your first record". Out of
+   * range is its own state: the records are there, this page is past them.
+   */
+  const isOutOfRange =
+    !isLoading && rows.length === 0 && total > 0 && page > 1 && !isPageLocalFilter
+  const showFirstRun =
+    !isLoading && rows.length === 0 && total === 0 && !isFiltered && empty !== undefined
+  const goToFirstPage = () => onPaginationChange(1, pageSize)
 
   const toolbar = (
     <div
@@ -859,109 +882,143 @@ export function EntityList<T extends object>({
 
       {/* The frame: what the columns are scaled to fill. `min-w-0` is what
           stops an overflowing table pushing the page itself wider. */}
-      <div
-        ref={frameRef}
-        data-slot="entity-list-frame"
-        data-border={border ? '' : undefined}
-        className={cn(
-          'w-full min-w-0',
-          border && 'bg-background overflow-hidden rounded-xl border',
-        )}
+      <DataRegion
+        state={{ refreshing: isRefreshing, provisional: isProvisional }}
+        className="min-w-0"
       >
-        {showFirstRun && empty ? (
-          <GuidedEmptyState
-            title={empty.title}
-            description={empty.description}
-            actions={empty.actions}
-            guides={empty.guides}
-            label={`${label}: nothing here yet`}
-          />
-        ) : (
-          <DataGrid
-            table={table as never}
-            recordCount={total}
-            isLoading={isLoading}
-            loadingMode="skeleton"
-            {...(onRowClick ? { onRowClick } : {})}
-            emptyMessage={
-              <EmptyState
-                size="inline"
-                isFiltered
-                title={filteredEmptyTitle ?? `No ${noun} match these filters`}
-                description={
-                  filteredEmptyDescription ??
-                  'Try a different search, or clear what is narrowing the list.'
-                }
-                {...(onClearFilters
-                  ? {
-                      onClearFilters: (
-                        <Button type="button" variant="outline" size="sm" onClick={onClearFilters}>
-                          Clear filters
-                        </Button>
-                      ),
+        <div
+          ref={frameRef}
+          data-slot="entity-list-frame"
+          data-border={border ? '' : undefined}
+          className={cn(
+            'w-full min-w-0',
+            border && 'bg-background overflow-hidden rounded-xl border',
+          )}
+        >
+          {showFirstRun && empty ? (
+            <GuidedEmptyState
+              title={empty.title}
+              description={empty.description}
+              actions={empty.actions}
+              guides={empty.guides}
+              label={`${label}: nothing here yet`}
+            />
+          ) : (
+            <DataGrid
+              table={table as never}
+              recordCount={total}
+              isLoading={isLoading}
+              loadingMode="skeleton"
+              {...(onRowClick ? { onRowClick } : {})}
+              emptyMessage={
+                isOutOfRange ? (
+                  <EmptyState
+                    size="inline"
+                    isFiltered
+                    title="This page is out of range"
+                    description={`There are ${total} ${noun}, but none on page ${page}. Your records are all still here.`}
+                    onClearFilters={
+                      <Button type="button" variant="outline" size="sm" onClick={goToFirstPage}>
+                        Go to first page
+                      </Button>
                     }
-                  : {})}
-              />
-            }
-            tableLayout={{
-              headerSticky: false,
-              headerBackground: false,
-              rowBorder: true,
-              columnsVisibility: true,
-              columnsPinnable: true,
-              width: 'fixed',
-            }}
-            tableClassNames={{
-              base: 'min-w-(--table-min)',
-              edgeCell: compact ? 'first:ps-6 last:pe-4' : 'first:ps-4 last:pe-2',
-              headerRow: cn(
-                'bg-muted/60 [&>th]:px-4 [&>th]:border-0',
-                compact
-                  ? '[&>th]:h-9'
-                  : cn(
-                      '[&>th]:h-11',
-                      // Inside a frame the outline already rounds the corners.
-                      !border && '[&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
-                    ),
-              ),
-              /*
-               * Every cell clips (`overflow-hidden`): `table-fixed` fixes the
-               * cell box, not its contents, so a pill or any other
-               * non-truncating child would paint past its column and inflate
-               * the scroll container. The cell helpers truncate their text;
-               * this is the backstop for the ones that cannot.
-               */
-              bodyRow: cn(
-                compact ? 'h-12 [&_.font-medium]:font-[450]' : 'h-[60px]',
-                'hover:bg-muted/30 [&>td]:px-4 [&>td]:whitespace-nowrap [&>td]:border-border/40 [&>td]:overflow-hidden last:[&>td]:border-b-0',
-                onRowClick && 'cursor-pointer',
-              ),
-            }}
-          >
-            <DataGridContainer className="flex flex-col border-0 bg-transparent">
-              <div
-                className="w-full overflow-x-auto"
-                style={{ '--table-min': `${tableMin}px` } as React.CSSProperties}
-              >
-                <DataGridTable />
-              </div>
-              {total > 0 ? (
-                <div
-                  className={cn(
-                    'border-border/60 border-t',
-                    compact ? 'px-6 py-3' : border ? 'px-4 py-3' : 'px-4 pt-4',
-                  )}
-                >
-                  <DataGridPagination
-                    sizes={PAGE_SIZES}
-                    info={`{from} - {to} of {count} ${noun}`}
                   />
+                ) : isFiltered ? (
+                  <EmptyState
+                    size="inline"
+                    isFiltered
+                    title={filteredEmptyTitle ?? `No ${noun} match these filters`}
+                    description={
+                      filteredEmptyDescription ??
+                      'Try a different search, or clear what is narrowing the list.'
+                    }
+                    {...(onClearFilters
+                      ? {
+                          onClearFilters: (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={onClearFilters}
+                            >
+                              Clear filters
+                            </Button>
+                          ),
+                        }
+                      : {})}
+                  />
+                ) : (
+                  /* Neither filtered nor out of range: the list itself is empty.
+                   Saying "match these filters" here would blame a filter that
+                   does not exist. */
+                  <EmptyState
+                    size="inline"
+                    isFiltered
+                    title={empty?.title ?? `No ${noun}`}
+                    {...(empty?.description ? { description: empty.description } : {})}
+                  />
+                )
+              }
+              tableLayout={{
+                headerSticky: false,
+                headerBackground: false,
+                rowBorder: true,
+                columnsVisibility: true,
+                columnsPinnable: true,
+                width: 'fixed',
+              }}
+              tableClassNames={{
+                base: 'min-w-(--table-min)',
+                edgeCell: compact ? 'first:ps-6 last:pe-4' : 'first:ps-4 last:pe-2',
+                headerRow: cn(
+                  'bg-muted/60 [&>th]:px-4 [&>th]:border-0',
+                  compact
+                    ? '[&>th]:h-9'
+                    : cn(
+                        '[&>th]:h-11',
+                        // Inside a frame the outline already rounds the corners.
+                        !border && '[&>th:first-child]:rounded-s-lg [&>th:last-child]:rounded-e-lg',
+                      ),
+                ),
+                /*
+                 * Every cell clips (`overflow-hidden`): `table-fixed` fixes the
+                 * cell box, not its contents, so a pill or any other
+                 * non-truncating child would paint past its column and inflate
+                 * the scroll container. The cell helpers truncate their text;
+                 * this is the backstop for the ones that cannot.
+                 */
+                bodyRow: cn(
+                  compact ? 'h-12 [&_.font-medium]:font-[450]' : 'h-[60px]',
+                  'hover:bg-muted/30 [&>td]:px-4 [&>td]:whitespace-nowrap [&>td]:border-border/40 [&>td]:overflow-hidden last:[&>td]:border-b-0',
+                  onRowClick && 'cursor-pointer',
+                ),
+              }}
+            >
+              <DataGridContainer className="flex flex-col border-0 bg-transparent">
+                <div
+                  className="w-full overflow-x-auto"
+                  style={{ '--table-min': `${tableMin}px` } as React.CSSProperties}
+                >
+                  <DataGridTable />
                 </div>
-              ) : null}
-            </DataGridContainer>
-          </DataGrid>
-        )}
-      </div>
+                {total > 0 ? (
+                  <div
+                    className={cn(
+                      'border-border/60 border-t',
+                      compact ? 'px-6 py-3' : border ? 'px-4 py-3' : 'px-4 pt-4',
+                    )}
+                  >
+                    <DataGridPagination
+                      sizes={PAGE_SIZES}
+                      info={`{from} - {to} of {count} ${noun}`}
+                    />
+                  </div>
+                ) : null}
+              </DataGridContainer>
+            </DataGrid>
+          )}
+        </div>
+      </DataRegion>
     </div>
   )
 }

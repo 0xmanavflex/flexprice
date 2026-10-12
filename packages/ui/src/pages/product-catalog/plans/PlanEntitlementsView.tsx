@@ -1,5 +1,5 @@
 import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from '@ui/icons'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
+import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { EmDash } from '../../shared/cells'
 import { type Entitlement, FeatureType, USAGE_RESET_PERIOD_LABEL } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -8,7 +8,7 @@ import { Section } from '@ui/compositions/layout/Section'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
 import { DetailTable } from '../../shared/DetailTable'
 
-export interface PlanEntitlementsViewProps {
+export interface PlanEntitlementsViewProps extends Partial<SubTabQuery> {
   entitlements: Entitlement[]
   /** The plan's usage price for this entitlement's feature, or null when it has none. */
   usagePrice: (entitlement: Entitlement) => string | null
@@ -62,20 +62,39 @@ export function PlanEntitlementsView({
   onEdit,
   onDelete,
   onOpenFeature,
+  isLoading,
+  error,
+  errorKind,
+  retryAfterMs,
+  onRetry,
+  isRetrying,
 }: PlanEntitlementsViewProps) {
   if (entitlements.length === 0) {
     return (
       <Section title="Entitlements" flush>
-        <SectionEmpty
-          title="No entitlements yet"
-          description="Add the features this plan includes."
-          action={
-            <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-              <PlusIcon aria-hidden />
-              Add entitlement
-            </Button>
-          }
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading ?? false}
+          error={error}
+          errorKind={errorKind}
+          retryAfterMs={retryAfterMs}
+          onRetry={onRetry}
+          isRetrying={isRetrying}
+          columns={5}
+          loadingLabel="Loading entitlements"
+          empty={{
+            title: 'No entitlements yet',
+            description: 'Add the features this plan includes.',
+            action: (
+              <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+                <PlusIcon aria-hidden />
+                Add entitlement
+              </Button>
+            ),
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }

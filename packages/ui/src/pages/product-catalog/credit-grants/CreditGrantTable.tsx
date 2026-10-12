@@ -5,7 +5,7 @@ import {
   type CreditGrant,
   CreditGrantCadence,
 } from '@fp/domain'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
+import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { Button } from '@ui/components/primitives/button'
 import { PlusIcon } from '@ui/icons'
 
@@ -23,11 +23,16 @@ import { DetailTable } from '../../shared/DetailTable'
  */
 export const CreditGrantTableProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/Section', 'pages/shared/DetailTable', 'ui/button'],
+  composes: [
+    'compositions/Section',
+    'compositions/SubTabState',
+    'pages/shared/DetailTable',
+    'ui/button',
+  ],
   note: 'Read-only credit-grants table for the plan Credit Grants tab.',
 })
 
-export interface CreditGrantTableProps {
+export interface CreditGrantTableProps extends Partial<SubTabQuery> {
   grants: CreditGrant[]
   onAdd?: () => void
   onEdit?: (grant: CreditGrant) => void
@@ -49,6 +54,12 @@ export function CreditGrantTable({
   onEdit,
   onDelete,
   showTitle,
+  isLoading,
+  error,
+  errorKind,
+  retryAfterMs,
+  onRetry,
+  isRetrying,
 }: CreditGrantTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
@@ -60,11 +71,24 @@ export function CreditGrantTable({
   if (grants.length === 0) {
     return (
       <Section title="Credit grants" flush>
-        <SectionEmpty
-          title="No credit grants yet"
-          description={`Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`}
-          action={addButton}
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading ?? false}
+          error={error}
+          errorKind={errorKind}
+          retryAfterMs={retryAfterMs}
+          onRetry={onRetry}
+          isRetrying={isRetrying}
+          columns={5}
+          loadingLabel="Loading credit grants"
+          empty={{
+            title: 'No credit grants yet',
+            description: `Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`,
+            action: addButton,
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }

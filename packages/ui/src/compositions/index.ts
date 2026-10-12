@@ -112,6 +112,13 @@ export { DetailStats, DetailStatsProvenance } from './detail/DetailStats'
 export type { DetailStat, DetailStatsProps } from './detail/DetailStats'
 export { MetricRail, MetricRailProvenance } from './detail/MetricRail'
 export type { DetailMetric, MetricRailProps } from './detail/MetricRail'
+export {
+  SubTabState,
+  SubTabStateProvenance,
+  knownCount,
+  truncationNote,
+} from './detail/SubTabState'
+export type { SubTabQuery, SubTabStateProps } from './detail/SubTabState'
 export { DetailBreadcrumb, DetailShell, DetailShellProvenance } from './detail/DetailShell'
 export type { DetailCrumb, DetailShellProps } from './detail/DetailShell'
 export { ConfirmDialog, ConfirmDialogProvenance } from './feedback/ConfirmDialog'

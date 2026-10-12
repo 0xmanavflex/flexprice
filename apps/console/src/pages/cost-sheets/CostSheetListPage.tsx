@@ -5,6 +5,7 @@ import { CostSheetGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { SheetIcon } from '@fp/ui/icons'
+import { toListFailure } from '../shared/listFailure'
 
 export interface CostSheetListPageProps {
   query: CostSheetQuery
@@ -32,7 +33,7 @@ export function CostSheetListPage({
 
   const [deleting, setDeleting] = useState<CostSheet | null>(null)
 
-  const failure = toFailure(costSheets.error)
+  const failure = toListFailure(costSheets.error, 'cost sheets')
   const rows = costSheets.data?.costSheets ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
@@ -48,7 +49,12 @@ export function CostSheetListPage({
         <ListState
           isLoading={costSheets.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (costSheets.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={costSheets.isFetching && !costSheets.isPending}
+          isProvisional={costSheets.isPlaceholderData}
+          isRetrying={costSheets.isFetching && costSheets.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void costSheets.refetch()}
           onClearFilters={clearFilters}
@@ -88,26 +94,6 @@ export function CostSheetListPage({
       />
     </>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to cost sheets here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading cost sheets.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading cost sheets.', canRetry: true }
 }
 
 /** A save failure, as a sentence the form can show inline. */

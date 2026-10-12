@@ -1,9 +1,10 @@
 import { type PlanQuery } from '@fp/domain'
-import { ApiError, usePlans } from '@fp/query'
+import { usePlans } from '@fp/query'
 import { PlanGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PackageIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
+import { toListFailure } from '../shared/listFailure'
 
 export interface PlanListPageProps {
   query: PlanQuery
@@ -24,7 +25,7 @@ export function PlanListPage({
   onCreatePlan,
 }: PlanListPageProps) {
   const plans = usePlans(query)
-  const failure = toFailure(plans.error)
+  const failure = toListFailure(plans.error, 'plans')
   const rows = plans.data?.plans ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
@@ -36,7 +37,12 @@ export function PlanListPage({
         <ListState
           isLoading={plans.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (plans.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={plans.isFetching && !plans.isPending}
+          isProvisional={plans.isPlaceholderData}
+          isRetrying={plans.isFetching && plans.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void plans.refetch()}
           onClearFilters={clearFilters}
@@ -58,25 +64,4 @@ export function PlanListPage({
       </PageBody>
     </>
   )
-}
-
-/** A failure, as a sentence and a judgement about whether retrying can help. */
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to plans here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading plans.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading plans.', canRetry: true }
 }

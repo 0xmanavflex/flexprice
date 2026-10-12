@@ -168,8 +168,14 @@ export const Charges: Story = {
   args: { tab: 'charges', chargeCount: 8 },
 }
 
+/** Loading is a skeleton, never "No charges yet". */
 export const ChargesLoading: Story = {
-  args: { tab: 'charges', chargesLoading: true },
+  args: { tab: 'charges', chargeCount: 0, chargesLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Loading charges')).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).toBeNull()
+  },
 }
 
 export const ChargesEmpty: Story = {
@@ -179,8 +185,20 @@ export const ChargesEmpty: Story = {
   },
 }
 
+/** A failed load says so; it never reads as "No charges yet". */
 export const ChargesError: Story = {
-  args: { tab: 'charges', chargesError: 'Could not load the charges for this feature.' },
+  args: {
+    tab: 'charges',
+    chargeCount: 0,
+    chargesError: 'Could not load the charges for this feature.',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByText('Could not load the charges for this feature.'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).toBeNull()
+  },
 }
 
 export const Entitlements: Story = {
@@ -195,7 +213,28 @@ export const EntitlementsEmpty: Story = {
 }
 
 export const EntitlementsLoading: Story = {
-  args: { tab: 'entitlements', entitlementsLoading: true },
+  args: { tab: 'entitlements', entitlementCount: 0, entitlementsLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Loading entitlements')).toBeInTheDocument()
+    await expect(canvas.queryByText('No entitlements yet')).toBeNull()
+  },
+}
+
+/** A failed entitlements load says so; it never reads as "No entitlements yet". */
+export const EntitlementsError: Story = {
+  args: {
+    tab: 'entitlements',
+    entitlementCount: 0,
+    entitlementsError: 'Could not load the entitlements for this feature.',
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByText('Could not load the entitlements for this feature.'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('No entitlements yet')).toBeNull()
+  },
 }
 
 export const ManyRows: Story = {

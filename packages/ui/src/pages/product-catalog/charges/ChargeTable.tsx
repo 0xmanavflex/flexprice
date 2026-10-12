@@ -8,7 +8,7 @@ import {
   PriceType,
   TierMode,
 } from '@fp/domain'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
+import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
@@ -29,11 +29,16 @@ import { DetailTable } from '../../shared/DetailTable'
  */
 export const ChargeTableProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/section', 'pages/shared/DetailTable', 'ui/button'],
+  composes: [
+    'compositions/section',
+    'compositions/SubTabState',
+    'pages/shared/DetailTable',
+    'ui/button',
+  ],
   note: 'Flush charges section for add-on and cost-sheet detail pages.',
 })
 
-export interface ChargeTableProps {
+export interface ChargeTableProps extends Partial<SubTabQuery> {
   charges: Charge[]
   onAdd?: () => void
   onEdit?: (charge: Charge) => void
@@ -104,6 +109,12 @@ export function ChargeTable({
   onTerminate,
   emptyDescription,
   title = 'Charges',
+  isLoading,
+  error,
+  errorKind,
+  retryAfterMs,
+  onRetry,
+  isRetrying,
 }: ChargeTableProps) {
   const hasActions = Boolean(onEdit || onTerminate)
   const addButton = onAdd ? (
@@ -124,7 +135,20 @@ export function ChargeTable({
 
     return (
       <Section title={title} flush>
-        <SectionEmpty title="No charges yet" description={emptyText} action={addButton} />
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading ?? false}
+          error={error}
+          errorKind={errorKind}
+          retryAfterMs={retryAfterMs}
+          onRetry={onRetry}
+          isRetrying={isRetrying}
+          columns={5}
+          loadingLabel="Loading charges"
+          empty={{ title: 'No charges yet', description: emptyText, action: addButton }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }

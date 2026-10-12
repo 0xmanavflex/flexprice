@@ -1,5 +1,5 @@
 import { GaugeIcon, PlusIcon, SlidersHorizontalIcon, ToggleRightIcon, TypeIcon } from '@ui/icons'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
+import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import { USAGE_RESET_PERIOD_LABEL, type Entitlement, FeatureType } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Section } from '@ui/compositions/layout/Section'
@@ -18,11 +18,16 @@ import { DetailTable } from '../../shared/DetailTable'
  */
 export const EntitlementTableProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/section', 'pages/shared/DetailTable', 'ui/button'],
+  composes: [
+    'compositions/section',
+    'compositions/SubTabState',
+    'pages/shared/DetailTable',
+    'ui/button',
+  ],
   note: 'Flush entitlements section for add-on and plan-like detail pages.',
 })
 
-export interface EntitlementTableProps {
+export interface EntitlementTableProps extends Partial<SubTabQuery> {
   entitlements: Entitlement[]
   onAdd?: () => void
   onEdit?: (entitlement: Entitlement) => void
@@ -70,6 +75,12 @@ export function EntitlementTable({
   onOpenFeature,
   title = 'Entitlements',
   showTitle,
+  isLoading,
+  error,
+  errorKind,
+  retryAfterMs,
+  onRetry,
+  isRetrying,
 }: EntitlementTableProps) {
   const hasActions = Boolean(onEdit || onDelete)
   const addButton = onAdd ? (
@@ -82,11 +93,24 @@ export function EntitlementTable({
   if (entitlements.length === 0) {
     return (
       <Section title={title} flush>
-        <SectionEmpty
-          title="No entitlements yet"
-          description={`Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`}
-          action={addButton}
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading ?? false}
+          error={error}
+          errorKind={errorKind}
+          retryAfterMs={retryAfterMs}
+          onRetry={onRetry}
+          isRetrying={isRetrying}
+          columns={5}
+          loadingLabel="Loading entitlements"
+          empty={{
+            title: 'No entitlements yet',
+            description: `Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`,
+            action: addButton,
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }

@@ -1,5 +1,5 @@
 import { PlusIcon, CoinsIcon } from '@ui/icons'
-import { SectionEmpty } from '@ui/compositions/feedback/SectionEmpty'
+import { SubTabState, type SubTabQuery } from '@ui/compositions/detail/SubTabState'
 import {
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
@@ -13,7 +13,7 @@ import { Section } from '@ui/compositions/layout/Section'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
 import { DetailTable } from '../../shared/DetailTable'
 
-export interface PlanCreditGrantsViewProps {
+export interface PlanCreditGrantsViewProps extends Partial<SubTabQuery> {
   grants: CreditGrant[]
   onAdd: () => void
   onEdit: (grant: CreditGrant) => void
@@ -33,20 +33,39 @@ export function PlanCreditGrantsView({
   onAdd,
   onEdit,
   onDelete,
+  isLoading,
+  error,
+  errorKind,
+  retryAfterMs,
+  onRetry,
+  isRetrying,
 }: PlanCreditGrantsViewProps) {
   if (grants.length === 0) {
     return (
       <Section title="Credit grants" flush>
-        <SectionEmpty
-          title="No credit grants yet"
-          description="Subscribers start with an empty wallet."
-          action={
-            <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-              <PlusIcon aria-hidden />
-              Add grant
-            </Button>
-          }
-        />
+        <SubTabState
+          hasData={false}
+          isLoading={isLoading ?? false}
+          error={error}
+          errorKind={errorKind}
+          retryAfterMs={retryAfterMs}
+          onRetry={onRetry}
+          isRetrying={isRetrying}
+          columns={5}
+          loadingLabel="Loading credit grants"
+          empty={{
+            title: 'No credit grants yet',
+            description: 'Subscribers start with an empty wallet.',
+            action: (
+              <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+                <PlusIcon aria-hidden />
+                Add grant
+              </Button>
+            ),
+          }}
+        >
+          {null}
+        </SubTabState>
       </Section>
     )
   }

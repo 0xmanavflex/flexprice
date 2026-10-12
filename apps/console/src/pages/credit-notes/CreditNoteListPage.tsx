@@ -1,8 +1,9 @@
 import { FileMinusIcon } from '@fp/ui/icons'
 import { type CreditNote, type CreditNoteQuery } from '@fp/domain'
-import { ApiError, useCreditNotes } from '@fp/query'
+import { useCreditNotes } from '@fp/query'
 import { CreditNoteGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
+import { toListFailure } from '../shared/listFailure'
 
 export interface CreditNoteListPageProps {
   query: CreditNoteQuery
@@ -19,6 +20,7 @@ export function CreditNoteListPage({
   onCreditNoteClick,
 }: CreditNoteListPageProps) {
   const creditNotes = useCreditNotes(query)
+  const failure = toListFailure(creditNotes.error, 'credit notes')
 
   const rows = creditNotes.data?.creditNotes ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -28,8 +30,13 @@ export function CreditNoteListPage({
     <PageBody>
       <ListState
         isLoading={creditNotes.isPending}
-        error={toFailure(creditNotes.error)}
-        isEmpty={rows.length === 0 && !isFiltered}
+        error={failure}
+        isEmpty={rows.length === 0 && (creditNotes.data?.total ?? 0) === 0 && !isFiltered}
+        hasRows={rows.length > 0}
+        isRefreshing={creditNotes.isFetching && !creditNotes.isPending}
+        isProvisional={creditNotes.isPlaceholderData}
+        isRetrying={creditNotes.isFetching && creditNotes.isError}
+        {...(failure ? { failureKind: failure.kind } : {})}
         isFiltered={isFiltered}
         onRetry={() => void creditNotes.refetch()}
         onClearFilters={clearFilters}
@@ -49,24 +56,4 @@ export function CreditNoteListPage({
       </ListState>
     </PageBody>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to credit notes here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading credit notes.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading credit notes.', canRetry: true }
 }

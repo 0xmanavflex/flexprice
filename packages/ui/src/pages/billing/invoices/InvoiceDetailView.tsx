@@ -32,8 +32,13 @@ import { DetailTabs } from '../../../compositions/detail/DetailKit'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../../compositions/detail/RelatedCard'
 import { Section } from '../../../compositions/layout/Section'
-import { SectionEmpty } from '../../../compositions/feedback/SectionEmpty'
-import { LoadingRows } from '../../../compositions/feedback/States'
+import {
+  SubTabState,
+  knownCount,
+  truncationNote,
+  type SubTabQuery,
+} from '../../../compositions/detail/SubTabState'
+import { Spinner } from '@ui/components/primitives/spinner'
 import { DetailTable } from '../../shared/DetailTable'
 import { Pill, Status } from '../../shared/cells'
 import {
@@ -53,6 +58,8 @@ export const InvoiceDetailViewProvenance = provenance({
     'compositions/MetadataCard',
     'compositions/RelatedCard',
     'compositions/ActivityLog',
+    'compositions/SubTabState',
+    'ui/spinner',
     '@reui/badge',
   ],
   note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit notes tabs.',
@@ -80,9 +87,24 @@ export interface InvoiceDetailViewProps {
   onOpenSubscription?: () => void
   onOpenPayment?: (paymentId: string) => void
   onOpenCreditNote?: (creditNoteId: string) => void
-  paymentsLoading?: boolean
-  creditNotesLoading?: boolean
+  /** Payments sub-query. Omitted: treated as loaded. */
+  payments?: SubTabQuery
+  /** Credit notes sub-query. Omitted: treated as loaded. */
+  creditNotes?: SubTabQuery
+  /**
+   * The action in flight, if any. Its menu item and button disable and say what
+   * is happening ("Sending…"), so a second press has nothing to land on.
+   */
+  pendingAction?: InvoicePendingAction | null
 }
+
+export type InvoicePendingAction = 'finalize' | 'recalculate' | 'send' | 'retry-payment'
+
+/** The most the payments and credit-note reads ask for; at the cap the list may be cut. */
+const SUB_LIST_LIMIT = 100
+
+const optionalCount = (count: number | undefined): { count?: number } =>
+  count === undefined ? {} : { count }
 
 type InvoiceTab = 'details' | 'payments' | 'credit-notes'
 
@@ -110,8 +132,9 @@ export function InvoiceDetailView({
   onOpenSubscription,
   onOpenPayment,
   onOpenCreditNote,
-  paymentsLoading = false,
-  creditNotesLoading = false,
+  payments: paymentsQuery = { isLoading: false },
+  creditNotes: creditNotesQuery = { isLoading: false },
+  pendingAction = null,
 }: InvoiceDetailViewProps) {
   const [tab, setTab] = useState<InvoiceTab>('details')
   const totals = invoiceTotals(invoice)
@@ -201,7 +224,9 @@ export function InvoiceDetailView({
                 <MenuAction
                   icon={<CheckCircle2Icon />}
                   label="Finalize invoice"
-                  disabled={isFinalizing}
+                  disabled={isFinalizing || pendingAction === 'finalize'}
+                  pending={isFinalizing || pendingAction === 'finalize'}
+                  pendingLabel="Finalizing…"
                   onSelect={onFinalize}
                 />
               ) : null}
@@ -219,6 +244,9 @@ export function InvoiceDetailView({
                 <MenuAction
                   icon={<RefreshCwIcon />}
                   label="Retry payment"
+                  disabled={pendingAction === 'retry-payment'}
+                  pending={pendingAction === 'retry-payment'}
+                  pendingLabel="Retrying…"
                   onSelect={onRetryPayment}
                 />
               ) : null}
@@ -226,7 +254,9 @@ export function InvoiceDetailView({
                 icon={<CalculatorIcon />}
                 label="Recalculate"
                 onSelect={onRecalculate}
-                disabled={!isDraft}
+                disabled={!isDraft || pendingAction === 'recalculate'}
+                pending={pendingAction === 'recalculate'}
+                pendingLabel="Recalculating…"
                 hint={isDraft ? undefined : 'Drafts only'}
               />
               <MenuAction
@@ -240,7 +270,11 @@ export function InvoiceDetailView({
                 icon={<SendIcon />}
                 label="Send invoice"
                 onSelect={onSend}
-                disabled={isDraft || invoice.status === InvoiceStatus.Void}
+                disabled={
+                  isDraft || invoice.status === InvoiceStatus.Void || pendingAction === 'send'
+                }
+                pending={pendingAction === 'send'}
+                pendingLabel="Sending…"
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
             </DropdownMenuGroup>
@@ -266,12 +300,12 @@ export function InvoiceDetailView({
             {
               value: 'payments',
               label: 'Payments',
-              ...(paymentsLoading ? {} : { count: invoice.payments.length }),
+              ...optionalCount(knownCount(invoice.payments.length, paymentsQuery)),
             },
             {
               value: 'credit-notes',
               label: 'Credit notes',
-              ...(creditNotesLoading ? {} : { count: invoice.creditNotes.length }),
+              ...optionalCount(knownCount(invoice.creditNotes.length, creditNotesQuery)),
             },
           ]}
         />
@@ -286,6 +320,7 @@ export function InvoiceDetailView({
               totals={totals}
               paymentFailed={paymentFailed}
               isDraft={isDraft}
+              retryPending={pendingAction === 'retry-payment'}
               {...(onRetryPayment ? { onRetryPayment } : {})}
             />
             <div className="flex flex-col gap-5 xl:sticky xl:top-6">
@@ -296,6 +331,8 @@ export function InvoiceDetailView({
                   at: event.at,
                   summary: event.summary,
                 }))}
+                note="Key dates from this invoice. A full activity log, with who did what, is not available yet."
+                emptyText="No dates recorded yet."
               />
               <MetadataCard metadata={invoice.metadata ?? {}} />
               <RelatedCard items={related} />
@@ -304,28 +341,29 @@ export function InvoiceDetailView({
         ) : null}
 
         {tab === 'payments' ? (
-          paymentsLoading ? (
-            <Section title="Payments" flush>
-              <div className="p-4">
-                <LoadingRows />
-              </div>
-            </Section>
-          ) : invoice.payments.length === 0 ? (
-            <Section title="Payments" flush>
-              <SectionEmpty
-                title="No payments yet"
-                description="No payments recorded for this invoice yet."
-                action={
+          <Section table title="Payments">
+            <SubTabState
+              hasData={invoice.payments.length > 0}
+              isLoading={paymentsQuery.isLoading}
+              error={paymentsQuery.error}
+              errorKind={paymentsQuery.errorKind}
+              retryAfterMs={paymentsQuery.retryAfterMs}
+              onRetry={paymentsQuery.onRetry}
+              isRetrying={paymentsQuery.isRetrying}
+              truncation={truncationNote(invoice.payments.length, SUB_LIST_LIMIT)}
+              loadingLabel="Loading payments"
+              columns={[{ width: '2fr' }, { kind: 'money' }, { kind: 'short' }, { kind: 'badge' }]}
+              empty={{
+                title: 'No payments yet',
+                description: 'No payments recorded for this invoice yet.',
+                action:
                   onRecordPayment && canRecordPayment ? (
                     <Button size="sm" onClick={onRecordPayment}>
                       Record payment
                     </Button>
-                  ) : undefined
-                }
-              />
-            </Section>
-          ) : (
-            <Section table title="Payments">
+                  ) : undefined,
+              }}
+            >
               <DetailTable<InvoicePaymentRow>
                 compact
                 label="Payments"
@@ -362,33 +400,34 @@ export function InvoiceDetailView({
                   },
                 ]}
               />
-            </Section>
-          )
+            </SubTabState>
+          </Section>
         ) : null}
 
         {tab === 'credit-notes' ? (
-          creditNotesLoading ? (
-            <Section title="Credit notes" flush>
-              <div className="p-4">
-                <LoadingRows />
-              </div>
-            </Section>
-          ) : invoice.creditNotes.length === 0 ? (
-            <Section title="Credit notes" flush>
-              <SectionEmpty
-                title="No credit notes yet"
-                description="No credit notes issued against this invoice."
-                action={
+          <Section table title="Credit notes">
+            <SubTabState
+              hasData={invoice.creditNotes.length > 0}
+              isLoading={creditNotesQuery.isLoading}
+              error={creditNotesQuery.error}
+              errorKind={creditNotesQuery.errorKind}
+              retryAfterMs={creditNotesQuery.retryAfterMs}
+              onRetry={creditNotesQuery.onRetry}
+              isRetrying={creditNotesQuery.isRetrying}
+              truncation={truncationNote(invoice.creditNotes.length, SUB_LIST_LIMIT)}
+              loadingLabel="Loading credit notes"
+              columns={[{ width: '2fr' }, { kind: 'money' }, { kind: 'short' }, { kind: 'badge' }]}
+              empty={{
+                title: 'No credit notes yet',
+                description: 'No credit notes issued against this invoice.',
+                action:
                   onIssueCreditNote && canIssueCreditNote ? (
                     <Button size="sm" onClick={onIssueCreditNote}>
                       Issue credit note
                     </Button>
-                  ) : undefined
-                }
-              />
-            </Section>
-          ) : (
-            <Section table title="Credit notes">
+                  ) : undefined,
+              }}
+            >
               <DetailTable<InvoiceCreditNoteRow>
                 compact
                 label="Credit notes"
@@ -418,8 +457,8 @@ export function InvoiceDetailView({
                   },
                 ]}
               />
-            </Section>
-          )
+            </SubTabState>
+          </Section>
         ) : null}
       </div>
     </DetailShell>
@@ -433,20 +472,29 @@ function MenuAction({
   onSelect,
   disabled = false,
   hint,
+  pending = false,
+  pendingLabel,
 }: {
   icon: ReactNode
   label: string
   onSelect: (() => void) | undefined
   disabled?: boolean
   hint?: string | undefined
+  /** The action is running: spinner, `pendingLabel`, not selectable. */
+  pending?: boolean
+  pendingLabel?: string | undefined
 }) {
   return (
-    <DropdownMenuItem disabled={disabled || !onSelect} onClick={onSelect}>
+    <DropdownMenuItem
+      disabled={disabled || pending || !onSelect}
+      onClick={onSelect}
+      {...(pending ? { 'aria-busy': true } : {})}
+    >
       <span className="text-muted-foreground [&_svg]:size-4" aria-hidden="true">
-        {icon}
+        {pending ? <Spinner /> : icon}
       </span>
       <span className="flex flex-col">
-        <span>{label}</span>
+        <span>{pending && pendingLabel ? pendingLabel : label}</span>
         {hint && (disabled || !onSelect) ? (
           <span className="text-muted-foreground text-xs">{hint}</span>
         ) : null}
@@ -468,6 +516,7 @@ function InvoiceDocumentArticle({
   totals,
   paymentFailed,
   isDraft,
+  retryPending = false,
   onRetryPayment,
 }: {
   invoice: InvoiceDocument
@@ -477,6 +526,7 @@ function InvoiceDocumentArticle({
   totals: ReturnType<typeof invoiceTotals>
   paymentFailed: boolean
   isDraft: boolean
+  retryPending?: boolean
   onRetryPayment?: () => void
 }) {
   const settled = totals.due <= 0 && invoice.paid > 0
@@ -582,8 +632,16 @@ function InvoiceDocumentArticle({
         <div className="bg-muted/40 flex flex-wrap items-center justify-between gap-3 border-t px-8 py-4 text-[13px]">
           <span className="text-muted-foreground">{note}</span>
           {paymentFailed && onRetryPayment ? (
-            <Button size="sm" variant="outline" className="h-8 px-3" onClick={onRetryPayment}>
-              Retry payment
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 px-3"
+              disabled={retryPending}
+              aria-busy={retryPending || undefined}
+              onClick={onRetryPayment}
+            >
+              {retryPending ? <Spinner aria-hidden="true" /> : null}
+              {retryPending ? 'Retrying…' : 'Retry payment'}
             </Button>
           ) : null}
         </div>

@@ -1,9 +1,10 @@
 import { type Addon, type AddonQuery } from '@fp/domain'
-import { ApiError, useAddons } from '@fp/query'
+import { useAddons } from '@fp/query'
 import { AddonGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { PuzzleIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
+import { toListFailure } from '../shared/listFailure'
 
 export interface AddonListPageProps {
   query: AddonQuery
@@ -27,7 +28,7 @@ export function AddonListPage({
   onEditAddon,
 }: AddonListPageProps) {
   const addons = useAddons(query)
-  const failure = toFailure(addons.error)
+  const failure = toListFailure(addons.error, 'add-ons')
   const rows = addons.data?.addons ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
@@ -38,7 +39,12 @@ export function AddonListPage({
       <ListState
         isLoading={addons.isPending}
         error={failure}
-        isEmpty={rows.length === 0 && !isFiltered}
+        isEmpty={rows.length === 0 && (addons.data?.total ?? 0) === 0 && !isFiltered}
+        hasRows={rows.length > 0}
+        isRefreshing={addons.isFetching && !addons.isPending}
+        isProvisional={addons.isPlaceholderData}
+        isRetrying={addons.isFetching && addons.isError}
+        {...(failure ? { failureKind: failure.kind } : {})}
         isFiltered={isFiltered}
         onRetry={() => void addons.refetch()}
         onClearFilters={clearFilters}
@@ -60,24 +66,4 @@ export function AddonListPage({
       </ListState>
     </PageBody>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to add-ons here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading add-ons.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading add-ons.', canRetry: true }
 }

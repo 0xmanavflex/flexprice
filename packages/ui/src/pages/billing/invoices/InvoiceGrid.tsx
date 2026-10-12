@@ -172,6 +172,17 @@ export interface InvoiceGridProps {
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
+  /**
+   * Set when `invoices` is a page-local narrowing of the page fetched (the
+   * derived paid/overdue statuses). `total` is then still the server's count
+   * of every invoice, and an empty result means "none on this page", never
+   * "none in the ledger".
+   */
+  pageLocal?: { fetchedCount: number } | undefined
+  /** A background refetch is updating the rows on screen. */
+  isRefreshing?: boolean
+  /** The rows belong to the previous page or filter. */
+  isProvisional?: boolean
   /** Locale for dates and amounts. Supplied by the app, never read from a global. */
   locale?: string
 }
@@ -188,6 +199,9 @@ export function InvoiceGrid({
   onOpenCustomer,
   onCreate,
   onClearFilters,
+  pageLocal,
+  isRefreshing = false,
+  isProvisional = false,
   locale,
 }: InvoiceGridProps) {
   const columns = useMemo<EntityColumn<Invoice>[]>(
@@ -269,6 +283,7 @@ export function InvoiceGrid({
   }
 
   const derived = hasDerivedStatus(query.statuses)
+  const isPageLocal = derived && pageLocal !== undefined
 
   return (
     <div className="flex min-w-0 flex-col gap-3">
@@ -284,10 +299,13 @@ export function InvoiceGrid({
         >
           <InfoIcon aria-hidden className="mt-px size-3.5 shrink-0" />
           <span>
+            <span className="text-foreground font-medium">Filtered within this page.</span>{' '}
+            {pageLocal
+              ? `Showing ${invoices.length} of ${pageLocal.fetchedCount} invoices on this page. `
+              : ''}
             Paid and overdue are worked out from each invoice&rsquo;s balance and due date rather
-            than stored, so the API cannot be asked for them. This narrows the invoices already
-            loaded, not the whole ledger — page through, or sort by due date, to be sure you have
-            seen everything.
+            than stored, so the API cannot be asked for them. The count below is every invoice, not
+            only matching ones; page through to see the rest.
           </span>
         </p>
       ) : null}
@@ -345,9 +363,20 @@ export function InvoiceGrid({
         isLoading={isLoading}
         error={error}
         {...(onRetry ? { onRetry } : {})}
+        isRefreshing={isRefreshing}
+        isProvisional={isProvisional}
+        isPageLocalFilter={isPageLocal}
         isFiltered={query.search.length > 0 || query.statuses.length > 0}
         {...(onClearFilters ? { onClearFilters } : {})}
-        filteredEmptyTitle="No invoices match these filters"
+        filteredEmptyTitle={
+          isPageLocal ? 'No matching invoices on this page' : 'No invoices match these filters'
+        }
+        {...(isPageLocal
+          ? {
+              filteredEmptyDescription:
+                'Paid and overdue are filtered within this page only. Other pages may have matches; go to another page, or clear the filter.',
+            }
+          : {})}
         empty={{
           title: 'No invoices yet',
           description:

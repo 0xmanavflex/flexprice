@@ -43,7 +43,10 @@ export function AddChargeDialog({
   const [chosen, setChosen] = useState(false)
 
   const handleOpenChange = (next: boolean) => {
-    if (!next) setChosen(false)
+    if (!next) {
+      setChosen(false)
+      setType(PriceType.Fixed)
+    }
     onOpenChange(next)
   }
 

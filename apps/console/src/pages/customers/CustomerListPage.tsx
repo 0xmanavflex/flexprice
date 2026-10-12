@@ -5,6 +5,7 @@ import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { UsersIcon } from '@fp/ui/icons'
+import { toListFailure } from '../shared/listFailure'
 
 export interface CustomerListPageProps {
   query: CustomerQuery
@@ -35,7 +36,7 @@ export function CustomerListPage({
 
   const [deleting, setDeleting] = useState<Customer | null>(null)
 
-  const failure = toFailure(customers.error)
+  const failure = toListFailure(customers.error, 'customers')
   const rows = customers.data?.customers ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
@@ -51,7 +52,12 @@ export function CustomerListPage({
         <ListState
           isLoading={customers.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (customers.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={customers.isFetching && !customers.isPending}
+          isProvisional={customers.isPlaceholderData}
+          isRetrying={customers.isFetching && customers.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void customers.refetch()}
           onClearFilters={clearFilters}
@@ -93,26 +99,6 @@ export function CustomerListPage({
       />
     </>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to customers here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading customers.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading customers.', canRetry: true }
 }
 
 /** A save failure, as a sentence the form can show inline. */

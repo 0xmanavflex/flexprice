@@ -9,6 +9,7 @@ import {
   useWalletTransactions,
 } from '@fp/query'
 import { CustomerWalletView, toast } from '@fp/ui/pages'
+import { subTab } from '@/pages/shared/subTab'
 
 export interface CustomerWalletPanelProps {
   customerId: string
@@ -21,6 +22,14 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
   const selected = wallets.data?.find((wallet) => wallet.id === chosen) ?? wallets.data?.[0] ?? null
   const transactions = useWalletTransactions(selected?.id ?? null)
 
+  const ledger = subTab(transactions, 'wallet transactions')
+  const transactionProps = {
+    transactionsLoading: ledger.isLoading,
+    transactionsError: ledger.error ?? null,
+    ...(ledger.errorKind ? { transactionsErrorKind: ledger.errorKind } : {}),
+    ...(ledger.onRetry ? { onRetryTransactions: ledger.onRetry } : {}),
+  }
+
   const create = useCreateWallet(customerId)
   const topUp = useTopUpWallet(selected?.id ?? '')
   const autoTopup = useUpdateAutoTopup(selected?.id ?? '')
@@ -30,12 +39,12 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
     <CustomerWalletView
       wallets={wallets.data ?? []}
       isLoading={wallets.isPending}
-      failed={wallets.error !== null}
+      failed={wallets.error !== null && !wallets.data}
       onRetry={() => void wallets.refetch()}
       selectedId={selected?.id ?? null}
       onSelect={setChosen}
       transactions={transactions.data ?? []}
-      transactionsLoading={transactions.isLoading}
+      {...transactionProps}
       onCreateWallet={(draft) =>
         create.mutateAsync(draft).then((created) => {
           toast.success('Wallet created')

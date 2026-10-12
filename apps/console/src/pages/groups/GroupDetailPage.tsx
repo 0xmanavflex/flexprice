@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
-import { ApiError, useGroup } from '@fp/query'
+import { useGroup } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView, Pill } from '@fp/ui/pages'
-import { AppFailure, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { EditableCard } from '@fp/ui/compositions'
 import { LayersIcon, PencilIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
 
 export interface GroupDetailPageProps {
   groupId: string
@@ -27,38 +28,8 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
   const group = useGroup(groupId)
   const [tab, setTab] = useState('members')
 
-  if (group.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (group.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(group.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void group.refetch()}
-        />
-      </PageBody>
-    )
-  }
-
   if (!group.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This group no longer exists"
-          detail="It may have been deleted. Everything else in the catalogue still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(group, { noun: 'this group', listName: 'groups', onBack: onNavigateToList })
   }
 
   const data = group.data
@@ -151,20 +122,4 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
 function formatDate(value: Date | null): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this group.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This group could not be loaded.'
-    }
-  }
-  return 'This group could not be loaded.'
 }

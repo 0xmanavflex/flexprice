@@ -1,9 +1,10 @@
 import { type Coupon, type CouponQuery } from '@fp/domain'
-import { ApiError, useCoupons } from '@fp/query'
+import { useCoupons } from '@fp/query'
 import { CouponGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { TicketPercentIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
+import { toListFailure } from '../shared/listFailure'
 
 export interface CouponListPageProps {
   query: CouponQuery
@@ -27,7 +28,7 @@ export function CouponListPage({
 }: CouponListPageProps) {
   const coupons = useCoupons(query)
   const onCreate = onCreateCoupon
-  const failure = toFailure(coupons.error)
+  const failure = toListFailure(coupons.error, 'coupons')
   const rows = coupons.data?.coupons ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
@@ -36,7 +37,12 @@ export function CouponListPage({
       <ListState
         isLoading={coupons.isPending}
         error={failure}
-        isEmpty={rows.length === 0 && !isFiltered}
+        isEmpty={rows.length === 0 && (coupons.data?.total ?? 0) === 0 && !isFiltered}
+        hasRows={rows.length > 0}
+        isRefreshing={coupons.isFetching && !coupons.isPending}
+        isProvisional={coupons.isPlaceholderData}
+        isRetrying={coupons.isFetching && coupons.isError}
+        {...(failure ? { failureKind: failure.kind } : {})}
         isFiltered={isFiltered}
         onRetry={() => void coupons.refetch()}
         onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
@@ -57,24 +63,4 @@ export function CouponListPage({
       </ListState>
     </PageBody>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to coupons here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading coupons.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading coupons.', canRetry: true }
 }

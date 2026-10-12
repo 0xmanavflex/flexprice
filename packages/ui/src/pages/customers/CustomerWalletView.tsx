@@ -57,6 +57,8 @@ import { ChoiceCards, Composer, SplitMeter } from '../../compositions/detail/Det
 import { DetailPills } from '../../compositions/detail/pillSize'
 import { Pill, type PillTone } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
+import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
+import type { ErrorKind } from '../../compositions/feedback/States'
 
 export interface CustomerWalletViewProps {
   wallets: Wallet[]
@@ -67,6 +69,10 @@ export interface CustomerWalletViewProps {
   onSelect: (walletId: string) => void
   transactions: WalletTransaction[]
   transactionsLoading?: boolean
+  /** The ledger read failed: the Top-ups section shows it with a retry, never "No top-ups yet". */
+  transactionsError?: string | null
+  transactionsErrorKind?: ErrorKind
+  onRetryTransactions?: () => void
   /** Each action resolves when done and rejects on failure; the matching error is a sentence. */
   onCreateWallet: (draft: CreateWallet) => Promise<unknown>
   createError?: string | null
@@ -86,7 +92,11 @@ const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR'].map((code) => ({ value: code, la
 
 // `Intl.NumberFormat` formats a decimal string exactly; the cast bridges a lib typing gap.
 const credits = (value: string) =>
-  new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(value as unknown as number)
+  value.trim() === '' || !Number.isFinite(Number(value))
+    ? '—'
+    : new Intl.NumberFormat('en-US', { maximumFractionDigits: 6 }).format(
+        value as unknown as number,
+      )
 
 const day = (value: Date | null) =>
   value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value) : ''
@@ -100,6 +110,9 @@ export function CustomerWalletView({
   onSelect,
   transactions,
   transactionsLoading = false,
+  transactionsError = null,
+  transactionsErrorKind,
+  onRetryTransactions,
   onCreateWallet,
   createError = null,
   onTopUp,
@@ -112,11 +125,13 @@ export function CustomerWalletView({
 }: CustomerWalletViewProps) {
   const [dialog, setDialog] = useState<Dialog>(null)
   const [pending, setPending] = useState(false)
-  const [autoTopupOpens, setAutoTopupOpens] = useState(0)
+  // Every open remounts the dialogs (their `key`), so a draft or a validation
+  // message from the last time never greets the next one.
+  const [opens, setOpens] = useState(0)
 
   const open = (next: Exclude<Dialog, null>) => {
     onResetErrors?.()
-    if (next === 'auto-topup') setAutoTopupOpens((count) => count + 1)
+    setOpens((count) => count + 1)
     setDialog(next)
   }
   const close = () => setDialog(null)
@@ -132,8 +147,8 @@ export function CustomerWalletView({
     }
   }
 
-  if (isLoading) return <LoadingRows />
-  if (failed) {
+  // Wallets on screen win over a failed refetch; with none, error beats loading.
+  if (failed && wallets.length === 0) {
     return (
       <AppFailure
         title="Wallets could not be loaded"
@@ -142,9 +157,11 @@ export function CustomerWalletView({
       />
     )
   }
+  if (isLoading && wallets.length === 0) return <LoadingRows />
 
   const createDialog = (
     <CreateWalletDialog
+      key={`create:${opens}`}
       open={dialog === 'create'}
       onClose={close}
       pending={pending}
@@ -172,11 +189,16 @@ export function CustomerWalletView({
   const topUps = transactions
     .filter((t) => t.direction === 'in')
     .sort((a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0))
-  const current = Number(wallet.creditBalance) || 0
-  const ongoing = Number(wallet.realTimeCreditBalance) || 0
-  const pendingUsage = Math.max(0, current - ongoing)
+  // An unreadable balance is "unknown", never a 0: the meter is left out rather
+  // than drawn as an untouched wallet.
+  const current = toNumber(wallet.creditBalance)
+  const ongoing = toNumber(wallet.realTimeCreditBalance)
+  const meterKnown = current !== null && ongoing !== null
+  const pendingUsage = meterKnown ? Math.max(0, current - ongoing) : 0
   const usedShare =
-    current > 0 ? Math.min(100, Math.round((pendingUsage / current) * 1000) / 10) : 0
+    meterKnown && current > 0 ? Math.min(100, Math.round((pendingUsage / current) * 1000) / 10) : 0
+  const availableNow = meterKnown ? Math.max(0, ongoing) : 0
+  const ledgerCapped = truncationNote(transactions.length, TRANSACTIONS_LIMIT)
 
   return (
     <div className="flex flex-col gap-5">
@@ -292,81 +314,110 @@ export function CustomerWalletView({
             </div>
           </div>
           <div className="flex flex-col justify-center gap-3 border-t p-6 lg:border-t-0">
-            <div className="flex flex-wrap items-baseline justify-between gap-2">
-              <p className="text-muted-foreground text-xs">Since the last invoice</p>
-              <p className="text-muted-foreground text-xs tabular-nums">{usedShare}% used</p>
-            </div>
-            <SplitMeter
-              segments={56}
-              parts={[
-                { value: pendingUsage, color: 'bg-success', label: 'Used, not yet invoiced' },
-                { value: Math.max(0, ongoing), color: 'bg-muted', label: 'Available' },
-              ]}
-            />
-            <div className="text-muted-foreground flex flex-wrap gap-x-5 gap-y-1 text-xs">
-              <span className="inline-flex items-center gap-1.5">
-                <span className="bg-success size-2 rounded-full" aria-hidden="true" />
-                {credits(String(pendingUsage))} used, not yet invoiced
-              </span>
-              <span className="inline-flex items-center gap-1.5">
-                <span className="bg-muted-foreground/30 size-2 rounded-full" aria-hidden="true" />
-                {credits(String(Math.max(0, ongoing)))} available
-              </span>
-            </div>
+            {meterKnown ? (
+              <>
+                <div className="flex flex-wrap items-baseline justify-between gap-2">
+                  <p className="text-muted-foreground text-xs">Since the last invoice</p>
+                  <p className="text-muted-foreground text-xs tabular-nums">{usedShare}% used</p>
+                </div>
+                <SplitMeter
+                  segments={56}
+                  parts={[
+                    { value: pendingUsage, color: 'bg-success', label: 'Used, not yet invoiced' },
+                    { value: availableNow, color: 'bg-muted', label: 'Available' },
+                  ]}
+                />
+                <div className="text-muted-foreground flex flex-wrap gap-x-5 gap-y-1 text-xs">
+                  <span className="inline-flex items-center gap-1.5">
+                    <span className="bg-success size-2 rounded-full" aria-hidden="true" />
+                    {credits(String(pendingUsage))} used, not yet invoiced
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <span
+                      className="bg-muted-foreground/30 size-2 rounded-full"
+                      aria-hidden="true"
+                    />
+                    {credits(String(availableNow))} available
+                  </span>
+                </div>
+              </>
+            ) : (
+              <>
+                <p className="text-muted-foreground text-xs">Since the last invoice</p>
+                <p className="text-muted-foreground text-sm">
+                  Usage since the last invoice is unavailable: a balance could not be read.
+                </p>
+              </>
+            )}
           </div>
         </div>
       </section>
 
       <Section table title="Top-ups">
-        <DetailTable
-          compact
-          label="Top-ups"
-          noun="top-ups"
-          rows={topUps}
+        <SubTabState
+          hasData={topUps.length > 0}
           isLoading={transactionsLoading}
-          empty="No top-ups yet."
-          columns={[
-            {
-              key: 'topup',
-              header: 'Top-up',
-              cell: (row) => (
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-medium">{row.reason}</p>
-                  <p className="text-muted-foreground truncate text-xs">
-                    {[row.description, row.createdAt ? `added ${day(row.createdAt)}` : '']
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
-                </div>
-              ),
-            },
-            {
-              key: 'credits',
-              header: 'Credits',
-              sortBy: (row) => Number(row.credits),
-              cell: (row) => (
-                <div>
-                  <p className="text-success text-sm font-medium tabular-nums">
-                    +{credits(row.credits)}
-                  </p>
-                  <p className="text-muted-foreground text-xs tabular-nums">
-                    {formatMoney(row.amount)}
-                  </p>
-                </div>
-              ),
-            },
-            { key: 'remaining', header: 'Remaining', cell: () => <NotTracked /> },
-            { key: 'consumed', header: 'Consumed', cell: () => <NotTracked /> },
-            { key: 'expires', header: 'Expires', cell: () => <NotTracked /> },
-          ]}
-        />
+          error={transactionsError}
+          errorKind={transactionsErrorKind}
+          onRetry={onRetryTransactions}
+          columns={3}
+          loadingLabel="Loading top-ups"
+          truncation={ledgerCapped}
+          empty={{
+            title: ledgerCapped ? 'No top-ups in the latest transactions' : 'No top-ups yet',
+            description: ledgerCapped
+              ? 'Older transactions are not listed here.'
+              : 'Credits added to this wallet appear here.',
+          }}
+        >
+          <DetailTable
+            compact
+            label="Top-ups"
+            noun="top-ups"
+            rows={topUps}
+            empty="No top-ups yet."
+            columns={[
+              {
+                key: 'topup',
+                header: 'Top-up',
+                cell: (row) => (
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium">{row.reason || '—'}</p>
+                    <p className="text-muted-foreground truncate text-xs">
+                      {[row.description, row.createdAt ? `added ${day(row.createdAt)}` : '']
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                  </div>
+                ),
+              },
+              {
+                key: 'credits',
+                header: 'Credits',
+                sortBy: (row) => Number(row.credits),
+                cell: (row) => (
+                  <div>
+                    <p className="text-success text-sm font-medium tabular-nums">
+                      +{credits(row.credits)}
+                    </p>
+                    <p className="text-muted-foreground text-xs tabular-nums">
+                      {formatMoney(row.amount)}
+                    </p>
+                  </div>
+                ),
+              },
+            ]}
+          />
+        </SubTabState>
         <p className="text-muted-foreground border-t px-6 py-3 text-xs">
-          Usage draws on the top-up that expires soonest, among those it is allowed to use.
+          Flexprice does not report how much of each top-up remains, has been consumed or when it
+          expires, so those are not shown.
         </p>
       </Section>
 
       {createDialog}
       <TopUpDialog
+        key={`top-up:${opens}`}
         open={dialog === 'top-up'}
         onClose={close}
         pending={pending}
@@ -374,7 +425,7 @@ export function CustomerWalletView({
         onSubmit={(draft) => run(() => onTopUp(draft))}
       />
       <AutoTopupDialog
-        key={`${wallet.id}:${autoTopupOpens}`}
+        key={`${wallet.id}:${opens}`}
         open={dialog === 'auto-topup'}
         onClose={close}
         pending={pending}
@@ -404,8 +455,15 @@ const STATUS_TONE: Record<WalletStatus, PillTone> = {
   [WalletStatus.Closed]: 'neutral',
 }
 
-/** The API reports no per-top-up remaining, consumed or expiry, so these read as absent. */
-const NotTracked = () => <span className="text-muted-foreground">—</span>
+/** How many ledger rows the wallet panel asks for; at this count older entries are cut off. */
+export const TRANSACTIONS_LIMIT = 50
+
+/** A decimal string as a number, or null when it is blank or unreadable. */
+function toNumber(value: string): number | null {
+  if (value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
 
 function CreateWalletDialog({
   open,

@@ -1,4 +1,4 @@
-import { Section } from '../../../compositions'
+import { EmptyState, Section } from '../../../compositions'
 import { DetailTable } from '../../shared/DetailTable'
 
 export interface CouponRedemption {
@@ -9,30 +9,27 @@ export interface CouponRedemption {
   discount: string
 }
 
-/** DEMO data: no redemption-history endpoint exists yet. Replace with a query when one does. */
-export const DEMO_COUPON_REDEMPTIONS: CouponRedemption[] = [
-  {
-    id: 'r1',
-    customer: 'Acme Robotics',
-    plan: 'Starter',
-    appliedAt: 'Jan 10, 2026',
-    discount: '$84.00',
-  },
-  { id: 'r2', customer: 'Globex AI', plan: 'Pro', appliedAt: 'Feb 11, 2026', discount: '$120.00' },
-  {
-    id: 'r3',
-    customer: 'Initech Cloud',
-    plan: 'Team',
-    appliedAt: 'Mar 12, 2026',
-    discount: '$24.00',
-  },
-]
-
+/**
+ * Who has redeemed a coupon. Flexprice has no redemption-history endpoint yet,
+ * so the console passes no `redemptions` and this says so; it never shows
+ * sample rows. Pass the rows (an empty array means none) once a source exists.
+ */
 export function CouponRedemptionsView({
-  redemptions = DEMO_COUPON_REDEMPTIONS,
+  redemptions,
 }: {
-  redemptions?: CouponRedemption[]
+  redemptions?: CouponRedemption[] | undefined
 }) {
+  if (!redemptions) {
+    return (
+      <Section title="Redemptions">
+        <EmptyState
+          size="inline"
+          title="Redemption history is not available yet"
+          description="Flexprice does not report who has redeemed a coupon, so none are shown."
+        />
+      </Section>
+    )
+  }
   return (
     <Section table title="Redemptions">
       <DetailTable

@@ -1,12 +1,6 @@
 import { useState } from 'react'
 import { PriceEntityType } from '@fp/domain'
-import {
-  ApiError,
-  useCostSheet,
-  useDeleteCostSheet,
-  usePrices,
-  useUpdateCostSheet,
-} from '@fp/query'
+import { useCostSheet, useDeleteCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
 import {
   CatalogDetailFrame,
   CatalogStatusBadge,
@@ -14,17 +8,10 @@ import {
   CostMarginCard,
   Pill,
 } from '@fp/ui/pages'
-import {
-  AppFailure,
-  ConfirmDialog,
-  EditableCard,
-  LoadingRows,
-  MetadataCard,
-  PageBody,
-  Section,
-  SectionEmpty,
-} from '@fp/ui/compositions'
+import { ConfirmDialog, EditableCard, MetadataCard } from '@fp/ui/compositions'
 import { ArchiveIcon, CalculatorIcon, PencilIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
+import { subTab } from '../shared/subTab'
 
 type CostSheetTab = 'costs' | 'information'
 
@@ -63,38 +50,12 @@ export function CostSheetDetailPage({
   const [archiving, setArchiving] = useState(false)
   const [tab, setTab] = useState<CostSheetTab>(startEditing ? 'information' : 'costs')
 
-  if (costSheet.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (costSheet.error) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={failureTitle(costSheet.error)}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={() => void costSheet.refetch()}
-        />
-      </PageBody>
-    )
-  }
-
   if (!costSheet.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title="This cost sheet no longer exists"
-          detail="It may have been deleted. Everything else in the catalogue still works."
-          onRetry={onNavigateToList}
-        />
-      </PageBody>
-    )
+    return detailGate(costSheet, {
+      noun: 'this cost sheet',
+      listName: 'cost sheets',
+      onBack: onNavigateToList,
+    })
   }
 
   const data = costSheet.data
@@ -143,23 +104,13 @@ export function CostSheetDetailPage({
           count,
           content: (
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-              {prices.isPending ? (
-                <Section title="Costs" flush>
-                  <div className="p-6">
-                    <LoadingRows />
-                  </div>
-                </Section>
-              ) : charges && charges.length > 0 ? (
-                <ChargeTable charges={charges} title="Costs" />
-              ) : (
-                <Section title="Costs" flush>
-                  <SectionEmpty
-                    title="No prices yet"
-                    description="Prices tagged to this cost sheet will appear here. None have been added to it yet."
-                  />
-                </Section>
-              )}
-              {/* Margin numbers are DEMO_COST_MARGIN: the API carries no revenue/cost totals. */}
+              <ChargeTable
+                charges={charges ?? []}
+                title="Costs"
+                emptyDescription="Prices tagged to this cost sheet will appear here. None have been added to it yet."
+                {...subTab(prices, 'prices')}
+              />
+              {/* No margin source: the API carries no revenue/cost totals, so the card says so. */}
               <CostMarginCard />
             </div>
           ),
@@ -255,20 +206,4 @@ export function CostSheetDetailPage({
 function formatDate(value: Date | null): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this cost sheet.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This cost sheet could not be loaded.'
-    }
-  }
-  return 'This cost sheet could not be loaded.'
 }

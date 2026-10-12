@@ -1,9 +1,10 @@
 import { type PriceUnit, type PriceUnitQuery } from '@fp/domain'
-import { ApiError, usePriceUnits } from '@fp/query'
+import { usePriceUnits } from '@fp/query'
 import { PriceUnitGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { CoinsIcon } from '@fp/ui/icons'
 import { Button } from '@fp/ui/primitives'
+import { toListFailure } from '../shared/listFailure'
 
 export interface PriceUnitListPageProps {
   query: PriceUnitQuery
@@ -27,7 +28,7 @@ export function PriceUnitListPage({
 }: PriceUnitListPageProps) {
   const priceUnits = usePriceUnits(query)
 
-  const failure = toFailure(priceUnits.error)
+  const failure = toListFailure(priceUnits.error, 'price units')
   const rows = priceUnits.data?.priceUnits ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
@@ -38,7 +39,12 @@ export function PriceUnitListPage({
       <ListState
         isLoading={priceUnits.isPending}
         error={failure}
-        isEmpty={rows.length === 0 && !isFiltered}
+        isEmpty={rows.length === 0 && (priceUnits.data?.total ?? 0) === 0 && !isFiltered}
+        hasRows={rows.length > 0}
+        isRefreshing={priceUnits.isFetching && !priceUnits.isPending}
+        isProvisional={priceUnits.isPlaceholderData}
+        isRetrying={priceUnits.isFetching && priceUnits.isError}
+        {...(failure ? { failureKind: failure.kind } : {})}
         isFiltered={isFiltered}
         onRetry={() => void priceUnits.refetch()}
         onClearFilters={clearFilters}
@@ -59,24 +65,4 @@ export function PriceUnitListPage({
       </ListState>
     </PageBody>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to price units here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading price units.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading price units.', canRetry: true }
 }

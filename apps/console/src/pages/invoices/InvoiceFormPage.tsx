@@ -68,9 +68,7 @@ export function InvoiceFormPage({ invoiceId, onCancel, onDone }: InvoiceFormPage
         { label: 'Invoices', onClick: onCancel },
         { label: editing ? 'Edit invoice' : 'New invoice' },
       ]}
-      {...(existing
-        ? { defaultValue: toDraft(existing), invoiceNumber: existing.number }
-        : {})}
+      {...(existing ? { defaultValue: toDraft(existing), invoiceNumber: existing.number } : {})}
       onCancel={onCancel}
       isSubmitting={create.isPending}
       submitError={editing ? editNotice : toSubmitError(create.error)}

@@ -1,8 +1,9 @@
 import { type Invoice, type InvoiceQuery, isStoredInvoiceStatus } from '@fp/domain'
-import { ApiError, useInvoices } from '@fp/query'
+import { useInvoices } from '@fp/query'
 import { ReceiptIcon } from '@fp/ui/icons'
 import { InvoiceGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
+import { toListFailure } from '../shared/listFailure'
 
 export interface InvoiceListPageProps {
   query: InvoiceQuery
@@ -34,6 +35,9 @@ export function InvoiceListPage({
 
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const fetched = invoices.data?.invoices ?? []
+  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+
+  const failure = toListFailure(invoices.error, 'invoices')
 
   /*
    * `paid` and `overdue` are derived, so the request went out without them.
@@ -46,15 +50,20 @@ export function InvoiceListPage({
    * not have.
    *
    * So the narrowing happens here, over the page that came back, and the grid
-   * says on screen that that is what it did. `total` is corrected to match,
-   * because a footer reading "1 – 3 of 847" under three rows is the same lie
-   * in a different place.
+   * says on screen that it is page-local ("Filtered within this page").
+   *
+   * `total` is *not* corrected. It used to be overwritten with the narrowed
+   * count, which made the footer claim the ledger had three invoices and, worse,
+   * collapsed pagination to a single page — so the next page, where the other
+   * paid invoices are, could never be reached. The server's total stays the
+   * server's; the grid explains the difference.
    */
   const derived = query.statuses.filter((status) => !isStoredInvoiceStatus(status))
-  const narrowed: Invoice[] =
-    derived.length > 0 ? fetched.filter((invoice) => derived.includes(invoice.status)) : fetched
-  const rows = narrowed
-  const total = derived.length > 0 ? narrowed.length : (invoices.data?.total ?? 0)
+  const isPageLocal = derived.length > 0
+  const rows: Invoice[] = isPageLocal
+    ? fetched.filter((invoice) => derived.includes(invoice.status))
+    : fetched
+  const total = invoices.data?.total ?? 0
 
   return (
     <>
@@ -74,62 +83,35 @@ export function InvoiceListPage({
          */}
         <ListState
           isLoading={invoices.isPending}
-          error={
-            invoices.error ? { message: toMessage(invoices.error) ?? '', canRetry: true } : null
-          }
-          isEmpty={rows.length === 0 && !isFiltered}
+          error={failure}
+          // A page-local filter can leave this page empty while the ledger is
+          // not; only the server's total says whether anything exists.
+          isEmpty={rows.length === 0 && total === 0 && !isFiltered}
           isFiltered={isFiltered}
+          hasRows={fetched.length > 0}
+          isRefreshing={invoices.isFetching && !invoices.isPending}
+          isProvisional={invoices.isPlaceholderData}
+          isRetrying={invoices.isFetching && invoices.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           onRetry={() => void invoices.refetch()}
           emptyIcon={<ReceiptIcon aria-hidden />}
           emptyTitle="No invoices yet"
           emptyDescription="Invoices are produced when a contract's billing period closes. Create a plan and subscribe a customer, and the first one will appear here."
-          onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+          onClearFilters={clearFilters}
         >
           <InvoiceGrid
             invoices={rows}
             total={total}
             query={query}
             onQueryChange={onQueryChange}
-            isLoading={invoices.isPending}
-            error={toMessage(invoices.error)}
-            onRetry={() => void invoices.refetch()}
+            {...(isPageLocal ? { pageLocal: { fetchedCount: fetched.length } } : {})}
             {...(onCreate ? { onCreate } : {})}
             {...(onInvoiceClick ? { onInvoiceClick } : {})}
             {...(onOpenCustomer ? { onOpenCustomer } : {})}
-            onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
-            /*
-             * The status facet, in the toolbar beside Sort — the same slot
-             * every other list screen fills. Without it the ledger could only
-             * be narrowed by hand-editing the URL, which is how a tenant whose
-             * only invoice was skipped ended up looking at an empty list.
-             */
+            onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
     </>
   )
-}
-
-/**
- * Turns a failure into something a person can act on.
- *
- * The grid takes a string, not an error: it has no business knowing what an
- * `ApiError` is, and a component that branches on `kind` cannot be told to
- * render the forbidden state in a story.
- */
-function toMessage(error: unknown): string | null {
-  if (!error) return null
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to invoices in this environment.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again to continue.'
-      case 'network':
-        return 'Could not reach Flexprice. Check your connection and try again.'
-      default:
-        return error.message
-    }
-  }
-  return 'Something went wrong loading invoices.'
 }

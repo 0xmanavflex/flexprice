@@ -214,3 +214,30 @@ export const EmptyWithCallerCopy: Story = {
     await expect(canvas.queryByText(/a plan bills nothing/i)).not.toBeInTheDocument()
   },
 }
+
+/** Loading is a skeleton, never "No charges yet". */
+export const Loading: Story = {
+  args: { charges: [], isLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Loading charges')).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).toBeNull()
+  },
+}
+
+/** A failed load says so and offers a retry; it never reads as "No charges yet". */
+export const SubTabError: Story = {
+  args: {
+    charges: [],
+    error: 'Could not load the charges.',
+    errorKind: 'server',
+    onRetry: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Could not load the charges.')).toBeInTheDocument()
+    await expect(canvas.queryByText('No charges yet')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
+  },
+}

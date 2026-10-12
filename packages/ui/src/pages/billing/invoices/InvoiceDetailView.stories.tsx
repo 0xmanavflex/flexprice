@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, within } from 'storybook/test'
 import { InvoiceStatus, PaymentStatus } from '@fp/domain'
+import type { SubTabQuery } from '../../../compositions/detail/SubTabState'
 import { DEMO_INVOICE, type InvoiceDocument } from './invoiceDocument'
 import { InvoiceDetailView, type InvoiceDetailViewProps } from './InvoiceDetailView'
 
@@ -23,12 +24,33 @@ interface InvoiceShape {
   hasIssuer: boolean
   hasSubscription: boolean
   hasNumber: boolean
+  paymentsState: SubTabMode
+  creditNotesState: SubTabMode
 }
 
-type PlaygroundArgs = Omit<InvoiceDetailViewProps, 'invoice'> & InvoiceShape
+type SubTabMode = 'loaded' | 'loading' | 'error'
+
+/** A sub-query in one of the three states a tab can be in besides "has rows". */
+function subTab(mode: SubTabMode, onRetry: () => void): SubTabQuery {
+  return mode === 'loading'
+    ? { isLoading: true }
+    : mode === 'error'
+      ? {
+          isLoading: false,
+          error: 'Flexprice had a problem loading this.',
+          errorKind: 'server',
+          onRetry,
+        }
+      : { isLoading: false }
+}
+
+type PlaygroundArgs = Omit<InvoiceDetailViewProps, 'invoice'> &
+  InvoiceShape & { onRetrySubTab: () => void }
 
 /** Every line is a whole-dollar amount, and every fifth is zero so the always-hidden zero lines have something to hide. */
-function makeInvoice(args: InvoiceShape): InvoiceDocument {
+function makeInvoice(
+  args: Omit<InvoiceShape, 'paymentsState' | 'creditNotesState'>,
+): InvoiceDocument {
   const lines = Array.from({ length: args.lineCount }, (_, index) => {
     const zero = index % 5 === 4
     return {
@@ -92,6 +114,9 @@ function InvoiceDetailPlayground({
   hasIssuer,
   hasSubscription,
   hasNumber,
+  paymentsState,
+  creditNotesState,
+  onRetrySubTab,
   ...handlers
 }: PlaygroundArgs) {
   const invoice = makeInvoice({
@@ -106,7 +131,14 @@ function InvoiceDetailPlayground({
     hasSubscription,
     hasNumber,
   })
-  return <InvoiceDetailView invoice={invoice} {...handlers} />
+  return (
+    <InvoiceDetailView
+      invoice={invoice}
+      payments={subTab(paymentsState, onRetrySubTab)}
+      creditNotes={subTab(creditNotesState, onRetrySubTab)}
+      {...handlers}
+    />
+  )
 }
 
 /** One invoice: Invoice details (document plus Activity, Metadata, Related rail), Payments and Credit notes tabs. */
@@ -126,8 +158,10 @@ const meta = {
     hasSubscription: true,
     hasNumber: true,
     isFinalizing: false,
-    paymentsLoading: false,
-    creditNotesLoading: false,
+    paymentsState: 'loaded',
+    creditNotesState: 'loaded',
+    pendingAction: null,
+    onRetrySubTab: fn(),
     onBack: fn(),
     onEdit: fn(),
     onFinalize: fn(),
@@ -155,8 +189,13 @@ const meta = {
     hasSubscription: { control: 'boolean' },
     hasNumber: { control: 'boolean' },
     isFinalizing: { control: 'boolean' },
-    paymentsLoading: { control: 'boolean' },
-    creditNotesLoading: { control: 'boolean' },
+    paymentsState: { control: 'inline-radio', options: ['loaded', 'loading', 'error'] },
+    creditNotesState: { control: 'inline-radio', options: ['loaded', 'loading', 'error'] },
+    pendingAction: {
+      control: 'select',
+      options: [null, 'finalize', 'recalculate', 'send', 'retry-payment'],
+    },
+    onRetrySubTab: { control: false },
     onBack: { control: false },
     onEdit: { control: false },
     onFinalize: { control: false },
@@ -265,7 +304,7 @@ export const Finalizing: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: 'More actions' }))
-    await expect(await screen.findByRole('menuitem', { name: /Finalize invoice/ })).toHaveAttribute(
+    await expect(await screen.findByRole('menuitem', { name: /Finalizing/ })).toHaveAttribute(
       'aria-disabled',
       'true',
     )
@@ -393,5 +432,62 @@ export const BillTo: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Billing email')).toBeVisible()
     await expect(canvas.getByText('Billing address')).toBeVisible()
+  },
+}
+
+/** Payments still loading: a table-shaped skeleton, and the tab label carries no count. */
+export const PaymentsLoading: Story = {
+  args: { paymentsState: 'loading', paymentCount: 0 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('tab', { name: 'Payments' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: 'Payments' }))
+    await expect(await canvas.findByText('Loading payments')).toBeVisible()
+    await expect(canvas.queryByText('No payments yet')).toBeNull()
+  },
+}
+
+/** A failed payments read is an error with a retry, never "No payments yet" and never a 0. */
+export const PaymentsError: Story = {
+  args: { paymentsState: 'error', paymentCount: 0, paymentStatus: 'none' },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('tab', { name: 'Payments' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: 'Payments' }))
+    await expect(await canvas.findByText('Flexprice had a problem loading this.')).toBeVisible()
+    await expect(canvas.queryByText('No payments yet')).toBeNull()
+    await userEvent.click(canvas.getByRole('button', { name: /Try again/ }))
+    await expect(args.onRetrySubTab).toHaveBeenCalled()
+  },
+}
+
+export const CreditNotesError: Story = {
+  args: { creditNotesState: 'error' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: 'Credit notes' }))
+    await expect(await canvas.findByText('Flexprice had a problem loading this.')).toBeVisible()
+    await expect(canvas.queryByText('No credit notes yet')).toBeNull()
+  },
+}
+
+/** At the read's cap the list says it may be cut. */
+export const PaymentsTruncated: Story = {
+  args: { paymentCount: 100 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('tab', { name: /Payments/ }))
+    await expect(await canvas.findByText(/Showing the latest 100/)).toBeVisible()
+  },
+}
+
+/** Sending is in flight: the menu item says so and cannot be pressed again. */
+export const Sending: Story = {
+  args: { pendingAction: 'send' },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'More actions' }))
+    const item = await screen.findByRole('menuitem', { name: /Sending…/ })
+    await expect(item).toHaveAttribute('aria-disabled', 'true')
   },
 }

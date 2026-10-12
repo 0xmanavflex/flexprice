@@ -46,8 +46,20 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   ),
 }
 
-/** The demo data the container ships with until an endpoint exists. */
+/** No add-on contracts endpoint exists: the tab says so instead of listing sample rows. */
 export const Default: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(
+      canvas.getByText('Contracts using this add-on are not available yet'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('Acme Corp')).toBeNull()
+  },
+}
+
+/** Real rows, once a source exists. */
+export const WithRows: Story = {
+  args: { subscriptions: makeSubscribers(3, 'Mixed') },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('Acme Corp')).toBeInTheDocument()
   },

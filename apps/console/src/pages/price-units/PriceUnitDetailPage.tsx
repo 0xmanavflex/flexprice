@@ -1,9 +1,10 @@
 import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
-import { ApiError, useDeletePriceUnit, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
+import { useDeletePriceUnit, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, Pill } from '@fp/ui/pages'
-import { AppFailure, ConfirmDialog, EditableCard, LoadingRows, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EditableCard, Section } from '@fp/ui/compositions'
 import { ArchiveIcon, CoinsIcon, PencilIcon } from '@fp/ui/icons'
+import { detailGate } from '../shared/detailGate'
 
 export interface PriceUnitDetailPageProps {
   priceUnitId: string
@@ -40,32 +41,12 @@ export function PriceUnitDetailPage({
   const [archiving, setArchiving] = useState(false)
   const [tab, setTab] = useState(startEditing ? 'information' : 'overview')
 
-  if (priceUnit.isPending) {
-    return (
-      <div className="p-6">
-        <LoadingRows />
-      </div>
-    )
-  }
-
-  if (priceUnit.error) {
-    return (
-      <AppFailure
-        title={failureTitle(priceUnit.error)}
-        detail="The rest of the console still works. Try again, or go back to the list."
-        onRetry={() => void priceUnit.refetch()}
-      />
-    )
-  }
-
   if (!priceUnit.data) {
-    return (
-      <AppFailure
-        title="This price unit no longer exists"
-        detail="It may have been deleted. Everything else in the catalogue still works."
-        onRetry={onNavigateToList}
-      />
-    )
+    return detailGate(priceUnit, {
+      noun: 'this price unit',
+      listName: 'price units',
+      onBack: onNavigateToList,
+    })
   }
 
   const data = priceUnit.data
@@ -278,20 +259,4 @@ function scaleDecimal(decimal: string, factor: number): string {
 function formatDate(value: Date | null): string {
   if (!value) return '—'
   return new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value)
-}
-
-function failureTitle(error: unknown): string {
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return 'You do not have access to this price unit.'
-      case 'unauthorized':
-        return 'Your session has expired. Sign in again.'
-      case 'network':
-        return 'Could not reach Flexprice.'
-      default:
-        return 'This price unit could not be loaded.'
-    }
-  }
-  return 'This price unit could not be loaded.'
 }

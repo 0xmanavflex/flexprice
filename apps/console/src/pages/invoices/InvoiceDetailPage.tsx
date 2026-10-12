@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { formatMoney } from '@fp/domain'
 import { useNavigate } from '@tanstack/react-router'
 import {
@@ -15,8 +15,10 @@ import {
   useUserInfo,
   useVoidInvoice,
 } from '@fp/query'
-import { InvoiceDetailView, Toaster, toast } from '@fp/ui/pages'
-import { AppFailure, ConfirmDialog, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { InvoiceDetailView, Toaster, toast, type InvoicePendingAction } from '@fp/ui/pages'
+import { ConfirmDialog } from '@fp/ui/compositions'
+import { detailGate } from '../shared/detailGate'
+import { subTab } from '../shared/subTab'
 import { toInvoiceDocument } from './invoiceDocumentAdapter'
 
 export interface InvoiceDetailPageProps {
@@ -55,35 +57,31 @@ export function InvoiceDetailPage({
   const send = useSendInvoice()
   const recordPayment = useRecordPayment()
   const [dialog, setDialog] = useState<Dialog>(null)
+  const inFlight = useRef(false)
+  const [pendingAction, setPendingAction] = useState<InvoicePendingAction | null>(null)
 
-  if (invoice.isPending) {
-    return (
-      <PageBody>
-        <div className="pt-4">
-          <LoadingRows />
-        </div>
-      </PageBody>
-    )
-  }
-
-  if (invoice.error || !invoice.data) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={invoice.error ? 'This invoice could not be loaded' : 'Invoice not found'}
-          detail="The rest of the console still works. Try again, or go back to the list."
-          onRetry={invoice.error ? () => void invoice.refetch() : onBack}
-        />
-      </PageBody>
-    )
+  if (!invoice.data) {
+    return detailGate(invoice, { noun: 'this invoice', listName: 'invoices', onBack })
   }
 
   const data = invoice.data
-  const run = (action: typeof finalize, done: string) =>
+
+  // One action at a time. The ref closes the gap between a click and the
+  // re-render that disables the control, so a double click cannot send twice.
+  // No optimistic update: the invoice refetches when the mutation settles.
+  const run = (kind: InvoicePendingAction, action: typeof finalize, done: string, verb: string) => {
+    if (inFlight.current) return
+    inFlight.current = true
+    setPendingAction(kind)
     action.mutate(data.id, {
       onSuccess: () => toast(done),
-      onError: (error) => toast(failure(error)),
+      onError: (error) => toast(failure(error, verb)),
+      onSettled: () => {
+        inFlight.current = false
+        setPendingAction(null)
+      },
     })
+  }
   const amountDue = data.amountRemaining
 
   return (
@@ -94,18 +92,22 @@ export function InvoiceDetailPage({
           payments: payments.data,
           creditNotes: creditNotes.data,
         })}
-        paymentsLoading={payments.isLoading}
-        creditNotesLoading={creditNotes.isLoading}
+        payments={subTab(payments, 'payments')}
+        creditNotes={subTab(creditNotes, 'credit notes')}
+        pendingAction={pendingAction}
         onBack={onBack}
         {...(onEdit ? { onEdit } : {})}
-        isFinalizing={finalize.isPending}
-        onFinalize={() => run(finalize, 'Invoice finalized')}
+        onFinalize={() => run('finalize', finalize, 'Invoice finalized', 'finalize the invoice')}
         onRecordPayment={() => setDialog('record-payment')}
-        onRecalculate={() => run(recalculate, 'Invoice recalculated')}
+        onRecalculate={() =>
+          run('recalculate', recalculate, 'Invoice recalculated', 'recalculate the invoice')
+        }
         onVoid={() => setDialog('void')}
         onIssueCreditNote={() => void navigate({ to: '/credit-notes/new' })}
-        onSend={() => run(send, 'Invoice sent to the customer')}
-        onRetryPayment={() => run(attempt, 'Payment attempt started')}
+        onSend={() => run('send', send, 'Invoice sent to the customer', 'send the invoice')}
+        onRetryPayment={() =>
+          run('retry-payment', attempt, 'Payment attempt started', 'retry the payment')
+        }
         {...(data.invoicePdfUrl
           ? { onDownload: () => window.open(data.invoicePdfUrl ?? '', '_blank', 'noopener') }
           : {})}
@@ -128,7 +130,10 @@ export function InvoiceDetailPage({
       />
       <ConfirmDialog
         open={dialog === 'void'}
-        onOpenChange={(open) => setDialog(open ? 'void' : null)}
+        onOpenChange={(open) => {
+          if (!open) voidInvoice.reset()
+          setDialog(open ? 'void' : null)
+        }}
         title="Void this invoice?"
         description="A voided invoice can no longer be collected. This cannot be undone."
         confirmLabel="Void invoice"
@@ -139,7 +144,10 @@ export function InvoiceDetailPage({
       />
       <ConfirmDialog
         open={dialog === 'record-payment'}
-        onOpenChange={(open) => setDialog(open ? 'record-payment' : null)}
+        onOpenChange={(open) => {
+          if (!open) recordPayment.reset()
+          setDialog(open ? 'record-payment' : null)
+        }}
         title="Record a payment?"
         description={`Records an offline payment of ${formatMoney(amountDue)} against this invoice, settling the amount due.`}
         confirmLabel="Record payment"
@@ -168,10 +176,26 @@ export function InvoiceDetailPage({
   )
 }
 
-function failure(error: unknown): string {
-  if (error instanceof ApiError && error.kind === 'forbidden')
-    return 'You do not have permission to change invoices here.'
-  if (error instanceof ApiError && error.kind === 'invalid')
-    return error.message || 'The invoice could not be changed.'
-  return 'Could not complete that. Try again.'
+function failure(error: unknown, verb = 'change the invoice'): string {
+  if (error instanceof ApiError) {
+    switch (error.kind) {
+      case 'forbidden':
+        return `Your role does not include permission to ${verb}.`
+      case 'unauthorized':
+        return 'Your session has expired. Sign in again, then retry.'
+      case 'not_found':
+        return `Could not ${verb}: this invoice no longer exists.`
+      case 'invalid':
+        return error.message ? `Could not ${verb}: ${error.message}` : `Could not ${verb}.`
+      case 'network':
+        return `Could not ${verb}: Flexprice was unreachable. Nothing was changed; try again.`
+      case 'timeout':
+        return `Could not ${verb}: the request timed out. Check the invoice before trying again.`
+      case 'rate_limited':
+        return `Could not ${verb}: too many requests. Wait a moment and try again.`
+      default:
+        return `Could not ${verb}: Flexprice had a problem. Try again shortly.`
+    }
+  }
+  return `Could not ${verb}. Try again.`
 }

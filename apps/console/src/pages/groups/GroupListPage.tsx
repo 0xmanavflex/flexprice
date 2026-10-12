@@ -5,6 +5,7 @@ import { GroupGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { LayersIcon } from '@fp/ui/icons'
+import { toListFailure } from '../shared/listFailure'
 
 export interface GroupListPageProps {
   query: GroupQuery
@@ -31,7 +32,7 @@ export function GroupListPage({
 
   const [deleting, setDeleting] = useState<Group | null>(null)
 
-  const failure = toFailure(groups.error)
+  const failure = toListFailure(groups.error, 'groups')
   const rows = groups.data?.groups ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
@@ -47,7 +48,12 @@ export function GroupListPage({
         <ListState
           isLoading={groups.isPending}
           error={failure}
-          isEmpty={rows.length === 0 && !isFiltered}
+          isEmpty={rows.length === 0 && (groups.data?.total ?? 0) === 0 && !isFiltered}
+          hasRows={rows.length > 0}
+          isRefreshing={groups.isFetching && !groups.isPending}
+          isProvisional={groups.isPlaceholderData}
+          isRetrying={groups.isFetching && groups.isError}
+          {...(failure ? { failureKind: failure.kind } : {})}
           isFiltered={isFiltered}
           onRetry={() => void groups.refetch()}
           onClearFilters={clearFilters}
@@ -86,26 +92,6 @@ export function GroupListPage({
       />
     </>
   )
-}
-
-function toFailure(error: unknown): { message: string; canRetry: boolean } | null {
-  if (!error) return null
-
-  if (error instanceof ApiError) {
-    switch (error.kind) {
-      case 'forbidden':
-        return { message: 'You do not have access to groups here.', canRetry: false }
-      case 'unauthorized':
-        return { message: 'Your session has expired. Sign in again.', canRetry: false }
-      case 'network':
-        return { message: 'Could not reach Flexprice.', canRetry: true }
-      case 'server':
-        return { message: 'Flexprice had a problem loading groups.', canRetry: true }
-      default:
-        return { message: error.message, canRetry: false }
-    }
-  }
-  return { message: 'Something went wrong loading groups.', canRetry: true }
 }
 
 /** A save failure, as a sentence the form can show inline. */

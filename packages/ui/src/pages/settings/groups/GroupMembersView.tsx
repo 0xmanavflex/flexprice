@@ -1,4 +1,4 @@
-import { Section } from '../../../compositions'
+import { EmptyState, Section } from '../../../compositions'
 import { DetailTable } from '../../shared/DetailTable'
 
 export interface GroupMember {
@@ -7,21 +7,31 @@ export interface GroupMember {
   detail: string
 }
 
-/** DEMO rows: V2 has no member-entities read hook yet, so real members cannot be listed. */
-export const DEMO_GROUP_MEMBERS: GroupMember[] = [
-  { id: 'm1', name: 'API requests', detail: 'Metered feature' },
-  { id: 'm2', name: 'Seats', detail: 'Static feature' },
-  { id: 'm3', name: 'Priority support', detail: 'Boolean feature' },
-]
-
+/**
+ * What a group holds. Flexprice has no member-entities read yet, so the console
+ * passes no `members` and this says so (the group's own count still shows on
+ * its tab); it never shows sample rows. Pass the rows (an empty array means
+ * none) once a source exists.
+ */
 export function GroupMembersView({
   kind,
-  members = DEMO_GROUP_MEMBERS,
+  members,
 }: {
   /** Lower-case noun the group holds, e.g. "features". */
   kind: string
-  members?: GroupMember[]
+  members?: GroupMember[] | undefined
 }) {
+  if (!members) {
+    return (
+      <Section title="Members">
+        <EmptyState
+          size="inline"
+          title={`The ${kind} in this group are not listed yet`}
+          description="Flexprice does not list a group's members yet. The count on the tab is real; the names are not available."
+        />
+      </Section>
+    )
+  }
   return (
     <Section table title="Members">
       <DetailTable

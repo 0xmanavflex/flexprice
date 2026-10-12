@@ -63,14 +63,22 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
 export function ActivitySection({
   entries,
   className,
+  note,
+  emptyText = 'No activity yet.',
 }: {
   entries: ActivityLogEntry[]
   className?: string
+  /**
+   * What this log is, when it is not a full audit trail: "Key dates from this
+   * invoice. A full activity log isn't available yet."
+   */
+  note?: string
+  emptyText?: string
 }) {
   return (
     <Section title="Activity" flush {...(className ? { className } : {})}>
       {entries.length === 0 ? (
-        <p className="text-muted-foreground px-6 py-5 text-[13px]">No activity yet.</p>
+        <p className="text-muted-foreground px-6 py-5 text-[13px]">{emptyText}</p>
       ) : (
         <ScrollArea className={cn('h-[420px]')}>
           <div className="p-6">
@@ -78,6 +86,7 @@ export function ActivitySection({
           </div>
         </ScrollArea>
       )}
+      {note ? <p className="text-muted-foreground border-t px-6 py-3 text-xs">{note}</p> : null}
     </Section>
   )
 }

@@ -559,6 +559,28 @@ export const Failed: Story = {
   },
 }
 
+/**
+ * Zero rows on page 3 of a list that has records is "this page is past the end",
+ * not "create your first record". The way back is one button.
+ */
+export const OutOfRange: Story = {
+  args: { rows: [], total: 60, page: 3, pageSize: 25, onPaginationChange: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('This page is out of range')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Go to first page' }))
+    await expect(args.onPaginationChange).toHaveBeenCalledWith(1, 25)
+  },
+}
+
+/** A background refetch: the rows stay on screen and are never swapped for a spinner. */
+export const Refreshing: Story = {
+  args: { isRefreshing: true },
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText('API calls 1')).toBeInTheDocument()
+  },
+}
+
 /** Paging reports a 1-based page and the size together. */
 export const Paginates: Story = {
   args: { rows: widgets(25), total: 120, pageSize: 25 },

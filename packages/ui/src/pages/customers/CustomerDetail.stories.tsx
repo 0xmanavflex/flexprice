@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, within } from 'storybook/test'
 import {
@@ -96,6 +96,10 @@ function Harness({
   subscriptionsLoading = false,
   subscriptionsError = false,
   invoicesLoading = false,
+  invoicesError = false,
+  onRetryInvoices,
+  onRetrySubscriptions,
+  events,
   initialTab = 'overview',
 }: {
   customer?: CustomerDetailModel
@@ -111,6 +115,10 @@ function Harness({
   subscriptionsLoading?: boolean
   subscriptionsError?: boolean
   invoicesLoading?: boolean
+  invoicesError?: boolean
+  onRetryInvoices?: () => void
+  onRetrySubscriptions?: () => void
+  events?: ReactNode
   initialTab?: CustomerTab
 }) {
   const [tab, setTab] = useState<CustomerTab>(initialTab)
@@ -125,6 +133,10 @@ function Harness({
         subscriptionsLoading={subscriptionsLoading}
         subscriptionsError={subscriptionsError}
         invoicesLoading={invoicesLoading}
+        invoicesError={invoicesError}
+        {...(onRetryInvoices ? { onRetryInvoices } : {})}
+        {...(onRetrySubscriptions ? { onRetrySubscriptions } : {})}
+        {...(events ? { events } : {})}
         onBack={onBack ?? (() => {})}
         onCreateInvoice={() => onCreateInvoice?.()}
         onCreateContract={() => onCreateContract?.()}
@@ -403,5 +415,55 @@ export const ContractsLoadFailed: Story = {
     const canvas = within(canvasElement)
     await expect(canvas.getByText("Contracts couldn't be loaded")).toBeVisible()
     await expect(canvas.queryByText('No contracts yet')).toBeNull()
+  },
+}
+
+/** A failed contracts read offers Try again, which calls the page's refetch. */
+export const ContractsRetry: Story = {
+  args: { subscriptions: [], subscriptionsError: true, onRetrySubscriptions: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: /try again/i }))
+    await expect(args.onRetrySubscriptions).toHaveBeenCalledOnce()
+  },
+}
+
+/** Overview tiles and the Invoices tab count do not count what has not arrived. */
+export const InvoicesLoading: Story = {
+  args: { invoices: [], invoicesLoading: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Loading invoices…')).toBeVisible()
+    await expect(canvas.queryByText('No invoices issued yet')).toBeNull()
+    await expect(canvas.queryByText(/No invoices yet/)).toBeNull()
+    await expect(canvas.getByRole('tab', { name: 'Invoices' })).toBeVisible()
+  },
+}
+
+/** A failed invoices read is an error with retry on the tab, never "No invoices yet" or a 0 count. */
+export const InvoicesLoadFailed: Story = {
+  args: {
+    invoices: [],
+    invoicesError: true,
+    initialTab: 'invoices',
+    onRetryInvoices: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText("Invoices couldn't be loaded")).toBeVisible()
+    await expect(canvas.queryByText(/No invoices yet/)).toBeNull()
+    await expect(canvas.getByRole('tab', { name: 'Invoices' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetryInvoices).toHaveBeenCalledOnce()
+  },
+}
+
+/** With no events slot the tab says it has nothing to show, rather than sample events. */
+export const EventsNotAvailable: Story = {
+  args: { initialTab: 'events' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Events not available here')).toBeVisible()
+    await expect(canvas.queryByText('api_call')).toBeNull()
   },
 }
