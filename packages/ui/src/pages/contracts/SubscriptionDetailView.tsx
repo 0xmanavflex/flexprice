@@ -309,7 +309,10 @@ export function SubscriptionDetailView({
 
   return (
     <DetailShell
-      trail={[{ label: 'Contracts', ...(onBack ? { onClick: onBack } : {}) }, { label: title }]}
+      trail={[
+        { label: 'Contracts', ...(onBack ? { onClick: onBack } : {}) },
+        { label: 'Contract details' },
+      ]}
       icon={<RefreshCwIcon />}
       title={title}
       id={s.id}

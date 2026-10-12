@@ -148,7 +148,7 @@ export function PlanFormPage(props: PlanFormPageProps) {
       defaultValue={{ name: plan.name, lookupKey: plan.lookupKey, description: plan.description }}
       trail={[
         { label: 'Plans', onClick: onCancel },
-        { label: plan.name, onClick: () => props.onDone(plan.id) },
+        { label: 'Plan details', onClick: () => props.onDone(plan.id) },
         { label: 'Edit' },
       ]}
       {...stepProps}

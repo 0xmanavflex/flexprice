@@ -34,9 +34,9 @@ export interface DetailCrumb {
 /**
  * The detail page's own breadcrumb — where this record sits, and the way back.
  *
- * A real trail ("Customers / Acme Robotics"), not a lone back button: it names
- * the parent list *and* the record, so the header says which one you are on
- * without re-reading the title, and the parent is one click away. Rendered above
+ * A real trail ("Customers / Customer details"), not a lone back button: it names
+ * the parent list and the kind of page, never the record id. The title still
+ * names the record. The parent is one click away. Rendered above
  * the title, it replaces the assorted "← Back" links each detail page used to
  * grow its own.
  */

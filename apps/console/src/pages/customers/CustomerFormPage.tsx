@@ -59,7 +59,7 @@ export function CustomerFormPage(props: CustomerFormPageProps) {
       defaultValue={customerToEdit(customer)}
       trail={[
         { label: 'Customers', onClick: onCancel },
-        { label: customer.name, onClick: () => props.onDone(customer.id) },
+        { label: 'Customer details', onClick: () => props.onDone(customer.id) },
         { label: 'Edit' },
       ]}
       onCancel={onCancel}

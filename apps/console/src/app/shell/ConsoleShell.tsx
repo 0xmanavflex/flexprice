@@ -166,8 +166,8 @@ export function ConsoleShell({
     if (childHref) onNavigate(childHref)
   }
 
-  // A detail page hands up "list, record": the list crumb becomes a link back
-  // and the record's name is appended, so the header carries the one trail.
+  // A detail page hands up "list, page": the list crumb becomes a link back
+  // and the page type ("Customer details") is appended, never the record id.
   // The group crumb goes where the sidebar's group goes — its first page.
   // The page crumb is a link whenever you are somewhere under it.
   const pagePath = activeItemId ? pathForNavId(activeItemId) : undefined

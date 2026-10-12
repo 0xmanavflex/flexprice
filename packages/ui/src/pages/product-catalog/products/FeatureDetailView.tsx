@@ -19,6 +19,7 @@ import {
 import { ArchiveIcon, ChevronRightIcon, CopyIcon, PencilIcon, PlusIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
+import { DetailBreadcrumb } from '../../../compositions/detail/DetailShell'
 import { EditableCard } from '../../../compositions/forms/EditableCard'
 import { EmptyState } from '../../../compositions/feedback/EmptyState'
 import { SubTabState, knownCount } from '../../../compositions/detail/SubTabState'
@@ -181,6 +182,7 @@ export function FeatureDetailView({
   feature,
   tab,
   onTabChange,
+  onBack,
   onEditConfiguration,
   onSave,
   onDuplicate,
@@ -265,6 +267,14 @@ export function FeatureDetailView({
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       <DetailHeader
+        breadcrumb={
+          <DetailBreadcrumb
+            trail={[
+              { label: 'Products', ...(onBack ? { onClick: onBack } : {}) },
+              { label: 'Product details' },
+            ]}
+          />
+        }
         icon={<Glyph />}
         title={feature.name}
         id={feature.lookupKey || feature.id}

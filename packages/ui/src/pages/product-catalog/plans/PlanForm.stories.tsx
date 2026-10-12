@@ -39,7 +39,7 @@ export const Edit: Story = {
   args: {
     mode: 'edit',
     planName: 'Pro',
-    trail: [{ label: 'Plans' }, { label: 'Pro' }, { label: 'Edit' }],
+    trail: [{ label: 'Plans' }, { label: 'Plan details' }, { label: 'Edit' }],
     defaultValue: { name: 'Pro', lookupKey: 'pro', description: 'For growing teams' },
   },
 }
@@ -146,7 +146,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       mode={mode}
       trail={
         mode === 'edit'
-          ? [{ label: 'Plans' }, { label: planName ?? name }, { label: 'Edit' }]
+          ? [{ label: 'Plans' }, { label: 'Plan details' }, { label: 'Edit' }]
           : [{ label: 'Plans' }, { label: 'Create plan' }]
       }
       {...(mode === 'edit' && planName ? { planName } : {})}

@@ -221,7 +221,7 @@ function PlanDetailPage({
   }
 
   return (
-    <PageShell activeItemId="plans" trail={['Product catalog', 'Plans', planName]}>
+    <PageShell activeItemId="plans" trail={['Product catalog', 'Plans', 'Plan details']}>
       {body}
     </PageShell>
   )

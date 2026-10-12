@@ -119,7 +119,7 @@ function CustomerDetailPage({
   useEffect(() => setTab(activeTab), [activeTab])
 
   return (
-    <PageShell activeItemId="customers" trail={['Customers', customerName]}>
+    <PageShell activeItemId="customers" trail={['Customers', 'Customer details']}>
       {isLoading ? (
         <PageBody>
           <PageLoadingState variant="detail" label="Loading this customer" />

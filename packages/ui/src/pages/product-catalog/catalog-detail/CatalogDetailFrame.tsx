@@ -34,6 +34,21 @@ export interface CatalogDetailFrameProps {
   children?: ReactNode
 }
 
+/** The current page in the breadcrumb. The title and the ID chip keep the record. */
+function detailPageLabel(listLabel: string): string {
+  const known: Record<string, string> = {
+    'Add-ons': 'Add-on details',
+    Coupons: 'Coupon details',
+    Payments: 'Payment details',
+    'Credit notes': 'Credit note details',
+    'Price Units': 'Price unit details',
+    Groups: 'Group details',
+    'Cost sheets': 'Cost sheet details',
+    Webhooks: 'Webhook details',
+  }
+  return known[listLabel] ?? `${listLabel.replace(/s$/, '')} details`
+}
+
 /**
  * The shared shell for catalog detail pages (coupon, add-on, cost sheet, group):
  * `DetailShell` (icon tile, title, small pills under it, "ID" copy chip and a
@@ -55,7 +70,7 @@ export function CatalogDetailFrame({
 }: CatalogDetailFrameProps) {
   return (
     <DetailShell
-      trail={[{ label: listLabel, onClick: onBack }, { label: title }]}
+      trail={[{ label: listLabel, onClick: onBack }, { label: detailPageLabel(listLabel) }]}
       icon={icon}
       title={title}
       {...(badges ? { badges } : {})}

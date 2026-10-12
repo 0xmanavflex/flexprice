@@ -66,7 +66,7 @@ export function TaxFormPage(props: TaxFormPageProps) {
     <TaxRateEditForm
       trail={[
         { label: 'Tax rates', onClick: onCancel },
-        { label: taxRate.name },
+        { label: 'Tax rate details' },
         { label: 'Edit' },
       ]}
       defaultValue={taxRateToEdit(taxRate)}

@@ -45,7 +45,7 @@ export const Playground: Story = {
         {...args}
         mode="edit"
         customerName={customerName ?? 'Acme Corp'}
-        trail={[{ label: 'Customers' }, { label: customerName ?? 'Acme Corp' }, { label: 'Edit' }]}
+        trail={[{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }]}
         submitError={submitError || null}
         defaultValue={{ externalId: 'acme', name: 'Acme Corp', email: 'billing@acme.test' }}
       />
@@ -81,7 +81,7 @@ export const Edit: Story = {
   args: {
     mode: 'edit',
     customerName: 'Acme Corp',
-    trail: [{ label: 'Customers' }, { label: 'Acme Corp' }, { label: 'Edit' }],
+    trail: [{ label: 'Customers' }, { label: 'Customer details' }, { label: 'Edit' }],
     defaultValue: { externalId: 'acme', name: 'Acme Corp', email: 'billing@acme.test' },
   },
   play: async ({ canvasElement, args }) => {

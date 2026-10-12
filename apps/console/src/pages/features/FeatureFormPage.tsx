@@ -84,7 +84,7 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
       feature={feature}
       trail={[
         { label: 'Products', onClick: onCancel },
-        { label: feature.name, onClick: () => props.onDone(feature.id) },
+        { label: 'Product details', onClick: () => props.onDone(feature.id) },
         { label: 'Edit' },
       ]}
       {...formProps}

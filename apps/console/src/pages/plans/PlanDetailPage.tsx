@@ -59,6 +59,7 @@ import {
 } from '@fp/ui/pages'
 import {
   ConfirmDialog,
+  DetailBreadcrumb,
   DetailHeader,
   DetailTabs,
   EditableCard,
@@ -161,6 +162,14 @@ export function PlanDetailPage({
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
       <DetailHeader
+        breadcrumb={
+          <DetailBreadcrumb
+            trail={[
+              { label: 'Plans', onClick: onNavigateToList },
+              { label: 'Plan details' },
+            ]}
+          />
+        }
         icon={<LayersIcon />}
         title={record.name}
         id={record.lookupKey || record.id}

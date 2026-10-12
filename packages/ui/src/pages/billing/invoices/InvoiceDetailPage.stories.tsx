@@ -79,7 +79,7 @@ function InvoiceDetailPage(props: InvoiceDetailPageProps) {
   return (
     <PageShell
       activeItemId="invoices"
-      trail={['Billing', 'Invoices', invoice.number ?? 'Draft invoice']}
+      trail={['Billing', 'Invoices', 'Invoice details']}
     >
       {props.isLoading ? (
         <PageBody>

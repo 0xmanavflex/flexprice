@@ -232,7 +232,7 @@ export function CustomerDetail({
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">
       <EntityHeader
-        trail={[{ label: 'Customers', onClick: onBack }, { label: customer.name }]}
+        trail={[{ label: 'Customers', onClick: onBack }, { label: 'Customer details' }]}
         icon={<span className="text-xs font-medium">{initials}</span>}
         title={customer.name}
         badges={<Status value={CUSTOMER_STATUS_LABEL[customer.status]} />}
@@ -509,11 +509,11 @@ function OverviewTab({
       </div>
       <ActivitySection
         entries={activityEntries(customer, subscriptions, invoices, locale)}
-        note={
-          contractsKnown && invoicesKnown
-            ? 'Built from the dates on this customer, their contracts and their invoices. A full activity log is not available yet.'
-            : 'Incomplete: contracts or invoices are still loading or could not be loaded, so some activity is missing.'
-        }
+        {...(contractsKnown && invoicesKnown
+          ? {}
+          : {
+              note: 'Incomplete: contracts or invoices are still loading or could not be loaded, so some activity is missing.',
+            })}
         className="xl:sticky xl:top-6"
       />
     </div>

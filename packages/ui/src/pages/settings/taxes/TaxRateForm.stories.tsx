@@ -49,7 +49,7 @@ export const Create: Story = {
 export const Edit: Story = {
   render: (args) => (
     <TaxRateEditForm
-      trail={[{ label: 'Tax rates' }, { label: 'VAT standard' }, { label: 'Edit' }]}
+      trail={[{ label: 'Tax rates' }, { label: 'Tax rate details' }, { label: 'Edit' }]}
       defaultValue={{ name: 'VAT standard', code: 'VAT20', description: '', status: 'published' }}
       onSubmit={fn()}
       {...(args.onCancel ? { onCancel: args.onCancel } : {})}
@@ -134,7 +134,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
       <TaxRateEditForm
         key={`edit|${name}|${code}|${description}|${status}`}
         {...rest}
-        trail={[{ label: 'Tax rates' }, { label: name || 'Tax rate' }, { label: 'Edit' }]}
+        trail={[{ label: 'Tax rates' }, { label: 'Tax rate details' }, { label: 'Edit' }]}
         defaultValue={{ name, code, description, status }}
         submitError={submitError || null}
       />

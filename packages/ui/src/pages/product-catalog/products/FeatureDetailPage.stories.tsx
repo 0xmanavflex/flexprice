@@ -78,7 +78,7 @@ function FeatureDetailPage({
   const feature = pickFeature(featureType, status)
 
   return (
-    <PageShell activeItemId="features" trail={['Product catalog', 'Products', feature.name]}>
+    <PageShell activeItemId="features" trail={['Product catalog', 'Products', 'Product details']}>
       {isLoading ? (
         <PageBody>
           <div className="pt-4">

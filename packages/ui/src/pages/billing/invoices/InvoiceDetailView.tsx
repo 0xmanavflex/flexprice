@@ -187,7 +187,7 @@ export function InvoiceDetailView({
     <DetailShell
       trail={[
         { label: 'Invoices', ...(onBack ? { onClick: onBack } : {}) },
-        { label: invoice.number ?? 'Invoice' },
+        { label: 'Invoice details' },
       ]}
       icon={<ReceiptIcon />}
       title="Invoice"
