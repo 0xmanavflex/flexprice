@@ -33,7 +33,7 @@ test.describe('the customers list', () => {
 
     await page.getByRole('button', { name: 'New customer' }).first().click()
     await expect(page).toHaveURL(/\/customers\/new/)
-    await expect(page.getByRole('heading', { level: 1, name: 'Create customer' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Customer details' })).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
     // Submit is gated on the required fields.

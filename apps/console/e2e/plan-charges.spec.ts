@@ -81,7 +81,7 @@ test.describe('plan charges, entitlements and credit grants', () => {
 
   test('creates a plan on a full page, staging a charge', async ({ page }) => {
     await page.goto('/plans/new')
-    await expect(page.getByRole('heading', { name: 'Create plan' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Plan details' })).toBeVisible()
     await expect(page.getByRole('dialog')).toHaveCount(0)
 
     await page.getByLabel(/^Name/).fill('Scale')

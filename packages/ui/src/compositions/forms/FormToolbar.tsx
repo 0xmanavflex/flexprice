@@ -5,8 +5,9 @@ import { Separator } from '@ui/components/primitives/separator'
 import { provenance } from '@ui/provenance'
 
 /**
- * The bar a create/edit page opens with: close (X), the title, and the one
- * primary action, and, optionally, a stepper centred between them.
+ * The bar a create/edit page opens with: close (X) and the one primary
+ * action, and, optionally, a stepper centred between them. Create leaves the
+ * title out — the breadcrumb already names the page. Edit keeps its title.
  *
  * There is no Cancel button and no footer: the X is the way back. A staged
  * form swaps the primary for "Next →" until its last step, and shows
@@ -81,7 +82,9 @@ export function FormToolbar({
             <Separator orientation="vertical" className="my-auto mr-4 ml-2 h-4 shrink-0" />
           </>
         ) : null}
-        <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
+        {mode === 'edit' ? (
+          <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
+        ) : null}
       </div>
       {center ? (
         <div className="order-last flex w-full min-w-0 justify-center md:order-none md:w-auto md:flex-none">

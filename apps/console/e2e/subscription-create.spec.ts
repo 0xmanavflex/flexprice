@@ -15,7 +15,7 @@ test.beforeEach(async ({ context }) => {
 
 test('creates a contract through the steps and posts it', async ({ page }) => {
   await page.goto('/subscriptions/new')
-  await expect(page.getByRole('heading', { level: 1, name: 'Create contract' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Customer' })).toBeVisible()
 
   // The toolbar carries Next (no Cancel, no Previous on the first step, no bottom bar).
   await expect(page.getByRole('button', { name: 'Cancel' })).toHaveCount(0)

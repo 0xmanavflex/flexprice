@@ -311,9 +311,11 @@ export function InvoiceForm({
                 <Separator orientation="vertical" className="my-auto mr-2 h-4 shrink-0" />
               </>
             ) : null}
-            <h1 className="text-foreground truncate text-base leading-5 font-medium">
-              {mode === 'edit' ? 'Edit invoice' : 'New one-off invoice'}
-            </h1>
+            {mode === 'edit' ? (
+              <h1 className="text-foreground truncate text-base leading-5 font-medium">
+                Edit invoice
+              </h1>
+            ) : null}
             <Badge
               variant="warning-light"
               className="hidden translate-y-px self-center sm:inline-flex"

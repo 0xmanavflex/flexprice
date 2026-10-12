@@ -101,7 +101,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/features/new',
     reference: 'pages/catalog.tsx',
     pattern: 'create',
-    ready: { heading: 'Create product' },
+    ready: { heading: 'Details' },
   },
   {
     name: 'plans-list',
@@ -136,7 +136,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/plans/new',
     reference: 'pages/catalog.tsx',
     pattern: 'create',
-    ready: { heading: 'Create plan' },
+    ready: { heading: 'Plan details' },
   },
   {
     name: 'plan-new-charges',
@@ -171,7 +171,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/addons/new',
     reference: 'pages/catalog.tsx',
     pattern: 'create',
-    ready: { heading: 'Create add-on' },
+    ready: { heading: 'Add-on details' },
   },
   {
     name: 'coupons-list',
@@ -264,7 +264,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/customers/new',
     reference: 'pages/billing.tsx',
     pattern: 'create',
-    ready: { heading: 'Create customer' },
+    ready: { heading: 'Customer details' },
   },
   {
     name: 'subscriptions-list',
@@ -285,7 +285,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/subscriptions/new',
     reference: 'pages/billing.tsx',
     pattern: 'create',
-    ready: { heading: 'Create contract' },
+    ready: { heading: 'Customer' },
   },
   {
     name: 'invoices-list',
@@ -306,7 +306,7 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: '/invoices/new',
     reference: 'pages/billing.tsx',
     pattern: 'create',
-    ready: { heading: 'New one-off invoice' },
+    ready: { heading: 'Line Items' },
   },
   {
     name: 'payments-list',

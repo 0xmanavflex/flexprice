@@ -141,8 +141,9 @@ export const Playground: StoryObj<PlaygroundArgs> = {
 export const Create: Story = {
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByRole('heading', { name: 'New one-off invoice' }),
-    ).toBeInTheDocument()
+      within(canvasElement).queryByRole('heading', { name: 'New one-off invoice' }),
+    ).toBeNull()
+    await expect(within(canvasElement).getByRole('heading', { name: 'Customer' })).toBeVisible()
   },
 }
 

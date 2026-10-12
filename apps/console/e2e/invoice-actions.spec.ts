@@ -15,7 +15,7 @@ test.beforeEach(async ({ context }) => {
 
 test('creates a draft invoice from the form', async ({ page }) => {
   await page.goto('/invoices/new')
-  await expect(page.getByRole('heading', { level: 1, name: 'New one-off invoice' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Customer' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Save draft' }).click()
   await expect(page.getByRole('alert').filter({ hasText: 'Choose a customer' })).toBeVisible()

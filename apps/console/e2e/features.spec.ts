@@ -109,7 +109,7 @@ test.describe('the features list', () => {
 
   test('opens the create page at /features/new', async ({ page }) => {
     await page.goto('/features/new')
-    await expect(page.getByRole('heading', { name: 'Create product' })).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Details' })).toBeVisible()
   })
 
   test('edits from the detail page', async ({ page }) => {
