@@ -166,7 +166,7 @@
     "Webhook": { "reui": "rings-linked", "animated": true },
     "Workflow": { "reui": "squares-ring", "animated": true },
     "Wrench": { "reui": "wrench" },
-    "X": { "reui": "cross-outline", "animated": true },
+    "X": { "reui": "cross-outline", "animated": true, "style": "solid" },
     "XCircle": { "reui": "cross-circle" },
     "Zap": { "reui": "bolt", "animated": true }
   }

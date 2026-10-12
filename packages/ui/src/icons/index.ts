@@ -6,13 +6,13 @@ import { animatedIcon, staticIcon, type IconComponent, type IconProps } from './
 import animated_filled_squaresRing from '../reui/icons/animated/filled/squares-ring'
 import animated_bolt from '../reui/icons/animated/outline/bolt'
 import animated_circlePlay from '../reui/icons/animated/outline/circle-play'
-import animated_crossOutline from '../reui/icons/animated/outline/cross-outline'
 import animated_cubesCluster from '../reui/icons/animated/outline/cubes-cluster'
 import animated_layers from '../reui/icons/animated/outline/layers'
 import animated_linesStack from '../reui/icons/animated/outline/lines-stack'
 import animated_receiptSquare from '../reui/icons/animated/outline/receipt-square'
 import animated_ringsLinked from '../reui/icons/animated/outline/rings-linked'
 import animated_squaresRing from '../reui/icons/animated/outline/squares-ring'
+import animated_solid_crossOutline from '../reui/icons/animated/solid/cross-outline'
 import static_filled_right from '../reui/icons/default/filled/right'
 import static_addFolder from '../reui/icons/default/outline/add-folder'
 import static_addUser from '../reui/icons/default/outline/add-user'
@@ -475,7 +475,7 @@ export const Workflow: IconComponent = animatedIcon(animated_squaresRing, 'Workf
 export { Workflow as WorkflowIcon }
 export const Wrench: IconComponent = staticIcon(static_wrench, 'Wrench')
 export { Wrench as WrenchIcon }
-export const X: IconComponent = animatedIcon(animated_crossOutline, 'X')
+export const X: IconComponent = animatedIcon(animated_solid_crossOutline, 'X')
 export { X as XIcon }
 export const XCircle: IconComponent = staticIcon(static_crossCircle, 'XCircle')
 export { XCircle as XCircleIcon }
