@@ -12,8 +12,6 @@
  */
 
 export { DashboardHome, DashboardHomeProvenance } from './home/DashboardHome'
-export { NeedAttention, NeedAttentionProvenance } from './home/NeedAttention'
-export type { AttentionItem, AttentionPanel, AttentionTone } from './home/NeedAttention'
 export type {
   ApiPanel,
   CustomersPanel,

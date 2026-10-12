@@ -18,8 +18,7 @@ import type {
  * The three states below are the reason this component takes data rather than
  * fetching it. `Populated` and `FirstRun` are the two the design specified, and
  * `Unavailable` is the one the product actually needs most: what a panel looks
- * like when Flexprice has no answer, which on this surface is a real and
- * permanent condition for processing lag.
+ * like when Flexprice has no answer.
  *
  * Usage by feature and the API panel are parked until quota-based metrics land,
  * so they have no fixtures here.
@@ -36,10 +35,6 @@ const RANGE_OPTIONS = [
 const GRANULARITY_OPTIONS = [
   { id: 'daily', label: 'Daily' },
   { id: 'hourly', label: 'Hourly' },
-]
-const CUSTOMER_OPTIONS = [
-  { id: 'all', label: 'All customers' },
-  { id: 'cus_1', label: 'Globex 1' },
 ]
 
 const DAYS = ['23 Sep', '24 Sep', '25 Sep', '26 Sep', '27 Sep', '28 Sep', '29 Sep']
@@ -104,9 +99,6 @@ const meta = {
     granularityOptions: GRANULARITY_OPTIONS,
     granularity: 'daily',
     onGranularityChange: fn(),
-    customerOptions: CUSTOMER_OPTIONS,
-    customer: 'all',
-    onCustomerChange: fn(),
     rangeLabel: 'last 7 days',
     events,
     customers,
@@ -117,18 +109,15 @@ const meta = {
   argTypes: {
     range: { control: 'select', options: RANGE_OPTIONS.map((option) => option.id) },
     granularity: { control: 'select', options: GRANULARITY_OPTIONS.map((option) => option.id) },
-    customer: { control: 'select', options: CUSTOMER_OPTIONS.map((option) => option.id) },
     rangeLabel: { control: 'text' },
     rangeOptions: { control: false },
     granularityOptions: { control: false },
-    customerOptions: { control: false },
     events: { control: 'object' },
     customers: { control: 'object' },
     subscriptions: { control: 'object' },
     invoices: { control: 'object' },
     onRangeChange: { control: false },
     onGranularityChange: { control: false },
-    onCustomerChange: { control: false },
     onNavigate: { control: false },
   },
   // The overview owns its scroll — the shell's content region does not scroll
@@ -151,7 +140,6 @@ const PLAN_POOL = ['Studio', 'Growth', 'Starter', 'Platform']
 interface PlaygroundArgs {
   range: string
   granularity: string
-  customer: string
   eventsStatus: PanelStatus
   customersStatus: PanelStatus
   subscriptionsStatus: PanelStatus
@@ -170,7 +158,6 @@ interface PlaygroundArgs {
   overdue: number
   onRangeChange: (range: string) => void
   onGranularityChange: (granularity: string) => void
-  onCustomerChange: (customer: string) => void
   onNavigate: (path: string) => void
 }
 
@@ -251,14 +238,12 @@ function makePanels(
   }
 }
 
-/** Keeps the three filters live so the selects in the page actually change. */
+/** Keeps the two filters live so the selects in the page actually change. */
 function PlaygroundHome(args: PlaygroundArgs) {
   const [range, setRange] = useState(args.range)
   const [granularity, setGranularity] = useState(args.granularity)
-  const [customer, setCustomer] = useState(args.customer)
   useEffect(() => setRange(args.range), [args.range])
   useEffect(() => setGranularity(args.granularity), [args.granularity])
-  useEffect(() => setCustomer(args.customer), [args.customer])
 
   const rangeLabel = (
     RANGE_OPTIONS.find((option) => option.id === range)?.label ?? range
@@ -278,12 +263,6 @@ function PlaygroundHome(args: PlaygroundArgs) {
         setGranularity(next)
         args.onGranularityChange(next)
       }}
-      customerOptions={CUSTOMER_OPTIONS}
-      customer={customer}
-      onCustomerChange={(next) => {
-        setCustomer(next)
-        args.onCustomerChange(next)
-      }}
       rangeLabel={rangeLabel}
       {...makePanels(args)}
       onNavigate={args.onNavigate}
@@ -296,7 +275,6 @@ export const Playground = {
   args: {
     range: '7d',
     granularity: 'daily',
-    customer: 'all',
     eventsStatus: 'ready',
     customersStatus: 'ready',
     subscriptionsStatus: 'ready',
@@ -315,7 +293,6 @@ export const Playground = {
     overdue: 7,
     onRangeChange: fn(),
     onGranularityChange: fn(),
-    onCustomerChange: fn(),
     onNavigate: fn(),
   },
   argTypes: {
@@ -324,7 +301,6 @@ export const Playground = {
       control: 'inline-radio',
       options: GRANULARITY_OPTIONS.map((option) => option.id),
     },
-    customer: { control: 'inline-radio', options: CUSTOMER_OPTIONS.map((option) => option.id) },
     eventsStatus: { control: 'select', options: PANEL_STATUSES },
     customersStatus: { control: 'select', options: PANEL_STATUSES },
     subscriptionsStatus: { control: 'select', options: PANEL_STATUSES },
@@ -346,7 +322,6 @@ export const Playground = {
     overdue: { control: { type: 'number', min: 0, max: 500, step: 1 } },
     onRangeChange: { control: false },
     onGranularityChange: { control: false },
-    onCustomerChange: { control: false },
     onNavigate: { control: false },
   },
   parameters: {
@@ -354,7 +329,6 @@ export const Playground = {
       include: [
         'range',
         'granularity',
-        'customer',
         'eventsStatus',
         'customersStatus',
         'subscriptionsStatus',
@@ -373,7 +347,6 @@ export const Playground = {
         'overdue',
         'onRangeChange',
         'onGranularityChange',
-        'onCustomerChange',
         'onNavigate',
       ],
     },
@@ -401,7 +374,6 @@ export const Populated: Story = {
       expect.stringContaining('Revenue'),
       expect.stringContaining('Customers'),
       expect.stringContaining('Usage ingestion'),
-      expect.stringContaining('Processing lag'),
     ])
     await expect(canvas.getByRole('tab', { name: /Revenue/ })).toHaveAttribute(
       'aria-selected',
@@ -422,15 +394,9 @@ export const Populated: Story = {
 
     // No "Configure" shortcut: the filters are the only controls up top.
     await expect(canvas.queryByRole('button', { name: 'Configure' })).toBeNull()
-
-    // The customer filter's reach and the day boundary are said, not implied.
-    await expect(
-      canvas.getByText(/customer filter applies to usage and revenue only/i),
-    ).toBeInTheDocument()
-    await expect(canvas.getByText(/Days run from 00:00/)).toBeInTheDocument()
-    await expect(canvas.getByRole('combobox', { name: 'Customer' })).toHaveAccessibleDescription(
-      /usage and revenue only/i,
-    )
+    await expect(canvas.getByRole('heading', { name: 'Overview' })).toBeVisible()
+    await expect(canvas.queryByRole('combobox', { name: 'Customer' })).toBeNull()
+    await expect(canvas.queryByText(/customer filter applies/i)).toBeNull()
   },
 }
 
@@ -442,32 +408,6 @@ export const SwitchesMetric: Story = {
     await expect(canvas.getByText('Usage events received, last 7 days.')).toBeInTheDocument()
     await userEvent.click(canvas.getByRole('tab', { name: /Customers/ }))
     await expect(canvas.getByText('New customers, last 7 days.')).toBeInTheDocument()
-  },
-}
-
-/**
- * The number that has no endpoint stays absent even when everything else is
- * populated — this is the regression guard for the defect that prompted the
- * rebuild, where a plausible figure stood in for one nobody could source.
- */
-export const UnavailableMetricsStayAbsent: Story = {
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-
-    // The reason is shown on the tab that has no series, not before it is chosen.
-    await userEvent.click(canvas.getByRole('tab', { name: /Processing lag/ }))
-    await expect(
-      canvas.getByText('Flexprice does not expose an ingestion-lag metric.'),
-    ).toBeInTheDocument()
-
-    // Processing lag: stated as not measured, never a dash that reads as "no
-    // value" and never a number.
-    await expect(canvas.getByText('Not measured')).toBeInTheDocument()
-    await expect(canvas.queryAllByText('—')).toHaveLength(0)
-    await expect(canvas.queryByText(/no processing lag/i)).toBeNull()
-    await expect(
-      canvas.getByText('Processing lag isn’t measured, so there is nothing to plot.'),
-    ).toBeInTheDocument()
   },
 }
 
@@ -541,10 +481,7 @@ export const FirstRun: Story = {
   },
 }
 
-/**
- * The window is empty but a wider one might not be: this is a period message,
- * not a first-run one, and it offers the wider range rather than a quickstart.
- */
+/** The window is empty but a wider one might not be: this is a period message, not a first-run one, and it offers the wider range rather than a quickstart. */
 export const PeriodEmpty: Story = {
   args: {
     events: { status: 'empty', points: [], total: null, revenue: null },
@@ -559,23 +496,6 @@ export const PeriodEmpty: Story = {
     await expect(canvas.queryByRole('button', { name: 'Send a test event' })).toBeNull()
     await userEvent.click(canvas.getAllByRole('button', { name: 'Show last 30 days' })[0]!)
     await expect(args.onRangeChange).toHaveBeenCalledWith('30d')
-  },
-}
-
-/** A customer is picked and has no usage: the message says so, and offers all customers. */
-export const CustomerFilteredEmpty: Story = {
-  args: {
-    customer: 'cus_1',
-    range: '30d',
-    events: { status: 'empty', points: [], total: null, revenue: null },
-    customers: { status: 'empty', newCount: 0, partial: false, points: [] },
-  },
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByText('No usage for this customer in this period')).toBeInTheDocument()
-    await expect(canvas.queryByText('No events received yet')).toBeNull()
-    await userEvent.click(canvas.getByRole('button', { name: 'Show all customers' }))
-    await expect(args.onCustomerChange).toHaveBeenCalledWith('all')
   },
 }
 

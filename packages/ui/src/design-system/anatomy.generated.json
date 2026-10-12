@@ -150,7 +150,6 @@
         "MeterTrack",
         "MetricChart",
         "Money",
-        "NeedAttention",
         "Panel",
         "PillColumns",
         "RetryAction",
@@ -1630,7 +1629,6 @@
         "MeterTrack",
         "MetricChart",
         "Money",
-        "NeedAttention",
         "Panel",
         "PillColumns",
         "RetryAction",
@@ -3889,20 +3887,6 @@
       "usedBy": [],
       "story": null
     },
-    "NeedAttention": {
-      "file": "src/pages/home/NeedAttention.tsx",
-      "layer": "surface",
-      "composes": [
-        "Panel",
-        "RetryAction"
-      ],
-      "usedBy": [
-        "ApiCard",
-        "DashboardHome",
-        "UsageCard"
-      ],
-      "story": "./src/pages/home/NeedAttention.stories.tsx"
-    },
     "NotificationIcon": {
       "file": "src/reui/icons/default/outline/notification.tsx",
       "layer": "other",
@@ -4089,7 +4073,6 @@
         "ApiCard",
         "ChartBox",
         "DashboardHome",
-        "NeedAttention",
         "RevenueDashboard",
         "UsageCard"
       ],
@@ -4781,7 +4764,6 @@
         "ListState",
         "LoadingRows",
         "MetricChart",
-        "NeedAttention",
         "PartialDataNotice",
         "RefreshingIndicator",
         "RevenueDashboard",
@@ -5836,7 +5818,6 @@
         "MeterTrack",
         "MetricChart",
         "Money",
-        "NeedAttention",
         "Panel",
         "PillColumns",
         "RetryAction",
@@ -7081,13 +7062,6 @@
       "uses": [
         "DashboardHome",
         "PageShell"
-      ]
-    },
-    "./src/pages/home/NeedAttention.stories.tsx": {
-      "title": "7 overdue invoices",
-      "component": "NeedAttention",
-      "uses": [
-        "NeedAttention"
       ]
     },
     "./src/pages/integrations/IntegrationsBlock.stories.tsx": {

@@ -16,11 +16,9 @@ import {
 } from '@fp/domain'
 import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
 import { DashboardHome } from '@fp/ui/pages'
-import { failed, qualityOf, withoutData } from './queryView'
+import { qualityOf, withoutData } from './queryView'
 import type { QueryView } from './queryView'
 import type {
-  AttentionItem,
-  AttentionPanel,
   CustomersPanel,
   EventsPanel,
   FilterOption,
@@ -52,10 +50,6 @@ import type {
  *   - **Invoice payment status** from `useInvoices`, bucketed by the domain's
  *     own derived status.
  *
- * And the number that is simply not available anywhere — processing lag — is
- * rendered as absent by the surface itself, with the reason. See
- * `DashboardHome`.
- *
  * Usage by feature and API key health are parked until quota-based metrics
  * land: the surface no longer renders them, so their queries and shaping are
  * commented out below rather than fetched for nothing.
@@ -79,8 +73,6 @@ const GRANULARITIES: (FilterOption & { windowSize: UsageWindowSize })[] = [
   { id: 'weekly', label: 'Weekly', windowSize: UsageWindowSize.Week },
 ]
 
-const ALL_CUSTOMERS = 'all'
-
 /** Midnight UTC `daysAgo` days back — the boundary every window is cut on. */
 function dayStart(daysAgo: number): Date {
   const date = new Date(Date.now() - daysAgo * DAY_MS)
@@ -91,7 +83,7 @@ function dayStart(daysAgo: number): Date {
 /*
  * Every label is cut in UTC, because every window is: `dayStart` buckets on
  * midnight UTC, so a label in the browser's zone would put a bucket's events
- * under the wrong date. The page says "UTC" next to the filters.
+ * under the wrong date.
  */
 const dayLabel = new Intl.DateTimeFormat(undefined, {
   day: 'numeric',
@@ -150,7 +142,6 @@ export function HomePage() {
   const navigate = useNavigate()
   const [rangeId, setRangeId] = useState('7d')
   const [granularityId, setGranularityId] = useState('daily')
-  const [customerId, setCustomerId] = useState(ALL_CUSTOMERS)
 
   const range = RANGES.find((entry) => entry.id === rangeId) ?? RANGES[0]!
   const granularity = GRANULARITIES.find((entry) => entry.id === granularityId) ?? GRANULARITIES[1]!
@@ -169,15 +160,9 @@ export function HomePage() {
   }, [range.days])
 
   /*
-   * One customers request serves the picker, the external-id lookup for the
-   * usage filter and the "new customers" count. It used to be two requests
-   * (pageSize 50 by name, pageSize 100 by date) for the same table.
-   *
    * Newest first, so once a row falls before the window every row after it is
-   * older still — which makes the count exact, unless the whole page is inside
-   * the window, in which case the panel says the figure is a floor. The picker
-   * is sorted by name below; it only offers these rows, which is a known limit
-   * until the picker can search the server.
+   * older still — which makes the new-customer count exact, unless the whole
+   * page is inside the window, in which case the panel says the figure is a floor.
    */
   const customers = useCustomers({
     page: 1,
@@ -188,23 +173,15 @@ export function HomePage() {
     sortDirection: 'desc',
   })
 
-  const externalCustomerId =
-    customerId === ALL_CUSTOMERS
-      ? undefined
-      : (customers.data?.customers.find((entry) => entry.id === customerId)?.externalId ??
-        undefined)
-
   const analytics = useUsageAnalytics({
     window: windows.current,
     windowSize: granularity.windowSize,
-    ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
   })
   // The window before this one, so the tab strip's changes are two real
   // measurements compared. The granularity is irrelevant to the totals it feeds.
   const priorAnalytics = useUsageAnalytics({
     window: windows.prior,
     windowSize: UsageWindowSize.Day,
-    ...(externalCustomerId !== undefined ? { externalCustomerId } : {}),
   })
 
   /*
@@ -226,9 +203,6 @@ export function HomePage() {
     sortBy: 'issuedAt',
     sortDirection: 'desc',
   })
-  // Draft is an API status, so the server counts it exactly. Overdue is derived from a due date
-  // and cannot be asked for, so it is read off the invoices already fetched above.
-  const draftInvoices = useInvoices({ ...ATTENTION_QUERY, statuses: [InvoiceStatus.Draft] })
   // Parked with the API panel until quota-based metrics land.
   // const apiKeys = useApiKeys()
 
@@ -244,21 +218,6 @@ export function HomePage() {
   const subscriptionsPanel = toSubscriptionsPanel(subscriptions, windows, range.days)
   const invoicesPanel = toInvoicesPanel(invoices, windows)
 
-  /*
-   * Parked until quota-based metrics land.
-   *
-   * const apiPanel = toApiPanel(apiKeys.data?.keys ?? [], apiKeys.isPending, apiKeys.isError)
-   */
-
-  const attentionPanel = toAttentionPanel(invoices, draftInvoices)
-
-  const customerOptions: FilterOption[] = [
-    { id: ALL_CUSTOMERS, label: 'All customers' },
-    ...[...(customers.data?.customers ?? [])]
-      .sort((a, b) => a.name.localeCompare(b.name))
-      .map((entry) => ({ id: entry.id, label: entry.name })),
-  ]
-
   return (
     <DashboardHome
       rangeOptions={RANGES.map(({ id, label }) => ({ id, label }))}
@@ -267,21 +226,12 @@ export function HomePage() {
       granularityOptions={GRANULARITIES.map(({ id, label }) => ({ id, label }))}
       granularity={granularityId}
       onGranularityChange={setGranularityId}
-      customerOptions={customerOptions}
-      customer={customerId}
-      onCustomerChange={setCustomerId}
       rangeLabel={range.label.toLowerCase()}
-      timeZoneLabel="UTC"
       events={eventsPanel}
       customers={customersPanel}
       subscriptions={subscriptionsPanel}
       invoices={invoicesPanel}
-      attention={attentionPanel}
-      onNavigate={(path) => {
-        // A task links to a filtered list, so the query string rides along.
-        const [to = path, query = ''] = path.split('?')
-        void navigate({ to, search: Object.fromEntries(new URLSearchParams(query)) as never })
-      }}
+      onNavigate={(path) => void navigate({ to: path, search: {} as never })}
     />
   )
 }
@@ -561,103 +511,6 @@ function toInvoicesPanel(
     basedOn: complete
       ? undefined
       : `Based on the latest ${page.invoices.length.toLocaleString()} invoices.`,
-  }
-}
-
-const ATTENTION_QUERY = { ...DEFAULT_INVOICE_QUERY, pageSize: 3 }
-
-type InvoiceRows = QueryView<{ invoices: Invoice[]; total: number }>
-
-/** "Acme, Globex and 2 more" — who the records belong to, from the few rows read. */
-function whoseInvoices(rows: Invoice[], total: number): string | undefined {
-  const names = [...new Set(rows.map((row) => row.customerName))].slice(0, 3)
-  if (names.length === 0) return undefined
-  const rest = total - names.length
-  return rest > 0 ? `${names.join(', ')} and ${rest} more` : names.join(', ')
-}
-
-const plural = (count: number, noun: string) =>
-  `${count.toLocaleString()} ${noun}${count === 1 ? '' : 's'}`
-
-/**
- * One row per kind of task that has records, most urgent first.
- *
- * Empty only when every source answered and found nothing. A source that has
- * no data yet cannot rule a task out, so the list is never declared empty on
- * the strength of a request that failed or has not finished: with rows from the
- * other source they stay (marked stale if one failed), otherwise the panel is
- * loading or unavailable.
- */
-function toAttentionPanel(recent: InvoiceRows, drafts: InvoiceRows): AttentionPanel {
-  const sources = [recent, drafts]
-  const missing = sources.filter((source) => source.data === undefined)
-  const broken = sources.filter(failed)
-
-  const items: AttentionItem[] = []
-
-  const loaded = recent.data?.invoices ?? []
-  const overdue = loaded.filter((row) => row.status === InvoiceStatus.Overdue)
-  // Overdue is derived client-side, so it is only known for the page read.
-  const recentTruncated = recent.data !== undefined && recent.data.total > loaded.length
-  if (overdue.length > 0) {
-    const who = whoseInvoices(overdue, overdue.length)
-    items.push({
-      id: 'overdue',
-      title: plural(overdue.length, 'overdue invoice'),
-      detail: [who, recentTruncated ? `among the latest ${loaded.length}` : undefined]
-        .filter(Boolean)
-        .join(' · '),
-      tone: 'critical',
-      path: `/invoices?status=${InvoiceStatus.Overdue}`,
-    })
-  }
-
-  const draftTotal = drafts.data?.total ?? 0
-  if (draftTotal > 0) {
-    items.push({
-      id: 'draft',
-      title: plural(draftTotal, 'draft invoice'),
-      detail: whoseInvoices(drafts.data?.invoices ?? [], draftTotal),
-      tone: 'neutral',
-      path: `/invoices?status=${InvoiceStatus.Draft}`,
-    })
-  }
-
-  /*
-   * "Nothing overdue" is only a claim about the newest page. When older
-   * invoices exist, say what was checked rather than leave the list empty.
-   */
-  if (overdue.length === 0 && recentTruncated) {
-    items.push({
-      id: 'overdue-checked',
-      title: `No overdue invoices among the latest ${loaded.length}`,
-      detail: 'Older invoices were not checked',
-      tone: 'neutral',
-      path: `/invoices?status=${InvoiceStatus.Overdue}`,
-    })
-  }
-
-  const retry = () => {
-    for (const source of broken.length > 0 ? broken : sources) void source.refetch()
-  }
-  const meta = {
-    onRetry: retry,
-    isRetrying: sources.some((source) => source.isFetching),
-  }
-
-  if (missing.length > 0 && items.length === 0) {
-    return {
-      ...meta,
-      status: broken.some((source) => source.data === undefined) ? 'unavailable' : 'loading',
-      items: [],
-    }
-  }
-
-  return {
-    ...meta,
-    status: 'ready',
-    items,
-    stale: broken.length > 0,
   }
 }
 

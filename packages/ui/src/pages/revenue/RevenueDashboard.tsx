@@ -43,8 +43,8 @@ import { DetailTable, type DetailColumn } from '../shared/DetailTable'
  *     sheets record the cost side, but nothing in the API aggregates the two,
  *     and `Money` has no `add` by design (`@fp/domain/money`), so the browser
  *     cannot do it either. The panel keeps its place and shows an em-dash with
- *     the reason — the same choice `DashboardHome` makes for processing lag and
- *     request latency, and for the same reason: deleting the panel would make
+ *     the reason — the same choice `DashboardHome` makes for request latency,
+ *     and for the same reason: deleting the panel would make
  *     "we do not measure this" and "this is not a thing" look identical.
  *
  * Presentational, and holding no queries, so its story can exercise the ready,
