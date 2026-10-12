@@ -2,14 +2,16 @@ import type { ReactNode } from 'react'
 import { Input } from '@ui/components/primitives/input'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { useDebouncedSearch } from './useDebouncedSearch'
 
 /**
  * The search-and-filter bar above a list.
  *
- * Controlled, like every list surface in this package: it reports what the user
- * asked for and renders what it is given. The route owns the query, so the
+ * It reports what the user asked for and renders what it is given. The route owns the query, so the
  * toolbar and the grid below it cannot disagree about the current filter — they
- * are both reading the same URL.
+ * are both reading the same URL. The search field keeps local state and pushes
+ * to the route after a 250ms pause (Enter or blur pushes at once); an outside
+ * change to `search`, such as Clear filters, replaces what is typed.
  *
  * `role="search"` makes it a landmark, so it is reachable directly rather than
  * by tabbing through the page.
@@ -44,14 +46,19 @@ export function Toolbar({
   onClear,
   actions,
 }: ToolbarProps) {
+  const { draft, update, commit } = useDebouncedSearch(search, onSearchChange)
   return (
     <div role="search" className="flex flex-wrap items-center justify-between gap-3">
       <Input
         type="search"
         aria-label={searchLabel}
         placeholder={searchPlaceholder}
-        value={search}
-        onChange={(event) => onSearchChange(event.target.value)}
+        value={draft}
+        onChange={(event) => update(event.target.value)}
+        onBlur={commit}
+        onKeyDown={(event) => {
+          if (event.key === 'Enter') commit()
+        }}
         className="h-9 w-72 max-w-full"
       />
 

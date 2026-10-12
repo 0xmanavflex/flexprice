@@ -1,6 +1,6 @@
 import { useEffect, useState, type ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { Button } from '@ui/components/primitives/button'
 import { ListOfferProvider } from '../feedback/EmptyState'
 import { GridToolbar } from './GridToolbar'
@@ -119,14 +119,56 @@ export const IsASearchLandmark: Story = {
   },
 }
 
-/** Controlled: it reports what was typed and renders what it is given. */
+/** It reports what was typed once typing pauses, not once per keystroke. */
 export const ReportsSearchUpward: Story = {
   play: async ({ canvasElement, args }) => {
-    await userEvent.type(
-      within(canvasElement).getByRole('textbox', { name: 'Search coupons' }),
-      'acme',
-    )
-    await expect(args.onSearchChange).toHaveBeenCalled()
+    const input = within(canvasElement).getByRole('textbox', { name: 'Search coupons' })
+    await userEvent.type(input, 'acme')
+    await expect(input).toHaveValue('acme')
+    await waitFor(() => expect(args.onSearchChange).toHaveBeenCalledWith('acme'))
+    await expect(args.onSearchChange).toHaveBeenCalledTimes(1)
+  },
+}
+
+/** Enter pushes the query at once, without waiting for the pause. */
+export const EnterFlushesImmediately: Story = {
+  play: async ({ canvasElement, args }) => {
+    const input = within(canvasElement).getByRole('textbox', { name: 'Search coupons' })
+    await userEvent.type(input, 'acme{Enter}')
+    await expect(args.onSearchChange).toHaveBeenCalledWith('acme')
+    await expect(args.onSearchChange).toHaveBeenCalledTimes(1)
+  },
+}
+
+function ExternalReset(args: ComponentProps<typeof GridToolbar>) {
+  const [search, setSearch] = useState('')
+  return (
+    <>
+      <GridToolbar
+        {...args}
+        search={search}
+        onSearchChange={(value) => {
+          setSearch(value)
+          args.onSearchChange(value)
+        }}
+      />
+      <Button variant="outline" size="sm" onClick={() => setSearch('')}>
+        Clear filters
+      </Button>
+    </>
+  )
+}
+
+/** A change from outside the field (Clear filters, back/forward) replaces what is typed. */
+export const FollowsExternalChanges: Story = {
+  render: (args) => <ExternalReset {...args} />,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const input = canvas.getByRole('textbox', { name: 'Search coupons' })
+    await userEvent.type(input, 'acme{Enter}')
+    await expect(input).toHaveValue('acme')
+    await userEvent.click(canvas.getByRole('button', { name: 'Clear filters' }))
+    await waitFor(() => expect(input).toHaveValue(''))
   },
 }
 

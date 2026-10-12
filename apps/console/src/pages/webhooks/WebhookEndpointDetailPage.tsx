@@ -16,7 +16,7 @@ import {
   useWebhookEndpointStats,
   useWebhookEventTypes,
 } from '@fp/query'
-import { AppFailure, LoadingRows } from '@fp/ui/compositions'
+import { ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { WebhookAttemptList, WebhookEndpointDetail, toast } from '@fp/ui/pages'
 import type { WebhookEndpointTabParam } from '@/app/webhookSearch'
 import { WebhookMessagePanel } from './WebhookMessagePanel'
@@ -67,24 +67,21 @@ function EndpointDetail({
   const sendExample = useSendWebhookExample(environmentId)
   const resend = useResendWebhookMessage(environmentId)
 
-  if (endpoint.isPending) {
-    return (
-      <div className="p-6">
-        <LoadingRows />
-      </div>
-    )
-  }
+  if (endpoint.isPending) return <PageLoadingState variant="detail" label="Loading endpoint" />
 
   if (endpoint.error || !endpoint.data) {
     const failure = toWebhookFailure(endpoint.error, 'this endpoint')
     return (
-      <AppFailure
+      <ErrorState
+        variant="page"
         title={
           endpoint.error instanceof ApiError && endpoint.error.kind === 'not_found'
             ? 'This endpoint no longer exists'
             : 'This endpoint could not be loaded'
         }
-        {...(failure ? { detail: failure.message } : {})}
+        {...(failure ? { description: failure.message, kind: failure.kind } : {})}
+        isRetrying={endpoint.isFetching}
+        {...(failure?.retryAfterMs !== undefined ? { retryAfterMs: failure.retryAfterMs } : {})}
         {...(failure?.canRetry ? { onRetry: () => void endpoint.refetch() } : {})}
       />
     )

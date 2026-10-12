@@ -1,6 +1,6 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { Toaster } from 'sonner'
-import { expect, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { INTEGRATION_CATALOG, type Integration } from '@fp/domain'
 import { IntegrationsBlock } from './IntegrationsBlock'
 
@@ -76,12 +76,60 @@ export const AllConnected: Story = {
   args: { integrations: makeIntegrations(INTEGRATION_CATALOG.length, INTEGRATION_CATALOG.length) },
 }
 
+/** No catalogue at all is the first-run state, not a filtered miss. */
 export const Empty: Story = {
   args: { integrations: [] },
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByText('No integrations match these filters.'),
-    ).toBeInTheDocument()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Nothing connected yet')).toBeInTheDocument()
+    await expect(canvas.queryByText(/match these filters/)).toBeNull()
+  },
+}
+
+/** The first request: card-shaped placeholders, announced once. */
+export const Loading: Story = {
+  args: { integrations: [], isLoading: true },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('status')).toHaveTextContent(
+      'Loading integrations',
+    )
+  },
+}
+
+/** A failed request says why and offers a retry; a permission error would not. */
+export const LoadError: Story = {
+  args: {
+    integrations: [],
+    error: { message: 'Could not reach Flexprice.', canRetry: true, kind: 'network' },
+    onRetry: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('alert')).toHaveTextContent('Could not reach Flexprice.')
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
+  },
+}
+
+export const Forbidden: Story = {
+  args: {
+    integrations: [],
+    error: {
+      message: 'Your role does not include access to integrations.',
+      canRetry: false,
+      kind: 'denied',
+    },
+    onRetry: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).queryByRole('button', { name: /try again/i })).toBeNull()
+  },
+}
+
+/** Connecting is a preview and says so before anyone clicks. */
+export const PreviewIsLabelled: Story = {
+  play: async ({ canvasElement }) => {
+    await expect(within(canvasElement).getByRole('note')).toHaveTextContent(/Preview/)
   },
 }
 
@@ -99,7 +147,7 @@ export const SearchFilters: Story = {
     await expect(canvas.queryByRole('heading', { name: 'Razorpay' })).toBeNull()
     await userEvent.clear(search)
     await userEvent.type(search, 'zzz-no-such-app')
-    await expect(canvas.getByText('No integrations match these filters.')).toBeInTheDocument()
+    await expect(canvas.getByText(/No results for/)).toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: 'Clear' }))
     await expect(canvas.getByRole('heading', { name: 'Razorpay' })).toBeInTheDocument()
   },

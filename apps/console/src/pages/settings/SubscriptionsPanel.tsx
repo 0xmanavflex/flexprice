@@ -5,13 +5,7 @@ import {
   useSubscriptionConfig,
   useUpdateSubscriptionConfig,
 } from '@fp/query'
-import {
-  ConfirmDialog,
-  EmptyState,
-  LoadingRows,
-  SettingRow,
-  SettingsFieldGroup,
-} from '@fp/ui/compositions'
+import { ConfirmDialog, EmptyState, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { useSession } from '@/app/session'
 import {
@@ -22,6 +16,9 @@ import {
   PanelError,
   mutationMessage,
   toFailure,
+  PanelLoading,
+  PanelUnavailable,
+  queryPhase,
   SettingsBlock,
 } from './panelKit'
 import { useDraft } from './useDraft'
@@ -79,13 +76,9 @@ export function SubscriptionsPanel() {
     )
   }
 
-  if (config.isPending || !config.data) {
-    return (
-      <Panel>
-        <LoadingRows rows={3} columns={2} />
-      </Panel>
-    )
-  }
+  const phase = queryPhase(config)
+  if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
+  if (phase === 'loading' || !config.data) return <PanelLoading rows={3} />
 
   return <SubscriptionForm key={environmentId} environmentId={environmentId} config={config.data} />
 }
@@ -269,7 +262,6 @@ function SubscriptionForm({
               </SettingRow>
             </SettingsFieldGroup>
           </SettingsBlock>
-
         </Panel>
       </form>
 

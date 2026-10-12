@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BoxIcon, SearchIcon } from '@ui/icons'
+import { SearchIcon } from '@ui/icons'
 import { toast } from 'sonner'
 import type { Integration } from '@fp/domain'
 import { ConnectorCard } from '@ui/compositions/layout/ConnectorCard'
@@ -13,6 +13,15 @@ import {
   SelectValue,
 } from '@ui/components/primitives/select'
 import { INTEGRATION_LOGOS } from '@ui/assets/integrations'
+import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import {
+  EMPTY_CATALOGUE,
+  filterMissCopy,
+  searchMissCopy,
+} from '@ui/compositions/feedback/emptyCatalogue'
+import { Bone, SkeletonRegion } from '@ui/compositions/feedback/Skeletons'
+import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
+import { provenance } from '@ui/provenance'
 
 /**
  * The integrations gallery. The `settings-13` block is kept verbatim in
@@ -20,12 +29,69 @@ import { INTEGRATION_LOGOS } from '@ui/assets/integrations'
  * and three-up grid) with the real catalogue through `ConnectorCard`.
  *
  * Connection state is real (`connections > 0`). Connect, Disconnect, Configure
- * and the on/off switch have no API yet: they update local state and toast.
+ * and the on/off switch have no API yet, so they are a labelled preview: they
+ * update local state only, a note above the gallery says so, and each toast
+ * starts with "Preview". Nothing is sent and nothing survives a reload.
+ *
+ * The page's query state is its own to show: loading is a grid of card-shaped
+ * placeholders, a failure is an `ErrorState` with a retry, an empty catalogue
+ * is the first-run state, and a search or category that matches nothing is a
+ * filtered miss with a way out — four different answers, not one line.
  */
+export const IntegrationsBlockProvenance = provenance({
+  source: 'composition',
+  composes: [
+    'compositions/layout/ConnectorCard',
+    'compositions/feedback/EmptyState',
+    'compositions/feedback/Skeletons',
+    'compositions/feedback/States',
+  ],
+  note: 'The settings-13 gallery layout over the live catalogue, with loading, error, first-run and filtered-empty states. Connect actions are a labelled preview.',
+})
+
 const ALL = 'All'
+
+export interface IntegrationsFailure {
+  message: string
+  canRetry: boolean
+  kind?: ErrorKind | undefined
+  retryAfterMs?: number | undefined
+}
 
 export interface IntegrationsBlockProps {
   integrations: Integration[]
+  /** The catalogue is on its first request. */
+  isLoading?: boolean
+  /** The catalogue request failed. Shown in place of the gallery when there is nothing to show. */
+  error?: IntegrationsFailure | null
+  onRetry?: (() => void) | undefined
+  isRetrying?: boolean | undefined
+}
+
+function GallerySkeleton() {
+  return (
+    <SkeletonRegion
+      label="Loading integrations"
+      className="grid gap-4 md:grid-cols-2 xl:grid-cols-3"
+    >
+      {Array.from({ length: 6 }, (_, index) => (
+        <div key={index} className="bg-muted/50 flex flex-col rounded-xl border p-1">
+          <div className="bg-background flex flex-col gap-4 rounded-lg border p-5">
+            <Bone className="size-12 rounded-lg" />
+            <div className="space-y-2">
+              <Bone className="h-4 w-1/3" />
+              <Bone className="h-3.5 w-full" />
+              <Bone className="h-3.5 w-4/5" />
+            </div>
+          </div>
+          <div className="flex items-center justify-between px-3 py-2.5">
+            <Bone className="h-4 w-24" />
+            <Bone className="h-5 w-9 rounded-full" />
+          </div>
+        </div>
+      ))}
+    </SkeletonRegion>
+  )
 }
 
 function Logo({ integration }: { integration: Integration }) {
@@ -39,7 +105,13 @@ function Logo({ integration }: { integration: Integration }) {
   )
 }
 
-export function IntegrationsBlock({ integrations }: IntegrationsBlockProps) {
+export function IntegrationsBlock({
+  integrations,
+  isLoading = false,
+  error = null,
+  onRetry,
+  isRetrying,
+}: IntegrationsBlockProps) {
   const [connectedOverride, setConnected] = useState<Record<string, boolean>>({})
   const [disabled, setDisabled] = useState<Record<string, boolean>>({})
   const [query, setQuery] = useState('')
@@ -79,22 +151,69 @@ export function IntegrationsBlock({ integrations }: IntegrationsBlockProps) {
       enabled={!disabled[integration.id]}
       onConnect={() => {
         setConnected((s) => ({ ...s, [integration.id]: true }))
-        toast(`${integration.name} connect is a demo action — no request was sent.`)
+        toast(`Preview: ${integration.name} was not connected. No request was sent.`)
       }}
       onDisconnect={() => {
         setConnected((s) => ({ ...s, [integration.id]: false }))
-        toast(`${integration.name} disconnect is a demo action — no request was sent.`)
+        toast(`Preview: ${integration.name} was not disconnected. No request was sent.`)
       }}
-      onConfigure={() => toast(`Configure ${integration.name} is not available yet.`)}
+      onConfigure={() => toast(`Preview: configuring ${integration.name} is not available yet.`)}
       onEnabledChange={(on) => setDisabled((s) => ({ ...s, [integration.id]: !on }))}
     />
   )
 
   const grid = 'grid gap-4 md:grid-cols-2 xl:grid-cols-3'
   const filtered = category !== ALL || query !== ''
+  const clearFilters = () => {
+    setCategory(ALL)
+    setQuery('')
+  }
+
+  const failure =
+    error === null ? null : (
+      <ErrorState
+        title={error.message}
+        variant={listed.length === 0 ? 'page' : 'panel'}
+        {...(error.kind ? { kind: error.kind } : {})}
+        {...(error.canRetry && onRetry ? { onRetry } : {})}
+        {...(isRetrying !== undefined ? { isRetrying } : {})}
+        {...(error.retryAfterMs !== undefined ? { retryAfterMs: error.retryAfterMs } : {})}
+      />
+    )
+
+  // Nothing to show yet, or nothing that could be shown: the gallery chrome
+  // (search, category) would have nothing to act on.
+  if (error !== null && listed.length === 0) {
+    return <div className="px-10 pt-8 pb-16 2xl:px-14">{failure}</div>
+  }
+  if (isLoading && listed.length === 0) {
+    return (
+      <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
+        <GallerySkeleton />
+      </div>
+    )
+  }
+  if (listed.length === 0) {
+    const copy = EMPTY_CATALOGUE.integrations
+    return (
+      <div className="px-10 pt-8 pb-16 2xl:px-14">
+        <EmptyState title={copy.title} description={copy.description} figure={copy.figure} />
+      </div>
+    )
+  }
+
+  const miss = query.trim() ? searchMissCopy(query) : filterMissCopy('integrations')
 
   return (
     <div className="flex flex-col gap-6 px-10 pt-8 pb-16 2xl:px-14">
+      {failure}
+      <p
+        role="note"
+        className="text-muted-foreground bg-muted/50 rounded-lg border px-3 py-2 text-[13px]"
+      >
+        <span className="text-foreground font-medium">Preview.</span> Connecting and disconnecting
+        are not wired up yet: changes here stay on this page and are not saved.
+      </p>
       <div className="flex flex-wrap items-center gap-2">
         <InputGroup className="h-9 w-72">
           <InputGroupAddon align="inline-start">
@@ -135,10 +254,7 @@ export function IntegrationsBlock({ integrations }: IntegrationsBlockProps) {
             type="button"
             variant="ghost"
             className="text-muted-foreground h-9"
-            onClick={() => {
-              setCategory(ALL)
-              setQuery('')
-            }}
+            onClick={clearFilters}
           >
             Clear
           </Button>
@@ -160,10 +276,22 @@ export function IntegrationsBlock({ integrations }: IntegrationsBlockProps) {
         </h2>
         {available.length > 0 ? (
           <div className={grid}>{available.map(renderCard)}</div>
+        ) : filtered ? (
+          <EmptyState
+            size="inline"
+            isFiltered
+            title={miss.title}
+            {...(miss.description ? { description: miss.description } : {})}
+            figure={EMPTY_CATALOGUE.search.figure}
+            onClearFilters={
+              <Button type="button" variant="outline" size="sm" onClick={clearFilters}>
+                Clear filters
+              </Button>
+            }
+          />
         ) : (
-          <p className="text-muted-foreground flex items-center gap-2 text-sm">
-            <BoxIcon className="size-4" aria-hidden="true" />
-            No integrations match these filters.
+          <p className="text-muted-foreground text-sm">
+            Everything available is already connected.
           </p>
         )}
       </section>

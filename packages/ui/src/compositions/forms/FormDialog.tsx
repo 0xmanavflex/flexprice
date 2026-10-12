@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react'
+import { useCallback, useState, type ReactNode } from 'react'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@ui/components/primitives/dialog'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
@@ -14,7 +14,11 @@ import { FormDialogBodyContext } from './formDialogContext'
  * end of the body.
  *
  * The caller owns `open`. Remount the form with a `key` per record so
- * react-hook-form's defaults reset.
+ * react-hook-form's defaults reset. Reopening remounts the body, so a form
+ * never reopens holding the half-typed values of the last time it was dismissed.
+ *
+ * Pass `isPending` while a submit is in flight: Escape, the overlay and the
+ * close control are then ignored so the dialog cannot close under the request.
  */
 export const FormDialogProvenance = provenance({
   source: 'composition',
@@ -33,20 +37,51 @@ export interface FormDialogProps {
   onOpenChange: (open: boolean) => void
   title: string
   size?: keyof typeof SIZES
+  /** A submit is in flight: the dialog cannot be dismissed until it settles. */
+  isPending?: boolean | undefined
   children: ReactNode
 }
 
-export function FormDialog({ open, onOpenChange, title, size = 'md', children }: FormDialogProps) {
+export function FormDialog({
+  open,
+  onOpenChange,
+  title,
+  size = 'md',
+  isPending = false,
+  children,
+}: FormDialogProps) {
+  // Bumped on each close-to-open transition so the body (and any uncontrolled or
+  // react-hook-form state in it) remounts fresh. Done during render, not in an
+  // effect, so the old values are never painted and the exit animation of the
+  // closing dialog is not disturbed.
+  const [session, setSession] = useState(0)
+  const [wasOpen, setWasOpen] = useState(open)
+  if (open !== wasOpen) {
+    setWasOpen(open)
+    if (open) setSession((n) => n + 1)
+  }
+
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      if (!next && isPending) return
+      onOpenChange(next)
+    },
+    [isPending, onOpenChange],
+  )
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent
+        showCloseButton={!isPending}
         className={cn('flex max-h-[88vh] flex-col gap-0 overflow-hidden p-0', SIZES[size])}
       >
         <DialogHeader className="border-b px-6 py-5">
           <DialogTitle className="text-base font-medium">{title}</DialogTitle>
         </DialogHeader>
         <div className="min-h-0 flex-1 overflow-y-auto p-6">
-          <FormDialogBodyContext.Provider value>{children}</FormDialogBodyContext.Provider>
+          <FormDialogBodyContext.Provider key={session} value>
+            {children}
+          </FormDialogBodyContext.Provider>
         </div>
       </DialogContent>
     </Dialog>

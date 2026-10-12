@@ -1,7 +1,7 @@
 import { useId } from 'react'
 import { type Tenant, type UpdateTenant, toUpdateTenantDraft, updateTenantSchema } from '@fp/domain'
 import { useTenant, useUpdateTenant, useUserInfo } from '@fp/query'
-import { LoadingRows, SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
+import { SettingRow, SettingsFieldGroup } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import {
   ActionError,
@@ -11,6 +11,9 @@ import {
   SettingsBlock,
   mutationMessage,
   toFailure,
+  PanelLoading,
+  PanelUnavailable,
+  queryPhase,
 } from './panelKit'
 import { useDraft } from './useDraft'
 
@@ -57,16 +60,25 @@ export function ProfilePanel() {
     )
   }
 
-  // `useTenant` is disabled until the id arrives, so "pending" has to cover
-  // both hops — otherwise the panel renders an empty form for one frame and
-  // then replaces it, which looks like the form resetting itself.
-  if (me.isPending || !tenantId || tenant.isPending || !tenant.data) {
+  // `useTenant` is disabled until the id arrives, so the loading state has to
+  // cover both hops — otherwise the panel renders an empty form for one frame
+  // and then replaces it, which looks like the form resetting itself. But a
+  // disabled query is `isPending` for ever: once `/users/me` has answered
+  // without a tenant id, nothing is coming, and the panel says so.
+  const mePhase = queryPhase(me)
+  if (mePhase === 'loading') return <PanelLoading rows={6} />
+  if (mePhase === 'idle' || !tenantId) {
     return (
-      <Panel>
-        <LoadingRows rows={6} columns={2} />
-      </Panel>
+      <PanelUnavailable
+        reason="unavailable"
+        title="Organisation details are not available"
+        description="Your account did not report an organisation, so there is nothing to show here."
+      />
     )
   }
+  const tenantPhase = queryPhase(tenant)
+  if (tenantPhase === 'idle') return <PanelUnavailable reason="unavailable" />
+  if (tenantPhase === 'loading' || !tenant.data) return <PanelLoading rows={6} />
 
   // Keyed on the record so a refetch that genuinely changes the organisation
   // re-seeds the draft rather than leaving the values it mounted with.
@@ -201,7 +213,6 @@ function ProfileForm({ tenant }: { tenant: Tenant }) {
             />
           </SettingsFieldGroup>
         </SettingsBlock>
-
       </Panel>
     </form>
   )
@@ -241,7 +252,13 @@ function TextField({
       {...(hint ? { description: hint } : {})}
       {...(last ? { last: true } : {})}
       {...(required
-        ? { titleAddon: <span className="text-destructive" aria-hidden="true">*</span> }
+        ? {
+            titleAddon: (
+              <span className="text-destructive" aria-hidden="true">
+                *
+              </span>
+            ),
+          }
         : {})}
     >
       <div className="flex w-full flex-col gap-1">

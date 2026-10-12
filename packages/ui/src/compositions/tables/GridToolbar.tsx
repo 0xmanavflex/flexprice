@@ -8,6 +8,7 @@ import {
 } from '@ui/components/primitives/input-group'
 import { useListOffer } from '../feedback/EmptyState'
 import { provenance } from '@ui/provenance'
+import { useDebouncedSearch } from './useDebouncedSearch'
 
 /**
  * The bar above a grid: a compact table heading and search on the left, controls
@@ -30,8 +31,11 @@ import { provenance } from '@ui/provenance'
  * The create CTA comes LAST, after Filter and Sort: the review puts the primary
  * action at the end of the toolbar rather than in a page header.
  *
- * Controlled, like every list surface here: the route owns the query, so the
- * toolbar and the grid cannot disagree about what is being shown.
+ * The route owns the query, so the toolbar and the grid cannot disagree about
+ * what is being shown. The field itself keeps local state and pushes to the route
+ * after a 250ms pause (Enter or blur pushes at once), so typing never lags and
+ * does not write a history entry per keystroke; an outside change to `search`
+ * (Clear filters, back/forward) replaces what is typed.
  */
 export const GridToolbarProvenance = provenance({
   source: 'composition',
@@ -78,6 +82,7 @@ export function GridToolbar({
    */
   const offer = useListOffer()
   const createAction = action ?? offer?.action
+  const { draft, update, commit, clear } = useDebouncedSearch(search, onSearchChange)
 
   return (
     /*
@@ -110,16 +115,20 @@ export function GridToolbar({
         <InputGroupInput
           aria-label={label}
           placeholder={placeholder}
-          value={search}
-          onChange={(event) => onSearchChange(event.target.value)}
+          value={draft}
+          onChange={(event) => update(event.target.value)}
+          onBlur={commit}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') commit()
+          }}
         />
-        {search.length > 0 ? (
+        {draft.length > 0 ? (
           <InputGroupAddon align="inline-end">
             <InputGroupButton
               type="button"
               size="icon-xs"
               aria-label="Clear search"
-              onClick={() => onSearchChange('')}
+              onClick={clear}
             >
               <XIcon aria-hidden />
             </InputGroupButton>

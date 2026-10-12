@@ -62,5 +62,48 @@ export const Empty: Story = {
 export const Loading: Story = { args: { endpoints: [], isLoading: true } }
 
 export const Failed: Story = {
-  args: { endpoints: [], error: 'Could not reach the webhook service.', onRetry: fn() },
+  args: {
+    endpoints: [],
+    error: 'Could not reach the webhook service.',
+    errorKind: 'network',
+    onRetry: fn(),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('alert')).toHaveTextContent('Could not reach')
+    await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
+    await expect(args.onRetry).toHaveBeenCalledOnce()
+  },
+}
+
+/** A permission failure is not retryable, so no retry is offered. */
+export const FailedDenied: Story = {
+  args: {
+    endpoints: [],
+    error: 'Your role does not include access to webhooks.',
+    errorKind: 'denied',
+    onRetry: fn(),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('alert')).toBeInTheDocument()
+    await expect(canvas.queryByRole('button', { name: /try again/i })).not.toBeInTheDocument()
+  },
+}
+
+/** An endpoint that has delivered nothing has no error rate: a dash, never "0%". */
+export const NoDeliveriesYet: Story = {
+  args: {
+    stats: Object.fromEntries(
+      DEMO_WEBHOOK_ENDPOINTS.map((endpoint) => [
+        endpoint.id,
+        { succeeded: 0, failed: 0, pending: 0, sending: 0 },
+      ]),
+    ),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect((await canvas.findAllByText('No deliveries yet')).length).toBeGreaterThan(0)
+    await expect(canvas.queryByText('0%')).not.toBeInTheDocument()
+  },
 }

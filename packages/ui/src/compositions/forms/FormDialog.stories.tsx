@@ -24,6 +24,7 @@ function FormDialogDemo({
   fields,
   useComposer,
   onSubmit,
+  isPending,
 }: PlaygroundArgs) {
   const [open, setOpen] = useState(initialOpen)
   useEffect(() => setOpen(initialOpen), [initialOpen])
@@ -39,7 +40,13 @@ function FormDialogDemo({
   return (
     <>
       <Button onClick={() => change(true)}>{title}</Button>
-      <FormDialog open={open} onOpenChange={change} title={title} {...(size ? { size } : {})}>
+      <FormDialog
+        open={open}
+        onOpenChange={change}
+        title={title}
+        {...(size ? { size } : {})}
+        {...(isPending ? { isPending } : {})}
+      >
         {useComposer ? (
           <Composer submitLabel="Create" onSubmit={onSubmit} onCancel={() => change(false)}>
             {inputs}
@@ -75,6 +82,10 @@ const meta = {
     open: { control: 'boolean' },
     title: { control: 'text' },
     size: { control: 'inline-radio', options: ['sm', 'md', 'lg'] },
+    isPending: {
+      control: 'boolean',
+      description: 'Submit in flight: the dialog cannot be dismissed.',
+    },
     fields: { control: { type: 'number', min: 1, max: 30, step: 1 } },
     useComposer: { control: 'boolean' },
     onOpenChange: { control: false },
@@ -156,5 +167,32 @@ export const WithComposer: Story = {
     await userEvent.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Platform')
     await userEvent.click(within(dialog).getByRole('button', { name: 'Create' }))
     await expect(args.onSubmit).toHaveBeenCalledOnce()
+  },
+}
+
+/** A submit in flight: Escape is ignored and the close control is withdrawn, so the dialog cannot close under the request. */
+export const Pending: Story = {
+  args: { isPending: true },
+  play: async ({ args }) => {
+    const dialog = await screen.findByRole('dialog', { name: 'New group' })
+    await expect(within(dialog).queryByRole('button', { name: 'Close' })).not.toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    await expect(args.onOpenChange).not.toHaveBeenCalled()
+    await expect(screen.getByRole('dialog', { name: 'New group' })).toBeInTheDocument()
+  },
+}
+
+/** Dismissing and reopening gives a clean form, not the half-typed values of last time. */
+export const ResetsOnReopen: Story = {
+  args: { open: false },
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'New group' }))
+    let dialog = await screen.findByRole('dialog', { name: 'New group' })
+    await userEvent.type(within(dialog).getByRole('textbox', { name: 'Name' }), 'Half typed')
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }))
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
+    await userEvent.click(within(canvasElement).getByRole('button', { name: 'New group' }))
+    dialog = await screen.findByRole('dialog', { name: 'New group' })
+    await expect(within(dialog).getByRole('textbox', { name: 'Name' })).toHaveValue('')
   },
 }

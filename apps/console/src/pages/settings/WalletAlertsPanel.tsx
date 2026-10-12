@@ -15,11 +15,21 @@ import {
   useUpdateWalletAlertConfig,
   useWalletAlertConfig,
 } from '@fp/query'
-import { FormCard, FormRow, LoadingRows } from '@fp/ui/compositions'
+import { FormCard, FormRow } from '@fp/ui/compositions'
 import { Button, Input, Switch } from '@fp/ui/primitives'
 import { InfoIcon } from '@fp/ui/icons'
 import { useSession } from '@/app/session'
-import { ActionError, ActionNote, Panel, PanelError, mutationMessage, toFailure } from './panelKit'
+import {
+  ActionError,
+  ActionNote,
+  Panel,
+  PanelError,
+  PanelLoading,
+  PanelUnavailable,
+  mutationMessage,
+  queryPhase,
+  toFailure,
+} from './panelKit'
 import { useDraft } from './useDraft'
 
 /**
@@ -71,13 +81,15 @@ export function WalletAlertsPanel() {
     )
   }
 
-  if (!environmentId || config.isPending || !config.data) {
+  if (!environmentId) {
     return (
-      <Panel>
-        <LoadingRows rows={5} columns={2} />
-      </Panel>
+      <PanelUnavailable reason="setup" description="Choose an environment to see these settings." />
     )
   }
+
+  const phase = queryPhase(config)
+  if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
+  if (phase === 'loading' || !config.data) return <PanelLoading rows={5} />
 
   // Keyed on the environment so switching environments re-seeds the draft
   // rather than leaving the previous environment's thresholds on screen.

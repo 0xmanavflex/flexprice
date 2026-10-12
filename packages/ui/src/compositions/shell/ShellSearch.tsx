@@ -110,6 +110,13 @@ export interface ShellSearchProps {
   /** Records found on the server for the current term, shown beneath `items`. */
   results?: ShellSearchItem[]
   isSearching?: boolean
+  /**
+   * The server lookup failed. Shown as "Search is unavailable" rather than "No
+   * results", because an empty list and a broken lookup are different news.
+   */
+  hasError?: boolean
+  /** Re-runs the failed lookup. Offered next to the error when given. */
+  onRetry?: () => void
   /** Reports the typed term (empty when the dialog closes) so the app can query. */
   onTermChange?: (term: string) => void
   onSelect?: (item: ShellSearchItem) => void
@@ -186,6 +193,8 @@ export function ShellSearch({
   items = [],
   results = [],
   isSearching = false,
+  hasError = false,
+  onRetry,
   onTermChange,
   onSelect,
   placeholder = 'Search everything',
@@ -249,6 +258,18 @@ export function ShellSearch({
       : items.slice(0, MAX_STATIC)
     return [...matched, ...(needle ? results : [])]
   }, [items, results, needle])
+
+  // Announced politely so a screen reader hears the outcome of typing without
+  // focus leaving the field. Empty until there is a term to report on.
+  const announcement = !needle
+    ? ''
+    : isSearching
+      ? 'Searching'
+      : hasError && visible.length === 0
+        ? 'Search is unavailable. Try again.'
+        : `${visible.length} ${visible.length === 1 ? 'result' : 'results'}${
+            hasError ? '. Some results could not be loaded.' : ''
+          }`
 
   const groups = useMemo(() => {
     const order: string[] = []
@@ -314,7 +335,7 @@ export function ShellSearch({
          * this one overrides it: a wide panel, set high on the page the way a
          * command palette sits, with room for a two-line row.
          */}
-        <DialogContent className="top-[10vh] w-[calc(100%-2rem)] max-w-none translate-y-0 gap-0 overflow-hidden p-0 shadow-2xl sm:max-w-3xl **:data-[slot=dialog-close]:hidden">
+        <DialogContent className="top-[10vh] w-[calc(100%-2rem)] max-w-none translate-y-0 gap-0 overflow-hidden p-0 shadow-2xl **:data-[slot=dialog-close]:hidden sm:max-w-3xl">
           {available ? (
             <>
               <DialogHeader className="sr-only">
@@ -334,8 +355,8 @@ export function ShellSearch({
                   autoFocus
                   autoComplete="off"
                   role="combobox"
-                  aria-expanded
-                  aria-controls="shell-search-list"
+                  aria-expanded={visible.length > 0}
+                  {...(visible.length > 0 ? { 'aria-controls': 'shell-search-list' } : {})}
                   aria-activedescendant={
                     visible[active] ? `shell-search-${visible[active].id}` : undefined
                   }
@@ -348,69 +369,103 @@ export function ShellSearch({
                 />
                 <Kbd className="shrink-0">esc</Kbd>
               </div>
+              <p role="status" aria-live="polite" className="sr-only">
+                {announcement}
+              </p>
               <div
                 ref={listRef}
-                id="shell-search-list"
-                role="listbox"
-                aria-label="Results"
                 className="max-h-[min(32rem,calc(100dvh-16rem))] overflow-y-auto p-2"
               >
-                {visible.length === 0 ? (
-                  <p className="text-muted-foreground px-3 py-16 text-center text-sm">
-                    {isSearching ? 'Searching…' : `No results for “${term.trim()}”.`}
-                  </p>
-                ) : (
-                  groups.map(({ group, rows }) => (
-                    <Fragment key={group}>
-                      <div className="text-muted-foreground px-3 pt-3 pb-1.5 text-xs font-medium">
-                        {group}
-                      </div>
-                      {rows.map((item) => {
-                        const index = visible.indexOf(item)
-                        const selected = index === active
-                        return (
-                          <div
-                            key={`${group}-${item.id}`}
-                            id={`shell-search-${item.id}`}
-                            role="option"
-                            aria-selected={selected}
-                            onMouseMove={() => setActive(index)}
-                            onClick={() => choose(item)}
-                            className={cn(
-                              'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5',
-                              selected && 'bg-accent',
-                            )}
-                          >
-                            <span
-                              aria-hidden
+                {/* The listbox holds options only; messages and Retry sit outside it. */}
+                <div
+                  {...(visible.length > 0
+                    ? { id: 'shell-search-list', role: 'listbox', 'aria-label': 'Results' }
+                    : {})}
+                >
+                  {visible.length === 0 ? (
+                    isSearching ? (
+                      <p className="text-muted-foreground px-3 py-16 text-center text-sm">
+                        Searching…
+                      </p>
+                    ) : hasError ? (
+                      <p className="text-muted-foreground px-3 pt-14 pb-3 text-center text-sm">
+                        Search is unavailable. Try again.
+                      </p>
+                    ) : (
+                      <p className="text-muted-foreground px-3 py-16 text-center text-sm">
+                        No results for “{term.trim()}”.
+                      </p>
+                    )
+                  ) : (
+                    groups.map(({ group, rows }) => (
+                      <Fragment key={group}>
+                        <div className="text-muted-foreground px-3 pt-3 pb-1.5 text-xs font-medium">
+                          {group}
+                        </div>
+                        {rows.map((item) => {
+                          const index = visible.indexOf(item)
+                          const selected = index === active
+                          return (
+                            <div
+                              key={`${group}-${item.id}`}
+                              id={`shell-search-${item.id}`}
+                              role="option"
+                              aria-selected={selected}
+                              onMouseMove={() => setActive(index)}
+                              onClick={() => choose(item)}
                               className={cn(
-                                'text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border [&_svg]:size-4',
-                                selected ? 'bg-background' : 'bg-muted',
+                                'flex cursor-pointer items-center gap-3 rounded-lg px-3 py-2.5',
+                                selected && 'bg-accent',
                               )}
                             >
-                              {item.icon ?? <SearchGlyph item={item} />}
-                            </span>
-                            <span className="min-w-0 flex-1">
-                              <span className="block truncate text-sm">{item.label}</span>
-                              {item.hint ? (
-                                <span className="text-muted-foreground block truncate text-xs">
-                                  {item.hint}
-                                </span>
+                              <span
+                                aria-hidden
+                                className={cn(
+                                  'text-muted-foreground flex size-9 shrink-0 items-center justify-center rounded-lg border [&_svg]:size-4',
+                                  selected ? 'bg-background' : 'bg-muted',
+                                )}
+                              >
+                                {item.icon ?? <SearchGlyph item={item} />}
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className="block truncate text-sm">{item.label}</span>
+                                {item.hint ? (
+                                  <span className="text-muted-foreground block truncate text-xs">
+                                    {item.hint}
+                                  </span>
+                                ) : null}
+                              </span>
+                              {selected ? (
+                                <Kbd aria-hidden className="shrink-0">
+                                  ↵
+                                </Kbd>
                               ) : null}
-                            </span>
-                            {selected ? (
-                              <Kbd aria-hidden className="shrink-0">
-                                ↵
-                              </Kbd>
-                            ) : null}
-                          </div>
-                        )
-                      })}
-                    </Fragment>
-                  ))
-                )}
+                            </div>
+                          )
+                        })}
+                      </Fragment>
+                    ))
+                  )}
+                </div>
+                {hasError && !isSearching && visible.length === 0 && onRetry ? (
+                  <div className="flex justify-center pb-14">
+                    <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                      Retry
+                    </Button>
+                  </div>
+                ) : null}
                 {isSearching && visible.length > 0 ? (
                   <p className="text-muted-foreground px-3 py-2 text-xs">Searching…</p>
+                ) : null}
+                {hasError && !isSearching && visible.length > 0 ? (
+                  <p className="text-muted-foreground flex items-center gap-2 px-3 py-2 text-xs">
+                    Some results could not be loaded.
+                    {onRetry ? (
+                      <Button type="button" variant="link" size="xs" onClick={onRetry}>
+                        Retry
+                      </Button>
+                    ) : null}
+                  </p>
                 ) : null}
               </div>
               <div className="text-muted-foreground flex items-center gap-4 border-t px-5 py-2.5 text-xs">

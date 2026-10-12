@@ -264,6 +264,8 @@ export function ConsoleShell({
           items: searchItems,
           results: searchResults,
           isSearching: found.isSearching,
+          hasError: found.hasError,
+          onRetry: found.retry,
           onTermChange: setSearchTerm,
           onSelect: (item) => {
             const path = destinations.paths.get(item.id) ?? found.paths.get(item.id)

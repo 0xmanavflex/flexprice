@@ -47,6 +47,11 @@ export function searchableDestinations(): { items: ShellSearchItem[]; paths: Map
  * Records matching `rawTerm`, fetched only once the dialog has a term worth
  * sending: the four list endpoints each take a `search`, so this is four small
  * reads rather than a dedicated search service.
+ *
+ * Responses cannot arrive out of order: each query is keyed by the settled
+ * (debounced) term, so a slow reply for "ac" is cached under "ac" and never
+ * rendered over "acm". The term itself is local state, so typing is not
+ * throttled and only the network is.
  */
 export function useGlobalSearch(rawTerm: string) {
   const [term, setTerm] = useState('')
@@ -103,10 +108,18 @@ export function useGlobalSearch(rawTerm: string) {
     return { results, paths }
   }, [enabled, customers.data, plans.data, features.data, invoices.data])
 
+  const failed = enabled
+    ? [customers, plans, features, invoices].filter((query) => query.isError)
+    : []
+  const hasError = failed.length > 0
+  const retry = () => {
+    for (const query of failed) void query.refetch()
+  }
+
   const isSearching =
     rawTerm.trim() !== term ||
     (enabled &&
       (customers.isFetching || plans.isFetching || features.isFetching || invoices.isFetching))
 
-  return { results, paths, isSearching }
+  return { results, paths, isSearching, hasError, retry }
 }

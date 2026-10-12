@@ -1,7 +1,13 @@
 import type { ReactNode } from 'react'
 import { WebhookIcon } from '@fp/ui/icons'
 import { useWebhookPortal } from '@fp/query'
-import { AppFailure, EmptyState, LoadingRows, PageBody } from '@fp/ui/compositions'
+import {
+  EMPTY_CATALOGUE,
+  EmptyState,
+  ErrorState,
+  PageBody,
+  PageLoadingState,
+} from '@fp/ui/compositions'
 import { useSession } from '@/app/session'
 import { toWebhookFailure } from './webhookFailure'
 
@@ -24,19 +30,51 @@ export function WebhookPortalGate({
 
   if (failure) {
     return (
-      <AppFailure
-        title="Webhooks could not be loaded"
-        detail={failure.message}
-        {...(failure.canRetry ? { onRetry: () => void portal.refetch() } : {})}
-      />
+      <PageBody>
+        <ErrorState
+          variant="page"
+          title="Webhooks could not be loaded"
+          description={failure.message}
+          kind={failure.kind}
+          isRetrying={portal.isFetching}
+          {...(failure.retryAfterMs !== undefined ? { retryAfterMs: failure.retryAfterMs } : {})}
+          {...(failure.canRetry ? { onRetry: () => void portal.refetch() } : {})}
+        />
+      </PageBody>
     )
   }
 
-  // The query waits for an environment, so "no id yet" reads as loading too.
-  if (!environmentId || portal.isPending || !portal.data) {
+  // The query waits for an environment. A disabled query is `isPending` for
+  // ever, so "no environment yet" is a setup state, not a skeleton that never
+  // resolves.
+  if (!environmentId) {
     return (
       <PageBody>
-        <LoadingRows rows={5} columns={4} />
+        <EmptyState
+          size="page"
+          figure={EMPTY_CATALOGUE.setup.figure}
+          motion={EMPTY_CATALOGUE.setup.motion}
+          title={EMPTY_CATALOGUE.setup.title}
+          description="Choose an environment to manage its webhook endpoints."
+        />
+      </PageBody>
+    )
+  }
+
+  if (portal.isLoading || (portal.isPending && portal.fetchStatus !== 'idle')) {
+    return <PageLoadingState variant="list" label="Loading webhooks" />
+  }
+
+  if (!portal.data) {
+    return (
+      <PageBody>
+        <EmptyState
+          size="page"
+          figure={EMPTY_CATALOGUE.unavailable.figure}
+          motion={EMPTY_CATALOGUE.unavailable.motion}
+          title="Webhooks are not available"
+          description="The webhook portal did not answer with any settings, so there is nothing to show."
+        />
       </PageBody>
     )
   }

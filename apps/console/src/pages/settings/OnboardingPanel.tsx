@@ -25,7 +25,7 @@ import {
   useResetCustomerOnboarding,
   useUpdateCustomerOnboarding,
 } from '@fp/query'
-import { EmptyState, Field, LoadingRows } from '@fp/ui/compositions'
+import { EmptyState, Field } from '@fp/ui/compositions'
 import { Button, Input } from '@fp/ui/primitives'
 import { WorkflowIcon } from '@fp/ui/icons'
 import { useSession } from '@/app/session'
@@ -34,11 +34,13 @@ import {
   ActionNote,
   DelayedHint,
   Fact,
-
   Panel,
   PanelError,
   mutationMessage,
   toFailure,
+  PanelLoading,
+  PanelUnavailable,
+  queryPhase,
   SettingsBlock,
 } from './panelKit'
 import { useDraft } from './useDraft'
@@ -106,13 +108,15 @@ export function OnboardingPanel() {
     )
   }
 
-  if (!environmentId || onboarding.isPending || !onboarding.data) {
+  if (!environmentId) {
     return (
-      <Panel>
-        <LoadingRows rows={5} columns={2} />
-      </Panel>
+      <PanelUnavailable reason="setup" description="Choose an environment to see these settings." />
     )
   }
+
+  const phase = queryPhase(onboarding)
+  if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
+  if (phase === 'loading' || !onboarding.data) return <PanelLoading rows={5} />
 
   return (
     <OnboardingForm key={environmentId} environmentId={environmentId} config={onboarding.data} />

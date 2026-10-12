@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { WebhookActivityPoint } from '@fp/domain'
-import { Skeleton } from '@ui/components/primitives/skeleton'
-import { EmptyState } from '@ui/compositions/feedback/EmptyState'
+import { ChartSkeleton } from '@ui/compositions/feedback/Skeletons'
+import { ErrorState, type ErrorKind } from '@ui/compositions/feedback/States'
 import { provenance } from '@ui/provenance'
 import { MetricChart, formatWhole } from '../../shared/charts'
 
@@ -12,7 +12,11 @@ import { MetricChart, formatWhole } from '../../shared/charts'
  */
 export const WebhookActivityProvenance = provenance({
   source: 'composition',
-  composes: ['pages/shared/charts'],
+  composes: [
+    'pages/shared/charts',
+    'compositions/feedback/States',
+    'compositions/feedback/Skeletons',
+  ],
   note: 'Successful and failed delivery attempts per hour on the shared MetricChart.',
 })
 
@@ -20,6 +24,9 @@ export interface WebhookActivityProps {
   points: WebhookActivityPoint[]
   isLoading?: boolean
   error?: string | null
+  errorKind?: ErrorKind | undefined
+  onRetry?: (() => void) | undefined
+  isRetrying?: boolean | undefined
   /** True when only the first N endpoints were counted. */
   truncated?: boolean
   locale?: string
@@ -29,15 +36,26 @@ export function WebhookActivity({
   points,
   isLoading = false,
   error = null,
+  errorKind,
+  onRetry,
+  isRetrying,
   truncated = false,
   locale,
 }: WebhookActivityProps) {
   const [tab, setTab] = useState('succeeded')
 
   if (error) {
-    return <EmptyState size="inline" title="Activity could not be loaded" description={error} />
+    return (
+      <ErrorState
+        title="Activity could not be loaded"
+        description={error}
+        {...(errorKind ? { kind: errorKind } : {})}
+        {...(onRetry ? { onRetry } : {})}
+        {...(isRetrying !== undefined ? { isRetrying } : {})}
+      />
+    )
   }
-  if (isLoading) return <Skeleton className="h-80 w-full rounded-xl" />
+  if (isLoading) return <ChartSkeleton height={320} label="Loading delivery activity" />
 
   const hour = new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' })
   const series = (pick: (point: WebhookActivityPoint) => number) =>

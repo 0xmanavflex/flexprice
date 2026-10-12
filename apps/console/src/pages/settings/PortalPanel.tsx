@@ -25,7 +25,6 @@ import {
   CheckboxRow,
   EmptyState,
   Field,
-  LoadingRows,
   OptionSelect,
   SortableItem,
   SortableList,
@@ -42,6 +41,9 @@ import {
   PanelError,
   mutationMessage,
   toFailure,
+  PanelLoading,
+  PanelUnavailable,
+  queryPhase,
   SettingsBlock,
 } from './panelKit'
 import { useDraft } from './useDraft'
@@ -99,13 +101,15 @@ export function PortalPanel() {
     )
   }
 
-  if (!environmentId || portal.isPending || !portal.data) {
+  if (!environmentId) {
     return (
-      <Panel>
-        <LoadingRows rows={6} columns={2} />
-      </Panel>
+      <PanelUnavailable reason="setup" description="Choose an environment to see these settings." />
     )
   }
+
+  const phase = queryPhase(portal)
+  if (phase === 'idle') return <PanelUnavailable reason="unavailable" />
+  if (phase === 'loading' || !portal.data) return <PanelLoading rows={6} />
 
   return <PortalForm key={environmentId} environmentId={environmentId} config={portal.data} />
 }
@@ -521,7 +525,6 @@ function Chip({
       className={cx(
         'focus-visible:ring-ring/50 rounded-full border px-3 py-1 text-sm outline-none focus-visible:ring-3 disabled:opacity-50',
         on ? 'bg-muted text-foreground' : cx('border-dashed', SUBDUED),
-
       )}
     >
       {label}
