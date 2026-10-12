@@ -16,6 +16,8 @@ export interface EntityHeaderProps {
   badges?: ReactNode
   /** Copyable identifier, shown as an "ID" copy chip. */
   id?: string
+  /** Drawn immediately before the copy-ID chip. */
+  leading?: ReactNode
   /** Copyable email, shown as a mail-icon copy chip beside the id. */
   email?: string
   /** Accessible name of the More button, e.g. "Customer actions". */
@@ -38,6 +40,7 @@ export function EntityHeader({
   title,
   badges,
   id,
+  leading,
   email,
   menuLabel = 'More actions',
   menu = [],
@@ -61,6 +64,7 @@ export function EntityHeader({
           </div>
         </div>
         <DetailHeaderCluster
+          {...(leading ? { leading } : {})}
           id={id}
           email={email}
           more={<DetailMoreMenu label={menuLabel} items={menu} />}

@@ -21,7 +21,8 @@ import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { statusFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
-import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
+import { type EntityColumn, EmDash, dateColumn, idColumn, pillColumn, textColumn } from '../shared/cells'
+import { IntegrationMarks } from './IntegrationMark'
 
 /**
  * The customer list, on the shared `EntityList`.
@@ -152,6 +153,18 @@ export function CustomerGrid({
         // attributes belonging to nobody.
         hideable: false,
       }),
+      {
+        id: 'integration',
+        header: 'Integration',
+        width: 140,
+        text: (row) => row.integrations.map((integration) => integration.name).join(', '),
+        cell: (row) =>
+          row.integrations.length === 0 ? (
+            <EmDash />
+          ) : (
+            <IntegrationMarks integrations={row.integrations} />
+          ),
+      },
       // Its own column rather than a subtitle under the name. Stacked, it was
       // unsortable, unexportable and clipped twice as often; beside the name
       // it is a value like any other — and it is the field support actually

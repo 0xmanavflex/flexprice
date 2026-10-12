@@ -25,6 +25,19 @@ export const CUSTOMER_STATUS_LABEL: Record<CustomerStatus, string> = {
   [CustomerStatus.Archived]: 'Archived',
 }
 
+/**
+ * An integration this customer is connected to.
+ *
+ * `id` is the catalogue id (the logo key). `name` is what a reader sees.
+ * `providerType` is the wire value, kept so two mappings of one provider
+ * collapse to one mark.
+ */
+export interface CustomerIntegration {
+  id: string
+  name: string
+  providerType: string
+}
+
 /** The read model the list renders. */
 export interface Customer {
   id: string
@@ -36,6 +49,8 @@ export interface Customer {
   /** ISO 3166-1 alpha-2 country of the customer's address. Empty when unset. */
   addressCountry: string
   status: CustomerStatus
+  /** Integrations this customer is connected to. Empty when none are. */
+  integrations: CustomerIntegration[]
   createdAt: Date | null
   updatedAt: Date | null
 }

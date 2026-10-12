@@ -184,12 +184,41 @@ function applyFeatureExpand(result: ReturnType<typeof page>, expand: string | un
   }
 }
 
+/**
+ * The corpus has no per-customer integration mappings. A stable slice of the
+ * catalogue is attached so the list column and the detail header can show the
+ * same marks the integrations page uses. Rows that already carry mappings are
+ * left alone.
+ */
+function withDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
+  if (Array.isArray(row['integrations'])) return row
+  const id = typeof row['id'] === 'string' ? row['id'] : ''
+  let hash = 0
+  for (const char of id) hash += char.charCodeAt(0)
+  const sets = [
+    [{ provider_type: 'stripe', status: 'published', provider_entity_id: 'cus_stripe_demo' }],
+    [
+      { provider_type: 'stripe', status: 'published', provider_entity_id: 'cus_stripe_demo' },
+      { provider_type: 'quickbooks', status: 'published', provider_entity_id: 'qb_demo' },
+    ],
+    [],
+  ]
+  const integrations = sets[hash % sets.length] ?? []
+  return integrations.length > 0 ? { ...row, integrations } : row
+}
+
 const search = (path: string, key: string) =>
   http.post(`${BASE}${path}`, async ({ request }) => {
     const body = ((await request.json().catch(() => ({}))) ?? {}) as SearchBody
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
     const result = page(sourceFor(key), body)
-    return HttpResponse.json(key === 'features' ? applyFeatureExpand(result, body.expand) : result)
+    const payload =
+      key === 'features'
+        ? applyFeatureExpand(result, body.expand)
+        : key === 'customers'
+          ? { ...result, items: result.items.map(withDemoIntegrations) }
+          : result
+    return HttpResponse.json(payload)
   })
 
 /** Finds one row in a corpus by id — the by-id GET endpoints read it. */
@@ -2005,7 +2034,7 @@ export const handlers = [
   http.get(`${BASE}/customers/:id`, ({ params }) => {
     const customer = byId('customers', String(params['id']))
     return customer
-      ? HttpResponse.json(customer)
+      ? HttpResponse.json(withDemoIntegrations(customer))
       : HttpResponse.json({ message: 'Customer not found' }, { status: 404 })
   }),
 

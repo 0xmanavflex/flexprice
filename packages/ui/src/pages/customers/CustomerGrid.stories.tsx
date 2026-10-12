@@ -96,6 +96,7 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Published,
       createdAt: new Date('2025-04-19T00:00:00Z'),
       updatedAt: new Date('2026-09-01T00:00:00Z'),
+      integrations: [{ id: 'stripe', name: 'Stripe', providerType: 'stripe' }],
     },
     {
       id: 'cus_02',
@@ -106,6 +107,10 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Published,
       createdAt: new Date('2025-06-02T00:00:00Z'),
       updatedAt: new Date('2026-08-11T00:00:00Z'),
+      integrations: [
+        { id: 'stripe', name: 'Stripe', providerType: 'stripe' },
+        { id: 'quickbooks', name: 'QuickBooks', providerType: 'quickbooks' },
+      ],
     },
     {
       // Everything optional absent: the row a hand-written demo never includes,
@@ -118,6 +123,7 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Published,
       createdAt: new Date('2026-01-15T00:00:00Z'),
       updatedAt: null,
+      integrations: [],
     },
     {
       id: 'cus_04',
@@ -128,6 +134,7 @@ function customerFixtures(): Customer[] {
       status: CustomerStatus.Archived,
       createdAt: new Date('2024-11-30T00:00:00Z'),
       updatedAt: new Date('2026-02-02T00:00:00Z'),
+      integrations: [{ id: 'razorpay', name: 'Razorpay', providerType: 'razorpay' }],
     },
   ]
 }

@@ -177,21 +177,25 @@ export function DetailMoreMenu({
  */
 export function DetailHeaderCluster({
   primary,
+  leading,
   id,
   email,
   more,
 }: {
   /** Legacy inline action slot; prefer menu items. */
   primary?: ReactNode
+  /** Sits immediately before the copy-ID chip. Connected integration marks. */
+  leading?: ReactNode
   id?: string | undefined
   email?: string | undefined
   /** The overflow ("More") menu, always last. */
   more?: ReactNode
 }) {
-  if (!primary && !id && !email && !more) return null
+  if (!primary && !leading && !id && !email && !more) return null
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {primary}
+      {leading}
       {id ? <CopyId value={id} /> : null}
       {email ? <CopyEmail value={email} /> : null}
       {more}

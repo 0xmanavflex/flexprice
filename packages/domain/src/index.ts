@@ -240,6 +240,7 @@ export {
 export type {
   Customer,
   CustomerDetail,
+  CustomerIntegration,
   CustomerQuery,
   CreateCustomer,
   EditCustomer,

@@ -3,6 +3,7 @@ import { type Flexprice, call } from '@fp/api'
 import {
   type CreateCustomer,
   type Customer,
+  type CustomerIntegration,
   type EditCustomer,
   type CustomerDetail,
   type CustomerQuery,
@@ -10,6 +11,7 @@ import {
   CustomerStatus,
   CustomerTaxTreatment,
   DEFAULT_INVOICE_QUERY,
+  INTEGRATION_CATALOG,
   type Subscription,
   type TenantFeatureUsage,
 } from '@fp/domain'
@@ -29,6 +31,12 @@ import { type FeatureUsageWire, toFeatureUsage } from './tenant'
  * than vanishing from the list.
  */
 
+/** One row of the customer's `integrations` array, after the SDK camelCases it. */
+export interface CustomerIntegrationWire {
+  providerType?: string | undefined
+  status?: string | undefined
+}
+
 /** The wire shape this reads, after the SDK camelCases the response. */
 export interface CustomerWire {
   id?: string | undefined
@@ -37,8 +45,30 @@ export interface CustomerWire {
   externalId?: string | undefined
   addressCountry?: string | undefined
   status?: string | undefined
+  integrations?: CustomerIntegrationWire[] | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
+}
+
+/** Published mappings only, one mark per provider. */
+export function toCustomerIntegrations(
+  wires: CustomerIntegrationWire[] | undefined,
+): CustomerIntegration[] {
+  const seen = new Set<string>()
+  const integrations: CustomerIntegration[] = []
+  for (const wire of wires ?? []) {
+    const providerType = wire.providerType?.trim()
+    if (!providerType || seen.has(providerType)) continue
+    if (wire.status && wire.status !== 'published') continue
+    seen.add(providerType)
+    const spec = INTEGRATION_CATALOG.find((entry) => entry.providerType === providerType)
+    integrations.push({
+      id: spec?.id ?? providerType,
+      name: spec?.name ?? providerType,
+      providerType,
+    })
+  }
+  return integrations
 }
 
 const CUSTOMER_STATUSES = new Set<string>(Object.values(CustomerStatus))
@@ -55,6 +85,7 @@ export function toCustomer(wire: CustomerWire): Customer {
     externalId: wire.externalId ?? '',
     addressCountry: wire.addressCountry ?? '',
     status,
+    integrations: toCustomerIntegrations(wire.integrations),
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }

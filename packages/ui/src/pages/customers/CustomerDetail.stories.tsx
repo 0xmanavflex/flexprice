@@ -28,6 +28,7 @@ const CUSTOMER: CustomerDetailModel = {
   taxTreatment: 'taxable',
   metadata: { segment: 'enterprise' },
   status: 'published',
+  integrations: [{ id: 'stripe', name: 'Stripe', providerType: 'stripe' }],
   createdAt: new Date('2025-04-19T00:00:00Z'),
   updatedAt: new Date('2026-09-01T00:00:00Z'),
 }

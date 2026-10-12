@@ -28,10 +28,12 @@ import { provenance } from '@ui/provenance'
 import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { cn } from '@ui/lib/cn'
 import { DetailTable } from '../shared/DetailTable'
+import { IntegrationMarks } from './IntegrationMark'
 
 /**
  * A customer's detail page: an avatar-tile `EntityHeader` (name; on the right
- * "ID" and email copy chips and a ⋯ menu holding Create invoice, Edit and Top up)
+ * the connected integration marks, "ID" and email copy chips, and a ⋯ menu
+ * holding Create invoice, Edit and Top up)
  * over line `DetailTabs`; the active tab renders as reference-style sections. It is presentational: the page fetches and hands data in.
  *
  * It shows only what the API has. A customer record carries no plan, currency or
@@ -237,6 +239,9 @@ export function CustomerDetail({
         title={customer.name}
         badges={<Status value={CUSTOMER_STATUS_LABEL[customer.status]} />}
         id={customer.externalId || customer.id}
+        {...(customer.integrations.length > 0
+          ? { leading: <IntegrationMarks integrations={customer.integrations} /> }
+          : {})}
         {...(customer.email ? { email: customer.email } : {})}
         menuLabel="Customer actions"
         menu={menu}

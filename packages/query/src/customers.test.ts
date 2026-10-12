@@ -41,7 +41,23 @@ describe('toCustomer', () => {
     expect(customer.email).toBe('')
     expect(customer.externalId).toBe('')
     expect(customer.addressCountry).toBe('')
+    expect(customer.integrations).toEqual([])
     expect(customer.status).toBe(CustomerStatus.Published)
+  })
+
+  it('keeps one published mark per provider and names it from the catalogue', () => {
+    const customer = toCustomer({
+      integrations: [
+        { providerType: 'stripe', status: 'published' },
+        { providerType: 'stripe', status: 'published' },
+        { providerType: 'quickbooks', status: 'archived' },
+        { providerType: 'zoho_books' },
+      ],
+    })
+    expect(customer.integrations).toEqual([
+      { id: 'stripe', name: 'Stripe', providerType: 'stripe' },
+      { id: 'zoho', name: 'Zoho', providerType: 'zoho_books' },
+    ])
   })
 
   it('collapses a soft-deleted or unknown status to published', () => {
