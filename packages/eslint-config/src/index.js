@@ -45,6 +45,7 @@ export const config = [
       '**/test-results/**',
       '**/playwright-report/**',
       '**/storybook-static/**',
+      '**/.agents/**',
     ],
   },
   js.configs.recommended,
