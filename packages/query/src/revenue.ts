@@ -23,6 +23,8 @@ export interface RevenueCustomer {
   customerId: string
   name: string
   total: Money
+  usage: Money
+  fixed: Money
 }
 
 export interface RevenueOverview {
@@ -49,6 +51,8 @@ export function toRevenueOverview(wire: RevenueDashboardWire): RevenueOverview {
         customerId: item.customer_id ?? '',
         name: item.customer_name || item.external_customer_id || item.customer_id || 'Unknown',
         total: money(amountOr(item.total_revenue), currency),
+        usage: money(amountOr(item.total_usage_revenue), currency),
+        fixed: money(amountOr(item.total_fixed_revenue), currency),
       })
       billedTo.set(currency, (billedTo.get(currency) ?? 0) + 1)
     } catch {

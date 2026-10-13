@@ -13,7 +13,13 @@ describe('toRevenueOverview', () => {
         },
       },
       items: [
-        { customer_id: 'c1', customer_name: 'Acme', currency: 'usd', total_revenue: '500.50' },
+        {
+          customer_id: 'c1',
+          customer_name: 'Acme',
+          currency: 'usd',
+          total_revenue: '500.50',
+          total_usage_revenue: '500.50',
+        },
         { customer_id: 'c2', customer_name: 'Globex', currency: 'usd', total_revenue: '1000' },
         { customer_id: 'c3', customer_name: 'Initech', currency: 'eur', total_revenue: '10' },
       ],
@@ -21,6 +27,9 @@ describe('toRevenueOverview', () => {
     expect(overview.summaries.map((s) => s.currency)).toEqual(['USD', 'EUR'])
     expect(overview.summaries[0]?.total).toEqual({ amount: '1500.50', currency: 'USD' })
     expect(overview.summaries[0]?.usage.amount).toBe('500.50')
+    const acme = overview.customers.find((c) => c.name === 'Acme')
+    expect(acme?.usage.amount).toBe('500.50')
+    expect(acme?.fixed.amount).toBe('0')
     // Highest first within a currency, compared as decimals.
     expect(overview.customers.filter((c) => c.total.currency === 'USD').map((c) => c.name)).toEqual(
       ['Globex', 'Acme'],
