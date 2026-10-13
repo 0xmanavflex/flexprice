@@ -1283,7 +1283,7 @@ function InvoicePreviewSection({
             {value.periodEnd
               ? `This is a preview of the invoice that will be billed on ${day(value.periodEnd)}.`
               : 'This is a preview of the next invoice.'}{' '}
-            It may change if the subscription is updated.
+            It may change if the contract is updated.
           </p>
         </>
       )}
