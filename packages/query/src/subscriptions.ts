@@ -1092,7 +1092,7 @@ export function useSubscriptionCoupons(id: string) {
       const response = await call(
         (options) =>
           client.couponAssociations.listCouponAssociations(
-            { subscriptionIds: [id], expand: 'coupon', limit: 100, offset: 0 } as never,
+            { subscriptionIds: [id], expand: 'coupon', limit: 100, offset: 0 },
             options,
           ),
         signal,

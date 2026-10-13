@@ -47,12 +47,12 @@ export type CountableId = 'features' | 'plans' | 'customers' | 'subscriptions' |
  */
 const COUNTERS: Record<CountableId, (client: Flexprice, options: CallOptions) => Promise<unknown>> =
   {
-    features: (client, options) => client.features.queryFeature({ limit: 1 } as never, options),
-    plans: (client, options) => client.plans.queryPlan({ limit: 1 } as never, options),
-    customers: (client, options) => client.customers.queryCustomer({ limit: 1 } as never, options),
+    features: (client, options) => client.features.queryFeature({ limit: 1 }, options),
+    plans: (client, options) => client.plans.queryPlan({ limit: 1 }, options),
+    customers: (client, options) => client.customers.queryCustomer({ limit: 1 }, options),
     subscriptions: (client, options) =>
-      client.subscriptions.querySubscription({ limit: 1 } as never, options),
-    invoices: (client, options) => client.invoices.queryInvoice({ limit: 1 } as never, options),
+      client.subscriptions.querySubscription({ limit: 1 }, options),
+    invoices: (client, options) => client.invoices.queryInvoice({ limit: 1 }, options),
   }
 
 async function fetchCount(
