@@ -4,6 +4,9 @@ import {
   CircleAlertIcon,
   PlusIcon,
   CirclePauseIcon,
+  FileTextIcon,
+  LayersIcon,
+  PuzzleIcon,
   ClockIcon,
   InfoIcon,
   PlayIcon,
@@ -175,9 +178,15 @@ const day = (date: Date | null | undefined) =>
     : '—'
 
 const LINE_SOURCE_LABEL: Record<SubscriptionLine['source'], string> = {
-  plan: 'From plan',
+  plan: 'Plan',
   addon: 'Add-on',
-  contract: 'Contract only',
+  contract: 'Contract',
+}
+
+const LINE_SOURCE_ICON: Record<SubscriptionLine['source'], typeof LayersIcon> = {
+  plan: LayersIcon,
+  addon: PuzzleIcon,
+  contract: FileTextIcon,
 }
 
 const isEnded = (line: SubscriptionLine) =>
@@ -272,7 +281,7 @@ export function SubscriptionDetailView({
       ? [
           {
             key: 'actions',
-            header: 'Actions',
+            header: '',
             width: 48,
             cell: (line) =>
               isEnded(line) ? null : (
@@ -531,6 +540,7 @@ export function SubscriptionDetailView({
                   {(rows) => (
                     <DetailTable<SubscriptionLine>
                       compact
+                      pageSize={5}
                       label="Overridden charges"
                       noun="charges"
                       rows={rows}
@@ -555,6 +565,7 @@ export function SubscriptionDetailView({
                 {(rows) => (
                   <DetailTable<SubscriptionEntitlement>
                     compact
+                    pageSize={5}
                     label="Entitlements"
                     noun="features"
                     rows={rows}
@@ -601,6 +612,7 @@ export function SubscriptionDetailView({
                 {(rows) => (
                   <DetailTable<CreditGrant>
                     compact
+                    pageSize={5}
                     label="Credit grants"
                     noun="grants"
                     rows={rows}
@@ -653,6 +665,7 @@ export function SubscriptionDetailView({
                 {(rows) => (
                   <DetailTable<SubscriptionAddon>
                     compact
+                    pageSize={5}
                     label="Add-ons"
                     noun="add-ons"
                     rows={rows}
@@ -697,6 +710,7 @@ export function SubscriptionDetailView({
                 {(rows) => (
                   <DetailTable<SubscriptionCoupon>
                     compact
+                    pageSize={5}
                     label="Coupons"
                     noun="coupons"
                     rows={rows}
@@ -751,6 +765,7 @@ export function SubscriptionDetailView({
                 {(rows) => (
                   <DetailTable<SubscriptionTax>
                     compact
+                    pageSize={5}
                     label="Taxes"
                     noun="taxes"
                     rows={rows}
@@ -1400,13 +1415,11 @@ function PaymentCell({ row }: { row: Invoice }) {
 
 /** Where a charge comes from; an ended charge also says when it ended. */
 function LineSourceBadge({ line }: { line: SubscriptionLine }) {
+  const Icon = LINE_SOURCE_ICON[line.source]
   return (
     <span className="flex items-center gap-2">
-      <Badge
-        variant={line.source === 'contract' ? 'info-outline' : 'outline'}
-        size="sm"
-        radius="full"
-      >
+      <Badge variant={line.source === 'contract' ? 'info-light' : 'secondary'} size="sm">
+        <Icon aria-hidden="true" />
         {LINE_SOURCE_LABEL[line.source]}
       </Badge>
       {isEnded(line) ? (

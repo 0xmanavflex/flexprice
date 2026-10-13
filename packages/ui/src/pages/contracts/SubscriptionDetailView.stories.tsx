@@ -592,8 +592,8 @@ export const ChargesTab: Story = {
     await expect(canvas.getByRole('button', { name: 'Manage pricing' })).toBeVisible()
     await expect(canvas.getByRole('textbox', { name: /^Search/ })).toBeVisible()
     // Each charge says where it comes from, and a plan charge says editing it here is local.
-    await expect(canvas.getAllByText('From plan').length).toBeGreaterThan(0)
-    await expect(canvas.getAllByText('Contract only').length).toBeGreaterThan(0)
+    await expect(canvas.getAllByText('Plan').length).toBeGreaterThan(0)
+    await expect(canvas.getAllByText('Contract').length).toBeGreaterThan(0)
     await expect(canvas.getByText(/shared by every contract on Scale/)).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Activity' })).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Metadata' })).toBeNull()

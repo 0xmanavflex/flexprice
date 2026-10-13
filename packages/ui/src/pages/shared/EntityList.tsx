@@ -1140,7 +1140,7 @@ export function EntityList<T extends object>({
                     )}
                   >
                     <DataGridPagination
-                      sizes={PAGE_SIZES}
+                      sizes={[...new Set([...PAGE_SIZES, pageSize])].sort((a, b) => a - b)}
                       info={`{from} - {to} of {count} ${noun}`}
                     />
                   </div>
