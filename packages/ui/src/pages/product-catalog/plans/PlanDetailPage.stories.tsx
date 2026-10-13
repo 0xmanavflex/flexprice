@@ -254,7 +254,7 @@ type Story = StoryObj<typeof meta>
 export const Playground: Story = {
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByRole('table', { name: 'Charges table' }),
+      await within(canvasElement).findByRole('region', { name: 'Charges table' }),
     ).toBeVisible()
   },
 }

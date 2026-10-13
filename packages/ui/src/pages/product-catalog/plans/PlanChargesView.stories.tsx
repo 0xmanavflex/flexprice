@@ -86,7 +86,7 @@ export const Playground: Story = {}
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('table', { name: 'Charges table' })).toBeVisible()
+    await expect(canvas.getByRole('region', { name: 'Charges table' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Add charge' })).toBeVisible()
   },
 }

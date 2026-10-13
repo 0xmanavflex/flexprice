@@ -8,12 +8,7 @@ import {
   type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from 'react'
-import {
-  type ColumnDef,
-  type PaginationState,
-  type RowSelectionState,
-  useTable,
-} from '@tanstack/react-table'
+import { type ColumnDef, type PaginationState, useTable } from '@tanstack/react-table'
 import {
   ArrowDownIcon,
   ArrowUpDownIcon,
@@ -30,11 +25,7 @@ import {
   dataGridFeatures,
 } from '@ui/components/reui/data-grid/data-grid'
 import { DataGridPagination } from '@ui/components/reui/data-grid/data-grid-pagination'
-import {
-  DataGridTable,
-  DataGridTableRowSelect,
-  DataGridTableRowSelectAll,
-} from '@ui/components/reui/data-grid/data-grid-table'
+import { DataGridTable } from '@ui/components/reui/data-grid/data-grid-table'
 import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -131,8 +122,6 @@ export const EntityListProvenance = provenance({
 
 /** The `⋯` row-actions column. Wide enough for a 28px button and no wider. */
 const ACTIONS_WIDTH = 40
-/** The checkbox column. */
-const SELECT_WIDTH = 44
 /**
  * How far the set of columns may be squeezed below its natural width before
  * the table stops squeezing and scrolls sideways instead.
@@ -147,7 +136,6 @@ const MIN_FLEX_WIDTH = 64
 /** The page sizes the footer offers. */
 const PAGE_SIZES = [10, 25, 50, 100]
 /** Ids reserved by the table itself, so a caller cannot collide with them. */
-const SELECT_ID = '__select'
 const ACTIONS_ID = '__actions'
 
 /* ------------------------------------------------------------------ *
@@ -253,9 +241,6 @@ export interface EntityListProps<T> {
   /* --- rows --- */
   onRowClick?: ((row: T) => void) | undefined
   rowActions?: ((row: T) => EntityRowAction[]) | undefined
-  /** Adds the pinned checkbox column. */
-  selectable?: boolean | undefined
-  onSelectionChange?: ((ids: string[]) => void) | undefined
 
   /* --- states --- */
   isLoading?: boolean | undefined
@@ -532,8 +517,6 @@ export function EntityList<T extends object>({
   exportFileName,
   onRowClick,
   rowActions,
-  selectable = false,
-  onSelectionChange,
   isLoading = false,
   error = null,
   errorKind,
@@ -560,7 +543,6 @@ export function EntityList<T extends object>({
       columns.filter((column) => column.hiddenByDefault).map((column) => [column.id, false]),
     ),
   )
-  const [rowSelection, setRowSelection] = useState<RowSelectionState>({})
 
   /* --- the measured width of the content area the table has to fill --- */
   const frameRef = useRef<HTMLDivElement>(null)
@@ -607,7 +589,6 @@ export function EntityList<T extends object>({
    */
   const { sizing, overflows } = useMemo(() => {
     const fixedWidth =
-      (selectable ? SELECT_WIDTH : 0) +
       (rowActions ? ACTIONS_WIDTH : 0) +
       visibleColumns.filter((column) => column.fixed).reduce((sum, c) => sum + (c.width ?? 120), 0)
     const flexible = visibleColumns.filter((column) => !column.fixed)
@@ -617,7 +598,6 @@ export function EntityList<T extends object>({
     for (const column of visibleColumns) {
       if (column.fixed) result[column.id] = column.width ?? 120
     }
-    if (selectable) result[SELECT_ID] = SELECT_WIDTH
     if (rowActions) result[ACTIONS_ID] = ACTIONS_WIDTH
 
     if (frameWidth === null || base === 0) {
@@ -660,7 +640,7 @@ export function EntityList<T extends object>({
     // A pixel of tolerance: sub-pixel frame widths are routine, and rounding
     // one of them up must not be read as "this table scrolls".
     return { sizing: result, overflows: fixedWidth + used > frameWidth + 1 }
-  }, [visibleColumns, frameWidth, selectable, rowActions])
+  }, [visibleColumns, frameWidth, rowActions])
   const tableMin = Object.values(sizing).reduce((sum, width) => sum + width, 0)
 
   /* --- build the TanStack columns --- */
@@ -670,18 +650,6 @@ export function EntityList<T extends object>({
 
   const tableColumns = useMemo(() => {
     const defs: ColumnDef<never, T>[] = []
-
-    if (selectable) {
-      defs.push({
-        id: SELECT_ID,
-        size: SELECT_WIDTH,
-        enableSorting: false,
-        enableHiding: false,
-        header: () => <DataGridTableRowSelectAll />,
-        cell: ({ row }: { row: never }) => <DataGridTableRowSelect row={row} />,
-        meta: { skeleton: <Skeleton className="size-4 rounded-sm" /> },
-      } as never)
-    }
 
     for (const column of columns) {
       defs.push({
@@ -731,7 +699,7 @@ export function EntityList<T extends object>({
     }
 
     return defs as never
-  }, [columns, selectable, rowActions, sizing, sortField, sortDirection, onSortChange])
+  }, [columns, rowActions, sizing, sortField, sortDirection, onSortChange])
 
   const pagination: PaginationState = { pageIndex: page - 1, pageSize }
 
@@ -751,14 +719,14 @@ export function EntityList<T extends object>({
             // logical one, and a `{ left, right }` object type-checks against
             // the loose state slot and then reads as *no pinning at all* — the
             // table asks for `start.length` and gets `undefined`.
-            start: selectable ? [SELECT_ID] : [],
+            start: [],
             end: [
               ...visibleColumns.filter((column) => column.fixed).map((column) => column.id),
               ...(rowActions ? [ACTIONS_ID] : []),
             ],
           }
         : { start: [], end: [] },
-    [overflows, selectable, rowActions, visibleColumns],
+    [overflows, rowActions, visibleColumns],
   )
 
   const table = useTable({
@@ -771,17 +739,9 @@ export function EntityList<T extends object>({
     manualSorting: true,
     rowCount: total,
     getRowId: (row: T) => getRowId(row),
-    enableRowSelection: selectable,
-    state: { pagination, columnVisibility, columnSizing: sizing, columnPinning, rowSelection },
+    enableRowSelection: false,
+    state: { pagination, columnVisibility, columnSizing: sizing, columnPinning },
     onColumnVisibilityChange: setColumnVisibility,
-    onRowSelectionChange: (updater: unknown) => {
-      const next =
-        typeof updater === 'function'
-          ? (updater as (s: RowSelectionState) => RowSelectionState)(rowSelection)
-          : (updater as RowSelectionState)
-      setRowSelection(next)
-      onSelectionChange?.(Object.keys(next).filter((id) => next[id]))
-    },
     onPaginationChange: (updater: unknown) => {
       const next =
         typeof updater === 'function'
@@ -797,7 +757,6 @@ export function EntityList<T extends object>({
   }, [exportFileName, visibleColumns, rows])
 
   const hideableColumns = columns.filter((column) => column.hideable !== false)
-  const selectedCount = Object.values(rowSelection).filter(Boolean).length
 
   /* --- error replaces everything: a toolbar over a table that failed to load
          offers controls that cannot do anything --- */
@@ -879,13 +838,6 @@ export function EntityList<T extends object>({
       </div>
 
       <div className="flex items-center gap-2">
-        {selectedCount > 0 ? (
-          <span aria-live="polite" className="text-muted-foreground mr-1 text-xs">
-            <span className="text-foreground font-medium tabular-nums">{selectedCount}</span>{' '}
-            selected
-          </span>
-        ) : null}
-
         {filter ? (
           <FilterBar
             variant="advanced"

@@ -313,7 +313,6 @@ export function PlanGrid({
         onChange: (sortBy, sortDirection) =>
           onQueryChange({ ...query, sortBy: sortBy as PlanSortField, sortDirection, page: 1 }),
       }}
-      selectable
       rowActions={rowActions}
       exportFileName="plans"
       primaryAction={onCreate ? <Button onClick={onCreate}>New plan</Button> : undefined}

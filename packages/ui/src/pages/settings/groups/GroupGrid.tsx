@@ -236,7 +236,6 @@ export function GroupGrid({
           onQueryChange({ ...query, sortBy: sortBy as GroupSortField, sortDirection, page: 1 }),
       }}
       rowActions={rowActions}
-      selectable
       exportFileName="groups"
       primaryAction={
         onCreate ? (
