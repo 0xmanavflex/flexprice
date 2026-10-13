@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react'
-import { useSession } from '@/app/session'
 import {
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
@@ -10,7 +9,6 @@ import {
 import {
   ApiError,
   useActivateSubscription,
-  useUpdateSubscriptionMetadata,
   useAddons,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
@@ -108,8 +106,6 @@ export function SubscriptionDetailPage({
   })
   const cancel = useCancelSubscription()
   const activate = useActivateSubscription()
-  const { environmentId } = useSession()
-  const saveMetadata = useUpdateSubscriptionMetadata(environmentId)
   const addLine = useCreateSubscriptionLineItem()
   const editLine = useUpdateSubscriptionLineItem()
   const endLine = useDeleteSubscriptionLineItem()
@@ -207,7 +203,6 @@ export function SubscriptionDetailPage({
           ? { onActivate: () => setDialog('activate') }
           : {})}
         onCancel={() => setDialog('cancel')}
-        onSaveMetadata={(metadata) => saveMetadata.mutateAsync({ id: data.id, metadata })}
         meters={formOptions.meters}
         priceUnits={formOptions.units.filter((unit) => unit.baseCurrency === data.currency)}
         onAddCharge={async (draft) => {

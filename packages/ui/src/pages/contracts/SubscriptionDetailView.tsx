@@ -810,7 +810,12 @@ export function SubscriptionDetailView({
               <ActivitySection entries={activityEntries} />
               <MetadataCard
                 metadata={s.metadata}
-                {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
+                {...(onSaveMetadata
+                  ? { onSave: onSaveMetadata }
+                  : {
+                      description:
+                        'Set when the contract is created. The API does not support editing it yet.',
+                    })}
               />
               <RelatedCard items={related} />
             </div>
