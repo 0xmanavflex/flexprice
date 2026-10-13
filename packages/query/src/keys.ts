@@ -35,6 +35,10 @@ export const queryKeys = {
     invoices: (id: string, filter: Readonly<Record<string, unknown>> = {}) =>
       ['subscriptions', 'invoices', id, filter] as const,
     entitlements: (id: string) => ['subscriptions', 'entitlements', id] as const,
+    preview: (id: string, hideZero: boolean) => ['subscriptions', 'preview', id, hideZero] as const,
+    addons: (id: string) => ['subscriptions', 'addons', id] as const,
+    coupons: (id: string) => ['subscriptions', 'coupons', id] as const,
+    taxes: (id: string) => ['subscriptions', 'taxes', id] as const,
   },
   counts: {
     all: () => ['counts'] as const,

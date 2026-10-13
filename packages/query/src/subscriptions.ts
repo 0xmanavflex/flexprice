@@ -13,17 +13,22 @@ import {
   type CreditGrant,
   type EditContractCharge,
   type EndContractCharge,
+  type InvoicePreview,
+  CouponType,
   type LineCommitment,
   type LinePricing,
   type LineChangePreview,
   type Money,
   type Subscription,
+  type SubscriptionAddon,
+  type SubscriptionCoupon,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
   type SubscriptionLineSource,
   type SubscriptionQuery,
   type SubscriptionSchedule,
+  type SubscriptionTax,
   SubscriptionScheduleType,
   SubscriptionSortField,
   SubscriptionStatus,
@@ -32,10 +37,13 @@ import {
   type UsageTerms,
   PriceType,
   TierMode,
+  TaxBehavior,
+  formatMoney,
+  money,
   moneyOr,
 } from '@fp/domain'
 import { type CreditGrantWire, toCreditGrant, toCreditGrantTerms } from './creditGrants'
-import { type InvoiceWire, toInvoice } from './invoices'
+import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } from './invoices'
 import { queryKeys } from './keys'
 import { toChargeRequest, toTier } from './prices'
 import { toOverrideLineItem } from './priceOverrides'
@@ -933,6 +941,210 @@ export function useSubscriptionInvoices(id: string) {
         } as never),
       )
       return (response.items ?? []).map((item) => toInvoice(item as InvoiceWire))
+    },
+    enabled: id.length > 0,
+  })
+}
+
+/** The wire fields of an invoice preview beyond what `toInvoiceDetail` reads. */
+interface InvoicePreviewWire extends InvoiceDetailWire {
+  totalDiscount?: string | undefined
+  periodStart?: Date | undefined
+  periodEnd?: Date | undefined
+}
+
+export function toInvoicePreview(wire: InvoicePreviewWire): InvoicePreview {
+  const detail = toInvoiceDetail(wire)
+  const currency = detail.currency
+  const amount = (value: string | undefined) => money(value ?? '0', currency)
+  return {
+    periodStart: wire.periodStart ?? null,
+    periodEnd: wire.periodEnd ?? null,
+    lines: detail.lines.map((line) => ({
+      id: line.id,
+      name: line.description,
+      detail: line.detail,
+      quantity: line.quantity,
+      amount: money(line.amount, currency),
+      kind: line.priceType,
+    })),
+    subtotal: money(detail.subtotal, currency),
+    discount: amount(wire.totalDiscount),
+    tax: money(detail.tax, currency),
+    prepaidCredits: money(detail.prepaidCredits, currency),
+    amountDue: detail.amountDue,
+  }
+}
+
+/**
+ * The invoice this contract will raise at the end of the period —
+ * `POST /invoices/preview`. Nothing is created; the API computes the lines and
+ * the totals. Callers disable it for contracts that are not billing (cancelled
+ * or still on trial), where the call has nothing to preview.
+ */
+export function useSubscriptionInvoicePreview(
+  id: string,
+  options: { hideZeroCharges: boolean; enabled?: boolean },
+) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.preview(id, options.hideZeroCharges),
+    queryFn: async ({ signal }) =>
+      toInvoicePreview(
+        (await call(
+          (requestOptions) =>
+            client.invoices.getInvoicePreview(
+              { subscriptionId: id, hideZeroChargesLineItems: options.hideZeroCharges },
+              requestOptions,
+            ),
+          signal,
+        )) as InvoicePreviewWire,
+      ),
+    enabled: (options.enabled ?? true) && id.length > 0,
+    retry: false,
+  })
+}
+
+interface AddonAssociationWire {
+  id?: string | undefined
+  addonId?: string | undefined
+  addonStatus?: string | undefined
+  startDate?: Date | undefined
+  endDate?: Date | undefined
+  addon?: { name?: string | undefined } | undefined
+}
+
+export function toSubscriptionAddon(wire: AddonAssociationWire): SubscriptionAddon {
+  return {
+    id: wire.id ?? wire.addonId ?? '',
+    name: wire.addon?.name || wire.addonId || 'Add-on',
+    active: (wire.addonStatus ?? 'active').toLowerCase() === 'active',
+    startDate: realDate(wire.startDate),
+    endDate: realDate(wire.endDate),
+  }
+}
+
+/** The add-ons attached to this contract — `GET /subscriptions/{id}/addons/associations`. */
+export function useSubscriptionAddons(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.addons(id),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) => client.subscriptions.getSubscriptionAddonAssociations(id, options),
+        signal,
+      )
+      return ((response.items ?? []) as AddonAssociationWire[]).map(toSubscriptionAddon)
+    },
+    enabled: id.length > 0,
+  })
+}
+
+interface SubscriptionCouponWire {
+  id?: string | undefined
+  couponId?: string | undefined
+  startDate?: Date | undefined
+  endDate?: Date | undefined
+  coupon?:
+    | {
+        name?: string | undefined
+        couponCode?: string | undefined
+        type?: string | undefined
+        amountOff?: string | undefined
+        percentageOff?: string | undefined
+        currency?: string | undefined
+      }
+    | undefined
+}
+
+export function toSubscriptionCoupon(
+  wire: SubscriptionCouponWire,
+  now = new Date(),
+): SubscriptionCoupon {
+  const coupon = wire.coupon
+  const percentage = coupon?.type === CouponType.Percentage
+  const off = percentage || !coupon?.amountOff ? null : moneyOr(coupon.amountOff, coupon.currency)
+  const endDate = realDate(wire.endDate)
+  return {
+    id: wire.id ?? wire.couponId ?? '',
+    name: coupon?.name || wire.couponId || 'Coupon',
+    code: coupon?.couponCode ?? '',
+    discount: percentage
+      ? `${coupon?.percentageOff ?? '0'}% off`
+      : off
+        ? `${formatMoney(off)} off`
+        : '',
+    active: endDate === null || endDate > now,
+    startDate: realDate(wire.startDate),
+    endDate,
+  }
+}
+
+/** The coupons applied to this contract — `GET /coupons/associations` filtered by subscription. */
+export function useSubscriptionCoupons(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.coupons(id),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.couponAssociations.listCouponAssociations(
+            { subscriptionIds: [id], expand: 'coupon', limit: 100, offset: 0 } as never,
+            options,
+          ),
+        signal,
+      )
+      return ((response.items ?? []) as SubscriptionCouponWire[]).map((item) =>
+        toSubscriptionCoupon(item),
+      )
+    },
+    enabled: id.length > 0,
+  })
+}
+
+interface SubscriptionTaxWire {
+  id?: string | undefined
+  taxRateId?: string | undefined
+  taxBehavior?: string | undefined
+  priority?: number | undefined
+  taxRate?:
+    | { name?: string | undefined; code?: string | undefined; percentageValue?: string | undefined }
+    | undefined
+}
+
+export function toSubscriptionTax(wire: SubscriptionTaxWire): SubscriptionTax {
+  return {
+    id: wire.id ?? wire.taxRateId ?? '',
+    name: wire.taxRate?.name || wire.taxRateId || 'Tax rate',
+    code: wire.taxRate?.code ?? '',
+    percentage: wire.taxRate?.percentageValue ?? '',
+    inclusive: wire.taxBehavior === TaxBehavior.Inclusive,
+    priority: wire.priority ?? 0,
+  }
+}
+
+/** The tax rates applied to this contract — `GET /taxes/associations` for the subscription. */
+export function useSubscriptionTaxes(id: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.taxes(id),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.taxAssociations.listTaxAssociations(
+            'subscription',
+            id,
+            undefined,
+            undefined,
+            options,
+          ),
+        signal,
+      )
+      return ((response.items ?? []) as SubscriptionTaxWire[]).map(toSubscriptionTax)
     },
     enabled: id.length > 0,
   })

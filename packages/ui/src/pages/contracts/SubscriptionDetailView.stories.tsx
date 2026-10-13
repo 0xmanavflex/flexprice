@@ -15,6 +15,10 @@ import {
   money,
   type CreditGrant,
   type Invoice,
+  type InvoicePreview,
+  type SubscriptionAddon,
+  type SubscriptionCoupon,
+  type SubscriptionTax,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type LinePricing,
@@ -282,6 +286,90 @@ const SCHEDULE: SubscriptionSchedule = {
   canBeCancelled: true,
 }
 
+const PREVIEW: InvoicePreview = {
+  periodStart: date('2026-10-01'),
+  periodEnd: date('2026-11-01'),
+  lines: [
+    {
+      id: 'pl_1',
+      name: 'Platform fee',
+      detail: 'Oct 1 – Nov 1',
+      quantity: '1',
+      amount: money('1500', 'USD'),
+      kind: 'fixed',
+    },
+    {
+      id: 'pl_2',
+      name: 'API requests',
+      detail: '920,250 requests',
+      quantity: '920250',
+      amount: money('1840.5', 'USD'),
+      kind: 'usage',
+    },
+    {
+      id: 'pl_3',
+      name: 'Onboarding',
+      detail: 'Oct 1 – Nov 1',
+      quantity: '1',
+      amount: money('250', 'USD'),
+      kind: 'fixed',
+    },
+    {
+      id: 'pl_4',
+      name: 'Seat overage',
+      detail: 'No usage this period',
+      quantity: '0',
+      amount: money('0', 'USD'),
+      kind: 'usage',
+    },
+  ],
+  subtotal: money('3590.5', 'USD'),
+  discount: money('359.05', 'USD'),
+  tax: money('258.51', 'USD'),
+  prepaidCredits: money('100', 'USD'),
+  amountDue: money('3389.96', 'USD'),
+}
+
+const ADDONS: SubscriptionAddon[] = [
+  {
+    id: 'sa_1',
+    name: 'Priority support',
+    active: true,
+    startDate: date('2026-04-01'),
+    endDate: null,
+  },
+  {
+    id: 'sa_2',
+    name: 'Extra seats',
+    active: false,
+    startDate: date('2026-03-01'),
+    endDate: date('2026-08-31'),
+  },
+]
+
+const COUPONS: SubscriptionCoupon[] = [
+  {
+    id: 'sc_1',
+    name: 'Launch partner',
+    code: 'LAUNCH10',
+    discount: '10% off',
+    active: true,
+    startDate: date('2026-03-01'),
+    endDate: date('2027-03-01'),
+  },
+]
+
+const TAXES: SubscriptionTax[] = [
+  {
+    id: 'st_1',
+    name: 'VAT',
+    code: 'VAT-DE',
+    percentage: '7.2%',
+    inclusive: false,
+    priority: 1,
+  },
+]
+
 const BASE: SubscriptionDetailViewProps = {
   subscription: SUBSCRIPTION,
   lines: ready(LINES),
@@ -290,6 +378,12 @@ const BASE: SubscriptionDetailViewProps = {
   usage: ready(USAGE),
   invoices: ready(INVOICES),
   schedules: ready([]),
+  preview: ready(PREVIEW),
+  hideZeroCharges: false,
+  onHideZeroChargesChange: fn(),
+  addons: ready(ADDONS),
+  coupons: ready(COUPONS),
+  taxes: ready(TAXES),
   activity: ACTIVITY,
   onBack: fn(),
   onOpenCustomer: fn(),
@@ -329,7 +423,7 @@ const withSubscription = (patch: Partial<SubscriptionDetail>): SubscriptionDetai
   subscription: { ...SUBSCRIPTION, ...patch },
 })
 
-/** One contract, read-only: lifecycle banners, a summary row, five tabs and an Activity, Metadata, Related rail. */
+/** One contract: lifecycle banners, four tabs, an Overview that runs from contract details to taxes, and an Activity, Metadata, Related rail. */
 const meta = {
   title: 'App/Contracts/Contract detail',
   component: SubscriptionDetailView,
@@ -351,15 +445,16 @@ export const Default: Story = {
     await expect(header.getByText('USD')).toBeVisible()
     // The header holds only the badges, the ID and More.
     await expect(header.queryByRole('button', { name: 'Cancel contract' })).toBeNull()
-    await expect(canvas.getAllByRole('tab')).toHaveLength(5)
-    await expect(canvas.getByRole('tab', { name: /Entitlements & credits/ })).toBeVisible()
+    await expect(canvas.getAllByRole('tab')).toHaveLength(4)
+    await expect(canvas.queryByRole('tab', { name: /Entitlements/ })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: 'Schedule' })).toBeNull()
     await expect(canvas.queryByRole('tab', { name: 'Activity' })).toBeNull()
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Related' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Recent invoices' })).toBeVisible()
-    await expect(canvas.getByText('Billing cycle')).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Contract details' })).toBeVisible()
+    await expect(canvas.getByText('Plan started on')).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Recent invoices' })).toBeNull()
     await expect(canvas.queryByRole('alert')).toBeNull()
   },
 }
@@ -422,7 +517,7 @@ export const Cancelled: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText(/cancelled on Sep 15, 2026/)).toBeVisible()
-    await expect(canvas.getByText('Ended')).toBeVisible()
+    await expect(canvas.getAllByText('Ended').length).toBeGreaterThan(0)
   },
 }
 
@@ -443,7 +538,10 @@ export const Trialing: Story = {
     trialEnd: date('2026-10-15'),
   }),
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText(/trial ends on Oct 15, 2026/)).toBeVisible()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText(/trial ends on Oct 15, 2026/)).toBeVisible()
+    await expect(canvas.getByText('Billing starts after the trial')).toBeVisible()
+    await expect(canvas.queryByText('Amount due')).toBeNull()
   },
 }
 
@@ -457,15 +555,18 @@ export const PendingPlanChange: Story = {
   },
 }
 
-export const PricingTab: Story = {
+/** Charges is a standard grid: search, sort, facets, and a Manage pricing action. */
+export const ChargesTab: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Pricing/ }))
+    await userEvent.click(canvas.getByRole('tab', { name: /Charges/ }))
     await expect(await canvas.findByText('Platform fee')).toBeVisible()
     await expect(canvas.getByText('$1,500.00')).toBeVisible()
+    await expect(canvas.getByRole('button', { name: 'Manage pricing' })).toBeVisible()
+    await expect(canvas.getByRole('textbox', { name: /^Search/ })).toBeVisible()
     // Each charge says where it comes from, and a plan charge says editing it here is local.
-    await expect(canvas.getAllByText('From plan')).toHaveLength(2)
-    await expect(canvas.getByText('Contract only')).toBeVisible()
+    await expect(canvas.getAllByText('From plan').length).toBeGreaterThan(0)
+    await expect(canvas.getAllByText('Contract only').length).toBeGreaterThan(0)
     await expect(canvas.getByText(/shared by every contract on Scale/)).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Activity' })).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Metadata' })).toBeNull()
@@ -474,39 +575,240 @@ export const PricingTab: Story = {
 
 const openPricing = async (canvasElement: HTMLElement) => {
   const canvas = within(canvasElement)
-  const tab = canvas.getByRole('tab', { name: /Pricing/ })
+  const tab = canvas.getByRole('tab', { name: /Charges/ })
   await userEvent.click(tab)
   await waitFor(() => expect(tab).toHaveAttribute('aria-selected', 'true'))
   await canvas.findByText('Platform fee')
   return canvas
 }
 
-/** Overview leads with the charges, then the contract and billing facts, then the latest invoice. */
+/** Overview runs contract details, upcoming invoice, overridden charges, entitlements, grants, add-ons, coupons, taxes. */
 export const OverviewSummary: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Charges' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Contract' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Billing & collection' })).toBeVisible()
-    await expect(canvas.getByText('Platform fee')).toBeVisible()
-    // The charges summary hands off to the Pricing tab.
-    await userEvent.click(canvas.getByRole('button', { name: /pricing/i }))
+    const order = [
+      'Contract details',
+      'Upcoming invoice',
+      'Overridden charges',
+      'Entitlements',
+      'Credit grants',
+      'Add-ons',
+      'Coupons',
+      'Taxes',
+    ]
+    const headings = await Promise.all(order.map((name) => canvas.findByRole('heading', { name })))
+    headings.forEach((heading, index) => {
+      const next = headings[index + 1]
+      if (next) {
+        expect(
+          heading.compareDocumentPosition(next) & Node.DOCUMENT_POSITION_FOLLOWING,
+        ).toBeTruthy()
+      }
+    })
+    // Charges no longer sit on Overview unless the contract overrides the plan.
+    await expect(canvas.queryByRole('heading', { name: 'Charges' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Billing & collection' })).toBeNull()
+    // The overridden charges hand off to the Charges tab.
+    await userEvent.click(canvas.getByRole('button', { name: 'Manage pricing' }))
     await waitFor(() =>
-      expect(canvas.getByRole('tab', { name: /Pricing/ })).toHaveAttribute('aria-selected', 'true'),
+      expect(canvas.getByRole('tab', { name: /Charges/ })).toHaveAttribute('aria-selected', 'true'),
     )
   },
 }
 
-/** The Overview charges carry the same row actions as Pricing, and show the quantity. */
-export const OverviewChargeActions: Story = {
-  parameters: menuA11y,
+/** Overview lists only what the contract changed from its plan. */
+export const OverriddenCharges: Story = {
+  play: async ({ canvasElement }) => {
+    const section = within(
+      (await within(canvasElement).findByRole('heading', { name: 'Overridden charges' })).closest(
+        'section',
+      )!,
+    )
+    await expect(section.getByText('Onboarding')).toBeVisible()
+    await expect(section.queryByText('Platform fee')).toBeNull()
+  },
+}
+
+export const NoOverriddenCharges: Story = {
+  args: { ...BASE, lines: ready(LINES.filter((line) => line.source === 'plan')) },
+  play: async ({ canvasElement }) => {
+    await expect(await within(canvasElement).findByText('No overridden charges')).toBeVisible()
+  },
+}
+
+/** The preview is the next invoice: lines, then subtotal, discount, tax, prepaid credits and amount due. */
+export const UpcomingInvoice: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await canvas.findByText('Platform fee')
-    await expect(canvas.getByRole('columnheader', { name: 'Quantity' })).toBeVisible()
-    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit' }))
-    await expect(await screen.findByRole('dialog')).toBeVisible()
+    const section = within(
+      (await canvas.findByRole('heading', { name: 'Upcoming invoice' })).closest('section')!,
+    )
+    await expect(section.getByText('Oct 1, 2026 – Nov 1, 2026')).toBeVisible()
+    await expect(section.getByText('API requests')).toBeVisible()
+    await expect(section.getByText('920,250 requests')).toBeVisible()
+    await expect(section.getByText('$1,840.50')).toBeVisible()
+    await expect(section.getByText('Subtotal')).toBeVisible()
+    await expect(section.getByText('Discount')).toBeVisible()
+    await expect(section.getByText('−$359.05')).toBeVisible()
+    await expect(section.getByText('Tax')).toBeVisible()
+    await expect(section.getByText('Prepaid credits')).toBeVisible()
+    await expect(section.getByText('Amount due')).toBeVisible()
+    await expect(section.getByText('$3,389.96')).toBeVisible()
+  },
+}
+
+/** Discount, tax and prepaid credits only appear when there is something to show. */
+export const UpcomingInvoicePlain: Story = {
+  args: {
+    ...BASE,
+    preview: ready({
+      ...PREVIEW,
+      lines: PREVIEW.lines.slice(0, 1),
+      subtotal: money('1500', 'USD'),
+      discount: money('0', 'USD'),
+      tax: money('0', 'USD'),
+      prepaidCredits: money('0', 'USD'),
+      amountDue: money('1500', 'USD'),
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const section = within(
+      (await within(canvasElement).findByRole('heading', { name: 'Upcoming invoice' })).closest(
+        'section',
+      )!,
+    )
+    await expect(section.getByText('Amount due')).toBeVisible()
+    await expect(section.queryByText('Discount')).toBeNull()
+    await expect(section.queryByText('Tax')).toBeNull()
+    await expect(section.queryByText('Prepaid credits')).toBeNull()
+  },
+}
+
+export const HideZeroCharges: Story = {
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('switch', { name: 'Hide zero charges' }))
+    await expect(args.onHideZeroChargesChange).toHaveBeenCalledOnce()
+    await expect((args.onHideZeroChargesChange as ReturnType<typeof fn>).mock.calls[0]?.[0]).toBe(
+      true,
+    )
+  },
+}
+
+export const UpcomingInvoiceAllZero: Story = {
+  args: {
+    ...BASE,
+    hideZeroCharges: true,
+    preview: ready({
+      ...PREVIEW,
+      lines: [],
+      subtotal: money('0', 'USD'),
+      discount: money('0', 'USD'),
+      tax: money('0', 'USD'),
+      prepaidCredits: money('0', 'USD'),
+      amountDue: money('0', 'USD'),
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Nothing to bill yet')).toBeVisible()
+    await expect(canvas.getByText(/Turn off Hide zero charges/)).toBeVisible()
+  },
+}
+
+export const UpcomingInvoiceLoading: Story = {
+  args: { ...BASE, preview: { data: undefined, isLoading: true } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Upcoming invoice' })).toBeVisible()
+    await expect(canvas.queryByText('Amount due')).toBeNull()
+  },
+}
+
+export const UpcomingInvoiceFailed: Story = {
+  args: { ...BASE, preview: { data: undefined, isError: true, onRetry: fn() } },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('The invoice preview could not be loaded')).toBeVisible()
+    await userEvent.click(canvas.getAllByRole('button', { name: 'Try again' })[0]!)
+  },
+}
+
+/** A cancelled or not-yet-started contract has no next invoice. */
+export const NoUpcomingInvoiceWhenCancelled: Story = {
+  args: withSubscription({
+    status: SubscriptionStatus.Cancelled,
+    cancelledAt: date('2026-09-15'),
+    endDate: date('2026-09-15'),
+  }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Contract details' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
+  },
+}
+
+export const NoUpcomingInvoiceWhenIncomplete: Story = {
+  args: withSubscription({ status: SubscriptionStatus.Incomplete, currentPeriodStart: null }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Contract details' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
+  },
+}
+
+/** The first row of facts, then payment terms, time zone and commitment. */
+export const ContractDetails: Story = {
+  play: async ({ canvasElement }) => {
+    const section = within(
+      (await within(canvasElement).findByRole('heading', { name: 'Contract details' })).closest(
+        'section',
+      )!,
+    )
+    await expect(section.getByText('Plan started on')).toBeVisible()
+    await expect(section.getByText('Mar 1, 2026')).toBeVisible()
+    await expect(section.getByText('Current period')).toBeVisible()
+    await expect(section.getByText('Collection')).toBeVisible()
+    await expect(section.getByText('Billing cycle')).toBeVisible()
+    await expect(section.getByText('Payment terms')).toBeVisible()
+    await expect(section.getByText('Time zone')).toBeVisible()
+    await expect(section.getByText('Commitment')).toBeVisible()
+    await expect(section.getByText(/\$2,500\.00/)).toBeVisible()
+  },
+}
+
+export const AddonsCouponsTaxes: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Priority support')).toBeVisible()
+    await expect(canvas.getByText('Extra seats')).toBeVisible()
+    await expect(canvas.getByText('LAUNCH10')).toBeVisible()
+    await expect(canvas.getByText('10% off')).toBeVisible()
+    await expect(canvas.getByText('VAT')).toBeVisible()
+    await expect(canvas.getByText('7.2%')).toBeVisible()
+    await expect(canvas.getByText('Added on top')).toBeVisible()
+  },
+}
+
+export const AddonsCouponsTaxesEmpty: Story = {
+  args: { ...BASE, addons: ready([]), coupons: ready([]), taxes: ready([]) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('No add-ons')).toBeVisible()
+    await expect(canvas.getByText('No coupons')).toBeVisible()
+    await expect(canvas.getByText('No taxes')).toBeVisible()
+  },
+}
+
+/** Pages that do not load add-ons, coupons or taxes leave those sections out. */
+export const WithoutAddonsCouponsTaxes: Story = {
+  args: { ...BASE, addons: undefined, coupons: undefined, taxes: undefined },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Credit grants' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Add-ons' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Coupons' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Taxes' })).toBeNull()
   },
 }
 
@@ -524,7 +826,7 @@ export const AddCharge: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Manage pricing' }))
     // Fixed or usage first, then the form for that type.
     await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
     const dialog = within(await screen.findByRole('dialog'))
@@ -567,7 +869,7 @@ export const AddUsageCharge: Story = {
   parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Manage pricing' }))
     await userEvent.click(await screen.findByRole('radio', { name: /Usage/ }))
     await userEvent.click(screen.getByRole('button', { name: 'Continue' }))
     const dialog = within(await screen.findByRole('dialog'))
@@ -752,7 +1054,7 @@ export const CancelledPricingIsReadOnly: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
-    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Manage pricing' })).toBeNull()
     await expect(canvas.queryByRole('button', { name: /^Actions for/ })).toBeNull()
   },
 }
@@ -762,17 +1064,17 @@ export const TrialingCannotAddCharge: Story = {
   args: withSubscription({ status: SubscriptionStatus.Trialing }),
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
-    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Manage pricing' })).toBeNull()
     await expect(canvas.getByRole('button', { name: 'Actions for Platform fee' })).toBeVisible()
   },
 }
 
-/** Without handlers the Pricing tab is read-only. */
+/** Without handlers the Charges tab is read-only. */
 export const PricingWithoutEditing: Story = {
   args: { onAddCharge: undefined, onEditCharge: undefined, onEndCharge: undefined },
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
-    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Manage pricing' })).toBeNull()
   },
 }
 
@@ -831,10 +1133,10 @@ export const NoInvoices: Story = {
   },
 }
 
+/** Entitlements and credit grants sit on Overview, below the charges. */
 export const EntitlementsAndCredits: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Entitlements & credits/ }))
     await expect(await canvas.findByText('SAML SSO')).toBeVisible()
     await expect(canvas.getByText('Unlimited')).toBeVisible()
     await expect(canvas.getByText('Onboarding credits')).toBeVisible()
@@ -869,6 +1171,10 @@ export const SectionsLoading: Story = {
     entitlements: { data: undefined, isLoading: true },
     creditGrants: { data: undefined, isLoading: true },
     schedules: { data: undefined, isLoading: true },
+    preview: { data: undefined, isLoading: true },
+    addons: { data: undefined, isLoading: true },
+    coupons: { data: undefined, isLoading: true },
+    taxes: { data: undefined, isLoading: true },
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

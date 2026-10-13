@@ -3846,6 +3846,7 @@
       "file": "src/compositions/detail/MetadataCard.tsx",
       "layer": "composition",
       "composes": [
+        "PencilIcon",
         "PlusIcon",
         "Section"
       ],
@@ -4321,6 +4322,7 @@
         "InlineField",
         "InvoiceDetailView",
         "Mark",
+        "MetadataCard",
         "Pill",
         "PlanGrid",
         "PriceUnitGrid",

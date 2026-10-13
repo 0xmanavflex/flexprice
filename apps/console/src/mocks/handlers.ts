@@ -3266,6 +3266,65 @@ export const handlers = [
       ],
     }),
   ),
+  // The next invoice, computed by the API. Authored: a fixed fee, metered usage, and a zero line
+  // that "Hide zero charges" removes.
+  http.post(`${BASE}/invoices/preview`, async ({ request }) => {
+    const body = await readBody(request)
+    const hideZero = body['hide_zero_charges_line_items'] === true
+    const lines = [
+      {
+        id: 'pv_1',
+        display_name: 'Platform fee',
+        quantity: '1',
+        amount: '99.00',
+        price_type: 'FIXED',
+      },
+      {
+        id: 'pv_2',
+        display_name: 'API usage',
+        meter_display_name: 'API calls',
+        quantity: '92250',
+        amount: '184.50',
+        price_type: 'USAGE',
+      },
+      { id: 'pv_3', display_name: 'Extra seats', quantity: '0', amount: '0', price_type: 'FIXED' },
+    ]
+      .filter((line) => !hideZero || Number(line.amount) !== 0)
+      .map((line) => ({
+        ...line,
+        period_start: '2026-10-01T00:00:00Z',
+        period_end: '2026-11-01T00:00:00Z',
+      }))
+    return HttpResponse.json({
+      id: '',
+      subscription_id: String(body['subscription_id'] ?? ''),
+      currency: 'usd',
+      period_start: '2026-10-01T00:00:00Z',
+      period_end: '2026-11-01T00:00:00Z',
+      subtotal: '283.50',
+      total_discount: '28.35',
+      total_tax: '20.41',
+      total_prepaid_credits_applied: '0',
+      total: '275.56',
+      amount_due: '275.56',
+      amount_remaining: '275.56',
+      line_items: lines,
+    })
+  }),
+  http.get(`${BASE}/subscriptions/:id/addons/associations`, () =>
+    HttpResponse.json({
+      items: [
+        {
+          id: 'sa_demo_1',
+          addon_id: 'addon_priority',
+          addon_status: 'active',
+          start_date: '2026-03-01T00:00:00Z',
+          addon: { name: 'Priority support' },
+        },
+      ],
+      pagination: { total: 1, limit: 50, offset: 0 },
+    }),
+  ),
   // Nothing queued by default; the page renders no banner.
   http.get(`${BASE}/subscriptions/:id/schedules`, () => HttpResponse.json({ schedules: [] })),
   http.get(`${BASE}/subscriptions/:id/entitlements`, () =>

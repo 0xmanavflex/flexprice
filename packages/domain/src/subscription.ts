@@ -339,3 +339,61 @@ export interface CancelSubscription {
   cancellationType: SubscriptionCancellationType
   reason: string
 }
+
+/** One line of the invoice a contract will raise next. */
+export interface InvoicePreviewLine {
+  id: string
+  name: string
+  /** The period note under the name, when the API sent one. */
+  detail: string
+  quantity: string
+  amount: Money
+  kind: 'fixed' | 'usage' | null
+}
+
+/**
+ * The invoice a contract would raise for its current period, as the API
+ * computes it. Every figure is the API's; nothing here is summed.
+ */
+export interface InvoicePreview {
+  periodStart: Date | null
+  periodEnd: Date | null
+  lines: InvoicePreviewLine[]
+  subtotal: Money
+  discount: Money
+  tax: Money
+  prepaidCredits: Money
+  amountDue: Money
+}
+
+/** An add-on attached to a contract. */
+export interface SubscriptionAddon {
+  id: string
+  name: string
+  active: boolean
+  startDate: Date | null
+  endDate: Date | null
+}
+
+/** A coupon applied to a contract. */
+export interface SubscriptionCoupon {
+  id: string
+  name: string
+  code: string
+  /** The discount in words: "10% off" or "$20.00 off". */
+  discount: string
+  active: boolean
+  startDate: Date | null
+  endDate: Date | null
+}
+
+/** A tax rate applied to a contract. */
+export interface SubscriptionTax {
+  id: string
+  name: string
+  code: string
+  /** The rate as the API sends it, or empty. */
+  percentage: string
+  inclusive: boolean
+  priority: number
+}

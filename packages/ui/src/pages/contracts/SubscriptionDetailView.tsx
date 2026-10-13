@@ -1,4 +1,5 @@
 import { useState, type ReactNode } from 'react'
+import { cn } from '@ui/lib/cn'
 import {
   CircleAlertIcon,
   PlusIcon,
@@ -23,15 +24,22 @@ import {
   type EditContractCharge,
   type EndContractCharge,
   type Invoice,
+  type InvoicePreview,
+  type InvoicePreviewLine,
   type LineChangePreview,
+  type Money,
+  type SubscriptionAddon,
+  type SubscriptionCoupon,
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type SubscriptionLine,
   type SubscriptionSchedule,
+  type SubscriptionTax,
   type SubscriptionUsage,
   type SubscriptionUsageCharge,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
+import { Switch } from '@ui/components/primitives/switch'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
@@ -69,7 +77,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     '@reui/badge',
     'compositions/ActivityLog',
   ],
-  note: 'Contract detail (read-only): DetailShell header with every action in More, five tabs (Overview, Pricing, Usage, Invoices, Entitlements and credits) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners and the summary tiles lead the Overview tab.',
+  note: 'Contract detail (read-only): DetailShell header with every action in More, four tabs (Overview, Charges, Usage, Invoices) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners lead the Overview tab, then contract details, the upcoming invoice preview, overridden charges, entitlements, credit grants, add-ons, coupons and taxes.',
 })
 
 /** One section's data with its own loading and failure state, so a slow tab never blocks the page. */
@@ -91,6 +99,13 @@ export interface SubscriptionDetailViewProps {
   invoices: SubscriptionPart<Invoice[]>
   schedules: SubscriptionPart<SubscriptionSchedule[]>
   activity: SubscriptionActivity[]
+  /** The next invoice as it would be created now. Leave out to hide the section. */
+  preview?: SubscriptionPart<InvoicePreview> | undefined
+  hideZeroCharges?: boolean | undefined
+  onHideZeroChargesChange?: ((hide: boolean) => void) | undefined
+  addons?: SubscriptionPart<SubscriptionAddon[]> | undefined
+  coupons?: SubscriptionPart<SubscriptionCoupon[]> | undefined
+  taxes?: SubscriptionPart<SubscriptionTax[]> | undefined
   onBack?: () => void
   onOpenCustomer?: () => void
   onOpenPlan?: () => void
@@ -99,9 +114,9 @@ export interface SubscriptionDetailViewProps {
   onActivate?: () => void
   onCancel?: () => void
   /**
-   * Charge editing on the Pricing tab. Each handler returns when the request has
+   * Charge editing on the Charges tab. Each handler returns when the request has
    * finished; a rejection keeps the dialog open and shows the error. Leave all
-   * three out for a read-only Pricing tab.
+   * three out for a read-only Charges tab.
    */
   onAddCharge?: ((draft: AddContractCharge) => Promise<void> | void) | undefined
   onEditCharge?:
@@ -121,7 +136,7 @@ export interface SubscriptionDetailViewProps {
   priceUnits?: PriceUnitOption[] | undefined
 }
 
-type SubscriptionTab = 'overview' | 'pricing' | 'usage' | 'invoices' | 'entitlements'
+type SubscriptionTab = 'overview' | 'charges' | 'usage' | 'invoices'
 
 const day = (date: Date | null | undefined) =>
   date
@@ -136,9 +151,6 @@ const LINE_SOURCE_LABEL: Record<SubscriptionLine['source'], string> = {
 
 const isEnded = (line: SubscriptionLine) =>
   line.endDate !== null && line.endDate.getTime() <= Date.now()
-
-const invoiceTime = (invoice: Invoice) =>
-  (invoice.issuedAt ?? invoice.dueDate ?? invoice.periodStart)?.getTime() ?? 0
 
 const words = (value: string) => value.replaceAll('_', ' ').toLowerCase()
 
@@ -159,6 +171,12 @@ export function SubscriptionDetailView({
   invoices,
   schedules,
   activity,
+  preview,
+  hideZeroCharges = false,
+  onHideZeroChargesChange,
+  addons,
+  coupons,
+  taxes,
   onBack,
   onOpenCustomer,
   onOpenPlan,
@@ -241,10 +259,10 @@ export function SubscriptionDetailView({
   }
 
   const usageData = usage.data
-  const recentInvoices = [...(invoices.data ?? [])]
-    .sort((a, b) => invoiceTime(b) - invoiceTime(a))
-    .slice(0, 5)
-  const entitlementCount = (entitlements.data?.length ?? 0) + (creditGrants.data?.length ?? 0)
+  const overriddenLines: SubscriptionPart<SubscriptionLine[]> = {
+    ...lines,
+    data: lines.data?.filter((line) => line.source === 'contract' && !isEnded(line)),
+  }
 
   const related: RelatedItem[] = [
     {
@@ -271,33 +289,49 @@ export function SubscriptionDetailView({
       : []),
   ]
 
-  const addChargeButton = canAddCharge ? (
+  const managePricingButton = canAddCharge ? (
     <Button size="sm" onClick={() => setDialog({ mode: 'add' })}>
       <PlusIcon aria-hidden="true" />
-      Add charge
+      Manage pricing
     </Button>
   ) : undefined
 
-  const chargeColumns = (withType: boolean): DetailColumn<SubscriptionLine>[] => [
-    { key: 'name', header: 'Charge', cell: (line) => line.name },
+  const chargeColumns = (
+    withType: boolean,
+    withActions: boolean,
+  ): DetailColumn<SubscriptionLine>[] => [
+    {
+      key: 'name',
+      header: 'Charge',
+      sortBy: (line) => line.name.toLowerCase(),
+      text: (line) => line.name,
+      cell: (line) => <Strong>{line.name}</Strong>,
+    },
     { key: 'source', header: 'Source', cell: (line) => <LineSourceBadge line={line} /> },
     ...(withType
       ? [
           {
             key: 'kind',
             header: 'Type',
-            cell: (line: SubscriptionLine) => (line.kind === 'usage' ? 'Usage' : 'Fixed'),
+            cell: (line: SubscriptionLine) => (
+              <Muted>{line.kind === 'usage' ? 'Usage' : 'Fixed'}</Muted>
+            ),
           },
         ]
       : []),
-    { key: 'quantity', header: 'Quantity', cell: (line) => line.quantity || '—' },
-    { key: 'period', header: 'Billed', cell: (line) => line.billingPeriodLabel },
+    {
+      key: 'quantity',
+      header: 'Quantity',
+      cell: (line) => <Muted className="tabular-nums">{line.quantity || '—'}</Muted>,
+    },
+    { key: 'period', header: 'Billed', cell: (line) => <Muted>{line.billingPeriodLabel}</Muted> },
     {
       key: 'amount',
       header: 'Price',
-      cell: (line) => <span className="tabular-nums">{formatMoney(line.amount)}</span>,
+      sortBy: (line) => Number(line.amount.amount),
+      cell: (line) => <Strong className="tabular-nums">{formatMoney(line.amount)}</Strong>,
     },
-    ...chargeActionColumns,
+    ...(withActions ? chargeActionColumns : []),
   ]
 
   const activityEntries: ActivityLogEntry[] = activity.map((event) => ({
@@ -356,8 +390,8 @@ export function SubscriptionDetailView({
           tabs={[
             { value: 'overview', label: 'Overview' },
             {
-              value: 'pricing',
-              label: 'Pricing',
+              value: 'charges',
+              label: 'Charges',
               ...(lines.data ? { count: lines.data.length } : {}),
             },
             { value: 'usage', label: 'Usage' },
@@ -365,11 +399,6 @@ export function SubscriptionDetailView({
               value: 'invoices',
               label: 'Invoices',
               ...(invoices.data ? { count: invoices.data.length } : {}),
-            },
-            {
-              value: 'entitlements',
-              label: 'Entitlements & credits',
-              ...(entitlements.data && creditGrants.data ? { count: entitlementCount } : {}),
             },
           ]}
         />
@@ -383,172 +412,300 @@ export function SubscriptionDetailView({
                 {...(canActivate && onActivate ? { onActivate } : {})}
               />
 
-              <OverviewTiles
-                tiles={[
-                  { label: 'Billing cycle', value: s.billingPeriodLabel, detail: s.currency },
-                  {
-                    label: endLabel,
-                    value: day(endsOn),
-                    detail: s.currentPeriodStart
-                      ? `Period began ${day(s.currentPeriodStart)}`
-                      : undefined,
-                  },
-                  {
-                    label: 'Usage this period',
-                    value: usageData ? formatMoney(usageData.total) : '—',
-                    detail: usageData
-                      ? `${usageData.charges.length} usage ${usageData.charges.length === 1 ? 'charge' : 'charges'}`
-                      : undefined,
-                  },
-                  {
-                    label: 'Commitment',
-                    value: s.commitmentAmount ? formatMoney(s.commitmentAmount) : 'None',
-                    detail:
-                      usageData?.commitmentUtilized && s.commitmentAmount
-                        ? `${formatMoney(usageData.commitmentUtilized)} used`
-                        : undefined,
-                  },
-                ]}
+              <ContractDetails
+                subscription={s}
+                usage={usageData}
+                endLabel={endLabel}
+                endsOn={endsOn}
+                {...(onOpenCustomer ? { onOpenCustomer } : {})}
+                {...(onOpenPlan ? { onOpenPlan } : {})}
               />
 
+              {preview ? (
+                <InvoicePreviewSection
+                  status={s.status}
+                  preview={preview}
+                  hideZero={hideZeroCharges}
+                  {...(onHideZeroChargesChange
+                    ? { onHideZeroChange: onHideZeroChargesChange }
+                    : {})}
+                />
+              ) : null}
+
               <PartSection
-                title="Charges"
+                title="Overridden charges"
                 showTitle
-                part={lines}
+                part={overriddenLines}
                 failure="Charges could not be loaded"
-                emptyTitle="No charges"
-                emptyDescription="This contract has no priced lines."
+                emptyTitle="No overridden charges"
+                emptyDescription="Every charge on this contract comes from its plan."
                 isEmpty={(rows) => rows.length === 0}
                 action={
                   <Button
                     size="sm"
                     variant="outline"
                     className="h-8 px-3"
-                    onClick={() => setTab('pricing')}
+                    onClick={() => setTab('charges')}
                   >
-                    {onAddCharge && canEditCharges ? 'Manage pricing' : 'View pricing'}
+                    {onAddCharge && canEditCharges ? 'Manage pricing' : 'View charges'}
                   </Button>
                 }
               >
                 {(rows) => (
                   <DetailTable<SubscriptionLine>
                     compact
-                    label="Charges"
+                    label="Overridden charges"
                     noun="charges"
-                    rows={rows.filter((line) => !isEnded(line)).slice(0, 5)}
+                    rows={rows}
                     toolbar={false}
-                    columns={chargeColumns(false)}
+                    columns={chargeColumns(false, false)}
                   />
                 )}
               </PartSection>
 
-              <div className="grid gap-6 lg:grid-cols-2">
-                <Section title="Contract">
-                  <Properties
-                    columns={2}
-                    items={[
-                      {
-                        label: 'Customer',
-                        value: onOpenCustomer ? (
-                          <EntityLink label={s.customerName} onOpen={onOpenCustomer} />
-                        ) : (
-                          s.customerName
-                        ),
-                      },
-                      {
-                        label: 'Plan',
-                        value: onOpenPlan ? (
-                          <EntityLink label={s.planName} onOpen={onOpenPlan} />
-                        ) : (
-                          s.planName
-                        ),
-                      },
-                      { label: 'Started', value: day(s.startDate) },
-                      {
-                        label: 'Current period',
-                        value: `${day(s.currentPeriodStart)} – ${day(s.currentPeriodEnd)}`,
-                      },
-                      ...(s.trialStart || s.trialEnd
-                        ? [{ label: 'Trial', value: `${day(s.trialStart)} – ${day(s.trialEnd)}` }]
-                        : []),
-                      ...(s.endDate ? [{ label: 'Ends', value: day(s.endDate) }] : []),
-                      ...(s.lookupKey
-                        ? [
-                            {
-                              label: 'Lookup key',
-                              value: <span className="font-mono text-xs">{s.lookupKey}</span>,
-                            },
-                          ]
-                        : []),
-                    ]}
-                  />
-                </Section>
-                <Section title="Billing & collection">
-                  <Properties
-                    columns={2}
-                    items={[
-                      {
-                        label: 'Billing',
-                        value:
-                          s.billingPeriodCount > 1
-                            ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
-                            : s.billingPeriodLabel,
-                      },
-                      {
-                        label: 'Collection',
-                        value: s.collectionMethod ? words(s.collectionMethod) : '—',
-                      },
-                      {
-                        label: 'Payment terms',
-                        value: s.paymentTerms ? words(s.paymentTerms) : '—',
-                      },
-                      { label: 'Timezone', value: s.timezone || '—' },
-                      {
-                        label: 'Commitment',
-                        value: s.commitmentAmount ? formatMoney(s.commitmentAmount) : 'None',
-                      },
-                    ]}
-                  />
-                </Section>
-              </div>
-
-              {recentInvoices.length > 0 ? (
-                <Section table showTitle title="Recent invoices">
-                  <DetailTable<Invoice>
+              <PartSection
+                title="Entitlements"
+                showTitle
+                part={entitlements}
+                failure="Entitlements could not be loaded"
+                emptyTitle="No features"
+                emptyDescription="This contract includes no features."
+                isEmpty={(rows) => rows.length === 0}
+              >
+                {(rows) => (
+                  <DetailTable<SubscriptionEntitlement>
                     compact
-                    label="Recent invoices"
-                    noun="invoices"
-                    rows={recentInvoices}
-                    toolbar={false}
-                    {...(onOpenInvoice ? { onRowClick: (row) => onOpenInvoice(row.id) } : {})}
+                    label="Entitlements"
+                    noun="features"
+                    rows={rows}
+                    getRowId={(row) => row.featureId || row.name}
                     columns={[
                       {
-                        key: 'number',
-                        header: 'Invoice',
-                        cell: (row) => <span className="font-mono text-xs">{row.number}</span>,
+                        key: 'feature',
+                        header: 'Feature',
+                        sortBy: (row) => row.name.toLowerCase(),
+                        cell: (row) => <Strong>{row.name}</Strong>,
                       },
                       {
-                        key: 'payment',
-                        header: 'Payment',
-                        cell: (row) => <PaymentCell row={row} />,
+                        key: 'access',
+                        header: 'Access',
+                        cell: (row) => <Muted>{row.enabled ? 'Included' : 'Not included'}</Muted>,
                       },
                       {
-                        key: 'due',
-                        header: 'Due',
+                        key: 'limit',
+                        header: 'Limit',
                         cell: (row) => (
-                          <span className="text-muted-foreground">{day(row.dueDate)}</span>
-                        ),
-                      },
-                      {
-                        key: 'total',
-                        header: 'Total',
-                        cell: (row) => (
-                          <span className="tabular-nums">{formatMoney(row.total)}</span>
+                          <Muted>
+                            {row.usageLimit === null
+                              ? 'Unlimited'
+                              : `${row.usageLimit.toLocaleString('en-US')}${row.softLimit ? ' (soft)' : ''}${row.resetPeriodLabel ? ` / ${row.resetPeriodLabel.toLowerCase()}` : ''}`}
+                          </Muted>
                         ),
                       },
                     ]}
                   />
-                </Section>
+                )}
+              </PartSection>
+
+              <PartSection
+                title="Credit grants"
+                showTitle
+                part={creditGrants}
+                failure="Credit grants could not be loaded"
+                emptyTitle="No credit grants"
+                emptyDescription="This contract has no credit grants."
+                isEmpty={(rows) => rows.length === 0}
+              >
+                {(rows) => (
+                  <DetailTable<CreditGrant>
+                    compact
+                    label="Credit grants"
+                    noun="grants"
+                    rows={rows}
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Grant',
+                        sortBy: (row) => row.name.toLowerCase(),
+                        cell: (row) => <Strong>{row.name}</Strong>,
+                      },
+                      {
+                        key: 'credits',
+                        header: 'Credits',
+                        cell: (row) => <Strong className="tabular-nums">{row.credits}</Strong>,
+                      },
+                      {
+                        key: 'cadence',
+                        header: 'Cadence',
+                        cell: (row) => (
+                          <Muted>
+                            {row.cadence === CreditGrantCadence.Recurring && row.period
+                              ? `${CREDIT_GRANT_CADENCE_LABEL[row.cadence]} · ${CREDIT_GRANT_PERIOD_LABEL[row.period].toLowerCase()}`
+                              : CREDIT_GRANT_CADENCE_LABEL[row.cadence]}
+                          </Muted>
+                        ),
+                      },
+                      {
+                        key: 'expiry',
+                        header: 'Expiry',
+                        cell: (row) => (
+                          <Muted>{CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}</Muted>
+                        ),
+                      },
+                    ]}
+                  />
+                )}
+              </PartSection>
+
+              {addons ? (
+                <PartSection
+                  title="Add-ons"
+                  showTitle
+                  part={addons}
+                  failure="Add-ons could not be loaded"
+                  emptyTitle="No add-ons"
+                  emptyDescription="No add-ons are attached to this contract."
+                  isEmpty={(rows) => rows.length === 0}
+                >
+                  {(rows) => (
+                    <DetailTable<SubscriptionAddon>
+                      compact
+                      label="Add-ons"
+                      noun="add-ons"
+                      rows={rows}
+                      columns={[
+                        {
+                          key: 'name',
+                          header: 'Add-on',
+                          sortBy: (row) => row.name.toLowerCase(),
+                          cell: (row) => <Strong>{row.name}</Strong>,
+                        },
+                        {
+                          key: 'status',
+                          header: 'Status',
+                          cell: (row) => <ActiveBadge active={row.active} />,
+                        },
+                        {
+                          key: 'start',
+                          header: 'Starts',
+                          cell: (row) => <Muted>{day(row.startDate)}</Muted>,
+                        },
+                        {
+                          key: 'end',
+                          header: 'Ends',
+                          cell: (row) => <Muted>{day(row.endDate)}</Muted>,
+                        },
+                      ]}
+                    />
+                  )}
+                </PartSection>
+              ) : null}
+
+              {coupons ? (
+                <PartSection
+                  title="Coupons"
+                  showTitle
+                  part={coupons}
+                  failure="Coupons could not be loaded"
+                  emptyTitle="No coupons"
+                  emptyDescription="No coupons are applied to this contract."
+                  isEmpty={(rows) => rows.length === 0}
+                >
+                  {(rows) => (
+                    <DetailTable<SubscriptionCoupon>
+                      compact
+                      label="Coupons"
+                      noun="coupons"
+                      rows={rows}
+                      columns={[
+                        {
+                          key: 'name',
+                          header: 'Coupon',
+                          sortBy: (row) => row.name.toLowerCase(),
+                          cell: (row) => <Strong>{row.name}</Strong>,
+                        },
+                        {
+                          key: 'code',
+                          header: 'Code',
+                          cell: (row) =>
+                            row.code ? (
+                              <Muted className="font-mono text-xs">{row.code}</Muted>
+                            ) : (
+                              <Muted>—</Muted>
+                            ),
+                        },
+                        {
+                          key: 'discount',
+                          header: 'Discount',
+                          cell: (row) => <Strong>{row.discount}</Strong>,
+                        },
+                        {
+                          key: 'status',
+                          header: 'Status',
+                          cell: (row) => <ActiveBadge active={row.active} />,
+                        },
+                        {
+                          key: 'end',
+                          header: 'Ends',
+                          cell: (row) => <Muted>{day(row.endDate)}</Muted>,
+                        },
+                      ]}
+                    />
+                  )}
+                </PartSection>
+              ) : null}
+
+              {taxes ? (
+                <PartSection
+                  title="Taxes"
+                  showTitle
+                  part={taxes}
+                  failure="Taxes could not be loaded"
+                  emptyTitle="No taxes"
+                  emptyDescription="No tax rates are applied to this contract."
+                  isEmpty={(rows) => rows.length === 0}
+                >
+                  {(rows) => (
+                    <DetailTable<SubscriptionTax>
+                      compact
+                      label="Taxes"
+                      noun="taxes"
+                      rows={rows}
+                      columns={[
+                        {
+                          key: 'name',
+                          header: 'Tax',
+                          sortBy: (row) => row.name.toLowerCase(),
+                          cell: (row) => <Strong>{row.name}</Strong>,
+                        },
+                        {
+                          key: 'code',
+                          header: 'Code',
+                          cell: (row) => (
+                            <Muted className="font-mono text-xs">{row.code || '—'}</Muted>
+                          ),
+                        },
+                        {
+                          key: 'rate',
+                          header: 'Rate',
+                          cell: (row) => <Strong className="tabular-nums">{row.percentage}</Strong>,
+                        },
+                        {
+                          key: 'inclusive',
+                          header: 'Applied',
+                          cell: (row) => (
+                            <Muted>{row.inclusive ? 'Included in price' : 'Added on top'}</Muted>
+                          ),
+                        },
+                        {
+                          key: 'priority',
+                          header: 'Priority',
+                          cell: (row) => <Muted className="tabular-nums">{row.priority}</Muted>,
+                        },
+                      ]}
+                    />
+                  )}
+                </PartSection>
               ) : null}
             </div>
 
@@ -560,25 +717,37 @@ export function SubscriptionDetailView({
           </div>
         ) : null}
 
-        {tab === 'pricing' ? (
+        {tab === 'charges' ? (
           <>
             <PartSection
-              title="Pricing"
+              title="Charges"
               part={lines}
-              failure="Pricing could not be loaded"
-              emptyTitle="No priced lines"
+              failure="Charges could not be loaded"
+              emptyTitle="No charges"
               emptyDescription="This contract has no priced lines."
-              emptyAction={addChargeButton}
+              emptyAction={managePricingButton}
               isEmpty={(rows) => rows.length === 0}
             >
               {(rows) => (
                 <DetailTable<SubscriptionLine>
                   compact
-                  label="Pricing"
-                  noun="lines"
+                  label="Charges"
+                  noun="charges"
                   rows={rows}
-                  action={addChargeButton}
-                  columns={chargeColumns(true)}
+                  action={managePricingButton}
+                  facets={[
+                    {
+                      id: 'source',
+                      label: 'Source',
+                      value: (line) => LINE_SOURCE_LABEL[line.source],
+                    },
+                    {
+                      id: 'type',
+                      label: 'Type',
+                      value: (line) => (line.kind === 'usage' ? 'Usage' : 'Fixed'),
+                    },
+                  ]}
+                  columns={chargeColumns(true, true)}
                 />
               )}
             </PartSection>
@@ -638,7 +807,7 @@ export function SubscriptionDetailView({
                       key: 'name',
                       header: 'Charge',
                       cell: (charge) => (
-                        <span className="flex items-center gap-2">
+                        <span className="text-foreground flex items-center gap-2 font-medium">
                           {charge.name}
                           {charge.isOverage ? (
                             <Badge variant="outline" size="sm" radius="full">
@@ -652,16 +821,16 @@ export function SubscriptionDetailView({
                       key: 'quantity',
                       header: 'Quantity',
                       cell: (charge) => (
-                        <span className="tabular-nums">
+                        <Muted className="tabular-nums">
                           {charge.quantity.toLocaleString('en-US')}
-                        </span>
+                        </Muted>
                       ),
                     },
                     {
                       key: 'amount',
                       header: 'Amount',
                       cell: (charge) => (
-                        <span className="tabular-nums">{formatMoney(charge.amount)}</span>
+                        <Strong className="tabular-nums">{formatMoney(charge.amount)}</Strong>
                       ),
                     },
                   ]}
@@ -691,21 +860,17 @@ export function SubscriptionDetailView({
                   {
                     key: 'number',
                     header: 'Invoice number',
-                    cell: (row) => <span className="font-mono text-xs">{row.number}</span>,
+                    cell: (row) => <Strong className="font-mono text-xs">{row.number}</Strong>,
                   },
                   {
                     key: 'issued',
                     header: 'Issue date',
-                    cell: (row) => (
-                      <span className="text-muted-foreground">{day(row.issuedAt)}</span>
-                    ),
+                    cell: (row) => <Muted>{day(row.issuedAt)}</Muted>,
                   },
                   {
                     key: 'due',
                     header: 'Due date',
-                    cell: (row) => (
-                      <span className="text-muted-foreground">{day(row.dueDate)}</span>
-                    ),
+                    cell: (row) => <Muted>{day(row.dueDate)}</Muted>,
                   },
                   {
                     key: 'status',
@@ -716,95 +881,14 @@ export function SubscriptionDetailView({
                   {
                     key: 'amount',
                     header: 'Amount',
-                    cell: (row) => <span className="tabular-nums">{formatMoney(row.total)}</span>,
+                    cell: (row) => (
+                      <Strong className="tabular-nums">{formatMoney(row.total)}</Strong>
+                    ),
                   },
                 ]}
               />
             )}
           </PartSection>
-        ) : null}
-
-        {tab === 'entitlements' ? (
-          <>
-            <PartSection
-              title="Entitlements"
-              showTitle
-              part={entitlements}
-              failure="Entitlements could not be loaded"
-              emptyTitle="No features"
-              emptyDescription="This contract includes no features."
-              isEmpty={(rows) => rows.length === 0}
-            >
-              {(rows) => (
-                <DetailTable<SubscriptionEntitlement>
-                  compact
-                  label="Entitlements"
-                  noun="features"
-                  rows={rows}
-                  getRowId={(row) => row.featureId || row.name}
-                  columns={[
-                    { key: 'feature', header: 'Feature', cell: (row) => row.name },
-                    {
-                      key: 'access',
-                      header: 'Access',
-                      cell: (row) => (row.enabled ? 'Included' : 'Not included'),
-                    },
-                    {
-                      key: 'limit',
-                      header: 'Limit',
-                      cell: (row) =>
-                        row.usageLimit === null
-                          ? 'Unlimited'
-                          : `${row.usageLimit.toLocaleString('en-US')}${row.softLimit ? ' (soft)' : ''}${row.resetPeriodLabel ? ` / ${row.resetPeriodLabel.toLowerCase()}` : ''}`,
-                    },
-                  ]}
-                />
-              )}
-            </PartSection>
-            <PartSection
-              title="Credit grants"
-              showTitle
-              part={creditGrants}
-              failure="Credit grants could not be loaded"
-              emptyTitle="No credit grants"
-              emptyDescription="This contract has no credit grants."
-              isEmpty={(rows) => rows.length === 0}
-            >
-              {(rows) => (
-                <DetailTable<CreditGrant>
-                  compact
-                  label="Credit grants"
-                  noun="grants"
-                  rows={rows}
-                  columns={[
-                    { key: 'name', header: 'Grant', cell: (row) => row.name },
-                    {
-                      key: 'credits',
-                      header: 'Credits',
-                      cell: (row) => <span className="tabular-nums">{row.credits}</span>,
-                    },
-                    {
-                      key: 'cadence',
-                      header: 'Cadence',
-                      cell: (row) =>
-                        row.cadence === CreditGrantCadence.Recurring && row.period
-                          ? `${CREDIT_GRANT_CADENCE_LABEL[row.cadence]} · ${CREDIT_GRANT_PERIOD_LABEL[row.period].toLowerCase()}`
-                          : CREDIT_GRANT_CADENCE_LABEL[row.cadence],
-                    },
-                    {
-                      key: 'expiry',
-                      header: 'Expiry',
-                      cell: (row) => (
-                        <span className="text-muted-foreground">
-                          {CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}
-                        </span>
-                      ),
-                    },
-                  ]}
-                />
-              )}
-            </PartSection>
-          </>
         ) : null}
       </div>
       {onPreviewQuantity && onChangeQuantity ? (
@@ -834,6 +918,254 @@ export function SubscriptionDetailView({
         onEnd={(line, draft) => void run(onEndCharge?.(line, draft))}
       />
     </DetailShell>
+  )
+}
+
+/** The value a row is about: name, amount. Everything else in the row is `Muted`. */
+function Strong({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cn('text-foreground font-medium', className)}>{children}</span>
+}
+
+function Muted({ children, className }: { children: ReactNode; className?: string }) {
+  return <span className={cn('text-muted-foreground font-normal', className)}>{children}</span>
+}
+
+function ActiveBadge({ active }: { active: boolean }) {
+  return <Pill tone={active ? 'success' : 'neutral'}>{active ? 'Active' : 'Ended'}</Pill>
+}
+
+const sentence = (value: string) => (value ? value.charAt(0).toUpperCase() + value.slice(1) : '—')
+
+const isZero = (money: Money) => Number(money.amount) === 0
+
+const deduction = (money: Money) =>
+  Number(money.amount) > 0 ? `−${formatMoney(money)}` : formatMoney(money)
+
+/**
+ * The contract's own facts. A strip of four leads, each one a thing a reader
+ * checks first; the rest sit in a grid below in the quieter label/value style.
+ */
+function ContractDetails({
+  subscription: s,
+  usage,
+  endLabel,
+  endsOn,
+  onOpenCustomer,
+  onOpenPlan,
+}: {
+  subscription: SubscriptionDetail
+  usage: SubscriptionUsage | undefined
+  endLabel: string
+  endsOn: Date | null
+  onOpenCustomer?: () => void
+  onOpenPlan?: () => void
+}) {
+  const facts = [
+    { label: 'Plan started on', value: day(s.startDate) },
+    { label: 'Current period', value: `${day(s.currentPeriodStart)} – ${day(s.currentPeriodEnd)}` },
+    { label: 'Collection', value: sentence(s.collectionMethod ? words(s.collectionMethod) : '') },
+    {
+      label: 'Billing cycle',
+      value:
+        s.billingPeriodCount > 1
+          ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
+          : s.billingPeriodLabel,
+    },
+  ]
+  return (
+    <Section title="Contract details" flush>
+      <dl className="grid grid-cols-2 gap-y-5 border-b px-6 py-5 md:grid-cols-4 md:divide-x">
+        {facts.map((fact, index) => (
+          <div key={fact.label} className={cn('min-w-0 space-y-1', index > 0 && 'md:pl-6')}>
+            <dt className="text-muted-foreground text-xs">{fact.label}</dt>
+            <dd className="text-foreground text-sm font-medium break-words">{fact.value}</dd>
+          </div>
+        ))}
+      </dl>
+      <div className="p-6">
+        <Properties
+          columns={4}
+          items={[
+            {
+              label: 'Payment terms',
+              value: sentence(s.paymentTerms ? words(s.paymentTerms) : ''),
+            },
+            { label: 'Time zone', value: s.timezone || '—' },
+            {
+              label: 'Commitment',
+              value: s.commitmentAmount
+                ? `${formatMoney(s.commitmentAmount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
+                : 'None',
+            },
+            { label: endLabel, value: day(endsOn) },
+            {
+              label: 'Customer',
+              value: onOpenCustomer ? (
+                <EntityLink label={s.customerName} onOpen={onOpenCustomer} />
+              ) : (
+                s.customerName
+              ),
+            },
+            {
+              label: 'Plan',
+              value: onOpenPlan ? (
+                <EntityLink label={s.planName} onOpen={onOpenPlan} />
+              ) : (
+                s.planName
+              ),
+            },
+            { label: 'Currency', value: s.currency || '—' },
+            {
+              label: 'Usage this period',
+              value: usage ? formatMoney(usage.total) : '—',
+            },
+            ...(s.trialStart || s.trialEnd
+              ? [{ label: 'Trial', value: `${day(s.trialStart)} – ${day(s.trialEnd)}` }]
+              : []),
+            ...(s.endDate ? [{ label: 'Contract end', value: day(s.endDate) }] : []),
+            ...(s.lookupKey
+              ? [
+                  {
+                    label: 'Lookup key',
+                    value: <span className="font-mono text-xs">{s.lookupKey}</span>,
+                  },
+                ]
+              : []),
+            { label: 'Created', value: day(s.createdAt) },
+          ]}
+        />
+      </div>
+    </Section>
+  )
+}
+
+/**
+ * What the next invoice will say if the period closed now: the lines, then the
+ * subtotal, any discount, tax and prepaid credit, and the amount due. Cancelled
+ * and not-yet-started contracts have no next invoice, and a trial's first one
+ * only appears when the trial ends, so each says so or stays out of the way.
+ */
+function InvoicePreviewSection({
+  status,
+  preview,
+  hideZero,
+  onHideZeroChange,
+}: {
+  status: SubscriptionStatus
+  preview: SubscriptionPart<InvoicePreview>
+  hideZero: boolean
+  onHideZeroChange?: (hide: boolean) => void
+}) {
+  if (status === SubscriptionStatus.Cancelled || status === SubscriptionStatus.Incomplete) {
+    return null
+  }
+  if (status === SubscriptionStatus.Trialing) {
+    return (
+      <Section table showTitle title="Upcoming invoice">
+        <SectionEmpty
+          title="Billing starts after the trial"
+          description="The first invoice is created when the trial ends."
+        />
+      </Section>
+    )
+  }
+
+  const data = preview.data
+  const period =
+    data && (data.periodStart || data.periodEnd) ? (
+      <span className="text-muted-foreground text-xs font-normal">
+        {day(data.periodStart)} – {day(data.periodEnd)}
+      </span>
+    ) : undefined
+
+  return (
+    <PartSection
+      title="Upcoming invoice"
+      showTitle
+      part={preview}
+      failure="The invoice preview could not be loaded"
+      emptyTitle="Nothing to bill yet"
+      emptyDescription={
+        hideZero
+          ? 'Every line is zero this period. Turn off Hide zero charges to see them.'
+          : 'This contract has no charges for the current period.'
+      }
+      isEmpty={(value) => value.lines.length === 0}
+      titleAction={period}
+      action={
+        onHideZeroChange ? (
+          <label className="text-muted-foreground flex items-center gap-2 text-xs font-normal">
+            <Switch size="sm" checked={hideZero} onCheckedChange={onHideZeroChange} />
+            Hide zero charges
+          </label>
+        ) : undefined
+      }
+    >
+      {(value) => (
+        <>
+          <DetailTable<InvoicePreviewLine>
+            compact
+            label="Upcoming invoice lines"
+            noun="lines"
+            rows={value.lines}
+            toolbar={false}
+            pageSize={50}
+            columns={[
+              {
+                key: 'name',
+                header: 'Description',
+                text: (line) => `${line.name} ${line.detail}`,
+                cell: (line) => (
+                  <span className="flex min-w-0 flex-col">
+                    <Strong>{line.name}</Strong>
+                    {line.detail ? <Muted className="text-xs">{line.detail}</Muted> : null}
+                  </span>
+                ),
+              },
+              {
+                key: 'quantity',
+                header: 'Quantity',
+                cell: (line) => <Muted className="tabular-nums">{line.quantity || '—'}</Muted>,
+              },
+              {
+                key: 'amount',
+                header: 'Amount',
+                cell: (line) => (
+                  <Strong className="tabular-nums">{formatMoney(line.amount)}</Strong>
+                ),
+              },
+            ]}
+          />
+          <div className="flex justify-end border-t px-6 py-4">
+            <dl className="flex w-full flex-col gap-2 text-sm sm:w-72">
+              <TotalRow label="Subtotal" value={formatMoney(value.subtotal)} />
+              {!isZero(value.discount) ? (
+                <TotalRow label="Discount" value={deduction(value.discount)} />
+              ) : null}
+              {!isZero(value.tax) ? <TotalRow label="Tax" value={formatMoney(value.tax)} /> : null}
+              {!isZero(value.prepaidCredits) ? (
+                <TotalRow label="Prepaid credits" value={deduction(value.prepaidCredits)} />
+              ) : null}
+              <div className="mt-1 flex items-baseline justify-between gap-4 border-t pt-3">
+                <dt className="text-foreground font-medium">Amount due</dt>
+                <dd className="text-foreground text-base font-medium tabular-nums">
+                  {formatMoney(value.amountDue)}
+                </dd>
+              </div>
+            </dl>
+          </div>
+        </>
+      )}
+    </PartSection>
+  )
+}
+
+function TotalRow({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="flex items-baseline justify-between gap-4">
+      <dt className="text-muted-foreground font-normal">{label}</dt>
+      <dd className="text-foreground tabular-nums">{value}</dd>
+    </div>
   )
 }
 
@@ -970,6 +1302,7 @@ function PartSection<T>({
   isEmpty,
   showTitle = false,
   action,
+  titleAction,
   children,
 }: {
   title: string
@@ -981,10 +1314,11 @@ function PartSection<T>({
   isEmpty: (data: T) => boolean
   showTitle?: boolean
   action?: ReactNode
+  titleAction?: ReactNode
   children: (data: T) => ReactNode
 }) {
   const { data } = part
-  const frame = { table: true, title, showTitle, action } as const
+  const frame = { table: true, title, showTitle, action, titleAction } as const
   if (part.isLoading || (!data && !part.isError)) {
     return (
       <Section {...frame}>

@@ -9,11 +9,15 @@ import {
   useExecuteLineChange,
   usePreviewLineChange,
   useSubscription,
+  useSubscriptionAddons,
+  useSubscriptionCoupons,
   useSubscriptionCreditGrants,
   useSubscriptionEntitlements,
+  useSubscriptionInvoicePreview,
   useSubscriptionInvoices,
   useSubscriptionLines,
   useSubscriptionSchedules,
+  useSubscriptionTaxes,
   useSubscriptionUsage,
   useUpdateSubscriptionLineItem,
 } from '@fp/query'
@@ -74,6 +78,15 @@ export function SubscriptionDetailPage({
   const usage = useSubscriptionUsage(subscriptionId)
   const invoices = useSubscriptionInvoices(subscriptionId)
   const schedules = useSubscriptionSchedules(subscriptionId)
+  const addons = useSubscriptionAddons(subscriptionId)
+  const coupons = useSubscriptionCoupons(subscriptionId)
+  const taxes = useSubscriptionTaxes(subscriptionId)
+  const [hideZeroCharges, setHideZeroCharges] = useState(true)
+  const status = subscription.data?.status
+  const preview = useSubscriptionInvoicePreview(subscriptionId, {
+    hideZeroCharges,
+    enabled: status === SubscriptionStatus.Active || status === SubscriptionStatus.Paused,
+  })
   const cancel = useCancelSubscription()
   const activate = useActivateSubscription()
   const addLine = useCreateSubscriptionLineItem()
@@ -115,6 +128,12 @@ export function SubscriptionDetailPage({
         usage={part(usage)}
         invoices={part(invoices)}
         schedules={part(schedules)}
+        preview={part(preview)}
+        hideZeroCharges={hideZeroCharges}
+        onHideZeroChargesChange={setHideZeroCharges}
+        addons={part(addons)}
+        coupons={part(coupons)}
+        taxes={part(taxes)}
         activity={activity}
         onBack={onNavigateToList}
         onOpenCustomer={() => onOpenCustomer(data.customerId)}
