@@ -51,7 +51,6 @@ import {
   EntitlementEditForm,
   type FeatureOption,
   PlanChargesView,
-  PlanCustomerPreview,
   PlanEntitlementsView,
   Pill,
   Status,
@@ -90,9 +89,7 @@ import { subTab } from '../shared/subTab'
  *
  * Header: icon tile, name, lookup key as a copyable id, badges and one ⋯ menu
  * holding every action on the plan as a whole (sync, edit, duplicate, archive). Tabs: Charges,
- * Entitlements, Credit grants, Information. Beside the tabs, a persistent
- * "What customers see" preview reads the same charges, entitlements and grants.
- * Add and edit happen in dialogs; every destructive action goes through a
+ * Entitlements, Credit grants, Information. Add and edit happen in dialogs; every destructive action goes through a
  * `ConfirmDialog` first.
  *
  * The page fetches and composes; every piece it renders is a presentational
@@ -294,15 +291,13 @@ export function PlanDetailPage({
 }
 
 /**
- * Charges — what the plan bills, grouped by when it bills. "Add charge" opens a
+ * Charges — what the plan bills, as one searchable table. "Add charge" opens a
  * dialog that asks Fixed or Usage first; a row's Edit opens the form directly.
  * An edit is saved as a new price version; terminate ends a charge behind a confirm.
  */
 function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
-  const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
-  const grants = useCreditGrants(CreditGrantScope.Plan, planId)
-  const { meters, units, featureOptions } = usePlanFormOptions()
+  const { meters, units } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const terminate = useTerminatePrice()
@@ -336,28 +331,17 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
 
   return (
     <>
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-        <PlanChargesView
-          charges={rows}
-          readOnly={readOnly}
-          loading={loading}
-          error={failed}
-          onRetry={() => void charges.refetch()}
-          meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-          onAdd={() => setForm('add')}
-          onEdit={(charge) => setForm(charge)}
-          onTerminate={(charge) => setTerminating(charge)}
-        />
-        {charges.isSuccess ? (
-          <PlanCustomerPreview
-            charges={rows}
-            entitlements={entitlements.data ?? []}
-            grants={grants.data ?? []}
-            meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-            featureUnit={(id) => featureOptions.find((f) => f.id === id)?.unit}
-          />
-        ) : null}
-      </div>
+      <PlanChargesView
+        charges={rows}
+        readOnly={readOnly}
+        loading={loading}
+        error={failed}
+        onRetry={() => void charges.refetch()}
+        meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+        onAdd={() => setForm('add')}
+        onEdit={(charge) => setForm(charge)}
+        onTerminate={(charge) => setTerminating(charge)}
+      />
 
       <AddChargeDialog
         open={form !== null}

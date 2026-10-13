@@ -44,7 +44,7 @@ function ChargesPlayground({
   )
 }
 
-/** A plan's charges, grouped into fixed and usage bands. Drag the counts from 0 to 20 to see empty, short and long lists. */
+/** A plan's charges in one table with search and filters. Drag the counts from 0 to 20 to see empty, short and long lists. */
 const meta = {
   title: 'App/Product catalog/Plans/Plan charges',
   component: ChargesPlayground,
@@ -86,8 +86,7 @@ export const Playground: Story = {}
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('group', { name: 'Fixed charges' })).toBeVisible()
-    await expect(canvas.getByRole('group', { name: 'Usage charges' })).toBeVisible()
+    await expect(canvas.getByRole('table', { name: 'Charges table' })).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Add charge' })).toBeVisible()
   },
 }
@@ -125,14 +124,9 @@ export const LoadFailed: Story = {
   },
 }
 
-/** Only fixed charges: the usage band is not drawn. */
+/** Only fixed charges. */
 export const FixedOnly: Story = {
   args: { fixedCharges: 3, usageCharges: 0 },
-  play: async ({ canvasElement }) => {
-    const canvas = within(canvasElement)
-    await expect(canvas.getByRole('group', { name: 'Fixed charges' })).toBeVisible()
-    await expect(canvas.queryByRole('group', { name: 'Usage charges' })).toBeNull()
-  },
 }
 
 /** Only usage charges, priced as package bundles. */
@@ -140,7 +134,7 @@ export const UsageOnlyPackages: Story = {
   args: { fixedCharges: 0, usageCharges: 3, usageModel: BillingModel.Package },
 }
 
-/** Twenty rows in each band. */
+/** Forty rows: the table pages them. */
 export const LongList: Story = {
   args: { fixedCharges: 20, usageCharges: 20 },
 }

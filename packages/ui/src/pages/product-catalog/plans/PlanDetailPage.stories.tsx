@@ -16,7 +16,6 @@ import {
 import { Status, Tag } from '@ui/pages'
 import { PlanChargesView } from '@ui/pages/product-catalog/plans/PlanChargesView'
 import { PlanCreditGrantsView } from '@ui/pages/product-catalog/plans/PlanCreditGrantsView'
-import { PlanCustomerPreview } from '@ui/pages/product-catalog/plans/PlanCustomerPreview'
 import { PlanEntitlementsView } from '@ui/pages/product-catalog/plans/PlanEntitlementsView'
 import {
   makeCharges,
@@ -137,22 +136,14 @@ function PlanDetailPage({
         />
 
         {tab === 'overview' ? (
-          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
-            <PlanChargesView
-              charges={charges}
-              readOnly={archived}
-              meterUnit={meterUnitOf}
-              onAdd={fn()}
-              onEdit={fn()}
-              onTerminate={fn()}
-            />
-            <PlanCustomerPreview
-              charges={charges}
-              entitlements={entitlements}
-              grants={grants}
-              meterUnit={meterUnitOf}
-            />
-          </div>
+          <PlanChargesView
+            charges={charges}
+            readOnly={archived}
+            meterUnit={meterUnitOf}
+            onAdd={fn()}
+            onEdit={fn()}
+            onTerminate={fn()}
+          />
         ) : null}
 
         {tab === 'entitlements' ? (
@@ -263,8 +254,8 @@ type Story = StoryObj<typeof meta>
 export const Playground: Story = {
   play: async ({ canvasElement }) => {
     await expect(
-      (await within(canvasElement).findAllByText('Fixed charges')).length,
-    ).toBeGreaterThan(0)
+      await within(canvasElement).findByRole('table', { name: 'Charges table' }),
+    ).toBeVisible()
   },
 }
 

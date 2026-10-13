@@ -13,8 +13,8 @@ import {
   chargeToDraft,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { cn } from '@ui/lib/cn'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
+import { DetailTable, type DetailColumn } from '../../shared/DetailTable'
 import { Section } from '@ui/compositions/layout/Section'
 import { chargeLabel, pricingSummary } from './PlanPreviewCard'
 
@@ -34,28 +34,6 @@ export interface PlanChargesViewProps {
   meterUnit?: (meterId: string) => string | undefined
 }
 
-/** Fixed and usage charges each get one quiet treatment: a tinted header band and a thin rail on their rows. */
-const GROUPS = [
-  {
-    type: PriceType.Fixed,
-    title: 'Fixed charges',
-    note: 'Billed at the start of each period',
-    icon: RepeatIcon,
-    band: 'bg-muted/60',
-    tile: 'bg-foreground/8 text-foreground/70',
-    rail: 'border-l-foreground/40',
-  },
-  {
-    type: PriceType.Usage,
-    title: 'Usage charges',
-    note: 'Billed at the end of the period the usage happened in',
-    icon: GaugeIcon,
-    band: 'bg-muted/60',
-    tile: 'bg-foreground/8 text-foreground/70',
-    rail: 'border-l-muted-foreground/40',
-  },
-] as const
-
 /** "Flat fee", "Volume tiered", "Slab tiered", "Package". */
 function modelLabel(charge: Charge): string {
   if (charge.billingModel === BillingModel.Tiered) {
@@ -64,13 +42,15 @@ function modelLabel(charge: Charge): string {
   return BILLING_MODEL_LABEL[charge.billingModel]
 }
 
-/** "Monthly, in advance" / "Monthly, in arrears". */
-function cadenceLabel(charge: Charge): string {
-  const period = BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? charge.billingPeriod
-  return `${period}, ${charge.invoiceCadence === InvoiceCadence.Advance ? 'in advance' : 'in arrears'}`
-}
+const typeLabel = (charge: Charge) => (charge.type === PriceType.Usage ? 'Usage' : 'Fixed')
 
-/** A plan's charges, grouped by when they bill. */
+const periodLabel = (charge: Charge) =>
+  BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? charge.billingPeriod
+
+const timingLabel = (charge: Charge) =>
+  charge.invoiceCadence === InvoiceCadence.Advance ? 'In advance' : 'In arrears'
+
+/** A plan's charges as one searchable, filterable table. */
 export function PlanChargesView({
   charges,
   onAdd,
@@ -83,123 +63,140 @@ export function PlanChargesView({
   meterUnit,
 }: PlanChargesViewProps) {
   const meterName = (id: string) => charges.find((c) => c.meterId === id)?.meterName ?? id
+  const nameOf = (charge: Charge) => chargeLabel(chargeToDraft(charge), meterName)
+  const priceOf = (charge: Charge) =>
+    charge.displayAmount && charge.billingModel === BillingModel.FlatFee
+      ? charge.displayAmount
+      : pricingSummary(
+          chargeToDraft(charge),
+          (charge.currency || 'usd').toUpperCase(),
+          undefined,
+          charge.meterId ? meterUnit?.(charge.meterId) : undefined,
+        )
+
+  if (loading || error || charges.length === 0) {
+    return (
+      <Section title="Charges" flush>
+        {loading ? (
+          <div className="p-6">
+            <LoadingRows rows={3} columns={5} />
+          </div>
+        ) : error ? (
+          <div className="p-6">
+            <ErrorState
+              title="Charges could not be loaded"
+              description="The plan's prices did not load, so nothing is shown rather than a wrong list."
+              {...(onRetry ? { onRetry } : {})}
+            />
+          </div>
+        ) : (
+          <SectionEmpty
+            scene="catalog"
+            title="No charges yet"
+            description="Nothing is billed yet. Add a fixed fee, a usage charge, or both."
+            action={
+              readOnly ? null : (
+                <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+                  <PlusIcon aria-hidden />
+                  Add the first charge
+                </Button>
+              )
+            }
+          />
+        )}
+      </Section>
+    )
+  }
+
+  const columns: DetailColumn<Charge>[] = [
+    {
+      key: 'name',
+      header: 'Charge',
+      sortBy: (charge) => nameOf(charge).toLowerCase(),
+      text: nameOf,
+      cell: (charge) => {
+        const Icon = charge.type === PriceType.Usage ? GaugeIcon : RepeatIcon
+        return (
+          <span className="flex min-w-0 items-center gap-2.5">
+            <Icon aria-hidden className="text-muted-foreground size-4 shrink-0" />
+            <span className="truncate font-medium">{nameOf(charge)}</span>
+          </span>
+        )
+      },
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      sortBy: typeLabel,
+      text: typeLabel,
+      cell: (charge) => <span className="text-muted-foreground">{typeLabel(charge)}</span>,
+    },
+    {
+      key: 'model',
+      header: 'Model',
+      sortBy: modelLabel,
+      text: modelLabel,
+      cell: (charge) => <span className="text-muted-foreground">{modelLabel(charge)}</span>,
+    },
+    {
+      key: 'period',
+      header: 'Billed',
+      text: (charge) => `${periodLabel(charge)} ${timingLabel(charge)}`,
+      cell: (charge) => (
+        <span className="text-muted-foreground">
+          {periodLabel(charge)}, {timingLabel(charge).toLowerCase()}
+        </span>
+      ),
+    },
+    {
+      key: 'price',
+      header: 'Price',
+      text: priceOf,
+      cell: (charge) => <span className="tabular-nums">{priceOf(charge)}</span>,
+    },
+    ...(readOnly
+      ? []
+      : [
+          {
+            key: 'actions',
+            header: '',
+            width: 48,
+            cell: (charge: Charge) => (
+              <RowActionsMenu
+                label={charge.displayName || charge.meterName || 'charge'}
+                onEdit={() => onEdit(charge)}
+                onRemove={() => onTerminate(charge)}
+                removeLabel="Terminate"
+              />
+            ),
+          },
+        ]),
+  ]
 
   return (
-    <Section
-      title="Charges"
-      flush
-      action={
-        readOnly || loading || error || charges.length === 0 ? undefined : (
-          <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-            <PlusIcon aria-hidden />
-            Add charge
-          </Button>
-        )
-      }
-    >
-      {loading ? (
-        <div className="p-6">
-          <LoadingRows rows={3} columns={4} />
-        </div>
-      ) : error ? (
-        <div className="p-6">
-          <ErrorState
-            title="Charges could not be loaded"
-            description="The plan's prices did not load, so nothing is shown rather than a wrong list."
-            {...(onRetry ? { onRetry } : {})}
-          />
-        </div>
-      ) : charges.length === 0 ? (
-        <SectionEmpty
-          scene="catalog"
-          title="No charges yet"
-          description="Nothing is billed yet. Add a fixed fee, a usage charge, or both."
-          action={
-            readOnly ? null : (
-              <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-                <PlusIcon aria-hidden />
-                Add the first charge
-              </Button>
-            )
-          }
-        />
-      ) : (
-        GROUPS.map((group) => {
-          const rows = charges.filter((c) => c.type === group.type)
-          if (rows.length === 0) return null
-          const Icon = group.icon
-          return (
-            <div key={group.type} role="group" aria-label={group.title}>
-              <div
-                className={cn(
-                  'flex items-center gap-3 border-y px-6 py-2.5 first:border-t-0',
-                  group.band,
-                )}
-              >
-                <span
-                  aria-hidden
-                  className={cn(
-                    'flex size-6 items-center justify-center rounded-md [&_svg]:size-3.5',
-                    group.tile,
-                  )}
-                >
-                  <Icon />
-                </span>
-                <span className="text-[13px] font-medium">{group.title}</span>
-                <span className="text-muted-foreground text-xs tabular-nums">{rows.length}</span>
-                <span className="text-muted-foreground ml-auto hidden text-xs sm:block">
-                  {group.note}
-                </span>
-              </div>
-              <ul className="divide-border/50 divide-y">
-                {rows.map((charge) => {
-                  const draft = chargeToDraft(charge)
-                  const currency = (charge.currency || 'usd').toUpperCase()
-                  return (
-                    <li
-                      key={charge.id}
-                      className={cn(
-                        'grid grid-cols-[minmax(0,1.2fr)_minmax(0,0.8fr)_minmax(0,1.1fr)_minmax(0,1.5fr)_32px] items-center gap-4 border-l-2 py-4 pr-6 pl-[22px]',
-                        group.rail,
-                      )}
-                    >
-                      <p className="truncate text-sm font-medium">
-                        {chargeLabel(draft, meterName)}
-                      </p>
-                      <span className="text-muted-foreground truncate text-[13px]">
-                        {modelLabel(charge)}
-                      </span>
-                      <span className="text-muted-foreground truncate text-[13px]">
-                        {cadenceLabel(charge)}
-                      </span>
-                      <span className="truncate text-[13px] tabular-nums">
-                        {charge.displayAmount && charge.billingModel === BillingModel.FlatFee
-                          ? charge.displayAmount
-                          : pricingSummary(
-                              draft,
-                              currency,
-                              undefined,
-                              charge.meterId ? meterUnit?.(charge.meterId) : undefined,
-                            )}
-                      </span>
-                      {readOnly ? (
-                        <span />
-                      ) : (
-                        <RowActionsMenu
-                          label={charge.displayName || charge.meterName || 'charge'}
-                          onEdit={() => onEdit(charge)}
-                          onRemove={() => onTerminate(charge)}
-                          removeLabel="Terminate"
-                        />
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-            </div>
-          )
-        })
-      )}
+    <Section table title="Charges">
+      <DetailTable<Charge>
+        compact
+        label="Charges"
+        noun="charges"
+        rows={charges}
+        {...(readOnly
+          ? {}
+          : {
+              action: (
+                <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
+                  <PlusIcon aria-hidden />
+                  Add charge
+                </Button>
+              ),
+            })}
+        facets={[
+          { id: 'type', label: 'Type', value: typeLabel },
+          { id: 'model', label: 'Model', value: modelLabel },
+          { id: 'period', label: 'Billing period', value: periodLabel },
+        ]}
+        columns={columns}
+      />
     </Section>
   )
 }
