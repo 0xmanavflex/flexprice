@@ -3486,6 +3486,15 @@ export const handlers = [
       ],
     }),
   ),
+  // Like the live API: the update request has no `metadata` field, so the
+  // record comes back unchanged and the console reports the edit as unsaved.
+  http.put(`${BASE}/subscriptions/:id`, ({ params }) => {
+    const row = sourceFor('subscriptions').items.find(
+      (item) => readString(item, 'id') === params['id'],
+    )
+    if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
+    return HttpResponse.json(row)
+  }),
   http.get(`${BASE}/subscriptions/:id`, ({ params }) => {
     const row = sourceFor('subscriptions').items.find(
       (item) => readString(item, 'id') === params['id'],

@@ -240,6 +240,7 @@ export {
   toLineItemChangeRequest,
   toUpdateLineItemRequest,
   useActivateSubscription,
+  useUpdateSubscriptionMetadata,
   useCancelSubscription,
   useCreateSubscription,
   useCreateSubscriptionLineItem,

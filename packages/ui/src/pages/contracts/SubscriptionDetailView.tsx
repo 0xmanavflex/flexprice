@@ -142,6 +142,8 @@ export interface SubscriptionDetailViewProps {
   /** Incomplete contracts only: the More item and the banner button. */
   onActivate?: () => void
   onCancel?: () => void
+  /** Saves the contract's metadata map. Omitted, the metadata card is read-only. */
+  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /**
    * Charge editing on the Charges tab. Each handler returns when the request has
    * finished; a rejection keeps the dialog open and shows the error. Leave all
@@ -224,6 +226,7 @@ export function SubscriptionDetailView({
   onOpenPlan,
   onOpenInvoice,
   onActivate,
+  onSaveMetadata,
   onCancel,
   onAddCharge,
   onEditCharge,
@@ -790,7 +793,10 @@ export function SubscriptionDetailView({
 
             <div className="flex flex-col gap-5 xl:sticky xl:top-6">
               <ActivitySection entries={activityEntries} />
-              <MetadataCard metadata={s.metadata} />
+              <MetadataCard
+                metadata={s.metadata}
+                {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
+              />
               <RelatedCard items={related} />
             </div>
           </div>

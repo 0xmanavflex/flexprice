@@ -56,6 +56,9 @@ export {
 } from './settings'
 export type { WebhookDashboard } from './settings'
 
+/** `PUT /subscriptions/{id}` with `{metadata}`, which the SDK strips. See `subscriptionMetadata.ts`. */
+export { updateSubscriptionMetadata } from './subscriptionMetadata'
+
 /**
  * `GET /creditnotes`, live but absent from the SDK. See `creditNotes.ts`.
  */

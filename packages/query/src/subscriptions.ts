@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type Flexprice, type FlexpriceModels, call } from '@fp/api'
+import {
+  ApiError,
+  ErrorKind,
+  type Flexprice,
+  type FlexpriceModels,
+  call,
+  updateSubscriptionMetadata,
+} from '@fp/api'
 import {
   type AddContractAddon,
   type AddContractCharge,
@@ -61,7 +68,7 @@ import { queryKeys } from './keys'
 import { toChargeRequest, toTier } from './prices'
 import { toCreateTaxAssociationRequest } from './taxAssociations'
 import { toOverrideLineItem } from './priceOverrides'
-import { useFlexprice } from './provider'
+import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
 
 /**
  * Subscriptions: the translation between product vocabulary and the API.
@@ -567,6 +574,29 @@ export function useActivateSubscription() {
   return useMutation({
     mutationFn: ({ id, startDate }: { id: string; startDate: Date }) =>
       call(() => client.subscriptions.activateSubscription(id, { startDate })),
+    onSuccess: () => invalidateSubscription(queryClient),
+  })
+}
+
+/**
+ * Replace a subscription's metadata — `PUT /subscriptions/{id}` with
+ * `{metadata}`, sent around the SDK because its request model strips the field.
+ * Rejects when the API answers without having stored it; see `@fp/api`.
+ */
+export function useUpdateSubscriptionMetadata(environmentId: string | null) {
+  const serverURL = useFlexpriceServerURL()
+  const auth = useFlexpriceAuth()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async ({ id, metadata }: { id: string; metadata: Record<string, string> }) => {
+      if (!environmentId) {
+        throw new ApiError(ErrorKind.Forbidden, 'Choose an environment first.')
+      }
+      const token = await auth.getToken()
+      if (!token) throw new ApiError(ErrorKind.Unauthorized, 'Sign in to save metadata.')
+      return updateSubscriptionMetadata(serverURL, token, environmentId, id, metadata)
+    },
     onSuccess: () => invalidateSubscription(queryClient),
   })
 }
