@@ -944,20 +944,37 @@ export function SubscriptionDetailView({
                 noun="invoices"
                 rows={rows}
                 {...(onOpenInvoice ? { onRowClick: (row) => onOpenInvoice(row.id) } : {})}
+                facets={[
+                  {
+                    id: 'status',
+                    label: 'Status',
+                    value: (row) => sentence(words(row.status)),
+                  },
+                  {
+                    id: 'payment',
+                    label: 'Payment',
+                    value: (row) =>
+                      row.paymentStatus ? sentence(words(row.paymentStatus)) : 'No payment',
+                  },
+                ]}
                 columns={[
                   {
                     key: 'number',
                     header: 'Invoice number',
+                    sortBy: (row) => row.number,
+                    text: (row) => row.number,
                     cell: (row) => <Strong className="font-mono text-xs">{row.number}</Strong>,
                   },
                   {
                     key: 'issued',
                     header: 'Issue date',
+                    sortBy: (row) => row.issuedAt?.getTime() ?? 0,
                     cell: (row) => <Muted>{day(row.issuedAt)}</Muted>,
                   },
                   {
                     key: 'due',
                     header: 'Due date',
+                    sortBy: (row) => row.dueDate?.getTime() ?? 0,
                     cell: (row) => <Muted>{day(row.dueDate)}</Muted>,
                   },
                   {
@@ -969,6 +986,7 @@ export function SubscriptionDetailView({
                   {
                     key: 'amount',
                     header: 'Amount',
+                    sortBy: (row) => Number(row.total.amount),
                     cell: (row) => (
                       <Strong className="tabular-nums">{formatMoney(row.total)}</Strong>
                     ),
