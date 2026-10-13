@@ -609,14 +609,14 @@ const openPricing = async (canvasElement: HTMLElement) => {
   return canvas
 }
 
-/** Overview runs contract details, upcoming invoice, overridden charges, entitlements, grants, add-ons, coupons, taxes. */
+/** Overview runs contract details, upcoming invoice, contract-specific charges, entitlements, grants, add-ons, coupons, taxes. */
 export const OverviewSummary: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const order = [
       'Contract details',
       'Upcoming invoice',
-      'Overridden charges',
+      'Contract-specific charges',
       'Entitlements',
       'Credit grants',
       'Add-ons',
@@ -635,7 +635,7 @@ export const OverviewSummary: Story = {
     // Charges no longer sit on Overview unless the contract overrides the plan.
     await expect(canvas.queryByRole('heading', { name: 'Charges' })).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Billing & collection' })).toBeNull()
-    // The overridden charges hand off to the Charges tab.
+    // The contract-specific charges hand off to the Charges tab.
     await userEvent.click(canvas.getByRole('button', { name: 'Manage pricing' }))
     await waitFor(() =>
       expect(canvas.getByRole('tab', { name: /Charges/ })).toHaveAttribute('aria-selected', 'true'),
@@ -644,10 +644,10 @@ export const OverviewSummary: Story = {
 }
 
 /** Overview lists only what the contract changed from its plan. */
-export const OverriddenCharges: Story = {
+export const ContractSpecificCharges: Story = {
   play: async ({ canvasElement }) => {
     const section = within(
-      (await within(canvasElement).findByRole('heading', { name: 'Overridden charges' })).closest(
+      (await within(canvasElement).findByRole('heading', { name: 'Contract-specific charges' })).closest(
         'section',
       )!,
     )
@@ -656,13 +656,13 @@ export const OverriddenCharges: Story = {
   },
 }
 
-/** A contract that follows its plan has no Overridden charges section at all. */
-export const NoOverriddenCharges: Story = {
+/** A contract that follows its plan has no Contract-specific charges section at all. */
+export const NoContractSpecificCharges: Story = {
   args: { ...BASE, lines: ready(LINES.filter((line) => line.source === 'plan')) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByRole('heading', { name: 'Entitlements' })).toBeVisible()
-    await expect(canvas.queryByRole('heading', { name: 'Overridden charges' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Contract-specific charges' })).toBeNull()
   },
 }
 

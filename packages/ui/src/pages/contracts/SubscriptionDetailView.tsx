@@ -92,7 +92,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     '@reui/badge',
     'compositions/ActivityLog',
   ],
-  note: 'Contract detail (read-only): DetailShell header with every action in More, four tabs (Overview, Charges, Usage, Invoices) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners lead the Overview tab, then contract details, the upcoming invoice preview, overridden charges, entitlements, credit grants, add-ons, coupons and taxes.',
+  note: 'Contract detail (read-only): DetailShell header with every action in More, four tabs (Overview, Charges, Usage, Invoices) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners lead the Overview tab, then contract details, the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes.',
 })
 
 /** One section's data with its own loading and failure state, so a slow tab never blocks the page. */
@@ -518,11 +518,11 @@ export function SubscriptionDetailView({
 
               {(overriddenLines.data?.length ?? 0) > 0 ? (
                 <PartSection
-                  title="Overridden charges"
+                  title="Contract-specific charges"
                   showTitle
                   part={overriddenLines}
                   failure="Charges could not be loaded"
-                  emptyTitle="No overridden charges"
+                  emptyTitle="No contract-specific charges"
                   scene="billing"
                   emptyDescription="Every charge on this contract comes from its plan."
                   isEmpty={(rows) => rows.length === 0}
@@ -541,7 +541,7 @@ export function SubscriptionDetailView({
                     <DetailTable<SubscriptionLine>
                       compact
                       pageSize={5}
-                      label="Overridden charges"
+                      label="Contract-specific charges"
                       noun="charges"
                       rows={rows}
                       toolbar={false}
