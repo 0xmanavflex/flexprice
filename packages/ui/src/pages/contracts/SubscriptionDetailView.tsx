@@ -852,19 +852,6 @@ export function SubscriptionDetailView({
                 />
               )}
             </PartSection>
-            {lines.data?.some((line) => line.source === 'plan') ? (
-              <p className="text-muted-foreground flex flex-wrap items-center gap-x-1 px-1 text-[13px]">
-                Charges marked From plan are shared by every contract on {s.planName}. Editing them
-                here changes this contract only.
-                {onOpenPlan ? (
-                  <>
-                    {' '}
-                    To change them for everyone,{' '}
-                    <EntityLink label="edit the plan" onOpen={onOpenPlan} />.
-                  </>
-                ) : null}
-              </p>
-            ) : null}
           </>
         ) : null}
 
