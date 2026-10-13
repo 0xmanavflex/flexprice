@@ -27,10 +27,9 @@ test('contract detail overview shows the upcoming invoice and entitlements', asy
   await expect(invoice.getByText('API usage')).toBeVisible()
   await expect(invoice.getByText('Amount due')).toBeVisible()
   await expect(invoice.getByText('$275.56')).toBeVisible()
-  // The zero line is hidden by default and comes back when the switch is turned off.
+  // Zero-amount lines never reach the preview, and there is no switch to bring them back.
   await expect(invoice.getByText('Extra seats')).toHaveCount(0)
-  await invoice.getByRole('switch', { name: 'Hide zero charges' }).click()
-  await expect(invoice.getByText('Extra seats')).toBeVisible()
+  await expect(page.getByRole('switch', { name: 'Hide zero charges' })).toHaveCount(0)
 
   await expect(page.getByText('API calls', { exact: true })).toBeVisible()
   await expect(page.getByText('Single sign-on')).toBeVisible()
@@ -47,4 +46,30 @@ test('contract detail charges tab lists the contract charges', async ({ page }) 
   await expect(page.getByText('API usage')).toBeVisible()
   await expect(page.getByText(/99\.00/)).toBeVisible()
   await expect(page.getByRole('button', { name: 'Manage pricing' })).toBeVisible()
+})
+
+test('contract detail overview keeps every add section and adds a coupon', async ({ page }) => {
+  await page.goto('/subscriptions')
+  await page.getByRole('row').nth(1).click()
+  await expect(page).toHaveURL(/\/subscriptions\/[^/]+$/)
+
+  for (const name of ['Entitlements', 'Credit grants', 'Add-ons', 'Coupons', 'Taxes']) {
+    await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()
+  }
+  for (const name of [
+    'Add entitlement',
+    'Add credit grant',
+    'Add add-on',
+    'Add coupon',
+    'Add tax',
+  ]) {
+    await expect(page.getByRole('button', { name })).toBeVisible()
+  }
+
+  await page.getByRole('button', { name: 'Add coupon' }).click()
+  const dialog = page.getByRole('dialog')
+  await dialog.getByRole('combobox', { name: /Coupon/ }).click()
+  await page.getByRole('option').first().click()
+  await dialog.getByRole('button', { name: 'Add coupon' }).click()
+  await expect(dialog).toHaveCount(0)
 })

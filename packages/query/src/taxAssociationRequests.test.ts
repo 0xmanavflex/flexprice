@@ -13,6 +13,16 @@ describe('tax association mapping', () => {
     expect(CreateTaxAssociationRequest$outboundSchema.safeParse(request).success).toBe(true)
   })
 
+  it('builds a subscription-scoped request the SDK accepts', () => {
+    const request = toCreateTaxAssociationRequest(
+      'sub_1',
+      { ...emptyTaxAssociation(), taxRateCode: 'US-OR' },
+      'subscription',
+    )
+    expect(request).toMatchObject({ entityType: 'subscription', entityId: 'sub_1' })
+    expect(CreateTaxAssociationRequest$outboundSchema.safeParse(request).success).toBe(true)
+  })
+
   it('reads the rate off the association and defaults the behavior', () => {
     expect(
       toTaxAssociation({

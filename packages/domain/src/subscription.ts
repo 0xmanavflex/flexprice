@@ -397,3 +397,13 @@ export interface SubscriptionTax {
   inclusive: boolean
   priority: number
 }
+
+/** Attach an add-on to one contract. */
+export interface AddContractAddon {
+  addonId: string
+}
+
+/** Apply a coupon to one contract, by its code. */
+export interface AddContractCoupon {
+  couponCode: string
+}

@@ -40,6 +40,18 @@ export interface CustomerIntegration {
   providerEntityId?: string | undefined
 }
 
+/**
+ * A customer's mapping to one provider as the contract header shows it: the
+ * mark, the provider-side id, and when the link was made and last changed.
+ */
+export interface IntegrationLink extends CustomerIntegration {
+  /** The mapping's own id. */
+  mappingId: string
+  providerEntityId: string
+  createdAt: Date | null
+  updatedAt: Date | null
+}
+
 /** The read model the list renders. */
 export interface Customer {
   id: string

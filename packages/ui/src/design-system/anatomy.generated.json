@@ -165,7 +165,8 @@
       "composes": [],
       "usedBy": [
         "CustomerTaxSection",
-        "CustomerWalletView"
+        "CustomerWalletView",
+        "TaxDialog"
       ],
       "story": "./src/compositions/feedback/AppFailure.stories.tsx"
     },
@@ -1066,11 +1067,14 @@
       ],
       "usedBy": [
         "ContractChargeDialog",
+        "ContractIntegrations",
         "ContractQuantityDialog",
+        "ContractSectionDialogs",
         "CustomerTaxSection",
         "CustomerWalletView",
         "EnvironmentForm",
-        "EnvironmentRenameForm"
+        "EnvironmentRenameForm",
+        "TaxDialog"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -1079,9 +1083,11 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
+        "ContractIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
         "ManageConnectionSheet",
+        "TaxDialog",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/feedback/ConfirmDialog.stories.tsx"
@@ -1156,6 +1162,24 @@
       ],
       "story": null
     },
+    "ContractIntegrations": {
+      "file": "src/pages/contracts/ContractIntegrations.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "ConfirmDialog",
+        "CopyIcon",
+        "FormDialog",
+        "IntegrationMark",
+        "LabelWithHint",
+        "OptionSelect",
+        "PlusIcon"
+      ],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
+      "story": null
+    },
     "ContractQuantityDialog": {
       "file": "src/pages/contracts/ContractQuantityDialog.tsx",
       "layer": "surface",
@@ -1163,6 +1187,23 @@
         "Composer",
         "Field",
         "FormDialog"
+      ],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
+      "story": null
+    },
+    "ContractSectionDialogs": {
+      "file": "src/pages/contracts/ContractSectionDialogs.tsx",
+      "layer": "surface",
+      "composes": [
+        "Composer",
+        "CreditGrantCreateForm",
+        "EntitlementCreateForm",
+        "FormDialog",
+        "LabelWithHint",
+        "OptionSelect",
+        "TaxDialog"
       ],
       "usedBy": [
         "SubscriptionDetailView"
@@ -1223,6 +1264,7 @@
         "AddonGrid",
         "ChoiceCards",
         "Composer",
+        "ContractIntegrations",
         "CopyChip",
         "CopyEmail",
         "CopyId",
@@ -1442,6 +1484,7 @@
         "OptionSelect"
       ],
       "usedBy": [
+        "ContractSectionDialogs",
         "PlanForm",
         "SubscriptionForm"
       ],
@@ -1557,6 +1600,7 @@
         "EmptyState",
         "EntityHeader",
         "EntityLink",
+        "EyeIcon",
         "IntegrationMark",
         "IntegrationMarks",
         "MetadataCard",
@@ -1910,6 +1954,7 @@
         "PlanEntitlementsView",
         "RevenueDashboard",
         "SubscriptionDetailView",
+        "TaxDialog",
         "WalletLedgerTable",
         "WebhookEndpointDetail"
       ],
@@ -2109,6 +2154,7 @@
         "PricingCatalogBlock",
         "SettingsShell",
         "SubscriptionForm",
+        "TaxDialog",
         "WebhookEventCatalog"
       ],
       "story": "./src/compositions/feedback/EmptyState.stories.tsx"
@@ -2131,6 +2177,7 @@
         "OptionCombobox"
       ],
       "usedBy": [
+        "ContractSectionDialogs",
         "PlanForm"
       ],
       "story": "./src/pages/product-catalog/entitlements/EntitlementForm.stories.tsx"
@@ -2383,6 +2430,7 @@
       "composes": [],
       "usedBy": [
         "AcceptInvitationForm",
+        "CustomerDetail",
         "SignInForm",
         "SpecField",
         "SyncOptions",
@@ -2869,12 +2917,15 @@
       "usedBy": [
         "AddChargeDialog",
         "ContractChargeDialog",
+        "ContractIntegrations",
         "ContractQuantityDialog",
+        "ContractSectionDialogs",
         "CustomerTaxSection",
         "CustomerWalletView",
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
+        "TaxDialog",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/FormDialog.stories.tsx"
@@ -3304,6 +3355,7 @@
         "CopyValue"
       ],
       "usedBy": [
+        "ContractIntegrations",
         "CustomerDetail"
       ],
       "story": null
@@ -3523,11 +3575,14 @@
         "InfoHint"
       ],
       "usedBy": [
+        "ContractIntegrations",
+        "ContractSectionDialogs",
         "CustomerTaxSection",
         "CustomerWalletView",
         "EnvironmentForm",
         "InvoiceForm",
-        "SignInForm"
+        "SignInForm",
+        "TaxDialog"
       ],
       "story": "./src/compositions/forms/LabelWithHint.stories.tsx"
     },
@@ -3713,7 +3768,8 @@
         "CustomerTaxSection",
         "CustomerWalletView",
         "PlanChargesView",
-        "SubscriptionDetailView"
+        "SubscriptionDetailView",
+        "TaxDialog"
       ],
       "story": "./src/compositions/feedback/States.stories.tsx"
     },
@@ -4082,6 +4138,8 @@
       "usedBy": [
         "ChargeForm",
         "ContractAddChargeForm",
+        "ContractIntegrations",
+        "ContractSectionDialogs",
         "CouponCreateForm",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
@@ -4096,6 +4154,7 @@
         "SpecField",
         "SubscriptionForm",
         "SyncOptions",
+        "TaxDialog",
         "TaxRateCreateForm",
         "TaxRateEditForm",
         "UsageTermsFields",
@@ -4601,6 +4660,7 @@
       "usedBy": [
         "AddonGrid",
         "ChargeTable",
+        "ContractIntegrations",
         "CostSheetGrid",
         "CouponGrid",
         "CreditGrantTable",
@@ -4628,6 +4688,7 @@
         "ShellSearch",
         "SubscriptionDetailView",
         "SubscriptionGrid",
+        "TaxDialog",
         "TaxRateGrid",
         "TierTable",
         "WebhookEndpointDetail",
@@ -5089,6 +5150,7 @@
         "PlanEntitlementsView",
         "RelatedCard",
         "SubscriptionDetailView",
+        "TaxDialog",
         "WebhookEndpointDetail",
         "WebhookEventCatalog"
       ],
@@ -5603,7 +5665,9 @@
       "composes": [
         "ActivitySection",
         "ContractChargeDialog",
+        "ContractIntegrations",
         "ContractQuantityDialog",
+        "ContractSectionDialogs",
         "DetailMoreMenu",
         "DetailShell",
         "DetailTable",
@@ -5756,6 +5820,27 @@
         "PlanGrid"
       ],
       "story": null
+    },
+    "TaxDialog": {
+      "file": "src/pages/customers/CustomerTaxSection.tsx",
+      "layer": "surface",
+      "composes": [
+        "AppFailure",
+        "Composer",
+        "ConfirmDialog",
+        "DetailTable",
+        "EmptyState",
+        "FormDialog",
+        "LabelWithHint",
+        "LoadingRows",
+        "OptionSelect",
+        "PlusIcon",
+        "Section"
+      ],
+      "usedBy": [
+        "ContractSectionDialogs"
+      ],
+      "story": "./src/pages/customers/CustomerTaxSection.stories.tsx"
     },
     "TaxRateCreateForm": {
       "file": "src/pages/settings/taxes/TaxRateForm.tsx",

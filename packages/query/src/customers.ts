@@ -5,6 +5,7 @@ import {
   type Customer,
   type CustomerIntegration,
   type EditCustomer,
+  type IntegrationLink,
   type CustomerDetail,
   type CustomerQuery,
   CustomerSortField,
@@ -419,5 +420,114 @@ export function useDeleteCustomer() {
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
       void queryClient.removeQueries({ queryKey: queryKeys.customers.detail(id) })
     },
+  })
+}
+
+/** One row of `GET /integrations/mappings`, after the SDK camelCases it. */
+export interface IntegrationMappingWire {
+  id?: string | undefined
+  providerType?: string | undefined
+  providerEntityId?: string | undefined
+  status?: string | undefined
+  createdAt?: Date | undefined
+  updatedAt?: Date | undefined
+}
+
+/**
+ * Published mappings only, one per provider, named from the integration
+ * catalogue exactly as the customer list names its marks — the catalogue `id`
+ * is what picks the logo.
+ */
+export function toIntegrationLinks(wires: IntegrationMappingWire[] | undefined): IntegrationLink[] {
+  const seen = new Set<string>()
+  const links: IntegrationLink[] = []
+  for (const wire of wires ?? []) {
+    const providerType = wire.providerType?.trim()
+    if (!providerType || seen.has(providerType)) continue
+    if (wire.status && wire.status !== 'published') continue
+    seen.add(providerType)
+    const spec = INTEGRATION_CATALOG.find((entry) => entry.providerType === providerType)
+    links.push({
+      id: spec?.id ?? providerType,
+      name: spec?.name ?? providerType,
+      providerType,
+      mappingId: wire.id ?? '',
+      providerEntityId: wire.providerEntityId?.trim() ?? '',
+      createdAt: wire.createdAt ?? null,
+      updatedAt: wire.updatedAt ?? null,
+    })
+  }
+  return links
+}
+
+/** Where a customer is mapped in each connected provider — `GET /integrations/mappings`. */
+export function useCustomerIntegrationLinks(customerId: string) {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.integrationLinks.forCustomer(customerId),
+    queryFn: async ({ signal }) => {
+      const response = await call(
+        (options) =>
+          client.integrations.getEntityIntegrationMappings('customer', customerId, options),
+        signal,
+      )
+      return toIntegrationLinks(response.items)
+    },
+    enabled: customerId.length > 0,
+  })
+}
+
+/** The customer list and detail show the same marks, so a link change refreshes both. */
+function invalidateIntegrationLinks(
+  queryClient: ReturnType<typeof useQueryClient>,
+  customerId: string,
+) {
+  void queryClient.invalidateQueries({
+    queryKey: queryKeys.integrationLinks.forCustomer(customerId),
+  })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.customers.all() })
+}
+
+/** Map this customer to their record in a provider — `POST /integrations/link`. */
+export function useLinkCustomerIntegration(customerId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({
+      providerType,
+      providerEntityId,
+    }: {
+      providerType: string
+      providerEntityId: string
+    }) =>
+      call(() =>
+        client.integrations.linkIntegrationMapping({
+          entityId: customerId,
+          entityType: 'customer',
+          providerType,
+          providerEntityId,
+        }),
+      ),
+    onSuccess: () => invalidateIntegrationLinks(queryClient, customerId),
+  })
+}
+
+/** Remove a provider mapping — `DELETE /integrations/link`, which carries a body. */
+export function useUnlinkCustomerIntegration(customerId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ providerType }: { providerType: string }) =>
+      call(() =>
+        client.integrations.delinkIntegrationMapping({
+          entityId: customerId,
+          entityType: 'customer',
+          providerType,
+        }),
+      ),
+    onSuccess: () => invalidateIntegrationLinks(queryClient, customerId),
   })
 }

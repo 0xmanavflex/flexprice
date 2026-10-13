@@ -19,12 +19,13 @@ import { FeatureType } from './feature'
 /**
  * What an entitlement can belong to.
  *
- * Plans and add-ons, in this catalogue. The wire also allows `SUBSCRIPTION`, but
- * that is set by the billing side, not authored here.
+ * Plans and add-ons in the catalogue, and a single subscription when a contract
+ * is given something its plan does not carry.
  */
 export const EntitlementEntityType = {
   Plan: 'PLAN',
   Addon: 'ADDON',
+  Subscription: 'SUBSCRIPTION',
 } as const
 export type EntitlementEntityType =
   (typeof EntitlementEntityType)[keyof typeof EntitlementEntityType]
@@ -229,29 +230,37 @@ export const editEntitlementSchema = z
       .regex(/^\d+(\.\d+)?$/, 'Enter a number, for example 100')
       .optional(),
     grantMeasure: z
-      .enum(Object.values(EntitlementGrantMeasure) as [
-        EntitlementGrantMeasure,
-        ...EntitlementGrantMeasure[],
-      ])
+      .enum(
+        Object.values(EntitlementGrantMeasure) as [
+          EntitlementGrantMeasure,
+          ...EntitlementGrantMeasure[],
+        ],
+      )
       .optional(),
     grantDurationUnit: z
-      .enum(Object.values(EntitlementGrantDurationUnit) as [
-        EntitlementGrantDurationUnit,
-        ...EntitlementGrantDurationUnit[],
-      ])
+      .enum(
+        Object.values(EntitlementGrantDurationUnit) as [
+          EntitlementGrantDurationUnit,
+          ...EntitlementGrantDurationUnit[],
+        ],
+      )
       .optional(),
     grantDurationValue: z.number().int().positive('Must be greater than zero').optional(),
     grantAllocationBehavior: z
-      .enum(Object.values(EntitlementGrantAllocationBehavior) as [
-        EntitlementGrantAllocationBehavior,
-        ...EntitlementGrantAllocationBehavior[],
-      ])
+      .enum(
+        Object.values(EntitlementGrantAllocationBehavior) as [
+          EntitlementGrantAllocationBehavior,
+          ...EntitlementGrantAllocationBehavior[],
+        ],
+      )
       .optional(),
     aggregationMode: z
-      .enum(Object.values(EntitlementAggregationMode) as [
-        EntitlementAggregationMode,
-        ...EntitlementAggregationMode[],
-      ])
+      .enum(
+        Object.values(EntitlementAggregationMode) as [
+          EntitlementAggregationMode,
+          ...EntitlementAggregationMode[],
+        ],
+      )
       .optional(),
     clearGrantConfig: z.boolean().optional(),
   })

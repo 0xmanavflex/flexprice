@@ -212,14 +212,52 @@ function publishedProviders(): string[] {
 }
 
 /**
+ * Per-customer provider mappings once someone has linked or unlinked one.
+ * Until then a customer's mappings are the demo slice below; the first write
+ * freezes that slice into this map so the list marks, the contract header and
+ * the link/unlink calls all read the same rows.
+ */
+const customerMappings = new Map<string, Record<string, unknown>[]>()
+
+function demoMappingRows(customerId: string): Record<string, unknown>[] {
+  const row = (corpus['customers'] as Corpus).items.find(
+    (item) => readString(item, 'id') === customerId,
+  )
+  const demo: Record<string, unknown> = seedDemoIntegrations({ id: customerId, ...(row ?? {}) })
+  const integrations = (demo['integrations'] as Record<string, unknown>[] | undefined) ?? []
+  return integrations.map((integration) => ({
+    id: `intmap_${customerId}_${String(integration['provider_type'])}`,
+    entity_id: customerId,
+    entity_type: 'customer',
+    status: 'published',
+    created_at: '2026-08-12T09:45:00Z',
+    updated_at: '2026-09-02T14:10:00Z',
+    ...integration,
+  }))
+}
+
+function mappingsFor(customerId: string): Record<string, unknown>[] {
+  const existing = customerMappings.get(customerId)
+  if (existing) return existing
+  const rows = demoMappingRows(customerId)
+  customerMappings.set(customerId, rows)
+  return rows
+}
+
+/**
  * The corpus has no per-customer integration mappings. A stable slice of the
  * connected providers is attached so the list column and the detail page can
  * show the same marks the integrations page uses. Rows that already carry
  * mappings are left alone.
  */
 function withDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
-  if (Array.isArray(row['integrations'])) return row
+  const edited = customerMappings.get(typeof row['id'] === 'string' ? row['id'] : '')
+  return edited ? { ...row, integrations: edited } : seedDemoIntegrations(row)
+}
+
+function seedDemoIntegrations<T extends Record<string, unknown>>(row: T): T {
   const id = typeof row['id'] === 'string' ? row['id'] : ''
+  if (Array.isArray(row['integrations'])) return row
   let hash = 0
   for (const char of id) hash += char.charCodeAt(0)
   // Provider ids differ per customer, as the real mappings do.
@@ -1009,6 +1047,28 @@ const scheduledTasks: Record<string, unknown>[] = [
  */
 /** Tax rates attached to entities, mutated by the association handlers. */
 const taxAssociations: Record<string, unknown>[] = []
+
+/**
+ * What the contract page's "add" dialogs have created, per subscription, so the
+ * tabs show the new row on the refetch. Entitlements and grants are the wire
+ * rows the dialogs posted; add-ons and coupons are the association rows the
+ * contract page reads back.
+ */
+const contractAdditions = {
+  entitlements: new Map<string, Record<string, unknown>[]>(),
+  grants: new Map<string, Record<string, unknown>[]>(),
+  addons: new Map<string, Record<string, unknown>[]>(),
+  coupons: new Map<string, Record<string, unknown>[]>(),
+}
+
+function additionsFor(
+  kind: keyof typeof contractAdditions,
+  subscriptionId: string,
+): Record<string, unknown>[] {
+  const rows = contractAdditions[kind].get(subscriptionId) ?? []
+  contractAdditions[kind].set(subscriptionId, rows)
+  return rows
+}
 
 const taxRates: Record<string, unknown>[] = [
   {
@@ -3056,10 +3116,14 @@ export const handlers = [
   }),
   http.post(`${BASE}/creditgrants`, async ({ request }) => {
     const body = (await request.json()) as Record<string, unknown>
-    return HttpResponse.json(
-      { ...body, id: `cg_new_${Date.now()}`, status: 'published' },
-      { status: 201 },
-    )
+    const row = { ...body, id: `cg_new_${Date.now()}`, status: 'published' }
+    if (body['scope'] === 'SUBSCRIPTION') {
+      additionsFor('grants', String(body['subscription_id'] ?? '')).push({
+        ...row,
+        created_at: new Date().toISOString(),
+      })
+    }
+    return HttpResponse.json(row, { status: 201 })
   }),
   http.put(`${BASE}/creditgrants/:id`, async ({ request, params }) => {
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>
@@ -3135,7 +3199,15 @@ export const handlers = [
   http.get(`${BASE}/coupons/associations`, ({ request }) => {
     const url = new URL(request.url)
     const couponIds = url.searchParams.getAll('coupon_ids').flatMap((value) => value.split(','))
-    const items = couponIds.includes(DEMO_ASSOCIATION_COUPON) ? couponAssociations() : []
+    const subscriptionIds = url.searchParams
+      .getAll('subscription_ids')
+      .flatMap((value) => value.split(','))
+    const items =
+      subscriptionIds.length > 0
+        ? subscriptionIds.flatMap((id) => additionsFor('coupons', id))
+        : couponIds.includes(DEMO_ASSOCIATION_COUPON)
+          ? couponAssociations()
+          : []
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 100, offset: 0 } })
   }),
   http.get(`${BASE}/coupons/:id`, ({ params }) => {
@@ -3311,25 +3383,93 @@ export const handlers = [
       line_items: lines,
     })
   }),
-  http.get(`${BASE}/subscriptions/:id/addons/associations`, () =>
-    HttpResponse.json({
-      items: [
-        {
-          id: 'sa_demo_1',
-          addon_id: 'addon_priority',
-          addon_status: 'active',
-          start_date: '2026-03-01T00:00:00Z',
-          addon: { name: 'Priority support' },
-        },
-      ],
-      pagination: { total: 1, limit: 50, offset: 0 },
-    }),
-  ),
+  http.get(`${BASE}/subscriptions/:id/addons/associations`, ({ params }) => {
+    const items = [
+      {
+        id: 'sa_demo_1',
+        addon_id: 'addon_priority',
+        addon_status: 'active',
+        start_date: '2026-03-01T00:00:00Z',
+        addon: { name: 'Priority support' },
+      },
+      ...additionsFor('addons', String(params['id'])),
+    ]
+    return HttpResponse.json({
+      items,
+      pagination: { total: items.length, limit: 50, offset: 0 },
+    })
+  }),
+  http.post(`${BASE}/subscriptions/addon`, async ({ request }) => {
+    const body = await readBody(request)
+    const subscriptionId = String(body['subscription_id'] ?? '')
+    const addonId = String(body['addon_id'] ?? '')
+    const addon = byId('addons', addonId)
+    const row = {
+      id: `sa_new_${Date.now()}`,
+      subscription_id: subscriptionId,
+      addon_id: addonId,
+      addon_status: 'active',
+      start_date: new Date().toISOString(),
+      addon: { name: readString(addon ?? {}, 'name') || addonId },
+    }
+    additionsFor('addons', subscriptionId).push(row)
+    return HttpResponse.json({ id: row.id, subscription_id: subscriptionId }, { status: 201 })
+  }),
+  http.post(`${BASE}/entitlements`, async ({ request }) => {
+    const body = await readBody(request)
+    const row = { ...body, id: `ent_new_${Date.now()}`, status: 'published' }
+    if (body['entity_type'] === 'SUBSCRIPTION') {
+      additionsFor('entitlements', String(body['entity_id'] ?? '')).push(row)
+    }
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.get(`${BASE}/integrations/mappings`, ({ request }) => {
+    const url = new URL(request.url)
+    const entityId = url.searchParams.get('entity_id') ?? ''
+    const items = entityId ? mappingsFor(entityId) : []
+    return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
+  }),
+  http.post(`${BASE}/integrations/link`, async ({ request }) => {
+    const body = await readBody(request)
+    const customerId = String(body['entity_id'] ?? '')
+    const providerType = String(body['provider_type'] ?? '')
+    const rows = mappingsFor(customerId)
+    const now = new Date().toISOString()
+    const existing = rows.find((row) => row['provider_type'] === providerType)
+    if (existing) {
+      existing['provider_entity_id'] = body['provider_entity_id']
+      existing['updated_at'] = now
+      return HttpResponse.json(existing)
+    }
+    const row = {
+      id: `intmap_new_${Date.now()}`,
+      entity_id: customerId,
+      entity_type: 'customer',
+      provider_type: providerType,
+      provider_entity_id: body['provider_entity_id'],
+      status: 'published',
+      created_at: now,
+      updated_at: now,
+    }
+    rows.push(row)
+    return HttpResponse.json(row, { status: 201 })
+  }),
+  http.delete(`${BASE}/integrations/link`, async ({ request }) => {
+    const body = await readBody(request)
+    const rows = mappingsFor(String(body['entity_id'] ?? ''))
+    const index = rows.findIndex((row) => row['provider_type'] === body['provider_type'])
+    if (index >= 0) rows.splice(index, 1)
+    return HttpResponse.json({ success: true })
+  }),
   // Nothing queued by default; the page renders no banner.
   http.get(`${BASE}/subscriptions/:id/schedules`, () => HttpResponse.json({ schedules: [] })),
-  http.get(`${BASE}/subscriptions/:id/entitlements`, () =>
+  http.get(`${BASE}/subscriptions/:id/entitlements`, ({ params }) =>
     HttpResponse.json({
       features: [
+        ...additionsFor('entitlements', String(params['id'])).map((row) => ({
+          feature: { id: row['feature_id'], name: String(row['feature_id']) },
+          entitlement: row,
+        })),
         {
           feature: { id: 'feat_api_calls', name: 'API calls' },
           entitlement: {
@@ -3351,7 +3491,19 @@ export const handlers = [
       (item) => readString(item, 'id') === params['id'],
     )
     if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
-    return HttpResponse.json({ ...row, line_items: contractLines(String(row['id']), row) })
+    const granted = additionsFor('grants', String(row['id']))
+    return HttpResponse.json({
+      ...row,
+      line_items: contractLines(String(row['id']), row),
+      ...(granted.length > 0
+        ? {
+            credit_grants: [
+              ...(Array.isArray(row['credit_grants']) ? row['credit_grants'] : []),
+              ...granted,
+            ],
+          }
+        : {}),
+    })
   }),
   http.post(`${BASE}/subscriptions/:id/lineitems`, async ({ request, params }) => {
     const id = String(params['id'])
@@ -3393,6 +3545,30 @@ export const handlers = [
     const row = sourceFor('subscriptions').items.find((item) => readString(item, 'id') === id)
     if (!row) return HttpResponse.json({ error: { message: 'not found' } }, { status: 404 })
     const body = await readBody(request)
+    if (body['type'] === 'coupon') {
+      const params = (body['coupon_params'] ?? {}) as Record<string, unknown>
+      const code = String(params['coupon_code'] ?? '')
+      const known = sourceFor('coupons').items.find(
+        (item) => readString(item, 'coupon_code') === code,
+      )
+      const coupon = known ?? {
+        id: `coupon_mock_${code}`,
+        name: code,
+        coupon_code: code,
+        type: 'percentage',
+        percentage_off: '10',
+      }
+      const association = {
+        id: `cpasc_new_${Date.now()}`,
+        coupon_id: readString(coupon, 'id'),
+        subscription_id: id,
+        status: 'published',
+        start_date: new Date().toISOString(),
+        coupon,
+      }
+      if (mode === 'execute') additionsFor('coupons', id).push(association)
+      return HttpResponse.json({ changed_resources: {} })
+    }
     const change = ((
       body['line_item_change_params'] as { line_items?: Record<string, unknown>[] } | undefined
     )?.line_items ?? [])[0]

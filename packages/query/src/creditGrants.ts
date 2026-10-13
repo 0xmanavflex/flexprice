@@ -77,11 +77,23 @@ export function toCreditGrant(wire: CreditGrantWire): CreditGrant {
   }
 }
 
+/** The request field a scope's target id belongs in. */
+function scopeTarget(scope: CreditGrantScope, id: string): Record<string, string> {
+  switch (scope) {
+    case CreditGrantScope.Plan:
+      return { planId: id }
+    case CreditGrantScope.Subscription:
+      return { subscriptionId: id }
+    case CreditGrantScope.Addon:
+      return { addonId: id }
+  }
+}
+
 /**
  * A grant draft, as a `CreateCreditGrantRequest`.
  *
  * The scope's target id is set on the field the scope names (`planId` /
- * `addonId`); a period is sent only for a recurring grant, a duration only for a
+ * `subscriptionId` / `addonId`); a period is sent only for a recurring grant, a duration only for a
  * duration expiry — so the request never carries a field the grant does not use.
  */
 export function toCreditGrantRequest(
@@ -94,7 +106,7 @@ export function toCreditGrantRequest(
     credits: draft.credits,
     cadence: draft.cadence,
     scope,
-    ...(scope === CreditGrantScope.Plan ? { planId: id } : { addonId: id }),
+    ...scopeTarget(scope, id),
     ...toCreditGrantTerms(draft),
   }
 }

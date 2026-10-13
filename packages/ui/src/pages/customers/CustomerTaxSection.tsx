@@ -213,9 +213,10 @@ export function CustomerTaxSection({
   )
 }
 
-function TaxDialog({
+export function TaxDialog({
   open,
   mode,
+  subject = 'customer',
   taxRates,
   initial,
   pending,
@@ -225,6 +226,8 @@ function TaxDialog({
 }: {
   open: boolean
   mode: 'add' | 'edit'
+  /** What the rate is applied to, for the hint. */
+  subject?: string
   taxRates: TaxRateOption[]
   initial: CreateTaxAssociation
   pending: boolean
@@ -259,7 +262,7 @@ function TaxDialog({
         }}
       >
         <div className="flex flex-col gap-2">
-          <LabelWithHint htmlFor="tax-rate" hint="The tax rate to apply to this customer.">
+          <LabelWithHint htmlFor="tax-rate" hint={`The tax rate to apply to this ${subject}.`}>
             Tax rate
           </LabelWithHint>
           <OptionSelect

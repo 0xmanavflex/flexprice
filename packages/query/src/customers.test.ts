@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { CustomerStatus, DEFAULT_CUSTOMER_QUERY } from '@fp/domain'
-import { toCustomer, toCustomerFilter, type CustomerWire } from './customers'
+import { toCustomer, toCustomerFilter, toIntegrationLinks, type CustomerWire } from './customers'
 
 describe('toCustomer', () => {
   it('carries the wire fields straight across', () => {
@@ -88,5 +88,35 @@ describe('toCustomerFilter', () => {
     expect(filter).not.toHaveProperty('nameContains')
     expect(filter).not.toHaveProperty('status')
     expect(filter).not.toHaveProperty('statuses')
+  })
+})
+
+describe('toIntegrationLinks', () => {
+  it('keeps published mappings, one per provider, named from the catalogue', () => {
+    const created = new Date('2026-08-01T00:00:00Z')
+    const links = toIntegrationLinks([
+      { id: 'map_1', providerType: 'stripe', providerEntityId: ' cus_Q3x9 ', createdAt: created },
+      { id: 'map_2', providerType: 'stripe', providerEntityId: 'cus_dup' },
+      { id: 'map_3', providerType: 'quickbooks', status: 'archived', providerEntityId: 'qb_1' },
+      { id: 'map_4', providerType: 'mystery', status: 'published' },
+      { id: 'map_5' },
+    ])
+
+    expect(links).toHaveLength(2)
+    expect(links[0]).toMatchObject({
+      id: 'stripe',
+      providerType: 'stripe',
+      mappingId: 'map_1',
+      providerEntityId: 'cus_Q3x9',
+      createdAt: created,
+      updatedAt: null,
+    })
+    expect(links[0]?.name).not.toBe('')
+    // An unknown provider falls back to its provider type for the mark.
+    expect(links[1]).toMatchObject({ id: 'mystery', name: 'mystery', providerEntityId: '' })
+  })
+
+  it('is empty for no mappings', () => {
+    expect(toIntegrationLinks(undefined)).toEqual([])
   })
 })

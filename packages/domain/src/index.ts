@@ -241,6 +241,7 @@ export type {
   Customer,
   CustomerDetail,
   CustomerIntegration,
+  IntegrationLink,
   CustomerQuery,
   CreateCustomer,
   EditCustomer,
@@ -280,6 +281,8 @@ export type {
   SubscriptionQuery,
   SubscriptionSchedule,
   SubscriptionTax,
+  AddContractAddon,
+  AddContractCoupon,
   SubscriptionUsage,
   SubscriptionUsageCharge,
 } from './subscription'

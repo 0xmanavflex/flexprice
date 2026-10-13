@@ -1,16 +1,31 @@
 import { describe, expect, it } from 'vitest'
 import {
+  AddAddonRequest$outboundSchema,
   CancelSubscriptionRequest$outboundSchema,
+  CreateCreditGrantRequest$outboundSchema,
+  CreateEntitlementRequest$outboundSchema,
   CreateSubscriptionRequest$outboundSchema,
+  ExecuteSubscriptionModifyRequest$outboundSchema,
 } from '@flexprice/sdk/sdk/models'
 import {
   BillingModel,
   CreditGrantCadence,
   CreditGrantExpiryType,
   type CreateSubscription,
+  CreditGrantScope,
+  EntitlementEntityType,
+  FeatureType,
+  emptyCreditGrant,
   emptySubscription,
 } from '@fp/domain'
-import { toCancelSubscriptionRequest, toCreateSubscriptionRequest } from './subscriptions'
+import { toCreditGrantRequest } from './creditGrants'
+import { toEntitlementRequest } from './entitlements'
+import {
+  toAddAddonRequest,
+  toAddCouponRequest,
+  toCancelSubscriptionRequest,
+  toCreateSubscriptionRequest,
+} from './subscriptions'
 
 const base: CreateSubscription = {
   ...emptySubscription(),
@@ -90,6 +105,56 @@ describe('toCancelSubscriptionRequest', () => {
     expect(CancelSubscriptionRequest$outboundSchema.parse(request)).toEqual({
       cancellation_type: 'immediate',
       reason: 'Churned',
+    })
+  })
+})
+
+describe('contract-scoped creators', () => {
+  it('tags an entitlement with the subscription it is for', () => {
+    const request = toEntitlementRequest(
+      { featureId: 'feat_1', featureType: FeatureType.Boolean, isEnabled: true },
+      EntitlementEntityType.Subscription,
+      'sub_1',
+    )
+    expect(request).toMatchObject({ entityType: 'SUBSCRIPTION', entityId: 'sub_1' })
+    expect(CreateEntitlementRequest$outboundSchema.safeParse(request).success).toBe(true)
+  })
+
+  it('puts a subscription grant on subscriptionId, not planId or addonId', () => {
+    const request = toCreditGrantRequest(
+      { ...emptyCreditGrant(), name: 'Goodwill', credits: '100' },
+      CreditGrantScope.Subscription,
+      'sub_1',
+    )
+    expect(request).toMatchObject({ scope: 'SUBSCRIPTION', subscriptionId: 'sub_1' })
+    expect(request).not.toHaveProperty('planId')
+    expect(request).not.toHaveProperty('addonId')
+    expect(CreateCreditGrantRequest$outboundSchema.safeParse(request).success).toBe(true)
+  })
+
+  it('keeps plan and add-on grants on their own fields', () => {
+    const grant = { ...emptyCreditGrant(), name: 'g', credits: '1' }
+    expect(toCreditGrantRequest(grant, CreditGrantScope.Plan, 'plan_1')).toMatchObject({
+      planId: 'plan_1',
+    })
+    expect(toCreditGrantRequest(grant, CreditGrantScope.Addon, 'addon_1')).toMatchObject({
+      addonId: 'addon_1',
+    })
+  })
+
+  it('builds an add-on request the SDK accepts', () => {
+    const request = toAddAddonRequest('sub_1', { addonId: 'addon_1' })
+    expect(AddAddonRequest$outboundSchema.parse(request)).toEqual({
+      subscription_id: 'sub_1',
+      addon_id: 'addon_1',
+    })
+  })
+
+  it('applies a coupon as an add modification', () => {
+    const request = toAddCouponRequest('sub_1', { couponCode: ' WELCOME10 ' })
+    expect(ExecuteSubscriptionModifyRequest$outboundSchema.parse(request)).toEqual({
+      type: 'coupon',
+      coupon_params: { action: 'add', coupon_code: 'WELCOME10', subscription_id: 'sub_1' },
     })
   })
 })

@@ -19,9 +19,15 @@ import {
   SubscriptionStatus,
   formatMoney,
   type AddContractCharge,
+  type CreateCreditGrant,
+  type CreateEntitlement,
+  type CreateTaxAssociation,
+  type AddContractAddon,
+  type AddContractCoupon,
   type ChangeLineQuantity,
   type CreditGrant,
   type EditContractCharge,
+  type IntegrationLink,
   type EndContractCharge,
   type Invoice,
   type InvoicePreview,
@@ -39,7 +45,6 @@ import {
   type SubscriptionUsageCharge,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
-import { Switch } from '@ui/components/primitives/switch'
 import { Alert, AlertAction, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { Badge } from '@ui/components/reui/badge'
 import { provenance } from '@ui/provenance'
@@ -54,6 +59,7 @@ import { DetailShell } from '../../compositions/detail/DetailShell'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../compositions/detail/RelatedCard'
 import { Section } from '../../compositions/layout/Section'
+import type { EmptyScene } from '../../compositions/feedback/SceneIllustration'
 import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
 import { LoadingRows } from '../../compositions/feedback/States'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
@@ -63,6 +69,12 @@ import { InvoiceStatusBadge } from '../shared/StatusBadge'
 import { PaymentStatusBadge } from '../collections/payments/PaymentStatusBadge'
 import type { InvoiceActivity } from '../billing/invoices/invoiceDocument'
 import type { MeterOption, PriceUnitOption } from '../product-catalog/charges/ChargeForm'
+import { ContractIntegrations, type LinkableProvider } from './ContractIntegrations'
+import {
+  ContractSectionDialogs,
+  type ContractSectionKind,
+  type ContractSectionOptions,
+} from './ContractSectionDialogs'
 import { ContractQuantityDialog } from './ContractQuantityDialog'
 import { ContractChargeDialog, type ContractChargeDialogState } from './ContractChargeDialog'
 import { SubscriptionStatusBadge } from './SubscriptionStatusBadge'
@@ -101,11 +113,28 @@ export interface SubscriptionDetailViewProps {
   activity: SubscriptionActivity[]
   /** The next invoice as it would be created now. Leave out to hide the section. */
   preview?: SubscriptionPart<InvoicePreview> | undefined
-  hideZeroCharges?: boolean | undefined
-  onHideZeroChargesChange?: ((hide: boolean) => void) | undefined
   addons?: SubscriptionPart<SubscriptionAddon[]> | undefined
   coupons?: SubscriptionPart<SubscriptionCoupon[]> | undefined
   taxes?: SubscriptionPart<SubscriptionTax[]> | undefined
+  /** The customer's integration mappings, shown as marks in the header. */
+  integrationLinks?: IntegrationLink[] | undefined
+  /** Connected providers the customer is not yet linked to. */
+  linkableProviders?: LinkableProvider[] | undefined
+  onLinkIntegration?:
+    ((input: { providerType: string; providerEntityId: string }) => Promise<unknown>) | undefined
+  onUnlinkIntegration?: ((input: { providerType: string }) => Promise<unknown>) | undefined
+  /**
+   * The Add buttons on Overview's sections. Each returns when the request has
+   * finished; a rejection keeps the dialog open and shows the error. A section's
+   * button is left out when its handler is.
+   */
+  onAddEntitlement?: ((draft: CreateEntitlement) => Promise<unknown> | void) | undefined
+  onAddCreditGrant?: ((draft: CreateCreditGrant) => Promise<unknown> | void) | undefined
+  onAddAddon?: ((draft: AddContractAddon) => Promise<unknown> | void) | undefined
+  onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
+  onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
+  /** What the Add dialogs offer. */
+  sectionOptions?: Partial<ContractSectionOptions> | undefined
   onBack?: () => void
   onOpenCustomer?: () => void
   onOpenPlan?: () => void
@@ -152,6 +181,11 @@ const LINE_SOURCE_LABEL: Record<SubscriptionLine['source'], string> = {
 const isEnded = (line: SubscriptionLine) =>
   line.endDate !== null && line.endDate.getTime() <= Date.now()
 
+/** Upcoming-invoice lines shown before "More"; the rest appear on expanding, never paged. */
+const PREVIEW_LINES_SHOWN = 5
+
+const NO_PART: SubscriptionPart<never[]> = { data: [] }
+
 const words = (value: string) => value.replaceAll('_', ' ').toLowerCase()
 
 /**
@@ -172,11 +206,19 @@ export function SubscriptionDetailView({
   schedules,
   activity,
   preview,
-  hideZeroCharges = false,
-  onHideZeroChargesChange,
   addons,
   coupons,
   taxes,
+  integrationLinks,
+  linkableProviders = [],
+  onLinkIntegration,
+  onUnlinkIntegration,
+  onAddEntitlement,
+  onAddCreditGrant,
+  onAddAddon,
+  onAddCoupon,
+  onAddTax,
+  sectionOptions,
   onBack,
   onOpenCustomer,
   onOpenPlan,
@@ -196,6 +238,7 @@ export function SubscriptionDetailView({
   const [saving, setSaving] = useState(false)
   const [quantityLine, setQuantityLine] = useState<SubscriptionLine | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [section, setSection] = useState<ContractSectionKind | null>(null)
   const s = subscription
   const isCancelled = s.status === SubscriptionStatus.Cancelled
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
@@ -257,6 +300,34 @@ export function SubscriptionDetailView({
       setSaving(false)
     }
   }
+
+  const closeSection = () => {
+    setSection(null)
+    setSaveError(null)
+  }
+  const runSection = async (action: Promise<unknown> | void) => {
+    setSaving(true)
+    setSaveError(null)
+    try {
+      await action
+      setSection(null)
+    } catch (error) {
+      setSaveError(error instanceof Error ? error.message : 'The change could not be saved.')
+    } finally {
+      setSaving(false)
+    }
+  }
+  const open = (kind: ContractSectionKind) => () => {
+    setSaveError(null)
+    setSection(kind)
+  }
+  const canModify = !isCancelled
+  const createFor = (
+    kind: ContractSectionKind,
+    label: string,
+    handler: unknown,
+  ): { label: string; onClick: () => void } | undefined =>
+    canModify && handler ? { label, onClick: open(kind) } : undefined
 
   const usageData = usage.data
   const overriddenLines: SubscriptionPart<SubscriptionLine[]> = {
@@ -350,6 +421,16 @@ export function SubscriptionDetailView({
       icon={<RefreshCwIcon />}
       title={title}
       id={s.id}
+      leading={
+        integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
+          <ContractIntegrations
+            links={integrationLinks}
+            linkable={linkableProviders}
+            onLink={onLinkIntegration}
+            onUnlink={onUnlinkIntegration}
+          />
+        ) : undefined
+      }
       badges={
         <>
           <SubscriptionStatusBadge status={s.status} />
@@ -421,47 +502,41 @@ export function SubscriptionDetailView({
                 {...(onOpenPlan ? { onOpenPlan } : {})}
               />
 
-              {preview ? (
-                <InvoicePreviewSection
-                  status={s.status}
-                  preview={preview}
-                  hideZero={hideZeroCharges}
-                  {...(onHideZeroChargesChange
-                    ? { onHideZeroChange: onHideZeroChargesChange }
-                    : {})}
-                />
-              ) : null}
+              {preview ? <InvoicePreviewSection status={s.status} preview={preview} /> : null}
 
-              <PartSection
-                title="Overridden charges"
-                showTitle
-                part={overriddenLines}
-                failure="Charges could not be loaded"
-                emptyTitle="No overridden charges"
-                emptyDescription="Every charge on this contract comes from its plan."
-                isEmpty={(rows) => rows.length === 0}
-                action={
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-8 px-3"
-                    onClick={() => setTab('charges')}
-                  >
-                    {onAddCharge && canEditCharges ? 'Manage pricing' : 'View charges'}
-                  </Button>
-                }
-              >
-                {(rows) => (
-                  <DetailTable<SubscriptionLine>
-                    compact
-                    label="Overridden charges"
-                    noun="charges"
-                    rows={rows}
-                    toolbar={false}
-                    columns={chargeColumns(false, false)}
-                  />
-                )}
-              </PartSection>
+              {(overriddenLines.data?.length ?? 0) > 0 ? (
+                <PartSection
+                  title="Overridden charges"
+                  showTitle
+                  part={overriddenLines}
+                  failure="Charges could not be loaded"
+                  emptyTitle="No overridden charges"
+                  scene="billing"
+                  emptyDescription="Every charge on this contract comes from its plan."
+                  isEmpty={(rows) => rows.length === 0}
+                  action={
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 px-3"
+                      onClick={() => setTab('charges')}
+                    >
+                      {onAddCharge && canEditCharges ? 'Manage pricing' : 'View charges'}
+                    </Button>
+                  }
+                >
+                  {(rows) => (
+                    <DetailTable<SubscriptionLine>
+                      compact
+                      label="Overridden charges"
+                      noun="charges"
+                      rows={rows}
+                      toolbar={false}
+                      columns={chargeColumns(false, false)}
+                    />
+                  )}
+                </PartSection>
+              ) : null}
 
               <PartSection
                 title="Entitlements"
@@ -469,7 +544,9 @@ export function SubscriptionDetailView({
                 part={entitlements}
                 failure="Entitlements could not be loaded"
                 emptyTitle="No features"
+                scene="catalog"
                 emptyDescription="This contract includes no features."
+                create={createFor('entitlement', 'Add entitlement', onAddEntitlement)}
                 isEmpty={(rows) => rows.length === 0}
               >
                 {(rows) => (
@@ -513,7 +590,9 @@ export function SubscriptionDetailView({
                 part={creditGrants}
                 failure="Credit grants could not be loaded"
                 emptyTitle="No credit grants"
+                scene="payments"
                 emptyDescription="This contract has no credit grants."
+                create={createFor('creditGrant', 'Add credit grant', onAddCreditGrant)}
                 isEmpty={(rows) => rows.length === 0}
               >
                 {(rows) => (
@@ -557,156 +636,156 @@ export function SubscriptionDetailView({
                 )}
               </PartSection>
 
-              {addons ? (
-                <PartSection
-                  title="Add-ons"
-                  showTitle
-                  part={addons}
-                  failure="Add-ons could not be loaded"
-                  emptyTitle="No add-ons"
-                  emptyDescription="No add-ons are attached to this contract."
-                  isEmpty={(rows) => rows.length === 0}
-                >
-                  {(rows) => (
-                    <DetailTable<SubscriptionAddon>
-                      compact
-                      label="Add-ons"
-                      noun="add-ons"
-                      rows={rows}
-                      columns={[
-                        {
-                          key: 'name',
-                          header: 'Add-on',
-                          sortBy: (row) => row.name.toLowerCase(),
-                          cell: (row) => <Strong>{row.name}</Strong>,
-                        },
-                        {
-                          key: 'status',
-                          header: 'Status',
-                          cell: (row) => <ActiveBadge active={row.active} />,
-                        },
-                        {
-                          key: 'start',
-                          header: 'Starts',
-                          cell: (row) => <Muted>{day(row.startDate)}</Muted>,
-                        },
-                        {
-                          key: 'end',
-                          header: 'Ends',
-                          cell: (row) => <Muted>{day(row.endDate)}</Muted>,
-                        },
-                      ]}
-                    />
-                  )}
-                </PartSection>
-              ) : null}
+              <PartSection
+                title="Add-ons"
+                showTitle
+                part={addons ?? NO_PART}
+                create={createFor('addon', 'Add add-on', onAddAddon)}
+                failure="Add-ons could not be loaded"
+                emptyTitle="No add-ons"
+                scene="catalog"
+                emptyDescription="No add-ons are attached to this contract."
+                isEmpty={(rows) => rows.length === 0}
+              >
+                {(rows) => (
+                  <DetailTable<SubscriptionAddon>
+                    compact
+                    label="Add-ons"
+                    noun="add-ons"
+                    rows={rows}
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Add-on',
+                        sortBy: (row) => row.name.toLowerCase(),
+                        cell: (row) => <Strong>{row.name}</Strong>,
+                      },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        cell: (row) => <ActiveBadge active={row.active} />,
+                      },
+                      {
+                        key: 'start',
+                        header: 'Starts',
+                        cell: (row) => <Muted>{day(row.startDate)}</Muted>,
+                      },
+                      {
+                        key: 'end',
+                        header: 'Ends',
+                        cell: (row) => <Muted>{day(row.endDate)}</Muted>,
+                      },
+                    ]}
+                  />
+                )}
+              </PartSection>
 
-              {coupons ? (
-                <PartSection
-                  title="Coupons"
-                  showTitle
-                  part={coupons}
-                  failure="Coupons could not be loaded"
-                  emptyTitle="No coupons"
-                  emptyDescription="No coupons are applied to this contract."
-                  isEmpty={(rows) => rows.length === 0}
-                >
-                  {(rows) => (
-                    <DetailTable<SubscriptionCoupon>
-                      compact
-                      label="Coupons"
-                      noun="coupons"
-                      rows={rows}
-                      columns={[
-                        {
-                          key: 'name',
-                          header: 'Coupon',
-                          sortBy: (row) => row.name.toLowerCase(),
-                          cell: (row) => <Strong>{row.name}</Strong>,
-                        },
-                        {
-                          key: 'code',
-                          header: 'Code',
-                          cell: (row) =>
-                            row.code ? (
-                              <Muted className="font-mono text-xs">{row.code}</Muted>
-                            ) : (
-                              <Muted>—</Muted>
-                            ),
-                        },
-                        {
-                          key: 'discount',
-                          header: 'Discount',
-                          cell: (row) => <Strong>{row.discount}</Strong>,
-                        },
-                        {
-                          key: 'status',
-                          header: 'Status',
-                          cell: (row) => <ActiveBadge active={row.active} />,
-                        },
-                        {
-                          key: 'end',
-                          header: 'Ends',
-                          cell: (row) => <Muted>{day(row.endDate)}</Muted>,
-                        },
-                      ]}
-                    />
-                  )}
-                </PartSection>
-              ) : null}
+              <PartSection
+                title="Coupons"
+                showTitle
+                part={coupons ?? NO_PART}
+                create={createFor('coupon', 'Add coupon', onAddCoupon)}
+                failure="Coupons could not be loaded"
+                emptyTitle="No coupons"
+                scene="billing"
+                emptyDescription="No coupons are applied to this contract."
+                isEmpty={(rows) => rows.length === 0}
+              >
+                {(rows) => (
+                  <DetailTable<SubscriptionCoupon>
+                    compact
+                    label="Coupons"
+                    noun="coupons"
+                    rows={rows}
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Coupon',
+                        sortBy: (row) => row.name.toLowerCase(),
+                        cell: (row) => <Strong>{row.name}</Strong>,
+                      },
+                      {
+                        key: 'code',
+                        header: 'Code',
+                        cell: (row) =>
+                          row.code ? (
+                            <Muted className="font-mono text-xs">{row.code}</Muted>
+                          ) : (
+                            <Muted>—</Muted>
+                          ),
+                      },
+                      {
+                        key: 'discount',
+                        header: 'Discount',
+                        cell: (row) => <Strong>{row.discount}</Strong>,
+                      },
+                      {
+                        key: 'status',
+                        header: 'Status',
+                        cell: (row) => <ActiveBadge active={row.active} />,
+                      },
+                      {
+                        key: 'end',
+                        header: 'Ends',
+                        cell: (row) => <Muted>{day(row.endDate)}</Muted>,
+                      },
+                    ]}
+                  />
+                )}
+              </PartSection>
 
-              {taxes ? (
-                <PartSection
-                  title="Taxes"
-                  showTitle
-                  part={taxes}
-                  failure="Taxes could not be loaded"
-                  emptyTitle="No taxes"
-                  emptyDescription="No tax rates are applied to this contract."
-                  isEmpty={(rows) => rows.length === 0}
-                >
-                  {(rows) => (
-                    <DetailTable<SubscriptionTax>
-                      compact
-                      label="Taxes"
-                      noun="taxes"
-                      rows={rows}
-                      columns={[
-                        {
-                          key: 'name',
-                          header: 'Tax',
-                          sortBy: (row) => row.name.toLowerCase(),
-                          cell: (row) => <Strong>{row.name}</Strong>,
-                        },
-                        {
-                          key: 'code',
-                          header: 'Code',
-                          cell: (row) => (
-                            <Muted className="font-mono text-xs">{row.code || '—'}</Muted>
-                          ),
-                        },
-                        {
-                          key: 'rate',
-                          header: 'Rate',
-                          cell: (row) => <Strong className="tabular-nums">{row.percentage}</Strong>,
-                        },
-                        {
-                          key: 'inclusive',
-                          header: 'Applied',
-                          cell: (row) => (
-                            <Muted>{row.inclusive ? 'Included in price' : 'Added on top'}</Muted>
-                          ),
-                        },
-                        {
-                          key: 'priority',
-                          header: 'Priority',
-                          cell: (row) => <Muted className="tabular-nums">{row.priority}</Muted>,
-                        },
-                      ]}
-                    />
-                  )}
-                </PartSection>
-              ) : null}
+              <PartSection
+                title="Taxes"
+                showTitle
+                part={taxes ?? NO_PART}
+                create={createFor('tax', 'Add tax', onAddTax)}
+                failure="Taxes could not be loaded"
+                emptyTitle="No taxes"
+                scene="billing"
+                emptyDescription="No tax rates are applied to this contract."
+                isEmpty={(rows) => rows.length === 0}
+              >
+                {(rows) => (
+                  <DetailTable<SubscriptionTax>
+                    compact
+                    label="Taxes"
+                    noun="taxes"
+                    rows={rows}
+                    columns={[
+                      {
+                        key: 'name',
+                        header: 'Tax',
+                        sortBy: (row) => row.name.toLowerCase(),
+                        cell: (row) => <Strong>{row.name}</Strong>,
+                      },
+                      {
+                        key: 'code',
+                        header: 'Code',
+                        cell: (row) => (
+                          <Muted className="font-mono text-xs">{row.code || '—'}</Muted>
+                        ),
+                      },
+                      {
+                        key: 'rate',
+                        header: 'Rate',
+                        cell: (row) => <Strong className="tabular-nums">{row.percentage}</Strong>,
+                      },
+                      {
+                        key: 'inclusive',
+                        header: 'Applied',
+                        cell: (row) => (
+                          <Muted>{row.inclusive ? 'Included in price' : 'Added on top'}</Muted>
+                        ),
+                      },
+                      {
+                        key: 'priority',
+                        header: 'Priority',
+                        cell: (row) => <Muted className="tabular-nums">{row.priority}</Muted>,
+                      },
+                    ]}
+                  />
+                )}
+              </PartSection>
             </div>
 
             <div className="flex flex-col gap-5 xl:sticky xl:top-6">
@@ -724,6 +803,7 @@ export function SubscriptionDetailView({
               part={lines}
               failure="Charges could not be loaded"
               emptyTitle="No charges"
+              scene="billing"
               emptyDescription="This contract has no priced lines."
               emptyAction={managePricingButton}
               isEmpty={(rows) => rows.length === 0}
@@ -793,6 +873,7 @@ export function SubscriptionDetailView({
               part={usage}
               failure="Usage could not be loaded"
               emptyTitle="No metered charges"
+              scene="revenue"
               emptyDescription="This contract has no usage-based charges this period."
               isEmpty={(data) => data.charges.length === 0}
             >
@@ -846,6 +927,7 @@ export function SubscriptionDetailView({
             part={invoices}
             failure="Invoices could not be loaded"
             emptyTitle="No invoices yet"
+            scene="billing"
             emptyDescription="Invoices for this contract appear here once a billing period closes."
             isEmpty={(rows) => rows.length === 0}
           >
@@ -916,6 +998,20 @@ export function SubscriptionDetailView({
         onAdd={(draft) => void run(onAddCharge?.(draft))}
         onEdit={(line, draft) => void run(onEditCharge?.(line, draft))}
         onEnd={(line, draft) => void run(onEndCharge?.(line, draft))}
+      />
+      <ContractSectionDialogs
+        kind={section}
+        options={{
+          features: sectionOptions?.features ?? [],
+          addons: sectionOptions?.addons ?? [],
+          coupons: sectionOptions?.coupons ?? [],
+          taxRates: sectionOptions?.taxRates ?? [],
+        }}
+        actions={{ onAddEntitlement, onAddCreditGrant, onAddAddon, onAddCoupon, onAddTax }}
+        pending={saving}
+        error={saveError}
+        onRun={(action) => void runSection(action)}
+        onClose={closeSection}
       />
     </DetailShell>
   )
@@ -1048,14 +1144,11 @@ function ContractDetails({
 function InvoicePreviewSection({
   status,
   preview,
-  hideZero,
-  onHideZeroChange,
 }: {
   status: SubscriptionStatus
   preview: SubscriptionPart<InvoicePreview>
-  hideZero: boolean
-  onHideZeroChange?: (hide: boolean) => void
 }) {
+  const [expanded, setExpanded] = useState(false)
   if (status === SubscriptionStatus.Cancelled || status === SubscriptionStatus.Incomplete) {
     return null
   }
@@ -1063,6 +1156,7 @@ function InvoicePreviewSection({
     return (
       <Section table showTitle title="Upcoming invoice">
         <SectionEmpty
+          scene="billing"
           title="Billing starts after the trial"
           description="The first invoice is created when the trial ends."
         />
@@ -1085,21 +1179,10 @@ function InvoicePreviewSection({
       part={preview}
       failure="The invoice preview could not be loaded"
       emptyTitle="Nothing to bill yet"
-      emptyDescription={
-        hideZero
-          ? 'Every line is zero this period. Turn off Hide zero charges to see them.'
-          : 'This contract has no charges for the current period.'
-      }
+      scene="billing"
+      emptyDescription="This contract has no charges for the current period."
       isEmpty={(value) => value.lines.length === 0}
       titleAction={period}
-      action={
-        onHideZeroChange ? (
-          <label className="text-muted-foreground flex items-center gap-2 text-xs font-normal">
-            <Switch size="sm" checked={hideZero} onCheckedChange={onHideZeroChange} />
-            Hide zero charges
-          </label>
-        ) : undefined
-      }
     >
       {(value) => (
         <>
@@ -1107,9 +1190,9 @@ function InvoicePreviewSection({
             compact
             label="Upcoming invoice lines"
             noun="lines"
-            rows={value.lines}
+            rows={expanded ? value.lines : value.lines.slice(0, PREVIEW_LINES_SHOWN)}
             toolbar={false}
-            pageSize={50}
+            pageSize={Math.max(value.lines.length, 1)}
             columns={[
               {
                 key: 'name',
@@ -1136,6 +1219,21 @@ function InvoicePreviewSection({
               },
             ]}
           />
+          {value.lines.length > PREVIEW_LINES_SHOWN ? (
+            <div className="flex justify-center border-t py-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-3"
+                aria-expanded={expanded}
+                onClick={() => setExpanded((open) => !open)}
+              >
+                {expanded
+                  ? 'Show fewer lines'
+                  : `Show ${value.lines.length - PREVIEW_LINES_SHOWN} more`}
+              </Button>
+            </div>
+          ) : null}
           <div className="flex justify-end border-t px-6 py-4">
             <dl className="flex w-full flex-col gap-2 text-sm sm:w-72">
               <TotalRow label="Subtotal" value={formatMoney(value.subtotal)} />
@@ -1299,6 +1397,8 @@ function PartSection<T>({
   emptyTitle,
   emptyDescription,
   emptyAction,
+  scene,
+  create,
   isEmpty,
   showTitle = false,
   action,
@@ -1311,6 +1411,10 @@ function PartSection<T>({
   emptyTitle: string
   emptyDescription: string
   emptyAction?: ReactNode
+  /** The drawing above the empty state. */
+  scene?: EmptyScene
+  /** The section's Add button: centred in the empty state, top right once there is data. */
+  create?: { label: string; onClick: () => void } | undefined
   isEmpty: (data: T) => boolean
   showTitle?: boolean
   action?: ReactNode
@@ -1318,6 +1422,12 @@ function PartSection<T>({
   children: (data: T) => ReactNode
 }) {
   const { data } = part
+  const createButton = create ? (
+    <Button size="sm" variant="outline" className="h-8 px-3" onClick={create.onClick}>
+      <PlusIcon aria-hidden="true" />
+      {create.label}
+    </Button>
+  ) : undefined
   const frame = { table: true, title, showTitle, action, titleAction } as const
   if (part.isLoading || (!data && !part.isError)) {
     return (
@@ -1348,9 +1458,28 @@ function PartSection<T>({
   if (isEmpty(data)) {
     return (
       <Section {...frame}>
-        <SectionEmpty title={emptyTitle} description={emptyDescription} action={emptyAction} />
+        <SectionEmpty
+          {...(scene ? { scene } : {})}
+          title={emptyTitle}
+          description={emptyDescription}
+          action={emptyAction ?? createButton}
+        />
       </Section>
     )
   }
-  return <Section {...frame}>{children(data)}</Section>
+  return (
+    <Section
+      {...frame}
+      action={
+        action || createButton ? (
+          <>
+            {action}
+            {createButton}
+          </>
+        ) : undefined
+      }
+    >
+      {children(data)}
+    </Section>
+  )
 }

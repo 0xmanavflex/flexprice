@@ -13,7 +13,9 @@ import {
   NO_USAGE_TERMS,
   TierMode,
   money,
+  FeatureType,
   type CreditGrant,
+  type IntegrationLink,
   type Invoice,
   type InvoicePreview,
   type SubscriptionAddon,
@@ -370,6 +372,18 @@ const TAXES: SubscriptionTax[] = [
   },
 ]
 
+const INTEGRATION_LINKS: IntegrationLink[] = [
+  {
+    id: 'stripe',
+    name: 'Stripe',
+    providerType: 'stripe',
+    mappingId: 'map_1',
+    providerEntityId: 'cus_Qx81nKd02',
+    createdAt: date('2026-03-04'),
+    updatedAt: date('2026-09-18'),
+  },
+]
+
 const BASE: SubscriptionDetailViewProps = {
   subscription: SUBSCRIPTION,
   lines: ready(LINES),
@@ -379,11 +393,24 @@ const BASE: SubscriptionDetailViewProps = {
   invoices: ready(INVOICES),
   schedules: ready([]),
   preview: ready(PREVIEW),
-  hideZeroCharges: false,
-  onHideZeroChargesChange: fn(),
   addons: ready(ADDONS),
   coupons: ready(COUPONS),
   taxes: ready(TAXES),
+  integrationLinks: INTEGRATION_LINKS,
+  linkableProviders: [{ providerType: 'quickbooks', name: 'QuickBooks' }],
+  onLinkIntegration: fn(async () => undefined),
+  onUnlinkIntegration: fn(async () => undefined),
+  onAddEntitlement: fn(async () => undefined),
+  onAddCreditGrant: fn(async () => undefined),
+  onAddAddon: fn(async () => undefined),
+  onAddCoupon: fn(async () => undefined),
+  onAddTax: fn(async () => undefined),
+  sectionOptions: {
+    features: [{ id: 'feat_seats', name: 'Seats', type: FeatureType.Static }],
+    addons: [{ id: 'addon_support', name: 'Priority support' }],
+    coupons: [{ code: 'LAUNCH10', name: 'Launch 10% off' }],
+    taxRates: [{ code: 'VAT-DE', label: 'VAT (7.2%)' }],
+  },
   activity: ACTIVITY,
   onBack: fn(),
   onOpenCustomer: fn(),
@@ -629,10 +656,13 @@ export const OverriddenCharges: Story = {
   },
 }
 
+/** A contract that follows its plan has no Overridden charges section at all. */
 export const NoOverriddenCharges: Story = {
   args: { ...BASE, lines: ready(LINES.filter((line) => line.source === 'plan')) },
   play: async ({ canvasElement }) => {
-    await expect(await within(canvasElement).findByText('No overridden charges')).toBeVisible()
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Entitlements' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Overridden charges' })).toBeNull()
   },
 }
 
@@ -684,21 +714,9 @@ export const UpcomingInvoicePlain: Story = {
   },
 }
 
-export const HideZeroCharges: Story = {
-  play: async ({ canvasElement, args }) => {
-    const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('switch', { name: 'Hide zero charges' }))
-    await expect(args.onHideZeroChargesChange).toHaveBeenCalledOnce()
-    await expect((args.onHideZeroChargesChange as ReturnType<typeof fn>).mock.calls[0]?.[0]).toBe(
-      true,
-    )
-  },
-}
-
 export const UpcomingInvoiceAllZero: Story = {
   args: {
     ...BASE,
-    hideZeroCharges: true,
     preview: ready({
       ...PREVIEW,
       lines: [],
@@ -712,7 +730,6 @@ export const UpcomingInvoiceAllZero: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('Nothing to bill yet')).toBeVisible()
-    await expect(canvas.getByText(/Turn off Hide zero charges/)).toBeVisible()
   },
 }
 
@@ -790,25 +807,218 @@ export const AddonsCouponsTaxes: Story = {
   },
 }
 
+/** Empty sections stay on the page, each with its own centred Add button. */
 export const AddonsCouponsTaxesEmpty: Story = {
-  args: { ...BASE, addons: ready([]), coupons: ready([]), taxes: ready([]) },
+  args: {
+    ...BASE,
+    entitlements: ready([]),
+    creditGrants: ready([]),
+    addons: ready([]),
+    coupons: ready([]),
+    taxes: ready([]),
+  },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('No add-ons')).toBeVisible()
     await expect(canvas.getByText('No coupons')).toBeVisible()
     await expect(canvas.getByText('No taxes')).toBeVisible()
+    for (const name of [
+      'Add entitlement',
+      'Add credit grant',
+      'Add add-on',
+      'Add coupon',
+      'Add tax',
+    ]) {
+      await expect(canvas.getByRole('button', { name })).toBeVisible()
+    }
   },
 }
 
-/** Pages that do not load add-ons, coupons or taxes leave those sections out. */
+/** Pages that do not load add-ons, coupons or taxes still show the sections, empty. */
 export const WithoutAddonsCouponsTaxes: Story = {
   args: { ...BASE, addons: undefined, coupons: undefined, taxes: undefined },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Credit grants' })).toBeVisible()
-    await expect(canvas.queryByRole('heading', { name: 'Add-ons' })).toBeNull()
-    await expect(canvas.queryByRole('heading', { name: 'Coupons' })).toBeNull()
-    await expect(canvas.queryByRole('heading', { name: 'Taxes' })).toBeNull()
+    await expect(await canvas.findByRole('heading', { name: 'Add-ons' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Coupons' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Taxes' })).toBeVisible()
+  },
+}
+
+/** With data the same button moves to the section's top right. */
+export const SectionAddButtons: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    for (const [heading, name] of [
+      ['Entitlements', 'Add entitlement'],
+      ['Credit grants', 'Add credit grant'],
+      ['Add-ons', 'Add add-on'],
+      ['Coupons', 'Add coupon'],
+      ['Taxes', 'Add tax'],
+    ] as const) {
+      const section = within(
+        (await canvas.findByRole('heading', { name: heading })).closest('section')!,
+      )
+      await expect(section.getByRole('button', { name })).toBeVisible()
+    }
+  },
+}
+
+/** A cancelled contract cannot be changed, so the Add buttons go away. */
+export const SectionAddButtonsCancelled: Story = {
+  args: withSubscription({ status: SubscriptionStatus.Cancelled }),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Taxes' })).toBeVisible()
+    await expect(canvas.queryByRole('button', { name: 'Add tax' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Add coupon' })).toBeNull()
+  },
+}
+
+export const AddAddon: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add add-on' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Add-on/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Priority support' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Add add-on' }))
+    await waitFor(() => expect(args.onAddAddon).toHaveBeenCalledWith({ addonId: 'addon_support' }))
+  },
+}
+
+export const AddCoupon: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add coupon' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('combobox', { name: /Coupon/ }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Launch 10% off' }))
+    await userEvent.click(dialog.getByRole('button', { name: 'Add coupon' }))
+    await waitFor(() => expect(args.onAddCoupon).toHaveBeenCalledWith({ couponCode: 'LAUNCH10' }))
+  },
+}
+
+export const AddCouponNeedsChoice: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add coupon' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Add coupon' }))
+    await expect(await dialog.findByRole('alert')).toHaveTextContent('Choose a coupon')
+    await expect(args.onAddCoupon).not.toHaveBeenCalled()
+  },
+}
+
+export const AddTaxDialog: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add tax' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await expect(dialog.getByRole('button', { name: 'Cancel' })).toBeVisible()
+  },
+}
+
+export const AddEntitlementDialog: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add entitlement' }))
+    await expect(
+      within(await screen.findByRole('dialog')).getByRole('heading', { name: 'Add entitlement' }),
+    ).toBeVisible()
+  },
+}
+
+export const AddCreditGrantDialog: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Add credit grant' }))
+    await expect(
+      within(await screen.findByRole('dialog')).getByRole('heading', { name: 'Add credit grant' }),
+    ).toBeVisible()
+  },
+}
+
+/** Five lines show; More reveals the rest, and there is no pagination. */
+export const UpcomingInvoiceManyLines: Story = {
+  args: {
+    ...BASE,
+    preview: ready({
+      ...PREVIEW,
+      lines: Array.from({ length: 8 }, (_, index) => ({
+        id: `pl_${index}`,
+        name: `Line item ${index + 1}`,
+        detail: 'Oct 1 – Nov 1',
+        quantity: '1',
+        amount: money('10', 'USD'),
+        kind: 'fixed' as const,
+      })),
+    }),
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const section = within(
+      (await canvas.findByRole('heading', { name: 'Upcoming invoice' })).closest('section')!,
+    )
+    await expect(section.getByText('Line item 5')).toBeVisible()
+    await expect(section.queryByText('Line item 6')).toBeNull()
+    await userEvent.click(section.getByRole('button', { name: 'Show 3 more' }))
+    await expect(section.getByText('Line item 8')).toBeVisible()
+    await expect(section.queryByRole('navigation')).toBeNull()
+    await userEvent.click(section.getByRole('button', { name: 'Show fewer lines' }))
+    await expect(section.queryByText('Line item 6')).toBeNull()
+  },
+}
+
+/** Marks sit by the contract ID; hover shows the provider-side detail. */
+export const HeaderIntegrations: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const mark = await canvas.findByRole('button', { name: 'Stripe integration' })
+    await userEvent.hover(mark)
+    const id = await screen.findByText('cus_Qx81nKd02')
+    const tip = within(id.closest('dl')!)
+    await expect(tip.getByText('Created')).toBeVisible()
+    await expect(tip.getByText('Updated')).toBeVisible()
+    await expect(tip.getByText('Sep 18, 2026', { exact: false })).toBeVisible()
+  },
+}
+
+export const UnlinkIntegration: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Stripe integration' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Unlink Stripe' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Unlink' }))
+    await waitFor(() =>
+      expect(args.onUnlinkIntegration).toHaveBeenCalledWith({ providerType: 'stripe' }),
+    )
+  },
+}
+
+export const LinkIntegration: Story = {
+  parameters: menuA11y,
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Link an integration' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/Customer ID at the provider/), 'qb_42')
+    await userEvent.click(dialog.getByRole('button', { name: 'Link' }))
+    await waitFor(() =>
+      expect(args.onLinkIntegration).toHaveBeenCalledWith({
+        providerType: 'quickbooks',
+        providerEntityId: 'qb_42',
+      }),
+    )
   },
 }
 

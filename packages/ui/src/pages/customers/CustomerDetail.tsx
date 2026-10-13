@@ -1,5 +1,13 @@
 import { type ReactNode } from 'react'
-import { ArchiveIcon, FileTextIcon, PencilIcon, PlusIcon, ReceiptIcon, WalletIcon } from '@ui/icons'
+import {
+  ArchiveIcon,
+  EyeIcon,
+  FileTextIcon,
+  PencilIcon,
+  PlusIcon,
+  ReceiptIcon,
+  WalletIcon,
+} from '@ui/icons'
 import {
   type CustomerDetail as CustomerDetailModel,
   CUSTOMER_STATUS_LABEL,
@@ -430,7 +438,8 @@ function activityEntries(
 
 function ViewAllButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs" onClick={onClick}>
+    <Button variant="outline" size="sm" className="h-8 px-3" onClick={onClick}>
+      <EyeIcon aria-hidden="true" />
       View all
       <span className="sr-only"> {label}</span>
     </Button>
@@ -553,7 +562,7 @@ function OverviewTab({
           showTitle
           title="Recent invoices"
           {...(invoices.length > 0
-            ? { titleAction: <ViewAllButton label="invoices" onClick={onViewAllInvoices} /> }
+            ? { action: <ViewAllButton label="invoices" onClick={onViewAllInvoices} /> }
             : {})}
         >
           <InvoiceTable
@@ -572,7 +581,7 @@ function OverviewTab({
             showTitle
             title="Recent payments"
             {...(onViewAllPayments && payments.length > 0
-              ? { titleAction: <ViewAllButton label="payments" onClick={onViewAllPayments} /> }
+              ? { action: <ViewAllButton label="payments" onClick={onViewAllPayments} /> }
               : {})}
           >
             <PaymentTable

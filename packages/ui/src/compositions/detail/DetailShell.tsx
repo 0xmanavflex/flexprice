@@ -95,6 +95,8 @@ export interface DetailShellProps {
   identifier?: string
   /** An email, rendered as a mail-icon copy chip beside the id. */
   email?: string
+  /** Sits immediately before the copy-ID chip: connected integration marks. */
+  leading?: ReactNode
   /** Legacy inline action slot. Prefer putting every action in `actions` via `DetailMoreMenu`. */
   primary?: ReactNode
   /** The overflow (More) menu, last in the right-hand cluster. Build it with `DetailMoreMenu`. */
@@ -144,6 +146,7 @@ export function DetailShell({
   id,
   identifier,
   email,
+  leading,
   primary,
   actions,
   metrics,
@@ -171,6 +174,7 @@ export function DetailShell({
           </div>
           <DetailHeaderCluster
             primary={primary}
+            leading={leading}
             id={id ?? identifier}
             email={email}
             more={actions}

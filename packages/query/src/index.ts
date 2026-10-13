@@ -210,12 +210,17 @@ export {
   useCreateCustomer,
   useUpdateCustomer,
   useDeleteCustomer,
+  toIntegrationLinks,
+  useCustomerIntegrationLinks,
+  useLinkCustomerIntegration,
+  useUnlinkCustomerIntegration,
 } from './customers'
 export type {
   CustomerDetailWire,
   CustomerPage,
   CustomerUsageSummary,
   CustomerWire,
+  IntegrationMappingWire,
 } from './customers'
 
 export {
@@ -238,6 +243,13 @@ export {
   useCancelSubscription,
   useCreateSubscription,
   useCreateSubscriptionLineItem,
+  toAddAddonRequest,
+  toAddCouponRequest,
+  useAddSubscriptionAddon,
+  useAddSubscriptionCoupon,
+  useCreateSubscriptionCreditGrant,
+  useCreateSubscriptionEntitlement,
+  useCreateSubscriptionTax,
   useDeleteSubscriptionLineItem,
   useExecuteLineChange,
   usePreviewLineChange,
@@ -519,7 +531,7 @@ export {
   useDeleteTaxAssociation,
   useUpdateTaxAssociation,
 } from './taxAssociations'
-export type { TaxAssociationWire } from './taxAssociations'
+export type { TaxAssociationEntityType, TaxAssociationWire } from './taxAssociations'
 
 export {
   hourlyWindows,

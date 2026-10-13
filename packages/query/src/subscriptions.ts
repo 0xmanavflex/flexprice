@@ -1,7 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { type Flexprice, call } from '@fp/api'
+import { type Flexprice, type FlexpriceModels, call } from '@fp/api'
 import {
+  type AddContractAddon,
   type AddContractCharge,
+  type AddContractCoupon,
   BILLING_PERIOD_LABEL,
   BillingModel,
   type BillingPeriod,
@@ -10,9 +12,14 @@ import {
   type CancelSubscription,
   type CreateSubscription,
   type ChangeLineQuantity,
+  type CreateCreditGrant,
+  type CreateEntitlement,
+  type CreateTaxAssociation,
   type CreditGrant,
+  CreditGrantScope,
   type EditContractCharge,
   type EndContractCharge,
+  EntitlementEntityType,
   type InvoicePreview,
   CouponType,
   type LineCommitment,
@@ -42,10 +49,17 @@ import {
   money,
   moneyOr,
 } from '@fp/domain'
-import { type CreditGrantWire, toCreditGrant, toCreditGrantTerms } from './creditGrants'
+import {
+  type CreditGrantWire,
+  toCreditGrant,
+  toCreditGrantRequest,
+  toCreditGrantTerms,
+} from './creditGrants'
+import { toEntitlementRequest } from './entitlements'
 import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } from './invoices'
 import { queryKeys } from './keys'
 import { toChargeRequest, toTier } from './prices'
+import { toCreateTaxAssociationRequest } from './taxAssociations'
 import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice } from './provider'
 
@@ -1147,5 +1161,131 @@ export function useSubscriptionTaxes(id: string) {
       return ((response.items ?? []) as SubscriptionTaxWire[]).map(toSubscriptionTax)
     },
     enabled: id.length > 0,
+  })
+}
+
+/**
+ * What adding something to one contract can change on its page: the detail, its
+ * entitlements, grants, add-ons, coupons, taxes and the invoice preview all sit
+ * under the subscriptions family. Tax associations are shared with the customer
+ * page, so they refresh too.
+ */
+const invalidateContract = (queryClient: ReturnType<typeof useQueryClient>) => {
+  void queryClient.invalidateQueries({ queryKey: queryKeys.subscriptions.all() })
+  void queryClient.invalidateQueries({ queryKey: queryKeys.taxAssociations.all() })
+}
+
+/** Give this contract an entitlement its plan does not carry — `POST /entitlements`. */
+export function useCreateSubscriptionEntitlement(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateEntitlement) =>
+      call(() =>
+        client.entitlements.createEntitlement(
+          toEntitlementRequest(
+            draft,
+            EntitlementEntityType.Subscription,
+            subscriptionId,
+          ) as FlexpriceModels.CreateEntitlementRequest,
+        ),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Grant this contract credits of its own — `POST /creditgrants`, scoped to the subscription. */
+export function useCreateSubscriptionCreditGrant(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateCreditGrant) =>
+      call(() =>
+        client.creditGrants.createCreditGrant(
+          toCreditGrantRequest(
+            draft,
+            CreditGrantScope.Subscription,
+            subscriptionId,
+          ) as FlexpriceModels.CreateCreditGrantRequest,
+        ),
+      ),
+    onSuccess: () => {
+      invalidateContract(queryClient)
+      void queryClient.invalidateQueries({ queryKey: queryKeys.creditGrants.all() })
+    },
+  })
+}
+
+export function toAddAddonRequest(
+  subscriptionId: string,
+  draft: AddContractAddon,
+): FlexpriceModels.AddAddonRequest {
+  return { subscriptionId, addonId: draft.addonId }
+}
+
+/** A coupon applied to one contract, as a `coupon` modification. */
+export function toAddCouponRequest(
+  subscriptionId: string,
+  draft: AddContractCoupon,
+): FlexpriceModels.ExecuteSubscriptionModifyRequest {
+  return {
+    type: 'coupon',
+    couponParams: { action: 'add', couponCode: draft.couponCode.trim(), subscriptionId },
+  }
+}
+
+/** Attach an add-on to this contract — `POST /subscriptions/addon`. */
+export function useAddSubscriptionAddon(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: AddContractAddon) =>
+      call(() =>
+        client.subscriptions.addSubscriptionAddon(toAddAddonRequest(subscriptionId, draft)),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/**
+ * Apply a coupon to this contract by its code —
+ * `POST /subscriptions/{id}/modify/execute` with a `coupon` modification.
+ */
+export function useAddSubscriptionCoupon(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: AddContractCoupon) =>
+      call(() =>
+        client.subscriptions.executeSubscriptionModify(
+          subscriptionId,
+          toAddCouponRequest(subscriptionId, draft),
+        ),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Apply a tax rate to this contract — `POST /taxes/associations`, entity type `subscription`. */
+export function useCreateSubscriptionTax(subscriptionId: string) {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (draft: CreateTaxAssociation) =>
+      call(() =>
+        client.taxAssociations.createTaxAssociation(
+          toCreateTaxAssociationRequest(
+            subscriptionId,
+            draft,
+            'subscription',
+          ) as FlexpriceModels.CreateTaxAssociationRequest,
+        ),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
   })
 }

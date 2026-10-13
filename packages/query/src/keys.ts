@@ -125,6 +125,11 @@ export const queryKeys = {
   integrations: {
     all: () => ['integrations'] as const,
   },
+  /** A customer's provider mappings — `GET /integrations/mappings`. */
+  integrationLinks: {
+    all: () => ['integrationLinks'] as const,
+    forCustomer: (customerId: string) => ['integrationLinks', 'customer', customerId] as const,
+  },
   dataExports: {
     all: () => ['dataExports'] as const,
     list: (filter: Record<string, unknown>) => ['dataExports', 'list', filter] as const,

@@ -1,9 +1,27 @@
 import { useMemo, useState } from 'react'
-import { SubscriptionStatus, type SubscriptionCancellationType } from '@fp/domain'
+import {
+  DEFAULT_ADDON_QUERY,
+  DEFAULT_COUPON_QUERY,
+  DEFAULT_TAX_RATE_QUERY,
+  SubscriptionStatus,
+  type SubscriptionCancellationType,
+} from '@fp/domain'
 import {
   ApiError,
   useActivateSubscription,
+  useAddons,
+  useAddSubscriptionAddon,
+  useAddSubscriptionCoupon,
   useCancelSubscription,
+  useCoupons,
+  useCreateSubscriptionCreditGrant,
+  useCreateSubscriptionEntitlement,
+  useCreateSubscriptionTax,
+  useCustomerIntegrationLinks,
+  useIntegrations,
+  useLinkCustomerIntegration,
+  useTaxRates,
+  useUnlinkCustomerIntegration,
   useCreateSubscriptionLineItem,
   useDeleteSubscriptionLineItem,
   useExecuteLineChange,
@@ -81,10 +99,9 @@ export function SubscriptionDetailPage({
   const addons = useSubscriptionAddons(subscriptionId)
   const coupons = useSubscriptionCoupons(subscriptionId)
   const taxes = useSubscriptionTaxes(subscriptionId)
-  const [hideZeroCharges, setHideZeroCharges] = useState(true)
   const status = subscription.data?.status
   const preview = useSubscriptionInvoicePreview(subscriptionId, {
-    hideZeroCharges,
+    hideZeroCharges: true,
     enabled: status === SubscriptionStatus.Active || status === SubscriptionStatus.Paused,
   })
   const cancel = useCancelSubscription()
@@ -95,6 +112,23 @@ export function SubscriptionDetailPage({
   const previewChange = usePreviewLineChange()
   const executeChange = useExecuteLineChange()
   const formOptions = usePlanFormOptions()
+  const customerId = subscription.data?.customerId ?? ''
+  const integrationLinks = useCustomerIntegrationLinks(customerId)
+  const integrations = useIntegrations()
+  const linkIntegration = useLinkCustomerIntegration(customerId)
+  const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
+  const createEntitlement = useCreateSubscriptionEntitlement(subscriptionId)
+  const createCreditGrant = useCreateSubscriptionCreditGrant(subscriptionId)
+  const addAddon = useAddSubscriptionAddon(subscriptionId)
+  const addCoupon = useAddSubscriptionCoupon(subscriptionId)
+  const createTax = useCreateSubscriptionTax(subscriptionId)
+  const addonCatalogue = useAddons({ ...DEFAULT_ADDON_QUERY, pageSize: 100 })
+  const couponCatalogue = useCoupons({ ...DEFAULT_COUPON_QUERY, pageSize: 100 })
+  const taxRateCatalogue = useTaxRates({
+    ...DEFAULT_TAX_RATE_QUERY,
+    pageSize: 100,
+    statuses: ['published'],
+  })
 
   const [dialog, setDialog] = useState<'cancel' | 'activate' | null>(null)
   const [cancellationType, setCancellationType] =
@@ -116,6 +150,10 @@ export function SubscriptionDetailPage({
   }
 
   const data = subscription.data
+  const linkedTypes = new Set((integrationLinks.data ?? []).map((link) => link.providerType))
+  const linkableProviders = (integrations.data ?? [])
+    .filter((integration) => integration.connection && !linkedTypes.has(integration.providerType))
+    .map((integration) => ({ providerType: integration.providerType, name: integration.name }))
   const close = () => setDialog(null)
 
   return (
@@ -129,11 +167,33 @@ export function SubscriptionDetailPage({
         invoices={part(invoices)}
         schedules={part(schedules)}
         preview={part(preview)}
-        hideZeroCharges={hideZeroCharges}
-        onHideZeroChargesChange={setHideZeroCharges}
         addons={part(addons)}
         coupons={part(coupons)}
         taxes={part(taxes)}
+        integrationLinks={integrationLinks.data ?? []}
+        linkableProviders={linkableProviders}
+        onLinkIntegration={(input) => linkIntegration.mutateAsync(input)}
+        onUnlinkIntegration={(input) => unlinkIntegration.mutateAsync(input)}
+        onAddEntitlement={(draft) => createEntitlement.mutateAsync(draft)}
+        onAddCreditGrant={(draft) => createCreditGrant.mutateAsync(draft)}
+        onAddAddon={(draft) => addAddon.mutateAsync(draft)}
+        onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
+        onAddTax={(draft) => createTax.mutateAsync(draft)}
+        sectionOptions={{
+          features: formOptions.featureOptions,
+          addons: (addonCatalogue.data?.addons ?? [])
+            .filter((addon) => addon.status === 'published')
+            .map((addon) => ({ id: addon.id, name: addon.name })),
+          coupons: (couponCatalogue.data?.coupons ?? [])
+            .filter((coupon) => coupon.code !== '')
+            .map((coupon) => ({ code: coupon.code, name: coupon.name })),
+          taxRates: (taxRateCatalogue.data?.taxRates ?? [])
+            .filter((rate) => rate.code !== '')
+            .map((rate) => ({
+              code: rate.code,
+              label: `${rate.name}${rate.percentageValue ? ` (${rate.percentageValue}%)` : ''}`,
+            })),
+        }}
         activity={activity}
         onBack={onNavigateToList}
         onOpenCustomer={() => onOpenCustomer(data.customerId)}
