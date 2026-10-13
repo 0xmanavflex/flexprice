@@ -10,6 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@ui/components/primitives/select'
+import { Calendar } from '@ui/components/primitives/calendar'
+import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
 import { DataFreshness, DataRegion } from '@ui/compositions/feedback/DataBoundary'
 import { EMPTY_CATALOGUE } from '@ui/compositions/feedback/emptyCatalogue'
 import { RetryAction } from '@ui/compositions/feedback/RetryAction'
@@ -238,10 +240,24 @@ export interface ApiPanel {
   lastUsedLabel: string | null
 }
 
+/** The range option that opens the date picker instead of naming a fixed window. */
+export const CUSTOM_RANGE_ID = 'custom'
+
+/** A chosen span of whole days, both ends inclusive. */
+export interface DayRange {
+  from: Date
+  to: Date
+}
+
 export interface DashboardHomeProps {
   rangeOptions: FilterOption[]
   range: string
   onRangeChange: (range: string) => void
+  /**
+   * The dates behind the `custom` range option. Drawn as a date-range picker
+   * beside the range select while `custom` is chosen.
+   */
+  customRange?: { value: DayRange | null; onChange: (range: DayRange) => void } | undefined
 
   granularityOptions: FilterOption[]
   granularity: string
@@ -358,6 +374,63 @@ function RangeFilter(props: {
         icon: <CalendarIcon aria-hidden className="size-3.5" />,
       }}
     />
+  )
+}
+
+const shortDay = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
+
+/**
+ * The custom range: a button naming the chosen days that opens a two-month
+ * calendar. A range is only reported once both ends are picked, so a half-made
+ * choice never refetches the page.
+ */
+function CustomRangePicker({
+  value,
+  onChange,
+}: {
+  value: DayRange | null
+  onChange: (range: DayRange) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [draft, setDraft] = useState<
+    { from?: Date | undefined; to?: Date | undefined } | undefined
+  >(value ?? undefined)
+  const today = new Date()
+  return (
+    <Popover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next)
+        if (next) setDraft(value ?? undefined)
+      }}
+    >
+      <PopoverTrigger
+        render={<Button type="button" variant="outline" aria-label="Custom date range" />}
+      >
+        <CalendarIcon aria-hidden className="size-3.5" />
+        {value ? shortDay.formatRange(value.from, value.to) : 'Pick dates'}
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0" align="end">
+        <Calendar
+          mode="range"
+          numberOfMonths={2}
+          disabled={{ after: today }}
+          defaultMonth={value?.from ?? new Date(today.getFullYear(), today.getMonth() - 1, 1)}
+          selected={draft as never}
+          onSelect={(next: { from?: Date | undefined; to?: Date | undefined } | undefined) => {
+            setDraft(next)
+            if (next?.from && next.to && next.from.getTime() !== next.to.getTime()) {
+              onChange({ from: next.from, to: next.to })
+              setOpen(false)
+            }
+          }}
+        />
+      </PopoverContent>
+    </Popover>
   )
 }
 
@@ -970,6 +1043,7 @@ export function DashboardHome({
   rangeOptions,
   range,
   onRangeChange,
+  customRange,
   granularityOptions,
   granularity,
   onGranularityChange,
@@ -984,7 +1058,7 @@ export function DashboardHome({
 
   // Ways out of an empty window. The range options run narrow to wide, so the
   // last is the widest; if it is already chosen there is nowhere wider to go.
-  const widest = rangeOptions.at(-1)
+  const widest = rangeOptions.filter((option) => option.id !== CUSTOM_RANGE_ID).at(-1)
   const widen: Exit | null =
     widest !== undefined && widest.id !== range
       ? { label: `Show ${widest.label.toLowerCase()}`, run: () => onRangeChange(widest.id) }
@@ -1002,11 +1076,16 @@ export function DashboardHome({
             granularity={granularity}
             onGranularityChange={onGranularityChange}
             range={
-              <RangeFilter
-                rangeOptions={rangeOptions}
-                range={range}
-                onRangeChange={onRangeChange}
-              />
+              <>
+                <RangeFilter
+                  rangeOptions={rangeOptions}
+                  range={range}
+                  onRangeChange={onRangeChange}
+                />
+                {range === CUSTOM_RANGE_ID && customRange ? (
+                  <CustomRangePicker value={customRange.value} onChange={customRange.onChange} />
+                ) : null}
+              </>
             }
           />
         }

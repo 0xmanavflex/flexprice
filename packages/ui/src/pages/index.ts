@@ -11,11 +11,12 @@
  * Still presentation. These take props and render; they do not fetch.
  */
 
-export { DashboardHome, DashboardHomeProvenance } from './home/DashboardHome'
+export { CUSTOM_RANGE_ID, DashboardHome, DashboardHomeProvenance } from './home/DashboardHome'
 export type {
   ApiPanel,
   CustomersPanel,
   DashboardHomeProps,
+  DayRange,
   EventPoint,
   EventsPanel,
   FilterOption,

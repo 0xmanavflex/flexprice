@@ -15,11 +15,12 @@ import {
   InvoiceStatus,
 } from '@fp/domain'
 import type { Customer, Invoice, Money, Subscription } from '@fp/domain'
-import { DashboardHome } from '@fp/ui/pages'
+import { CUSTOM_RANGE_ID, DashboardHome } from '@fp/ui/pages'
 import { qualityOf, withoutData } from './queryView'
 import type { QueryView } from './queryView'
 import type {
   CustomersPanel,
+  DayRange,
   EventsPanel,
   FilterOption,
   InvoicesPanel,
@@ -63,15 +64,38 @@ interface RangeSpec extends FilterOption {
 
 const RANGES: RangeSpec[] = [
   { id: '7d', label: 'Last 7 days', days: 7 },
+  { id: '14d', label: 'Last 14 days', days: 14 },
   { id: '30d', label: 'Last 30 days', days: 30 },
   { id: '90d', label: 'Last 90 days', days: 90 },
+  { id: '180d', label: 'Last 6 months', days: 180 },
+  { id: '365d', label: 'Last 12 months', days: 365 },
 ]
+
+/** The presets plus "Custom range", which opens the date picker. */
+const RANGE_OPTIONS: FilterOption[] = [
+  ...RANGES.map(({ id, label }) => ({ id, label })),
+  { id: CUSTOM_RANGE_ID, label: 'Custom range' },
+]
+
+/** Hourly buckets stop being readable (and cheap) past a month. */
+const MAX_HOURLY_DAYS = 31
 
 const GRANULARITIES: (FilterOption & { windowSize: UsageWindowSize })[] = [
   { id: 'hourly', label: 'Hourly', windowSize: UsageWindowSize.Hour },
   { id: 'daily', label: 'Daily', windowSize: UsageWindowSize.Day },
   { id: 'weekly', label: 'Weekly', windowSize: UsageWindowSize.Week },
 ]
+
+/** A picked calendar day as midnight UTC, so a custom window is cut like a preset one. */
+function utcDay(date: Date): Date {
+  return new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()))
+}
+
+const pickedDay = new Intl.DateTimeFormat(undefined, {
+  day: 'numeric',
+  month: 'short',
+  year: 'numeric',
+})
 
 /** Midnight UTC `daysAgo` days back — the boundary every window is cut on. */
 function dayStart(daysAgo: number): Date {
@@ -142,22 +166,51 @@ export function HomePage() {
   const navigate = useNavigate()
   const [rangeId, setRangeId] = useState('7d')
   const [granularityId, setGranularityId] = useState('daily')
-
-  const range = RANGES.find((entry) => entry.id === rangeId) ?? RANGES[0]!
-  const granularity = GRANULARITIES.find((entry) => entry.id === granularityId) ?? GRANULARITIES[1]!
+  // Seeded with the last 30 days, so choosing "Custom range" shows data at once.
+  const [custom, setCustom] = useState<DayRange>(() => ({
+    from: new Date(Date.now() - 29 * DAY_MS),
+    to: new Date(),
+  }))
+  const isCustom = rangeId === CUSTOM_RANGE_ID
 
   /*
    * Both windows are derived from one `now` per render pass, so the current and
    * prior windows are exactly adjacent and the same width. Two independent
    * `Date.now()` calls would leave a sliver of time in neither.
    */
-  const windows = useMemo(() => {
+  const windows = useMemo<Windows>(() => {
+    if (isCustom) {
+      // Both picked days are inclusive: the window runs to the end of the last one,
+      // or to now when that is today.
+      const start = utcDay(custom.from)
+      const end = new Date(Math.min(utcDay(custom.to).getTime() + DAY_MS, Date.now()))
+      const days = Math.max(
+        1,
+        Math.round((utcDay(custom.to).getTime() - start.getTime()) / DAY_MS) + 1,
+      )
+      const priorStart = new Date(start.getTime() - days * DAY_MS)
+      return { current: { start, end }, prior: { start: priorStart, end: start }, days }
+    }
+    const preset = RANGES.find((entry) => entry.id === rangeId) ?? RANGES[0]!
     const end = new Date()
-    const start = dayStart(range.days)
-    const priorEnd = start
-    const priorStart = new Date(start.getTime() - range.days * DAY_MS)
-    return { current: { start, end }, prior: { start: priorStart, end: priorEnd } }
-  }, [range.days])
+    const start = dayStart(preset.days)
+    const priorStart = new Date(start.getTime() - preset.days * DAY_MS)
+    return {
+      current: { start, end },
+      prior: { start: priorStart, end: start },
+      days: preset.days,
+    }
+  }, [isCustom, custom, rangeId])
+  const days = windows.days
+  const rangeLabel = isCustom
+    ? `${pickedDay.formatRange(custom.from, custom.to)}`
+    : (RANGES.find((entry) => entry.id === rangeId) ?? RANGES[0]!).label.toLowerCase()
+
+  const granularityOptions = GRANULARITIES.filter(
+    (entry) => entry.id !== 'hourly' || days <= MAX_HOURLY_DAYS,
+  )
+  const granularity =
+    granularityOptions.find((entry) => entry.id === granularityId) ?? GRANULARITIES[1]!
 
   /*
    * Newest first, so once a row falls before the window every row after it is
@@ -206,8 +259,8 @@ export function HomePage() {
   // Parked with the API panel until quota-based metrics land.
   // const apiKeys = useApiKeys()
 
-  const eventsPanel = toEventsPanel(analytics, priorAnalytics, granularityId)
-  const customersPanel = toCustomersPanel(customers, windows, range.days)
+  const eventsPanel = toEventsPanel(analytics, priorAnalytics, granularity.id)
+  const customersPanel = toCustomersPanel(customers, windows)
 
   /*
    * Parked until quota-based metrics land.
@@ -215,18 +268,19 @@ export function HomePage() {
    * const usagePanel = toUsagePanel(analytics.data, priorAnalytics.data, analytics.isPending, analytics.isError)
    */
 
-  const subscriptionsPanel = toSubscriptionsPanel(subscriptions, windows, range.days)
+  const subscriptionsPanel = toSubscriptionsPanel(subscriptions, windows)
   const invoicesPanel = toInvoicesPanel(invoices, windows)
 
   return (
     <DashboardHome
-      rangeOptions={RANGES.map(({ id, label }) => ({ id, label }))}
+      rangeOptions={RANGE_OPTIONS}
       range={rangeId}
       onRangeChange={setRangeId}
-      granularityOptions={GRANULARITIES.map(({ id, label }) => ({ id, label }))}
-      granularity={granularityId}
+      customRange={{ value: custom, onChange: setCustom }}
+      granularityOptions={granularityOptions.map(({ id, label }) => ({ id, label }))}
+      granularity={granularity.id}
       onGranularityChange={setGranularityId}
-      rangeLabel={range.label.toLowerCase()}
+      rangeLabel={rangeLabel}
       events={eventsPanel}
       customers={customersPanel}
       subscriptions={subscriptionsPanel}
@@ -324,6 +378,21 @@ function revenueChange(current: Money | null, prior: Money | null): number | nul
 interface Windows {
   current: { start: Date; end: Date }
   prior: { start: Date; end: Date }
+  /** Whole days in the current window. */
+  days: number
+}
+
+/** Calendar days the current window touches: a preset's runs to now, so it includes today. */
+function spanDays(windows: Windows): number {
+  return Math.max(
+    1,
+    Math.ceil((windows.current.end.getTime() - windows.current.start.getTime()) / DAY_MS),
+  )
+}
+
+/** The UTC day `index` days after the window's first one. */
+function windowDay(windows: Windows, index: number): Date {
+  return new Date(windows.current.start.getTime() + index * DAY_MS)
 }
 
 /** The earliest of a set of dates, or `null` when there are none. */
@@ -338,7 +407,6 @@ function earliest(dates: (Date | null)[]): Date | null {
 function toCustomersPanel(
   view: QueryView<{ customers: Customer[]; total: number }>,
   windows: Windows,
-  days: number,
 ): CustomersPanel {
   const meta = qualityOf(view)
   const blank = { newCount: null, partial: false, points: [] }
@@ -356,8 +424,8 @@ function toCustomersPanel(
   const partial = created.length === rows.length && total > rows.length
 
   // A point per day, oldest first, so a quiet day is a zero rather than a gap.
-  const points = Array.from({ length: days + 1 }, (_, index) => {
-    const start = dayStart(days - index)
+  const points = Array.from({ length: spanDays(windows) }, (_, index) => {
+    const start = windowDay(windows, index)
     const end = new Date(start.getTime() + DAY_MS)
     return {
       label: dayLabel.format(start),
@@ -393,7 +461,6 @@ function toCustomersPanel(
 function toSubscriptionsPanel(
   view: QueryView<{ subscriptions: Subscription[]; total: number }>,
   windows: Windows,
-  days: number,
 ): SubscriptionsPanel {
   const meta = qualityOf(view)
   const blank = { total: 0, changePercent: null, days: [], plans: [] }
@@ -445,11 +512,12 @@ function toSubscriptionsPanel(
    * truncated: every subscription inside it is still counted, in a column that
    * spans several days and says so on the axis.
    */
-  const bucketDays = Math.max(1, Math.ceil(days / MAX_COLUMNS))
+  const bucketDays = Math.max(1, Math.ceil(spanDays(windows) / MAX_COLUMNS))
   const buckets: { label: string; byPlan: Record<string, number> }[] = []
-  for (let offset = days - 1; offset >= 0; offset -= bucketDays) {
-    const start = dayStart(offset)
-    const last = dayStart(Math.max(offset - bucketDays + 1, 0))
+  const span = spanDays(windows)
+  for (let index = 0; index < span; index += bucketDays) {
+    const start = windowDay(windows, index)
+    const last = windowDay(windows, Math.min(index + bucketDays, span) - 1)
     const end = new Date(last.getTime() + DAY_MS)
     const byPlan: Record<string, number> = {}
     for (const row of current) {
