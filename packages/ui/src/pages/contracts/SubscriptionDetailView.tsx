@@ -1406,7 +1406,7 @@ function LineSourceBadge({ line }: { line: SubscriptionLine }) {
   return (
     <span className="flex items-center gap-2">
       <Badge variant={line.source === 'contract' ? 'info-light' : 'secondary'} size="sm">
-        <Icon aria-hidden="true" />
+        <Icon aria-hidden="true" className="size-3" />
         {LINE_SOURCE_LABEL[line.source]}
       </Badge>
       {isEnded(line) ? (
