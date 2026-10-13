@@ -641,7 +641,7 @@ const BY_CUSTOMER_COLUMNS: DetailColumn<RevenueByCustomerRow>[] = [
   },
   {
     key: 'contract',
-    header: 'Contract',
+    header: 'Fixed',
     cell: (row) => <span className="text-muted-foreground tabular-nums">{row.contract}</span>,
   },
   {
@@ -669,6 +669,17 @@ function RevenueByCustomerPanel({
   onViewCustomers: () => void
 }) {
   const rows = byCustomer.rows ?? []
+  // A column no row has a figure for (cost and margin today) is left out rather
+  // than drawn as a column of dashes, which would read as zeros.
+  const field: Record<string, keyof RevenueByCustomerRow> = { net: 'netRevenue' }
+  const columns = BY_CUSTOMER_COLUMNS.filter(
+    (column) =>
+      column.key === 'customer' ||
+      rows.some((row) => {
+        const value = row[field[column.key] ?? (column.key as keyof RevenueByCustomerRow)]
+        return value !== '' && value !== NOTHING
+      }),
+  )
 
   return (
     <section aria-labelledby="revenue-by-customer" className="flex flex-col gap-4">
@@ -690,7 +701,7 @@ function RevenueByCustomerPanel({
           <DetailTable
             label="Revenue by customer"
             noun="customers"
-            columns={BY_CUSTOMER_COLUMNS}
+            columns={columns}
             rows={rows}
             getRowId={(row) => row.id}
             action={
