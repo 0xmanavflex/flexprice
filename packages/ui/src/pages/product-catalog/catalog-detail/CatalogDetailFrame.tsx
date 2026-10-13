@@ -20,6 +20,8 @@ export interface CatalogDetailFrameProps {
   badges?: ReactNode
   /** Copyable identifier. */
   id: string
+  /** Sits immediately before the ID chip, e.g. the payment gateway's logo. */
+  leading?: ReactNode
   /** Accessible name of the More button. */
   menuLabel: string
   /**
@@ -61,6 +63,7 @@ export function CatalogDetailFrame({
   title,
   badges,
   id,
+  leading,
   menuLabel,
   menu = [],
   tabs,
@@ -75,6 +78,7 @@ export function CatalogDetailFrame({
       title={title}
       {...(badges ? { badges } : {})}
       id={id}
+      {...(leading ? { leading } : {})}
       actions={<DetailMoreMenu label={menuLabel} items={menu} />}
     >
       <DetailTabs

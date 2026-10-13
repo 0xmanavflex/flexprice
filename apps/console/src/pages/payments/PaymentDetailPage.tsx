@@ -2,7 +2,13 @@ import { useState } from 'react'
 import { CreditCardIcon } from '@fp/ui/icons'
 import { PaymentStatus, formatMoney, PAYMENT_STATUS_LABEL } from '@fp/domain'
 import { ApiError, useDeletePayment, usePayment, useProcessPayment } from '@fp/query'
-import { CatalogDetailFrame, EntityLink, PaymentStatusBadge, Pill } from '@fp/ui/pages'
+import {
+  CatalogDetailFrame,
+  EntityLink,
+  IntegrationMark,
+  PaymentStatusBadge,
+  Pill,
+} from '@fp/ui/pages'
 import { AppFailure, ConfirmDialog, EditableCard, LoadingRows, PageBody } from '@fp/ui/compositions'
 
 export interface PaymentDetailPageProps {
@@ -15,6 +21,13 @@ const formatDate = (value: Date | null) =>
   value
     ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(value)
     : '—'
+
+/** The gateway's logo beside the ID chip, in place of a text pill. */
+function GatewayMark({ gateway }: { gateway: string }) {
+  const id = gateway.toLowerCase()
+  const name = id.charAt(0).toUpperCase() + id.slice(1).replaceAll('_', ' ')
+  return <IntegrationMark integration={{ id, name, providerType: id }} />
+}
 
 /**
  * One payment, with what the API lets you do to it: run it if it is still
@@ -60,15 +73,9 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
       onBack={onBack}
       icon={<CreditCardIcon />}
       title={`Payment ${formatMoney(data.amount)}`}
-      badges={
-        data.methodType || data.gateway ? (
-          <>
-            {data.methodType ? <Pill>{data.methodType}</Pill> : null}
-            {data.gateway ? <Pill>{data.gateway}</Pill> : null}
-          </>
-        ) : undefined
-      }
+      badges={data.methodType ? <Pill>{data.methodType}</Pill> : undefined}
       id={data.id}
+      {...(data.gateway ? { leading: <GatewayMark gateway={data.gateway} /> } : {})}
       menuLabel="Payment actions"
       menu={[
         ...(canProcess
