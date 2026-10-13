@@ -56,6 +56,10 @@ export {
 } from './settings'
 export type { WebhookDashboard } from './settings'
 
+/** `POST /dashboard/revenue-dashboard`, live but absent from the SDK. See `revenue.ts`. */
+export { fetchRevenueDashboard } from './revenue'
+export type { RevenueDashboardWire } from './revenue'
+
 /** `PUT /subscriptions/{id}` with `{metadata}`, which the SDK strips. See `subscriptionMetadata.ts`. */
 export { updateSubscriptionMetadata } from './subscriptionMetadata'
 

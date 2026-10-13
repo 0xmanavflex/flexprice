@@ -44,6 +44,13 @@ export const queryKeys = {
     all: () => ['counts'] as const,
     of: (entity: string) => ['counts', entity] as const,
   },
+  revenue: {
+    all: () => ['revenue'] as const,
+    overview: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['revenue', 'overview', filter] as const,
+    series: (filter: Readonly<Record<string, unknown>> = {}) =>
+      ['revenue', 'series', filter] as const,
+  },
   events: {
     all: () => ['events'] as const,
     analytics: (filter: Readonly<Record<string, unknown>> = {}) =>
