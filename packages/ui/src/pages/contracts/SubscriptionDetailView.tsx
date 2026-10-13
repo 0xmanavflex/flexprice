@@ -287,6 +287,11 @@ export function SubscriptionDetailView({
               isEnded(line) ? null : (
                 <RowActionsMenu
                   label={line.name}
+                  extra={
+                    line.source === 'plan' && onOpenPlan
+                      ? [{ label: 'Edit on plan', onSelect: onOpenPlan }]
+                      : undefined
+                  }
                   {...(canEditLine(line) ? { onEdit: () => editLine(line) } : {})}
                   {...(onEndCharge ? { onRemove: () => setDialog({ mode: 'end', line }) } : {})}
                   removeLabel="End charge"
@@ -390,7 +395,11 @@ export function SubscriptionDetailView({
       text: (line) => line.name,
       cell: (line) => <Strong>{line.name}</Strong>,
     },
-    { key: 'source', header: 'Source', cell: (line) => <LineSourceBadge line={line} /> },
+    {
+      key: 'source',
+      header: 'Source',
+      cell: (line) => <LineSourceBadge line={line} planName={s.planName} />,
+    },
     ...(withType
       ? [
           {
@@ -1406,11 +1415,20 @@ function PaymentCell({ row }: { row: Invoice }) {
 }
 
 /** Where a charge comes from; an ended charge also says when it ended. */
-function LineSourceBadge({ line }: { line: SubscriptionLine }) {
+function LineSourceBadge({ line, planName }: { line: SubscriptionLine; planName: string }) {
   const Icon = LINE_SOURCE_ICON[line.source]
+  // A plan charge is shared: say so where the badge is, not in a note under the table.
+  const hint =
+    line.source === 'plan'
+      ? `Shared by every contract on ${planName}. Editing it here changes this contract only.`
+      : undefined
   return (
     <span className="flex items-center gap-2">
-      <Badge variant={line.source === 'contract' ? 'info-light' : 'secondary'} size="sm">
+      <Badge
+        variant={line.source === 'contract' ? 'info-light' : 'secondary'}
+        size="sm"
+        {...(hint ? { title: hint } : {})}
+      >
         <Icon aria-hidden="true" className="size-3" />
         {LINE_SOURCE_LABEL[line.source]}
       </Badge>

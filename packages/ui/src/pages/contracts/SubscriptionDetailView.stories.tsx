@@ -647,9 +647,9 @@ export const OverviewSummary: Story = {
 export const ContractSpecificCharges: Story = {
   play: async ({ canvasElement }) => {
     const section = within(
-      (await within(canvasElement).findByRole('heading', { name: 'Contract-specific charges' })).closest(
-        'section',
-      )!,
+      (
+        await within(canvasElement).findByRole('heading', { name: 'Contract-specific charges' })
+      ).closest('section')!,
     )
     await expect(section.getByText('Onboarding')).toBeVisible()
     await expect(section.queryByText('Platform fee')).toBeNull()
@@ -1022,11 +1022,13 @@ export const LinkIntegration: Story = {
   },
 }
 
-/** "Edit the plan" is the way to change a plan charge for everyone. */
+/** A plan charge's menu offers "Edit on plan", the way to change it for every contract. */
 export const EditPlanLink: Story = {
+  parameters: menuA11y,
   play: async ({ canvasElement, args }) => {
     const canvas = await openPricing(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: 'edit the plan' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Platform fee' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Edit on plan' }))
     await expect(args.onOpenPlan).toHaveBeenCalledOnce()
   },
 }
