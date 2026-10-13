@@ -1277,6 +1277,12 @@ function InvoicePreviewSection({
               </div>
             </dl>
           </div>
+          <p className="text-muted-foreground border-t px-6 py-3 text-xs">
+            {value.periodEnd
+              ? `This is a preview of the invoice that will be billed on ${day(value.periodEnd)}.`
+              : 'This is a preview of the next invoice.'}{' '}
+            It may change if the subscription is updated.
+          </p>
         </>
       )}
     </PartSection>
