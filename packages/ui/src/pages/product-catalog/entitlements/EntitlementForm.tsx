@@ -83,11 +83,14 @@ interface SharedProps {
 export interface EntitlementCreateFormProps extends SharedProps {
   /** Features not already entitled — offered as the choice. */
   features: FeatureOption[]
+  /** Opens with this feature already chosen, e.g. from the product it was started on. */
+  defaultFeatureId?: string
   onSubmit: (entitlement: CreateEntitlement) => void
 }
 
 export function EntitlementCreateForm({
   features,
+  defaultFeatureId,
   onSubmit,
   isSubmitting = false,
   submitError = null,
@@ -96,7 +99,10 @@ export function EntitlementCreateForm({
 }: EntitlementCreateFormProps) {
   const form = useForm<CreateEntitlement>({
     resolver: standardSchemaResolver(createEntitlementSchema) as Resolver<CreateEntitlement>,
-    defaultValues: emptyEntitlement('', FeatureType.Metered),
+    defaultValues: emptyEntitlement(
+      defaultFeatureId ?? '',
+      features.find((option) => option.id === defaultFeatureId)?.type ?? FeatureType.Metered,
+    ),
     mode: 'onTouched',
   })
   const [configText, setConfigText] = useState('{}')

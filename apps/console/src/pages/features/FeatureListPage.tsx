@@ -5,14 +5,13 @@ import { FeatureCloneDialog, FeatureGrid, type ProductLinkage } from '@fp/ui/pag
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { toSubmitError } from './featureMessages'
+import { ProductEntitlementDialog } from './ProductEntitlementDialog'
 import { toListFailure } from '../shared/listFailure'
 
 export interface FeatureListPageProps {
   query: FeatureQuery
   onQueryChange: (query: FeatureQuery) => void
   onCreateFeature: () => void
-  /** Entitlements are granted by plans, so this goes to where one is added. */
-  onCreateEntitlement: (feature: Feature) => void
   onEditFeature: (feature: Feature) => void
   onOpenFeature: (feature: Feature) => void
 }
@@ -25,7 +24,6 @@ export function FeatureListPage({
   query,
   onQueryChange,
   onCreateFeature,
-  onCreateEntitlement,
   onEditFeature,
   onOpenFeature,
 }: FeatureListPageProps) {
@@ -35,6 +33,7 @@ export function FeatureListPage({
 
   const [cloning, setCloning] = useState<Feature | null>(null)
   const [deleting, setDeleting] = useState<Feature | null>(null)
+  const [entitling, setEntitling] = useState<Feature | null>(null)
 
   const onCreate = onCreateFeature
   const closeClone = () => {
@@ -115,7 +114,7 @@ export function FeatureListPage({
             features={rows}
             linkage={linkage}
             linkageLoading={linked.isPending}
-            onCreateEntitlement={onCreateEntitlement}
+            onCreateEntitlement={setEntitling}
             total={features.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
@@ -128,6 +127,8 @@ export function FeatureListPage({
           />
         </ListState>
       </PageBody>
+
+      <ProductEntitlementDialog feature={entitling} onClose={() => setEntitling(null)} />
 
       <FeatureCloneDialog
         open={cloning !== null}

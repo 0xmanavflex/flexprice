@@ -656,7 +656,6 @@ function FeaturesRouteComponent() {
         void navigate({ to: '/features/$featureId', params: { featureId: feature.id } })
       }
       onCreateFeature={() => void navigate({ to: '/features/new' })}
-      onCreateEntitlement={() => void navigate({ to: '/plans', search: {} as never })}
       onEditFeature={(feature) =>
         void navigate({ to: '/features/$featureId/edit', params: { featureId: feature.id } })
       }
