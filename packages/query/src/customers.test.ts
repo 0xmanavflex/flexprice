@@ -89,6 +89,10 @@ describe('toCustomerFilter', () => {
     expect(filter).not.toHaveProperty('status')
     expect(filter).not.toHaveProperty('statuses')
   })
+
+  it('expands integrations so the list can show each customer’s marks', () => {
+    expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)).toMatchObject({ expand: 'integrations' })
+  })
 })
 
 describe('toIntegrationLinks', () => {

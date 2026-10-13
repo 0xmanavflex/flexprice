@@ -398,6 +398,50 @@ export function useSubscriptions(query: SubscriptionQuery) {
   })
 }
 
+/** Pages read per count query: 500 contracts each, so 5 000 before giving up. */
+const COUNT_PAGE = 500
+const COUNT_PAGES = 10
+
+/**
+ * How many contracts each of these customers has — for the Contracts column on
+ * the customer list, whose search endpoint carries no subscription count.
+ *
+ * One `POST /subscriptions/search` narrowed by `customer_ids`, paged until the
+ * total is read, then counted per customer. A customer with none is a 0, not a
+ * missing value. If the set is larger than the page cap the query fails rather
+ * than returning an undercount, and the column shows an em dash.
+ */
+export function useCustomerContractCounts(customerIds: readonly string[]) {
+  const client = useFlexprice()
+  const ids = [...new Set(customerIds)].sort()
+
+  return useQuery({
+    queryKey: queryKeys.subscriptions.list({ countFor: ids }),
+    queryFn: async ({ signal }) => {
+      const counts: Record<string, number> = Object.fromEntries(ids.map((id) => [id, 0]))
+      for (let page = 0; page < COUNT_PAGES; page += 1) {
+        const response = await call(
+          (options) =>
+            client.subscriptions.querySubscription(
+              { customerIds: ids, limit: COUNT_PAGE, offset: page * COUNT_PAGE } as never,
+              options,
+            ),
+          signal,
+        )
+        const items = (response.items ?? []) as SubscriptionWire[]
+        for (const item of items) {
+          if (item.customerId && item.customerId in counts) counts[item.customerId]! += 1
+        }
+        const total = response.pagination?.total ?? 0
+        if (items.length < COUNT_PAGE || (page + 1) * COUNT_PAGE >= total) return counts
+      }
+      throw new Error('Too many contracts to count')
+    },
+    enabled: ids.length > 0,
+    staleTime: 30_000,
+  })
+}
+
 /**
  * A subscription draft, as a `CreateSubscriptionRequest`.
  *

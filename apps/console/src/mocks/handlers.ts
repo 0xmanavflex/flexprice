@@ -37,6 +37,9 @@ interface SearchBody {
   filters?: { field?: string; operator?: string; value?: { string?: string } }[]
   subscription_ids?: string[]
   subscriptionIds?: string[]
+  /** The customer list's contract counts: every contract of these customers. */
+  customer_ids?: string[]
+  customerIds?: string[]
   /** How the contract detail page scopes the invoice search to one contract. */
   subscription_id?: string
   subscriptionId?: string
@@ -98,6 +101,10 @@ function page(source: Corpus, body: SearchBody) {
   const subscriptionIds = body.subscription_ids ?? body.subscriptionIds
   if (subscriptionIds?.length)
     rows = rows.filter((row) => subscriptionIds.includes(readString(row, 'id')))
+
+  const customerIds = body.customer_ids ?? body.customerIds
+  if (customerIds?.length)
+    rows = rows.filter((row) => customerIds.includes(readString(row, 'customer_id')))
 
   const ids = body.feature_ids ?? body.featureIds
   if (ids?.length) rows = rows.filter((row) => ids.includes(readString(row, 'id')))

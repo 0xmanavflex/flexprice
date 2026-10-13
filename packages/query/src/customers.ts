@@ -105,6 +105,9 @@ export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> 
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    // The integration marks in the list: one batched lookup on the server
+    // instead of a mappings request per row.
+    expand: 'integrations',
   }
 }
 

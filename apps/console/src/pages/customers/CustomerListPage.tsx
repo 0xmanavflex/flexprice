@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { type Customer, type CustomerQuery } from '@fp/domain'
-import { ApiError, useCustomers, useDeleteCustomer } from '@fp/query'
+import { ApiError, useCustomerContractCounts, useCustomers, useDeleteCustomer } from '@fp/query'
 import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -37,6 +37,7 @@ export function CustomerListPage({
 
   const failure = toListFailure(customers.error, 'customers')
   const rows = customers.data?.customers ?? []
+  const contractCounts = useCustomerContractCounts(rows.map((customer) => customer.id))
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
 
@@ -69,6 +70,7 @@ export function CustomerListPage({
             total={customers.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            {...(contractCounts.data ? { contractCounts: contractCounts.data } : {})}
             {...(onOpenCustomer
               ? { onCustomerClick: (customer) => onOpenCustomer(customer.id) }
               : {})}

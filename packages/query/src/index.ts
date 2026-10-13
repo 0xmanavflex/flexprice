@@ -242,6 +242,7 @@ export {
   toUpdateLineItemRequest,
   useActivateSubscription,
   useUpdateSubscriptionMetadata,
+  useCustomerContractCounts,
   useCancelSubscription,
   useCreateSubscription,
   useCreateSubscriptionLineItem,
