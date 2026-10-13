@@ -32,6 +32,7 @@ export interface PriceUnitWire {
   status?: string | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
+  metadata?: Record<string, string> | null | undefined
 }
 
 /**
@@ -57,6 +58,7 @@ export function toPriceUnit(wire: PriceUnitWire): PriceUnit {
     // round, and nothing above this layer does arithmetic on it.
     conversionRate: wire.conversionRate ?? '0',
     status: toStatus(wire.status),
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -122,8 +124,8 @@ export function usePriceUnits(query: PriceUnitQuery) {
  * Create sends the whole record — the rate stringified, because the API stores
  * it as a string. Update sends **only the name**: the backend rejects a change
  * to the code, symbol, base currency or rate, so sending them would be an error
- * the form has already prevented by rendering them read-only. Metadata is left
- * untouched (absent) rather than blanked.
+ * the form has already prevented by rendering them read-only. Metadata is sent
+ * only when the draft carries it, so a rename leaves it untouched.
  */
 export function toCreatePriceUnitRequest(draft: CreatePriceUnit): Record<string, unknown> {
   return {
@@ -136,7 +138,7 @@ export function toCreatePriceUnitRequest(draft: CreatePriceUnit): Record<string,
 }
 
 export function toUpdatePriceUnitRequest(draft: CreatePriceUnit): Record<string, unknown> {
-  return { name: draft.name }
+  return { name: draft.name, ...(draft.metadata ? { metadata: draft.metadata } : {}) }
 }
 
 export function useCreatePriceUnit() {

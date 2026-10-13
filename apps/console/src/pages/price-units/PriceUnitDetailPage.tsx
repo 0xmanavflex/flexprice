@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { formatMoney, money } from '@fp/domain'
 import { useDeletePriceUnit, usePriceUnit, useUpdatePriceUnit } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, Pill } from '@fp/ui/pages'
-import { ConfirmDialog, EditableCard, Section } from '@fp/ui/compositions'
+import { ConfirmDialog, EditableCard, MetadataCard, Section } from '@fp/ui/compositions'
 import { ArchiveIcon, CoinsIcon, PencilIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
 
@@ -130,64 +130,91 @@ export function PriceUnitDetailPage({
           value: 'information',
           label: 'Information',
           content: (
-            <EditableCard
-              title="General"
-              description="The name is the only field that can change once a unit is created."
-              locked={data.status === 'archived'}
-              fields={[
-                { key: 'name', label: 'Name', value: data.name, required: true },
-                {
-                  key: 'code',
-                  label: 'Code',
-                  value: data.code,
-                  display: data.code ? (
-                    <span className="font-mono text-[13px]">{data.code}</span>
-                  ) : (
-                    '—'
-                  ),
-                  readOnly: true,
-                },
-                { key: 'symbol', label: 'Symbol', value: symbolDisplay, readOnly: true },
-                { key: 'base', label: 'Base currency', value: baseCurrency ?? '—', readOnly: true },
-                {
-                  key: 'rate',
-                  label: 'Conversion rate',
-                  value: data.conversionRate || '—',
-                  readOnly: true,
-                },
-                {
-                  key: 'id',
-                  label: 'Price unit ID',
-                  value: data.id,
-                  display: <span className="font-mono text-[13px]">{data.id}</span>,
-                  readOnly: true,
-                },
-                {
-                  key: 'created',
-                  label: 'Created',
-                  value: formatDate(data.createdAt),
-                  readOnly: true,
-                },
-                {
-                  key: 'updated',
-                  label: 'Updated',
-                  value: formatDate(data.updatedAt),
-                  readOnly: true,
-                },
-              ]}
-              onSave={(changes) =>
-                update.mutateAsync({
-                  id: data.id,
-                  draft: {
-                    name: changes.name ?? data.name,
-                    code: data.code,
-                    symbol: data.symbol,
-                    baseCurrency: data.baseCurrency.toUpperCase(),
-                    conversionRate: Number(data.conversionRate) || 1,
+            <div className="grid items-start gap-5 xl:grid-cols-3">
+              <EditableCard
+                className="xl:col-span-2"
+                title="General"
+                description="The name is the only field that can change once a unit is created."
+                locked={data.status === 'archived'}
+                fields={[
+                  { key: 'name', label: 'Name', value: data.name, required: true },
+                  {
+                    key: 'code',
+                    label: 'Code',
+                    value: data.code,
+                    display: data.code ? (
+                      <span className="font-mono text-[13px]">{data.code}</span>
+                    ) : (
+                      '—'
+                    ),
+                    readOnly: true,
                   },
-                })
-              }
-            />
+                  { key: 'symbol', label: 'Symbol', value: symbolDisplay, readOnly: true },
+                  {
+                    key: 'base',
+                    label: 'Base currency',
+                    value: baseCurrency ?? '—',
+                    readOnly: true,
+                  },
+                  {
+                    key: 'rate',
+                    label: 'Conversion rate',
+                    value: data.conversionRate || '—',
+                    readOnly: true,
+                  },
+                  {
+                    key: 'id',
+                    label: 'Price unit ID',
+                    value: data.id,
+                    display: <span className="font-mono text-[13px]">{data.id}</span>,
+                    readOnly: true,
+                  },
+                  {
+                    key: 'created',
+                    label: 'Created',
+                    value: formatDate(data.createdAt),
+                    readOnly: true,
+                  },
+                  {
+                    key: 'updated',
+                    label: 'Updated',
+                    value: formatDate(data.updatedAt),
+                    readOnly: true,
+                  },
+                ]}
+                onSave={(changes) =>
+                  update.mutateAsync({
+                    id: data.id,
+                    draft: {
+                      name: changes.name ?? data.name,
+                      code: data.code,
+                      symbol: data.symbol,
+                      baseCurrency: data.baseCurrency.toUpperCase(),
+                      conversionRate: Number(data.conversionRate) || 1,
+                    },
+                  })
+                }
+              />
+              <MetadataCard
+                metadata={data.metadata ?? {}}
+                {...(data.status === 'archived'
+                  ? {}
+                  : {
+                      onSave: (metadata: Record<string, string>) =>
+                        update.mutateAsync({
+                          id: data.id,
+                          draft: {
+                            name: data.name,
+                            code: data.code,
+                            symbol: data.symbol,
+                            baseCurrency: data.baseCurrency.toUpperCase(),
+                            conversionRate: Number(data.conversionRate) || 1,
+                            metadata,
+                          },
+                        }),
+                    })}
+              />
+            </div>
           ),
         },
       ]}

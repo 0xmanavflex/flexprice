@@ -42,6 +42,8 @@ export interface PriceUnit {
    */
   conversionRate: string
   status: PriceUnitStatus
+  /** Free-form key/value fields; absent or empty when none. */
+  metadata?: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -109,6 +111,7 @@ export const createPriceUnitSchema = z.object({
   conversionRate: z
     .number({ message: 'Enter a conversion rate' })
     .positive('Must be greater than zero'),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type CreatePriceUnit = z.infer<typeof createPriceUnitSchema>
