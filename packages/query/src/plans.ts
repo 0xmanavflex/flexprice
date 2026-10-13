@@ -32,6 +32,7 @@ export interface PlanWire {
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
   prices?: unknown[] | undefined
+  metadata?: Record<string, string> | null | undefined
 }
 
 const PLAN_STATUSES = new Set<string>(Object.values(PlanStatus))
@@ -71,6 +72,7 @@ export function toPlan(wire: PlanWire): Plan {
     status,
     chargeCount: Array.isArray(wire.prices) ? wire.prices.length : 0,
     headline: toHeadline(wire.prices),
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -156,6 +158,7 @@ export function toUpdatePlanRequest(draft: CreatePlan): Record<string, unknown> 
     name: draft.name,
     lookupKey: draft.lookupKey ?? '',
     description: draft.description ?? '',
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
   }
 }
 

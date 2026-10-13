@@ -63,6 +63,7 @@ import {
   DetailTabs,
   EditableCard,
   FormDialog,
+  MetadataCard,
 } from '@fp/ui/compositions'
 import {
   Button,
@@ -251,6 +252,7 @@ export function PlanDetailPage({
           name={record.name}
           lookupKey={record.lookupKey}
           description={record.description}
+          metadata={record.metadata}
           createdAt={record.createdAt}
           updatedAt={record.updatedAt}
           readOnly={isArchived}
@@ -598,11 +600,15 @@ function CreditGrantsTab({ planId }: { planId: string }) {
   )
 }
 
-/** Information — the plan record. One pencil on the card edits its fields in place. */
+/**
+ * Information — the plan record. One pencil on the card edits its fields in
+ * place; the metadata card on the right edits, adds and removes key/value fields.
+ */
 function InformationTab({
   name,
   lookupKey,
   description,
+  metadata,
   createdAt,
   updatedAt,
   readOnly,
@@ -611,15 +617,21 @@ function InformationTab({
   name: string
   lookupKey: string
   description: string
+  metadata: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
   readOnly: boolean
-  onSave: (patch: { name?: string; lookupKey?: string; description?: string }) => Promise<unknown>
+  onSave: (patch: {
+    name?: string
+    lookupKey?: string
+    description?: string
+    metadata?: Record<string, string>
+  }) => Promise<unknown>
 }) {
   return (
-    <div className="grid gap-5 xl:grid-cols-3">
+    <div className="grid items-start gap-5 xl:grid-cols-3">
       <EditableCard
-        className="xl:col-span-3"
+        className="xl:col-span-2"
         title="Plan details"
         locked={readOnly}
         fields={[
@@ -646,6 +658,12 @@ function InformationTab({
           },
         ]}
         onSave={(changes) => onSave(changes)}
+      />
+      <MetadataCard
+        metadata={metadata}
+        {...(readOnly
+          ? {}
+          : { onSave: (next: Record<string, string>) => onSave({ metadata: next }) })}
       />
     </div>
   )

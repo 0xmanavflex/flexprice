@@ -45,6 +45,8 @@ export interface Plan {
   chargeCount: number
   /** The pricing-card headline, or null when the plan prices nothing yet. */
   headline: PlanHeadline | null
+  /** Free-form key/value fields, empty when none. */
+  metadata: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -115,6 +117,7 @@ export const createPlanSchema = z.object({
     .regex(/^[a-z0-9_-]*$/, 'Use lowercase letters, numbers, hyphens and underscores')
     .optional(),
   description: z.string().trim().optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type CreatePlan = z.infer<typeof createPlanSchema>
