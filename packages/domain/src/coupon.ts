@@ -134,6 +134,7 @@ export const DEFAULT_COUPON_QUERY: CouponQuery = {
  */
 export const editCouponSchema = z.object({
   name: z.string().trim().min(1, 'Enter a name'),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type EditCoupon = z.infer<typeof editCouponSchema>
@@ -173,7 +174,11 @@ export const createCouponSchema = z
     currency: z.string().trim().optional(),
     percentageOff: z.string().trim().optional(),
     cadence: z.enum([CouponCadence.Once, CouponCadence.Repeated, CouponCadence.Forever]),
-    durationInPeriods: z.number().int('Must be a whole number').positive('Must be greater than zero').optional(),
+    durationInPeriods: z
+      .number()
+      .int('Must be a whole number')
+      .positive('Must be greater than zero')
+      .optional(),
     redeemAfter: z.date().optional(),
     redeemBefore: z.date().optional(),
     maxRedemptions: z

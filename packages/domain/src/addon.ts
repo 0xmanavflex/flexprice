@@ -25,6 +25,8 @@ export interface Addon {
   lookupKey: string
   description: string
   status: AddonStatus
+  /** Free-form key/value fields; absent or empty when none. */
+  metadata?: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
 }
@@ -90,6 +92,7 @@ export const createAddonSchema = z.object({
     .min(1, 'Enter a lookup key')
     .regex(/^[a-z0-9_-]+$/, 'Use lowercase letters, numbers, hyphens and underscores'),
   description: z.string().trim().optional(),
+  metadata: z.record(z.string(), z.string()).optional(),
 })
 
 export type CreateAddon = z.infer<typeof createAddonSchema>

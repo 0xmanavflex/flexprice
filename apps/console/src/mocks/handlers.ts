@@ -3285,6 +3285,14 @@ export const handlers = [
       ],
     })
   }),
+  http.put(`${BASE}/invoices/:id`, async ({ request, params }) => {
+    const id = String(params['id'])
+    const body = (await request.json()) as Record<string, unknown>
+    if (body['metadata']) patchRow(sourceFor('invoices').items, id, { metadata: body['metadata'] })
+    const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+    if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+    return HttpResponse.json(invoice)
+  }),
   http.post(`${BASE}/invoices/:id/finalize`, ({ params }) => {
     patchRow(sourceFor('invoices').items, String(params['id']), {
       invoice_status: 'FINALIZED',

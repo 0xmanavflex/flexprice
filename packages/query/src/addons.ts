@@ -29,6 +29,7 @@ export interface AddonWire {
   status?: string | undefined
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
+  metadata?: Record<string, string> | null | undefined
 }
 
 const ADDON_STATUSES = new Set<string>(Object.values(AddonStatus))
@@ -44,6 +45,7 @@ export function toAddon(wire: AddonWire): Addon {
     lookupKey: wire.lookupKey ?? '',
     description: wire.description ?? '',
     status,
+    metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
   }
@@ -117,6 +119,7 @@ export function toUpdateAddonRequest(draft: CreateAddon): Record<string, unknown
     // `description` is cleared with an empty string rather than omitted, so
     // removing the text on an edit actually removes it.
     description: draft.description ?? '',
+    ...(draft.metadata ? { metadata: draft.metadata } : {}),
   }
 }
 

@@ -154,7 +154,18 @@ export function CouponDetailPage({
                   })
                 }
               />
-              <MetadataCard metadata={record.metadata ?? {}} />
+              <MetadataCard
+                metadata={record.metadata ?? {}}
+                {...(isArchived
+                  ? {}
+                  : {
+                      onSave: (metadata: Record<string, string>) =>
+                        update.mutateAsync({
+                          id: record.id,
+                          draft: { name: record.name, metadata },
+                        }),
+                    })}
+              />
             </div>
           ),
         },

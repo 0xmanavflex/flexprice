@@ -79,6 +79,8 @@ export interface InvoiceDetailViewProps {
   /** Drafts only: recompute lines, credits and taxes in place. */
   onRecalculate?: () => void
   onVoid?: () => void
+  /** Saves the invoice's metadata map. Omitted, the metadata card is read-only. */
+  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   onIssueCreditNote?: () => void
   /** Finalized invoices: send the invoice to the customer. */
   onSend?: () => void
@@ -125,6 +127,7 @@ export function InvoiceDetailView({
   onRecordPayment,
   onRecalculate,
   onVoid,
+  onSaveMetadata,
   onIssueCreditNote,
   onSend,
   onRetryPayment,
@@ -333,7 +336,10 @@ export function InvoiceDetailView({
                 }))}
                 emptyText="No dates recorded yet."
               />
-              <MetadataCard metadata={invoice.metadata ?? {}} />
+              <MetadataCard
+                metadata={invoice.metadata ?? {}}
+                {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
+              />
               <RelatedCard items={related} />
             </div>
           </div>

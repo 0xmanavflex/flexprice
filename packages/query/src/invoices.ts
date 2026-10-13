@@ -327,6 +327,20 @@ function useInvoiceAction(run: (client: Flexprice, id: string) => Promise<unknow
   })
 }
 
+/** Replace an invoice's metadata — `PUT /invoices/{id}` with `{metadata}` and nothing else. */
+export function useUpdateInvoiceMetadata() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, metadata }: { id: string; metadata: Record<string, string> }) =>
+      call(() => client.invoices.updateInvoice(id, { metadata })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+    },
+  })
+}
+
 /** Lock a draft and send it — `POST /invoices/{id}/finalize`. */
 export const useFinalizeInvoice = () =>
   useInvoiceAction((client, id) => client.invoices.finalizeInvoice(id))

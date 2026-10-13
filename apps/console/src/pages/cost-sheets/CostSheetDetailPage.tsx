@@ -170,7 +170,23 @@ export function CostSheetDetailPage({
                   })
                 }
               />
-              <MetadataCard metadata={data.metadata ?? {}} />
+              <MetadataCard
+                metadata={data.metadata ?? {}}
+                {...(data.status === 'archived'
+                  ? {}
+                  : {
+                      onSave: (metadata: Record<string, string>) =>
+                        update.mutateAsync({
+                          id: data.id,
+                          draft: {
+                            name: data.name,
+                            lookupKey: data.lookupKey,
+                            description: data.description,
+                            metadata,
+                          },
+                        }),
+                    })}
+              />
             </div>
           ),
         },

@@ -158,11 +158,11 @@ export function useCoupon(id: string) {
  * A coupon's edit is a rename.
  *
  * `UpdateCouponRequest` accepts only `name` and `metadata`; the discount and
- * its cadence are immutable once created. The draft carries the one editable
- * field, so this is the whole request.
+ * its cadence are immutable once created. Metadata is sent only when the draft
+ * carries it, so a rename leaves it alone.
  */
 export function toUpdateCouponRequest(draft: EditCoupon): Record<string, unknown> {
-  return { name: draft.name }
+  return { name: draft.name, ...(draft.metadata ? { metadata: draft.metadata } : {}) }
 }
 
 export function useUpdateCoupon() {

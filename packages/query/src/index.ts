@@ -64,6 +64,7 @@ export {
   useAttemptInvoicePayment,
   useCreateInvoice,
   useFinalizeInvoice,
+  useUpdateInvoiceMetadata,
   useInvoice,
   useInvoices,
   useRecalculateInvoice,

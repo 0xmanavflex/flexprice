@@ -12,6 +12,7 @@ import {
   useRecordPayment,
   useSendInvoice,
   useTenant,
+  useUpdateInvoiceMetadata,
   useUserInfo,
   useVoidInvoice,
 } from '@fp/query'
@@ -51,6 +52,7 @@ export function InvoiceDetailPage({
   const payments = useInvoicePayments(invoiceId)
   const creditNotes = useInvoiceCreditNotes(invoiceId)
   const finalize = useFinalizeInvoice()
+  const saveMetadata = useUpdateInvoiceMetadata()
   const voidInvoice = useVoidInvoice()
   const attempt = useAttemptInvoicePayment()
   const recalculate = useRecalculateInvoice()
@@ -103,6 +105,7 @@ export function InvoiceDetailPage({
           run('recalculate', recalculate, 'Invoice recalculated', 'recalculate the invoice')
         }
         onVoid={() => setDialog('void')}
+        onSaveMetadata={(metadata) => saveMetadata.mutateAsync({ id: data.id, metadata })}
         onIssueCreditNote={() => void navigate({ to: '/credit-notes/new' })}
         onSend={() => run('send', send, 'Invoice sent to the customer', 'send the invoice')}
         onRetryPayment={() =>

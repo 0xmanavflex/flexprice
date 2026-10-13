@@ -47,7 +47,7 @@ import {
   type FeatureOption,
   Pill,
 } from '@fp/ui/pages'
-import { ConfirmDialog, EditableCard, FormDialog } from '@fp/ui/compositions'
+import { ConfirmDialog, EditableCard, FormDialog, MetadataCard } from '@fp/ui/compositions'
 import { ArchiveIcon, PencilIcon, PuzzleIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
@@ -451,18 +451,25 @@ function CreditGrantsTab({ addonId }: { addonId: string }) {
   )
 }
 
-/** Information — one pencil edits the name and description in place; the rest is read-only. */
+/**
+ * Information — one pencil edits the name and description in place; the rest
+ * is read-only. The metadata card beside it edits, adds and removes fields.
+ */
 function InformationTab({
   addon,
   onSave,
 }: {
   addon: Addon
-  onSave: (patch: { name?: string; description?: string }) => Promise<void>
+  onSave: (patch: {
+    name?: string
+    description?: string
+    metadata?: Record<string, string>
+  }) => Promise<void>
 }) {
   return (
-    <div className="grid gap-5 xl:grid-cols-3">
+    <div className="grid items-start gap-5 xl:grid-cols-3">
       <EditableCard
-        className="xl:col-span-3"
+        className="xl:col-span-2"
         title="Add-on details"
         locked={addon.status === 'archived'}
         fields={[
@@ -486,6 +493,12 @@ function InformationTab({
           },
         ]}
         onSave={(changes) => onSave(changes)}
+      />
+      <MetadataCard
+        metadata={addon.metadata ?? {}}
+        {...(addon.status === 'archived'
+          ? {}
+          : { onSave: (metadata: Record<string, string>) => onSave({ metadata }) })}
       />
     </div>
   )
