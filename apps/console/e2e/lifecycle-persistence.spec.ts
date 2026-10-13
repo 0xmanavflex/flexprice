@@ -26,7 +26,6 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
   await page.getByRole('button', { name: 'Save draft' }).click()
 
   await expect(page).toHaveURL(/\/invoices\/inv_new_/)
-  const id = new URL(page.url()).pathname.split('/').pop() ?? ''
   await expect(page.getByRole('heading', { name: 'Invoice', level: 1 })).toBeVisible()
   await expect(page.getByText('Draft', { exact: true }).first()).toBeVisible()
 
@@ -45,7 +44,8 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
     .getByRole('button', { name: 'Invoices', exact: true })
     .click()
   await expect(page).toHaveURL(/\/invoices$/)
-  await expect(page.getByText(id).first()).toBeVisible()
+  // A new invoice has no number yet, so the list row is found by its amount.
+  await expect(page.getByText('$75.50').first()).toBeVisible()
 })
 
 test('add-on in-place edit saves and the detail reflects it', async ({ page }) => {

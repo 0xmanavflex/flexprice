@@ -288,6 +288,8 @@ export interface EntityListProps<T> {
   headingAs?: 'h1' | 'h3'
   /** For a table inside a panel: 36px header, 48px rows, 32px toolbar controls, and a footer only once there is a second page. */
   compact?: boolean | undefined
+  /** For a short, fully shown set (an invoice's lines): no page-size picker or range footer. */
+  hideFooter?: boolean | undefined
   /** Leaves out the search and filter row: a short list that needs none. */
   hideToolbar?: boolean | undefined
   /**
@@ -547,6 +549,7 @@ export function EntityList<T extends object>({
   filteredEmptyDescription,
   headingAs: Heading = 'h1',
   compact = false,
+  hideFooter = false,
   hideToolbar = false,
   border = false,
   className,
@@ -1129,7 +1132,7 @@ export function EntityList<T extends object>({
                 <TableScroller minWidth={tableMin} scrolls={overflows}>
                   <DataGridTable />
                 </TableScroller>
-                {total > 0 ? (
+                {total > 0 && !hideFooter ? (
                   <div
                     className={cn(
                       'border-border/60 border-t',

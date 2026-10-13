@@ -1192,6 +1192,7 @@ function InvoicePreviewSection({
             noun="lines"
             rows={expanded ? value.lines : value.lines.slice(0, PREVIEW_LINES_SHOWN)}
             toolbar={false}
+            footer={false}
             pageSize={Math.max(value.lines.length, 1)}
             columns={[
               {
