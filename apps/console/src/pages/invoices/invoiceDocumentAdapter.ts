@@ -59,7 +59,7 @@ export function toInvoiceDocument(
 
   return {
     id: invoice.id,
-    number: invoice.number === invoice.id ? null : invoice.number,
+    number: invoice.number.trim() ? invoice.number : null,
     status: invoice.status,
     paymentStatus: invoice.paymentStatus,
     currency: invoice.currency || 'USD',

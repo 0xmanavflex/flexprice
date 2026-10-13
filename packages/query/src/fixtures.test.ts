@@ -43,8 +43,9 @@ describe('invoices, from captured responses', () => {
     const invoice = toInvoice(item as never)
 
     expect(invoice.id).not.toBe('')
-    expect(invoice.number).not.toBe('')
-    // The fallback exists for a reason, but it should not be firing on real data.
+    // A missing invoice number stays blank. The internal id is never shown as the number.
+    expect(invoice.number).toBe(item.invoiceNumber?.trim() ?? '')
+    expect(invoice.number).not.toBe(invoice.id)
     expect(invoice.customerName).not.toBe('Unknown')
     expect(Object.values(InvoiceStatus)).toContain(invoice.status)
     expect(invoice.total.currency).toMatch(/^[A-Z]{3}$/)

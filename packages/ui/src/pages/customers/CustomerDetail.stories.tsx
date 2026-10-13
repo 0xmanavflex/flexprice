@@ -53,7 +53,7 @@ const SUBSCRIPTIONS: Subscription[] = [
 const INVOICES: Invoice[] = [
   {
     id: 'inv_draft',
-    number: 'Draft',
+    number: '',
     customerId: CUSTOMER.id,
     customerName: CUSTOMER.name,
     status: InvoiceStatus.Draft,
@@ -209,7 +209,10 @@ function makeInvoices(count: number, status: InvoiceStatus): Invoice[] {
     const paid = status === InvoiceStatus.Paid
     return {
       id: `inv_gen_${index}`,
-      number: `INV-2026-${String(1000 + index).padStart(5, '0')}`,
+      number:
+        status === InvoiceStatus.Draft
+          ? ''
+          : `INV-2026-${String(1000 + index).padStart(5, '0')}`,
       customerId: CUSTOMER.id,
       customerName: CUSTOMER.name,
       status,

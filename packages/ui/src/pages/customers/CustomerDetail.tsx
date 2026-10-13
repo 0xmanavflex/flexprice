@@ -27,8 +27,7 @@ import { SubTabState, truncationNote } from '@ui/compositions/detail/SubTabState
 import { Money } from '../shared/Money'
 import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
-import { EntityLink, Pill, Status, type PillTone } from '../shared/cells'
-import { cn } from '@ui/lib/cn'
+import { EmDash, EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
 import { IntegrationMark, IntegrationMarks } from './IntegrationMark'
 import { CopyValue } from '../shared/CopyValue'
@@ -852,13 +851,12 @@ function InvoiceTable({
             header: 'Invoice number',
             width: 160,
             sortBy: (invoice) => invoice.number,
-            cell: (invoice) => (
-              <span
-                className={cn(invoice.status === InvoiceStatus.Draft && 'text-muted-foreground')}
-              >
-                {invoice.status === InvoiceStatus.Draft ? 'Draft' : invoice.number}
-              </span>
-            ),
+            cell: (invoice) =>
+              invoice.number ? (
+                <span className="font-mono text-xs">{invoice.number}</span>
+              ) : (
+                <EmDash />
+              ),
           },
           {
             key: 'issued',

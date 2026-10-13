@@ -98,8 +98,9 @@ export function toInvoice(wire: InvoiceWire, now?: Date): Invoice {
 
   return {
     id: wire.id ?? '',
-    // A draft has no number yet. Showing the id beats showing a blank cell.
-    number: wire.invoiceNumber || (wire.id ?? ''),
+    // Drafts often have no invoice number yet. Leave it blank so the UI shows
+    // a dash instead of the internal id.
+    number: wire.invoiceNumber?.trim() ?? '',
     customerId: wire.customerId ?? '',
     // Resolved here so no cell has to fall back, and no grid joins data.
     customerName: wire.customer?.name || wire.customer?.email || (wire.customerId ?? 'Unknown'),

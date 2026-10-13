@@ -67,10 +67,9 @@ export const invoiceFixtures: Invoice[] = [
     periodEnd: date('2026-02-28T00:00:00Z'),
   },
   {
-    // A draft has no number yet, so the grid shows the id. Worth having in a
-    // fixture: it is the case a hand-written demo row never includes.
+    // A draft has no number yet, so the grid shows a dash.
     id: 'inv_04',
-    number: 'inv_04',
+    number: '',
     customerId: 'cus_umbrella',
     customerName: 'Umbrella Ltd',
     status: InvoiceStatus.Draft,

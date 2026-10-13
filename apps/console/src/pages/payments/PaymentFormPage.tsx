@@ -16,7 +16,7 @@ export function PaymentFormPage({ onCancel, onDone }: PaymentFormPageProps) {
     () =>
       (invoices.data?.invoices ?? []).map((invoice) => ({
         value: invoice.id,
-        label: `${invoice.number} · ${invoice.customerName}`,
+        label: `${invoice.number || '—'} · ${invoice.customerName}`,
       })),
     [invoices.data],
   )

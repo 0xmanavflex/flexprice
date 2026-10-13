@@ -264,7 +264,7 @@ export function SubscriptionDetailView({
           {
             id: 'latest-invoice',
             label: 'Latest invoice',
-            value: s.latestInvoice.number || s.latestInvoice.id,
+            value: s.latestInvoice.number || '—',
             onOpen: () => onOpenInvoice(s.latestInvoice!.id),
           },
         ]

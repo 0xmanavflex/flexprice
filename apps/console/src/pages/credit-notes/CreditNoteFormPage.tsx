@@ -19,7 +19,7 @@ export function CreditNoteFormPage({ onCancel, onDone }: CreditNoteFormPageProps
     () =>
       (invoices.data?.invoices ?? []).map((invoice) => ({
         value: invoice.id,
-        label: `${invoice.number} · ${invoice.customerName}`,
+        label: `${invoice.number || '—'} · ${invoice.customerName}`,
       })),
     [invoices.data],
   )

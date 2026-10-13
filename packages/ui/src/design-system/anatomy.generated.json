@@ -1546,6 +1546,7 @@
         "DetailTable",
         "DetailTabs",
         "EditableCard",
+        "EmDash",
         "EmptyState",
         "EntityHeader",
         "EntityLink",
@@ -2068,6 +2069,7 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "CustomerDetail",
         "CustomerGrid",
         "DunningGrid",
         "EntitlementTable",
