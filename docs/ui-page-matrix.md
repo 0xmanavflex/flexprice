@@ -6,7 +6,7 @@ Kit pieces are found by following each page's UI-package imports two levels deep
 empty is building its own structure and needs a design decision (see `DESIGN_CHANGE.md`). Page-specific
 pieces are domain components (a plan form, a charge row); they may not re-implement a kit pattern.
 
-57 route pages.
+56 route pages.
 
 | Area | Page | Pattern | Kit pieces | Page-specific pieces |
 | --- | --- | --- | --- | --- |
@@ -27,7 +27,6 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | customers | `CustomerDetailPage` | Detail | ConfirmDialog, DetailTabs, EmptyState, EntityList, Section | AppFailure, CUSTOMER_TABS, CustomerDetail, CustomerTab, LoadingRows, QuotaCard |
 | customers | `CustomerFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | CustomerForm |
 | customers | `CustomerListPage` | List | ConfirmDialog, EmptyState, EntityList, FilterBar, SortMenu | Button, CustomerGrid, ListState, PageBody |
-| dunning | `DunningListPage` | List | EntityList | CollectionsSummary, DunningGrid, ListState, PageBody |
 | environments | `EnvironmentFormPage` | Form | Field, FormDialog | EnvironmentForm |
 | environments | `EnvironmentRenameFormPage` | Form | Field, FormDialog | EnvironmentRenameForm |
 | events | `EventListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | DataFreshness, EMPTY_CATALOGUE, EventDetailSheet, EventGrid, ListState, PageBody |

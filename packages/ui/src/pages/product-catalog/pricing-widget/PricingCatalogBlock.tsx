@@ -138,6 +138,7 @@ export function PricingCatalogBlock({
         </div>
       ) : tiles.length === 0 ? (
         <EmptyState
+          scene="catalog"
           title="No plans to show yet"
           description="Publish a plan and it appears here, ready to embed on your pricing page."
           action={

@@ -1,5 +1,16 @@
 import { useLayoutEffect, useRef, type ComponentType } from 'react'
-import { Hub, Padlock, Riffle, Terminal, type HairlineProps } from '@lucasmarkes/hairline/react'
+import {
+  Exploded,
+  Loupe,
+  Padlock,
+  Phosphor,
+  Plot,
+  Riffle,
+  Settle,
+  Slow,
+  Terminal,
+  type HairlineProps,
+} from '@lucasmarkes/hairline/react'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 
@@ -12,10 +23,16 @@ import { provenance } from '@ui/provenance'
  * the inline, error and per-record states; a first-run page is the one place a
  * larger, livelier drawing earns its room.
  *
- *   table       Riffle    a tray of cards — any list of records
- *   developers  Terminal  events, webhooks, exports, workflows, syncs
- *   settings    Padlock   configuration that has not been set up
- *   home        Hub       the dashboard before anything is connected
+ *   table       Riffle     a tray of cards — any list of records
+ *   contracts   Riffle     contracts and everything inside them
+ *   customers   Phosphor   customers and every tab of a customer
+ *   catalog     Slow       products, plans, add-ons and pricing widgets
+ *   billing     Loupe      invoices and credit notes
+ *   payments    Settle     payments and collections
+ *   revenue     Plot       the revenue dashboard
+ *   developers  Terminal   events, webhooks, exports, workflows, syncs
+ *   settings    Padlock    configuration that has not been set up
+ *   home        Exploded   the dashboard before anything is connected
  *
  * Decorative, like every figure here: the wrapper is `aria-hidden` and the
  * figure's own tab stop is removed, so the drawing adds nothing to the reading
@@ -29,14 +46,31 @@ export const SceneIllustrationProvenance = provenance({
   note: '@lucasmarkes/hairline figures for first-run pages, one per area of the product.',
 })
 
-export const EMPTY_SCENES = ['table', 'developers', 'settings', 'home'] as const
+export const EMPTY_SCENES = [
+  'table',
+  'contracts',
+  'customers',
+  'catalog',
+  'billing',
+  'payments',
+  'revenue',
+  'developers',
+  'settings',
+  'home',
+] as const
 export type EmptyScene = (typeof EMPTY_SCENES)[number]
 
 const SCENES: Record<EmptyScene, ComponentType<HairlineProps>> = {
   table: Riffle,
+  contracts: Riffle,
+  customers: Phosphor,
+  catalog: Slow,
+  billing: Loupe,
+  payments: Settle,
+  revenue: Plot,
   developers: Terminal,
   settings: Padlock,
-  home: Hub,
+  home: Exploded,
 }
 
 /**

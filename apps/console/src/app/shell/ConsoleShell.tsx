@@ -8,7 +8,7 @@ import {
   UserPlusIcon,
   CodeXmlIcon,
   GalleryHorizontalEndIcon,
-  Blocks as IntegrationsIcon,
+  LinkIcon as IntegrationsIcon,
   HouseIcon,
   Layers2Icon,
   LandmarkIcon,

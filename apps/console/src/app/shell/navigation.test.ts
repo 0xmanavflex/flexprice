@@ -105,7 +105,6 @@ describe('the sidebar layout', () => {
       'Credit notes',
     ])
     expect(NAV.find((entry) => entry.id === 'collections')?.children?.map((c) => c.label)).toEqual([
-      'Dunning',
       'Payments',
     ])
     expect(NAV.map((entry) => entry.label)).toEqual([
@@ -197,7 +196,6 @@ describe('every destination resolves', () => {
     '/customers',
     '/subscriptions',
     '/invoices',
-    '/dunning',
     '/payments',
     '/credit-notes',
     '/taxes',

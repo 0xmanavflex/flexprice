@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import { provenance } from '@ui/provenance'
 import { SectionEmpty } from '../feedback/SectionEmpty'
+import type { EmptyScene } from '../feedback/SceneIllustration'
 import { ErrorState, type ErrorKind } from '../feedback/States'
 import { TableSkeleton, type SkeletonColumn } from '../feedback/Skeletons'
 
@@ -39,7 +40,12 @@ export interface SubTabStateProps {
   onRetry?: (() => void) | undefined
   isRetrying?: boolean | undefined
   /** What nothing-here-yet says, specific to this tab. */
-  empty: { title: string; description?: string | undefined; action?: ReactNode }
+  empty: {
+    title: string
+    description?: string | undefined
+    action?: ReactNode
+    scene?: EmptyScene | undefined
+  }
   /** Skeleton columns that mirror the real table. */
   columns?: number | SkeletonColumn[] | undefined
   /** Label the skeleton announces. */
@@ -97,6 +103,7 @@ export function SubTabState({
       title={empty.title}
       description={empty.description}
       {...(empty.action ? { action: empty.action } : {})}
+      scene={empty.scene}
     />
   )
 }

@@ -111,6 +111,7 @@ export function PlanChargesView({
         </div>
       ) : charges.length === 0 ? (
         <SectionEmpty
+          scene="catalog"
           title="No charges yet"
           description="Nothing is billed yet. Add a fixed fee, a usage charge, or both."
           action={

@@ -54,6 +54,7 @@ export function PlanCreditGrantsView({
           columns={5}
           loadingLabel="Loading credit grants"
           empty={{
+            scene: 'catalog',
             title: 'No credit grants yet',
             description: 'Subscribers start with an empty wallet.',
             action: (

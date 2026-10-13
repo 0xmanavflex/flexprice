@@ -366,6 +366,7 @@ function MetricPanel({
 
     return (
       <BlurredEmpty
+        scene="revenue"
         title={`No usage or invoices in the ${rangeLabel}`}
         description="This report covers that window only; earlier periods are unchanged. Price a plan and send usage events to fill it."
         action={{ label: 'Create a plan', onClick: onSeePlans }}

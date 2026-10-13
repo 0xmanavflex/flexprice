@@ -168,6 +168,7 @@ export function CreditNoteGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No credit notes match these filters"
       empty={{
+        scene: 'billing',
         title: 'No credit notes yet',
         description:
           'Credit notes refund or adjust an invoice after it has been issued. Issue one from an invoice and it appears here.',

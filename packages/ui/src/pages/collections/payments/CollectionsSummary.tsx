@@ -12,7 +12,7 @@ export const CollectionsSummaryProvenance = provenance({
     'compositions/feedback/RetryAction',
     'compositions/feedback/Skeletons',
   ],
-  note: 'Two-cell strip above the Dunning table: total overdue and total outstanding, each with a count beneath. Loading is announced, a failure says "Unavailable" with a retry, and caveats (partial read, other currencies) sit in a footer.',
+  note: 'Two-cell strip above a collections table: total overdue and total outstanding, each with a count beneath. Loading is announced, a failure says "Unavailable" with a retry, and caveats (partial read, other currencies) sit in a footer.',
 })
 
 export interface CollectionsSummaryCell {

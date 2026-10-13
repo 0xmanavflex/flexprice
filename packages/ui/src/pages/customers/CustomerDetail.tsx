@@ -95,6 +95,8 @@ export interface CustomerDetailProps {
   onUpdateMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /** Open an invoice from a row action. */
   onOpenInvoice?: (invoiceId: string) => void
+  /** The "View all" beside Recent payments. Omitted, the button is not shown. */
+  onViewAllPayments?: () => void
   onOpenPlan?: (planId: string) => void
   /** Open one contract's own page, from a Contracts row or a running-contract card. Omitted, rows are not links. */
   onOpenContract?: (subscriptionId: string) => void
@@ -169,6 +171,7 @@ export function CustomerDetail({
   onUpdateField,
   onUpdateMetadata,
   onOpenInvoice,
+  onViewAllPayments,
   onOpenPlan,
   onOpenContract,
   subscriptionsLoading = false,
@@ -300,6 +303,8 @@ export function CustomerDetail({
             formatDate={formatDate}
             locale={locale}
             onOpenInvoice={onOpenInvoice}
+            onViewAllInvoices={() => onTabChange('invoices')}
+            onViewAllPayments={onViewAllPayments}
           />
         ) : null}
 
@@ -329,6 +334,7 @@ export function CustomerDetail({
         {tab === 'wallet'
           ? (wallet ?? (
               <EmptyState
+                scene="customers"
                 title="Wallet not available here"
                 description="This view has no wallet data to show. A customer's credit balance, top-ups and transactions appear here when it is provided."
               />
@@ -338,6 +344,7 @@ export function CustomerDetail({
         {tab === 'usage'
           ? (usage ?? (
               <EmptyState
+                scene="customers"
                 title="Usage not available here"
                 description="This view has no usage data to show. Per-feature allowances and consumption appear here when it is provided."
               />
@@ -347,6 +354,7 @@ export function CustomerDetail({
         {tab === 'events'
           ? (events ?? (
               <EmptyState
+                scene="customers"
                 title="Events not available here"
                 description="This view has no event feed to show. Events ingested for this customer appear here when it is provided."
               />
@@ -420,6 +428,15 @@ function activityEntries(
   return dated.sort((x, y) => time(y.when) - time(x.when)).map((d) => d.entry)
 }
 
+function ViewAllButton({ label, onClick }: { label: string; onClick: () => void }) {
+  return (
+    <Button variant="outline" size="sm" className="h-7 px-2.5 text-xs" onClick={onClick}>
+      View all
+      <span className="sr-only"> {label}</span>
+    </Button>
+  )
+}
+
 function OverviewTab({
   customer,
   subscriptions,
@@ -440,6 +457,8 @@ function OverviewTab({
   formatDate,
   locale,
   onOpenInvoice,
+  onViewAllInvoices,
+  onViewAllPayments,
 }: {
   customer: CustomerDetailModel
   subscriptions: Subscription[]
@@ -460,6 +479,8 @@ function OverviewTab({
   formatDate: FormatDate
   locale: string | undefined
   onOpenInvoice: ((invoiceId: string) => void) | undefined
+  onViewAllInvoices: () => void
+  onViewAllPayments: (() => void) | undefined
 }) {
   // A loading or failed read is "not known", never "none": the tiles and the
   // activity note say so rather than count what has not arrived.
@@ -527,7 +548,14 @@ function OverviewTab({
           onOpenContract={onOpenContract}
           onCreateContract={onCreateContract}
         />
-        <Section table showTitle title="Recent invoices">
+        <Section
+          table
+          showTitle
+          title="Recent invoices"
+          {...(invoices.length > 0
+            ? { titleAction: <ViewAllButton label="invoices" onClick={onViewAllInvoices} /> }
+            : {})}
+        >
           <InvoiceTable
             compactList
             invoices={invoices.slice(0, 5)}
@@ -539,7 +567,14 @@ function OverviewTab({
           />
         </Section>
         {payments ? (
-          <Section table showTitle title="Recent payments">
+          <Section
+            table
+            showTitle
+            title="Recent payments"
+            {...(onViewAllPayments && payments.length > 0
+              ? { titleAction: <ViewAllButton label="payments" onClick={onViewAllPayments} /> }
+              : {})}
+          >
             <PaymentTable
               payments={payments.slice(0, 5)}
               isLoading={paymentsLoading}
@@ -595,6 +630,7 @@ function PaymentTable({
       columns={6}
       loadingLabel="Loading payments"
       empty={{
+        scene: 'customers',
         title: 'No payments yet',
         description: 'Payments collected against this customer’s invoices appear here.',
       }}
@@ -694,6 +730,7 @@ function ContractsTable({
         columns={5}
         loadingLabel="Loading contracts"
         empty={{
+          scene: 'customers',
           title: 'No contracts yet',
           description: 'A contract puts this customer on a plan. Create one to start billing them.',
         }}
@@ -814,10 +851,11 @@ function InvoiceTable({
 }) {
   // Rows win; otherwise a failed read is an error with retry, a pending one a
   // skeleton, and only a finished empty read says "no invoices".
-  if (invoices.length === 0 && (isLoading || isError)) {
+  if (invoices.length === 0) {
+    const failed = isLoading || isError
     return (
       <div>
-        {action ? <div className="flex justify-end px-6 py-3">{action}</div> : null}
+        {action && failed ? <div className="flex justify-end px-6 py-3">{action}</div> : null}
         <SubTabState
           hasData={false}
           isLoading={isLoading}
@@ -825,7 +863,12 @@ function InvoiceTable({
           onRetry={onRetry}
           columns={6}
           loadingLabel="Loading invoices"
-          empty={{ title: 'No invoices yet' }}
+          empty={{
+            scene: 'customers',
+            title: 'No invoices yet',
+            description: 'Invoices are created automatically from contracts, or raised by hand.',
+            ...(action ? { action } : {}),
+          }}
         >
           {null}
         </SubTabState>

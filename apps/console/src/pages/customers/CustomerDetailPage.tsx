@@ -101,6 +101,7 @@ export function CustomerDetailPage({
         onOpenInvoice={(invoiceId) =>
           void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
         }
+        onViewAllPayments={() => void navigate({ to: '/payments', search: {} as never })}
         onOpenPlan={(planId) =>
           void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
         }
@@ -138,6 +139,7 @@ export function CustomerDetailPage({
             <CustomerEventsPanel externalId={customer.data.externalId} />
           ) : (
             <EmptyState
+              scene="customers"
               title="No external ID"
               description="Events are matched to a customer by external ID, and this customer has none."
             />
@@ -149,6 +151,7 @@ export function CustomerDetailPage({
           <div className="flex flex-col gap-8">
             <Section title="Analytics">
               <EmptyState
+                scene="customers"
                 size="inline"
                 title="Revenue and cost by feature are not available yet"
                 description="Flexprice does not report revenue or cost per feature for a customer, so none is shown. Allowances and consumption are below."
@@ -247,6 +250,7 @@ function UsageSection({
     return (
       <Section title="Usage">
         <EmptyState
+          scene="customers"
           size="inline"
           title="No entitlements yet"
           description="Quotas appear here once this customer is on a plan that grants a feature."

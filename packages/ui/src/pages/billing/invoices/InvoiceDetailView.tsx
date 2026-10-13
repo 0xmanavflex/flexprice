@@ -353,6 +353,7 @@ export function InvoiceDetailView({
               loadingLabel="Loading payments"
               columns={[{ width: '2fr' }, { kind: 'money' }, { kind: 'short' }, { kind: 'badge' }]}
               empty={{
+                scene: 'billing',
                 title: 'No payments yet',
                 description: 'No payments recorded for this invoice yet.',
                 action:
@@ -417,6 +418,7 @@ export function InvoiceDetailView({
               loadingLabel="Loading credit notes"
               columns={[{ width: '2fr' }, { kind: 'money' }, { kind: 'short' }, { kind: 'badge' }]}
               empty={{
+                scene: 'billing',
                 title: 'No credit notes yet',
                 description: 'No credit notes issued against this invoice.',
                 action:

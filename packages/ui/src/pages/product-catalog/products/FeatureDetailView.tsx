@@ -370,6 +370,7 @@ function ChargesTab({
           columns={5}
           loadingLabel="Loading charges"
           empty={{
+            scene: 'catalog',
             title: 'No charges yet',
             description: 'No plan or add-on prices this feature yet.',
             action: add,
@@ -474,6 +475,7 @@ function EntitlementsTab({
           columns={4}
           loadingLabel="Loading entitlements"
           empty={{
+            scene: 'catalog',
             title: 'No entitlements yet',
             description: 'No plan includes this feature yet.',
           }}
@@ -567,6 +569,7 @@ function OverviewTab({
     <div className="flex flex-col gap-5">
       <Section title="Usage">
         <EmptyState
+          scene="catalog"
           size="inline"
           title="Usage for this feature is not available yet"
           description="Flexprice does not report usage, customers or billed amounts per feature, so none are shown."
@@ -595,6 +598,7 @@ function OverviewTab({
               columns={3}
               loadingLabel="Loading plans"
               empty={{
+                scene: 'catalog',
                 title: 'No plans attached yet',
                 description: 'No plan prices this feature yet.',
               }}

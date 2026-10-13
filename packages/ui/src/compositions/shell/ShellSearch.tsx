@@ -10,7 +10,7 @@ import {
 import {
   ActivityIcon,
   BarChart3Icon,
-  BlocksIcon,
+  LinkIcon,
   BookOpenIcon,
   BotIcon,
   BoxIcon,
@@ -148,7 +148,7 @@ const PAGE_GLYPHS: Record<string, IconComponent> = {
   workflows: WorkflowIcon,
   developers: CodeXmlIcon,
   billing: LandmarkIcon,
-  integrations: BlocksIcon,
+  integrations: LinkIcon,
   docs: BookOpenIcon,
   settings: SettingsIcon,
   'settings-discounts': TicketPercentIcon,

@@ -286,6 +286,7 @@ export function PaymentGrid({
         filteredEmptyTitle="No matching payments on this page"
         filteredEmptyDescription="Search and status only narrow the payments loaded on this page. Other pages may have matches; go to another page, or clear the filters."
         empty={{
+          scene: 'payments',
           title: 'No money has moved yet',
           description:
             'A payment is a collection against an invoice — taken by a gateway, or recorded by you when it arrived some other way. Finalize an invoice and the first one can be collected.',

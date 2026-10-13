@@ -104,6 +104,7 @@ export function EntitlementTable({
           columns={5}
           loadingLabel="Loading entitlements"
           empty={{
+            scene: 'catalog',
             title: 'No entitlements yet',
             description: `Entitlements decide what is included of each feature: an allowance, a flag, or a value.${onAdd ? ' Add one to define what subscribers get.' : ''}`,
             action: addButton,

@@ -428,6 +428,7 @@ export function FeatureGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No products match these filters"
       empty={{
+        scene: 'catalog',
         title: 'Nothing is being measured yet',
         description:
           'A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',

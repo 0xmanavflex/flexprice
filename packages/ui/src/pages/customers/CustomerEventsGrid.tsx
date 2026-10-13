@@ -65,6 +65,7 @@ export function CustomerEventsGrid({
           loadingLabel="Loading events"
           truncation={capped}
           empty={{
+            scene: 'customers',
             title: 'No events yet',
             description: 'Events ingested for this customer appear here as they arrive.',
           }}

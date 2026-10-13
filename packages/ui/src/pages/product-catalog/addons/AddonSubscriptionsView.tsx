@@ -26,6 +26,7 @@ export function AddonSubscriptionsView({
     return (
       <Section title="Contracts">
         <EmptyState
+          scene="catalog"
           size="inline"
           title="Contracts using this add-on are not available yet"
           description="Flexprice does not list the contracts that use an add-on, so none are shown."

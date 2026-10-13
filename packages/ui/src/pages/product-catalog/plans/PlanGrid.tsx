@@ -325,6 +325,7 @@ export function PlanGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No plans match these filters"
       empty={{
+        scene: 'catalog',
         title: 'No plans yet',
         description:
           'A plan is what a customer subscribes to — a set of charges sold together under one name. Create one, price it, and it is ready to sell.',

@@ -145,7 +145,12 @@ export function ChargeTable({
           isRetrying={isRetrying}
           columns={5}
           loadingLabel="Loading charges"
-          empty={{ title: 'No charges yet', description: emptyText, action: addButton }}
+          empty={{
+            scene: 'catalog',
+            title: 'No charges yet',
+            description: emptyText,
+            action: addButton,
+          }}
         >
           {null}
         </SubTabState>

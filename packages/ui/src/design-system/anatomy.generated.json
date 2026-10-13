@@ -1502,6 +1502,13 @@
       "usedBy": [],
       "story": null
     },
+    "CrossIcon": {
+      "file": "src/reui/icons/default/filled/cross.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "CubeIcon": {
       "file": "src/reui/icons/default/outline/cube.tsx",
       "layer": "other",
@@ -1895,7 +1902,6 @@
         "CustomerDetail",
         "CustomerEventsGrid",
         "CustomerTaxSection",
-        "DunningGrid",
         "EntitlementTable",
         "FeatureDetailView",
         "GroupMembersView",
@@ -2006,16 +2012,6 @@
       "usedBy": [],
       "story": null
     },
-    "DunningGrid": {
-      "file": "src/pages/collections/dunning/DunningGrid.tsx",
-      "layer": "surface",
-      "composes": [
-        "DetailTable",
-        "EmDash"
-      ],
-      "usedBy": [],
-      "story": "./src/pages/collections/dunning/DunningGrid.stories.tsx"
-    },
     "EditableCard": {
       "file": "src/compositions/forms/EditableCard.tsx",
       "layer": "composition",
@@ -2071,7 +2067,6 @@
       "usedBy": [
         "CustomerDetail",
         "CustomerGrid",
-        "DunningGrid",
         "EntitlementTable",
         "EventGrid",
         "EventTypeName",
@@ -2223,7 +2218,6 @@
         "EmptyState",
         "ErrorState",
         "FilterBar",
-        "FilterIcon",
         "GuidedEmptyState",
         "SortMenu"
       ],
@@ -2623,7 +2617,6 @@
       "file": "src/compositions/tables/FilterBar.tsx",
       "layer": "composition",
       "composes": [
-        "FilterIcon",
         "Filters"
       ],
       "usedBy": [
@@ -2657,16 +2650,6 @@
       "layer": "vendor/reui",
       "composes": [],
       "usedBy": [],
-      "story": null
-    },
-    "FilterIcon": {
-      "file": "src/reui/icons/default/outline/filter.tsx",
-      "layer": "other",
-      "composes": [],
-      "usedBy": [
-        "EntityList",
-        "FilterBar"
-      ],
       "story": null
     },
     "FilterMenu": {
@@ -2763,7 +2746,7 @@
       "story": null
     },
     "FilterSearchIcon": {
-      "file": "src/reui/icons/default/outline/filter-search.tsx",
+      "file": "src/reui/icons/default/filled/filter-search.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [],
@@ -3027,6 +3010,13 @@
       "usedBy": [],
       "story": null
     },
+    "GearIcon": {
+      "file": "src/reui/icons/default/filled/gear.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Globe": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -3204,6 +3194,13 @@
       "usedBy": [],
       "story": null
     },
+    "HomeIcon": {
+      "file": "src/reui/icons/default/filled/home.tsx",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "HotelIcon": {
       "file": "src/reui/icons/default/outline/hotel.tsx",
       "layer": "other",
@@ -3213,13 +3210,6 @@
     },
     "House": {
       "file": "src/icons/index.ts",
-      "layer": "other",
-      "composes": [],
-      "usedBy": [],
-      "story": null
-    },
-    "HouseWindowIcon": {
-      "file": "src/reui/icons/default/outline/house-window.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [],
@@ -3619,11 +3609,12 @@
       "story": null
     },
     "LinkIcon": {
-      "file": "src/reui/icons/default/outline/link.tsx",
+      "file": "src/reui/icons/default/filled/link.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [
         "InvoiceDetailView",
+        "ShellSearch",
         "TaxRateGrid"
       ],
       "story": null
@@ -5026,6 +5017,7 @@
         "GuidedEmptyState",
         "ListOfferProvider",
         "MetricChart",
+        "SectionEmpty",
         "TrendBadge"
       ],
       "story": "./src/compositions/feedback/SceneIllustration.stories.tsx"
@@ -5103,7 +5095,9 @@
     "SectionEmpty": {
       "file": "src/compositions/feedback/SectionEmpty.tsx",
       "layer": "composition",
-      "composes": [],
+      "composes": [
+        "SceneIllustration"
+      ],
       "usedBy": [
         "PlanChargesView",
         "SubTabState",
@@ -5291,6 +5285,7 @@
         "BookOpenIcon",
         "CalculatorIcon",
         "CreditCardIcon",
+        "LinkIcon",
         "PlusIcon",
         "UsersIcon"
       ],
@@ -7017,13 +7012,6 @@
         "PageShell"
       ]
     },
-    "./src/pages/collections/dunning/DunningGrid.stories.tsx": {
-      "title": "App/Collections/Dunning/Dunning table",
-      "component": "DunningGrid",
-      "uses": [
-        "DunningGrid"
-      ]
-    },
     "./src/pages/collections/payments/CollectionsSummary.stories.tsx": {
       "title": "App/Collections/Payments/Collections summary",
       "component": "CollectionsSummary",
@@ -8078,17 +8066,6 @@
       "uses": [
         "ConfirmDialog",
         "CustomerGrid",
-        "ListState",
-        "PageBody"
-      ]
-    },
-    "DunningListPage": {
-      "file": "apps/console/src/pages/dunning/DunningListPage.tsx",
-      "pattern": "List",
-      "route": "/dunning",
-      "uses": [
-        "CollectionsSummary",
-        "DunningGrid",
         "ListState",
         "PageBody"
       ]

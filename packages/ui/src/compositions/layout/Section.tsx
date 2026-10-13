@@ -43,6 +43,8 @@ export interface SectionProps {
    * right. For tables on an Overview tab; a dedicated tab keeps no visible title.
    */
   showTitle?: boolean
+  /** With `table` and `showTitle`: sits on the title's line, right after it ("View all"). */
+  titleAction?: ReactNode
   /** A line under the title. */
   description?: string
   /** Heading level, so a page's outline stays correct. */
@@ -60,6 +62,7 @@ export function Section({
   bare,
   table,
   showTitle,
+  titleAction,
   description,
   as: Heading = 'h2',
 }: SectionProps) {
@@ -71,9 +74,12 @@ export function Section({
       <section aria-labelledby={id} className={cn('flex flex-col gap-3', className)}>
         {showTitle ? (
           <div className="flex items-center justify-between gap-4">
-            <Heading id={id} className="text-sm font-medium">
-              {title}
-            </Heading>
+            <div className="flex min-w-0 items-center gap-3">
+              <Heading id={id} className="text-sm font-medium">
+                {title}
+              </Heading>
+              {titleAction}
+            </div>
             {headerAction ? (
               <div className="flex shrink-0 items-center gap-2">{headerAction}</div>
             ) : null}
@@ -83,7 +89,9 @@ export function Section({
             {title}
           </Heading>
         )}
-        <div className={cn('bg-background min-w-0 overflow-hidden rounded-xl border', bodyClassName)}>
+        <div
+          className={cn('bg-background min-w-0 overflow-hidden rounded-xl border', bodyClassName)}
+        >
           {children}
         </div>
       </section>

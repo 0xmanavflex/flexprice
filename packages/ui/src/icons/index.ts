@@ -3,7 +3,6 @@
 // The one place the app gets icons from. Names follow lucide's, so existing
 // call sites keep working while the glyphs come from ReUI Motion Icons.
 import { animatedIcon, staticIcon, type IconComponent, type IconProps } from './factory'
-import animated_filled_squaresRing from '../reui/icons/animated/filled/squares-ring'
 import animated_bolt from '../reui/icons/animated/outline/bolt'
 import animated_circlePlay from '../reui/icons/animated/outline/circle-play'
 import animated_cubesCluster from '../reui/icons/animated/outline/cubes-cluster'
@@ -12,7 +11,11 @@ import animated_linesStack from '../reui/icons/animated/outline/lines-stack'
 import animated_receiptSquare from '../reui/icons/animated/outline/receipt-square'
 import animated_ringsLinked from '../reui/icons/animated/outline/rings-linked'
 import animated_squaresRing from '../reui/icons/animated/outline/squares-ring'
-import animated_solid_crossOutline from '../reui/icons/animated/solid/cross-outline'
+import static_filled_cross from '../reui/icons/default/filled/cross'
+import static_filled_filterSearch from '../reui/icons/default/filled/filter-search'
+import static_filled_gear from '../reui/icons/default/filled/gear'
+import static_filled_home from '../reui/icons/default/filled/home'
+import static_filled_link from '../reui/icons/default/filled/link'
 import static_filled_right from '../reui/icons/default/filled/right'
 import static_addFolder from '../reui/icons/default/outline/add-folder'
 import static_addUser from '../reui/icons/default/outline/add-user'
@@ -73,14 +76,12 @@ import static_exitRight from '../reui/icons/default/outline/exit-right'
 import static_eye from '../reui/icons/default/outline/eye'
 import static_eyeSlash from '../reui/icons/default/outline/eye-slash'
 import static_fileSheet from '../reui/icons/default/outline/file-sheet'
-import static_filter from '../reui/icons/default/outline/filter'
 import static_filterEdit from '../reui/icons/default/outline/filter-edit'
 import static_filterSearch from '../reui/icons/default/outline/filter-search'
 import static_flask from '../reui/icons/default/outline/flask'
 import static_globe from '../reui/icons/default/outline/globe'
 import static_hash from '../reui/icons/default/outline/hash'
 import static_hotel from '../reui/icons/default/outline/hotel'
-import static_houseWindow from '../reui/icons/default/outline/house-window'
 import static_inbox from '../reui/icons/default/outline/inbox'
 import static_informationCircle from '../reui/icons/default/outline/information-circle'
 import static_issueMoney from '../reui/icons/default/outline/issue-money'
@@ -89,7 +90,6 @@ import static_key from '../reui/icons/default/outline/key'
 import static_layoutDashboard from '../reui/icons/default/outline/layout-dashboard'
 import static_layoutHeader from '../reui/icons/default/outline/layout-header'
 import static_layoutSidebarLeft from '../reui/icons/default/outline/layout-sidebar-left'
-import static_link from '../reui/icons/default/outline/link'
 import static_loading from '../reui/icons/default/outline/loading'
 import static_lock from '../reui/icons/default/outline/lock'
 import static_magnifier from '../reui/icons/default/outline/magnifier'
@@ -275,7 +275,7 @@ export const FileSignature: IconComponent = staticIcon(static_penNib, 'FileSigna
 export { FileSignature as FileSignatureIcon }
 export const FileText: IconComponent = staticIcon(static_document, 'FileText')
 export { FileText as FileTextIcon }
-export const Filter: IconComponent = staticIcon(static_filter, 'Filter')
+export const Filter: IconComponent = staticIcon(static_filled_filterSearch, 'Filter')
 export { Filter as FilterIcon }
 export const FlaskConical: IconComponent = staticIcon(static_flask, 'FlaskConical')
 export { FlaskConical as FlaskConicalIcon }
@@ -299,7 +299,7 @@ export const Headphones: IconComponent = staticIcon(static_message24, 'Headphone
 export { Headphones as HeadphonesIcon }
 export const HelpCircle: IconComponent = staticIcon(static_questionCircle, 'HelpCircle')
 export { HelpCircle as HelpCircleIcon }
-export const House: IconComponent = staticIcon(static_houseWindow, 'House')
+export const House: IconComponent = staticIcon(static_filled_home, 'House')
 export { House as HouseIcon }
 export const Inbox: IconComponent = staticIcon(static_inbox, 'Inbox')
 export { Inbox as InboxIcon }
@@ -321,11 +321,11 @@ export const LayoutPanelLeft: IconComponent = staticIcon(static_layoutSidebarLef
 export { LayoutPanelLeft as LayoutPanelLeftIcon }
 export const LayoutTemplate: IconComponent = staticIcon(static_layoutDashboard, 'LayoutTemplate')
 export { LayoutTemplate as LayoutTemplateIcon }
-export const Link: IconComponent = staticIcon(static_link, 'Link')
+export const Link: IconComponent = staticIcon(static_filled_link, 'Link')
 export { Link as LinkIcon }
 export const List: IconComponent = staticIcon(static_squareBulletList, 'List')
 export { List as ListIcon }
-export const ListFilter: IconComponent = staticIcon(static_filter, 'ListFilter')
+export const ListFilter: IconComponent = staticIcon(static_filled_filterSearch, 'ListFilter')
 export { ListFilter as ListFilterIcon }
 export const ListFilterPlus: IconComponent = staticIcon(static_filterEdit, 'ListFilterPlus')
 export { ListFilterPlus as ListFilterPlusIcon }
@@ -405,7 +405,7 @@ export const SearchX: IconComponent = staticIcon(static_filterSearch, 'SearchX')
 export { SearchX as SearchXIcon }
 export const Send: IconComponent = staticIcon(static_paperPlane, 'Send')
 export { Send as SendIcon }
-export const Settings: IconComponent = animatedIcon(animated_filled_squaresRing, 'Settings')
+export const Settings: IconComponent = staticIcon(static_filled_gear, 'Settings')
 export { Settings as SettingsIcon }
 export const Settings2: IconComponent = staticIcon(static_sliders, 'Settings2')
 export { Settings2 as Settings2Icon }
@@ -475,7 +475,7 @@ export const Workflow: IconComponent = animatedIcon(animated_squaresRing, 'Workf
 export { Workflow as WorkflowIcon }
 export const Wrench: IconComponent = staticIcon(static_wrench, 'Wrench')
 export { Wrench as WrenchIcon }
-export const X: IconComponent = animatedIcon(animated_solid_crossOutline, 'X')
+export const X: IconComponent = staticIcon(static_filled_cross, 'X')
 export { X as XIcon }
 export const XCircle: IconComponent = staticIcon(static_crossCircle, 'XCircle')
 export { XCircle as XCircleIcon }

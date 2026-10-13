@@ -83,6 +83,7 @@ export function PlanEntitlementsView({
           columns={5}
           loadingLabel="Loading entitlements"
           empty={{
+            scene: 'catalog',
             title: 'No entitlements yet',
             description: 'Add the features this plan includes.',
             action: (

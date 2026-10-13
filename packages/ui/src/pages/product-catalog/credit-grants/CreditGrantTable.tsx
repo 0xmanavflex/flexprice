@@ -82,6 +82,7 @@ export function CreditGrantTable({
           columns={5}
           loadingLabel="Loading credit grants"
           empty={{
+            scene: 'catalog',
             title: 'No credit grants yet',
             description: `Credit grants hand subscribers a balance to spend against usage — a one-time top-up or a budget that refreshes each period.${onAdd ? ' Add one to include credits in the plan.' : ''}`,
             action: addButton,

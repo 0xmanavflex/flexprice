@@ -35,7 +35,7 @@ export interface NavEntry {
 }
 
 /** Flexprice's own documentation, where the Documentation row sends you. */
-export const DOCS_URL = 'https://docs.flexprice.io/docs/overview'
+export const DOCS_URL = 'https://docs.flexprice.io/docs/welcome-to-flexprice'
 
 export const NAV: NavEntry[] = [
   { id: 'home', label: 'Home', path: '/' },
@@ -62,10 +62,7 @@ export const NAV: NavEntry[] = [
   {
     id: 'collections',
     label: 'Collections',
-    children: [
-      { id: 'dunning', label: 'Dunning', path: '/dunning' },
-      { id: 'payments', label: 'Payments', path: '/payments' },
-    ],
+    children: [{ id: 'payments', label: 'Payments', path: '/payments' }],
   },
   { id: 'revenue', label: 'Revenue', path: '/revenue' },
   {

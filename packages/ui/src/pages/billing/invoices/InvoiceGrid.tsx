@@ -380,6 +380,7 @@ export function InvoiceGrid({
             }
           : {})}
         empty={{
+          scene: 'billing',
           title: 'No invoices yet',
           description:
             'Invoices are produced when a contract’s billing period closes. Put a customer on a plan and the first one will appear here on its own.',

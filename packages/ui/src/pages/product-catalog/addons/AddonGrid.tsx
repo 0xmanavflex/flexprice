@@ -219,6 +219,7 @@ export function AddonGrid({
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No add-ons match these filters"
       empty={{
+        scene: 'catalog',
         title: 'No add-ons yet',
         description:
           'An add-on is a priced extra sold alongside a plan — extra seats, a support tier, a burst of capacity. Create the shell here, then give it charges.',

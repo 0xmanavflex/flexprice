@@ -184,6 +184,7 @@ export function CustomerWalletView({
     return (
       <>
         <EmptyState
+          scene="customers"
           size="inline"
           title="No wallet yet"
           description="A wallet holds prepaid credits this customer's usage draws down."
@@ -378,6 +379,7 @@ export function CustomerWalletView({
           loadingLabel="Loading top-ups"
           truncation={ledgerCapped}
           empty={{
+            scene: 'customers',
             title: ledgerCapped ? 'No top-ups in the latest transactions' : 'No top-ups yet',
             description: ledgerCapped
               ? 'Older transactions are not listed here.'
