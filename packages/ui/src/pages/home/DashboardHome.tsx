@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowUpRightIcon, CalendarIcon } from '@ui/icons'
-import type { Money as MoneyValue } from '@fp/domain'
+import { formatMoney, type Money as MoneyValue } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import {
   Select,
@@ -153,6 +153,35 @@ export interface EventsPanel extends PanelMeta {
   revenueChangePercent?: number | null | undefined
 }
 
+/** One customer's billed revenue, for the top-customers list. */
+export interface RevenueCustomerRow {
+  id: string
+  name: string
+  total: MoneyValue
+}
+
+/**
+ * Invoiced revenue for the window — what was billed, from invoice line items —
+ * in one currency. Amounts in other currencies are named, never added in.
+ */
+export interface RevenuePanel extends PanelMeta {
+  status: PanelStatus
+  total: MoneyValue | null
+  fixed: MoneyValue | null
+  usage: MoneyValue | null
+  /** Change in `total` against the window before this one. `null` when not comparable. */
+  changePercent?: number | null | undefined
+  /**
+   * Net revenue per bucket in `total`'s currency. Empty when the tenant has no
+   * revenue analytics, in which case the headline stands alone.
+   */
+  points: { label: string; value: number }[]
+  /** The customers billed most in the window, highest first. */
+  topCustomers: RevenueCustomerRow[]
+  /** Other currencies billed in the window, which the figures above leave out. */
+  otherCurrencies: string[]
+}
+
 /**
  * One column of the subscription stack, split by plan.
  *
@@ -267,6 +296,12 @@ export interface DashboardHomeProps {
   rangeLabel: string
 
   events: EventsPanel
+  /**
+   * Billed revenue. When given, the Revenue tab shows it (with a daily series
+   * where one exists) and a breakdown row follows the chart; without it the
+   * tab falls back to the usage subtotal on `events`.
+   */
+  revenue?: RevenuePanel | undefined
   customers: CustomersPanel
   subscriptions: SubscriptionsPanel
   invoices: InvoicesPanel
@@ -517,6 +552,7 @@ interface Exit {
 
 function MetricsSection({
   events,
+  revenue,
   customers,
   rangeLabel,
   filters,
@@ -524,6 +560,7 @@ function MetricsSection({
   widen,
 }: {
   events: EventsPanel
+  revenue?: RevenuePanel | undefined
   customers: CustomersPanel
   rangeLabel: string
   /** The chart's granularity and range, drawn above it. */
@@ -558,8 +595,30 @@ function MetricsSection({
    * Revenue has no series to plot: the usage API prices a window as a whole
    * rather than per bucket, and `emptyMessage` says so.
    */
+  const revenueTab: MetricTab | null = revenue
+    ? {
+        id: METRIC_REVENUE,
+        label: 'Revenue',
+        status: tabStatus(revenue.status),
+        onRetry: revenue.onRetry,
+        value:
+          revenue.status === 'ready' && revenue.total !== null ? (
+            <Money value={revenue.total} />
+          ) : (
+            NOTHING
+          ),
+        ...changeOf(revenue.status === 'ready' ? revenue.changePercent : null),
+        points: revenue.status === 'ready' ? revenue.points : [],
+        ...(revenue.total ? { format: currencyFormat(revenue.total.currency) } : {}),
+        emptyMessage:
+          revenue.status === 'empty'
+            ? 'Nothing was billed in this period.'
+            : 'Daily revenue needs revenue analytics turned on; the total covers the whole window.',
+      }
+    : null
+
   const tabs: MetricTab[] = [
-    {
+    revenueTab ?? {
       id: METRIC_REVENUE,
       label: 'Revenue',
       status: tabStatus(events.status),
@@ -608,7 +667,13 @@ function MetricsSection({
 
   const caption =
     metric === METRIC_REVENUE
-      ? 'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.'
+      ? revenue
+        ? `Invoiced revenue${revenue.total ? ` in ${revenue.total.currency}` : ''}, ${rangeLabel}.${
+            revenue.otherCurrencies.length > 0
+              ? ` Also billed in ${revenue.otherCurrencies.join(', ')}, not included.`
+              : ''
+          }`
+        : 'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.'
       : metric === METRIC_CUSTOMERS
         ? `New customers, ${rangeLabel}.`
         : `Usage events received, ${rangeLabel}.`
@@ -617,7 +682,7 @@ function MetricsSection({
     tab.id === METRIC_REVENUE ? { ...tab, points: PLACEHOLDER_SHAPE } : tab,
   )
 
-  const fresh = freshnessOf(events, customers)
+  const fresh = revenue ? freshnessOf(events, customers, revenue) : freshnessOf(events, customers)
   const basedOn = metric === METRIC_CUSTOMERS ? customers.basedOn : events.basedOn
 
   // Period-empty ("this window has nothing; earlier data is unchanged") is a
@@ -681,6 +746,106 @@ function MetricsSection({
         <Unavailable what="The usage API returned no priced subtotal for this window." />
       ) : null}
     </section>
+  )
+}
+
+/* ---- Revenue breakdown ------------------------------------------------ */
+
+/** Compact currency figures for a chart's tooltip and axis: "$1.2K". */
+function currencyFormat(currency: string): (value: number) => string {
+  const format = new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currency,
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  })
+  return (value) => format.format(value)
+}
+
+/**
+ * Where the window's revenue came from: fixed fees against usage, and the
+ * customers it was billed to. Every figure is the server's decimal; the bars
+ * only compare the two to each other.
+ */
+function RevenueBreakdown({
+  revenue,
+  onViewRevenue,
+}: {
+  revenue: RevenuePanel
+  onViewRevenue: () => void
+}) {
+  const ready = revenue.status === 'ready'
+  const mix: SegmentMeterRow[] =
+    ready && revenue.fixed && revenue.usage
+      ? [
+          {
+            id: 'fixed',
+            label: 'Fixed',
+            caption: 'Recurring fees and seats',
+            value: Number(revenue.fixed.amount),
+            display: formatMoney(revenue.fixed),
+          },
+          {
+            id: 'usage',
+            label: 'Usage',
+            caption: 'Metered charges',
+            value: Number(revenue.usage.amount),
+            display: formatMoney(revenue.usage),
+          },
+        ]
+      : []
+  const top: SegmentMeterRow[] = ready
+    ? revenue.topCustomers.map((row) => ({
+        id: row.id || row.name,
+        label: row.name,
+        value: Number(row.total.amount),
+        display: formatMoney(row.total),
+      }))
+    : []
+
+  const body = (rows: SegmentMeterRow[], label: string, empty: string) =>
+    revenue.status === 'loading' ? (
+      <ChartSkeleton height={120} />
+    ) : revenue.status === 'unavailable' ? (
+      <Unavailable what="Revenue could not be loaded." />
+    ) : (
+      <SegmentMeter rows={rows} label={label} emptyMessage={empty} />
+    )
+
+  return (
+    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <Panel title="Revenue mix">
+        <DataRegion
+          state={{
+            refreshing: Boolean(revenue.refreshing),
+            provisional: Boolean(revenue.provisional),
+          }}
+        >
+          <div className="flex flex-1 flex-col justify-center p-6">
+            {body(mix, 'Revenue by type', 'Nothing was billed in this period.')}
+          </div>
+        </DataRegion>
+      </Panel>
+      <Panel
+        title="Top customers by revenue"
+        action={
+          <Button variant="outline" size="sm" onClick={onViewRevenue}>
+            View revenue
+          </Button>
+        }
+      >
+        <DataRegion
+          state={{
+            refreshing: Boolean(revenue.refreshing),
+            provisional: Boolean(revenue.provisional),
+          }}
+        >
+          <div className="flex flex-1 flex-col justify-center p-6">
+            {body(top, 'Top customers by revenue', 'No customer was billed in this period.')}
+          </div>
+        </DataRegion>
+      </Panel>
+    </div>
   )
 }
 
@@ -1049,6 +1214,7 @@ export function DashboardHome({
   onGranularityChange,
   rangeLabel,
   events,
+  revenue,
   customers,
   subscriptions,
   invoices,
@@ -1068,6 +1234,7 @@ export function DashboardHome({
     <div className="flex flex-1 flex-col gap-5 px-10 pt-8 pb-16 2xl:px-14">
       <MetricsSection
         events={events}
+        {...(revenue ? { revenue } : {})}
         customers={customers}
         rangeLabel={rangeLabel}
         filters={
@@ -1092,6 +1259,8 @@ export function DashboardHome({
         onQuickstart={() => go('/features')}
         widen={widen}
       />
+
+      {revenue ? <RevenueBreakdown revenue={revenue} onViewRevenue={() => go('/revenue')} /> : null}
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         <SubscriptionsCard

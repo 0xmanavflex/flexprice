@@ -1843,6 +1843,33 @@ const WINDOW_MS: Record<string, number> = {
 }
 
 /**
+ * Billed revenue for the overview: each of the first few customers bills a
+ * fixed fee spread evenly over the days and a wobbling usage amount per day,
+ * in USD. Both revenue routes read this one generator, so the dashboard's
+ * totals and the daily series always agree.
+ */
+const REVENUE_CUSTOMERS = 6
+
+function revenueDays(start: Date, end: Date) {
+  const customers = (corpus['customers'] as Corpus).items.slice(0, REVENUE_CUSTOMERS)
+  const days: { day: string; customer: Record<string, unknown>; fixed: number; usage: number }[] =
+    []
+  const first = Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())
+  for (let cursor = first; cursor < end.getTime() && days.length < 4000; cursor += DAY_MS) {
+    const day = new Date(cursor).toISOString().slice(0, 10)
+    customers.forEach((customer, index) => {
+      const fixed = Math.round(((200 + index * 150) / 30) * 100) / 100
+      const usage =
+        Math.round((40 + index * 25) * (0.6 + 0.8 * noise(`rev:${index}:${day}`)) * 100) / 100
+      days.push({ day, customer, fixed, usage })
+    })
+  }
+  return days
+}
+
+const cents = (value: number) => (Math.round(value * 100) / 100).toFixed(2)
+
+/**
  * The analytics response for one window.
  *
  * Each point is the feature's daily rate scaled to the bucket and wobbled by a
@@ -2160,6 +2187,78 @@ export const handlers = [
       { code: 'permission_denied', message: 'Failed to get user', http_status_code: 403 },
       { status: 403 },
     )
+  }),
+
+  /*
+   * Billed revenue: `POST /dashboard/revenue-dashboard` (totals per currency
+   * and customer) and `POST /analytics/revenue` (net revenue per day, grouped
+   * by currency), both read from `revenueDays`.
+   */
+  http.post(`${BASE}/dashboard/revenue-dashboard`, async ({ request }) => {
+    if (demoEmpty()) return HttpResponse.json({ summaries: {}, items: [] })
+    const body = (await request.json().catch(() => ({}))) as {
+      period_start?: string
+      period_end?: string
+    }
+    const days = revenueDays(
+      new Date(body.period_start ?? Date.now() - 7 * DAY_MS),
+      new Date(body.period_end ?? Date.now()),
+    )
+    const byCustomer = new Map<
+      string,
+      { customer: Record<string, unknown>; fixed: number; usage: number }
+    >()
+    for (const row of days) {
+      const id = readString(row.customer, 'id')
+      const entry = byCustomer.get(id) ?? { customer: row.customer, fixed: 0, usage: 0 }
+      entry.fixed += row.fixed
+      entry.usage += row.usage
+      byCustomer.set(id, entry)
+    }
+    const items = [...byCustomer.values()].map(({ customer, fixed, usage }) => ({
+      customer_id: readString(customer, 'id'),
+      customer_name: readString(customer, 'name'),
+      external_customer_id: readString(customer, 'external_id'),
+      currency: 'usd',
+      total_revenue: cents(fixed + usage),
+      total_usage_revenue: cents(usage),
+      total_fixed_revenue: cents(fixed),
+    }))
+    const fixed = [...byCustomer.values()].reduce((sum, entry) => sum + entry.fixed, 0)
+    const usage = [...byCustomer.values()].reduce((sum, entry) => sum + entry.usage, 0)
+    return HttpResponse.json({
+      summaries:
+        items.length > 0
+          ? {
+              usd: {
+                total_revenue: cents(fixed + usage),
+                total_usage_revenue: cents(usage),
+                total_fixed_revenue: cents(fixed),
+              },
+            }
+          : {},
+      items,
+    })
+  }),
+  http.post(`${BASE}/analytics/revenue`, async ({ request }) => {
+    if (demoEmpty()) return HttpResponse.json({ rows: [] })
+    const body = (await request.json().catch(() => ({}))) as {
+      start_time?: string
+      end_time?: string
+    }
+    const days = revenueDays(
+      new Date(body.start_time ?? Date.now() - 7 * DAY_MS),
+      new Date(body.end_time ?? Date.now()),
+    )
+    const byDay = new Map<string, number>()
+    for (const row of days) byDay.set(row.day, (byDay.get(row.day) ?? 0) + row.fixed + row.usage)
+    return HttpResponse.json({
+      rows: [...byDay.entries()].map(([day, amount]) => ({
+        day,
+        group: { currency: 'usd', revenue_source: 'all' },
+        net_amount: Math.round(amount * 100) / 100,
+      })),
+    })
   }),
 
   /*

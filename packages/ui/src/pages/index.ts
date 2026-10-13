@@ -23,6 +23,8 @@ export type {
   InvoicesPanel,
   PanelMeta,
   PanelStatus,
+  RevenueCustomerRow,
+  RevenuePanel,
   SubscriptionDay,
   SubscriptionsPanel,
   UsagePanel,
