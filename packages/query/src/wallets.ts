@@ -123,9 +123,13 @@ export function toCreateWalletRequest(
     customerId,
     currency: draft.currency.toUpperCase(),
     conversionRate: draft.conversionRate,
-    walletType: 'PRE_PAID',
+    walletType: draft.walletType,
     ...(description ? { description } : {}),
+    ...(draft.topupConversionRate ? { topupConversionRate: draft.topupConversionRate } : {}),
     ...(draft.initialCredits ? { initialCreditsToLoad: draft.initialCredits } : {}),
+    ...(draft.initialCredits && draft.initialCreditsExpiry
+      ? { initialCreditsExpiryDateUtc: `${draft.initialCreditsExpiry}T00:00:00Z` }
+      : {}),
   }
 }
 

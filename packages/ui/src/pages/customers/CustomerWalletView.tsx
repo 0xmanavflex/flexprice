@@ -506,6 +506,25 @@ function CreateWalletDialog({
           onSubmit(parsed.data)
         }}
       >
+        <ChoiceCards
+          label="Wallet type"
+          value={draft.walletType}
+          onChange={(walletType) => set({ walletType })}
+          choices={[
+            {
+              value: 'PRE_PAID',
+              title: 'Prepaid',
+              description: 'Credits are bought up front; usage draws them down in real time.',
+              icon: <WalletIcon aria-hidden="true" />,
+            },
+            {
+              value: 'POST_PAID',
+              title: 'Postpaid',
+              description: 'Credits are applied to invoices at the end of the billing cycle.',
+              icon: <RepeatIcon aria-hidden="true" />,
+            },
+          ]}
+        />
         <div className="grid gap-5 sm:grid-cols-2">
           <Field>
             <LabelWithHint
@@ -538,6 +557,25 @@ function CreateWalletDialog({
           </Field>
           <Field>
             <LabelWithHint
+              htmlFor="wallet-topup-rate"
+              hint="What one credit costs when it is bought, if that differs from the conversion rate. Optional."
+            >
+              Top-up rate
+            </LabelWithHint>
+            <InputGroup className="h-9">
+              <InputGroupAddon align="inline-start">1 credit =</InputGroupAddon>
+              <InputGroupInput
+                id="wallet-topup-rate"
+                inputMode="decimal"
+                placeholder={draft.conversionRate}
+                value={draft.topupConversionRate}
+                onChange={(event) => set({ topupConversionRate: event.target.value })}
+              />
+              <InputGroupAddon align="inline-end">{draft.currency}</InputGroupAddon>
+            </InputGroup>
+          </Field>
+          <Field>
+            <LabelWithHint
               htmlFor="wallet-initial"
               hint="Credits added as soon as the wallet is created. Optional."
             >
@@ -549,6 +587,21 @@ function CreateWalletDialog({
               inputMode="decimal"
               value={draft.initialCredits}
               onChange={(event) => set({ initialCredits: event.target.value })}
+            />
+          </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="wallet-initial-expiry"
+              hint="The initial credits lapse on this day if they are not used. Optional."
+            >
+              Initial credits expire on
+            </LabelWithHint>
+            <DateInput
+              id="wallet-initial-expiry"
+              value={draft.initialCreditsExpiry}
+              onValueChange={(initialCreditsExpiry) => set({ initialCreditsExpiry })}
+              placeholder="Never"
+              disabled={draft.initialCredits.trim() === ''}
             />
           </Field>
           <Field>

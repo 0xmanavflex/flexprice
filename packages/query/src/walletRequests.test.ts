@@ -22,6 +22,21 @@ describe('wallet requests', () => {
     expect(parsed.initial_credits_to_load).toBe('500')
   })
 
+  it('sends a postpaid wallet with its top-up rate and initial-credit expiry', () => {
+    const parsed = CreateWalletRequest$outboundSchema.parse(
+      toCreateWalletRequest('c', {
+        ...emptyWallet(),
+        walletType: 'POST_PAID',
+        topupConversionRate: '2',
+        initialCredits: '10',
+        initialCreditsExpiry: '2030-01-31',
+      }),
+    )
+    expect(parsed.wallet_type).toBe('POST_PAID')
+    expect(parsed.topup_conversion_rate).toBe('2')
+    expect(parsed.initial_credits_expiry_date_utc).toBe('2030-01-31T00:00:00Z')
+  })
+
   it('omits initial credits when blank', () => {
     expect(toCreateWalletRequest('c', emptyWallet())).not.toHaveProperty('initialCreditsToLoad')
   })

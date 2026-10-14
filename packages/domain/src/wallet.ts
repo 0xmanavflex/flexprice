@@ -80,6 +80,15 @@ export interface WalletTransaction {
 const decimal = /^\d+(\.\d+)?$/
 const positive = (value: string) => decimal.test(value) && /[1-9]/.test(value)
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/
+
+/** Today as a local `YYYY-MM-DD`, the form an expiry date is picked in. */
+function today(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 export const createWalletSchema = z.object({
   currency: z.string().trim().length(3, 'Choose a currency'),
   description: z.string().trim().max(200, 'Keep the description under 200 characters'),
@@ -91,6 +100,19 @@ export const createWalletSchema = z.object({
       (value) => value === '' || decimal.test(value),
       'Enter a number of credits, or leave blank',
     ),
+  /** Prepaid wallets are drawn down in real time; postpaid ones settle on the invoice. */
+  walletType: z.enum(['PRE_PAID', 'POST_PAID']),
+  /** What one credit costs when bought; blank means the conversion rate. */
+  topupConversionRate: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || positive(value), 'Enter a positive rate, or leave blank'),
+  /** The day the initial credits lapse (`YYYY-MM-DD`), or blank for never. */
+  initialCreditsExpiry: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || DAY.test(value), 'Pick an expiry date')
+    .refine((value) => value === '' || value >= today(), 'The expiry date cannot be in the past'),
 })
 export type CreateWallet = z.infer<typeof createWalletSchema>
 
@@ -99,19 +121,13 @@ export const emptyWallet = (currency = 'USD'): CreateWallet => ({
   description: '',
   conversionRate: '1',
   initialCredits: '',
+  walletType: 'PRE_PAID',
+  topupConversionRate: '',
+  initialCreditsExpiry: '',
 })
 
 export const WalletTopUpKind = { Purchased: 'purchased', Free: 'free' } as const
 export type WalletTopUpKind = (typeof WalletTopUpKind)[keyof typeof WalletTopUpKind]
-
-const DAY = /^\d{4}-\d{2}-\d{2}$/
-
-/** Today as a local `YYYY-MM-DD`, the form an expiry date is picked in. */
-function today(): string {
-  const now = new Date()
-  const pad = (n: number) => String(n).padStart(2, '0')
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
-}
 
 export const topUpWalletSchema = z.object({
   kind: z.enum(['purchased', 'free']),
