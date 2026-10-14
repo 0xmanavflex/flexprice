@@ -21,6 +21,11 @@ export function usePlanFormOptions() {
       id: f.meterId as string,
       name: f.name,
       ...(f.unitSingular ? { unit: f.unitSingular } : {}),
+      // Both decide whether a usage window may be set on a charge, and the
+      // charge form leaves the field out rather than guessing when they are
+      // absent — see `MeterOption`.
+      ...(f.aggregationType ? { aggregationType: f.aggregationType } : {}),
+      ...(f.meterBucketSize ? { bucketSize: f.meterBucketSize } : {}),
     }))
   const units: PriceUnitOption[] = (priceUnits.data?.priceUnits ?? [])
     .filter((unit) => unit.status === PriceUnitStatus.Published)

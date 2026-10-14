@@ -11,7 +11,10 @@ import {
   INVOICE_CADENCE_LABEL,
   InvoiceCadence,
   PRICE_TYPE_LABEL,
+  PRICE_WINDOW_SIZE_LABEL,
   PriceType,
+  type PriceWindowSize,
+  WINDOWABLE_AGGREGATIONS,
   type Tier,
   TIER_MODE_LABEL,
   TierMode,
@@ -69,6 +72,22 @@ export interface MeterOption {
   name: string
   /** Singular unit of the meter's feature ("call"), for "per call" wording. */
   unit?: string
+  /**
+   * The meter's aggregation, which decides whether a usage window is offered.
+   *
+   * Windowing re-aggregates inside each window, so it changes the answer only
+   * for MAX and SUM — the API rejects it on anything else. Absent means the
+   * caller did not supply it, and the field is then left out rather than
+   * guessed at.
+   */
+  aggregationType?: string | null
+  /**
+   * The meter's own window, when it is bucketed at the meter level.
+   *
+   * A price may not set a second one: the API refuses it rather than deciding
+   * which wins. Present means the field is shown disabled, saying why.
+   */
+  bucketSize?: string | null
 }
 
 /** A custom price unit a charge can be denominated in instead of a currency. */
@@ -167,6 +186,25 @@ export function ChargeForm({
   const priceUnit = form.watch('priceUnit')
   const errors = form.formState.errors
   const isUsage = type === PriceType.Usage
+  /*
+   * Whether this charge may carry a usage window, and why not when it may not.
+   *
+   * The three rules are the API's, checked here so the field is never offered
+   * where saving would fail: windows are for usage charges, only MAX and SUM
+   * change their answer when re-aggregated, and a meter that already buckets
+   * refuses a second source rather than letting the price shadow it.
+   *
+   * A meter whose aggregation the caller did not supply is treated as not
+   * offerable. Showing the field on a guess and failing on save is worse than
+   * leaving a rarely-used option out.
+   */
+  const selectedMeterId = (form.watch('meterId' as never) as unknown as string | undefined) ?? ''
+  const selectedMeter = meters.find((meter) => meter.id === selectedMeterId)
+  const meterBuckets = Boolean(selectedMeter?.bucketSize)
+  const windowable =
+    selectedMeter?.aggregationType != null &&
+    (WINDOWABLE_AGGREGATIONS as readonly string[]).includes(selectedMeter.aggregationType)
+  const showWindow = isUsage && Boolean(selectedMeter) && (windowable || meterBuckets)
   const periods = isUsage ? USAGE_PERIODS : FIXED_PERIODS
   const unitLabel = priceUnit || currency
   const lockedInput = (id: string, value: string) => (
@@ -490,6 +528,51 @@ export function ChargeForm({
         <p className="text-muted-foreground text-xs">
           Usage charges bill in arrears — once the period’s usage is known.
         </p>
+      ) : null}
+
+      {showWindow ? (
+        <div className="max-w-xs">
+          <Field
+            label="Usage window"
+            hint={
+              meterBuckets
+                ? `Set on the ${selectedMeter?.name ?? 'meter'} feature itself, so it cannot be changed here.`
+                : 'Optional. Aggregate the meter inside each window and price the windows, instead of once across the period.'
+            }
+            error={messageOf(errors, 'bucketSize')}
+          >
+            {({ id }) =>
+              meterBuckets ? (
+                lockedInput(
+                  id,
+                  PRICE_WINDOW_SIZE_LABEL[selectedMeter?.bucketSize as PriceWindowSize] ??
+                    String(selectedMeter?.bucketSize ?? ''),
+                )
+              ) : (
+                <Controller
+                  control={form.control}
+                  name={'bucketSize' as never}
+                  render={({ field }) => (
+                    <OptionCombobox
+                      id={id}
+                      value={(field.value as string) || ''}
+                      onValueChange={(next) => field.onChange(next === '' ? undefined : next)}
+                      options={[
+                        { value: '', label: 'No window — the whole period' },
+                        ...Object.entries(PRICE_WINDOW_SIZE_LABEL).map(([value, label]) => ({
+                          value,
+                          label,
+                        })),
+                      ]}
+                      placeholder="No window — the whole period"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )
+            }
+          </Field>
+        </div>
       ) : null}
 
       <fieldset disabled={isSubmitting} className="flex flex-col gap-2">

@@ -68,6 +68,7 @@ export function makeCharge(index: number, options: MakeChargeOptions): Charge {
         : [],
     transformQuantity:
       billingModel === BillingModel.Package ? { divideBy: 1000, round: RoundType.Up } : null,
+    bucketSize: null,
     meterId: isUsage ? meter.id : null,
     meterName: isUsage ? meter.name : null,
     entityType: PriceEntityType.Plan,

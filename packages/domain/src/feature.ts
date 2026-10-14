@@ -289,6 +289,15 @@ export interface Feature {
   reportingUnit?: ReportingUnitDraft | null
   /** The meter's event filters (metered features only). */
   meterFilters?: MeterFilterDraft[]
+  /**
+   * The meter's own usage window, when it has one.
+   *
+   * A price may set a window of its own *only* when the meter does not: the
+   * API refuses the second source rather than letting one shadow the other.
+   * Carried on the read model so the charge form can say why the field is
+   * unavailable instead of failing on save.
+   */
+  meterBucketSize?: string | null
   /** The meter's aggregation target and options, for prefilling an edit. */
   aggregationField?: string | null
   aggregationGroupBy?: string | null

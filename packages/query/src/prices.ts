@@ -8,6 +8,7 @@ import {
   InvoiceCadence,
   type PriceEntityType,
   PriceType,
+  PriceWindowSize,
   type RoundType,
   type Tier,
   TierMode,
@@ -30,6 +31,8 @@ import { useFlexprice } from './provider'
 
 /** The wire shape this reads, after the SDK camelCases the response. */
 export interface ChargeWire {
+  /** The usage window the price is aggregated over, when it has one. */
+  bucketSize?: string | undefined
   id?: string | undefined
   type?: string | undefined
   billingModel?: string | undefined
@@ -82,6 +85,17 @@ export function toTier(raw: {
  * an unknown billing model is the API ahead of this build, and coercing it to a
  * flat fee is wrong but visible, where letting it through would render nothing.
  */
+/** The window set on the price itself, ignoring anything the wire does not know. */
+const PRICE_WINDOW_SIZES = new Set<string>(Object.values(PriceWindowSize))
+function toBucketSize(value: unknown): PriceWindowSize | null {
+  // A meter-level WEEK or MONTH can reach a price row; it is a real window but
+  // not one this form offers, so it reads as "not set here" rather than being
+  // coerced into a value the select cannot show.
+  return typeof value === 'string' && PRICE_WINDOW_SIZES.has(value)
+    ? (value as PriceWindowSize)
+    : null
+}
+
 export function toCharge(wire: ChargeWire): Charge {
   const type = PRICE_TYPES.has(wire.type ?? '') ? (wire.type as PriceType) : PriceType.Fixed
   const billingModel = BILLING_MODELS.has(wire.billingModel ?? '')
@@ -115,6 +129,7 @@ export function toCharge(wire: ChargeWire): Charge {
     currency: wire.currency ?? '',
     billingPeriod,
     billingPeriodCount: wire.billingPeriodCount ?? 1,
+    bucketSize: toBucketSize(wire.bucketSize),
     invoiceCadence,
     billingCadence: wire.billingCadence ?? 'RECURRING',
     tierMode,
@@ -161,6 +176,14 @@ export function toChargeRequest(
     entityId,
     ...(draft.displayName ? { displayName: draft.displayName } : {}),
     ...(draft.type === PriceType.Usage && draft.meterId ? { meterId: draft.meterId } : {}),
+    /*
+     * The usage window, for metered charges only.
+     *
+     * Guarded on the type rather than sent whenever present: the API rejects
+     * `bucket_size` on a fixed price outright, and a charge switched from usage
+     * to fixed can still be holding the value the usage form put there.
+     */
+    ...(draft.type === PriceType.Usage && draft.bucketSize ? { bucketSize: draft.bucketSize } : {}),
     ...(draft.type === PriceType.Fixed && draft.trialPeriodDays
       ? { trialPeriodDays: draft.trialPeriodDays }
       : {}),
@@ -202,6 +225,15 @@ export function toChargeRequest(
 }
 
 /**
+ * Clears a usage window on the successor price.
+ *
+ * An absent `bucket_size` means "inherit", so removal needs a value of its own.
+ * The API spells it `none`, lowercase, and it is not a `WindowSize` — hence the
+ * literal here rather than a member of `PriceWindowSize`.
+ */
+const BUCKET_SIZE_NONE = 'none'
+
+/**
  * A charge edit, as an `UpdatePriceRequest`.
  *
  * Only the price itself moves: the amount or bands, the model, the display name.
@@ -215,6 +247,17 @@ export function toUpdatePriceRequest(draft: CreateCharge): Record<string, unknow
     billingModel: draft.billingModel,
     ...(draft.displayName ? { displayName: draft.displayName } : {}),
     ...(draft.effectiveFrom ? { effectiveFrom: `${draft.effectiveFrom}T00:00:00Z` } : {}),
+    /*
+     * The usage window, stated rather than diffed.
+     *
+     * The API reads three cases off this field: absent means "keep whatever the
+     * existing price had", the sentinel `'none'` clears it on the successor, and
+     * a value replaces it. Absent is therefore not usable as "the user cleared
+     * it" — a window could never be removed. So a usage charge always says which
+     * of the two it means, and a fixed charge says nothing because the API
+     * refuses the field there at all.
+     */
+    ...(draft.type === PriceType.Usage ? { bucketSize: draft.bucketSize ?? BUCKET_SIZE_NONE } : {}),
   }
   const tiersOf = (tiers: Tier[]) =>
     tiers.map((tier) => ({

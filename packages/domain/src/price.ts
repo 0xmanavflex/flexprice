@@ -34,6 +34,53 @@ export const nonNegativeAmount = decimal.refine(
 )
 
 /**
+ * How a usage charge windows its meter before pricing it.
+ *
+ * Bucketing cuts the billing period into fixed windows, aggregates the meter
+ * inside each one, and prices the windows. A MAX meter bucketed by DAY bills
+ * the sum of each day's peak rather than one peak for the month, which is how
+ * "peak concurrent seats, charged daily" is expressed.
+ *
+ * Only the sub-day-to-day sizes are offered. The meter-level enum also has
+ * WEEK and MONTH, but a window at or above the billing period prices the whole
+ * period as one bucket, which is what an unbucketed charge already does.
+ *
+ * The API calls this `bucket_size`; the form calls it a usage window, because
+ * "bucket" names the implementation and "window" names what it does.
+ */
+export const PriceWindowSize = {
+  Minute: 'MINUTE',
+  FifteenMin: '15MIN',
+  ThirtyMin: '30MIN',
+  Hour: 'HOUR',
+  ThreeHour: '3HOUR',
+  SixHour: '6HOUR',
+  TwelveHour: '12HOUR',
+  Day: 'DAY',
+} as const
+export type PriceWindowSize = (typeof PriceWindowSize)[keyof typeof PriceWindowSize]
+
+export const PRICE_WINDOW_SIZE_LABEL: Record<PriceWindowSize, string> = {
+  [PriceWindowSize.Minute]: 'Every minute',
+  [PriceWindowSize.FifteenMin]: 'Every 15 minutes',
+  [PriceWindowSize.ThirtyMin]: 'Every 30 minutes',
+  [PriceWindowSize.Hour]: 'Hourly',
+  [PriceWindowSize.ThreeHour]: 'Every 3 hours',
+  [PriceWindowSize.SixHour]: 'Every 6 hours',
+  [PriceWindowSize.TwelveHour]: 'Every 12 hours',
+  [PriceWindowSize.Day]: 'Daily',
+}
+
+/**
+ * The aggregations a window is meaningful for.
+ *
+ * The API refuses any other: windowing a COUNT or a COUNT_UNIQUE would just
+ * re-count the same events in smaller pieces and sum to the same number, so
+ * only MAX and SUM change their answer when bucketed.
+ */
+export const WINDOWABLE_AGGREGATIONS = ['MAX', 'SUM'] as const
+
+/**
  * Fixed or usage-based.
  *
  * A fixed charge bills the same every period (a subscription base); a usage
@@ -254,6 +301,8 @@ export interface Charge {
   tiers: Tier[]
   /** Package/volume divisor, when the charge uses one. */
   transformQuantity: { divideBy: number; round: RoundType | null } | null
+  /** The usage window this charge prices its meter over, else null. */
+  bucketSize: PriceWindowSize | null
   /** The meter a USAGE charge bills against, else null. */
   meterId: string | null
   /** The meter's name, when the response expanded it — for the table's benefit. */
@@ -306,6 +355,26 @@ const chargeBase = {
   groupId: z.string().trim().optional(),
   /** Create only: the ISO date (`YYYY-MM-DD`) the price starts; absent means now. */
   startDate: z.string().trim().optional(),
+  /**
+   * Usage charges only: the window the meter is aggregated over before pricing.
+   *
+   * Absent means no windowing — the meter aggregates across the whole billing
+   * period. The API rejects a window on a fixed charge, on a meter that is not
+   * MAX or SUM, and on a meter that already carries one of its own; the form
+   * only offers the field where all three hold.
+   */
+  bucketSize: z
+    .enum([
+      PriceWindowSize.Minute,
+      PriceWindowSize.FifteenMin,
+      PriceWindowSize.ThirtyMin,
+      PriceWindowSize.Hour,
+      PriceWindowSize.ThreeHour,
+      PriceWindowSize.SixHour,
+      PriceWindowSize.TwelveHour,
+      PriceWindowSize.Day,
+    ])
+    .optional(),
   /** Create only, fixed charges: the fewest units a subscriber can hold. */
   minQuantity: z
     .number({ error: 'Enter a whole number' })
@@ -344,6 +413,16 @@ export const createChargeSchema = z
         code: 'custom',
         path: ['meterId'],
         message: 'Choose the feature this charge meters',
+      })
+    }
+    // The API refuses this outright — a window has nothing to aggregate on a
+    // charge that does not meter anything. Caught here so switching a charge
+    // from usage to fixed cannot carry a stale window into the request.
+    if (charge.type === PriceType.Fixed && charge.bucketSize) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['bucketSize'],
+        message: 'A usage window applies to metered charges only',
       })
     }
   })
@@ -400,6 +479,9 @@ export function chargeToDraft(charge: Charge): CreateCharge {
     ...(charge.displayName ? { displayName: charge.displayName } : {}),
     ...(charge.trialPeriodDays ? { trialPeriodDays: charge.trialPeriodDays } : {}),
     ...(charge.priceUnit ? { priceUnit: charge.priceUnit } : {}),
+    ...(charge.type === PriceType.Usage && charge.bucketSize
+      ? { bucketSize: charge.bucketSize }
+      : {}),
   }
 
   switch (charge.billingModel) {
