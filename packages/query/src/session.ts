@@ -15,6 +15,7 @@ import {
   fetchCurrentUser,
   fetchEnvironments,
   signIn,
+  signUp,
   updateEnvironment,
 } from '@fp/api'
 import { EnvironmentType, type CreateEnvironment, type Environment } from '@fp/domain'
@@ -48,6 +49,15 @@ export function useSignIn() {
 
   return useMutation<SessionCredentials, Error, { email: string; password: string }>({
     mutationFn: ({ email, password }) => signIn(serverURL, email, password),
+  })
+}
+
+/** Create an account — `POST /auth/signup`, which answers with a session like sign-in. */
+export function useSignUp() {
+  const serverURL = useFlexpriceServerURL()
+
+  return useMutation<SessionCredentials, Error, { email: string; password: string }>({
+    mutationFn: ({ email, password }) => signUp(serverURL, email, password),
   })
 }
 

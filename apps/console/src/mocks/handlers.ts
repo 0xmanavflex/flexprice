@@ -2232,6 +2232,20 @@ export const handlers = [
     )
   }),
 
+  // Sign-up mints the same demo session, so a new account lands in the fixtures.
+  // The demo address is taken, which is how the "already exists" answer is reached.
+  http.post(`${BASE}/auth/signup`, async ({ request }) => {
+    const body = (await request.json().catch(() => ({}))) as { email?: string }
+    if (body.email === 'demo@flexprice.io') {
+      return HttpResponse.json({ error: { message: 'user already exists' } }, { status: 409 })
+    }
+    return HttpResponse.json({
+      token: 'mock_demo_token',
+      user_id: 'user_demo',
+      tenant_id: 'tenant_demo',
+    })
+  }),
+
   /*
    * Billed revenue: `POST /dashboard/revenue-dashboard` (totals per currency
    * and customer) and `POST /analytics/revenue` (net revenue per day, grouped

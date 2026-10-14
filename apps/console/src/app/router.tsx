@@ -274,6 +274,7 @@ const RevenuePage = lazy(() =>
  * shell to render a spinner into.
  */
 import { SignInPage } from '@/pages/auth/SignInPage'
+import { SignUpPage } from '@/pages/auth/SignUpPage'
 
 /**
  * The shell wraps every route except the ones you can reach signed out.
@@ -479,6 +480,16 @@ const signInRoute = createRoute({
     if (hasSession()) throw redirect({ to: '/' })
   },
   component: SignInRouteComponent,
+})
+
+/** Create an account. Outside the shell like sign-in, and steps aside for a real session. */
+const signUpRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sign-up',
+  beforeLoad: () => {
+    if (hasSession()) throw redirect({ to: '/' })
+  },
+  component: SignUpPage,
 })
 
 function SignInRouteComponent() {
@@ -2126,6 +2137,7 @@ const labelsRedirect = createRoute({
 
 export const routeTree = rootRoute.addChildren([
   signInRoute,
+  signUpRoute,
   shellRoute.addChildren([
     homeRoute,
     revenueRoute,

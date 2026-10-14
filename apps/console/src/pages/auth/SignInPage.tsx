@@ -57,6 +57,7 @@ export function SignInPage({ redirect }: SignInPageProps) {
     <main className="bg-background min-h-svh">
       <SignInScreen
         {...demoProps}
+        onSignUp={() => void navigate({ to: '/sign-up', search: {} as never })}
         isSubmitting={signIn.isPending}
         error={signIn.error ? messageForSignInError(signIn.error) : null}
         onSubmit={(credentials) => {

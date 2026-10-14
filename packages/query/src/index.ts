@@ -51,6 +51,7 @@ export {
   useEnvironmentList,
   useRenameEnvironment,
   useSignIn,
+  useSignUp,
 } from './session'
 export type { CurrentUser, RenameEnvironment, SessionCredentials } from './session'
 

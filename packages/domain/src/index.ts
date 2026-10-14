@@ -561,8 +561,8 @@ export type {
   WalletAlertThreshold,
 } from './settings'
 
-export { resetRequestSchema, setPasswordSchema, signInSchema } from './auth'
-export type { ResetRequest, SetPassword, SignInCredentials } from './auth'
+export { resetRequestSchema, setPasswordSchema, signInSchema, signUpSchema } from './auth'
+export type { ResetRequest, SetPassword, SignInCredentials, SignUpDetails } from './auth'
 export {
   ENVIRONMENT_TYPE_DESCRIPTION,
   ENVIRONMENT_TYPE_LABEL,
