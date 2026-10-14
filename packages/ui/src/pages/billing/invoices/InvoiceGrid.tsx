@@ -157,6 +157,8 @@ export interface InvoiceGridProps {
   error?: string | null
   onRetry?: () => void
   onInvoiceClick?: (invoice: Invoice) => void
+  /** More row-menu items after View and Copy: finalize, void, record payment… chosen per invoice. */
+  extraActions?: (invoice: Invoice) => EntityRowAction[]
   onOpenCustomer?: (customerId: string) => void
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
@@ -186,6 +188,7 @@ export function InvoiceGrid({
   error = null,
   onRetry,
   onInvoiceClick,
+  extraActions,
   onOpenCustomer,
   onCreate,
   onClearFilters,
@@ -271,6 +274,7 @@ export function InvoiceGrid({
         onSelect: () => void navigator.clipboard?.writeText(invoice.number),
       })
     }
+    if (extraActions) actions.push(...extraActions(invoice))
     return actions
   }
 

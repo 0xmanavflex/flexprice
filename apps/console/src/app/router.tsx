@@ -583,6 +583,10 @@ function InvoicesRouteComponent() {
     <InvoiceListPage
       query={query}
       onCreate={() => void navigate({ to: '/invoices/new' })}
+      onRecordPayment={(invoice) => void navigate({ to: '/payments/new', search: { invoice } })}
+      onIssueCreditNote={(invoice) =>
+        void navigate({ to: '/credit-notes/new', search: { invoice } })
+      }
       onOpenCustomer={(customerId) =>
         void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
       }
