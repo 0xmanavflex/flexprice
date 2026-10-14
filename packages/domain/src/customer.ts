@@ -175,9 +175,13 @@ const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} cha
  */
 export const createCustomerSchema = z.object({
   externalId: z.string().trim().min(1, 'Enter an external ID').max(255),
-  name: z.string().trim().min(1, 'Enter a name'),
+  // 255 and 20 are the API's own limits (`CreateCustomerRequest`: `max=255` on
+  // name, `max=20` on contact). A form that accepts more does not accept more —
+  // it collects a value the save then rejects, with a server message about a
+  // field the person has already stopped looking at.
+  name: z.string().trim().min(1, 'Enter a name').max(255, 'Use 255 characters or fewer'),
   email: z.union([z.literal(''), z.email('Enter a valid email address')]).optional(),
-  phone: optionalText(50).optional(),
+  phone: optionalText(20).optional(),
   timezone: optionalText(100).optional(),
   taxTreatment: z.enum([CustomerTaxTreatment.Taxable, CustomerTaxTreatment.Exempt]).optional(),
   addressLine1: optionalText(255).optional(),
