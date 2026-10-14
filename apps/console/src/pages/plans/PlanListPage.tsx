@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { type Plan, type PlanQuery } from '@fp/domain'
-import { useArchivePlan, useClonePlan, usePlans } from '@fp/query'
+import { useArchivePlan, usePlans } from '@fp/query'
+import { DuplicatePlanDialog } from './DuplicatePlanDialog'
 import { PlanGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -28,7 +29,7 @@ export function PlanListPage({
   onEditPlan,
 }: PlanListPageProps) {
   const plans = usePlans(query)
-  const clone = useClonePlan()
+  const [duplicating, setDuplicating] = useState<Plan | null>(null)
   const archive = useArchivePlan()
   const [archiving, setArchiving] = useState<Plan | null>(null)
   const failure = toListFailure(plans.error, 'plans')
@@ -65,23 +66,19 @@ export function PlanListPage({
             onPlanClick={(plan) => onOpenPlan(plan.id)}
             onEdit={(plan) => onEditPlan(plan.id)}
             onAddCharges={(plan) => onOpenPlan(plan.id)}
-            onDuplicate={(plan) =>
-              clone.mutate(
-                { id: plan.id, name: `${plan.name} (copy)` },
-                {
-                  onSuccess: (result) => {
-                    const id = (result as { id?: string } | undefined)?.id
-                    if (id) onOpenPlan(id)
-                  },
-                },
-              )
-            }
+            onDuplicate={(plan) => setDuplicating(plan)}
             onArchive={(plan) => setArchiving(plan)}
             onCreate={() => onCreatePlan()}
             onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
+
+      <DuplicatePlanDialog
+        plan={duplicating}
+        onClose={() => setDuplicating(null)}
+        onDuplicated={onOpenPlan}
+      />
 
       <ConfirmDialog
         open={archiving !== null}

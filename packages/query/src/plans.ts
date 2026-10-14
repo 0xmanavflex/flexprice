@@ -241,8 +241,27 @@ export function useClonePlan() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, name }: { id: string; name: string }) =>
-      call(() => client.plans.clonePlan(id, { name } as never)),
+    mutationFn: ({
+      id,
+      name,
+      lookupKey,
+      description,
+      metadata,
+    }: {
+      id: string
+      name: string
+      lookupKey?: string
+      description?: string
+      metadata?: Record<string, string>
+    }) =>
+      call(() =>
+        client.plans.clonePlan(id, {
+          name,
+          ...(lookupKey ? { lookupKey } : {}),
+          ...(description ? { description } : {}),
+          ...(metadata && Object.keys(metadata).length > 0 ? { metadata } : {}),
+        } as never),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.plans.all() })
     },

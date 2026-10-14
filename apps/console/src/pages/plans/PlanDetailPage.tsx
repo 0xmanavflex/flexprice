@@ -24,7 +24,6 @@ import {
 } from '@fp/domain'
 import {
   useArchivePlan,
-  useClonePlan,
   useCreateBulkEntitlements,
   useCreateBulkPrices,
   useCreateCreditGrant,
@@ -82,6 +81,7 @@ import {
   RefreshCwIcon,
 } from '@fp/ui/icons'
 import { usePlanFormOptions } from './planFormOptions'
+import { DuplicatePlanDialog } from './DuplicatePlanDialog'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 
@@ -138,7 +138,6 @@ export function PlanDetailPage({
   const plan = usePlan(planId)
   const update = useUpdatePlan()
   const archive = useArchivePlan()
-  const clone = useClonePlan()
   const sync = useSyncPlanPrices()
 
   // The tabs and the preview read the same keys, so react-query serves each once.
@@ -147,6 +146,7 @@ export function PlanDetailPage({
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
 
   const [archiving, setArchiving] = useState(false)
+  const [duplicating, setDuplicating] = useState(false)
 
   if (!plan.data) {
     return detailGate(plan, { noun: 'this plan', listName: 'plans', onBack: onNavigateToList })
@@ -202,19 +202,7 @@ export function PlanDetailPage({
                   <PencilIcon className="text-muted-foreground" aria-hidden />
                   Edit details
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() =>
-                    clone.mutate(
-                      { id: planId, name: `${record.name} (copy)` },
-                      {
-                        onSuccess: (result) => {
-                          const id = (result as { id?: string }).id
-                          if (id) onDuplicated(id)
-                        },
-                      },
-                    )
-                  }
-                >
+                <DropdownMenuItem onClick={() => setDuplicating(true)}>
                   <CopyIcon className="text-muted-foreground" aria-hidden />
                   Duplicate plan
                 </DropdownMenuItem>
@@ -270,6 +258,11 @@ export function PlanDetailPage({
         />
       ) : null}
 
+      <DuplicatePlanDialog
+        plan={duplicating ? record : null}
+        onClose={() => setDuplicating(false)}
+        onDuplicated={onDuplicated}
+      />
       <ConfirmDialog
         open={archiving}
         onOpenChange={setArchiving}
