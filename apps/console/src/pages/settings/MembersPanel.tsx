@@ -335,11 +335,6 @@ interface Credentials {
   password: string
 }
 
-/** Where the new member signs in, with their email filled in. Never the password. */
-function signInLink(email: string): string {
-  return `${window.location.origin}/sign-in?email=${encodeURIComponent(email)}`
-}
-
 /** A CSV cell, quoted when it holds a comma, quote or line break. */
 function csvCell(value: string): string {
   return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
@@ -349,8 +344,12 @@ function csvCell(value: string): string {
  * The new member's one-time password, shown once.
  *
  * The API returns it on the invite and keeps no copy, so this is the only time
- * anyone sees it: it can be revealed, copied on its own or with the email and
- * sign-in link, or saved as a CSV to hand over.
+ * anyone sees it: it can be revealed, copied on its own or with the email, or
+ * saved as a CSV to hand over.
+ *
+ * There is deliberately no sign-in link. A URL is not a private channel — it
+ * lands in history, Referer headers, logs and chat link previews — so a link
+ * carrying, or leading to, a working credential is never built here.
  */
 function CredentialsDialog({
   credentials,
@@ -368,13 +367,12 @@ function CredentialsDialog({
     }
   }, [credentials])
   if (!credentials) return null
-  const link = signInLink(credentials.email)
 
   const copy = (text: string, what: string) => {
     void navigator.clipboard?.writeText(text).then(() => setCopied(what))
   }
   const download = () => {
-    const csv = `email,password,sign_in_link\r\n${[credentials.email, credentials.password, link].map(csvCell).join(',')}`
+    const csv = `email,password\r\n${[credentials.email, credentials.password].map(csvCell).join(',')}`
     const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
     const anchor = document.createElement('a')
     anchor.href = url
@@ -418,16 +416,6 @@ function CredentialsDialog({
               </span>
             )}
           </Field>
-          <Field label="Sign-in link">
-            {({ id, ...field }) => (
-              <span className="flex gap-2">
-                <Input id={id} readOnly value={link} className="text-muted-foreground" {...field} />
-                <Button type="button" variant="outline" onClick={() => copy(link, 'link')}>
-                  {copied === 'link' ? 'Copied' : 'Copy'}
-                </Button>
-              </span>
-            )}
-          </Field>
         </div>
         <DialogFooter>
           <Button type="button" variant="outline" onClick={download}>
@@ -437,10 +425,7 @@ function CredentialsDialog({
             type="button"
             variant="outline"
             onClick={() =>
-              copy(
-                `Email: ${credentials.email}\nPassword: ${credentials.password}\nSign in: ${link}`,
-                'all',
-              )
+              copy(`Email: ${credentials.email}\nPassword: ${credentials.password}`, 'all')
             }
           >
             {copied === 'all' ? 'Copied' : 'Copy all'}
