@@ -225,7 +225,7 @@ export function SubscriptionGrid({
   return (
     <EntityList<Subscription>
       label="Contracts"
-      noun="subscriptions"
+      noun="contracts"
       rows={subscriptions}
       total={total}
       columns={columns}
