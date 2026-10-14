@@ -132,6 +132,14 @@ export interface ChargeFormProps {
    * these itself, as a contract does.
    */
   priceOptions?: { groups: readonly { value: string; label: string }[] }
+  /**
+   * Draws the usage window on a metered charge. Default on.
+   *
+   * Off where the container owns the window itself: a contract collects it in
+   * `UsageTermsFields` beside the commitment it interacts with, and two
+   * controls for one field in one dialog is worse than either.
+   */
+  showUsageWindow?: boolean
 }
 
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
@@ -172,6 +180,7 @@ export function ChargeForm({
   lockCurrency = false,
   lockDisplayName = false,
   priceOptions,
+  showUsageWindow = true,
 }: ChargeFormProps) {
   const isEdit = mode === 'edit'
   const form = useCalmForm<CreateCharge>({
@@ -204,7 +213,8 @@ export function ChargeForm({
   const windowable =
     selectedMeter?.aggregationType != null &&
     (WINDOWABLE_AGGREGATIONS as readonly string[]).includes(selectedMeter.aggregationType)
-  const showWindow = isUsage && Boolean(selectedMeter) && (windowable || meterBuckets)
+  const showWindow =
+    showUsageWindow && isUsage && Boolean(selectedMeter) && (windowable || meterBuckets)
   const periods = isUsage ? USAGE_PERIODS : FIXED_PERIODS
   const unitLabel = priceUnit || currency
   const lockedInput = (id: string, value: string) => (

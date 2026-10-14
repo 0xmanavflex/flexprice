@@ -130,6 +130,9 @@ export function ContractUsageEditForm({
       mode="edit"
       lockType
       lockDisplayName
+      // Same reason as the add form: the window is collected in
+      // `UsageTermsFields` below, so the price form must not draw a second.
+      showUsageWindow={false}
       defaultValue={draft}
       meters={meters}
       priceUnits={priceUnits}
