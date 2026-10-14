@@ -3,21 +3,28 @@ import { DetailTable } from '../../shared/DetailTable'
 
 export interface CouponRedemption {
   id: string
+  /** The contract the coupon is applied to. */
+  contractId?: string
   customer: string
   plan: string
   appliedAt: string
-  discount: string
+  /** When the discount stops, or "Ongoing". */
+  endsAt?: string
+  /** Whether the coupon is still applied. */
+  status?: string
 }
 
 /**
- * Who has redeemed a coupon. Flexprice has no redemption-history endpoint yet,
- * so the console passes no `redemptions` and this says so; it never shows
- * sample rows. Pass the rows (an empty array means none) once a source exists.
+ * Where a coupon is applied: one row per contract, from
+ * `GET /coupons/associations`. Without `redemptions` (still loading) it says
+ * so instead of showing sample rows; an empty array means none.
  */
 export function CouponRedemptionsView({
   redemptions,
+  onOpenContract,
 }: {
   redemptions?: CouponRedemption[] | undefined
+  onOpenContract?: ((contractId: string) => void) | undefined
 }) {
   if (!redemptions) {
     return (
@@ -25,8 +32,8 @@ export function CouponRedemptionsView({
         <EmptyState
           scene="settings"
           size="inline"
-          title="Redemption history is not available yet"
-          description="Flexprice does not report who has redeemed a coupon, so none are shown."
+          title="Loading where this coupon is applied"
+          description="The contracts using it appear here once they load."
         />
       </Section>
     )
@@ -40,6 +47,14 @@ export function CouponRedemptionsView({
         rows={redemptions}
         getRowId={(r) => r.id}
         empty="This coupon has not been redeemed yet."
+        {...(onOpenContract
+          ? {
+              onRowClick: (r: CouponRedemption) => {
+                if (r.contractId) onOpenContract(r.contractId)
+              },
+            }
+          : {})}
+        facet={{ label: 'Status', value: (r) => r.status ?? '' }}
         columns={[
           {
             key: 'c',
@@ -59,9 +74,14 @@ export function CouponRedemptionsView({
             cell: (r) => <span className="text-muted-foreground">{r.appliedAt}</span>,
           },
           {
-            key: 'a',
-            header: 'Discounted so far',
-            cell: (r) => <span className="tabular-nums">{r.discount}</span>,
+            key: 'e',
+            header: 'Ends',
+            cell: (r) => <span className="text-muted-foreground">{r.endsAt ?? 'Ongoing'}</span>,
+          },
+          {
+            key: 'st',
+            header: 'Status',
+            cell: (r) => <span className="text-muted-foreground">{r.status ?? '—'}</span>,
           },
         ]}
       />

@@ -307,3 +307,64 @@ export function useCreateCoupon() {
     },
   })
 }
+
+/** One contract a coupon is applied to, named for the redemptions table. */
+export interface CouponRedemptionRow {
+  id: string
+  contractId: string
+  customer: string
+  plan: string
+  startDate: Date | null
+  endDate: Date | null
+  status: string
+}
+
+/**
+ * Where a coupon is applied, by customer and plan: its associations, then
+ * those contracts read back by id through the subscription search.
+ */
+export function useCouponRedemptions(couponId: string) {
+  const client = useFlexprice()
+  const associations = useCouponAssociations(couponId)
+  const rows = associations.data?.associations ?? []
+  const ids = [...new Set(rows.map((row) => row.subscriptionId).filter(Boolean))]
+
+  return useQuery({
+    queryKey: [...queryKeys.coupons.associations(couponId), 'contracts', ids],
+    enabled: associations.isSuccess,
+    queryFn: async (): Promise<CouponRedemptionRow[]> => {
+      const byId = new Map<string, { customer: string; plan: string }>()
+      if (ids.length > 0) {
+        const response = await call(() =>
+          client.subscriptions.querySubscription({
+            subscriptionIds: ids,
+            limit: ids.length,
+            expand: 'customer,plan',
+          } as never),
+        )
+        for (const item of (response.items ?? []) as Array<{
+          id?: string
+          customerId?: string
+          customer?: { name?: string; email?: string }
+          plan?: { name?: string }
+          planId?: string
+        }>) {
+          if (!item.id) continue
+          byId.set(item.id, {
+            customer: item.customer?.name || item.customer?.email || item.customerId || 'Unknown',
+            plan: item.plan?.name || item.planId || '—',
+          })
+        }
+      }
+      return rows.map((row) => ({
+        id: row.id,
+        contractId: row.subscriptionId,
+        customer: byId.get(row.subscriptionId)?.customer ?? row.subscriptionId,
+        plan: byId.get(row.subscriptionId)?.plan ?? '—',
+        startDate: row.startDate,
+        endDate: row.endDate,
+        status: row.endDate && row.endDate.getTime() < Date.now() ? 'Ended' : 'Active',
+      }))
+    },
+  })
+}

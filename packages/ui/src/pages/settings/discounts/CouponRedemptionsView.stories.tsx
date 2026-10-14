@@ -13,7 +13,8 @@ function makeRedemptions(count: number): CouponRedemption[] {
     customer: `${CUSTOMERS[i % CUSTOMERS.length]}${i >= CUSTOMERS.length ? ` ${Math.floor(i / CUSTOMERS.length) + 1}` : ''}`,
     plan: PLANS[i % PLANS.length] ?? 'Starter',
     appliedAt: DATES[i % DATES.length] ?? 'Jan 10, 2026',
-    discount: `$${(((i * 37) % 200) + 12).toFixed(2)}`,
+    contractId: `subs_${i + 1}`,
+    status: i % 4 === 3 ? 'Ended' : 'Active',
   }))
 }
 
@@ -33,11 +34,11 @@ export const Playground: StoryObj<{ rows: number }> = {
   render: ({ rows }) => <CouponRedemptionsView redemptions={makeRedemptions(rows)} />,
 }
 
-/** No redemption-history endpoint exists: the tab says so instead of listing sample rows. */
+/** Still loading: the tab says so instead of listing sample rows. */
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Redemption history is not available yet')).toBeInTheDocument()
+    await expect(canvas.getByText('Loading where this coupon is applied')).toBeInTheDocument()
     await expect(canvas.queryByText('Acme Robotics')).toBeNull()
   },
 }

@@ -1173,6 +1173,13 @@ function CouponDetailRouteComponent() {
       couponId={couponId}
       startEditing={edit === true}
       onBack={() => void navigate({ to: '/coupons', search: {} as never })}
+      onOpenContract={(subscriptionId) =>
+        void navigate({
+          to: '/subscriptions/$subscriptionId',
+          params: { subscriptionId },
+          search: {} as never,
+        })
+      }
     />
   )
 }

@@ -144,6 +144,7 @@ export {
   useArchiveCoupon,
   useCoupon,
   useCouponAssociations,
+  useCouponRedemptions,
   useCoupons,
   useUpdateCoupon,
   toCreateCouponRequest,

@@ -7,7 +7,13 @@ import {
   CouponType,
   formatMoney,
 } from '@fp/domain'
-import { ApiError, useArchiveCoupon, useCoupon, useUpdateCoupon } from '@fp/query'
+import {
+  ApiError,
+  useArchiveCoupon,
+  useCoupon,
+  useCouponRedemptions,
+  useUpdateCoupon,
+} from '@fp/query'
 import {
   CatalogDetailFrame,
   CatalogStatusBadge,
@@ -27,6 +33,8 @@ export interface CouponDetailPageProps {
   onBack: () => void
   /** Open with the details already in edit mode. */
   startEditing?: boolean
+  /** Open a contract the coupon is applied to. */
+  onOpenContract?: (contractId: string) => void
 }
 
 /**
@@ -49,8 +57,10 @@ export function CouponDetailPage({
   couponId,
   onBack,
   startEditing = false,
+  onOpenContract,
 }: CouponDetailPageProps) {
   const coupon = useCoupon(couponId)
+  const redemptions = useCouponRedemptions(couponId)
   const update = useUpdateCoupon()
   const archive = useArchiveCoupon()
 
@@ -114,7 +124,24 @@ export function CouponDetailPage({
           value: 'redemptions',
           label: 'Redemptions',
           count: record.totalRedemptions,
-          content: <CouponRedemptionsView />,
+          content: (
+            <CouponRedemptionsView
+              {...(redemptions.data
+                ? {
+                    redemptions: redemptions.data.map((row) => ({
+                      id: row.id,
+                      contractId: row.contractId,
+                      customer: row.customer,
+                      plan: row.plan,
+                      appliedAt: formatDay(row.startDate),
+                      ...(row.endDate ? { endsAt: formatDay(row.endDate) } : {}),
+                      status: row.status,
+                    })),
+                  }
+                : {})}
+              {...(onOpenContract ? { onOpenContract } : {})}
+            />
+          ),
         },
         {
           value: 'information',
