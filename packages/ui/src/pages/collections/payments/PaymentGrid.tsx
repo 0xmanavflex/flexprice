@@ -14,7 +14,7 @@ import { provenance } from '@ui/provenance'
 import {
   type EntityColumn,
   type PillTone,
-  EmDash,
+  dateColumn,
   idColumn,
   moneyColumn,
   pillColumn,
@@ -26,15 +26,11 @@ import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared
 /**
  * The payment list, on the shared `EntityList`.
  *
- * ## Customer and Receipt number are dashes
+ * ## No customer or receipt column
  *
- * The brief asks for both. `PaymentResponse` carries neither: no customer name,
- * not even a `customer_id` — only `destination_id`, the invoice the money was
- * paid against — and no receipt number at all. A name would mean fetching each
- * row's invoice, a join per row per page, and a receipt number has no source,
- * so both columns show an em dash until the API grows the fields. The
- * **Invoice number** column is the honest version of the same lookup: it is a
- * real field, and the thing you would click to find the customer anyway.
+ * `PaymentResponse` carries neither a customer nor a receipt number — only the
+ * invoice it was paid against — so the list shows what V1 showed: when, which
+ * invoice, how much, how, and the gateway's own reference for the charge.
  *
  * ## Method is the customer's, not the processor's
  *
@@ -149,21 +145,10 @@ export function PaymentGrid({
 }: PaymentGridProps) {
   const columns = useMemo<EntityColumn<Payment>[]>(
     () => [
-      // The API sends neither: see the note on this file.
-      {
-        id: 'customer',
-        header: 'Customer',
-        cell: () => <EmDash />,
-        text: () => '',
-        width: 200,
-      },
-      {
-        id: 'receipt',
-        header: 'Receipt number',
-        cell: () => <EmDash />,
-        text: () => '',
-        width: 160,
-      },
+      dateColumn<Payment>('date', 'Date', (row) => row.succeededAt ?? row.createdAt, {
+        width: 140,
+        ...(locale ? { locale } : {}),
+      }),
       idColumn<Payment>('invoice', 'Invoice number', (row) => row.invoiceNumber, {
         width: 160,
         hideable: false,
@@ -179,6 +164,9 @@ export function PaymentGrid({
         label: PAYMENT_STATUS_LABEL[row.status],
         tone: STATUS_TONE[row.status],
       })),
+      idColumn<Payment>('reference', 'Gateway reference', (row) => row.gatewayPaymentId ?? '', {
+        width: 180,
+      }),
     ],
     [locale],
   )

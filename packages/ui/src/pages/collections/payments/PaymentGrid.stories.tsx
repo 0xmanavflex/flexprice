@@ -103,12 +103,10 @@ export const PaymentMethod: Story = {
 }
 
 /**
- * Customer and Receipt number are columns, and every cell is a dash.
- *
- * `PaymentResponse` has no customer and no receipt number, so the table says
- * so rather than omitting the columns or inventing values.
+ * The columns V1 showed: when, which invoice, how much, how, and the
+ * gateway's reference. No always-empty customer or receipt column.
  */
-export const CustomerAndReceiptNotAvailable: Story = {
+export const Columns: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('INV-1041')
@@ -118,14 +116,16 @@ export const CustomerAndReceiptNotAvailable: Story = {
     )
     await expect(headers).toEqual(
       expect.arrayContaining([
-        'customer',
-        'receipt number',
+        'date',
         'invoice number',
         'amount',
         'payment method',
         'status',
+        'gateway reference',
       ]),
     )
+    await expect(headers).not.toContain('customer')
+    await expect(headers).not.toContain('receipt number')
   },
 }
 
