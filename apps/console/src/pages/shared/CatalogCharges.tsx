@@ -1,16 +1,10 @@
 import { useState } from 'react'
 import { type Charge, type CreateCharge, type PriceEntityType } from '@fp/domain'
-import {
-  toUpdatePriceRequest,
-  useCreateBulkPrices,
-  usePrices,
-  useTerminatePrice,
-  useUpdatePrice,
-} from '@fp/query'
+import { toUpdatePriceRequest, useCreateBulkPrices, usePrices, useUpdatePrice } from '@fp/query'
 import { AddChargeDialog, ChargeTable } from '@fp/ui/pages'
-import { ConfirmDialog } from '@fp/ui/compositions'
 import { usePlanFormOptions } from '../plans/planFormOptions'
 import { subTab } from './subTab'
+import { TerminateChargeDialog } from './TerminateChargeDialog'
 
 export interface CatalogChargesProps {
   entityType: PriceEntityType
@@ -37,15 +31,10 @@ export function CatalogCharges({
   const { meters, units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
-  const terminate = useTerminatePrice()
   const [target, setTarget] = useState<Charge | null>(null)
   const [form, setForm] = useState<'add' | Charge | null>(null)
   const editing = form !== null && form !== 'add' ? form : null
 
-  const close = () => {
-    setTarget(null)
-    terminate.reset()
-  }
   const closeForm = () => {
     setForm(null)
     create.reset()
@@ -95,21 +84,7 @@ export function CatalogCharges({
               : null
         }
       />
-      <ConfirmDialog
-        open={target !== null}
-        onOpenChange={(open) => {
-          if (!open) close()
-        }}
-        title="Terminate this charge?"
-        description={`“${target?.displayName || target?.meterName || 'This charge'}” will stop billing on this ${noun}. Past invoices that referenced it are unaffected.`}
-        confirmLabel="Terminate charge"
-        destructive
-        isPending={terminate.isPending}
-        error={terminate.isError ? 'Could not terminate the charge. Try again.' : null}
-        onConfirm={() => {
-          if (target) terminate.mutate({ id: target.id }, { onSuccess: () => setTarget(null) })
-        }}
-      />
+      <TerminateChargeDialog charge={target} noun={noun} onClose={() => setTarget(null)} />
     </>
   )
 }

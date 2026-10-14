@@ -164,6 +164,12 @@ export function PlanChargesView({
             cell: (charge: Charge) => (
               <RowActionsMenu
                 label={charge.displayName || charge.meterName || 'charge'}
+                extra={[
+                  {
+                    label: 'Copy price ID',
+                    onSelect: () => void navigator.clipboard?.writeText(charge.id),
+                  },
+                ]}
                 onEdit={() => onEdit(charge)}
                 onRemove={() => onTerminate(charge)}
                 removeLabel="Terminate"

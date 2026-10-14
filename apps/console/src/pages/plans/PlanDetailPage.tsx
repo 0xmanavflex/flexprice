@@ -34,7 +34,6 @@ import {
   usePlan,
   usePrices,
   useSyncPlanPrices,
-  useTerminatePrice,
   useUpdateCreditGrant,
   useUpdateEntitlement,
   useUpdatePlan,
@@ -82,6 +81,7 @@ import {
 } from '@fp/ui/icons'
 import { usePlanFormOptions } from './planFormOptions'
 import { DuplicatePlanDialog } from './DuplicatePlanDialog'
+import { TerminateChargeDialog } from '../shared/TerminateChargeDialog'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 
@@ -295,7 +295,6 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
   const { meters, units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
-  const terminate = useTerminatePrice()
   const [form, setForm] = useState<'add' | Charge | null>(null)
   const [terminating, setTerminating] = useState<Charge | null>(null)
 
@@ -360,25 +359,10 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
         }
       />
 
-      <ConfirmDialog
-        open={terminating !== null}
-        onOpenChange={(open) => {
-          if (!open) setTerminating(null)
-        }}
-        title="Terminate this charge?"
-        description={
-          terminating
-            ? `“${terminating.displayName || terminating.meterName || 'This charge'}” stops billing on this plan. Past invoices that referenced it are unaffected.`
-            : undefined
-        }
-        confirmLabel="Terminate charge"
-        destructive
-        isPending={terminate.isPending}
-        error={terminate.isError ? 'Could not terminate the charge. Try again.' : null}
-        onConfirm={() => {
-          if (terminating)
-            terminate.mutate({ id: terminating.id }, { onSuccess: () => setTerminating(null) })
-        }}
+      <TerminateChargeDialog
+        charge={terminating}
+        noun="plan"
+        onClose={() => setTerminating(null)}
       />
     </>
   )

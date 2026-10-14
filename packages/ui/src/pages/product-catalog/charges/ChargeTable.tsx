@@ -206,6 +206,12 @@ export function ChargeTable({
                   cell: (charge: Charge) => (
                     <RowActionsMenu
                       label={charge.displayName || 'charge'}
+                      extra={[
+                        {
+                          label: 'Copy price ID',
+                          onSelect: () => void navigator.clipboard?.writeText(charge.id),
+                        },
+                      ]}
                       onEdit={onEdit ? () => onEdit(charge) : undefined}
                       onRemove={onTerminate ? () => onTerminate(charge) : undefined}
                       removeLabel="Terminate"
