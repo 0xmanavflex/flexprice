@@ -167,3 +167,170 @@ export function useRevenueSeries(window: { start: Date; end: Date }): UseQueryRe
     placeholderData: (previous) => previous,
   })
 }
+
+/* ---- Invoiced revenue ------------------------------------------------------ */
+
+/** One finalized invoice, as the revenue chart reads it. */
+export interface InvoicedRow {
+  customerId: string
+  customerName: string
+  /** The exact decimal the API sent. */
+  amount: string
+  currency: string
+  createdAt: Date
+}
+
+/** One currency's invoiced revenue: the exact total, its rows and its customers. */
+export interface InvoicedCurrency {
+  currency: string
+  total: Money
+  rows: InvoicedRow[]
+  /** Highest first, exact. */
+  customers: RevenueCustomer[]
+}
+
+export interface InvoicedRevenue {
+  /** The currency invoiced to the most customers first; others are never added in. */
+  currencies: InvoicedCurrency[]
+}
+
+/**
+ * Adds decimal strings exactly — no float ever holds an amount.
+ *
+ * `Money` deliberately has no `add`: an invoice's own total is the backend's
+ * answer. This is not that. It adds whole invoice totals the backend already
+ * computed, so the headline is exactly the sum of the points plotted under it.
+ */
+export function sumDecimals(amounts: readonly string[]): string {
+  const scale = Math.max(0, ...amounts.map((a) => (a.split('.')[1] ?? '').length))
+  let sum = 0n
+  for (const amount of amounts) {
+    const negative = amount.startsWith('-')
+    const [whole = '0', fraction = ''] = amount.replace('-', '').split('.')
+    const units = BigInt(whole + fraction.padEnd(scale, '0'))
+    sum += negative ? -units : units
+  }
+  const negative = sum < 0n
+  const digits = (negative ? -sum : sum).toString().padStart(scale + 1, '0')
+  const whole = digits.slice(0, digits.length - scale)
+  const fraction = scale > 0 ? `.${digits.slice(digits.length - scale)}` : ''
+  return `${negative ? '-' : ''}${whole}${fraction}`
+}
+
+/** Groups finalized invoices by currency and customer, with exact totals. */
+export function toInvoicedRevenue(rows: readonly InvoicedRow[]): InvoicedRevenue {
+  const byCurrency = new Map<string, InvoicedRow[]>()
+  for (const row of rows) {
+    const list = byCurrency.get(row.currency) ?? []
+    list.push(row)
+    byCurrency.set(row.currency, list)
+  }
+  const currencies = [...byCurrency.entries()].map(([currency, list]): InvoicedCurrency => {
+    const byCustomer = new Map<string, InvoicedRow[]>()
+    for (const row of list) {
+      const own = byCustomer.get(row.customerId) ?? []
+      own.push(row)
+      byCustomer.set(row.customerId, own)
+    }
+    const customers = [...byCustomer.entries()]
+      .map(([customerId, own]) => ({
+        customerId,
+        name: own[0]?.customerName ?? customerId,
+        total: money(sumDecimals(own.map((row) => row.amount)), currency),
+        usage: money('0', currency),
+        fixed: money('0', currency),
+      }))
+      .sort((a, b) => compareMoney(b.total, a.total))
+    return {
+      currency,
+      total: money(sumDecimals(list.map((row) => row.amount)), currency),
+      rows: list,
+      customers,
+    }
+  })
+  currencies.sort(
+    (a, b) => b.customers.length - a.customers.length || a.currency.localeCompare(b.currency),
+  )
+  return { currencies }
+}
+
+/** Invoices read per page, and the most pages a window may take (10 000 invoices). */
+const INVOICE_PAGE = 1000
+const INVOICE_PAGES = 10
+
+/**
+ * Invoiced revenue for a window — every FINALIZED invoice created in it, from
+ * `POST /invoices/search` (`invoice_status` plus `created_at` after/before),
+ * paged until the total is read. Works for every tenant; nothing to enable.
+ */
+export function useInvoicedRevenue(window: {
+  start: Date
+  end: Date
+}): UseQueryResult<InvoicedRevenue> {
+  const client = useFlexprice()
+
+  return useQuery({
+    queryKey: queryKeys.revenue.series({
+      source: 'invoices',
+      start: window.start.toISOString(),
+      end: window.end.toISOString(),
+    }),
+    queryFn: async ({ signal }) => {
+      const rows: InvoicedRow[] = []
+      for (let page = 0; page < INVOICE_PAGES; page += 1) {
+        const response = await call(
+          (options) =>
+            client.invoices.queryInvoice(
+              {
+                limit: INVOICE_PAGE,
+                offset: page * INVOICE_PAGE,
+                invoiceStatus: ['FINALIZED'],
+                skipLineItems: true,
+                sort: [{ field: 'created_at', direction: 'asc' }],
+                filters: [
+                  {
+                    field: 'created_at',
+                    operator: 'after',
+                    dataType: 'date',
+                    value: { date: new Date(window.start.getTime() - 1).toISOString() },
+                  },
+                  {
+                    field: 'created_at',
+                    operator: 'before',
+                    dataType: 'date',
+                    value: { date: window.end.toISOString() },
+                  },
+                ],
+              } as never,
+              options,
+            ),
+          signal,
+        )
+        const items = (response.items ?? []) as Array<{
+          customerId?: string
+          customer?: { name?: string; email?: string }
+          total?: string
+          currency?: string
+          createdAt?: Date
+        }>
+        for (const item of items) {
+          const currency = (item.currency ?? '').trim().toUpperCase()
+          if (!currency || !item.createdAt || !/^-?\d+(\.\d+)?$/.test(item.total ?? '')) continue
+          rows.push({
+            customerId: item.customerId ?? '',
+            customerName:
+              item.customer?.name || item.customer?.email || item.customerId || 'Unknown',
+            amount: item.total as string,
+            currency,
+            createdAt: new Date(item.createdAt),
+          })
+        }
+        const total = response.pagination?.total ?? 0
+        if (items.length < INVOICE_PAGE || (page + 1) * INVOICE_PAGE >= total) break
+      }
+      return toInvoicedRevenue(rows)
+    },
+    staleTime: 60_000,
+    placeholderData: (previous) => previous,
+  })
+}

@@ -485,8 +485,23 @@ export { useCatalogStats } from './catalogStats'
 export type { CatalogEntity, CatalogStats } from './catalogStats'
 
 export { toUsageAnalytics, useUsageAnalytics, UsageWindowSize } from './events'
-export { toRevenueOverview, useRevenueOverview, useRevenueSeries } from './revenue'
-export type { RevenueCustomer, RevenueDay, RevenueOverview, RevenueSummary } from './revenue'
+export {
+  sumDecimals,
+  toInvoicedRevenue,
+  toRevenueOverview,
+  useInvoicedRevenue,
+  useRevenueOverview,
+  useRevenueSeries,
+} from './revenue'
+export type {
+  InvoicedCurrency,
+  InvoicedRevenue,
+  InvoicedRow,
+  RevenueCustomer,
+  RevenueDay,
+  RevenueOverview,
+  RevenueSummary,
+} from './revenue'
 export type {
   FeatureUsageRow,
   UsageAnalytics,
