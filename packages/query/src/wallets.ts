@@ -174,7 +174,7 @@ export function useWalletTransactions(walletId: string | null) {
     enabled: walletId !== null,
     queryFn: async () => {
       const response = await call(() =>
-        client.wallets.getWalletTransactions({ idPathParameter: walletId ?? '', limit: 50 }),
+        client.wallets.getWalletTransactions({ idPathParameter: walletId ?? '', limit: 200 }),
       )
       return ((response.items ?? []) as WalletTransactionWire[]).map(toWalletTransaction)
     },

@@ -55,7 +55,13 @@ import {
 } from '../../compositions'
 import { ChoiceCards, Composer, SplitMeter } from '../../compositions/detail/DetailKit'
 import { Pill, type PillTone } from '../shared/cells'
-import { WalletLedgerTable, expiringSoon, formatCredits, formatDay } from './WalletLedgerTable'
+import {
+  WalletLedgerTable,
+  WalletTransactionsTable,
+  expiringSoon,
+  formatCredits,
+  formatDay,
+} from './WalletLedgerTable'
 import { SubTabState, truncationNote } from '../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../compositions/feedback/States'
 
@@ -390,6 +396,29 @@ export function CustomerWalletView({
         </SubTabState>
       </Section>
 
+      {/* A failed ledger read is reported once, in Top-ups above. */}
+      {transactionsError ? null : (
+        <Section table title="All transactions">
+          <SubTabState
+            hasData={transactions.length > 0}
+            isLoading={transactionsLoading}
+            error={transactionsError}
+            errorKind={transactionsErrorKind}
+            onRetry={onRetryTransactions}
+            columns={5}
+            loadingLabel="Loading transactions"
+            truncation={ledgerCapped}
+            empty={{
+              scene: 'customers',
+              title: 'No transactions yet',
+              description: 'Credits added and usage drawn from this wallet appear here.',
+            }}
+          >
+            <WalletTransactionsTable transactions={transactions} />
+          </SubTabState>
+        </Section>
+      )}
+
       {createDialog}
       <TopUpDialog
         key={`top-up:${opens}`}
@@ -431,7 +460,7 @@ const STATUS_TONE: Record<WalletStatus, PillTone> = {
 }
 
 /** How many ledger rows the wallet panel asks for; at this count older entries are cut off. */
-export const TRANSACTIONS_LIMIT = 50
+export const TRANSACTIONS_LIMIT = 200
 
 /** A decimal string as a number, or null when it is blank or unreadable. */
 function toNumber(value: string): number | null {

@@ -321,3 +321,78 @@ export function WalletLedgerTable({
     </>
   )
 }
+
+/**
+ * Every movement on a wallet — credits in and debits out, newest first — with
+ * search, a type filter and paging. The top-ups table above it answers "what
+ * is left of each grant"; this one answers "what happened".
+ */
+export function WalletTransactionsTable({
+  transactions,
+}: {
+  transactions: readonly WalletTransaction[]
+}) {
+  const rows = [...transactions].sort(
+    (a, b) => (b.createdAt?.getTime() ?? 0) - (a.createdAt?.getTime() ?? 0),
+  )
+  const typeOf = (t: WalletTransaction) => (t.direction === 'out' ? 'Debit' : 'Credit')
+  return (
+    <DetailTable<WalletTransaction>
+      compact
+      label="Wallet transactions"
+      noun="transactions"
+      rows={rows}
+      facet={{ label: 'Type', value: typeOf }}
+      columns={[
+        {
+          key: 'date',
+          header: 'Date',
+          sortBy: (t) => t.createdAt?.getTime() ?? 0,
+          cell: (t) => (
+            <span className="text-muted-foreground">
+              {t.createdAt ? formatDay(t.createdAt) : '—'}
+            </span>
+          ),
+        },
+        {
+          key: 'type',
+          header: 'Type',
+          sortBy: typeOf,
+          cell: (t) => (
+            <span className={cn(t.direction === 'out' ? 'text-muted-foreground' : 'font-medium')}>
+              {typeOf(t)}
+            </span>
+          ),
+        },
+        {
+          key: 'reason',
+          header: 'Reason',
+          text: (t) => `${t.reason} ${t.description}`,
+          cell: (t) => (
+            <span className="flex min-w-0 flex-col">
+              <span className="truncate">{t.reason}</span>
+              {t.description ? (
+                <span className="text-muted-foreground truncate text-xs">{t.description}</span>
+              ) : null}
+            </span>
+          ),
+        },
+        {
+          key: 'credits',
+          header: 'Credits',
+          cell: (t) => (
+            <span className="tabular-nums">
+              {t.direction === 'out' ? '−' : '+'}
+              {formatCredits(t.credits)}
+            </span>
+          ),
+        },
+        {
+          key: 'amount',
+          header: 'Amount',
+          cell: (t) => <span className="tabular-nums">{formatMoney(t.amount)}</span>,
+        },
+      ]}
+    />
+  )
+}
