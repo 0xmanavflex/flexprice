@@ -197,6 +197,7 @@ export type { Coupon, CouponAssociation, CouponQuery, EditCoupon, CreateCoupon }
 
 export {
   DEFAULT_PRICE_UNIT_QUERY,
+  PRICE_UNIT_FILTERS,
   PRICE_UNIT_CURRENCIES,
   PRICE_UNIT_SORT_LABEL,
   PRICE_UNIT_STATUS_LABEL,

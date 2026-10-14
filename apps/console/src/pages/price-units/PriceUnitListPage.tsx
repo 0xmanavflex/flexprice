@@ -31,7 +31,8 @@ export function PriceUnitListPage({
   const rows = priceUnits.data?.priceUnits ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
-  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
   return (
     <PageBody>

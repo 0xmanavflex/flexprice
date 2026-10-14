@@ -6,10 +6,11 @@ import {
   type PriceUnitQuery,
   PriceUnitSortField,
   PriceUnitStatus,
+  PRICE_UNIT_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter } from './search'
+import { nameContainsFilter, toFilterConditions } from './search'
 
 /**
  * Price units: the translation between product vocabulary and the API.
@@ -76,7 +77,14 @@ export function toPriceUnitFilter(query: PriceUnitQuery): Record<string, unknown
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
-    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
+    ...(query.search || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search ? nameContainsFilter(query.search) : []),
+            ...toFilterConditions(query.filters ?? [], PRICE_UNIT_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 

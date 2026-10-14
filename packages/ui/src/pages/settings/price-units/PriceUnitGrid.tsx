@@ -8,10 +8,11 @@ import {
   type PriceUnitQuery,
   PriceUnitSortField,
   PriceUnitStatus,
+  PRICE_UNIT_FILTERS,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../../shared/cells'
 
@@ -71,11 +72,6 @@ const GUIDES: EntityGuide[] = [
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
 ]
-
-const STATUS_CHOICES = Object.values(PriceUnitStatus).map((value) => ({
-  value,
-  label: PRICE_UNIT_STATUS_LABEL[value],
-}))
 
 export interface PriceUnitGridProps {
   priceUnits: PriceUnit[]
@@ -195,10 +191,10 @@ export function PriceUnitGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search price units…"
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: PRICE_UNIT_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -222,7 +218,9 @@ export function PriceUnitGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No price units match these filters"
       empty={{

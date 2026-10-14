@@ -4,6 +4,9 @@ import {
   PriceUnitStatus,
   PriceUnitView,
   DEFAULT_PRICE_UNIT_QUERY,
+  PRICE_UNIT_FILTERS,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -47,7 +50,13 @@ export function parsePriceUnitSearch(raw: Record<string, unknown>): PriceUnitQue
       ? (String(param(raw, 'sort', 'sortBy')) as PriceUnitSortField)
       : DEFAULT_PRICE_UNIT_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_PRICE_UNIT_QUERY.sortDirection,
-    view: param(raw, 'view', 'view') === PriceUnitView.Cards ? PriceUnitView.Cards : PriceUnitView.Table,
+      param(raw, 'dir', 'sortDirection') === 'desc'
+        ? 'desc'
+        : DEFAULT_PRICE_UNIT_QUERY.sortDirection,
+    view:
+      param(raw, 'view', 'view') === PriceUnitView.Cards
+        ? PriceUnitView.Cards
+        : PriceUnitView.Table,
+    filters: runnableFilters(decodeListFilters(raw['filters']), PRICE_UNIT_FILTERS),
   }
 }
