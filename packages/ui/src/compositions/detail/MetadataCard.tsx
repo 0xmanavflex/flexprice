@@ -45,10 +45,6 @@ export function MetadataCard({
   const [pending, setPending] = useState(false)
   const entries = Object.entries(metadata)
   const formId = useId()
-  // Read-only cards say nothing about editing; only an editable one explains the fields.
-  const shownDescription =
-    description ??
-    (onSave ? 'Your own key/value fields, returned with this record in the API.' : undefined)
 
   const start = () => {
     setRows(entries.map(([key, value], index) => ({ id: index, key, value })))
@@ -112,7 +108,7 @@ export function MetadataCard({
   return (
     <Section
       title={title}
-      {...(shownDescription ? { description: shownDescription } : {})}
+      {...(description ? { description } : {})}
       actions={actions}
       flush
       {...(className ? { className } : {})}
