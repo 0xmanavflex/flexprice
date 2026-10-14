@@ -106,7 +106,9 @@ export function InvoiceDetailPage({
         }
         onVoid={() => setDialog('void')}
         onSaveMetadata={(metadata) => saveMetadata.mutateAsync({ id: data.id, metadata })}
-        onIssueCreditNote={() => void navigate({ to: '/credit-notes/new' })}
+        onIssueCreditNote={() =>
+          void navigate({ to: '/credit-notes/new', search: { invoice: data.id } })
+        }
         onSend={() => run('send', send, 'Invoice sent to the customer', 'send the invoice')}
         onRetryPayment={() =>
           run('retry-payment', attempt, 'Payment attempt started', 'retry the payment')

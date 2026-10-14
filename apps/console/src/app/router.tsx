@@ -1711,14 +1711,21 @@ function CreditNotesRouteComponent() {
 const creditNoteCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/credit-notes/new',
+  // `?invoice=` preselects the invoice to credit, from an invoice's "Issue credit note".
+  validateSearch: (search: Record<string, unknown>): { invoice?: string } =>
+    typeof search['invoice'] === 'string' && search['invoice']
+      ? { invoice: search['invoice'] }
+      : {},
   component: CreditNoteCreateRouteComponent,
 })
 
 function CreditNoteCreateRouteComponent() {
   const navigate = useNavigate()
+  const { invoice } = creditNoteCreateRoute.useSearch()
   const toList = () => void navigate({ to: '/credit-notes', search: {} as never })
   return (
     <CreditNoteFormPage
+      {...(invoice ? { invoiceId: invoice } : {})}
       onCancel={toList}
       onDone={(creditNoteId) =>
         void navigate(
@@ -1818,14 +1825,21 @@ function ExportsRouteComponent() {
 const invoiceCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/invoices/new',
+  // `?customer=` preselects the customer, from a customer's "Create invoice".
+  validateSearch: (search: Record<string, unknown>): { customer?: string } =>
+    typeof search['customer'] === 'string' && search['customer']
+      ? { customer: search['customer'] }
+      : {},
   component: InvoiceCreateRouteComponent,
 })
 
 function InvoiceCreateRouteComponent() {
   const navigate = useNavigate()
+  const { customer } = invoiceCreateRoute.useSearch()
   const toList = () => void navigate({ to: '/invoices', search: {} as never })
   return (
     <InvoiceFormPage
+      {...(customer ? { customerId: customer } : {})}
       onCancel={toList}
       onDone={(invoiceId) =>
         void navigate(

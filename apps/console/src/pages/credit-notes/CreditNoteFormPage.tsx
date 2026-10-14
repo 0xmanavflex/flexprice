@@ -4,15 +4,21 @@ import { ApiError, useCreateCreditNote, useInvoice, useInvoices } from '@fp/quer
 import { CreditNoteForm } from '@fp/ui/pages'
 
 export interface CreditNoteFormPageProps {
+  /** Start with this invoice chosen, e.g. from the invoice's "Issue credit note". */
+  invoiceId?: string
   onCancel: () => void
   onDone: (creditNoteId: string) => void
 }
 
 /** Credit part of an invoice on its own page: `/credit-notes/new`. */
-export function CreditNoteFormPage({ onCancel, onDone }: CreditNoteFormPageProps) {
+export function CreditNoteFormPage({
+  invoiceId: startInvoiceId,
+  onCancel,
+  onDone,
+}: CreditNoteFormPageProps) {
   const create = useCreateCreditNote()
   const invoices = useInvoices({ ...DEFAULT_INVOICE_QUERY, page: 1, pageSize: 100 })
-  const [invoiceId, setInvoiceId] = useState('')
+  const [invoiceId, setInvoiceId] = useState(startInvoiceId ?? '')
   const chosen = useInvoice(invoiceId, { enabled: invoiceId !== '' })
 
   const options = useMemo(
@@ -41,6 +47,7 @@ export function CreditNoteFormPage({ onCancel, onDone }: CreditNoteFormPageProps
       invoiceLines={lines}
       linesLoading={invoiceId !== '' && chosen.isPending}
       onInvoiceChange={setInvoiceId}
+      {...(startInvoiceId ? { defaultInvoiceId: startInvoiceId } : {})}
       trail={[{ label: 'Credit notes', onClick: onCancel }, { label: 'New credit note' }]}
       onCancel={onCancel}
       isSubmitting={create.isPending}

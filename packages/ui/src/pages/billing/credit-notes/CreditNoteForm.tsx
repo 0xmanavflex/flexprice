@@ -49,6 +49,8 @@ export interface CreditNoteFormProps {
   invoiceLines: readonly CreditNoteInvoiceLine[]
   linesLoading?: boolean
   onInvoiceChange: (invoiceId: string) => void
+  /** The invoice chosen when the form opens. */
+  defaultInvoiceId?: string
   trail: DetailCrumb[]
   onSubmit: (creditNote: CreateCreditNote) => void
   onCancel?: () => void
@@ -67,10 +69,13 @@ export function CreditNoteForm({
   onCancel,
   isSubmitting = false,
   submitError = null,
+  defaultInvoiceId,
 }: CreditNoteFormProps) {
   const form = useCalmForm<CreateCreditNote>({
     resolver: standardSchemaResolver(createCreditNoteSchema) as Resolver<CreateCreditNote>,
-    defaultValues: emptyCreditNote(),
+    defaultValues: defaultInvoiceId
+      ? { ...emptyCreditNote(), invoiceId: defaultInvoiceId }
+      : emptyCreditNote(),
   })
   const errors = form.formState.errors
   const lines = form.watch('lines')

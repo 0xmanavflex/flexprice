@@ -89,7 +89,9 @@ export function CustomerDetailPage({
         tab={tab}
         onTabChange={onTabChange}
         onBack={onNavigateToList}
-        onCreateInvoice={() => void navigate({ to: '/invoices/new' })}
+        onCreateInvoice={() =>
+          void navigate({ to: '/invoices/new', search: { customer: customerId } })
+        }
         onCreateContract={() =>
           void navigate({
             to: '/customers/$customerId/subscriptions/new',

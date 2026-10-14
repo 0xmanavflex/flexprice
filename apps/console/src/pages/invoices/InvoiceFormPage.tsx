@@ -1,5 +1,10 @@
 import { useMemo, useState } from 'react'
-import { DEFAULT_CUSTOMER_QUERY, type CreateInvoice, type InvoiceDetail } from '@fp/domain'
+import {
+  DEFAULT_CUSTOMER_QUERY,
+  emptyInvoice,
+  type CreateInvoice,
+  type InvoiceDetail,
+} from '@fp/domain'
 import { ApiError, useCreateInvoice, useCustomers, useInvoice } from '@fp/query'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 import { InvoiceForm } from '@fp/ui/pages'
@@ -7,6 +12,8 @@ import { InvoiceForm } from '@fp/ui/pages'
 export interface InvoiceFormPageProps {
   /** Set when this page edits an existing invoice. Create leaves it out. */
   invoiceId?: string
+  /** Create only: start with this customer chosen. */
+  customerId?: string
   onCancel: () => void
   onDone: (invoiceId: string) => void
 }
@@ -19,7 +26,7 @@ export interface InvoiceFormPageProps {
  * invoice. There is no update call on the API, so edit explains that saving
  * changes is not available yet.
  */
-export function InvoiceFormPage({ invoiceId, onCancel, onDone }: InvoiceFormPageProps) {
+export function InvoiceFormPage({ invoiceId, customerId, onCancel, onDone }: InvoiceFormPageProps) {
   const editing = Boolean(invoiceId)
   const create = useCreateInvoice()
   const invoice = useInvoice(invoiceId ?? '', { enabled: editing })
@@ -35,7 +42,8 @@ export function InvoiceFormPage({ invoiceId, onCancel, onDone }: InvoiceFormPage
     [customers.data],
   )
 
-  if (editing && invoice.isPending) {
+  // A preset customer can only be shown once the list it is picked from has arrived.
+  if ((editing && invoice.isPending) || (!editing && customerId && customers.isPending)) {
     return (
       <PageBody>
         <div className="pt-4">
@@ -68,7 +76,11 @@ export function InvoiceFormPage({ invoiceId, onCancel, onDone }: InvoiceFormPage
         { label: 'Invoices', onClick: onCancel },
         { label: editing ? 'Edit invoice' : 'New invoice' },
       ]}
-      {...(existing ? { defaultValue: toDraft(existing), invoiceNumber: existing.number } : {})}
+      {...(existing
+        ? { defaultValue: toDraft(existing), invoiceNumber: existing.number }
+        : customerId
+          ? { defaultValue: { ...emptyInvoice(), customerId } }
+          : {})}
       onCancel={onCancel}
       isSubmitting={create.isPending}
       submitError={editing ? editNotice : toSubmitError(create.error)}
