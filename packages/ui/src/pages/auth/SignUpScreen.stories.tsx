@@ -72,3 +72,21 @@ export const BackToSignIn: Story = {
     await expect(args.onSignIn).toHaveBeenCalledOnce()
   },
 }
+
+/** Clicking through the fields without typing flags nothing; a typed value is checked on leaving. */
+export const ValidatesOnlyWhatWasTyped: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByLabelText('Work email'))
+    await userEvent.click(canvas.getByLabelText('Password'))
+    await userEvent.click(canvas.getByLabelText('Confirm password'))
+    await userEvent.click(canvas.getByRole('heading', { level: 1 }))
+    await expect(canvas.queryByText('Enter your work email')).toBeNull()
+    await expect(canvas.queryByText('Use at least 6 characters')).toBeNull()
+
+    await userEvent.type(canvas.getByLabelText('Work email'), 'nope')
+    await userEvent.tab()
+    await expect(await canvas.findByText('Enter a valid email address')).toBeInTheDocument()
+    await expect(canvas.queryByText('Use at least 6 characters')).toBeNull()
+  },
+}

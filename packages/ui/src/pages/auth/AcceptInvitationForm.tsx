@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { EyeIcon, EyeOffIcon } from '@ui/icons'
 import { type SetPassword, setPasswordSchema } from '@fp/domain'
@@ -47,10 +48,9 @@ export function AcceptInvitationForm({
   error = null,
 }: AcceptInvitationFormProps) {
   const [revealed, setRevealed] = useState(false)
-  const form = useForm<SetPassword>({
+  const form = useCalmForm<SetPassword>({
     resolver: standardSchemaResolver(setPasswordSchema) as Resolver<SetPassword>,
     defaultValues: { password: '', confirm: '' },
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
 

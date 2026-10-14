@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useEffect, useId, useRef } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { EyeIcon, EyeOffIcon } from '@ui/icons'
 import { useState } from 'react'
@@ -77,13 +78,12 @@ export function SignInForm({
   const [revealed, setRevealed] = useState(false)
   const passwordRef = useRef<HTMLInputElement | null>(null)
 
-  const form = useForm<SignInCredentials>({
+  const form = useCalmForm<SignInCredentials>({
     resolver: standardSchemaResolver(signInSchema) as Resolver<SignInCredentials>,
     defaultValues: {
       email: defaultValues?.email ?? '',
       password: defaultValues?.password ?? '',
     },
-    mode: 'onTouched',
   })
 
   // Keep what they got right, clear what they did not, and put the cursor

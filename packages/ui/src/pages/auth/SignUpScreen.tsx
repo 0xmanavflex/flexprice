@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useId, useState, type ReactNode } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { EyeIcon, EyeOffIcon } from '@ui/icons'
 import { type SignUpDetails, signUpSchema } from '@fp/domain'
@@ -58,7 +59,7 @@ function PasswordInput({
   invalid: boolean
   describedBy: string | undefined
   disabled: boolean
-  registration: ReturnType<ReturnType<typeof useForm<SignUpDetails>>['register']>
+  registration: ReturnType<ReturnType<typeof useCalmForm<SignUpDetails>>['register']>
 }) {
   const [shown, setShown] = useState(false)
   return (
@@ -95,10 +96,9 @@ export function SignUpScreen({
   onSignIn,
   onProvider,
 }: SignUpScreenProps) {
-  const form = useForm<SignUpDetails>({
+  const form = useCalmForm<SignUpDetails>({
     resolver: standardSchemaResolver(signUpSchema) as Resolver<SignUpDetails>,
     defaultValues: { email: '', password: '', confirm: '' },
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
   const emailId = useId()

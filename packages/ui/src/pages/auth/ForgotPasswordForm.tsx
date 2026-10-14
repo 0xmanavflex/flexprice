@@ -1,4 +1,5 @@
-import { useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type ResetRequest, resetRequestSchema } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
@@ -41,10 +42,9 @@ export function ForgotPasswordForm({
   sentTo = null,
   error = null,
 }: ForgotPasswordFormProps) {
-  const form = useForm<ResetRequest>({
+  const form = useCalmForm<ResetRequest>({
     resolver: standardSchemaResolver(resetRequestSchema) as Resolver<ResetRequest>,
     defaultValues: { email: '' },
-    mode: 'onTouched',
   })
 
   if (sentTo) {
