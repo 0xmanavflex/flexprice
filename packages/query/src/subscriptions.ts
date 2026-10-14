@@ -592,6 +592,15 @@ export function toCancelSubscriptionRequest(draft: CancelSubscription): Record<s
   return {
     cancellationType: draft.cancellationType,
     ...(draft.reason.trim() ? { reason: draft.reason.trim() } : {}),
+    ...(draft.cancellationType === 'scheduled_date' && draft.cancelAt
+      ? { cancelAt: new Date(`${draft.cancelAt}T00:00:00Z`) }
+      : {}),
+    ...(draft.prorate !== undefined
+      ? { prorationBehavior: draft.prorate ? 'create_prorations' : 'none' }
+      : {}),
+    ...(draft.cancellationType === 'immediate' && draft.generateInvoice !== undefined
+      ? { cancelImmediatelyInovicePolicy: draft.generateInvoice ? 'generate_invoice' : 'skip' }
+      : {}),
   }
 }
 

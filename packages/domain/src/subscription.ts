@@ -366,12 +366,22 @@ export interface SubscriptionEntitlement {
   resetPeriodLabel: string
 }
 
-export const SUBSCRIPTION_CANCELLATION_TYPES = ['immediate', 'end_of_period'] as const
+export const SUBSCRIPTION_CANCELLATION_TYPES = [
+  'immediate',
+  'end_of_period',
+  'scheduled_date',
+] as const
 export type SubscriptionCancellationType = (typeof SUBSCRIPTION_CANCELLATION_TYPES)[number]
 
 export interface CancelSubscription {
   cancellationType: SubscriptionCancellationType
   reason: string
+  /** For `scheduled_date`: the day (`YYYY-MM-DD`) the contract ends. */
+  cancelAt?: string
+  /** Credit or charge the unused or extra part of the period. Absent means none. */
+  prorate?: boolean
+  /** For `immediate`: raise a final invoice now, rather than skip it. */
+  generateInvoice?: boolean
 }
 
 /** One line of the invoice a contract will raise next. */

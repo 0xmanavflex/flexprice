@@ -44,7 +44,7 @@ import {
 } from '@fp/query'
 import { SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
-import { Input } from '@fp/ui/primitives'
+import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions } from '../plans/planFormOptions'
 import { subscriptionLifecycle } from './subscriptionLifecycle'
 import { detailGate } from '../shared/detailGate'
@@ -60,6 +60,7 @@ export interface SubscriptionDetailPageProps {
 const CANCEL_OPTIONS = [
   { value: 'end_of_period', label: 'At the end of the current period' },
   { value: 'immediate', label: 'Immediately' },
+  { value: 'scheduled_date', label: 'On a date' },
 ]
 
 const today = () => new Date().toISOString().slice(0, 10)
@@ -140,6 +141,10 @@ export function SubscriptionDetailPage({
   const [cancellationType, setCancellationType] =
     useState<SubscriptionCancellationType>('end_of_period')
   const [reason, setReason] = useState('')
+  const [cancelAt, setCancelAt] = useState('')
+  const [prorate, setProrate] = useState(false)
+  const [finalInvoice, setFinalInvoice] = useState(false)
+  const [cancelProblem, setCancelProblem] = useState<string | null>(null)
   const [startDate, setStartDate] = useState(today())
 
   const activity = useMemo(
@@ -241,12 +246,40 @@ export function SubscriptionDetailPage({
               <OptionSelect
                 id="cancel-when"
                 value={cancellationType}
-                onValueChange={(value) =>
+                onValueChange={(value) => {
                   setCancellationType(value as SubscriptionCancellationType)
-                }
+                  setCancelProblem(null)
+                }}
                 options={CANCEL_OPTIONS}
               />
             </label>
+            {cancellationType === 'scheduled_date' ? (
+              <label htmlFor="cancel-at" className="flex flex-col gap-1.5 text-sm">
+                Cancel on
+                <DateInput
+                  id="cancel-at"
+                  value={cancelAt}
+                  onValueChange={(value) => {
+                    setCancelAt(value)
+                    setCancelProblem(null)
+                  }}
+                />
+              </label>
+            ) : null}
+            <span className="flex items-center justify-between gap-4 text-sm">
+              <label htmlFor="cancel-prorate">Prorate the current period</label>
+              <Switch id="cancel-prorate" checked={prorate} onCheckedChange={setProrate} />
+            </span>
+            {cancellationType === 'immediate' ? (
+              <span className="flex items-center justify-between gap-4 text-sm">
+                <label htmlFor="cancel-invoice">Raise a final invoice now</label>
+                <Switch
+                  id="cancel-invoice"
+                  checked={finalInvoice}
+                  onCheckedChange={setFinalInvoice}
+                />
+              </span>
+            ) : null}
             <label htmlFor="cancel-reason" className="flex flex-col gap-1.5 text-sm">
               Reason (optional)
               <Input
@@ -261,10 +294,30 @@ export function SubscriptionDetailPage({
         cancelLabel="Keep contract"
         destructive
         isPending={cancel.isPending}
-        error={toError(cancel.error, 'cancel')}
-        onConfirm={() =>
-          cancel.mutate({ id: data.id, draft: { cancellationType, reason } }, { onSuccess: close })
-        }
+        error={cancelProblem ?? toError(cancel.error, 'cancel')}
+        onConfirm={() => {
+          if (cancellationType === 'scheduled_date' && !cancelAt) {
+            setCancelProblem('Pick the day the contract ends.')
+            return
+          }
+          if (cancellationType === 'scheduled_date' && cancelAt < today()) {
+            setCancelProblem('The cancellation date cannot be in the past.')
+            return
+          }
+          cancel.mutate(
+            {
+              id: data.id,
+              draft: {
+                cancellationType,
+                reason,
+                prorate,
+                ...(cancellationType === 'scheduled_date' ? { cancelAt } : {}),
+                ...(cancellationType === 'immediate' ? { generateInvoice: finalInvoice } : {}),
+              },
+            },
+            { onSuccess: close },
+          )
+        }}
       />
       <ConfirmDialog
         open={dialog === 'activate'}

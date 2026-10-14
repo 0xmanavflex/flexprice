@@ -107,6 +107,34 @@ describe('toCancelSubscriptionRequest', () => {
       reason: 'Churned',
     })
   })
+
+  it('sends a scheduled date, proration and the final-invoice policy', () => {
+    const scheduled = CancelSubscriptionRequest$outboundSchema.parse(
+      toCancelSubscriptionRequest({
+        cancellationType: 'scheduled_date',
+        reason: '',
+        cancelAt: '2030-03-01',
+        prorate: true,
+      }),
+    )
+    expect(scheduled).toEqual({
+      cancellation_type: 'scheduled_date',
+      cancel_at: '2030-03-01T00:00:00.000Z',
+      proration_behavior: 'create_prorations',
+    })
+    const now = CancelSubscriptionRequest$outboundSchema.parse(
+      toCancelSubscriptionRequest({
+        cancellationType: 'immediate',
+        reason: '',
+        prorate: false,
+        generateInvoice: true,
+      }),
+    )
+    expect(now).toMatchObject({
+      proration_behavior: 'none',
+      cancel_immediately_inovice_policy: 'generate_invoice',
+    })
+  })
 })
 
 describe('contract-scoped creators', () => {
