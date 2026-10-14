@@ -2,8 +2,6 @@ import { useNavigate } from '@tanstack/react-router'
 import { useState } from 'react'
 import {
   type Addon,
-  type Charge,
-  type CreateCharge,
   type CreateCreditGrant,
   type CreateEntitlement,
   type CreditGrant,
@@ -21,7 +19,6 @@ import {
 import {
   useAddon,
   useCreateBulkEntitlements,
-  useCreateBulkPrices,
   useCreateCreditGrant,
   useCreditGrants,
   useDeleteAddon,
@@ -30,19 +27,14 @@ import {
   useEntitlements,
   useFeatures,
   usePrices,
-  useTerminatePrice,
   useUpdateAddon,
-  useUpdatePrice,
-  toUpdatePriceRequest,
   useUpdateCreditGrant,
   useUpdateEntitlement,
 } from '@fp/query'
 import {
-  AddChargeDialog,
   AddonSubscriptionsView,
   CatalogDetailFrame,
   CatalogStatusBadge,
-  ChargeTable,
   CreditGrantCreateForm,
   CreditGrantEditForm,
   CreditGrantTable,
@@ -56,7 +48,7 @@ import { ConfirmDialog, EditableCard, FormDialog, MetadataCard } from '@fp/ui/co
 import { ArchiveIcon, PencilIcon, PuzzleIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
-import { usePlanFormOptions } from '../plans/planFormOptions'
+import { CatalogCharges } from '../shared/CatalogCharges'
 
 export interface AddonDetailPageProps {
   addonId: string
@@ -150,7 +142,14 @@ export function AddonDetailPage({
           value: 'charges',
           label: 'Charges',
           ...(prices.data ? { count: chargeCount } : {}),
-          content: <PricesTab addonId={addonId} />,
+          content: (
+            <CatalogCharges
+              entityType={PriceEntityType.Addon}
+              entityId={addonId}
+              noun="add-on"
+              emptyDescription="This add-on bills nothing until it has a charge."
+            />
+          ),
         },
         {
           value: 'entitlements',
@@ -212,95 +211,6 @@ export function AddonDetailPage({
         }
       />
     </CatalogDetailFrame>
-  )
-}
-
-/**
- * Charges — the prices this add-on carries. "Add charge" asks Fixed or Usage,
- * then shows the plan's charge form; an edit saves a new price version, and
- * terminating one is confirmed first.
- */
-function PricesTab({ addonId }: { addonId: string }) {
-  const charges = usePrices(PriceEntityType.Addon, addonId)
-  const { meters, units, priceGroups } = usePlanFormOptions()
-  const create = useCreateBulkPrices()
-  const updatePrice = useUpdatePrice()
-  const terminate = useTerminatePrice()
-  const [target, setTarget] = useState<Charge | null>(null)
-  const [form, setForm] = useState<'add' | Charge | null>(null)
-  const editing = form !== null && form !== 'add' ? form : null
-
-  const close = () => {
-    setTarget(null)
-    terminate.reset()
-  }
-  const closeForm = () => {
-    setForm(null)
-    create.reset()
-    updatePrice.reset()
-  }
-
-  const submit = (draft: CreateCharge) => {
-    if (editing) {
-      updatePrice.mutate(
-        { id: editing.id, body: toUpdatePriceRequest(draft) },
-        { onSuccess: closeForm },
-      )
-      return
-    }
-    create.mutate(
-      { entityType: PriceEntityType.Addon, entityId: addonId, charges: [draft] },
-      { onSuccess: closeForm },
-    )
-  }
-
-  return (
-    <>
-      <ChargeTable
-        charges={charges.data ?? []}
-        {...subTab(charges, 'charges')}
-        emptyDescription="This add-on bills nothing until it has a charge."
-        onAdd={() => setForm('add')}
-        onEdit={(charge) => setForm(charge)}
-        onTerminate={(charge) => setTarget(charge)}
-      />
-      <AddChargeDialog
-        open={form !== null}
-        onOpenChange={(open) => {
-          if (!open) closeForm()
-        }}
-        editing={editing}
-        meters={meters}
-        priceUnits={units}
-        priceGroups={priceGroups}
-        onSubmit={submit}
-        isSubmitting={create.isPending || updatePrice.isPending}
-        submitError={
-          editing
-            ? updatePrice.isError
-              ? 'Could not save the price. Try again.'
-              : null
-            : create.isError
-              ? 'The charge was rejected. Check it and try again.'
-              : null
-        }
-      />
-      <ConfirmDialog
-        open={target !== null}
-        onOpenChange={(open) => {
-          if (!open) close()
-        }}
-        title="Terminate this charge?"
-        description={`“${target?.displayName || target?.meterName || 'This charge'}” will stop billing on this add-on. Past invoices that referenced it are unaffected.`}
-        confirmLabel="Terminate charge"
-        destructive
-        isPending={terminate.isPending}
-        error={terminate.isError ? 'Could not terminate the charge. Try again.' : null}
-        onConfirm={() => {
-          if (target) terminate.mutate({ id: target.id }, { onSuccess: () => setTarget(null) })
-        }}
-      />
-    </>
   )
 }
 

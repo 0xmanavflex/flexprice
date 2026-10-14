@@ -1,17 +1,11 @@
 import { useState } from 'react'
 import { PriceEntityType } from '@fp/domain'
 import { useCostSheet, useDeleteCostSheet, usePrices, useUpdateCostSheet } from '@fp/query'
-import {
-  CatalogDetailFrame,
-  CatalogStatusBadge,
-  ChargeTable,
-  CostMarginCard,
-  Pill,
-} from '@fp/ui/pages'
+import { CatalogDetailFrame, CatalogStatusBadge, CostMarginCard, Pill } from '@fp/ui/pages'
 import { ConfirmDialog, EditableCard, MetadataCard } from '@fp/ui/compositions'
 import { ArchiveIcon, CalculatorIcon, PencilIcon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
-import { subTab } from '../shared/subTab'
+import { CatalogCharges } from '../shared/CatalogCharges'
 
 type CostSheetTab = 'costs' | 'information'
 
@@ -104,11 +98,12 @@ export function CostSheetDetailPage({
           count,
           content: (
             <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
-              <ChargeTable
-                charges={charges ?? []}
+              <CatalogCharges
+                entityType={PriceEntityType.CostSheet}
+                entityId={costSheetId}
+                noun="cost sheet"
                 title="Costs"
-                emptyDescription="Prices tagged to this cost sheet will appear here. None have been added to it yet."
-                {...subTab(prices, 'prices')}
+                emptyDescription="Costs added to this cost sheet appear here. None have been added yet."
               />
               {/* No margin source: the API carries no revenue/cost totals, so the card says so. */}
               <CostMarginCard />
