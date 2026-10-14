@@ -16,6 +16,7 @@ describe('parseAddonSearch', () => {
       sortBy: 'name',
       sortDirection: 'asc',
       view: 'table',
+      filters: [],
     })
   })
 

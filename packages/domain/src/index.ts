@@ -171,6 +171,7 @@ export {
   AddonStatus,
   AddonView,
   DEFAULT_ADDON_QUERY,
+  ADDON_FILTERS,
   createAddonSchema,
   emptyAddon,
 } from './addon'

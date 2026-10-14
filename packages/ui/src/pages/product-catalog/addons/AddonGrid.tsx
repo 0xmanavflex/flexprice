@@ -8,10 +8,11 @@ import {
   AddonSortField,
   AddonStatus,
   DEFAULT_ADDON_QUERY,
+  ADDON_FILTERS,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../../shared/cells'
 
@@ -45,11 +46,6 @@ export const AddonGridProvenance = provenance({
 const SORT_OPTIONS = Object.values(AddonSortField).map((value) => ({
   value,
   label: ADDON_SORT_LABEL[value],
-}))
-
-const STATUS_CHOICES = Object.values(AddonStatus).map((value) => ({
-  value,
-  label: ADDON_STATUS_LABEL[value],
 }))
 
 /** Every URL requested and returned 200; all three are in the docs sitemap. */
@@ -188,10 +184,10 @@ export function AddonGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search add-ons…"
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: ADDON_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -215,7 +211,9 @@ export function AddonGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No add-ons match these filters"
       empty={{

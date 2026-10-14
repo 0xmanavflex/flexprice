@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * An add-on, as the list reads it.
  *
@@ -59,6 +60,8 @@ export interface AddonQuery {
   sortBy: AddonSortField
   sortDirection: 'asc' | 'desc'
   view: AddonView
+  /** Granular field filters, applied by the search endpoint. See `ADDON_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_ADDON_QUERY: AddonQuery = {
@@ -69,7 +72,23 @@ export const DEFAULT_ADDON_QUERY: AddonQuery = {
   sortBy: AddonSortField.Name,
   sortDirection: 'asc',
   view: AddonView.Table,
+  filters: [],
 }
+/** What the add-on list can filter on — V1's fields, by their wire names. */
+export const ADDON_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * The rules for creating or editing an add-on's details.

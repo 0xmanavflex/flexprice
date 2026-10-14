@@ -4,6 +4,9 @@ import {
   AddonStatus,
   AddonView,
   DEFAULT_ADDON_QUERY,
+  ADDON_FILTERS,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -36,7 +39,11 @@ export function parseAddonSearch(raw: Record<string, unknown>): AddonQuery {
 
   return {
     page: positiveInt(raw['page'], DEFAULT_ADDON_QUERY.page),
-    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_ADDON_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(
+      param(raw, 'size', 'pageSize'),
+      DEFAULT_ADDON_QUERY.pageSize,
+      MAX_PAGE_SIZE,
+    ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
@@ -45,5 +52,6 @@ export function parseAddonSearch(raw: Record<string, unknown>): AddonQuery {
     sortDirection:
       param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_ADDON_QUERY.sortDirection,
     view: param(raw, 'view', 'view') === AddonView.Cards ? AddonView.Cards : AddonView.Table,
+    filters: runnableFilters(decodeListFilters(raw['filters']), ADDON_FILTERS),
   }
 }

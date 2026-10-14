@@ -6,10 +6,11 @@ import {
   AddonSortField,
   AddonStatus,
   type CreateAddon,
+  ADDON_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter } from './search'
+import { nameContainsFilter, toFilterConditions } from './search'
 
 /**
  * Add-ons: the translation between product vocabulary and the API.
@@ -62,7 +63,14 @@ export function toAddonFilter(query: AddonQuery): Record<string, unknown> {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
-    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
+    ...(query.search || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search ? nameContainsFilter(query.search) : []),
+            ...toFilterConditions(query.filters ?? [], ADDON_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 
