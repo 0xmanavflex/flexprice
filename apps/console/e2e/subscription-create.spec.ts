@@ -15,24 +15,26 @@ test.beforeEach(async ({ context }) => {
 
 test('creates a contract through the steps and posts it', async ({ page }) => {
   await page.goto('/subscriptions/new')
+  // Customer and plan are one step. The plan half is withheld until there is a
+  // customer, so the step opens as one question.
   await expect(page.getByRole('heading', { name: 'Customer' })).toBeVisible()
+  await expect(page.getByText('Plan and billing')).toHaveCount(0)
 
   // The toolbar carries Next (no Cancel, no Previous on the first step, no bottom bar).
   await expect(page.getByRole('button', { name: 'Cancel' })).toHaveCount(0)
   await expect(page.getByRole('button', { name: 'Previous' })).toHaveCount(0)
 
-  // The Customer step is gated on a choice.
+  // The step is gated on the customer: Next does not advance without one.
   await page.getByRole('button', { name: 'Next' }).click()
   await expect(page.getByText(/customer/i).first()).toBeVisible()
-  await expect(page).not.toHaveURL(/step=plan/)
+  await expect(page).not.toHaveURL(/step=benefits/)
 
   await page.getByRole('combobox').first().click()
   await page.getByRole('option').first().click()
-  await page.getByRole('button', { name: 'Next' }).click()
-  await expect(page).toHaveURL(/step=plan/)
 
-  await expect(page.getByRole('button', { name: 'Previous' })).toBeVisible()
-  await page.getByRole('combobox').first().click()
+  // Choosing the customer reveals the plan, in the same step.
+  await expect(page.getByText('Plan and billing')).toBeVisible()
+  await page.getByRole('combobox', { name: /^Plan/ }).click()
   await page.getByRole('option').first().click()
   // Choosing a plan clears any "Choose a plan" prompt.
   await expect(page.getByText('Choose a plan')).toHaveCount(0)

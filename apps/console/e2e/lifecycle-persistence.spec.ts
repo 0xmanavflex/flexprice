@@ -146,11 +146,12 @@ test('cancelling a contract immediately marks it cancelled', async ({ page }) =>
 
 test('a future-dated contract is incomplete until it is activated', async ({ page }) => {
   await page.goto('/subscriptions/new')
+  // Customer and plan share the first step; the plan appears once the customer
+  // is chosen, so there is no Next between them.
   await page.getByRole('combobox').first().click()
   await page.getByRole('option').first().click()
-  await page.getByRole('button', { name: 'Next' }).click()
-  await expect(page).toHaveURL(/step=plan/)
-  await page.getByRole('combobox').first().click()
+  await expect(page.getByText('Plan and billing')).toBeVisible()
+  await page.getByRole('combobox', { name: /^Plan/ }).click()
   await page.getByRole('option').first().click()
   const currency = page.getByRole('combobox', { name: /Currency/ })
   if ((await currency.textContent())?.includes('Choose')) {

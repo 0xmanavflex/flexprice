@@ -23,7 +23,9 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await page.getByRole('button', { name: 'Create wallet' }).click()
   const create = page.getByRole('dialog', { name: 'Create wallet' })
   await create.getByLabel('Conversion rate').fill('0.01')
-  await create.getByLabel('Initial credits').fill('1000')
+  // Exact: the dialog also has "Initial credits expire on", which a substring
+  // match picks up as well.
+  await create.getByLabel('Initial credits', { exact: true }).fill('1000')
   await create.getByRole('button', { name: 'Create wallet' }).click()
 
   await expect(page.getByText('Real-time balance')).toBeVisible()
@@ -36,7 +38,11 @@ test('creates, tops up and terminates a wallet', async ({ page }) => {
   await topUp.getByLabel('Credits').fill('250')
   await topUp.getByRole('button', { name: 'Top up' }).click()
   await expect(page.getByText('1,250 credits').first()).toBeVisible()
-  await expect(page.getByText('Purchased credits')).toBeVisible()
+  // The top-up now shows in two places — the top-ups table and the newer
+  // wallet transactions ledger — so the assertion names which one it means.
+  await expect(
+    page.getByRole('region', { name: 'Top-ups table' }).getByText('Purchased credits'),
+  ).toBeVisible()
 
   await expect(page.getByText('Consumption rate')).toBeVisible()
   await page.getByRole('button', { name: /auto top-up off/i }).click()
