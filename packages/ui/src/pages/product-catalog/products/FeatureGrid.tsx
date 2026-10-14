@@ -18,11 +18,9 @@ import {
   type Feature,
   type FeatureQuery,
   FeatureSortField,
-  FeatureType,
+  FEATURE_FILTERS,
 } from '@fp/domain'
-import { createFilterQuery, createFilterRule } from '@ui/components/reui/filters/filters-query'
-import type { FilterField, FilterNode } from '@ui/components/reui/filters/filters-types'
-import type { FlatFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'
@@ -71,31 +69,6 @@ const SORT_OPTIONS = Object.values(FeatureSortField).map((value) => ({
   value,
   label: FEATURE_SORT_LABEL[value],
 }))
-
-const TYPE_OPTIONS = Object.values(FeatureType).map((value) => ({
-  value,
-  label: FEATURE_TYPE_LABEL[value],
-}))
-
-/**
- * What the filter builder offers.
- *
- * `is_any_of` only: it is the one operator whose flattened result maps onto
- * the query and survives a URL round trip, and offering operators the URL
- * cannot carry is offering a filter that vanishes when the page is shared.
- */
-const FILTER_FIELDS: FilterField[] = [
-  {
-    id: 'type',
-    label: 'Type',
-    type: 'select',
-    options: TYPE_OPTIONS,
-    operators: [{ value: 'is_any_of', label: 'is any of', arity: 'many' }],
-    defaultOperator: 'is_any_of',
-  },
-]
-
-const TYPES = new Set<string>(Object.values(FeatureType))
 
 /**
  * The three cards under the first-run empty state.
@@ -320,15 +293,6 @@ export function FeatureGrid({
     [linkage, linkageLoading, onCreateEntitlement],
   )
 
-  /* --- the filter builder's tree, rebuilt from the query every render, so
-         the chips and the URL cannot drift --- */
-  const filterRules: FilterNode[] = []
-  if (query.types.length > 0) {
-    filterRules.push(
-      createFilterRule({ id: 'type', path: ['type'], operator: 'is_any_of', value: query.types }),
-    )
-  }
-
   const isDefaultSort =
     query.sortBy === DEFAULT_FEATURE_QUERY.sortBy &&
     query.sortDirection === DEFAULT_FEATURE_QUERY.sortDirection
@@ -386,17 +350,11 @@ export function FeatureGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search products…"
-      filter={{
-        fields: FILTER_FIELDS,
-        query: createFilterQuery(filterRules),
-        activeCount: query.types.length > 0 ? 1 : 0,
-        onQueryChange: (_next, flat: FlatFilter[]) => {
-          const types = (flat.find((entry) => entry.field === 'type')?.values ?? [])
-            .map(String)
-            .filter((value): value is FeatureType => TYPES.has(value))
-          onQueryChange({ ...query, types, page: 1 })
-        },
-      }}
+      filter={granularFilter({
+        specs: FEATURE_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,
@@ -424,7 +382,12 @@ export function FeatureGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 ||
+        query.types.length > 0 ||
+        query.statuses.length > 0 ||
+        (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No products match these filters"
       empty={{

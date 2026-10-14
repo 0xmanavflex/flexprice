@@ -11,9 +11,11 @@ import {
   FeatureStatus,
   FeatureType,
   FeatureSortField,
+  FEATURE_FILTERS,
 } from '@fp/domain'
 import { toAlertConfigRequest } from './alertSettings'
 import { queryKeys } from './keys'
+import { toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 
 /**
@@ -154,6 +156,9 @@ export function toFeatureFilter(query: FeatureQuery): Record<string, unknown> {
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     expand: 'meters',
     ...(query.search ? { nameContains: query.search } : {}),
+    ...((query.filters?.length ?? 0) > 0
+      ? { filters: toFilterConditions(query.filters ?? [], FEATURE_FILTERS) }
+      : {}),
   }
 }
 

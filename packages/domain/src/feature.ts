@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { alertSettingConfigSchema } from './alertSetting'
 import { KEY_PREFIX, suggestKey } from './suggestKey'
@@ -386,6 +387,8 @@ export interface FeatureQuery {
   sortDirection: 'asc' | 'desc'
   /** Table or cards. Lives in the URL like the rest of the query. */
   view: FeatureView
+  /** Granular field filters, applied by the search endpoint. See `FEATURE_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
@@ -399,4 +402,32 @@ export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   sortBy: FeatureSortField.Name,
   sortDirection: 'asc',
   view: FeatureView.Table,
+  filters: [],
 }
+
+/** What the product list can filter on — V1's fields, by their wire names. */
+export const FEATURE_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'type',
+    label: 'Type',
+    kind: 'options',
+    options: [
+      { value: 'metered', label: 'Metered' },
+      { value: 'boolean', label: 'Boolean' },
+      { value: 'static', label: 'Static' },
+      { value: 'config', label: 'Config' },
+    ],
+  },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]

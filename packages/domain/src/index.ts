@@ -121,6 +121,7 @@ export {
   aggregationFormula,
   AggregationType,
   DEFAULT_FEATURE_QUERY,
+  FEATURE_FILTERS,
   FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   FeatureStatus,

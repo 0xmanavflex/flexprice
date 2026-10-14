@@ -70,9 +70,13 @@ export function FeatureListPage({
     }
     return out
   }, [linked.byFeature])
-  const isFiltered = query.search.length > 0 || query.types.length > 0 || query.statuses.length > 0
+  const isFiltered =
+    query.search.length > 0 ||
+    query.types.length > 0 ||
+    query.statuses.length > 0 ||
+    (query.filters?.length ?? 0) > 0
   const clearFilters = () =>
-    onQueryChange({ ...query, search: '', types: [], statuses: [], page: 1 })
+    onQueryChange({ ...query, search: '', types: [], statuses: [], filters: [], page: 1 })
 
   return (
     <>

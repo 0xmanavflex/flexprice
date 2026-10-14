@@ -17,6 +17,7 @@ describe('parseFeatureSearch', () => {
       sortBy: 'name',
       sortDirection: 'asc',
       view: 'table',
+      filters: [],
     })
   })
 
@@ -78,6 +79,7 @@ describe('round-trips what the router writes', () => {
       sortBy: 'updatedAt',
       sortDirection: 'desc',
       view: 'table',
+      filters: [],
     })
   })
 
