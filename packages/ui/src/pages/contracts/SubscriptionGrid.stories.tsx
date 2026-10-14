@@ -149,6 +149,22 @@ export const Layout: Story = {
   },
 }
 
+/** A running contract's menu reaches its customer and plan, and can cancel it. */
+export const RowActionsCancel: Story = {
+  args: { onCancelSubscription: fn(), onOpenCustomer: fn(), onOpenPlan: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click((await canvas.findAllByRole('button', { name: 'Row actions' }))[0]!)
+    const body = within(document.body)
+    await expect(await body.findByRole('menuitem', { name: /view customer/i })).toBeVisible()
+    await expect(body.getByRole('menuitem', { name: /view plan/i })).toBeVisible()
+    await userEvent.click(body.getByRole('menuitem', { name: /cancel contract/i }))
+    await expect(args.onCancelSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'sub_01' }),
+    )
+  },
+}
+
 export const Loading: Story = { args: { subscriptions: [], total: 0, isLoading: true } }
 
 export const FilteredEmpty: Story = {

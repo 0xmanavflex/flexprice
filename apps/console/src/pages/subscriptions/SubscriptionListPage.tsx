@@ -1,7 +1,14 @@
-import { DEFAULT_CUSTOMER_QUERY, DEFAULT_PLAN_QUERY, type SubscriptionQuery } from '@fp/domain'
-import { useCustomers, usePlans, useSubscriptions } from '@fp/query'
-import { SubscriptionGrid } from '@fp/ui/pages'
-import { ListState, PageBody } from '@fp/ui/compositions'
+import { useState } from 'react'
+import {
+  DEFAULT_CUSTOMER_QUERY,
+  DEFAULT_PLAN_QUERY,
+  type Subscription,
+  type SubscriptionCancellationType,
+  type SubscriptionQuery,
+} from '@fp/domain'
+import { useCancelSubscription, useCustomers, usePlans, useSubscriptions } from '@fp/query'
+import { SubscriptionGrid, Toaster, toast } from '@fp/ui/pages'
+import { ConfirmDialog, ListState, OptionSelect, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
 
@@ -36,6 +43,14 @@ export function SubscriptionListPage({
   const filterOptions = {
     customer_id: (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
     plan_id: (plans.data?.plans ?? []).map((p) => ({ value: p.id, label: p.name })),
+  }
+
+  const cancel = useCancelSubscription()
+  const [cancelling, setCancelling] = useState<Subscription | null>(null)
+  const [when, setWhen] = useState<SubscriptionCancellationType>('end_of_period')
+  const closeCancel = () => {
+    setCancelling(null)
+    cancel.reset()
   }
 
   const failure = toListFailure(subscriptions.error, 'contracts')
@@ -74,12 +89,61 @@ export function SubscriptionListPage({
             {...(onOpen ? { onSubscriptionClick: (subscription) => onOpen(subscription.id) } : {})}
             {...(onOpenCustomer ? { onOpenCustomer } : {})}
             {...(onOpenPlan ? { onOpenPlan } : {})}
+            onCancelSubscription={(subscription) => {
+              setWhen('end_of_period')
+              setCancelling(subscription)
+            }}
             onClearFilters={() =>
               onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
             }
           />
         </ListState>
       </PageBody>
+      <ConfirmDialog
+        open={cancelling !== null}
+        onOpenChange={(open) => (open ? undefined : closeCancel())}
+        title="Cancel this contract?"
+        description={
+          <span className="flex flex-col gap-3 pt-2 text-left">
+            <span>
+              {cancelling
+                ? `${cancelling.customerName || 'This customer'} on ${cancelling.planName || 'this plan'}.`
+                : null}{' '}
+              Open the contract for proration, a date or a final invoice.
+            </span>
+            <label htmlFor="list-cancel-when" className="flex flex-col gap-1.5 text-sm">
+              When
+              <OptionSelect
+                id="list-cancel-when"
+                value={when}
+                onValueChange={(value) => setWhen(value as SubscriptionCancellationType)}
+                options={[
+                  { value: 'end_of_period', label: 'At the end of the current period' },
+                  { value: 'immediate', label: 'Immediately' },
+                ]}
+              />
+            </label>
+          </span>
+        }
+        confirmLabel="Cancel contract"
+        cancelLabel="Keep contract"
+        destructive
+        isPending={cancel.isPending}
+        error={cancel.isError ? 'The contract could not be cancelled. Try again.' : null}
+        onConfirm={() => {
+          if (!cancelling) return
+          cancel.mutate(
+            { id: cancelling.id, draft: { cancellationType: when, reason: '' } },
+            {
+              onSuccess: () => {
+                closeCancel()
+                toast('Contract cancelled')
+              },
+            },
+          )
+        }}
+      />
+      <Toaster />
     </>
   )
 }

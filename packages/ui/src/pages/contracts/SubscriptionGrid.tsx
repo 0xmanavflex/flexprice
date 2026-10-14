@@ -6,6 +6,8 @@ import {
   LayersIcon,
   RepeatIcon,
   PlusIcon,
+  UserIcon,
+  XCircleIcon,
 } from '@ui/icons'
 import {
   DEFAULT_SUBSCRIPTION_QUERY,
@@ -122,6 +124,8 @@ export interface SubscriptionGridProps {
   filterOptions?: Readonly<Record<string, readonly { value: string; label: string }[]>>
   onOpenCustomer?: (customerId: string) => void
   onOpenPlan?: (planId: string) => void
+  /** Asks to cancel a contract that is still running; the page confirms it. */
+  onCancelSubscription?: (subscription: Subscription) => void
   /** The primary create action; renders a "New contract" button beside the filter. */
   onCreate?: () => void
   /** Offered when a filter is what emptied the list. */
@@ -142,6 +146,7 @@ export function SubscriptionGrid({
   filterOptions,
   onOpenCustomer,
   onOpenPlan,
+  onCancelSubscription,
   onCreate,
   onClearFilters,
   locale,
@@ -214,11 +219,33 @@ export function SubscriptionGrid({
         onSelect: () => onSubscriptionClick(subscription),
       })
     }
+    if (onOpenCustomer && subscription.customerId) {
+      actions.push({
+        label: 'View customer',
+        icon: <UserIcon aria-hidden className="size-4" />,
+        onSelect: () => onOpenCustomer(subscription.customerId),
+      })
+    }
+    if (onOpenPlan && subscription.planId) {
+      actions.push({
+        label: 'View plan',
+        icon: <LayersIcon aria-hidden className="size-4" />,
+        onSelect: () => onOpenPlan(subscription.planId),
+      })
+    }
     actions.push({
       label: 'Copy contract ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(subscription.id),
     })
+    if (onCancelSubscription && subscription.status !== SubscriptionStatus.Cancelled) {
+      actions.push({
+        label: 'Cancel contract',
+        icon: <XCircleIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onCancelSubscription(subscription),
+      })
+    }
     return actions
   }
 
