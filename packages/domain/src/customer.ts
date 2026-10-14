@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 
 /**
@@ -132,6 +133,8 @@ export interface CustomerQuery {
   statuses: CustomerStatus[]
   sortBy: CustomerSortField
   sortDirection: 'asc' | 'desc'
+  /** Granular field filters, applied by the search endpoint. See `CUSTOMER_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_CUSTOMER_QUERY: CustomerQuery = {
@@ -141,7 +144,25 @@ export const DEFAULT_CUSTOMER_QUERY: CustomerQuery = {
   statuses: [],
   sortBy: CustomerSortField.Name,
   sortDirection: 'asc',
+  filters: [],
 }
+
+/** What the customer list can filter on — V1's fields, by their wire names. */
+export const CUSTOMER_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'external_id', label: 'External ID', kind: 'text' },
+  { field: 'email', label: 'Email', kind: 'text' },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: CustomerStatus.Published, label: 'Active' },
+      { value: CustomerStatus.Archived, label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 const optionalText = (max: number) => z.string().trim().max(max, `Use ${max} characters or fewer`)
 

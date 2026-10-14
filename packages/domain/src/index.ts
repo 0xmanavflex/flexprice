@@ -241,6 +241,7 @@ export {
   CustomerStatus,
   CustomerTaxTreatment,
   DEFAULT_CUSTOMER_QUERY,
+  CUSTOMER_FILTERS,
   createCustomerSchema,
   editCustomerSchema,
   emptyCustomer,

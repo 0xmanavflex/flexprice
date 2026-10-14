@@ -9,6 +9,7 @@ import {
   PlusIcon,
 } from '@ui/icons'
 import {
+  CUSTOMER_FILTERS,
   CUSTOMER_SORT_LABEL,
   CUSTOMER_STATUS_LABEL,
   type Customer,
@@ -19,7 +20,7 @@ import {
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../shared/EntityList'
 import {
   type EntityColumn,
@@ -76,11 +77,6 @@ export const CustomerGridProvenance = provenance({
 const SORT_OPTIONS = Object.values(CustomerSortField).map((value) => ({
   value,
   label: CUSTOMER_SORT_LABEL[value],
-}))
-
-const STATUS_CHOICES = Object.values(CustomerStatus).map((value) => ({
-  value,
-  label: CUSTOMER_STATUS_LABEL[value],
 }))
 
 /**
@@ -281,20 +277,13 @@ export function CustomerGrid({
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search customers…"
       /*
-       * The dropdown and the advanced filter both write `query.statuses`, so
-       * a choice in either place shows up in the other. `CustomerFilter` on
-       * the wire has no other enumerable facet to put in the builder.
-       *
-       * No counts. `fetchCustomers` narrows status *on the page it received*,
-       * because the search endpoint has no status field — so there is no
-       * server total per status to read, and the only number available would
-       * be a count of the twenty-five rows on screen. The dropdown shows no
-       * number rather than a confident wrong one.
+       * Field-by-field filters (name, external ID, email, status, created),
+       * applied by the search endpoint so the total and pages agree with them.
        */
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: CUSTOMER_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -323,7 +312,9 @@ export function CustomerGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No customers match these filters"
       empty={{

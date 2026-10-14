@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { type Flexprice, call } from '@fp/api'
 import {
+  CUSTOMER_FILTERS,
   type CreateCustomer,
   type Customer,
   type CustomerIntegration,
@@ -17,6 +18,7 @@ import {
   type TenantFeatureUsage,
 } from '@fp/domain'
 import { queryKeys } from './keys'
+import { toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 import { type SubscriptionWire, toSubscription } from './subscriptions'
 import { type InvoicePage, fetchInvoices } from './invoices'
@@ -108,6 +110,9 @@ export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> 
     // The integration marks in the list: one batched lookup on the server
     // instead of a mappings request per row.
     expand: 'integrations',
+    ...(query.filters && query.filters.length > 0
+      ? { filters: toFilterConditions(query.filters, CUSTOMER_FILTERS) }
+      : {}),
   }
 }
 

@@ -2,7 +2,10 @@ import {
   type CustomerQuery,
   CustomerSortField,
   CustomerStatus,
+  CUSTOMER_FILTERS,
   DEFAULT_CUSTOMER_QUERY,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -36,7 +39,11 @@ export function parseCustomerSearch(raw: Record<string, unknown>): CustomerQuery
 
   return {
     page: positiveInt(raw['page'], DEFAULT_CUSTOMER_QUERY.page),
-    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_CUSTOMER_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(
+      param(raw, 'size', 'pageSize'),
+      DEFAULT_CUSTOMER_QUERY.pageSize,
+      MAX_PAGE_SIZE,
+    ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
@@ -44,5 +51,6 @@ export function parseCustomerSearch(raw: Record<string, unknown>): CustomerQuery
       : DEFAULT_CUSTOMER_QUERY.sortBy,
     sortDirection:
       param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_CUSTOMER_QUERY.sortDirection,
+    filters: runnableFilters(decodeListFilters(raw['filters']), CUSTOMER_FILTERS),
   }
 }

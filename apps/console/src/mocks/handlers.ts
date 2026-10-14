@@ -34,7 +34,12 @@ interface SearchBody {
    * name-search field, so their search goes through this instead — see
    * `packages/query/src/search.ts`.
    */
-  filters?: { field?: string; operator?: string; value?: { string?: string } }[]
+  filters?: {
+    field?: string
+    operator?: string
+    data_type?: string
+    value?: { string?: string; number?: number; date?: string; array?: string[] }
+  }[]
   subscription_ids?: string[]
   subscriptionIds?: string[]
   /** The customer list's contract counts: every contract of these customers. */
@@ -71,6 +76,41 @@ function readString(row: Record<string, unknown>, key: string): string {
  * the grid's page count, so returning the page length here would silently cap
  * every list at one page.
  */
+/** One filter-DSL condition against a corpus row. Unknown operators match everything. */
+function matchesCondition(
+  row: Record<string, unknown>,
+  condition: NonNullable<SearchBody['filters']>[number],
+): boolean {
+  const field = condition.field ?? ''
+  const raw = row[field]
+  const value = condition.value ?? {}
+  const text = raw === undefined || raw === null ? '' : String(raw)
+  switch (condition.operator) {
+    case 'contains':
+      return text.toLowerCase().includes((value.string ?? '').toLowerCase())
+    case 'not_contains':
+      return !text.toLowerCase().includes((value.string ?? '').toLowerCase())
+    case 'eq':
+      return value.number !== undefined
+        ? Number(raw) === value.number
+        : text.toLowerCase() === (value.string ?? '').toLowerCase()
+    case 'gt':
+      return Number(raw) > (value.number ?? Number.NaN)
+    case 'lt':
+      return Number(raw) < (value.number ?? Number.NaN)
+    case 'in':
+      return (value.array ?? []).includes(text)
+    case 'not_in':
+      return !(value.array ?? []).includes(text)
+    case 'before':
+      return text !== '' && new Date(text) < new Date(value.date ?? '')
+    case 'after':
+      return text !== '' && new Date(text) > new Date(value.date ?? '')
+    default:
+      return true
+  }
+}
+
 function page(source: Corpus, body: SearchBody) {
   let rows = [...source.items]
 
@@ -89,13 +129,16 @@ function page(source: Corpus, body: SearchBody) {
   // have the field) or a `contains` condition in the filter DSL (plans,
   // add-ons, coupons, price units, which do not). Both are honoured so the mock
   // matches the real API rather than being laxer than it.
-  const dsl = body.filters?.find(
-    (condition) => condition.field === 'name' && condition.operator === 'contains',
-  )
-  const search = body.name_contains ?? body.nameContains ?? dsl?.value?.string
+  const search = body.name_contains ?? body.nameContains
   if (search) {
     const needle = search.toLowerCase()
     rows = rows.filter((row) => readString(row, 'name').toLowerCase().includes(needle))
+  }
+
+  // The generic filter DSL, evaluated the way the backend does: every
+  // condition must hold (AND), on the row's snake_case field.
+  for (const condition of body.filters ?? []) {
+    rows = rows.filter((row) => matchesCondition(row, condition))
   }
 
   const subscriptionIds = body.subscription_ids ?? body.subscriptionIds

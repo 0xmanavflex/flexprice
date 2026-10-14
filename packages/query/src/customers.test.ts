@@ -90,6 +90,17 @@ describe('toCustomerFilter', () => {
     expect(filter).not.toHaveProperty('statuses')
   })
 
+  it('sends granular filters as typed conditions', () => {
+    const filter = toCustomerFilter({
+      ...DEFAULT_CUSTOMER_QUERY,
+      filters: [{ field: 'email', op: 'contains', value: '@acme' }],
+    })
+    expect(filter['filters']).toEqual([
+      { field: 'email', operator: 'contains', dataType: 'string', value: { string: '@acme' } },
+    ])
+    expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)).not.toHaveProperty('filters')
+  })
+
   it('expands integrations so the list can show each customer’s marks', () => {
     expect(toCustomerFilter(DEFAULT_CUSTOMER_QUERY)).toMatchObject({ expand: 'integrations' })
   })

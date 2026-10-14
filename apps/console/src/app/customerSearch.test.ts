@@ -16,6 +16,7 @@ describe('parseCustomerSearch', () => {
         status: 'archived',
         sort: 'createdAt',
         dir: 'desc',
+        filters: '[{"field":"email","op":"contains","value":"@acme"}]',
       }),
     ).toEqual({
       page: 2,
@@ -24,7 +25,14 @@ describe('parseCustomerSearch', () => {
       statuses: [CustomerStatus.Archived],
       sortBy: 'createdAt',
       sortDirection: 'desc',
+      filters: [{ field: 'email', op: 'contains', value: '@acme' }],
     })
+  })
+
+  it('drops filters it cannot run', () => {
+    expect(
+      parseCustomerSearch({ filters: [{ field: 'plan', op: 'eq', value: 'x' }] }).filters,
+    ).toEqual([])
   })
 
   it('accepts statuses as a repeated param or a comma list', () => {

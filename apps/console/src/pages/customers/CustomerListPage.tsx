@@ -38,8 +38,10 @@ export function CustomerListPage({
   const failure = toListFailure(customers.error, 'customers')
   const rows = customers.data?.customers ?? []
   const contractCounts = useCustomerContractCounts(rows.map((customer) => customer.id))
-  const isFiltered = query.search.length > 0 || query.statuses.length > 0
-  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+  const isFiltered =
+    query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
   const closeDelete = () => {
     setDeleting(null)
