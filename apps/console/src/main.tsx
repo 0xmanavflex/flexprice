@@ -14,6 +14,7 @@ import {
   useSession,
 } from './app/session'
 import { env } from './env'
+import { RegionProvider, useRegion } from './app/region'
 
 const container = document.getElementById('root')
 if (!container) throw new Error('#root is missing from index.html')
@@ -78,6 +79,7 @@ const queryClient = createQueryClient({ getEnvironmentId: getActiveEnvironmentId
 function ConsoleApp() {
   const auth = useAuthSource()
   const { signOut } = useSession()
+  const { serverURL } = useRegion()
 
   /**
    * A 401 ends the session, in exactly one place.
@@ -102,7 +104,7 @@ function ConsoleApp() {
 
   return (
     <FlexpriceProvider
-      serverURL={env.apiUrl}
+      serverURL={serverURL}
       auth={auth}
       queryClient={queryClient}
       onUnauthorized={onUnauthorized}
@@ -117,7 +119,9 @@ createRoot(container).render(
     <ThemeProvider>
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
-          <ConsoleApp />
+          <RegionProvider>
+            <ConsoleApp />
+          </RegionProvider>
         </SessionProvider>
       </QueryClientProvider>
     </ThemeProvider>

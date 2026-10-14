@@ -1,7 +1,8 @@
 import { useNavigate } from '@tanstack/react-router'
 import { ApiError, ErrorKind, useSignUp } from '@fp/query'
-import { SignUpScreen } from '@fp/ui/pages'
+import { RegionField, SignUpScreen } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
+import { useRegion } from '@/app/region'
 
 /** A failed sign-up as a sentence. Same reasoning as `messageForSignInError`: map the kind, not the API's words. */
 export function messageForSignUpError(error: unknown): string {
@@ -30,10 +31,26 @@ export function SignUpPage() {
   const navigate = useNavigate()
   const session = useSession()
   const signUp = useSignUp()
+  const { regions, region, setRegion } = useRegion()
 
   return (
     <main className="bg-background min-h-svh">
       <SignUpScreen
+        {...(regions.length > 0
+          ? {
+              region: (
+                <RegionField
+                  regions={regions}
+                  value={region}
+                  onChange={(next) => {
+                    setRegion(next)
+                    signUp.reset()
+                  }}
+                  disabled={signUp.isPending}
+                />
+              ),
+            }
+          : {})}
         isSubmitting={signUp.isPending}
         error={signUp.error ? messageForSignUpError(signUp.error) : null}
         onSignIn={() => void navigate({ to: '/sign-in', search: {} as never })}

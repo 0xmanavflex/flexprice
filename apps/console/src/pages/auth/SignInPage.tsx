@@ -1,7 +1,8 @@
 import { useNavigate } from '@tanstack/react-router'
 import { useSignIn } from '@fp/query'
-import { SignInScreen } from '@fp/ui/pages'
+import { RegionField, SignInScreen } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
+import { useRegion } from '@/app/region'
 import { env } from '@/env'
 import { messageForSignInError } from './signInMessage'
 
@@ -47,6 +48,7 @@ export function SignInPage({ redirect }: SignInPageProps) {
   const navigate = useNavigate()
   const session = useSession()
   const signIn = useSignIn()
+  const { regions, region, setRegion } = useRegion()
 
   // Under mocks the form is seeded and announces itself; against a real API it
   // stays empty and silent. Spread conditionally rather than passing `undefined`
@@ -57,6 +59,21 @@ export function SignInPage({ redirect }: SignInPageProps) {
     <main className="bg-background min-h-svh">
       <SignInScreen
         {...demoProps}
+        {...(regions.length > 0
+          ? {
+              region: (
+                <RegionField
+                  regions={regions}
+                  value={region}
+                  onChange={(next) => {
+                    setRegion(next)
+                    signIn.reset()
+                  }}
+                  disabled={signIn.isPending}
+                />
+              ),
+            }
+          : {})}
         onSignUp={() => void navigate({ to: '/sign-up', search: {} as never })}
         isSubmitting={signIn.isPending}
         error={signIn.error ? messageForSignInError(signIn.error) : null}
