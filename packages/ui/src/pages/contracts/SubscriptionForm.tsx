@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useEffect, useMemo, useState, type ReactNode } from 'react'
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { XIcon } from '@ui/icons'
 import {
@@ -131,10 +132,9 @@ export function SubscriptionForm({
   step,
   onStepChange,
 }: SubscriptionFormProps) {
-  const form = useForm<CreateSubscription>({
+  const form = useCalmForm<CreateSubscription>({
     resolver: standardSchemaResolver(createSubscriptionSchema) as Resolver<CreateSubscription>,
     defaultValues: { ...emptySubscription(), ...defaultValue },
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
   const values = form.watch()

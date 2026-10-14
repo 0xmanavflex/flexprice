@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   PAYMENT_METHOD_LABEL,
@@ -43,10 +44,9 @@ export function PaymentForm({
   isSubmitting = false,
   submitError = null,
 }: PaymentFormProps) {
-  const form = useForm<RecordPayment>({
+  const form = useCalmForm<RecordPayment>({
     resolver: standardSchemaResolver(recordPaymentSchema) as Resolver<RecordPayment>,
     defaultValues: defaultValue ?? emptyPayment(),
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
 

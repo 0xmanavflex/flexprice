@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   CUSTOMER_TAX_TREATMENT_LABEL,
@@ -121,10 +122,9 @@ export function CustomerForm({
   trail,
 }: CustomerFormProps) {
   const isEdit = mode === 'edit'
-  const form = useForm<CreateCustomer>({
+  const form = useCalmForm<CreateCustomer>({
     resolver: standardSchemaResolver(createCustomerSchema) as Resolver<CreateCustomer>,
     defaultValues: defaultValue ?? emptyCustomer(),
-    mode: 'onTouched',
   })
 
   const nameField = form.register('name', {

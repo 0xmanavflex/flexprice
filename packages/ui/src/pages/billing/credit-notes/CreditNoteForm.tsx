@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useEffect } from 'react'
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   CREDIT_NOTE_REASON_LABEL,
@@ -67,10 +68,9 @@ export function CreditNoteForm({
   isSubmitting = false,
   submitError = null,
 }: CreditNoteFormProps) {
-  const form = useForm<CreateCreditNote>({
+  const form = useCalmForm<CreateCreditNote>({
     resolver: standardSchemaResolver(createCreditNoteSchema) as Resolver<CreateCreditNote>,
     defaultValues: emptyCreditNote(),
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
   const lines = form.watch('lines')
