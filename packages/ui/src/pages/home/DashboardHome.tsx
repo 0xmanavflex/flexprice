@@ -554,7 +554,6 @@ function MetricsSection({
   events,
   revenue,
   customers,
-  rangeLabel,
   filters,
   onQuickstart,
   widen,
@@ -562,7 +561,6 @@ function MetricsSection({
   events: EventsPanel
   revenue?: RevenuePanel | undefined
   customers: CustomersPanel
-  rangeLabel: string
   /** The chart's granularity and range, drawn above it. */
   filters: ReactNode
   onQuickstart: () => void
@@ -613,7 +611,7 @@ function MetricsSection({
         emptyMessage:
           revenue.status === 'empty'
             ? 'Nothing was billed in this period.'
-            : 'Daily revenue needs revenue analytics turned on; the total covers the whole window.',
+            : 'No revenue to plot for this period.',
       }
     : null
 
@@ -630,11 +628,7 @@ function MetricsSection({
       ...changeOf(revenueKnown ? events.revenueChangePercent : null),
       points: [],
       // Never "No revenue in this period" beside a headline that has one.
-      emptyMessage: revenueKnown
-        ? 'Revenue is one total for the window, so there is no series to plot.'
-        : events.status === 'empty'
-          ? 'Nothing was priced in this period.'
-          : 'Nothing to plot for this window.',
+      emptyMessage: 'No revenue to plot for this period.',
     },
     {
       id: METRIC_CUSTOMERS,
@@ -665,25 +659,11 @@ function MetricsSection({
     },
   ]
 
-  const caption =
-    metric === METRIC_REVENUE
-      ? revenue
-        ? `Invoiced revenue${revenue.total ? ` in ${revenue.total.currency}` : ''}, ${rangeLabel}.${
-            revenue.otherCurrencies.length > 0
-              ? ` Also billed in ${revenue.otherCurrencies.join(', ')}, not included.`
-              : ''
-          }`
-        : 'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.'
-      : metric === METRIC_CUSTOMERS
-        ? `New customers, ${rangeLabel}.`
-        : `Usage events received, ${rangeLabel}.`
-
   const placeholder: MetricTab[] = tabs.map((tab) =>
     tab.id === METRIC_REVENUE ? { ...tab, points: PLACEHOLDER_SHAPE } : tab,
   )
 
   const fresh = revenue ? freshnessOf(events, customers, revenue) : freshnessOf(events, customers)
-  const basedOn = metric === METRIC_CUSTOMERS ? customers.basedOn : events.basedOn
 
   // Period-empty ("this window has nothing; earlier data is unchanged") is a
   // different message from first-run ("nothing has ever arrived"). A narrower
@@ -722,17 +702,10 @@ function MetricsSection({
         </BlurredEmpty>
       ) : (
         <DataRegion state={{ refreshing: fresh.refreshing, provisional: fresh.provisional }}>
-          <MetricChart
-            tabs={tabs}
-            activeTab={metric}
-            onTabChange={setMetric}
-            caption={caption}
-            height={240}
-          />
+          <MetricChart tabs={tabs} activeTab={metric} onTabChange={setMetric} height={240} />
         </DataRegion>
       )}
 
-      {basedOn ? <p className="text-muted-foreground text-xs">{basedOn}</p> : null}
       {fresh.stale ? (
         <DataFreshness
           updatedAt={fresh.updatedAt}
@@ -740,10 +713,6 @@ function MetricsSection({
           refreshing={fresh.retrying}
           {...(fresh.onRetry ? { onRefresh: fresh.onRetry } : {})}
         />
-      ) : null}
-
-      {eventsReady && events.revenue === null ? (
-        <Unavailable what="The usage API returned no priced subtotal for this window." />
       ) : null}
     </section>
   )
@@ -927,9 +896,6 @@ function SubscriptionsCard({
                 series={series}
                 label={`New contracts by plan, ${rangeLabel}`}
               />
-              {subscriptions.basedOn ? (
-                <p className="text-muted-foreground text-xs">{subscriptions.basedOn}</p>
-              ) : null}
               {subscriptions.stale ? (
                 <DataFreshness
                   updatedAt={subscriptions.updatedAt}
@@ -1052,9 +1018,6 @@ function InvoicesCard({
                 </Button>
               ) : null}
             </div>
-          ) : null}
-          {ready && invoices.basedOn ? (
-            <p className="text-muted-foreground text-center text-xs">{invoices.basedOn}</p>
           ) : null}
           {ready && invoices.stale ? (
             <div className="flex justify-center">
@@ -1236,7 +1199,6 @@ export function DashboardHome({
         events={events}
         {...(revenue ? { revenue } : {})}
         customers={customers}
-        rangeLabel={rangeLabel}
         filters={
           <ChartFilters
             granularityOptions={granularityOptions}

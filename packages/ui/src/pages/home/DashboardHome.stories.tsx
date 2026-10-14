@@ -379,11 +379,8 @@ export const Populated: Story = {
       'aria-selected',
       'true',
     )
-    await expect(
-      canvas.getByText(
-        'Revenue is priced for the window as a whole; the usage API returns no per-bucket figure to plot.',
-      ),
-    ).toBeInTheDocument()
+    // No explanatory captions around the chart: they appeared and vanished and moved the page.
+    await expect(canvas.queryByText(/priced for the window/i)).toBeNull()
 
     // Each tab reads the totals it was given, compactly.
     await expect(canvas.getByText('5.1M')).toBeInTheDocument()
@@ -405,9 +402,15 @@ export const SwitchesMetric: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await userEvent.click(canvas.getByRole('tab', { name: /Usage ingestion/ }))
-    await expect(canvas.getByText('Usage events received, last 7 days.')).toBeInTheDocument()
+    await expect(canvas.getByRole('tab', { name: /Usage ingestion/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
     await userEvent.click(canvas.getByRole('tab', { name: /Customers/ }))
-    await expect(canvas.getByText('New customers, last 7 days.')).toBeInTheDocument()
+    await expect(canvas.getByRole('tab', { name: /Customers/ })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
   },
 }
 
@@ -537,7 +540,8 @@ export const PartialFailure: Story = {
     await expect(canvas.getByText('Revenue couldn’t be loaded.')).toBeInTheDocument()
     await expect(canvas.getByText('14')).toBeInTheDocument()
     await expect(canvas.getByText('56')).toBeInTheDocument()
-    await expect(canvas.getByText('Based on the latest 100 invoices.')).toBeInTheDocument()
+    // A sampling note is not drawn under the panel.
+    await expect(canvas.queryByText('Based on the latest 100 invoices.')).toBeNull()
     await userEvent.click(canvas.getByRole('button', { name: /try again/i }))
     await expect(args.events.onRetry).toHaveBeenCalled()
   },
