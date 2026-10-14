@@ -1,7 +1,8 @@
-import { type PlanQuery } from '@fp/domain'
-import { usePlans } from '@fp/query'
+import { useState } from 'react'
+import { type Plan, type PlanQuery } from '@fp/domain'
+import { useArchivePlan, useClonePlan, usePlans } from '@fp/query'
 import { PlanGrid } from '@fp/ui/pages'
-import { ListState, PageBody } from '@fp/ui/compositions'
+import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { toListFailure } from '../shared/listFailure'
 
@@ -12,6 +13,8 @@ export interface PlanListPageProps {
   onOpenPlan: (planId: string) => void
   /** Start the full-page create flow. */
   onCreatePlan: () => void
+  /** Open the full-page edit form. */
+  onEditPlan: (planId: string) => void
 }
 
 /**
@@ -22,8 +25,12 @@ export function PlanListPage({
   onQueryChange,
   onOpenPlan,
   onCreatePlan,
+  onEditPlan,
 }: PlanListPageProps) {
   const plans = usePlans(query)
+  const clone = useClonePlan()
+  const archive = useArchivePlan()
+  const [archiving, setArchiving] = useState<Plan | null>(null)
   const failure = toListFailure(plans.error, 'plans')
   const rows = plans.data?.plans ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -56,11 +63,44 @@ export function PlanListPage({
             query={query}
             onQueryChange={onQueryChange}
             onPlanClick={(plan) => onOpenPlan(plan.id)}
+            onEdit={(plan) => onEditPlan(plan.id)}
+            onAddCharges={(plan) => onOpenPlan(plan.id)}
+            onDuplicate={(plan) =>
+              clone.mutate(
+                { id: plan.id, name: `${plan.name} (copy)` },
+                {
+                  onSuccess: (result) => {
+                    const id = (result as { id?: string } | undefined)?.id
+                    if (id) onOpenPlan(id)
+                  },
+                },
+              )
+            }
+            onArchive={(plan) => setArchiving(plan)}
             onCreate={() => onCreatePlan()}
             onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
+
+      <ConfirmDialog
+        open={archiving !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setArchiving(null)
+            archive.reset()
+          }
+        }}
+        title={`Archive ${archiving?.name ?? 'this plan'}?`}
+        description="Archiving retires the plan from the catalogue. Existing contracts keep billing; the plan can no longer be added to new ones."
+        confirmLabel="Archive plan"
+        destructive
+        isPending={archive.isPending}
+        error={archive.isError ? 'Could not archive the plan. Try again.' : null}
+        onConfirm={() => {
+          if (archiving) archive.mutate(archiving.id, { onSuccess: () => setArchiving(null) })
+        }}
+      />
     </>
   )
 }

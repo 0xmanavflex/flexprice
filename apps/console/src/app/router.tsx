@@ -789,6 +789,9 @@ function PlansRouteComponent() {
         void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
       }
       onCreatePlan={() => void navigate({ to: '/plans/new' })}
+      onEditPlan={(planId) =>
+        void navigate({ to: '/plans/$planId/edit', params: { planId }, search: {} as never })
+      }
     />
   )
 }
