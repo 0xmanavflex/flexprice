@@ -1144,6 +1144,13 @@ function CouponsRouteComponent() {
           void navigate({ to: '/coupons/$couponId', params: { couponId: coupon.id } })
         }
         onCreateCoupon={() => void navigate({ to: '/coupons/new' })}
+        onEditCoupon={(coupon) =>
+          void navigate({
+            to: '/coupons/$couponId/edit',
+            params: { couponId: coupon.id },
+            search: {} as never,
+          })
+        }
       />
     </SettingsListFrame>
   )
