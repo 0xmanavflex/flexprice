@@ -40,6 +40,51 @@ export function nameContainsFilter(term: string): Record<string, unknown>[] {
 }
 
 /**
+ * The status facet, as the field the search endpoints filter on server-side.
+ *
+ * `status` is a real column on every catalogue and customer table, and the
+ * search endpoints accept it as a top-level field — verified live, and it is
+ * what `catalogStats` already counts the published/archived split with. So
+ * there was never a reason to narrow by status in the browser.
+ *
+ * Narrowing on the page is not a smaller version of narrowing on the server, it
+ * is a different and wrong thing: the request fetches one page, the browser
+ * drops rows from *that page*, and the pager still reports the server's
+ * unfiltered total. Asking for Archived then shows "287 customers" above three
+ * rows, and most of the pages it offers render empty — the matches are spread
+ * through pages the browser never fetched.
+ *
+ * The field takes one value, so this answers for one:
+ *
+ *   - **nothing selected** — no narrowing, which is the same request as before.
+ *   - **one selected** — that status, server-side.
+ *   - **every known status selected** — no narrowing, because asking for all of
+ *     them is asking for all of them.
+ *
+ * Any other combination cannot be expressed, and would need either several
+ * requests whose pages could not be reconciled into one pager, or an `OR` the
+ * DSL does not have (Ent's `Where(...)` conjoins predicates). Every status
+ * facet in the console is binary, so that case does not arise today; it throws
+ * rather than silently widening to every row, because a filter that quietly
+ * stops filtering is the bug this function exists to remove.
+ */
+export function statusFilterField(
+  selected: readonly string[],
+  known: readonly string[],
+): Record<string, unknown> {
+  if (selected.length === 0) return {}
+
+  const wanted = [...new Set(selected)]
+  if (known.length > 0 && wanted.length >= known.length) return {}
+  if (wanted.length === 1) return { status: wanted[0] }
+
+  throw new Error(
+    `Cannot filter by ${wanted.length} statuses at once: the search endpoints take a single ` +
+      `status and the filter DSL has no OR. Narrow the facet to one, or add server support.`,
+  )
+}
+
+/**
  * Granular list filters as the search endpoints' filter DSL.
  *
  * Incomplete filters are dropped first, so a half-built rule never narrows a

@@ -18,7 +18,7 @@ import {
   type TenantFeatureUsage,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { toFilterConditions } from './search'
+import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 import { type SubscriptionWire, toSubscription } from './subscriptions'
 import { type InvoicePage, fetchInvoices } from './invoices'
@@ -110,8 +110,14 @@ export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> 
     // The integration marks in the list: one batched lookup on the server
     // instead of a mappings request per row.
     expand: 'integrations',
-    ...(query.filters && query.filters.length > 0
-      ? { filters: toFilterConditions(query.filters, CUSTOMER_FILTERS) }
+    ...statusFilterField(query.statuses, Object.values(CustomerStatus)),
+    ...(query.search.trim() || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search.trim() ? nameContainsFilter(query.search.trim()) : []),
+            ...toFilterConditions(query.filters ?? [], CUSTOMER_FILTERS),
+          ],
+        }
       : {}),
   }
 }
@@ -132,24 +138,28 @@ export async function fetchCustomers(
   )
   const customers = (response.items ?? []).map((item) => toCustomer(item as CustomerWire))
 
-  // The SDK's customer filter has no name-search field and does not narrow by
-  // status, so both are applied on the page — the same split coupons and price
-  // units use. Search matches the name, email or external id, case-insensitively.
-  const needle = query.search.trim().toLowerCase()
-  const filtered = customers
-    .filter((customer) =>
-      query.statuses.length > 0 ? query.statuses.includes(customer.status) : true,
-    )
-    .filter((customer) =>
-      needle
-        ? [customer.name, customer.email, customer.externalId].some((field) =>
-            field.toLowerCase().includes(needle),
-          )
-        : true,
-    )
-
+  /*
+   * No narrowing happens here any more, and that is the fix.
+   *
+   * Search and status used to be applied to the fetched page: the request asked
+   * for 25 rows, the browser dropped the ones that did not match, and `total`
+   * still reported the server's unfiltered count. Searching "acme" found an
+   * Acme on page 1 and missed the one on page 3, the pager promised pages that
+   * came back empty, and page 2 of a search was not the second page of matches
+   * but the matches inside the second page of everything.
+   *
+   * Both are server-side now (see `toCustomerFilter`), so `pagination.total` is
+   * the count of rows that actually match and every page is full.
+   *
+   * One deliberate narrowing of behaviour: search matches the **name** only,
+   * where the browser version also matched email and external id. The filter
+   * DSL conjoins its conditions — Ent's `Where(...)` ANDs them — so one box
+   * across three fields would need an OR the API does not offer. Email and
+   * external id remain searchable as their own `contains` filters in the filter
+   * bar (`CUSTOMER_FILTERS`), which do work across every page.
+   */
   return {
-    customers: filtered,
+    customers,
     total: response.pagination?.total ?? 0,
   }
 }

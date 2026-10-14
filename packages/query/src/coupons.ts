@@ -15,7 +15,7 @@ import {
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter, toFilterConditions } from './search'
+import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
 
 /**
  * Coupons: the translation between product vocabulary and the API.
@@ -103,6 +103,16 @@ export function toCouponFilter(query: CouponQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
+    /*
+     * Status, server-side.
+     *
+     * It used to narrow the fetched page in the browser, which is a different
+     * and wrong thing: the request returns one page, rows are dropped from
+     * *that* page, and the pager still reports the server's unfiltered total.
+     * `status` is a declared field on this filter model and a real column the
+     * backend accepts, so there was never a reason not to send it.
+     */
+    ...statusFilterField(query.statuses, Object.values(CouponStatus)),
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     ...(query.search || (query.filters?.length ?? 0) > 0
       ? {
@@ -125,12 +135,7 @@ export async function fetchCoupons(client: Flexprice, query: CouponQuery): Promi
   const coupons = (response.items ?? []).map((item) => toCoupon(item as CouponWire))
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page —
-    // the same split add-ons use.
-    coupons:
-      query.statuses.length > 0
-        ? coupons.filter((coupon) => query.statuses.includes(coupon.status))
-        : coupons,
+    coupons,
     total: response.pagination?.total ?? 0,
   }
 }

@@ -10,7 +10,7 @@ import {
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter, toFilterConditions } from './search'
+import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
 
 /**
  * Price units: the translation between product vocabulary and the API.
@@ -76,6 +76,16 @@ export function toPriceUnitFilter(query: PriceUnitQuery): Record<string, unknown
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
+    /*
+     * Status, server-side.
+     *
+     * It used to narrow the fetched page in the browser, which is a different
+     * and wrong thing: the request returns one page, rows are dropped from
+     * *that* page, and the pager still reports the server's unfiltered total.
+     * `status` is a declared field on this filter model and a real column the
+     * backend accepts, so there was never a reason not to send it.
+     */
+    ...statusFilterField(query.statuses, Object.values(PriceUnitStatus)),
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     ...(query.search || (query.filters?.length ?? 0) > 0
       ? {
@@ -103,12 +113,7 @@ export async function fetchPriceUnits(
   const priceUnits = (response.items ?? []).map((item) => toPriceUnit(item as PriceUnitWire))
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page —
-    // the same split add-ons and coupons use.
-    priceUnits:
-      query.statuses.length > 0
-        ? priceUnits.filter((unit) => query.statuses.includes(unit.status))
-        : priceUnits,
+    priceUnits,
     total: response.pagination?.total ?? 0,
   }
 }

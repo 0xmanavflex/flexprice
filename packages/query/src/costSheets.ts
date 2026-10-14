@@ -10,7 +10,7 @@ import {
   COST_SHEET_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { toFilterConditions } from './search'
+import { statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 
 /**
@@ -71,6 +71,13 @@ export function toCostSheetFilter(query: CostSheetQuery): Record<string, unknown
     // Paging nests under `queryFilter` for this endpoint — see the note above.
     queryFilter: { limit: query.pageSize, offset: (query.page - 1) * query.pageSize },
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    /*
+     * Status, server-side — it used to narrow the fetched page in the browser,
+     * which left the pager reporting the server's unfiltered total above a
+     * handful of rows. Soft-deleted sheets are still dropped in the fetch and
+     * taken off that total: a different exclusion the endpoint cannot express.
+     */
+    ...statusFilterField(query.statuses, Object.values(CostSheetStatus)),
     ...(query.search ? { name: query.search } : {}),
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], COST_SHEET_FILTERS) }
@@ -98,12 +105,7 @@ export async function fetchCostSheets(
   const dropped = items.length - live.length
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page —
-    // the same split add-ons and coupons use.
-    costSheets:
-      query.statuses.length > 0
-        ? costSheets.filter((sheet) => query.statuses.includes(sheet.status))
-        : costSheets,
+    costSheets,
     total: Math.max(0, (response.pagination?.total ?? 0) - dropped),
   }
 }

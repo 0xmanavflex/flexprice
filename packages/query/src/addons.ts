@@ -10,7 +10,7 @@ import {
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter, toFilterConditions } from './search'
+import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
 
 /**
  * Add-ons: the translation between product vocabulary and the API.
@@ -62,6 +62,16 @@ export function toAddonFilter(query: AddonQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
+    /*
+     * Status, server-side.
+     *
+     * It used to narrow the fetched page in the browser, which is a different
+     * and wrong thing: the request returns one page, rows are dropped from
+     * *that* page, and the pager still reports the server's unfiltered total.
+     * `status` is a declared field on this filter model and a real column the
+     * backend accepts, so there was never a reason not to send it.
+     */
+    ...statusFilterField(query.statuses, Object.values(AddonStatus)),
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     ...(query.search || (query.filters?.length ?? 0) > 0
       ? {
@@ -84,11 +94,7 @@ export async function fetchAddons(client: Flexprice, query: AddonQuery): Promise
   const addons = (response.items ?? []).map((item) => toAddon(item as AddonWire))
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page.
-    addons:
-      query.statuses.length > 0
-        ? addons.filter((addon) => query.statuses.includes(addon.status))
-        : addons,
+    addons,
     total: response.pagination?.total ?? 0,
   }
 }

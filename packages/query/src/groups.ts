@@ -10,7 +10,7 @@ import {
   GROUP_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
-import { toFilterConditions } from './search'
+import { statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 
 /**
@@ -72,6 +72,16 @@ export function toGroupFilter(query: GroupQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
+    /*
+     * Status, server-side.
+     *
+     * It used to narrow the fetched page in the browser, which is a different
+     * and wrong thing: the request returns one page, rows are dropped from
+     * *that* page, and the pager still reports the server's unfiltered total.
+     * `status` is a declared field on this filter model and a real column the
+     * backend accepts, so there was never a reason not to send it.
+     */
+    ...statusFilterField(query.statuses, Object.values(GroupStatus)),
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     ...(query.search ? { name: query.search } : {}),
     ...((query.filters?.length ?? 0) > 0
@@ -90,12 +100,7 @@ export async function fetchGroups(client: Flexprice, query: GroupQuery): Promise
   const groups = (response.items ?? []).map((item) => toGroup(item as GroupWire))
 
   return {
-    // Status is not a server-side filter here, so it is applied on the page —
-    // the same split add-ons and coupons use.
-    groups:
-      query.statuses.length > 0
-        ? groups.filter((group) => query.statuses.includes(group.status))
-        : groups,
+    groups,
     total: response.pagination?.total ?? 0,
   }
 }
