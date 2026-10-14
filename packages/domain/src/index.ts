@@ -188,6 +188,7 @@ export {
   CouponType,
   CouponView,
   DEFAULT_COUPON_QUERY,
+  COUPON_FILTERS,
   editCouponSchema,
   createCouponSchema,
   emptyCoupon,

@@ -44,7 +44,9 @@ export function CouponListPage({
         {...(failure ? { failureKind: failure.kind } : {})}
         isFiltered={isFiltered}
         onRetry={() => void coupons.refetch()}
-        onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+        onClearFilters={() =>
+          onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
+        }
         createAction={<Button onClick={onCreate}>New coupon</Button>}
         emptyTitle="No coupons yet"
         emptyDescription="Coupons apply a discount to a contract or an invoice — once, for a set number of periods, or forever. Create the first to offer one."
@@ -56,7 +58,9 @@ export function CouponListPage({
           onQueryChange={onQueryChange}
           onCouponClick={onOpenCoupon}
           onCreate={onCreate}
-          onClearFilters={() => onQueryChange({ ...query, search: '', statuses: [], page: 1 })}
+          onClearFilters={() =>
+            onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
+          }
         />
       </ListState>
     </PageBody>

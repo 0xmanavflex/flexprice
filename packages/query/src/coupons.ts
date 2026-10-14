@@ -11,10 +11,11 @@ import {
   type CreateCoupon,
   type EditCoupon,
   moneyOr,
+  COUPON_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter } from './search'
+import { nameContainsFilter, toFilterConditions } from './search'
 
 /**
  * Coupons: the translation between product vocabulary and the API.
@@ -103,7 +104,14 @@ export function toCouponFilter(query: CouponQuery): Record<string, unknown> {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
-    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
+    ...(query.search || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search ? nameContainsFilter(query.search) : []),
+            ...toFilterConditions(query.filters ?? [], COUPON_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 

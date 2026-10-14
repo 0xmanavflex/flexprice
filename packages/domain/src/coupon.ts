@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * A coupon, as the list reads it.
  *
@@ -110,6 +111,8 @@ export interface CouponQuery {
   sortBy: CouponSortField
   sortDirection: 'asc' | 'desc'
   view: CouponView
+  /** Granular field filters, applied by the search endpoint. See `COUPON_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_COUPON_QUERY: CouponQuery = {
@@ -120,7 +123,31 @@ export const DEFAULT_COUPON_QUERY: CouponQuery = {
   sortBy: CouponSortField.Name,
   sortDirection: 'asc',
   view: CouponView.Table,
+  filters: [],
 }
+/** What the coupon list can filter on — V1's fields, by their wire names. */
+export const COUPON_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  {
+    field: 'type',
+    label: 'Type',
+    kind: 'options',
+    options: [
+      { value: 'fixed', label: 'Fixed amount' },
+      { value: 'percentage', label: 'Percentage' },
+    ],
+  },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * The rules for editing a coupon.
