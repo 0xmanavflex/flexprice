@@ -17,6 +17,7 @@ import {
   TierMode,
   createChargeSchema,
   emptyCharge,
+  currencyCodes,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { ChoiceCards } from '@ui/compositions/detail/DetailKit'
@@ -109,7 +110,7 @@ export interface ChargeFormProps {
 }
 
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
-const DEFAULT_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR']
+const DEFAULT_CURRENCIES = currencyCodes()
 const FIAT = 'FIAT'
 
 /** Fixed charges can be one-time; usage cannot — you cannot meter a one-off. */

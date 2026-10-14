@@ -6,6 +6,7 @@ import {
   type RecordPayment,
   emptyPayment,
   recordPaymentSchema,
+  currencyCodes,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { Switch } from '@ui/components/primitives/switch'
@@ -21,7 +22,7 @@ export const PaymentFormProvenance = provenance({
   note: 'RHF + recordPaymentSchema; the same FormPage shell as the other create forms.',
 })
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR'].map((code) => ({ value: code, label: code }))
+const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
 const METHODS = Object.entries(PAYMENT_METHOD_LABEL).map(([value, label]) => ({ value, label }))
 
 export interface PaymentFormProps {

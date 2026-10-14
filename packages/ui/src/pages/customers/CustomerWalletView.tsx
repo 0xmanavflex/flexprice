@@ -23,6 +23,7 @@ import {
   emptyWallet,
   formatMoney,
   topUpWalletSchema,
+  currencyCodes,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
@@ -95,7 +96,7 @@ export interface CustomerWalletViewProps {
 
 type Dialog = 'create' | 'top-up' | 'auto-topup' | 'terminate' | null
 
-const CURRENCIES = ['USD', 'EUR', 'GBP', 'INR'].map((code) => ({ value: code, label: code }))
+const CURRENCIES = currencyCodes().map((code) => ({ value: code, label: code }))
 
 const credits = formatCredits
 

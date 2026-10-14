@@ -19,6 +19,7 @@ import {
   TierMode,
   createSubscriptionSchema,
   emptySubscription,
+  currencyCodes,
 } from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
 import { Button } from '@ui/components/primitives/button'
@@ -100,7 +101,7 @@ export interface SubscriptionFormProps {
 
 const FORM_ID = 'subscription-form'
 
-const FALLBACK_CURRENCIES = ['USD', 'EUR', 'GBP', 'INR']
+const FALLBACK_CURRENCIES = currencyCodes()
 
 /** Step ids are URL-safe and mirrored by the console's route (`app/subscriptionSteps.ts`). */
 export const SUBSCRIPTION_FORM_STEPS = [
