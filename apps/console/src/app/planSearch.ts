@@ -4,6 +4,9 @@ import {
   PlanSortField,
   PlanStatus,
   PlanView,
+  PLAN_FILTERS,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -37,7 +40,11 @@ export function parsePlanSearch(raw: Record<string, unknown>): PlanQuery {
 
   return {
     page: positiveInt(raw['page'], DEFAULT_PLAN_QUERY.page),
-    pageSize: positiveInt(param(raw, 'size', 'pageSize'), DEFAULT_PLAN_QUERY.pageSize, MAX_PAGE_SIZE),
+    pageSize: positiveInt(
+      param(raw, 'size', 'pageSize'),
+      DEFAULT_PLAN_QUERY.pageSize,
+      MAX_PAGE_SIZE,
+    ),
     search: String(param(raw, 'q', 'search') ?? '').trim(),
     statuses: [...new Set(statuses)],
     sortBy: SORT_FIELDS.has(String(param(raw, 'sort', 'sortBy')))
@@ -47,5 +54,6 @@ export function parsePlanSearch(raw: Record<string, unknown>): PlanQuery {
       param(raw, 'dir', 'sortDirection') === 'desc' ? 'desc' : DEFAULT_PLAN_QUERY.sortDirection,
     // A layout, not a filter. `cards` persists; anything else is the table.
     view: param(raw, 'view', 'view') === PlanView.Cards ? PlanView.Cards : PlanView.Table,
+    filters: runnableFilters(decodeListFilters(raw['filters']), PLAN_FILTERS),
   }
 }

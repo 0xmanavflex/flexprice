@@ -16,6 +16,7 @@ describe('parsePlanSearch', () => {
       sortBy: 'name',
       sortDirection: 'asc',
       view: 'table',
+      filters: [],
     })
   })
 

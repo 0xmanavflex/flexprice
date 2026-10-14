@@ -153,6 +153,7 @@ export type {
 
 export {
   DEFAULT_PLAN_QUERY,
+  PLAN_FILTERS,
   PLAN_SORT_LABEL,
   PLAN_STATUS_LABEL,
   PlanSortField,

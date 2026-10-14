@@ -28,7 +28,8 @@ export function PlanListPage({
   const rows = plans.data?.plans ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
-  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
   return (
     <>

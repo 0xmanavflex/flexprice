@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 /**
  * A plan, as the list and detail pages read it. Narrow and total.
  *
@@ -85,6 +86,8 @@ export interface PlanQuery {
   sortBy: PlanSortField
   sortDirection: 'asc' | 'desc'
   view: PlanView
+  /** Granular field filters, applied by the search endpoint. See `PLAN_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_PLAN_QUERY: PlanQuery = {
@@ -96,7 +99,23 @@ export const DEFAULT_PLAN_QUERY: PlanQuery = {
   sortBy: PlanSortField.Name,
   sortDirection: 'asc',
   view: PlanView.Table,
+  filters: [],
 }
+/** What the plan list can filter on — V1's fields, by their wire names. */
+export const PLAN_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * The rules for creating or editing a plan's details.

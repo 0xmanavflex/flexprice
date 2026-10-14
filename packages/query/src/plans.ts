@@ -7,10 +7,11 @@ import {
   type PlanQuery,
   PlanSortField,
   PlanStatus,
+  PLAN_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
-import { nameContainsFilter } from './search'
+import { nameContainsFilter, toFilterConditions } from './search'
 
 /**
  * Plans: the translation between product vocabulary and the API.
@@ -92,7 +93,14 @@ export function toPlanFilter(query: PlanQuery): Record<string, unknown> {
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     expand: 'prices',
-    ...(query.search ? { filters: nameContainsFilter(query.search) } : {}),
+    ...(query.search || (query.filters?.length ?? 0) > 0
+      ? {
+          filters: [
+            ...(query.search ? nameContainsFilter(query.search) : []),
+            ...toFilterConditions(query.filters ?? [], PLAN_FILTERS),
+          ],
+        }
+      : {}),
   }
 }
 

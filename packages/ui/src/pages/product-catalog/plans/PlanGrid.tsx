@@ -18,8 +18,9 @@ import {
   type PlanQuery,
   PlanSortField,
   PlanStatus,
+  PLAN_FILTERS,
 } from '@fp/domain'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'
@@ -66,10 +67,6 @@ const SORT_OPTIONS = Object.values(PlanSortField).map((value) => ({
   label: PLAN_SORT_LABEL[value],
 }))
 
-const STATUS_CHOICES = Object.values(PlanStatus).map((value) => ({
-  value,
-  label: PLAN_STATUS_LABEL[value],
-}))
 
 /** Indexed by the raw wire period, which is a plain string on `PlanHeadline`. */
 const PERIOD_SHORT: Record<string, string | undefined> = BILLING_PERIOD_SHORT
@@ -300,10 +297,10 @@ export function PlanGrid({
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
       searchPlaceholder="Search plans…"
-      filter={statusFilter({
-        values: query.statuses,
-        choices: STATUS_CHOICES,
-        onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+      filter={granularFilter({
+        specs: PLAN_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
       })}
       sort={{
         options: SORT_OPTIONS,
@@ -320,7 +317,9 @@ export function PlanGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No plans match these filters"
       empty={{
