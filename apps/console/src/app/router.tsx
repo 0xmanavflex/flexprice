@@ -1643,14 +1643,21 @@ function PaymentsRouteComponent() {
 const paymentCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/payments/new',
+  // `?invoice=` preselects the invoice, from an invoice's "Record payment".
+  validateSearch: (search: Record<string, unknown>): { invoice?: string } =>
+    typeof search['invoice'] === 'string' && search['invoice']
+      ? { invoice: search['invoice'] }
+      : {},
   component: PaymentCreateRouteComponent,
 })
 
 function PaymentCreateRouteComponent() {
   const navigate = useNavigate()
+  const { invoice } = paymentCreateRoute.useSearch()
   const toList = () => void navigate({ to: '/payments', search: {} as never })
   return (
     <PaymentFormPage
+      {...(invoice ? { invoiceId: invoice } : {})}
       onCancel={toList}
       onDone={(paymentId) =>
         void navigate(

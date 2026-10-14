@@ -1,5 +1,4 @@
 import { useRef, useState } from 'react'
-import { formatMoney } from '@fp/domain'
 import { useNavigate } from '@tanstack/react-router'
 import {
   ApiError,
@@ -9,7 +8,6 @@ import {
   useInvoiceCreditNotes,
   useInvoicePayments,
   useRecalculateInvoice,
-  useRecordPayment,
   useSendInvoice,
   useTenant,
   useUpdateInvoiceMetadata,
@@ -29,7 +27,7 @@ export interface InvoiceDetailPageProps {
   onOpenCustomer: (customerId: string) => void
 }
 
-type Dialog = 'void' | 'record-payment' | null
+type Dialog = 'void' | null
 
 /**
  * One invoice, read through `useInvoice`, with its issuer (`useTenant`),
@@ -57,7 +55,6 @@ export function InvoiceDetailPage({
   const attempt = useAttemptInvoicePayment()
   const recalculate = useRecalculateInvoice()
   const send = useSendInvoice()
-  const recordPayment = useRecordPayment()
   const [dialog, setDialog] = useState<Dialog>(null)
   const inFlight = useRef(false)
   const [pendingAction, setPendingAction] = useState<InvoicePendingAction | null>(null)
@@ -84,7 +81,6 @@ export function InvoiceDetailPage({
       },
     })
   }
-  const amountDue = data.amountRemaining
 
   return (
     <>
@@ -100,7 +96,7 @@ export function InvoiceDetailPage({
         onBack={onBack}
         {...(onEdit ? { onEdit } : {})}
         onFinalize={() => run('finalize', finalize, 'Invoice finalized', 'finalize the invoice')}
-        onRecordPayment={() => setDialog('record-payment')}
+        onRecordPayment={() => void navigate({ to: '/payments/new', search: { invoice: data.id } })}
         onRecalculate={() =>
           run('recalculate', recalculate, 'Invoice recalculated', 'recalculate the invoice')
         }
@@ -146,35 +142,6 @@ export function InvoiceDetailPage({
         isPending={voidInvoice.isPending}
         error={voidInvoice.error ? failure(voidInvoice.error) : null}
         onConfirm={() => voidInvoice.mutate(data.id, { onSuccess: () => setDialog(null) })}
-      />
-      <ConfirmDialog
-        open={dialog === 'record-payment'}
-        onOpenChange={(open) => {
-          if (!open) recordPayment.reset()
-          setDialog(open ? 'record-payment' : null)
-        }}
-        title="Record a payment?"
-        description={`Records an offline payment of ${formatMoney(amountDue)} against this invoice, settling the amount due.`}
-        confirmLabel="Record payment"
-        isPending={recordPayment.isPending}
-        error={recordPayment.error ? failure(recordPayment.error) : null}
-        onConfirm={() =>
-          recordPayment.mutate(
-            {
-              invoiceId: data.id,
-              currency: amountDue.currency || data.currency,
-              amount: amountDue.amount,
-              methodType: 'OFFLINE',
-              processNow: true,
-            },
-            {
-              onSuccess: () => {
-                setDialog(null)
-                toast('Payment recorded')
-              },
-            },
-          )
-        }
       />
       <Toaster />
     </>
