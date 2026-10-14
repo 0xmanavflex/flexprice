@@ -781,20 +781,25 @@ function RevenueBreakdown({
       <SegmentMeter rows={rows} label={label} emptyMessage={empty} />
     )
 
+  // Invoiced revenue carries no fixed/usage split; then the row is top customers alone.
+  const hasMix = revenue.fixed !== null && revenue.usage !== null
+
   return (
-    <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
-      <Panel title="Revenue mix">
-        <DataRegion
-          state={{
-            refreshing: Boolean(revenue.refreshing),
-            provisional: Boolean(revenue.provisional),
-          }}
-        >
-          <div className="flex flex-1 flex-col justify-center p-6">
-            {body(mix, 'Revenue by type', 'Nothing was billed in this period.')}
-          </div>
-        </DataRegion>
-      </Panel>
+    <div className={cn('grid grid-cols-1 gap-5', hasMix && 'lg:grid-cols-2')}>
+      {hasMix ? (
+        <Panel title="Revenue mix">
+          <DataRegion
+            state={{
+              refreshing: Boolean(revenue.refreshing),
+              provisional: Boolean(revenue.provisional),
+            }}
+          >
+            <div className="flex flex-1 flex-col justify-center p-6">
+              {body(mix, 'Revenue by type', 'Nothing was billed in this period.')}
+            </div>
+          </DataRegion>
+        </Panel>
+      ) : null}
       <Panel
         title="Top customers by revenue"
         action={

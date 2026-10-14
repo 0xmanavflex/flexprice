@@ -3,14 +3,12 @@ import { useNavigate } from '@tanstack/react-router'
 import {
   useCustomers,
   useInvoices,
-  useRevenueOverview,
-  useRevenueSeries,
+  useInvoicedRevenue,
   useSubscriptions,
   useUsageAnalytics,
   UsageWindowSize,
 } from '@fp/query'
-import type { RevenueDay, RevenueOverview, UsageAnalytics } from '@fp/query'
-import { useSession } from '@/app/session'
+import type { InvoicedRevenue, UsageAnalytics } from '@fp/query'
 import {
   CustomerSortField,
   DEFAULT_INVOICE_QUERY,
@@ -265,20 +263,15 @@ export function HomePage() {
   // const apiKeys = useApiKeys()
 
   /*
-   * Billed revenue: the server's per-currency totals for this window and the
-   * one before it, and — where the tenant has revenue analytics — a daily
-   * series to plot. Without an environment there is nothing to scope them to,
-   * and the Revenue tab falls back to the usage subtotal.
+   * Invoiced revenue: every finalized invoice created in this window and the
+   * one before it. The headline, the points and the top customers all read the
+   * same invoices, so the headline is exactly the sum of what is plotted.
    */
-  const { environmentId } = useSession()
-  const revenue = useRevenueOverview(environmentId, windows.current)
-  const priorRevenue = useRevenueOverview(environmentId, windows.prior)
-  const revenueSeries = useRevenueSeries(windows.current)
+  const revenue = useInvoicedRevenue(windows.current)
+  const priorRevenue = useInvoicedRevenue(windows.prior)
 
   const eventsPanel = toEventsPanel(analytics, priorAnalytics, granularity.id)
-  const revenuePanel = environmentId
-    ? toRevenuePanel(revenue, priorRevenue, revenueSeries, windows, granularity.id)
-    : undefined
+  const revenuePanel = toRevenuePanel(revenue, priorRevenue, windows, granularity.id)
   const customersPanel = toCustomersPanel(customers, windows)
 
   /*
@@ -301,7 +294,7 @@ export function HomePage() {
       onGranularityChange={setGranularityId}
       rangeLabel={rangeLabel}
       events={eventsPanel}
-      {...(revenuePanel ? { revenue: revenuePanel } : {})}
+      revenue={revenuePanel}
       customers={customersPanel}
       subscriptions={subscriptionsPanel}
       invoices={invoicesPanel}
@@ -389,13 +382,12 @@ function toEventsPanel(
 const TOP_CUSTOMERS = 5
 
 /**
- * The billed-revenue panel. The headline currency is the one billed to the
- * most customers; any others are named in the caption, never added in.
+ * The invoiced-revenue panel. The headline currency is the one invoiced to the
+ * most customers; any others are named, never added in.
  */
 function toRevenuePanel(
-  view: QueryView<RevenueOverview>,
-  prior: QueryView<RevenueOverview>,
-  series: QueryView<RevenueDay[]>,
+  view: QueryView<InvoicedRevenue>,
+  prior: QueryView<InvoicedRevenue>,
   windows: Windows,
   granularityId: string,
 ): RevenuePanel {
@@ -410,24 +402,24 @@ function toRevenuePanel(
   }
   const data = view.data
   if (data === undefined) return { ...meta, ...blank, status: withoutData(view) }
-  const [main, ...others] = data.summaries
+  const [main, ...others] = data.currencies
   if (!main || isZeroMoney(main.total)) return { ...meta, ...blank, status: 'empty' }
 
   const priorMain =
     prior.data !== undefined && !prior.isPlaceholderData && !view.isPlaceholderData
-      ? prior.data.summaries.find((summary) => summary.currency === main.currency)
+      ? prior.data.currencies.find((entry) => entry.currency === main.currency)
       : undefined
 
   return {
     ...meta,
     status: 'ready',
     total: main.total,
-    fixed: main.fixed,
-    usage: main.usage,
+    fixed: null,
+    usage: null,
     changePercent: priorMain ? revenueChange(main.total, priorMain.total) : null,
-    points: series.data ? revenuePoints(series.data, main.currency, windows, granularityId) : [],
-    topCustomers: data.customers
-      .filter((row) => row.total.currency === main.currency && !isZeroMoney(row.total))
+    points: revenuePoints(main.rows, windows, granularityId),
+    topCustomers: main.customers
+      .filter((row) => !isZeroMoney(row.total))
       .slice(0, TOP_CUSTOMERS)
       .map((row) => ({ id: row.customerId, name: row.name, total: row.total })),
     otherCurrencies: others
@@ -437,22 +429,21 @@ function toRevenuePanel(
 }
 
 /**
- * The daily series as chart points: one per day of the window (a quiet day is
- * a zero, not a gap), or one per week when the weekly granularity is chosen.
- * Hourly has no revenue equivalent and reads as daily.
+ * Invoices as chart points: one per UTC day of the window (a quiet day is a
+ * zero, not a gap), or one per week under the weekly granularity. Hourly reads
+ * as daily — an invoice total has no meaningful hour.
  */
 function revenuePoints(
-  days: RevenueDay[],
-  currency: string,
+  rows: InvoicedRevenue['currencies'][number]['rows'],
   windows: Windows,
   granularityId: string,
 ): { label: string; value: number }[] {
   const byDay = new Map<string, number>()
-  for (const row of days) {
-    if (row.currency !== currency) continue
-    byDay.set(row.day, (byDay.get(row.day) ?? 0) + row.amount)
+  for (const row of rows) {
+    const day = row.createdAt.toISOString().slice(0, 10)
+    // A chart value only; the headline is the exact sum, not this.
+    byDay.set(day, (byDay.get(day) ?? 0) + Number(row.amount))
   }
-  if (byDay.size === 0) return []
   const step = granularityId === 'weekly' ? 7 : 1
   const span = spanDays(windows)
   const points: { label: string; value: number }[] = []
