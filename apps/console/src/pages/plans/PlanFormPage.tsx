@@ -43,7 +43,7 @@ export function PlanFormPage(props: PlanFormPageProps) {
   const createEntitlements = useCreateBulkEntitlements()
   const createGrant = useCreateCreditGrant()
   const existing = usePlan(props.mode === 'edit' ? props.planId : '')
-  const { meters, units, featureOptions } = usePlanFormOptions()
+  const { meters, units, priceGroups, featureOptions } = usePlanFormOptions()
   const progress = useRef<{
     planId: string
     charges: boolean
@@ -111,6 +111,7 @@ export function PlanFormPage(props: PlanFormPageProps) {
         {...stepProps}
         meters={meters}
         priceUnits={units}
+        priceGroups={priceGroups}
         features={featureOptions}
         isSubmitting={busy}
         submitError={failure}

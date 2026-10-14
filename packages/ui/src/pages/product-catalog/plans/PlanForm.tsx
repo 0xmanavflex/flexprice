@@ -75,6 +75,8 @@ export interface PlanFormProps {
   onStepChange?: ((id: string) => void) | undefined
   meters?: MeterOption[]
   priceUnits?: PriceUnitOption[]
+  /** The account's price groups a new charge may join. */
+  priceGroups?: readonly { value: string; label: string }[]
   /** Features an entitlement can be granted on. */
   features?: FeatureOption[]
   onSubmit: (value: PlanFormValue) => void
@@ -104,6 +106,7 @@ export function PlanForm({
   onStepChange,
   meters = [],
   priceUnits = [],
+  priceGroups = [],
   features = [],
   onSubmit,
   onCancel,
@@ -219,6 +222,7 @@ export function PlanForm({
           mode="create"
           meters={meters}
           priceUnits={priceUnits}
+          priceOptions={{ groups: priceGroups }}
           submitLabel="Add charge"
           onSubmit={(charge) => {
             setCharges((rows) => [...rows, charge])

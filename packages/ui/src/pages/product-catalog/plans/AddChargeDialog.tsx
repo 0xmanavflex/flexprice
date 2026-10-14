@@ -20,6 +20,8 @@ export interface AddChargeDialogProps {
   editing?: Charge | null
   meters: MeterOption[]
   priceUnits: PriceUnitOption[]
+  /** The account's price groups a new charge may join. */
+  priceGroups?: readonly { value: string; label: string }[]
   onSubmit: (draft: CreateCharge) => void
   isSubmitting: boolean
   submitError: string | null
@@ -35,6 +37,7 @@ export function AddChargeDialog({
   editing = null,
   meters,
   priceUnits,
+  priceGroups = [],
   onSubmit,
   isSubmitting,
   submitError,
@@ -67,6 +70,7 @@ export function AddChargeDialog({
           lockType
           meters={meters}
           priceUnits={priceUnits}
+          priceOptions={{ groups: priceGroups }}
           onSubmit={onSubmit}
           onCancel={() => handleOpenChange(false)}
           isSubmitting={isSubmitting}

@@ -179,6 +179,7 @@ export {
   useGroup,
   useGroupMembers,
   useGroups,
+  usePriceGroupOptions,
   toCreateGroupRequest,
   useCreateGroup,
   useDeleteGroup,

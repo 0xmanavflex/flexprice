@@ -302,6 +302,16 @@ const chargeBase = {
   priceUnit: z.string().trim().optional(),
   /** Edit only: the ISO date (`YYYY-MM-DD`) a changed price takes effect, as a new version. */
   effectiveFrom: z.string().trim().optional(),
+  /** Create only: the price group the charge joins, for reporting and bulk changes. */
+  groupId: z.string().trim().optional(),
+  /** Create only: the ISO date (`YYYY-MM-DD`) the price starts; absent means now. */
+  startDate: z.string().trim().optional(),
+  /** Create only, fixed charges: the fewest units a subscriber can hold. */
+  minQuantity: z
+    .number({ error: 'Enter a whole number' })
+    .int('Must be a whole number')
+    .nonnegative('Must be 0 or more')
+    .optional(),
 }
 
 export const createChargeSchema = z

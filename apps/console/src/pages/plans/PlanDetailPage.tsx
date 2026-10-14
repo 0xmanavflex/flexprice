@@ -299,7 +299,7 @@ export function PlanDetailPage({
  */
 function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
-  const { meters, units } = usePlanFormOptions()
+  const { meters, units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const terminate = useTerminatePrice()
@@ -353,6 +353,7 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
         editing={editing}
         meters={meters}
         priceUnits={units}
+        priceGroups={priceGroups}
         onSubmit={submit}
         isSubmitting={create.isPending || updatePrice.isPending}
         submitError={

@@ -107,6 +107,12 @@ export interface ChargeFormProps {
   lockCurrency?: boolean
   /** Shows the display name locked, for a container that cannot rename a charge. */
   lockDisplayName?: boolean
+  /**
+   * Shows the catalogue's price options on create — price group, start date and,
+   * for a fixed charge, minimum quantity. Left out where the container decides
+   * these itself, as a contract does.
+   */
+  priceOptions?: { groups: readonly { value: string; label: string }[] }
 }
 
 const TIER_MODES = [TierMode.Volume, TierMode.Slab] as const
@@ -146,6 +152,7 @@ export function ChargeForm({
   notice,
   lockCurrency = false,
   lockDisplayName = false,
+  priceOptions,
 }: ChargeFormProps) {
   const isEdit = mode === 'edit'
   const form = useCalmForm<CreateCharge>({
@@ -184,6 +191,11 @@ export function ChargeForm({
       ...(current.displayName ? { displayName: current.displayName } : {}),
       ...(current.priceUnit ? { priceUnit: current.priceUnit } : {}),
       ...(current.effectiveFrom ? { effectiveFrom: current.effectiveFrom } : {}),
+      ...(current.groupId ? { groupId: current.groupId } : {}),
+      ...(current.startDate ? { startDate: current.startDate } : {}),
+      ...(nextType === PriceType.Fixed && current.minQuantity !== undefined
+        ? { minQuantity: current.minQuantity }
+        : {}),
       ...(nextType === PriceType.Fixed && current.trialPeriodDays
         ? { trialPeriodDays: current.trialPeriodDays }
         : {}),
@@ -576,6 +588,79 @@ export function ChargeForm({
             <p role="alert" className="text-destructive text-xs">
               {tierMessage}
             </p>
+          ) : null}
+        </div>
+      ) : null}
+
+      {priceOptions && !isEdit ? (
+        <div className="grid gap-5 sm:grid-cols-2">
+          {priceOptions.groups.length > 0 ? (
+            <Field
+              label="Price group"
+              hint="Optional. Groups related prices for reporting and bulk changes."
+            >
+              {({ id }) => (
+                <Controller
+                  control={form.control}
+                  name={'groupId' as never}
+                  render={({ field }) => (
+                    <OptionCombobox
+                      id={id}
+                      value={(field.value as string | undefined) ?? ''}
+                      onValueChange={(value) => field.onChange(value || undefined)}
+                      options={[...priceOptions.groups]}
+                      placeholder="No group"
+                      disabled={isSubmitting}
+                    />
+                  )}
+                />
+              )}
+            </Field>
+          ) : null}
+          <Field
+            label="Start date"
+            hint="Optional. The price applies from this day; empty means now."
+          >
+            {({ id, 'aria-describedby': describedBy }) => (
+              <Controller
+                control={form.control}
+                name={'startDate' as never}
+                render={({ field }) => (
+                  <DateInput
+                    id={id}
+                    value={(field.value as string | undefined) ?? ''}
+                    onValueChange={(value) => field.onChange(value || undefined)}
+                    placeholder="Now"
+                    disabled={isSubmitting}
+                    aria-describedby={describedBy}
+                  />
+                )}
+              />
+            )}
+          </Field>
+          {!isUsage ? (
+            <Field
+              label="Minimum quantity"
+              hint="Optional. The fewest units a subscriber can hold of this charge."
+              error={messageOf(errors, 'minQuantity')}
+            >
+              {({ id, ...field }) => (
+                <Input
+                  id={id}
+                  type="number"
+                  min={0}
+                  inputMode="numeric"
+                  disabled={isSubmitting}
+                  {...field}
+                  {...form.register('minQuantity' as never, {
+                    setValueAs: (value: unknown) =>
+                      value === '' || value == null || Number.isNaN(Number(value))
+                        ? undefined
+                        : Number(value),
+                  })}
+                />
+              )}
+            </Field>
           ) : null}
         </div>
       ) : null}

@@ -227,3 +227,20 @@ export function useGroupMembers(group: Group | undefined) {
     },
   })
 }
+
+/** The account's price groups, as choices for a charge — the first 100, by name. */
+export function usePriceGroupOptions() {
+  const groups = useGroups({
+    page: 1,
+    pageSize: 100,
+    search: '',
+    statuses: [],
+    sortBy: GroupSortField.Name,
+    sortDirection: 'asc',
+    view: 'table' as GroupQuery['view'],
+    filters: [{ field: 'entity_type', op: 'in', value: [GroupEntityType.Price] }],
+  })
+  return (groups.data?.groups ?? [])
+    .filter((group) => group.entityType === GroupEntityType.Price)
+    .map((group) => ({ value: group.id, label: group.name }))
+}

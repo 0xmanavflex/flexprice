@@ -164,6 +164,11 @@ export function toChargeRequest(
     ...(draft.type === PriceType.Fixed && draft.trialPeriodDays
       ? { trialPeriodDays: draft.trialPeriodDays }
       : {}),
+    ...(draft.type === PriceType.Fixed && draft.minQuantity !== undefined
+      ? { minQuantity: draft.minQuantity }
+      : {}),
+    ...(draft.groupId ? { groupId: draft.groupId } : {}),
+    ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
   }
   const tiersOf = (tiers: Tier[]) =>
     tiers.map((tier) => ({

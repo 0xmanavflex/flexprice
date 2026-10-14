@@ -92,3 +92,26 @@ describe('toUpdatePriceRequest', () => {
     })
   })
 })
+
+describe('toChargeRequest price options', () => {
+  it('sends the group, start date and minimum quantity of a fixed charge', () => {
+    const body = toChargeRequest(
+      {
+        type: PriceType.Fixed,
+        billingModel: BillingModel.FlatFee,
+        amount: '10',
+        currency: 'USD',
+        billingPeriod: BillingPeriod.Monthly,
+        invoiceCadence: 'ADVANCE',
+        groupId: 'grp_1',
+        startDate: '2030-02-01',
+        minQuantity: 2,
+      },
+      'PLAN',
+      'plan_1',
+    )
+    expect(body['groupId']).toBe('grp_1')
+    expect(body['minQuantity']).toBe(2)
+    expect((body['startDate'] as Date).toISOString()).toBe('2030-02-01T00:00:00.000Z')
+  })
+})

@@ -145,6 +145,32 @@ export const SubmitsAValidatedCharge: Story = {
   },
 }
 
+/** In the catalogue, a fixed charge can join a price group and set a minimum quantity. */
+export const SetsPriceOptions: Story = {
+  args: {
+    defaultValue: fixedFlatFee,
+    priceOptions: { groups: [{ value: 'grp_1', label: 'Seats' }] },
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByLabelText(/^price group/i)).toBeInTheDocument()
+    await expect(canvas.getByLabelText(/^start date/i)).toBeInTheDocument()
+    await userEvent.type(canvas.getByLabelText(/^minimum quantity/i), '3')
+    await userEvent.click(canvas.getByRole('button', { name: /create charge/i }))
+    await expect(args.onSubmit).toHaveBeenCalledWith(expect.objectContaining({ minQuantity: 3 }))
+  },
+}
+
+/** Without the catalogue's options — on a contract — those fields stay out. */
+export const HidesPriceOptionsOutsideTheCatalogue: Story = {
+  args: { defaultValue: fixedFlatFee },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.queryByLabelText(/^minimum quantity/i)).toBeNull()
+    await expect(canvas.queryByLabelText(/^start date/i)).toBeNull()
+  },
+}
+
 /** Tiered pricing adds and removes tier rows. */
 export const TierTableAddsRows: Story = {
   args: { defaultValue: usageTiered, meters },
