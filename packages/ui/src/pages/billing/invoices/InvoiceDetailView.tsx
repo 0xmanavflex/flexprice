@@ -79,6 +79,8 @@ export interface InvoiceDetailViewProps {
   /** Drafts only: recompute lines, credits and taxes in place. */
   onRecalculate?: () => void
   onVoid?: () => void
+  /** Set the payment status by hand, for money that moved outside Flexprice. */
+  onUpdatePaymentStatus?: () => void
   /** Saves the invoice's metadata map. Omitted, the metadata card is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   onIssueCreditNote?: () => void
@@ -127,6 +129,7 @@ export function InvoiceDetailView({
   onRecordPayment,
   onRecalculate,
   onVoid,
+  onUpdatePaymentStatus,
   onSaveMetadata,
   onIssueCreditNote,
   onSend,
@@ -269,6 +272,13 @@ export function InvoiceDetailView({
                 disabled={!canIssueCreditNote}
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
+              {onUpdatePaymentStatus && !isDraft && invoice.status !== InvoiceStatus.Void ? (
+                <MenuAction
+                  icon={<WalletIcon />}
+                  label="Update payment status"
+                  onSelect={onUpdatePaymentStatus}
+                />
+              ) : null}
               <MenuAction
                 icon={<SendIcon />}
                 label="Send invoice"

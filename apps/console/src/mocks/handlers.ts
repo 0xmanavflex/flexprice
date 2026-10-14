@@ -3502,6 +3502,17 @@ export const handlers = [
     })
     return HttpResponse.json({ message: 'ok' })
   }),
+  http.put(`${BASE}/invoices/:id/payment`, async ({ request, params }) => {
+    const id = String(params['id'])
+    const body = (await request.json().catch(() => ({}))) as { payment_status?: string }
+    if (body.payment_status) {
+      patchRow(sourceFor('invoices').items, id, { payment_status: body.payment_status })
+    }
+    const row = sourceFor('invoices').items.find((item) => readString(item, 'id') === id)
+    return row
+      ? HttpResponse.json(row)
+      : HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+  }),
   http.post(`${BASE}/invoices/:id/payment/attempt`, () => HttpResponse.json({ message: 'ok' })),
   http.post(`${BASE}/invoices`, async ({ request }) => {
     const body = await readBody(request)

@@ -11,11 +11,12 @@ import {
   useSendInvoice,
   useTenant,
   useUpdateInvoiceMetadata,
+  useUpdateInvoicePaymentStatus,
   useUserInfo,
   useVoidInvoice,
 } from '@fp/query'
 import { InvoiceDetailView, Toaster, toast, type InvoicePendingAction } from '@fp/ui/pages'
-import { ConfirmDialog } from '@fp/ui/compositions'
+import { ConfirmDialog, OptionSelect } from '@fp/ui/compositions'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 import { toInvoiceDocument } from './invoiceDocumentAdapter'
@@ -27,7 +28,7 @@ export interface InvoiceDetailPageProps {
   onOpenCustomer: (customerId: string) => void
 }
 
-type Dialog = 'void' | null
+type Dialog = 'void' | 'payment-status' | null
 
 /**
  * One invoice, read through `useInvoice`, with its issuer (`useTenant`),
@@ -51,6 +52,10 @@ export function InvoiceDetailPage({
   const creditNotes = useInvoiceCreditNotes(invoiceId)
   const finalize = useFinalizeInvoice()
   const saveMetadata = useUpdateInvoiceMetadata()
+  const setPaymentStatus = useUpdateInvoicePaymentStatus()
+  const [paymentStatus, setPaymentStatusChoice] = useState<'SUCCEEDED' | 'FAILED' | 'PENDING'>(
+    'SUCCEEDED',
+  )
   const voidInvoice = useVoidInvoice()
   const attempt = useAttemptInvoicePayment()
   const recalculate = useRecalculateInvoice()
@@ -101,6 +106,7 @@ export function InvoiceDetailPage({
           run('recalculate', recalculate, 'Invoice recalculated', 'recalculate the invoice')
         }
         onVoid={() => setDialog('void')}
+        onUpdatePaymentStatus={() => setDialog('payment-status')}
         onSaveMetadata={(metadata) => saveMetadata.mutateAsync({ id: data.id, metadata })}
         onIssueCreditNote={() =>
           void navigate({ to: '/credit-notes/new', search: { invoice: data.id } })
@@ -142,6 +148,48 @@ export function InvoiceDetailPage({
         isPending={voidInvoice.isPending}
         error={voidInvoice.error ? failure(voidInvoice.error) : null}
         onConfirm={() => voidInvoice.mutate(data.id, { onSuccess: () => setDialog(null) })}
+      />
+      <ConfirmDialog
+        open={dialog === 'payment-status'}
+        onOpenChange={(open) => {
+          if (!open) setPaymentStatus.reset()
+          setDialog(open ? 'payment-status' : null)
+        }}
+        title="Update payment status"
+        description={
+          <span className="flex flex-col gap-3 pt-2 text-left">
+            <span>For money that moved outside Flexprice. The invoice and its balance follow.</span>
+            <label htmlFor="payment-status" className="flex flex-col gap-1.5 text-sm">
+              Payment status
+              <OptionSelect
+                id="payment-status"
+                value={paymentStatus}
+                onValueChange={(value) =>
+                  setPaymentStatusChoice(value as 'SUCCEEDED' | 'FAILED' | 'PENDING')
+                }
+                options={[
+                  { value: 'SUCCEEDED', label: 'Succeeded' },
+                  { value: 'FAILED', label: 'Failed' },
+                  { value: 'PENDING', label: 'Pending' },
+                ]}
+              />
+            </label>
+          </span>
+        }
+        confirmLabel="Update status"
+        isPending={setPaymentStatus.isPending}
+        error={setPaymentStatus.error ? failure(setPaymentStatus.error) : null}
+        onConfirm={() =>
+          setPaymentStatus.mutate(
+            { id: data.id, status: paymentStatus },
+            {
+              onSuccess: () => {
+                setDialog(null)
+                toast('Payment status updated')
+              },
+            },
+          )
+        }
       />
       <Toaster />
     </>

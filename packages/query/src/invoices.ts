@@ -346,6 +346,25 @@ export function useUpdateInvoiceMetadata() {
   })
 }
 
+/**
+ * Set an invoice's payment status by hand — `PUT /invoices/{id}/payment` —
+ * for money that moved outside Flexprice. `status` is the wire value
+ * (`SUCCEEDED`, `FAILED`, `PENDING`).
+ */
+export function useUpdateInvoicePaymentStatus() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, status }: { id: string; status: 'SUCCEEDED' | 'FAILED' | 'PENDING' }) =>
+      call(() => client.invoices.updateInvoicePaymentStatus(id, { paymentStatus: status })),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    },
+  })
+}
+
 /** Lock a draft and send it — `POST /invoices/{id}/finalize`. */
 export const useFinalizeInvoice = () =>
   useInvoiceAction((client, id) => client.invoices.finalizeInvoice(id))
