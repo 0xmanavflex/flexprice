@@ -3,6 +3,7 @@ import { useAuthCapabilitiesValue, useSignIn } from '@fp/query'
 import { RegionField, SignInScreen } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
 import { useRegion } from '@/app/region'
+import { resetAvailableFor } from '@/app/auth/passwordReset'
 import { env } from '@/env'
 import { messageForSignInError } from './signInMessage'
 
@@ -52,6 +53,16 @@ export function SignInPage({ redirect }: SignInPageProps) {
   // Google is drawn only where it exists. Reads password-only until the
   // backend serves `/auth/capabilities`, which is how the console behaves today.
   const capabilities = useAuthCapabilitiesValue()
+  /*
+   * Reset runs against Supabase from the browser, not against the Flexprice
+   * API, so what decides the link is whether *this region* has a Supabase
+   * project configured — not what `/auth/capabilities` says. A self-hosted
+   * build has none, and correctly shows no link: it has never had reset.
+   *
+   * The server's answer is honoured too, so that brokering reset later turns
+   * the link on without touching this page.
+   */
+  const canReset = resetAvailableFor(region) || capabilities.passwordReset.enabled
 
   // Under mocks the form is seeded and announces itself; against a real API it
   // stays empty and silent. Spread conditionally rather than passing `undefined`
@@ -86,6 +97,12 @@ export function SignInPage({ redirect }: SignInPageProps) {
           : {})}
         {...(capabilities.signUp.enabled
           ? { onSignUp: () => void navigate({ to: '/sign-up', search: {} as never }) }
+          : {})}
+        {...(canReset
+          ? {
+              onForgotPassword: () =>
+                void navigate({ to: '/forgot-password', search: {} as never }),
+            }
           : {})}
         isSubmitting={signIn.isPending}
         error={signIn.error ? messageForSignInError(signIn.error) : null}

@@ -18,6 +18,7 @@
     "@fp/domain": "workspace:*",
     "@fp/query": "workspace:*",
     "@fp/ui": "workspace:*",
+    "@supabase/supabase-js": "^2.117.3",
     "@tanstack/react-query": "^5.100.14",
     "@tanstack/react-router": "^1.170.10",
     "react": "^19.2.6",
@@ -25,15 +26,15 @@
   },
   "devDependencies": {
     "@playwright/test": "^1.63.0",
+    "@tailwindcss/vite": "^4.3.0",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.1",
+    "msw": "^2.12.4",
     "tailwindcss": "^4.3.0",
-    "@tailwindcss/vite": "^4.3.0",
     "typescript": "~5.9.2",
     "vite": "^8.0.12",
-    "vitest": "^4.1.10",
-    "msw": "^2.12.4"
+    "vitest": "^4.1.10"
   },
   "msw": {
     "workerDirectory": [

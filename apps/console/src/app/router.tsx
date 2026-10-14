@@ -275,6 +275,8 @@ const RevenuePage = lazy(() =>
  */
 import { SignInPage } from '@/pages/auth/SignInPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
+import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
+import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 
 /**
  * The shell wraps every route except the ones you can reach signed out.
@@ -490,6 +492,28 @@ const signUpRoute = createRoute({
     if (hasSession()) throw redirect({ to: '/' })
   },
   component: SignUpPage,
+})
+
+/**
+ * Request a reset link, and the far end of one.
+ *
+ * Both sit outside the shell, like sign-in. Neither steps aside for an existing
+ * session: someone already signed in may still be following a reset link from
+ * their inbox, and bouncing them to the dashboard would make the link look
+ * broken. `/reset-password` in particular must stay reachable — it is the
+ * address Supabase emails, and it is the only place the recovery fragment can
+ * be consumed.
+ */
+const forgotPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/forgot-password',
+  component: ForgotPasswordPage,
+})
+
+const resetPasswordRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/reset-password',
+  component: ResetPasswordPage,
 })
 
 function SignInRouteComponent() {
@@ -2138,6 +2162,8 @@ const labelsRedirect = createRoute({
 export const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
+  forgotPasswordRoute,
+  resetPasswordRoute,
   shellRoute.addChildren([
     homeRoute,
     revenueRoute,

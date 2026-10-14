@@ -116,6 +116,59 @@ if (!import.meta.env.DEV && apiKeyConfigured) {
   )
 }
 
+/**
+ * Supabase, for password reset only.
+ *
+ * Reset is the one flow the Flexprice API does not expose: the backend's public
+ * auth routes are `/auth/signup`, `/auth/login` and SAML, and nothing else. V1
+ * solved it by talking to Supabase from the browser, and this console now does
+ * the same, so these two variables are read here.
+ *
+ * Unlike the API key above, these are genuinely publishable: the anon key is
+ * designed to ship to browsers and is constrained by row-level security. It is
+ * still per-deployment, which is why it is configuration and not a constant.
+ *
+ * ## Why this is per region
+ *
+ * The console can switch between the India and US APIs at runtime (see
+ * `app/region.tsx`), and those are separate deployments with separate accounts
+ * — so they are very likely separate Supabase projects. One project's anon key
+ * cannot reset a password held by the other: the request would succeed against
+ * the wrong project and simply never send an email to a user who exists only in
+ * the other one. A per-region value prevents that, and `VITE_SUPABASE_URL` /
+ * `VITE_SUPABASE_ANON_KEY` remain as the fallback for a single-region or
+ * self-hosted deployment.
+ *
+ * Absent config is not an error. A self-hosted install has no Supabase at all,
+ * and must still sign in normally — it simply gets no reset link.
+ */
+export interface SupabaseConfig {
+  url: string
+  anonKey: string
+}
+
+function supabaseFor(url: string | undefined, anonKey: string | undefined): SupabaseConfig | null {
+  return url && anonKey ? { url, anonKey } : null
+}
+
+const supabaseDefault = supabaseFor(
+  clean(import.meta.env.VITE_SUPABASE_URL),
+  clean(import.meta.env.VITE_SUPABASE_ANON_KEY),
+)
+
+const supabaseByRegion: Readonly<Record<string, SupabaseConfig | null>> = {
+  in:
+    supabaseFor(
+      clean(import.meta.env.VITE_SUPABASE_URL_IN),
+      clean(import.meta.env.VITE_SUPABASE_ANON_KEY_IN),
+    ) ?? supabaseDefault,
+  us:
+    supabaseFor(
+      clean(import.meta.env.VITE_SUPABASE_URL_US),
+      clean(import.meta.env.VITE_SUPABASE_ANON_KEY_US),
+    ) ?? supabaseDefault,
+}
+
 /** A configuration problem, as a value the app can render. */
 export interface ConfigProblem {
   title: string
@@ -167,4 +220,11 @@ export const env = {
    * and would not be safe shipped.
    */
   apiKey,
+  /**
+   * Supabase for the region currently selected, or `null` where none is
+   * configured. `null` means the console offers no password reset, which is
+   * the correct and honest state for a self-hosted deployment.
+   */
+  supabaseFor: (region: string): SupabaseConfig | null =>
+    supabaseByRegion[region] ?? supabaseDefault,
 } as const
