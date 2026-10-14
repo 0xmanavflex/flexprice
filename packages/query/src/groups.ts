@@ -7,8 +7,10 @@ import {
   GroupEntityType,
   GroupSortField,
   GroupStatus,
+  GROUP_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
+import { toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 
 /**
@@ -71,6 +73,9 @@ export function toGroupFilter(query: GroupQuery): Record<string, unknown> {
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     ...(query.search ? { name: query.search } : {}),
+    ...((query.filters?.length ?? 0) > 0
+      ? { filters: toFilterConditions(query.filters ?? [], GROUP_FILTERS) }
+      : {}),
   }
 }
 

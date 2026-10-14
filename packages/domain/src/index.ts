@@ -214,6 +214,7 @@ export type { CreatePriceUnit, PriceUnit, PriceUnitQuery } from './priceUnit'
 
 export {
   DEFAULT_GROUP_QUERY,
+  GROUP_FILTERS,
   GROUP_ENTITY_TYPE_LABEL,
   GROUP_SORT_LABEL,
   GROUP_STATUS_LABEL,

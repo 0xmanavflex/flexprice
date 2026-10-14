@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 
 /**
@@ -80,6 +81,8 @@ export interface GroupQuery {
   sortBy: GroupSortField
   sortDirection: 'asc' | 'desc'
   view: GroupView
+  /** Granular field filters, applied by the search endpoint. See `GROUP_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_GROUP_QUERY: GroupQuery = {
@@ -90,7 +93,23 @@ export const DEFAULT_GROUP_QUERY: GroupQuery = {
   sortBy: GroupSortField.Name,
   sortDirection: 'asc',
   view: GroupView.Table,
+  filters: [],
 }
+/** What the group list can filter on — V1's fields, by their wire names. */
+export const GROUP_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'entity_type',
+    label: 'Holds',
+    kind: 'options',
+    options: [
+      { value: 'price', label: 'Prices' },
+      { value: 'feature', label: 'Features' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * A group draft. A group holds either prices or features, never both, so the

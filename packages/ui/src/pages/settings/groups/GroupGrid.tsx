@@ -18,9 +18,11 @@ import {
   type GroupQuery,
   GroupSortField,
   GroupStatus,
+  GROUP_FILTERS,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
 import {
   type EntityColumn,
@@ -227,6 +229,11 @@ export function GroupGrid({
        * reporting the server's total. That mismatch is the reason
        * `NoEntityFilter` exists, and it fails the moment one is added.
        */
+      filter={granularFilter({
+        specs: GROUP_FILTERS,
+        filters: query.filters ?? [],
+        onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
+      })}
       sort={{
         options: SORT_OPTIONS,
         field: query.sortBy,
@@ -249,7 +256,9 @@ export function GroupGrid({
       isLoading={isLoading}
       error={error}
       {...(onRetry ? { onRetry } : {})}
-      isFiltered={query.search.length > 0 || query.statuses.length > 0}
+      isFiltered={
+        query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+      }
       {...(onClearFilters ? { onClearFilters } : {})}
       filteredEmptyTitle="No groups match these filters"
       empty={{

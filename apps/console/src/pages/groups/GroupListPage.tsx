@@ -34,7 +34,8 @@ export function GroupListPage({
   const failure = toListFailure(groups.error, 'groups')
   const rows = groups.data?.groups ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
-  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
   const closeDelete = () => {
     setDeleting(null)
