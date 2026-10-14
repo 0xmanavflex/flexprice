@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 
 /**
@@ -68,6 +69,8 @@ export interface CostSheetQuery {
   sortBy: CostSheetSortField
   sortDirection: 'asc' | 'desc'
   view: CostSheetView
+  /** Granular field filters, applied by the search endpoint. See `COST_SHEET_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_COST_SHEET_QUERY: CostSheetQuery = {
@@ -78,7 +81,23 @@ export const DEFAULT_COST_SHEET_QUERY: CostSheetQuery = {
   sortBy: CostSheetSortField.Name,
   sortDirection: 'asc',
   view: CostSheetView.Table,
+  filters: [],
 }
+/** What the cost sheet list can filter on — V1's fields, by their wire names. */
+export const COST_SHEET_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'name', label: 'Name', kind: 'text' },
+  { field: 'lookup_key', label: 'Lookup key', kind: 'text' },
+  {
+    field: 'status',
+    label: 'Status',
+    kind: 'options',
+    options: [
+      { value: 'published', label: 'Published' },
+      { value: 'archived', label: 'Archived' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 const metadata = z.record(z.string(), z.string())
 

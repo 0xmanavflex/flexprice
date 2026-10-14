@@ -7,8 +7,10 @@ import {
   type CostSheetQuery,
   CostSheetSortField,
   CostSheetStatus,
+  COST_SHEET_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
+import { toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 
 /**
@@ -70,6 +72,9 @@ export function toCostSheetFilter(query: CostSheetQuery): Record<string, unknown
     queryFilter: { limit: query.pageSize, offset: (query.page - 1) * query.pageSize },
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     ...(query.search ? { name: query.search } : {}),
+    ...((query.filters?.length ?? 0) > 0
+      ? { filters: toFilterConditions(query.filters ?? [], COST_SHEET_FILTERS) }
+      : {}),
   }
 }
 
