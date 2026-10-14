@@ -154,6 +154,8 @@ export interface EntityFilter {
   activeCount?: number | undefined
   /** A "Status: All" select beside the search, writing the same rule as the filter. */
   quick?: EntityQuickSelect | undefined
+  /** AND-only conditions, no groups: what the search endpoints can run. */
+  flat?: boolean | undefined
 }
 
 /** The inline select next to the search box: one value, `all` for none. */
@@ -845,6 +847,7 @@ export function EntityList<T extends object>({
             fields={filter.fields}
             query={filter.query}
             onQueryChange={filter.onQueryChange}
+            {...(filter.flat ? { flat: true } : {})}
             trigger={
               <Button
                 type="button"

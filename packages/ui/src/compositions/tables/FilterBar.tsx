@@ -94,7 +94,21 @@ export interface FilterBarProps {
    * `basic` chip row draws a trigger at all; `advanced` ignores it, as before.
    */
   trigger?: ReactNode
+  /**
+   * AND-only, one level: refuses any change that would add a group or switch
+   * the combinator to OR, and hides "Add group". For filters sent to the
+   * search endpoints, which AND every condition and know no grouping.
+   */
+  flat?: boolean
 }
+
+/** Whether a query is one level of AND-ed rules. */
+function isFlatAnd(query: FilterQuery): boolean {
+  return query.combinator === 'and' && query.rules.every((node) => node.type === 'rule')
+}
+
+/** Hides the advanced panel's second footer button, "Add group", when `flat`. */
+const FLAT_CLASS = '[&_[data-slot=filters-advanced-footer]>button:nth-of-type(2)]:hidden'
 
 /** A query with nothing in it. Exported so callers can seed state with it. */
 export function emptyFilterQuery(): FilterQuery {
@@ -153,6 +167,7 @@ export function FilterBar({
   advancedAlign = 'start',
   showClear = true,
   trigger,
+  flat = false,
 }: FilterBarProps) {
   /*
    * The bar owns the tree; the caller owns what it *means*.
@@ -218,6 +233,9 @@ export function FilterBar({
       showClear={showClear}
       fields={fields}
       query={draft}
+      {...(flat
+        ? { className: FLAT_CLASS, onBeforeQueryChange: (next: FilterQuery) => isFlatAnd(next) }
+        : {})}
       onQueryChange={(next: FilterQuery) => {
         // Optimistic: the draft owns the tree between commits, and `seen` is
         // left to the render guard so the caller's echo — however late — is
@@ -484,6 +502,7 @@ export function granularFilter({
       ),
     ),
     activeCount: valid.length,
+    flat: true,
     onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
       const next = flat.map((entry): ListFilter => {
         const spec = specs.find((candidate) => candidate.field === entry.field)
