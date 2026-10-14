@@ -358,14 +358,14 @@ export function useUpdateInvoice() {
   return useMutation({
     mutationFn: ({ id, dueDate, metadata, applyDiscount }: InvoiceEdit) =>
       call(() =>
+        // Each field is sent only when the caller named it: the API treats an
+        // absent key as "leave it alone", so spreading undefined would be the
+        // difference between not touching the metadata and clearing it.
         client.invoices.updateInvoice(id, {
-          // Each field is sent only when the caller named it: the API treats an
-          // absent key as "leave it alone", so spreading undefined would be the
-          // difference between not touching the metadata and clearing it.
           ...(dueDate !== undefined ? { dueDate: dueDate ?? undefined } : {}),
           ...(metadata !== undefined ? { metadata } : {}),
           ...(applyDiscount ? { applyDiscount: true } : {}),
-        } as never),
+        }),
       ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })

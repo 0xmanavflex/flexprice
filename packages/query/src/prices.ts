@@ -430,13 +430,13 @@ export function useFeatureCharges(meterId: string | null) {
 
       const [plans, addons, sheets] = await Promise.all([
         planIds.length > 0
-          ? call(() =>
-              client.plans.queryPlan({ planIds, limit: planIds.length, offset: 0 } as never),
-            ).then((page) => (page.items ?? []) as NamedParent[])
+          ? call(() => client.plans.queryPlan({ planIds, limit: planIds.length, offset: 0 })).then(
+              (page) => (page.items ?? []) as NamedParent[],
+            )
           : [],
         addonIds.length > 0
           ? call(() =>
-              client.addons.queryAddon({ addonIds, limit: addonIds.length, offset: 0 } as never),
+              client.addons.queryAddon({ addonIds, limit: addonIds.length, offset: 0 }),
             ).then((page) => (page.items ?? []) as NamedParent[])
           : [],
         sheetIds.length > 0
@@ -514,7 +514,7 @@ export function useTerminatePrice() {
 
   return useMutation({
     mutationFn: ({ id, endDate }: { id: string; endDate?: Date }) =>
-      call(() => client.prices.deletePrice(id, (endDate ? { endDate } : {}) as never)),
+      call(() => client.prices.deletePrice(id, endDate ? { endDate } : {})),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.prices.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.plans.all() })

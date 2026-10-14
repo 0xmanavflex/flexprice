@@ -73,7 +73,7 @@ export function toTaxRate(wire: TaxRateWire): TaxRate {
  * but no sort *field* and no name search, so only paging is sent here. Search
  * and status are applied on the page — the same split coupons use.
  */
-export function toTaxRateFilter(query: TaxRateQuery): Record<string, unknown> {
+export function toTaxRateFilter(query: TaxRateQuery) {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
@@ -92,7 +92,7 @@ export interface TaxRatePage {
 }
 
 export async function fetchTaxRates(client: Flexprice, query: TaxRateQuery): Promise<TaxRatePage> {
-  const response = await call(() => client.taxRates.getTaxRates(toTaxRateFilter(query) as never))
+  const response = await call(() => client.taxRates.getTaxRates(toTaxRateFilter(query)))
   const taxRates = (response.items ?? []).map((item) => toTaxRate(item as TaxRateWire))
 
   /*

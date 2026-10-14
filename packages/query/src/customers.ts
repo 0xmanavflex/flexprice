@@ -342,9 +342,7 @@ export async function fetchCustomerUsageSummary(
   client: Flexprice,
   customerId: string,
 ): Promise<CustomerUsageSummary> {
-  const response = await call(() =>
-    client.customers.getCustomerUsageSummary({ customerId } as never),
-  )
+  const response = await call(() => client.customers.getCustomerUsageSummary({ customerId }))
   return toCustomerUsageSummary(response as CustomerUsageSummaryWire)
 }
 
