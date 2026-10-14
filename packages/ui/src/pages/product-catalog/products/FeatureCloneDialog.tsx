@@ -1,4 +1,5 @@
-import { useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type CloneFeature, type Feature, cloneFeatureSchema, emptyCloneFeature } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
@@ -61,10 +62,9 @@ function CloneForm({
   isSubmitting: boolean
   submitError: string | null
 }) {
-  const form = useForm<CloneFeature>({
+  const form = useCalmForm<CloneFeature>({
     resolver: standardSchemaResolver(cloneFeatureSchema) as Resolver<CloneFeature>,
     defaultValues: emptyCloneFeature(source),
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
 

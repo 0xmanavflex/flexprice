@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState, type FormEvent } from 'react'
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   type CreateEntitlement,
@@ -97,13 +98,12 @@ export function EntitlementCreateForm({
   submitLabel,
   usagePrice,
 }: EntitlementCreateFormProps) {
-  const form = useForm<CreateEntitlement>({
+  const form = useCalmForm<CreateEntitlement>({
     resolver: standardSchemaResolver(createEntitlementSchema) as Resolver<CreateEntitlement>,
     defaultValues: emptyEntitlement(
       defaultFeatureId ?? '',
       features.find((option) => option.id === defaultFeatureId)?.type ?? FeatureType.Metered,
     ),
-    mode: 'onTouched',
   })
   const [configText, setConfigText] = useState('{}')
   const [configError, setConfigError] = useState<string | null>(null)
@@ -267,10 +267,9 @@ export function EntitlementEditForm({
   submitError = null,
   usagePrice,
 }: EntitlementEditFormProps) {
-  const form = useForm<EditEntitlement>({
+  const form = useCalmForm<EditEntitlement>({
     resolver: standardSchemaResolver(editEntitlementSchema) as Resolver<EditEntitlement>,
     defaultValues: defaultValue,
-    mode: 'onTouched',
   })
   const [configText, setConfigText] = useState(
     JSON.stringify(defaultValue.configValue ?? {}, null, 2),

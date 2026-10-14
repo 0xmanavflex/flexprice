@@ -1,4 +1,5 @@
-import { useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { type CreateAddon, createAddonSchema, emptyAddon, KEY_PREFIX, suggestKey } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
@@ -54,10 +55,9 @@ export function AddonForm({
   isSubmitting = false,
   submitError = null,
 }: AddonFormProps) {
-  const form = useForm<CreateAddon>({
+  const form = useCalmForm<CreateAddon>({
     resolver: standardSchemaResolver(createAddonSchema) as Resolver<CreateAddon>,
     defaultValues: defaultValue ?? emptyAddon(),
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors

@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
@@ -77,10 +78,9 @@ export function CreditGrantEditForm({
   onSubmit,
   submitLabel,
 }: CreditGrantFormProps<EditCreditGrant> & { defaultValue: EditCreditGrant }) {
-  const form = useForm<EditCreditGrant>({
+  const form = useCalmForm<EditCreditGrant>({
     resolver: standardSchemaResolver(editCreditGrantSchema) as Resolver<EditCreditGrant>,
     defaultValues: defaultValue,
-    mode: 'onTouched',
   })
   const errors = form.formState.errors
 
@@ -140,10 +140,9 @@ export function CreditGrantCreateForm({
   onSubmit,
   submitLabel,
 }: CreditGrantFormProps<CreateCreditGrant>) {
-  const form = useForm<CreateCreditGrant>({
+  const form = useCalmForm<CreateCreditGrant>({
     resolver: standardSchemaResolver(createCreditGrantSchema) as Resolver<CreateCreditGrant>,
     defaultValues: emptyCreditGrant(),
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors

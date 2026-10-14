@@ -1,4 +1,5 @@
-import { get, useFieldArray, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { get, useFieldArray, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   AGGREGATION_LABEL,
@@ -266,12 +267,11 @@ export function FeatureForm(props: FeatureFormProps) {
     return schemaResolver(candidate, context, options)
   }
 
-  const form = useForm<FormValues>({
+  const form = useCalmForm<FormValues>({
     resolver,
     defaultValues: feature
       ? fromFeature(feature)
       : fromCreate(props.mode === 'create' ? props.defaultValue : undefined),
-    mode: 'onTouched',
   })
   const filters = useFieldArray({ control: form.control, name: 'filters' })
 

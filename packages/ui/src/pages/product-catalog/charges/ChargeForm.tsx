@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { type ReactNode } from 'react'
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   BILLING_MODEL_LABEL,
@@ -146,10 +147,9 @@ export function ChargeForm({
   lockDisplayName = false,
 }: ChargeFormProps) {
   const isEdit = mode === 'edit'
-  const form = useForm<CreateCharge>({
+  const form = useCalmForm<CreateCharge>({
     resolver: standardSchemaResolver(createChargeSchema) as Resolver<CreateCharge>,
     defaultValues: defaultValue ?? emptyCharge(PriceType.Fixed, BillingModel.FlatFee),
-    mode: 'onTouched',
   })
 
   const type = form.watch('type')

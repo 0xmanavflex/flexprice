@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState, type ReactNode } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { PlusIcon, Trash2Icon, XIcon } from '@ui/icons'
 import {
@@ -110,10 +111,9 @@ export function PlanForm({
   submitError = null,
 }: PlanFormProps) {
   const isEdit = mode === 'edit'
-  const form = useForm<CreatePlan>({
+  const form = useCalmForm<CreatePlan>({
     resolver: standardSchemaResolver(createPlanSchema) as Resolver<CreatePlan>,
     defaultValues: defaultValue ?? emptyPlan(),
-    mode: 'onTouched',
   })
 
   const nameField = form.register('name', {
