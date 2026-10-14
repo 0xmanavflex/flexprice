@@ -1,3 +1,5 @@
+import { FilterOp, runnableFilters, type ListFilter, type ListFilterSpec } from '@fp/domain'
+
 /**
  * Name search, for the endpoints that have no name-search field.
  *
@@ -35,4 +37,35 @@ export function nameContainsFilter(term: string): Record<string, unknown>[] {
       value: { string: term },
     },
   ]
+}
+
+/**
+ * Granular list filters as the search endpoints' filter DSL.
+ *
+ * Incomplete filters are dropped first, so a half-built rule never narrows a
+ * request. A date is a calendar day: "before 1 Oct" is before the start of that
+ * day and "after 1 Oct" is after its end, both in UTC, which is how the lists
+ * cut their days.
+ */
+export function toFilterConditions(
+  filters: readonly ListFilter[],
+  specs: readonly ListFilterSpec[],
+): Record<string, unknown>[] {
+  return runnableFilters(filters, specs).map((filter) => {
+    const spec = specs.find((entry) => entry.field === filter.field)!
+    const base = { field: filter.field, operator: filter.op }
+    switch (spec.kind) {
+      case 'options':
+        return { ...base, dataType: 'array', value: { array: filter.value as string[] } }
+      case 'number':
+        return { ...base, dataType: 'number', value: { number: Number(filter.value) } }
+      case 'date': {
+        const day = new Date(`${filter.value as string}T00:00:00Z`)
+        const at = filter.op === FilterOp.After ? new Date(day.getTime() + 86_400_000) : day
+        return { ...base, dataType: 'date', value: { date: at.toISOString() } }
+      }
+      case 'text':
+        return { ...base, dataType: 'string', value: { string: (filter.value as string).trim() } }
+    }
+  })
 }
