@@ -15,6 +15,8 @@ export const queryKeys = {
     all: () => ['session'] as const,
     current: () => ['session', 'current'] as const,
     environments: () => ['session', 'environments'] as const,
+    /** Keyed by server URL: the region picker can switch deployments mid-session. */
+    capabilities: (serverURL: string) => ['session', 'capabilities', serverURL] as const,
   },
   customers: {
     all: () => ['customers'] as const,

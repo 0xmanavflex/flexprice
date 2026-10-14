@@ -55,6 +55,9 @@ export {
 } from './session'
 export type { CurrentUser, RenameEnvironment, SessionCredentials } from './session'
 
+export { PASSWORD_ONLY, useAuthCapabilities, useAuthCapabilitiesValue } from './authCapabilities'
+export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
+
 export {
   fetchInvoices,
   isServerFilterable,

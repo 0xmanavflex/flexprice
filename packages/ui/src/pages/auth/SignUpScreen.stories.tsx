@@ -29,7 +29,7 @@ export const Default: Story = {
   },
 }
 
-/** The live app's rules: a real email, six characters, and the same password twice. */
+/** The API's rules: a real email, eight characters, and the same password twice. */
 export const ValidatesBeforeSending: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
@@ -38,7 +38,7 @@ export const ValidatesBeforeSending: Story = {
     await userEvent.type(canvas.getByLabelText('Confirm password'), '456')
     await userEvent.click(canvas.getByRole('button', { name: 'Create account' }))
     await expect(await canvas.findByText('Enter a valid email address')).toBeInTheDocument()
-    await expect(canvas.getByText('Use at least 6 characters')).toBeInTheDocument()
+    await expect(canvas.getByText('Use at least 8 characters')).toBeInTheDocument()
     await expect(canvas.getByText("The passwords don't match")).toBeInTheDocument()
     await expect(args.onSubmit).not.toHaveBeenCalled()
   },

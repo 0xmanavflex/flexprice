@@ -37,7 +37,8 @@ export interface SignUpScreenProps {
   region?: ReactNode
   /** "Already have an account? Log in". */
   onSignIn?: () => void
-  /** Start Google sign-up. Omitted while no deployment has it configured. */
+  /** Start Google sign-up. Omitted — and the button not drawn — when the
+   * deployment does not offer it. */
   onProvider?: (providerId: string) => void
 }
 
@@ -94,7 +95,6 @@ export function SignUpScreen({
   onSignIn,
   onProvider,
 }: SignUpScreenProps) {
-  const [providerNotice, setProviderNotice] = useState<string | null>(null)
   const form = useForm<SignUpDetails>({
     resolver: standardSchemaResolver(signUpSchema) as Resolver<SignUpDetails>,
     defaultValues: { email: '', password: '', confirm: '' },
@@ -196,22 +196,7 @@ export function SignUpScreen({
           <Separator className="flex-1" />
         </div>
 
-        <GoogleButton
-          onClick={() => {
-            if (onProvider) {
-              onProvider('google')
-              return
-            }
-            setProviderNotice(
-              "Google sign-up isn't enabled for this workspace yet. Use your email and a password.",
-            )
-          }}
-        />
-        {providerNotice ? (
-          <p role="status" className="text-muted-foreground text-sm">
-            {providerNotice}
-          </p>
-        ) : null}
+        {onProvider ? <GoogleButton onClick={() => onProvider('google')} /> : null}
 
         {onSignIn ? (
           <SwitchLine>

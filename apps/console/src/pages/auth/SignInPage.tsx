@@ -1,5 +1,5 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useSignIn } from '@fp/query'
+import { useAuthCapabilitiesValue, useSignIn } from '@fp/query'
 import { RegionField, SignInScreen } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
 import { useRegion } from '@/app/region'
@@ -49,12 +49,22 @@ export function SignInPage({ redirect }: SignInPageProps) {
   const session = useSession()
   const signIn = useSignIn()
   const { regions, region, setRegion } = useRegion()
+  // Google is drawn only where it exists. Reads password-only until the
+  // backend serves `/auth/capabilities`, which is how the console behaves today.
+  const capabilities = useAuthCapabilitiesValue()
 
   // Under mocks the form is seeded and announces itself; against a real API it
   // stays empty and silent. Spread conditionally rather than passing `undefined`
   // — the props are exact-optional, so an explicit `undefined` would not type.
   const demoProps = env.useMocks ? { defaultValues: DEMO_CREDENTIALS, hint: DEMO_HINT } : {}
 
+  /*
+   * No `onProvider` is passed, so no Google button is drawn. There is no Google
+   * flow to start: the backend's only OAuth routes (`/oauth/init`,
+   * `/oauth/complete`) are the QuickBooks and Zoho integration consent flows,
+   * not user sign-in. When a brokered Google flow lands, pass `onProvider`
+   * behind `capabilities.oauth.google`.
+   */
   return (
     <main className="bg-background min-h-svh">
       <SignInScreen
@@ -74,7 +84,9 @@ export function SignInPage({ redirect }: SignInPageProps) {
               ),
             }
           : {})}
-        onSignUp={() => void navigate({ to: '/sign-up', search: {} as never })}
+        {...(capabilities.signUp.enabled
+          ? { onSignUp: () => void navigate({ to: '/sign-up', search: {} as never }) }
+          : {})}
         isSubmitting={signIn.isPending}
         error={signIn.error ? messageForSignInError(signIn.error) : null}
         onSubmit={(credentials) => {

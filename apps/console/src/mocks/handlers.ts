@@ -2214,6 +2214,26 @@ export const handlers = [
   // shape `messageForSignInError` collapses to "That email and password do not
   // match." Under mocks the fixtures are served regardless of the bearer token,
   // so any valid session is all the route guard needs — this just mints one.
+  /*
+   * `GET /auth/capabilities` — what this deployment offers at sign-in.
+   *
+   * The fixture answers password-only, which is also what `fetchAuthCapabilities`
+   * falls back to when the call fails. The two agreeing is deliberate: the mock
+   * build and a live backend that has not shipped the endpoint yet must show the
+   * same sign-in screen, or the fixtures would be demonstrating a console nobody
+   * can actually run.
+   */
+  http.get(`${BASE}/auth/capabilities`, () =>
+    HttpResponse.json({
+      provider: 'flexprice',
+      password: { enabled: true, min_length: 8 },
+      signup: { enabled: true },
+      password_reset: { enabled: false },
+      saml: { enabled: false },
+      oauth: { google: false },
+    }),
+  ),
+
   http.post(`${BASE}/auth/login`, async ({ request }) => {
     const body = (await request.json().catch(() => ({}))) as {
       email?: string

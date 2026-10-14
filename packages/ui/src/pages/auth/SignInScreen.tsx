@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
 import { Google } from '@ui/components/ui/svgs/google'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
@@ -10,9 +10,12 @@ import { SignInForm, type SignInFormProps } from './SignInForm'
  * left-aligned form (data region, email, password, Google), and the review
  * panel on the right.
  *
- * Authentication is `POST /auth/login`. Google sign-in is drawn because it is
- * part of the design, but until a deployment wires `onProvider` a click says
- * so, in the place errors are announced, instead of appearing to work.
+ * Authentication is `POST /auth/login`. Google is drawn only when the app
+ * passes `onProvider`, which it does only when the deployment reports Google as
+ * available (`useAuthCapabilities`). A button that renders unconditionally and
+ * then explains that it does not work is worse than no button: it reads as a
+ * broken feature rather than an absent one, and it is the first thing a new
+ * user reaches for.
  */
 export const SignInScreenProvenance = provenance({
   source: 'composition',
@@ -21,7 +24,8 @@ export const SignInScreenProvenance = provenance({
 })
 
 export interface SignInScreenProps extends SignInFormProps {
-  /** Start Google sign-in. Omitted while no deployment has it configured. */
+  /** Start Google sign-in. Omitted — and the button not drawn — when the
+   * deployment does not offer it. */
   onProvider?: (providerId: string) => void
   /** "Don't have an account? Sign up". Omitted, the line is not shown. */
   onSignUp?: () => void
@@ -66,8 +70,6 @@ export function SignInScreen({
   onPrivacy,
   ...form
 }: SignInScreenProps) {
-  const [providerNotice, setProviderNotice] = useState<string | null>(null)
-
   return (
     <AuthFrame
       quote="optimality"
@@ -82,22 +84,7 @@ export function SignInScreen({
         {...form}
         alternatives={
           <>
-            <GoogleButton
-              onClick={() => {
-                if (onProvider) {
-                  onProvider('google')
-                  return
-                }
-                setProviderNotice(
-                  "Google sign-in isn't enabled for this workspace yet. Use your email and password.",
-                )
-              }}
-            />
-            {providerNotice ? (
-              <p role="status" className="text-muted-foreground text-sm">
-                {providerNotice}
-              </p>
-            ) : null}
+            {onProvider ? <GoogleButton onClick={() => onProvider('google')} /> : null}
             {onSignUp ? (
               <SwitchLine>
                 Don&apos;t have an account?{' '}

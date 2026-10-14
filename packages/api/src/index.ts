@@ -41,6 +41,13 @@ export {
 export type { CurrentUser, EnvironmentRecord, SessionCredentials } from './session'
 
 /**
+ * Which sign-in methods the deployment offers, asked at runtime rather than
+ * compiled in. See `authCapabilities.ts` for why, and why it fails open.
+ */
+export { PASSWORD_ONLY, fetchAuthCapabilities, toAuthCapabilities } from './authCapabilities'
+export type { AuthCapabilities, AuthProviderId } from './authCapabilities'
+
+/**
  * Tenant settings, the webhook portal, and the tenant's own bill — three more
  * live routes the OpenAPI document does not describe (or, for the bill,
  * describes one character wrong). See `settings.ts`, which is a sibling of
