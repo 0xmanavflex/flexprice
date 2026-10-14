@@ -37,6 +37,32 @@ describe('wallet requests', () => {
     expect(purchased.credits_to_add).toBe('100')
     expect(free.transaction_reason).toBe('FREE_CREDIT_GRANT')
   })
+
+  it('sends an invoiced top-up with its expiry, priority and reference', () => {
+    const body = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest({
+        ...emptyTopUp(),
+        credits: '100',
+        invoice: true,
+        expiryDate: '2030-01-31',
+        priority: '2',
+        referenceId: 'po-77',
+      }),
+    )
+    expect(body.transaction_reason).toBe('PURCHASED_CREDIT_INVOICED')
+    expect(body.expiry_date_utc).toBe('2030-01-31T00:00:00Z')
+    expect(body.priority).toBe(2)
+    expect(body.idempotency_key).toBe('po-77')
+  })
+
+  it('leaves blank options out of a top-up', () => {
+    const body = TopUpWalletRequest$outboundSchema.parse(
+      toTopUpRequest({ ...emptyTopUp(), credits: '1' }),
+    )
+    expect(body).not.toHaveProperty('expiry_date_utc')
+    expect(body).not.toHaveProperty('priority')
+    expect(body).not.toHaveProperty('idempotency_key')
+  })
 })
 
 describe('auto top-up', () => {

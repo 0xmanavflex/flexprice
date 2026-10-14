@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from 'react'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
+import { DateInput } from '@ui/compositions/forms/DateInput'
 import {
   ArrowUpRightIcon,
   InfoIcon,
@@ -653,7 +654,67 @@ function TopUpDialog({
               onChange={(event) => set({ description: event.target.value })}
             />
           </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="topup-expiry"
+              hint="The credits lapse on this day if they are not used. Optional."
+            >
+              Expires on
+            </LabelWithHint>
+            <DateInput
+              id="topup-expiry"
+              value={draft.expiryDate}
+              onValueChange={(expiryDate) => set({ expiryDate })}
+              placeholder="Never"
+            />
+          </Field>
+          <Field>
+            <LabelWithHint
+              htmlFor="topup-priority"
+              hint="Which credits are used first. A lower number is used sooner. Optional."
+            >
+              Priority
+            </LabelWithHint>
+            <Input
+              id="topup-priority"
+              className="h-9"
+              inputMode="numeric"
+              value={draft.priority}
+              onChange={(event) => set({ priority: event.target.value })}
+            />
+          </Field>
+          <Field className="sm:col-span-2">
+            <LabelWithHint
+              htmlFor="topup-reference"
+              hint="A unique reference, such as a purchase order number. The same reference is never applied twice. Optional."
+            >
+              Reference ID
+            </LabelWithHint>
+            <Input
+              id="topup-reference"
+              className="h-9"
+              value={draft.referenceId}
+              onChange={(event) => set({ referenceId: event.target.value })}
+            />
+          </Field>
         </div>
+        {draft.kind === 'purchased' ? (
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-0.5">
+              <label htmlFor="topup-invoice" className="text-sm font-medium">
+                Invoice the customer
+              </label>
+              <p className="text-muted-foreground text-xs">
+                Raise an invoice for these credits. Off records them as already paid.
+              </p>
+            </div>
+            <Switch
+              id="topup-invoice"
+              checked={draft.invoice}
+              onCheckedChange={(invoice) => set({ invoice })}
+            />
+          </div>
+        ) : null}
         {problem || error ? (
           <p role="alert" className="text-destructive text-sm">
             {problem ?? error}

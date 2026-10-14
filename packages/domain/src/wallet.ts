@@ -104,14 +104,49 @@ export const emptyWallet = (currency = 'USD'): CreateWallet => ({
 export const WalletTopUpKind = { Purchased: 'purchased', Free: 'free' } as const
 export type WalletTopUpKind = (typeof WalletTopUpKind)[keyof typeof WalletTopUpKind]
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/
+
+/** Today as a local `YYYY-MM-DD`, the form an expiry date is picked in. */
+function today(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
 export const topUpWalletSchema = z.object({
   kind: z.enum(['purchased', 'free']),
   credits: z.string().trim().refine(positive, 'Enter a positive number of credits'),
   description: z.string().trim().max(200, 'Keep the note under 200 characters'),
+  /** Purchased credits only: raise an invoice for them, rather than record them as paid. */
+  invoice: z.boolean(),
+  /** The day the credits expire (`YYYY-MM-DD`), or blank for never. */
+  expiryDate: z
+    .string()
+    .trim()
+    .refine((value) => value === '' || DAY.test(value), 'Pick an expiry date')
+    .refine((value) => value === '' || value >= today(), 'The expiry date cannot be in the past'),
+  /** Which credits are drawn first; a lower number goes first. Blank for no priority. */
+  priority: z
+    .string()
+    .trim()
+    .refine(
+      (value) => value === '' || (/^\d+$/.test(value) && Number(value) >= 1),
+      'Priority is a whole number, 1 or more',
+    ),
+  /** A unique reference that keeps the same top-up from being applied twice. */
+  referenceId: z.string().trim().max(255, 'Keep the reference under 255 characters'),
 })
 export type TopUpWallet = z.infer<typeof topUpWalletSchema>
 
-export const emptyTopUp = (): TopUpWallet => ({ kind: 'purchased', credits: '', description: '' })
+export const emptyTopUp = (): TopUpWallet => ({
+  kind: 'purchased',
+  credits: '',
+  description: '',
+  invoice: false,
+  expiryDate: '',
+  priority: '',
+  referenceId: '',
+})
 
 export const autoTopupSchema = z
   .object({

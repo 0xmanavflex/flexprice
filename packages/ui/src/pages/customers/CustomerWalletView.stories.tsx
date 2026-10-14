@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, screen, userEvent, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { type Wallet, type WalletTransaction, WalletStatus, money } from '@fp/domain'
 import { CustomerWalletView, type CustomerWalletViewProps } from './CustomerWalletView'
 
@@ -363,6 +363,44 @@ export const OpensTopUpDialog: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
     await expect(await screen.findByRole('dialog')).toBeInTheDocument()
+  },
+}
+
+/** A purchased top-up can be invoiced, and carries its priority and reference. */
+export const TopsUpWithOptions: Story = {
+  args: { onTopUp: fn(async () => undefined) },
+  play: async ({ args, canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/^credits/i), '100')
+    await userEvent.type(dialog.getByLabelText(/^priority/i), '2')
+    await userEvent.type(dialog.getByLabelText(/^reference id/i), 'po-77')
+    await userEvent.click(dialog.getByRole('switch', { name: /invoice the customer/i }))
+    await userEvent.click(dialog.getByRole('button', { name: /^top up$/i }))
+    await waitFor(() =>
+      expect(args.onTopUp).toHaveBeenCalledWith(
+        expect.objectContaining({
+          credits: '100',
+          invoice: true,
+          priority: '2',
+          referenceId: 'po-77',
+        }),
+      ),
+    )
+  },
+}
+
+/** A priority must be a whole number. */
+export const RejectsAFractionalPriority: Story = {
+  play: async ({ canvasElement }) => {
+    await userEvent.click(within(canvasElement).getByRole('button', { name: /top up wallet/i }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(dialog.getByLabelText(/^credits/i), '100')
+    await userEvent.type(dialog.getByLabelText(/^priority/i), '1.5')
+    await userEvent.click(dialog.getByRole('button', { name: /^top up$/i }))
+    await expect(
+      await dialog.findByText('Priority is a whole number, 1 or more'),
+    ).toBeInTheDocument()
   },
 }
 

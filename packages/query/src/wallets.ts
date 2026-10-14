@@ -132,10 +132,21 @@ export function toCreateWalletRequest(
 /** Builds `POST /wallets/{id}/top-up`. Purchased credits are charged; free ones are a grant. */
 export function toTopUpRequest(draft: TopUpWallet): Record<string, unknown> {
   const description = draft.description.trim()
+  const referenceId = draft.referenceId.trim()
+  const reason =
+    draft.kind === 'free'
+      ? 'FREE_CREDIT_GRANT'
+      : draft.invoice
+        ? 'PURCHASED_CREDIT_INVOICED'
+        : 'PURCHASED_CREDIT_DIRECT'
   return {
     creditsToAdd: draft.credits,
-    transactionReason: draft.kind === 'free' ? 'FREE_CREDIT_GRANT' : 'PURCHASED_CREDIT_DIRECT',
+    transactionReason: reason,
     ...(description ? { description } : {}),
+    // The credits lapse at the start of the picked day, in UTC.
+    ...(draft.expiryDate ? { expiryDateUtc: `${draft.expiryDate}T00:00:00Z` } : {}),
+    ...(draft.priority ? { priority: Number(draft.priority) } : {}),
+    ...(referenceId ? { idempotencyKey: referenceId } : {}),
   }
 }
 
