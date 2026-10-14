@@ -55,6 +55,7 @@ export function toGroup(wire: GroupWire): Group {
     lookupKey: wire.lookupKey ?? '',
     entityType,
     entityCount: wire.entityIds?.length ?? 0,
+    entityIds: wire.entityIds ?? [],
     status,
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -156,6 +157,73 @@ export function useDeleteGroup() {
       void queryClient.removeQueries({ queryKey: queryKeys.groups.detail(id) })
       // Members are filed by group id, so their lists can now be stale.
       void queryClient.invalidateQueries({ queryKey: queryKeys.features.all() })
+    },
+  })
+}
+
+/** One thing a group holds, named for the members table. */
+export interface GroupMemberRow {
+  id: string
+  name: string
+  detail: string
+}
+
+/**
+ * What a group holds, by name: its `entityIds` read back through the feature
+ * or price search, which both filter by id. Ids the search no longer returns
+ * (deleted since) are listed by id so the count still adds up.
+ */
+export function useGroupMembers(group: Group | undefined) {
+  const client = useFlexprice()
+  const ids = group?.entityIds ?? []
+
+  return useQuery({
+    queryKey: [...queryKeys.groups.detail(group?.id ?? ''), 'members', ids],
+    enabled: group !== undefined,
+    queryFn: async ({ signal }): Promise<GroupMemberRow[]> => {
+      if (!group || ids.length === 0) return []
+      const found = new Map<string, GroupMemberRow>()
+      if (group.entityType === GroupEntityType.Feature) {
+        const response = await call(
+          (options) =>
+            client.features.queryFeature({ featureIds: ids, limit: ids.length } as never, options),
+          signal,
+        )
+        for (const item of (response.items ?? []) as Array<{
+          id?: string
+          name?: string
+          type?: string
+        }>) {
+          if (!item.id) continue
+          const type = item.type ?? ''
+          found.set(item.id, {
+            id: item.id,
+            name: item.name || item.id,
+            detail: type ? type.charAt(0).toUpperCase() + type.slice(1).toLowerCase() : 'Feature',
+          })
+        }
+      } else {
+        const response = await call(
+          (options) =>
+            client.prices.queryPrice({ priceIds: ids, limit: ids.length } as never, options),
+          signal,
+        )
+        for (const item of (response.items ?? []) as Array<{
+          id?: string
+          displayName?: string
+          lookupKey?: string
+          type?: string
+          meter?: { name?: string }
+        }>) {
+          if (!item.id) continue
+          found.set(item.id, {
+            id: item.id,
+            name: item.displayName || item.meter?.name || item.lookupKey || item.id,
+            detail: item.type === 'USAGE' ? 'Usage price' : 'Fixed price',
+          })
+        }
+      }
+      return ids.map((id) => found.get(id) ?? { id, name: id, detail: 'Not found' })
     },
   })
 }

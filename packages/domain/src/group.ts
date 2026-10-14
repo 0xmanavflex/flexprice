@@ -48,6 +48,8 @@ export interface Group {
   entityType: GroupEntityType
   /** How many entities the group holds. */
   entityCount: number
+  /** The ids of what it holds: feature ids or price ids, by `entityType`. */
+  entityIds?: string[]
   status: GroupStatus
   createdAt: Date | null
   updatedAt: Date | null

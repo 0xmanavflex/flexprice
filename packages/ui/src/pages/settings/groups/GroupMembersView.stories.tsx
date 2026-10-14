@@ -36,7 +36,7 @@ export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(
-      canvas.getByText('The features in this group are not listed yet'),
+      canvas.getByText('Loading the features in this group'),
     ).toBeInTheDocument()
     await expect(canvas.queryByText('API requests')).toBeNull()
   },

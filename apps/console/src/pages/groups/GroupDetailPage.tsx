@@ -1,9 +1,9 @@
 import { useState } from 'react'
 import { GROUP_ENTITY_TYPE_LABEL } from '@fp/domain'
-import { useGroup } from '@fp/query'
+import { useDeleteGroup, useGroup, useGroupMembers } from '@fp/query'
 import { CatalogDetailFrame, CatalogStatusBadge, GroupMembersView, Pill } from '@fp/ui/pages'
-import { EditableCard } from '@fp/ui/compositions'
-import { LayersIcon, PencilIcon } from '@fp/ui/icons'
+import { ConfirmDialog, EditableCard } from '@fp/ui/compositions'
+import { LayersIcon, Trash2Icon } from '@fp/ui/icons'
 import { detailGate } from '../shared/detailGate'
 
 export interface GroupDetailPageProps {
@@ -12,21 +12,16 @@ export interface GroupDetailPageProps {
 }
 
 /**
- * One group, in full.
- *
- * A group exists to show its contents, so the page leads with the one number it
- * can honestly derive — how many members it holds, from the `entityIds` the
- * group model carries as a count — then lists the record and, where the members
- * themselves would go, an honest empty state.
- *
- * The members are a genuine empty state, not a stub dressed as one: V2 has no
- * member-entities read hook, so there is no way to enumerate them yet. The count
- * is real (it rides on the group), so it earns the rail; the list of who they
- * are is not, so the section says so plainly rather than inventing rows.
+ * One group, in full: what it holds (its `entityIds`, named through the
+ * feature or price search) and its record. The record is read-only because the
+ * API has no group update; a group can be deleted.
  */
 export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPageProps) {
   const group = useGroup(groupId)
+  const members = useGroupMembers(group.data)
+  const remove = useDeleteGroup()
   const [tab, setTab] = useState('members')
+  const [deleting, setDeleting] = useState(false)
 
   if (!group.data) {
     return detailGate(group, { noun: 'this group', listName: 'groups', onBack: onNavigateToList })
@@ -55,12 +50,14 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
       }
       id={data.lookupKey || data.id}
       menuLabel="Group actions"
+      // No edit item: the API has no group update, so the record is read-only.
       menu={[
         {
-          id: 'edit-details',
-          label: 'Edit details',
-          icon: <PencilIcon className="text-muted-foreground" aria-hidden />,
-          onSelect: () => setTab('information'),
+          id: 'delete',
+          label: 'Delete group',
+          icon: <Trash2Icon aria-hidden />,
+          destructive: true,
+          onSelect: () => setDeleting(true),
         },
       ]}
       tab={tab}
@@ -70,7 +67,9 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           value: 'members',
           label: noun,
           count: data.entityCount,
-          content: <GroupMembersView kind={kind} />,
+          content: (
+            <GroupMembersView kind={kind} {...(members.data ? { members: members.data } : {})} />
+          ),
         },
         {
           value: 'information',
@@ -115,7 +114,24 @@ export function GroupDetailPage({ groupId, onNavigateToList }: GroupDetailPagePr
           ),
         },
       ]}
-    />
+    >
+      <ConfirmDialog
+        open={deleting}
+        onOpenChange={(open) => {
+          if (!open) {
+            setDeleting(false)
+            remove.reset()
+          }
+        }}
+        title={`Delete ${data.name}?`}
+        description="The group is removed and its members are no longer grouped. The features or prices themselves are not changed."
+        confirmLabel="Delete group"
+        destructive
+        isPending={remove.isPending}
+        error={remove.isError ? 'Could not delete the group. Try again.' : null}
+        onConfirm={() => remove.mutate(data.id, { onSuccess: onNavigateToList })}
+      />
+    </CatalogDetailFrame>
   )
 }
 

@@ -175,6 +175,7 @@ export {
   toGroup,
   toGroupFilter,
   useGroup,
+  useGroupMembers,
   useGroups,
   toCreateGroupRequest,
   useCreateGroup,

@@ -42,6 +42,9 @@ interface SearchBody {
   }[]
   subscription_ids?: string[]
   subscriptionIds?: string[]
+  /** A group's price members, read back by id. */
+  price_ids?: string[]
+  priceIds?: string[]
   /** The customer list's contract counts: every contract of these customers. */
   customer_ids?: string[]
   customerIds?: string[]
@@ -148,6 +151,9 @@ function page(source: Corpus, body: SearchBody) {
   const customerIds = body.customer_ids ?? body.customerIds
   if (customerIds?.length)
     rows = rows.filter((row) => customerIds.includes(readString(row, 'customer_id')))
+
+  const priceIds = body.price_ids ?? body.priceIds
+  if (priceIds?.length) rows = rows.filter((row) => priceIds.includes(readString(row, 'id')))
 
   const ids = body.feature_ids ?? body.featureIds
   if (ids?.length) rows = rows.filter((row) => ids.includes(readString(row, 'id')))
@@ -3207,6 +3213,12 @@ export const handlers = [
       pagination: { total: groupStore.length, limit: 25, offset: 0 },
     }),
   ),
+  http.get(`${BASE}/groups/:id`, ({ params }) => {
+    const row = groupStore.find((item) => readString(item, 'id') === params['id'])
+    return row
+      ? HttpResponse.json(row)
+      : HttpResponse.json({ error: { message: 'group not found' } }, { status: 404 })
+  }),
   http.post(`${BASE}/costs/search`, () =>
     HttpResponse.json({
       items: costSheetStore,
