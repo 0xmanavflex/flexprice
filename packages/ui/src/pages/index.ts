@@ -38,7 +38,7 @@ export {
   CustomerDetail,
   CustomerDetailProvenance,
 } from './customers/CustomerDetail'
-export type { CustomerDetailProps, CustomerTab } from './customers/CustomerDetail'
+export type { CustomerDetailProps, CustomerTab, InvoiceRowAction } from './customers/CustomerDetail'
 export { InvoiceGrid, InvoiceGridProvenance } from './billing/invoices/InvoiceGrid'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
 export { InvoiceForm, InvoiceFormProvenance } from './billing/invoices/InvoiceForm'

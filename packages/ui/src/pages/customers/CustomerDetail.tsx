@@ -37,6 +37,7 @@ import { EntityHeader } from '../shared/EntityHeader'
 import { provenance } from '@ui/provenance'
 import { EmDash, EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
+import { RowActionsMenu } from '../shared/RowActionsMenu'
 import { IntegrationMark, IntegrationMarks } from './IntegrationMark'
 import { CopyValue } from '../shared/CopyValue'
 
@@ -64,7 +65,7 @@ export const CustomerDetailProvenance = provenance({
 })
 
 /** How many invoices the customer page asks for; at this count the list may be cut. */
-export const CUSTOMER_INVOICES_LIMIT = 50
+export const CUSTOMER_INVOICES_LIMIT = 200
 
 export type CustomerTab = 'overview' | 'invoices' | 'wallet' | 'usage' | 'events' | 'information'
 
@@ -103,6 +104,11 @@ export interface CustomerDetailProps {
   onUpdateMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   /** Open an invoice from a row action. */
   onOpenInvoice?: (invoiceId: string) => void
+  /**
+   * The Invoices tab's row menu for one invoice — finalize, record payment,
+   * void… The page decides which apply; a destructive one sits last, apart.
+   */
+  invoiceActions?: (invoice: Invoice) => InvoiceRowAction[]
   /** The "View all" beside Recent payments. Omitted, the button is not shown. */
   onViewAllPayments?: () => void
   onOpenPlan?: (planId: string) => void
@@ -179,6 +185,7 @@ export function CustomerDetail({
   onUpdateField,
   onUpdateMetadata,
   onOpenInvoice,
+  invoiceActions,
   onViewAllPayments,
   onOpenPlan,
   onOpenContract,
@@ -325,6 +332,7 @@ export function CustomerDetail({
               onRetry={onRetryInvoices}
               formatDate={formatDate}
               onOpenInvoice={onOpenInvoice}
+              {...(invoiceActions ? { actions: invoiceActions } : {})}
               {...(onCreateInvoice
                 ? {
                     action: (
@@ -813,6 +821,13 @@ function ContractsTable({
   )
 }
 
+/** One item of an invoice row's menu. */
+export interface InvoiceRowAction {
+  label: string
+  onSelect: () => void
+  destructive?: boolean
+}
+
 /** The document state of an invoice: Draft, Finalized or Void. */
 function invoiceDocument(invoice: Invoice): string {
   if (invoice.status === InvoiceStatus.Draft) return 'Draft'
@@ -846,6 +861,7 @@ function InvoiceTable({
   formatDate,
   onOpenInvoice,
   action,
+  actions,
 }: {
   /** The short list on the Overview: no toolbar. */
   compactList?: boolean
@@ -857,6 +873,8 @@ function InvoiceTable({
   onOpenInvoice: ((invoiceId: string) => void) | undefined
   /** Sits on the toolbar, to the right of the filter. Omitted on the short overview list. */
   action?: ReactNode
+  /** Each row's menu; omitted, rows have none. */
+  actions?: (invoice: Invoice) => InvoiceRowAction[]
 }) {
   // Rows win; otherwise a failed read is an error with retry, a pending one a
   // skeleton, and only a finished empty read says "no invoices".
@@ -948,6 +966,32 @@ function InvoiceTable({
             sortBy: (invoice) => Number(invoice.total.amount),
             cell: (invoice) => <Money value={invoice.total} />,
           },
+          ...(actions
+            ? [
+                {
+                  key: 'actions',
+                  header: '',
+                  width: 56,
+                  cell: (invoice: Invoice) => {
+                    const items = actions(invoice)
+                    if (items.length === 0) return null
+                    const removal = items.find((item) => item.destructive)
+                    return (
+                      // The menu is its own control: a click on it must not open the row.
+                      <div onClick={(event) => event.stopPropagation()}>
+                        <RowActionsMenu
+                          label={invoice.number || 'invoice'}
+                          extra={items.filter((item) => !item.destructive)}
+                          {...(removal
+                            ? { onRemove: removal.onSelect, removeLabel: removal.label }
+                            : {})}
+                        />
+                      </div>
+                    )
+                  },
+                },
+              ]
+            : []),
         ]}
       />
       {capped ? <p className="text-muted-foreground border-t px-6 py-3 text-xs">{capped}</p> : null}

@@ -283,7 +283,7 @@ export function useCustomerInvoices(externalId: string) {
   return useQuery<InvoicePage>({
     queryKey: queryKeys.invoices.list({ externalCustomerId: externalId }),
     queryFn: () =>
-      fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, search: externalId, pageSize: 50 }),
+      fetchInvoices(client, { ...DEFAULT_INVOICE_QUERY, search: externalId, pageSize: 200 }),
     enabled: externalId.length > 0,
   })
 }

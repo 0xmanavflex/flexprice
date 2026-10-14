@@ -1,21 +1,13 @@
-import { useState } from 'react'
 import {
   DEFAULT_CUSTOMER_QUERY,
-  InvoiceStatus,
   type Invoice,
   type InvoiceQuery,
   isStoredInvoiceStatus,
 } from '@fp/domain'
-import {
-  useCustomers,
-  useFinalizeInvoice,
-  useInvoices,
-  useRecalculateInvoice,
-  useSendInvoice,
-  useVoidInvoice,
-} from '@fp/query'
-import { InvoiceGrid, Toaster, toast } from '@fp/ui/pages'
-import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
+import { useCustomers, useInvoices } from '@fp/query'
+import { InvoiceGrid, Toaster } from '@fp/ui/pages'
+import { ListState, PageBody } from '@fp/ui/compositions'
+import { useInvoiceRowActions } from './useInvoiceRowActions'
 import { toListFailure } from '../shared/listFailure'
 
 export interface InvoiceListPageProps {
@@ -51,63 +43,11 @@ export function InvoiceListPage({
   onIssueCreditNote,
 }: InvoiceListPageProps) {
   const invoices = useInvoices(query)
-  const finalize = useFinalizeInvoice()
-  const recalculate = useRecalculateInvoice()
-  const send = useSendInvoice()
-  const voidInvoice = useVoidInvoice()
-  const [voiding, setVoiding] = useState<Invoice | null>(null)
-
-  /** One request from the row menu, reported in a toast. */
-  const run = (
-    action: {
-      mutate: (id: string, options: { onSuccess: () => void; onError: () => void }) => void
-    },
-    invoice: Invoice,
-    done: string,
-    verb: string,
-  ) =>
-    action.mutate(invoice.id, {
-      onSuccess: () => toast(done),
-      onError: () => toast.error(`Could not ${verb}. Try again.`),
-    })
-
-  /** V1's row menu, offered only where the invoice's status allows it. */
-  const extraActions = (invoice: Invoice) => {
-    const items = []
-    const open = invoice.status === InvoiceStatus.Open || invoice.status === InvoiceStatus.Overdue
-    if (invoice.status === InvoiceStatus.Draft) {
-      items.push(
-        {
-          label: 'Finalize',
-          onSelect: () => run(finalize, invoice, 'Invoice finalized', 'finalize the invoice'),
-        },
-        {
-          label: 'Recalculate',
-          onSelect: () =>
-            run(recalculate, invoice, 'Invoice recalculated', 'recalculate the invoice'),
-        },
-      )
-    }
-    if (open && onRecordPayment) {
-      items.push({ label: 'Record payment', onSelect: () => onRecordPayment(invoice.id) })
-    }
-    if (invoice.status !== InvoiceStatus.Draft && invoice.status !== InvoiceStatus.Void) {
-      items.push({
-        label: 'Send to customer',
-        onSelect: () => run(send, invoice, 'Invoice sent to the customer', 'send the invoice'),
-      })
-      if (onIssueCreditNote) {
-        items.push({ label: 'Issue credit note', onSelect: () => onIssueCreditNote(invoice.id) })
-      }
-    }
-    if (onOpenCustomer && invoice.customerId) {
-      items.push({ label: 'View customer', onSelect: () => onOpenCustomer(invoice.customerId) })
-    }
-    if (open) {
-      items.push({ label: 'Void invoice', destructive: true, onSelect: () => setVoiding(invoice) })
-    }
-    return items
-  }
+  const { actionsFor, dialogs } = useInvoiceRowActions({
+    onRecordPayment,
+    onIssueCreditNote,
+    onOpenCustomer,
+  })
 
   const isFiltered =
     query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
@@ -190,31 +130,14 @@ export function InvoiceListPage({
             {...(isPageLocal ? { pageLocal: { fetchedCount: fetched.length } } : {})}
             {...(onCreate ? { onCreate } : {})}
             {...(onInvoiceClick ? { onInvoiceClick } : {})}
-            extraActions={extraActions}
+            extraActions={actionsFor}
             {...(onOpenCustomer ? { onOpenCustomer } : {})}
             onClearFilters={clearFilters}
           />
         </ListState>
       </PageBody>
 
-      <ConfirmDialog
-        open={voiding !== null}
-        onOpenChange={(next) => {
-          if (!next) {
-            setVoiding(null)
-            voidInvoice.reset()
-          }
-        }}
-        title={`Void ${voiding?.number || 'this invoice'}?`}
-        description="A voided invoice is no longer owed. This cannot be undone."
-        confirmLabel="Void invoice"
-        destructive
-        isPending={voidInvoice.isPending}
-        error={voidInvoice.isError ? 'Could not void the invoice. Try again.' : null}
-        onConfirm={() => {
-          if (voiding) voidInvoice.mutate(voiding.id, { onSuccess: () => setVoiding(null) })
-        }}
-      />
+      {dialogs}
       <Toaster />
     </>
   )

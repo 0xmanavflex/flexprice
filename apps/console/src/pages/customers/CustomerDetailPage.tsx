@@ -10,12 +10,13 @@ import {
   useDeleteCustomer,
   useUpdateCustomer,
 } from '@fp/query'
-import { CUSTOMER_TABS, CustomerDetail, QuotaCard, type CustomerTab } from '@fp/ui/pages'
+import { CUSTOMER_TABS, CustomerDetail, QuotaCard, Toaster, type CustomerTab } from '@fp/ui/pages'
 import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { AppFailure, ConfirmDialog, EmptyState, LoadingRows, Section } from '@fp/ui/compositions'
 import { detailGate } from '@/pages/shared/detailGate'
+import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
 
 /**
  * Turns whatever is in `?tab=` into a real section, defaulting to Overview.
@@ -71,6 +72,13 @@ export function CustomerDetailPage({
   const remove = useDeleteCustomer()
   const [archiving, setArchiving] = useState(false)
   const navigate = useNavigate()
+  // The customer is already on screen, so the menu leaves out "View customer".
+  const invoiceRows = useInvoiceRowActions({
+    onRecordPayment: (invoiceId) =>
+      void navigate({ to: '/payments/new', search: { invoice: invoiceId } }),
+    onIssueCreditNote: (invoiceId) =>
+      void navigate({ to: '/credit-notes/new', search: { invoice: invoiceId } }),
+  })
 
   if (!customer.data) {
     return detailGate(customer, {
@@ -103,6 +111,7 @@ export function CustomerDetailPage({
         onOpenInvoice={(invoiceId) =>
           void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
         }
+        invoiceActions={invoiceRows.actionsFor}
         onViewAllPayments={() => void navigate({ to: '/payments', search: {} as never })}
         onOpenPlan={(planId) =>
           void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
@@ -191,6 +200,8 @@ export function CustomerDetailPage({
         destructive
         error={remove.error ? 'Could not archive the customer. Try again.' : null}
       />
+      {invoiceRows.dialogs}
+      <Toaster />
     </>
   )
 }
