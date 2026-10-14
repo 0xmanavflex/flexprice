@@ -125,6 +125,7 @@ export { ConfirmDialog, ConfirmDialogProvenance } from './feedback/ConfirmDialog
 export type { ConfirmDialogProps } from './feedback/ConfirmDialog'
 
 export { FormDialog, FormDialogProvenance } from './forms/FormDialog'
+export { useCalmForm } from './forms/useCalmForm'
 export type { FormDialogProps } from './forms/FormDialog'
 export { FormActions, FormActionsProvenance } from './forms/FormActions'
 export type { FormActionsProps } from './forms/FormActions'
