@@ -335,15 +335,37 @@ reason V1 documents.
 **Do not port `VITE_AUTH_PROVIDER` or `VITE_APP_ENV=self-hosted`.** They are the
 precise mistake. Both are dead code in V1 and the drift they allow is undetectable.
 
-**Do not put supabase-js in the console.** It is tempting because V1's hosted path
-does it, but this console has already proved the backend-brokered path works
-against hosted. Adding the browser client back buys one thing — Google OAuth — and
-costs: two token lifecycles, two storage keys, a per-deployment project URL and
-anon key in the bundle, and the GoTrue redirect-allowlist burden V1 documents at
-length in `.env.example` and `utils/auth/authRedirect.ts` (a missing origin is not
-an error — GoTrue silently substitutes Site URL, so it surfaces only as an email
-link pointing at the wrong host). Broker Google server-side instead, in the same
-shape as SAML.
+**supabase-js in the console: decided, and scoped.** This was listed here as a
+non-goal. It was overruled on 2026-10-14 (§5.1), because password reset has no
+backend to call on any provider (§1.3) and waiting for one would mean shipping a
+console with no reset at all.
+
+What makes that affordable is the scope. `app/auth/passwordReset.ts` uses the
+client for two calls — request a reset email, set the new password — and nothing
+else. `persistSession` and `autoRefreshToken` are **off**, so supabase-js writes
+no storage and refreshes nothing; the momentary session the recovery link mints
+is signed out as soon as the password is set. Sign-in stays `POST /auth/login`
+and the session stays `SessionProvider`'s.
+
+That is the line to hold. The costs originally listed here are all real and all
+arrive the moment the client grows past those two calls:
+
+- **Two token lifecycles and two storage keys** — avoided only by
+  `persistSession: false`. Turning it on makes supabase-js a second session, and
+  the console's idea of who is signed in starts depending on which one you ask.
+- **The redirect allowlist.** Every origin — both region dashboards, localhost,
+  every preview deploy — must be in the Supabase project's Redirect URLs. A
+  missing entry is not an error: GoTrue substitutes the project's Site URL and
+  returns success, so it surfaces only as a link in someone's inbox pointing at
+  the wrong host.
+- **It does not cover self-hosted.** A `flexprice`-provider install has no
+  Supabase, so it still has no password reset. The console reports this honestly
+  rather than showing a link that cannot work, but the gap is real and only
+  brokering (§4, phase 3) closes it.
+
+**Google is still not this.** Reset was worth the exception because there is no
+alternative; Google has one — broker it server-side, in the same shape as SAML.
+There is no user-facing Google route on the backend at all today.
 
 **Do not let the capabilities probe gate sign-in.** Password-only is the correct
 fallback for every failure mode.
@@ -395,10 +417,11 @@ password-only, which is what it is today.
 
 ## 5. Decisions needed
 
-1. **Password reset (§1.3)** — broker it server-side, or supabase-js in the
-   browser? Recommendation: **broker**. It is the only option that works on
-   self-hosted, it keeps the browser free of a second token lifecycle, and the
-   Supabase client methods the backend needs are already in hand.
+1. ~~**Password reset (§1.3)**~~ — **decided 2026-10-14: supabase-js in the
+   browser**, shipped in `c153ac4`. Brokering was recommended and was not
+   chosen; it remains phase 3, and remains the only thing that gives self-hosted
+   a password reset. The browser client is scoped to two calls and holds no
+   session — see §3.
 2. **Token storage** — `localStorage` today. The access token is XSS-readable
    and now longer-lived (§1.1). An `httpOnly` refresh cookie plus an in-memory
    access token is the better destination; it needs cross-origin cookie, CORS
