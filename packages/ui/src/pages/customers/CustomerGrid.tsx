@@ -178,7 +178,7 @@ export function CustomerGrid({
       {
         id: 'integrations',
         header: 'Integrations',
-        width: 280,
+        width: 140,
         text: (row) =>
           row.integrations
             .map((integration) =>
