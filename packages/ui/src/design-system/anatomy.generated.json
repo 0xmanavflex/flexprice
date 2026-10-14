@@ -93,6 +93,7 @@
       "file": "src/pages/product-catalog/addons/AddonGrid.tsx",
       "layer": "surface",
       "composes": [
+        "ArchiveIcon",
         "BookOpenIcon",
         "CopyIcon",
         "EntityList",
@@ -142,6 +143,7 @@
         "ArcGauge",
         "ArrowUpRightIcon",
         "BlurredEmpty",
+        "Calendar",
         "CalendarIcon",
         "ChartSkeleton",
         "DataFreshness",
@@ -215,10 +217,12 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AddonGrid",
         "CouponGrid",
         "CustomerDetail",
         "FeatureDetailView",
-        "PlanGrid"
+        "PlanGrid",
+        "PriceUnitGrid"
       ],
       "story": null
     },
@@ -420,6 +424,20 @@
       "layer": "vendor/blocks",
       "composes": [],
       "usedBy": [],
+      "story": null
+    },
+    "AuthFrame": {
+      "file": "src/pages/auth/AuthFrame.tsx",
+      "layer": "surface",
+      "composes": [
+        "ReviewPanel"
+      ],
+      "usedBy": [
+        "GoogleButton",
+        "SignInScreen",
+        "SignUpScreen",
+        "SwitchLine"
+      ],
       "story": null
     },
     "AuthGridBackground": {
@@ -652,8 +670,12 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ApiCard",
+        "DashboardHome",
         "DateInput",
-        "InvoiceForm"
+        "FilterBar",
+        "InvoiceForm",
+        "UsageCard"
       ],
       "story": null
     },
@@ -848,6 +870,7 @@
         "OverviewTiles",
         "PlanPreviewCard",
         "Properties",
+        "RegionField",
         "SegmentMeter",
         "SimpleTable",
         "SplitMeter",
@@ -1087,6 +1110,7 @@
         "CustomerTaxSection",
         "CustomerWalletView",
         "ManageConnectionSheet",
+        "SubscriptionDetailView",
         "TaxDialog",
         "WebhookEndpointDetail"
       ],
@@ -1330,10 +1354,7 @@
       ],
       "usedBy": [
         "CustomerDetail",
-        "CustomerGrid",
-        "IntegrationChips",
-        "IntegrationMark",
-        "IntegrationMarks"
+        "CustomerGrid"
       ],
       "story": null
     },
@@ -1609,6 +1630,7 @@
         "PencilIcon",
         "Pill",
         "PlusIcon",
+        "RowActionsMenu",
         "Section",
         "Status",
         "SubTabState",
@@ -1688,6 +1710,7 @@
         "ChoiceCards",
         "Composer",
         "ConfirmDialog",
+        "DateInput",
         "EmptyState",
         "Field",
         "FormDialog",
@@ -1700,7 +1723,8 @@
         "SplitMeter",
         "SubTabState",
         "WalletIcon",
-        "WalletLedgerTable"
+        "WalletLedgerTable",
+        "WalletTransactionsTable"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerWalletView.stories.tsx"
@@ -1719,6 +1743,7 @@
         "ArcGauge",
         "ArrowUpRightIcon",
         "BlurredEmpty",
+        "Calendar",
         "CalendarIcon",
         "ChartSkeleton",
         "DataFreshness",
@@ -1800,6 +1825,7 @@
         "CouponCreateForm",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
+        "CustomerWalletView",
         "SubscriptionForm"
       ],
       "story": "./src/compositions/forms/DateInput.stories.tsx"
@@ -1950,12 +1976,14 @@
         "FeatureDetailView",
         "GroupMembersView",
         "InvoiceDetailView",
+        "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "RevenueDashboard",
         "SubscriptionDetailView",
         "TaxDialog",
         "WalletLedgerTable",
+        "WalletTransactionsTable",
         "WebhookEndpointDetail"
       ],
       "story": "./src/pages/shared/DetailTable.stories.tsx"
@@ -2116,7 +2144,6 @@
         "EventGrid",
         "EventTypeName",
         "FeatureGrid",
-        "PaymentGrid",
         "PlanEntitlementsView",
         "PlanGrid",
         "WebhookMessageSheet",
@@ -2432,6 +2459,7 @@
         "AcceptInvitationForm",
         "CustomerDetail",
         "SignInForm",
+        "SignUpScreen",
         "SpecField",
         "SyncOptions",
         "WebhookEndpointDetail",
@@ -2590,7 +2618,10 @@
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
         "PriceOverrideForm",
+        "RegionField",
+        "SetPasswordForm",
         "SignInForm",
+        "SignUpScreen",
         "SpecField",
         "SyncOptions",
         "UsageTermsFields",
@@ -2665,6 +2696,7 @@
       "file": "src/compositions/tables/FilterBar.tsx",
       "layer": "composition",
       "composes": [
+        "Calendar",
         "Filters"
       ],
       "usedBy": [
@@ -2950,6 +2982,18 @@
       ],
       "story": "./src/compositions/forms/FormDisclosure.stories.tsx"
     },
+    "FormHead": {
+      "file": "src/pages/auth/AuthFrame.tsx",
+      "layer": "surface",
+      "composes": [
+        "ReviewPanel"
+      ],
+      "usedBy": [
+        "SignInForm",
+        "SignUpScreen"
+      ],
+      "story": null
+    },
     "FormPage": {
       "file": "src/compositions/forms/FormPage.tsx",
       "layer": "composition",
@@ -3093,6 +3137,18 @@
         "SubscriptionStatusBadge"
       ],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
+    },
+    "GoogleButton": {
+      "file": "src/pages/auth/SignInScreen.tsx",
+      "layer": "surface",
+      "composes": [
+        "AuthFrame",
+        "SignInForm"
+      ],
+      "usedBy": [
+        "SignUpScreen"
+      ],
+      "story": "./src/pages/auth/SignInScreen.stories.tsx"
     },
     "GridFooter": {
       "file": "src/compositions/tables/GridFooter.tsx",
@@ -3327,9 +3383,7 @@
     "IntegrationChips": {
       "file": "src/pages/customers/IntegrationMark.tsx",
       "layer": "surface",
-      "composes": [
-        "CopyValue"
-      ],
+      "composes": [],
       "usedBy": [
         "CustomerGrid"
       ],
@@ -3351,9 +3405,7 @@
     "IntegrationMark": {
       "file": "src/pages/customers/IntegrationMark.tsx",
       "layer": "surface",
-      "composes": [
-        "CopyValue"
-      ],
+      "composes": [],
       "usedBy": [
         "ContractIntegrations",
         "CustomerDetail"
@@ -3363,9 +3415,7 @@
     "IntegrationMarks": {
       "file": "src/pages/customers/IntegrationMark.tsx",
       "layer": "surface",
-      "composes": [
-        "CopyValue"
-      ],
+      "composes": [],
       "usedBy": [
         "CustomerDetail"
       ],
@@ -3581,7 +3631,6 @@
         "CustomerWalletView",
         "EnvironmentForm",
         "InvoiceForm",
-        "SignInForm",
         "TaxDialog"
       ],
       "story": "./src/compositions/forms/LabelWithHint.stories.tsx"
@@ -4014,7 +4063,6 @@
         "FeatureTypePill",
         "Formula",
         "Pill",
-        "RevenueDashboard",
         "Status",
         "UsageCard"
       ],
@@ -4327,7 +4375,6 @@
       "composes": [
         "CopyIcon",
         "CreditCardIcon",
-        "EmDash",
         "EntityList"
       ],
       "usedBy": [],
@@ -4418,6 +4465,13 @@
       "usedBy": [],
       "story": null
     },
+    "PhotoGround": {
+      "file": "src/pages/auth/ReviewPanel.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
     "Pill": {
       "file": "src/pages/shared/cells.tsx",
       "layer": "surface",
@@ -4497,6 +4551,7 @@
       "file": "src/pages/product-catalog/plans/PlanChargesView.tsx",
       "layer": "surface",
       "composes": [
+        "DetailTable",
         "ErrorState",
         "LoadingRows",
         "PlusIcon",
@@ -4768,6 +4823,7 @@
       "file": "src/pages/settings/price-units/PriceUnitGrid.tsx",
       "layer": "surface",
       "composes": [
+        "ArchiveIcon",
         "BookOpenIcon",
         "CopyIcon",
         "EntityList",
@@ -4909,6 +4965,16 @@
       "usedBy": [],
       "story": "./src/compositions/feedback/DataBoundary.stories.tsx"
     },
+    "RegionField": {
+      "file": "src/pages/auth/RegionField.tsx",
+      "layer": "surface",
+      "composes": [
+        "CheckIcon",
+        "Field"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/auth/RegionField.stories.tsx"
+    },
     "RelatedCard": {
       "file": "src/compositions/detail/RelatedCard.tsx",
       "layer": "composition",
@@ -4974,7 +5040,6 @@
         "DetailTable",
         "HalfDonut",
         "MetricChart",
-        "Money",
         "Panel",
         "RetryAction",
         "SkeletonRegion",
@@ -4983,6 +5048,16 @@
       ],
       "usedBy": [],
       "story": "./src/pages/revenue/RevenueDashboard.stories.tsx"
+    },
+    "ReviewPanel": {
+      "file": "src/pages/auth/ReviewPanel.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [
+        "AuthFrame",
+        "FormHead"
+      ],
+      "story": null
     },
     "RightIcon": {
       "file": "src/reui/icons/default/filled/right.tsx",
@@ -5040,6 +5115,7 @@
       "usedBy": [
         "ChargeTable",
         "CreditGrantTable",
+        "CustomerDetail",
         "EntitlementTable",
         "PlanChargesView",
         "PlanCreditGrantsView",
@@ -5197,6 +5273,15 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "SetPasswordForm": {
+      "file": "src/pages/auth/SetPasswordForm.tsx",
+      "layer": "surface",
+      "composes": [
+        "Field"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/auth/SetPasswordForm.stories.tsx"
     },
     "SettingRow": {
       "file": "src/components/blocks/settings-7/components/setting-row.tsx",
@@ -5406,10 +5491,12 @@
       "composes": [
         "EyeIcon",
         "Field",
-        "LabelWithHint"
+        "FormHead"
       ],
       "usedBy": [
-        "SignInScreen"
+        "GoogleButton",
+        "SignInScreen",
+        "SwitchLine"
       ],
       "story": "./src/pages/auth/SignInForm.stories.tsx"
     },
@@ -5417,12 +5504,25 @@
       "file": "src/pages/auth/SignInScreen.tsx",
       "layer": "surface",
       "composes": [
-        "SignInForm",
-        "Source",
-        "WaveDots"
+        "AuthFrame",
+        "SignInForm"
       ],
       "usedBy": [],
       "story": "./src/pages/auth/SignInScreen.stories.tsx"
+    },
+    "SignUpScreen": {
+      "file": "src/pages/auth/SignUpScreen.tsx",
+      "layer": "surface",
+      "composes": [
+        "AuthFrame",
+        "EyeIcon",
+        "Field",
+        "FormHead",
+        "GoogleButton",
+        "SwitchLine"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/auth/SignUpScreen.stories.tsx"
     },
     "SimpleTable": {
       "file": "src/compositions/detail/DetailKit.tsx",
@@ -5520,7 +5620,6 @@
       "composes": [],
       "usedBy": [
         "SettingsShell",
-        "SignInScreen",
         "ThemeChoiceCards",
         "ThemePreferenceCards"
       ],
@@ -5664,6 +5763,7 @@
       "layer": "surface",
       "composes": [
         "ActivitySection",
+        "ConfirmDialog",
         "ContractChargeDialog",
         "ContractIntegrations",
         "ContractQuantityDialog",
@@ -5714,7 +5814,8 @@
         "BookOpenIcon",
         "CopyIcon",
         "EntityList",
-        "PlusIcon"
+        "PlusIcon",
+        "UserIcon"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionGrid.stories.tsx"
@@ -5787,6 +5888,18 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "SwitchLine": {
+      "file": "src/pages/auth/SignInScreen.tsx",
+      "layer": "surface",
+      "composes": [
+        "AuthFrame",
+        "SignInForm"
+      ],
+      "usedBy": [
+        "SignUpScreen"
+      ],
+      "story": "./src/pages/auth/SignInScreen.stories.tsx"
     },
     "SyncOptions": {
       "file": "src/pages/integrations/ConnectionFields.tsx",
@@ -6076,6 +6189,7 @@
         "ArcGauge",
         "ArrowUpRightIcon",
         "BlurredEmpty",
+        "Calendar",
         "CalendarIcon",
         "ChartSkeleton",
         "DataFreshness",
@@ -6156,7 +6270,8 @@
       "composes": [],
       "usedBy": [
         "CustomerGrid",
-        "ShellAccount"
+        "ShellAccount",
+        "SubscriptionGrid"
       ],
       "story": null
     },
@@ -6232,13 +6347,22 @@
       ],
       "story": null
     },
+    "WalletTransactionsTable": {
+      "file": "src/pages/customers/WalletLedgerTable.tsx",
+      "layer": "surface",
+      "composes": [
+        "DetailTable"
+      ],
+      "usedBy": [
+        "CustomerWalletView"
+      ],
+      "story": null
+    },
     "WaveDots": {
       "file": "src/components/blocks/auth-11/components/wave-dots.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "SignInScreen"
-      ],
+      "usedBy": [],
       "story": null
     },
     "Waypoints": {
@@ -7022,6 +7146,21 @@
         "ForgotPasswordForm"
       ]
     },
+    "./src/pages/auth/RegionField.stories.tsx": {
+      "title": "App/Sign-in/Region field",
+      "component": null,
+      "uses": [
+        "RegionField",
+        "SignInScreen"
+      ]
+    },
+    "./src/pages/auth/SetPasswordForm.stories.tsx": {
+      "title": "Pages/Auth/SetPasswordForm",
+      "component": "SetPasswordForm",
+      "uses": [
+        "SetPasswordForm"
+      ]
+    },
     "./src/pages/auth/SignInForm.stories.tsx": {
       "title": "App/Sign-in/Sign-in form",
       "component": "SignInForm",
@@ -7034,6 +7173,13 @@
       "component": "SignInScreen",
       "uses": [
         "SignInScreen"
+      ]
+    },
+    "./src/pages/auth/SignUpScreen.stories.tsx": {
+      "title": "App/Sign-in/Sign-up screen",
+      "component": "SignUpScreen",
+      "uses": [
+        "SignUpScreen"
       ]
     },
     "./src/pages/billing/credit-notes/CreditNoteForm.stories.tsx": {
@@ -7522,7 +7668,6 @@
         "PencilIcon",
         "PlanChargesView",
         "PlanCreditGrantsView",
-        "PlanCustomerPreview",
         "PlanEntitlementsView",
         "Properties",
         "Section",
@@ -7968,7 +8113,6 @@
         "ArchiveIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
-        "ChargeTable",
         "ConfirmDialog",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
@@ -7978,6 +8122,7 @@
         "EntitlementEditForm",
         "EntitlementTable",
         "FormDialog",
+        "MetadataCard",
         "PencilIcon",
         "Pill"
       ]
@@ -7999,8 +8144,27 @@
       "route": "/addons",
       "uses": [
         "AddonGrid",
+        "ConfirmDialog",
         "ListState",
         "PageBody"
+      ]
+    },
+    "ForgotPasswordPage": {
+      "file": "apps/console/src/pages/auth/ForgotPasswordPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "AuthFrame",
+        "ForgotPasswordForm"
+      ]
+    },
+    "ResetPasswordPage": {
+      "file": "apps/console/src/pages/auth/ResetPasswordPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "AuthFrame",
+        "SetPasswordForm"
       ]
     },
     "SignInPage": {
@@ -8008,7 +8172,17 @@
       "pattern": "Other",
       "route": "/sign-in",
       "uses": [
+        "RegionField",
         "SignInScreen"
+      ]
+    },
+    "SignUpPage": {
+      "file": "apps/console/src/pages/auth/SignUpPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "RegionField",
+        "SignUpScreen"
       ]
     },
     "CostSheetDetailPage": {
@@ -8020,7 +8194,6 @@
         "CalculatorIcon",
         "CatalogDetailFrame",
         "CatalogStatusBadge",
-        "ChargeTable",
         "ConfirmDialog",
         "CostMarginCard",
         "EditableCard",
@@ -8088,6 +8261,7 @@
       "pattern": "List",
       "route": "/coupons",
       "uses": [
+        "ConfirmDialog",
         "CouponGrid",
         "ListState",
         "PageBody"
@@ -8235,9 +8409,9 @@
       "uses": [
         "CatalogDetailFrame",
         "CatalogStatusBadge",
+        "ConfirmDialog",
         "EditableCard",
         "GroupMembersView",
-        "PencilIcon",
         "Pill"
       ]
     },
@@ -8295,15 +8469,27 @@
       "route": "/invoices/$invoiceId",
       "uses": [
         "ConfirmDialog",
-        "InvoiceDetailView"
+        "InvoiceDetailView",
+        "OptionSelect"
+      ]
+    },
+    "InvoiceEditPage": {
+      "file": "apps/console/src/pages/invoices/InvoiceEditPage.tsx",
+      "pattern": "Form",
+      "route": "/invoices/$invoiceId/edit",
+      "uses": [
+        "AppFailure",
+        "Field",
+        "LoadingRows",
+        "PageBody",
+        "Section"
       ]
     },
     "InvoiceFormPage": {
       "file": "apps/console/src/pages/invoices/InvoiceFormPage.tsx",
       "pattern": "Form",
-      "route": "/invoices/$invoiceId/edit",
+      "route": "/invoices/new",
       "uses": [
-        "AppFailure",
         "InvoiceForm",
         "LoadingRows",
         "PageBody"
@@ -8330,6 +8516,7 @@
         "CreditCardIcon",
         "EditableCard",
         "EntityLink",
+        "IntegrationMark",
         "LoadingRows",
         "PageBody",
         "PaymentStatusBadge",
@@ -8341,6 +8528,8 @@
       "pattern": "Form",
       "route": "/payments/new",
       "uses": [
+        "LoadingRows",
+        "PageBody",
         "PaymentForm"
       ]
     },
@@ -8372,11 +8561,11 @@
         "EntitlementCreateForm",
         "EntitlementEditForm",
         "FormDialog",
+        "MetadataCard",
         "PencilIcon",
         "Pill",
         "PlanChargesView",
         "PlanCreditGrantsView",
-        "PlanCustomerPreview",
         "PlanEntitlementsView",
         "Status"
       ]
@@ -8397,6 +8586,7 @@
       "pattern": "List",
       "route": "/plans",
       "uses": [
+        "ConfirmDialog",
         "ListState",
         "PageBody",
         "PlanGrid"
@@ -8412,6 +8602,7 @@
         "CatalogStatusBadge",
         "ConfirmDialog",
         "EditableCard",
+        "MetadataCard",
         "PencilIcon",
         "Pill",
         "Section"
@@ -8430,6 +8621,7 @@
       "pattern": "List",
       "route": "/price-units",
       "uses": [
+        "ConfirmDialog",
         "ListState",
         "PageBody",
         "PriceUnitGrid"
@@ -8495,7 +8687,9 @@
       "pattern": "List",
       "route": "/subscriptions",
       "uses": [
+        "ConfirmDialog",
         "ListState",
+        "OptionSelect",
         "PageBody",
         "SubscriptionGrid"
       ]
