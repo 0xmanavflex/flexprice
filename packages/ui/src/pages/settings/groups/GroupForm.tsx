@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   type CreateGroup,
@@ -50,10 +51,9 @@ export function GroupForm({
   submitError = null,
   trail,
 }: GroupFormProps) {
-  const form = useForm<CreateGroup>({
+  const form = useCalmForm<CreateGroup>({
     resolver: standardSchemaResolver(createGroupSchema) as Resolver<CreateGroup>,
     defaultValues: defaultValue ?? emptyGroup(),
-    mode: 'onTouched',
   })
 
   const nameField = form.register('name', {

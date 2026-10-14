@@ -1,4 +1,5 @@
-import { useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   type CreateCostSheet,
@@ -51,10 +52,9 @@ export function CostSheetForm({
   isSubmitting = false,
   submitError = null,
 }: CostSheetFormProps) {
-  const form = useForm<CreateCostSheet>({
+  const form = useCalmForm<CreateCostSheet>({
     resolver: standardSchemaResolver(createCostSheetSchema) as Resolver<CreateCostSheet>,
     defaultValues: defaultValue ?? emptyCostSheet(),
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors

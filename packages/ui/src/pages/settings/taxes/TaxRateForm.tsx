@@ -1,4 +1,5 @@
-import { Controller, useForm, type Resolver } from 'react-hook-form'
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
+import { Controller, type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import {
   type CreateTaxRate,
@@ -69,10 +70,9 @@ export function TaxRateCreateForm({
   submitError = null,
   trail,
 }: TaxRateCreateFormProps) {
-  const form = useForm<CreateTaxRate>({
+  const form = useCalmForm<CreateTaxRate>({
     resolver: standardSchemaResolver(createTaxRateSchema) as Resolver<CreateTaxRate>,
     defaultValues: defaultValue ?? emptyTaxRate(),
-    mode: 'onTouched',
   })
 
   const nameField = form.register('name', {
@@ -195,10 +195,9 @@ export function TaxRateEditForm({
   submitError = null,
   trail,
 }: TaxRateEditFormProps) {
-  const form = useForm<EditTaxRate>({
+  const form = useCalmForm<EditTaxRate>({
     resolver: standardSchemaResolver(editTaxRateSchema) as Resolver<EditTaxRate>,
     defaultValues: defaultValue,
-    mode: 'onTouched',
   })
 
   const errors = form.formState.errors

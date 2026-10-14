@@ -1,5 +1,6 @@
+import { useCalmForm } from '@ui/compositions/forms/useCalmForm'
 import { useState, type ReactNode } from 'react'
-import { useForm, type Resolver } from 'react-hook-form'
+import { type Resolver } from 'react-hook-form'
 import { standardSchemaResolver } from '@hookform/resolvers/standard-schema'
 import { InfoIcon, TriangleAlert } from '@ui/icons'
 import {
@@ -135,12 +136,11 @@ function ManageForm({
 }) {
   const connection = integration.connection!
   const [confirming, setConfirming] = useState(false)
-  const form = useForm<ConnectionFormValues>({
+  const form = useCalmForm<ConnectionFormValues>({
     resolver: standardSchemaResolver(
       manageFormSchema(spec),
     ) as unknown as Resolver<ConnectionFormValues>,
     defaultValues: connectionToFormValues(spec, connection),
-    mode: 'onTouched',
   })
   const { control, register, watch, formState } = form
   const { errors } = formState
