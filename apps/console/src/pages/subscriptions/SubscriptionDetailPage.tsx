@@ -9,6 +9,9 @@ import {
 import {
   ApiError,
   useActivateSubscription,
+  useCancelSubscriptionCreditGrant,
+  useRemoveSubscriptionAddon,
+  useRemoveSubscriptionTax,
   useAddons,
   useAddSubscriptionAddon,
   useAddSubscriptionCoupon,
@@ -106,6 +109,9 @@ export function SubscriptionDetailPage({
   })
   const cancel = useCancelSubscription()
   const activate = useActivateSubscription()
+  const removeAddon = useRemoveSubscriptionAddon()
+  const removeTax = useRemoveSubscriptionTax()
+  const endGrant = useCancelSubscriptionCreditGrant()
   const addLine = useCreateSubscriptionLineItem()
   const editLine = useUpdateSubscriptionLineItem()
   const endLine = useDeleteSubscriptionLineItem()
@@ -179,6 +185,9 @@ export function SubscriptionDetailPage({
         onAddAddon={(draft) => addAddon.mutateAsync(draft)}
         onAddCoupon={(draft) => addCoupon.mutateAsync(draft)}
         onAddTax={(draft) => createTax.mutateAsync(draft)}
+        onRemoveAddon={(addon) => removeAddon.mutateAsync(addon.id)}
+        onRemoveTax={(tax) => removeTax.mutateAsync(tax.id)}
+        onCancelCreditGrant={(grant) => endGrant.mutateAsync(grant.id)}
         sectionOptions={{
           features: formOptions.featureOptions,
           addons: (addonCatalogue.data?.addons ?? [])

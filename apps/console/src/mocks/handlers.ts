@@ -3602,6 +3602,7 @@ export const handlers = [
       pagination: { total: items.length, limit: 50, offset: 0 },
     })
   }),
+  http.delete(`${BASE}/subscriptions/addon`, () => HttpResponse.json({ message: 'ok' })),
   http.post(`${BASE}/subscriptions/addon`, async ({ request }) => {
     const body = await readBody(request)
     const subscriptionId = String(body['subscription_id'] ?? '')

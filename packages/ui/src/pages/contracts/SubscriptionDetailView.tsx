@@ -62,6 +62,7 @@ import { DetailShell } from '../../compositions/detail/DetailShell'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../compositions/detail/RelatedCard'
 import { Section } from '../../compositions/layout/Section'
+import { ConfirmDialog } from '../../compositions/feedback/ConfirmDialog'
 import type { EmptyScene } from '../../compositions/feedback/SceneIllustration'
 import { SectionEmpty } from '../../compositions/feedback/SectionEmpty'
 import { LoadingRows } from '../../compositions/feedback/States'
@@ -136,6 +137,10 @@ export interface SubscriptionDetailViewProps {
   onAddAddon?: ((draft: AddContractAddon) => Promise<unknown> | void) | undefined
   onAddCoupon?: ((draft: AddContractCoupon) => Promise<unknown> | void) | undefined
   onAddTax?: ((draft: CreateTaxAssociation) => Promise<unknown> | void) | undefined
+  /** Row menus: take an add-on off, stop a tax, end a credit grant. Each resolves when done. */
+  onRemoveAddon?: ((addon: SubscriptionAddon) => Promise<unknown>) | undefined
+  onRemoveTax?: ((tax: SubscriptionTax) => Promise<unknown>) | undefined
+  onCancelCreditGrant?: ((grant: CreditGrant) => Promise<unknown>) | undefined
   /** What the Add dialogs offer. */
   sectionOptions?: Partial<ContractSectionOptions> | undefined
   onBack?: () => void
@@ -229,6 +234,9 @@ export function SubscriptionDetailView({
   onAddAddon,
   onAddCoupon,
   onAddTax,
+  onRemoveAddon,
+  onRemoveTax,
+  onCancelCreditGrant,
   sectionOptions,
   onBack,
   onOpenCustomer,
@@ -251,6 +259,41 @@ export function SubscriptionDetailView({
   const [quantityLine, setQuantityLine] = useState<SubscriptionLine | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [section, setSection] = useState<ContractSectionKind | null>(null)
+  // One confirm for every removal on the page: what it says, and what it runs.
+  const [removal, setRemoval] = useState<{
+    title: string
+    description: string
+    confirmLabel: string
+    run: () => Promise<unknown>
+  } | null>(null)
+  const [removing, setRemoving] = useState(false)
+  const [removalError, setRemovalError] = useState<string | null>(null)
+  const askRemoval = (next: NonNullable<typeof removal>) => {
+    setRemovalError(null)
+    setRemoval(next)
+  }
+  /** A narrow ⋯ column with one destructive item, or nothing when the contract cannot change. */
+  const removeColumn = <T,>(
+    label: (row: T) => string,
+    removeLabel: string,
+    onRemove: ((row: T) => void) | null,
+  ): DetailColumn<T>[] =>
+    onRemove && canEditCharges
+      ? [
+          {
+            key: 'actions',
+            header: '',
+            width: 48,
+            cell: (row: T) => (
+              <RowActionsMenu
+                label={label(row)}
+                onRemove={() => onRemove(row)}
+                removeLabel={removeLabel}
+              />
+            ),
+          },
+        ]
+      : []
   const s = subscription
   const isCancelled = s.status === SubscriptionStatus.Cancelled
   const isCancelling = !isCancelled && (s.cancelAtPeriodEnd || s.cancelAt !== null)
@@ -655,6 +698,20 @@ export function SubscriptionDetailView({
                           <Muted>{CREDIT_GRANT_EXPIRY_TYPE_LABEL[row.expirationType]}</Muted>
                         ),
                       },
+                      ...removeColumn<CreditGrant>(
+                        (row) => row.name,
+                        'End grant',
+                        onCancelCreditGrant
+                          ? (grant) =>
+                              askRemoval({
+                                title: `End ${grant.name}?`,
+                                description:
+                                  'The grant stops today. Credits it already gave stay in the wallet; no further credits are granted.',
+                                confirmLabel: 'End grant',
+                                run: () => onCancelCreditGrant(grant),
+                              })
+                          : null,
+                      ),
                     ]}
                   />
                 )}
@@ -700,6 +757,20 @@ export function SubscriptionDetailView({
                         header: 'Ends',
                         cell: (row) => <Muted>{day(row.endDate)}</Muted>,
                       },
+                      ...removeColumn<SubscriptionAddon>(
+                        (row) => row.name,
+                        'Remove add-on',
+                        onRemoveAddon
+                          ? (addon) =>
+                              askRemoval({
+                                title: `Remove ${addon.name}?`,
+                                description:
+                                  'The add-on comes off this contract at the end of the current period. Charges already billed are unaffected.',
+                                confirmLabel: 'Remove add-on',
+                                run: () => onRemoveAddon(addon),
+                              })
+                          : null,
+                      ),
                     ]}
                   />
                 )}
@@ -809,6 +880,20 @@ export function SubscriptionDetailView({
                         header: 'Priority',
                         cell: (row) => <Muted className="tabular-nums">{row.priority}</Muted>,
                       },
+                      ...removeColumn<SubscriptionTax>(
+                        (row) => row.name,
+                        'Remove tax',
+                        onRemoveTax
+                          ? (tax) =>
+                              askRemoval({
+                                title: `Stop applying ${tax.name}?`,
+                                description:
+                                  'Invoices created from now on leave this tax out. Invoices already issued keep it.',
+                                confirmLabel: 'Remove tax',
+                                run: () => onRemoveTax(tax),
+                              })
+                          : null,
+                      ),
                     ]}
                   />
                 )}
@@ -1038,6 +1123,34 @@ export function SubscriptionDetailView({
         onAdd={(draft) => void run(onAddCharge?.(draft))}
         onEdit={(line, draft) => void run(onEditCharge?.(line, draft))}
         onEnd={(line, draft) => void run(onEndCharge?.(line, draft))}
+      />
+      <ConfirmDialog
+        open={removal !== null}
+        onOpenChange={(open) => {
+          if (!open && !removing) setRemoval(null)
+        }}
+        title={removal?.title ?? ''}
+        {...(removal ? { description: removal.description } : {})}
+        confirmLabel={removal?.confirmLabel ?? 'Remove'}
+        destructive
+        isPending={removing}
+        error={removalError}
+        onConfirm={() => {
+          if (!removal) return
+          setRemoving(true)
+          setRemovalError(null)
+          removal
+            .run()
+            .then(() => setRemoval(null))
+            .catch((caught: unknown) =>
+              setRemovalError(
+                caught instanceof Error && caught.message
+                  ? caught.message
+                  : 'That did not go through. Try again.',
+              ),
+            )
+            .finally(() => setRemoving(false))
+        }}
       />
       <ContractSectionDialogs
         kind={section}

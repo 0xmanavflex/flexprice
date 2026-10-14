@@ -1368,3 +1368,41 @@ export function useCreateSubscriptionTax(subscriptionId: string) {
     onSuccess: () => invalidateContract(queryClient),
   })
 }
+
+/** Take an add-on off a contract — `DELETE /subscriptions/addon` by its association id, at period end. */
+export function useRemoveSubscriptionAddon() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (associationId: string) =>
+      call(() =>
+        client.subscriptions.removeSubscriptionAddon({ addonAssociationId: associationId }),
+      ),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** Stop applying a tax rate to a contract — `DELETE /taxes/associations/{id}`. */
+export function useRemoveSubscriptionTax() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (associationId: string) =>
+      call(() => client.taxAssociations.deleteTaxAssociation(associationId)),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}
+
+/** End a contract's credit grant now — `DELETE /creditgrants/{id}` with today as the end date. */
+export function useCancelSubscriptionCreditGrant() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (grantId: string) =>
+      call(() => client.creditGrants.deleteCreditGrant(grantId, { effectiveDate: new Date() })),
+    onSuccess: () => invalidateContract(queryClient),
+  })
+}

@@ -1405,3 +1405,17 @@ export const SectionFailed: Story = {
     await userEvent.click(canvas.getByRole('button', { name: 'Try again' }))
   },
 }
+
+/** A tax comes off through its row menu and a confirm; the view reports it and closes on success. */
+export const RemovesATax: Story = {
+  parameters: menuA11y,
+  args: { ...BASE, onRemoveTax: fn(async () => undefined) },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(await canvas.findByRole('button', { name: 'Actions for VAT' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Remove tax' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.click(dialog.getByRole('button', { name: 'Remove tax' }))
+    await expect(args.onRemoveTax).toHaveBeenCalledOnce()
+  },
+}
