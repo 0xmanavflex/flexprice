@@ -148,7 +148,7 @@ export const ProviderNotConfigured: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
-    await userEvent.click(canvas.getByRole('button', { name: 'Google' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Continue with Google' }))
 
     await expect(await canvas.findByRole('status')).toHaveTextContent(
       /Google sign-in isn't enabled/,
