@@ -26,6 +26,15 @@ export {
   moneyOr,
 } from './money'
 export type { Money } from './money'
+export {
+  FILTER_OPS,
+  FilterOp,
+  decodeListFilters,
+  encodeListFilters,
+  isRunnableFilter,
+  runnableFilters,
+} from './listFilter'
+export type { FilterKind, ListFilter, ListFilterSpec } from './listFilter'
 
 export {
   DEFAULT_INVOICE_QUERY,
