@@ -103,17 +103,36 @@ const FORM_ID = 'subscription-form'
 
 const FALLBACK_CURRENCIES = currencyCodes()
 
-/** Step ids are URL-safe and mirrored by the console's route (`app/subscriptionSteps.ts`). */
+/**
+ * Step ids are URL-safe and mirrored by the console's route
+ * (`app/subscriptionSteps.ts`).
+ *
+ * Customer and plan are **one** step, not two. They were split, and the first
+ * step was a single combobox — a whole screen, with its own Next, to answer one
+ * question. Merging them also puts the two choices that constrain each other
+ * side by side: the customer decides the currency, the plan decides the billing
+ * periods on offer, and picking them a page apart hides that from the person
+ * making the choice.
+ *
+ * The plan half stays hidden until a customer is chosen, so the merged step
+ * opens as one question and grows into the rest rather than presenting an
+ * eight-field wall.
+ */
 export const SUBSCRIPTION_FORM_STEPS = [
-  { id: 'customer', title: 'Customer' },
-  { id: 'plan', title: 'Plan & charges' },
+  { id: 'plan', title: 'Customer & plan' },
   { id: 'benefits', title: 'Benefits' },
   { id: 'review', title: 'Review' },
 ] as const
 
 const STEP_FIELDS: Record<string, (keyof CreateSubscription)[]> = {
-  customer: ['customerId'],
-  plan: ['planId', 'currency', 'billingPeriod', 'billingPeriodCount', 'trialPeriodDays'],
+  plan: [
+    'customerId',
+    'planId',
+    'currency',
+    'billingPeriod',
+    'billingPeriodCount',
+    'trialPeriodDays',
+  ],
 }
 
 const unique = <T,>(values: T[]) => [...new Set(values)]
@@ -140,10 +159,15 @@ export function SubscriptionForm({
   const errors = form.formState.errors
   const values = form.watch()
 
+  /*
+   * Opened from a customer's own page there is no customer to choose, so the
+   * step is about the plan alone and says so. The step *list* no longer changes
+   * — the customer is a card inside the first step now, not a step of its own.
+   */
   const steps = useMemo(
     () =>
       customerLocked
-        ? SUBSCRIPTION_FORM_STEPS.filter((s) => s.id !== 'customer')
+        ? SUBSCRIPTION_FORM_STEPS.map((s) => (s.id === 'plan' ? { ...s, title: 'Plan' } : s))
         : SUBSCRIPTION_FORM_STEPS,
     [customerLocked],
   )
@@ -409,10 +433,22 @@ export function SubscriptionForm({
   )
 
   const content: Record<string, ReactNode> = {
-    customer: formEl(customerStep),
     plan: (
       <div className="flex flex-col gap-5">
-        {formEl(planCard)}
+        {/*
+          One form element around both cards: they are one step, and a second
+          <form> would break Enter-to-advance and the toolbar's submit.
+        */}
+        {formEl(
+          <>
+            {customerLocked ? null : customerStep}
+            {/*
+              The plan is asked for only once there is a customer to ask it
+              about — the customer's own currency is what defaults this step's.
+            */}
+            {customerLocked || values.customerId ? planCard : null}
+          </>,
+        )}
         {values.planId ? (
           <ChargesSection
             charges={charges}

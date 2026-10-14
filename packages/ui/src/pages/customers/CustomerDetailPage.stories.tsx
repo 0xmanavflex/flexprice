@@ -65,9 +65,7 @@ function makeInvoices(count: number, status: InvoiceStatus): Invoice[] {
     return {
       id: `inv_${index + 1}`,
       number:
-        status === InvoiceStatus.Draft
-          ? ''
-          : `INV-2026-${String(1000 + index).padStart(5, '0')}`,
+        status === InvoiceStatus.Draft ? '' : `INV-2026-${String(1000 + index).padStart(5, '0')}`,
       customerId: CUSTOMER.id,
       customerName: CUSTOMER.name,
       status,

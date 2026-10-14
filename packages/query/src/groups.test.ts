@@ -3,7 +3,7 @@ import { DEFAULT_GROUP_QUERY, GroupEntityType, GroupStatus } from '@fp/domain'
 import { toGroup, toGroupFilter, type GroupWire } from './groups'
 
 describe('toGroup', () => {
-  it('counts the members from the entityIds array and drops the array', () => {
+  it('counts the members from the entityIds array, and keeps the ids', () => {
     const group = toGroup({
       id: 'group_1',
       name: 'Storage prices',
@@ -15,7 +15,9 @@ describe('toGroup', () => {
 
     expect(group.entityType).toBe(GroupEntityType.Price)
     expect(group.entityCount).toBe(3)
-    expect(group).not.toHaveProperty('entityIds')
+    // The ids are kept as well as counted: the detail page names each member
+    // from them. They used to be dropped, and the count was all a caller got.
+    expect(group.entityIds).toEqual(['price_1', 'price_2', 'price_3'])
   })
 
   it('reports zero members when the group is empty or absent', () => {

@@ -35,9 +35,7 @@ type Story = StoryObj<typeof meta>
 export const Default: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      canvas.getByText('Loading the features in this group'),
-    ).toBeInTheDocument()
+    await expect(canvas.getByText('Loading the features in this group')).toBeInTheDocument()
     await expect(canvas.queryByText('API requests')).toBeNull()
   },
 }

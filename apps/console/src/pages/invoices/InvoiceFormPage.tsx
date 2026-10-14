@@ -1,17 +1,11 @@
-import { useMemo, useState } from 'react'
-import {
-  DEFAULT_CUSTOMER_QUERY,
-  emptyInvoice,
-  type CreateInvoice,
-  type InvoiceDetail,
-} from '@fp/domain'
-import { ApiError, useCreateInvoice, useCustomers, useInvoice } from '@fp/query'
-import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
+import { useMemo } from 'react'
+import { DEFAULT_CUSTOMER_QUERY, emptyInvoice } from '@fp/domain'
+import { ApiError, useCreateInvoice, useCustomers } from '@fp/query'
+import { LoadingRows, PageBody } from '@fp/ui/compositions'
 import { InvoiceForm } from '@fp/ui/pages'
 
 export interface InvoiceFormPageProps {
   /** Set when this page edits an existing invoice. Create leaves it out. */
-  invoiceId?: string
   /** Create only: start with this customer chosen. */
   customerId?: string
   onCancel: () => void
@@ -19,19 +13,17 @@ export interface InvoiceFormPageProps {
 }
 
 /**
- * Create or edit an invoice on its own page.
+ * Create an invoice on its own page — `POST /invoices`.
  *
- * Create is `/invoices/new` and saves through `POST /invoices`. Edit is
- * `/invoices/:id/edit` and uses the same Form 3 layout, filled from the
- * invoice. There is no update call on the API, so edit explains that saving
- * changes is not available yet.
+ * Create only. This page used to serve `/invoices/:id/edit` as well, filling
+ * the same form from an existing invoice and then refusing every save, because
+ * `PUT /invoices/{id}` accepts none of the fields it collects: its whole body
+ * is `invoice_pdf_url`, `due_date`, `metadata` and `apply_discount`. Editing
+ * now lives in `InvoiceEditPage`, scoped to what the API will change.
  */
-export function InvoiceFormPage({ invoiceId, customerId, onCancel, onDone }: InvoiceFormPageProps) {
-  const editing = Boolean(invoiceId)
+export function InvoiceFormPage({ customerId, onCancel, onDone }: InvoiceFormPageProps) {
   const create = useCreateInvoice()
-  const invoice = useInvoice(invoiceId ?? '', { enabled: editing })
   const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
-  const [editNotice, setEditNotice] = useState<string | null>(null)
   const options = useMemo(
     () =>
       (customers.data?.customers ?? []).map((customer) => ({
@@ -43,7 +35,7 @@ export function InvoiceFormPage({ invoiceId, customerId, onCancel, onDone }: Inv
   )
 
   // A preset customer can only be shown once the list it is picked from has arrived.
-  if ((editing && invoice.isPending) || (!editing && customerId && customers.isPending)) {
+  if (customerId && customers.isPending) {
     return (
       <PageBody>
         <div className="pt-4">
@@ -53,71 +45,20 @@ export function InvoiceFormPage({ invoiceId, customerId, onCancel, onDone }: Inv
     )
   }
 
-  if (editing && (invoice.error || !invoice.data)) {
-    return (
-      <PageBody>
-        <AppFailure
-          title={invoice.error ? 'This invoice could not be loaded' : 'Invoice not found'}
-          detail="The rest of the console still works. Try again, or go back."
-          onRetry={invoice.error ? () => void invoice.refetch() : onCancel}
-        />
-      </PageBody>
-    )
-  }
-
-  const existing = invoice.data
-
   return (
     <InvoiceForm
-      key={existing?.id ?? 'new'}
-      mode={editing ? 'edit' : 'create'}
+      mode="create"
       customers={options}
-      trail={[
-        { label: 'Invoices', onClick: onCancel },
-        { label: editing ? 'Edit invoice' : 'New invoice' },
-      ]}
-      {...(existing
-        ? { defaultValue: toDraft(existing), invoiceNumber: existing.number }
-        : customerId
-          ? { defaultValue: { ...emptyInvoice(), customerId } }
-          : {})}
+      trail={[{ label: 'Invoices', onClick: onCancel }, { label: 'New invoice' }]}
+      {...(customerId ? { defaultValue: { ...emptyInvoice(), customerId } } : {})}
       onCancel={onCancel}
       isSubmitting={create.isPending}
-      submitError={editing ? editNotice : toSubmitError(create.error)}
-      onSubmit={(draft) => {
-        if (editing) {
-          setEditNotice('Saving changes to an invoice is not available yet.')
-          return
-        }
+      submitError={toSubmitError(create.error)}
+      onSubmit={(draft) =>
         create.mutate(draft, { onSuccess: (created) => onDone(created.id ?? '') })
-      }}
+      }
     />
   )
-}
-
-function toDraft(invoice: InvoiceDetail): CreateInvoice {
-  return {
-    customerId: invoice.customerId,
-    currency: invoice.currency,
-    description: invoice.description,
-    dueDate: invoice.dueDate ? day(invoice.dueDate) : '',
-    total: invoice.total.amount,
-    finalize: false,
-    lines:
-      invoice.lines.length > 0
-        ? invoice.lines.map((line) => ({
-            description: line.description,
-            quantity: line.quantity || '1',
-            amount: line.amount,
-          }))
-        : [{ description: '', quantity: '1', amount: '' }],
-  }
-}
-
-function day(date: Date): string {
-  const month = String(date.getMonth() + 1).padStart(2, '0')
-  const dateOfMonth = String(date.getDate()).padStart(2, '0')
-  return `${date.getFullYear()}-${month}-${dateOfMonth}`
 }
 
 function toSubmitError(error: unknown): string | null {

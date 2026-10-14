@@ -73,7 +73,9 @@ export const Expired: Story = {
   args: { expired: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('heading', { level: 1 })).toHaveTextContent('That link has expired')
+    await expect(canvas.getByRole('heading', { level: 1 })).toHaveTextContent(
+      'That link has expired',
+    )
     await expect(canvas.queryByLabelText('New password')).toBeNull()
     await expect(canvas.getByRole('button', { name: 'Request a new link' })).toBeVisible()
   },

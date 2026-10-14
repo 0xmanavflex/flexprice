@@ -58,7 +58,6 @@ export const RevenueDashboardProvenance = provenance({
     'pages/shared/HalfDonut',
     'pages/shared/SplitMeter',
     'pages/shared/ArcGauge',
-    'pages/shared/Money',
     'compositions/Section',
     'pages/shared/DetailTable',
     'compositions/feedback/DataBoundary',

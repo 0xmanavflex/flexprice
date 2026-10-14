@@ -26,6 +26,9 @@ import type { InvoiceQuery } from '@fp/domain'
 const InvoiceFormPage = lazy(() =>
   import('@/pages/invoices/InvoiceFormPage').then((m) => ({ default: m.InvoiceFormPage })),
 )
+const InvoiceEditPage = lazy(() =>
+  import('@/pages/invoices/InvoiceEditPage').then((m) => ({ default: m.InvoiceEditPage })),
+)
 const PaymentFormPage = lazy(() =>
   import('@/pages/payments/PaymentFormPage').then((m) => ({ default: m.PaymentFormPage })),
 )
@@ -55,7 +58,7 @@ const SubscriptionFormPage = lazy(() =>
     default: m.SubscriptionFormPage,
   })),
 )
-import { parseStep, toStepSearch } from './subscriptionSteps'
+import { DEFAULT_STEP, parseStep, toStepSearch } from './subscriptionSteps'
 import { DEFAULT_FEATURE_QUERY, type FeatureQuery } from '@fp/domain'
 /**
  * Routes are split, from the first one.
@@ -655,7 +658,7 @@ function SubscriptionCreateRouteComponent() {
 
   return (
     <SubscriptionFormPage
-      {...(step === 'customer' ? {} : { step })}
+      {...(step === DEFAULT_STEP ? {} : { step })}
       onStepChange={(next) =>
         void navigate({
           to: '/subscriptions/new',
@@ -1873,7 +1876,7 @@ function InvoiceEditRouteComponent() {
   const { invoiceId } = invoiceEditRoute.useParams()
   const navigate = useNavigate()
   const toDetail = () => void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
-  return <InvoiceFormPage invoiceId={invoiceId} onCancel={toDetail} onDone={toDetail} />
+  return <InvoiceEditPage invoiceId={invoiceId} onCancel={toDetail} onDone={toDetail} />
 }
 
 const invoiceDetailRoute = createRoute({

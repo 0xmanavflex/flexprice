@@ -332,6 +332,48 @@ function useInvoiceAction(run: (client: Flexprice, id: string) => Promise<unknow
   })
 }
 
+/**
+ * What `PUT /invoices/{id}` will actually change.
+ *
+ * Worth stating, because the route's name promises far more than it does: the
+ * request body is `invoice_pdf_url`, `due_date`, `metadata` and
+ * `apply_discount`, and nothing else. A customer, a currency, an amount or a
+ * line item cannot be edited after an invoice exists — correcting one of those
+ * means voiding and reissuing, or a credit note.
+ *
+ * `applyDiscount` recalculates the discount from the invoice's existing coupon
+ * associations and is accepted on drafts only.
+ */
+export interface InvoiceEdit {
+  id: string
+  dueDate?: Date | null
+  metadata?: Record<string, string>
+  applyDiscount?: boolean
+}
+
+export function useUpdateInvoice() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: ({ id, dueDate, metadata, applyDiscount }: InvoiceEdit) =>
+      call(() =>
+        client.invoices.updateInvoice(id, {
+          // Each field is sent only when the caller named it: the API treats an
+          // absent key as "leave it alone", so spreading undefined would be the
+          // difference between not touching the metadata and clearing it.
+          ...(dueDate !== undefined ? { dueDate: dueDate ?? undefined } : {}),
+          ...(metadata !== undefined ? { metadata } : {}),
+          ...(applyDiscount ? { applyDiscount: true } : {}),
+        } as never),
+      ),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    },
+  })
+}
+
 /** Replace an invoice's metadata — `PUT /invoices/{id}` with `{metadata}` and nothing else. */
 export function useUpdateInvoiceMetadata() {
   const client = useFlexprice()

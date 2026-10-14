@@ -31,9 +31,23 @@ describe('toStepSearch', () => {
   })
 
   it('round-trips', () => {
-    for (const step of ['customer', 'benefits', 'review'] as const) {
+    for (const step of ['plan', 'benefits', 'review'] as const) {
       expect(parseStep(toStepSearch(step)['step'])).toBe(step)
     }
+  })
+
+  /*
+   * `customer` was the first step until it was merged into `plan`. A link
+   * already shared, or a back button into history, still carries it — landing
+   * those on the merged step is the whole point of keeping the id around.
+   */
+  it('sends the retired customer step to the step that absorbed it', () => {
+    expect(parseStep('customer')).toBe('plan')
+  })
+
+  it('still falls back for a step that never existed', () => {
+    expect(parseStep('nonsense')).toBe('plan')
+    expect(parseStep(undefined)).toBe('plan')
   })
 })
 
@@ -46,21 +60,21 @@ describe('toWorkflowSteps', () => {
 
   // You cannot skip ahead: the next step stays locked until this one is done.
   it('locks everything past where the user has actually been', () => {
-    const steps = toWorkflowSteps('customer')
-    expect(steps.map((s) => s.status)).toEqual(['current', 'locked', 'locked', 'locked'])
+    const steps = toWorkflowSteps('plan')
+    expect(steps.map((s) => s.status)).toEqual(['current', 'locked', 'locked'])
   })
 
   // Back-navigation is the reason the flow is a route at all.
   it('leaves visited steps revisitable when the user goes back', () => {
-    const steps = toWorkflowSteps('customer', 'benefits')
-    expect(steps.find((s) => s.id === 'plan')?.status).toBe('complete')
+    const steps = toWorkflowSteps('plan', 'benefits')
+    expect(steps.find((s) => s.id === 'plan')?.status).toBe('current')
     expect(steps.find((s) => s.id === 'benefits')?.status).toBe('upcoming')
     expect(steps.find((s) => s.id === 'review')?.status).toBe('locked')
   })
 
   it('never reports progress behind the current step', () => {
     // Deep-linking straight to a later step must not lock the step you are on.
-    const steps = toWorkflowSteps('review', 'customer')
+    const steps = toWorkflowSteps('review', 'plan')
     expect(steps.find((s) => s.id === 'review')?.status).toBe('current')
     expect(steps.every((s) => s.status !== 'locked')).toBe(true)
   })
@@ -68,8 +82,8 @@ describe('toWorkflowSteps', () => {
 
 describe('furthestOf', () => {
   it('keeps the later step', () => {
-    expect(furthestOf('customer', 'benefits')).toBe('benefits')
-    expect(furthestOf('benefits', 'customer')).toBe('benefits')
+    expect(furthestOf('plan', 'benefits')).toBe('benefits')
+    expect(furthestOf('benefits', 'plan')).toBe('benefits')
   })
 
   // Going back must not re-lock what was already reached.

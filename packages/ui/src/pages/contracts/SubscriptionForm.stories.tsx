@@ -1,12 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import { BillingPeriod, type CreateSubscription } from '@fp/domain'
 import type { Option } from '@ui/compositions/forms/OptionSelect'
 import { makeCharges, makeEntitlements } from '../product-catalog/plans/planDetailFixtures'
 import { SubscriptionForm, type SubscriptionPlanContext } from './SubscriptionForm'
 
-const STEPS = ['customer', 'plan', 'benefits', 'review'] as const
+const STEPS = ['plan', 'benefits', 'review'] as const
 const PLAN_NAMES = ['Starter', 'Pro', 'Business', 'Scale', 'Enterprise']
 const CUSTOMER_NAMES = [
   'Acme Robotics',
@@ -130,14 +130,14 @@ const withHeight: Decorator = (Story) => (
   </div>
 )
 
-/** Start a contract in four steps: customer, plan and charges, benefits (entitlements, credit grants, commitments) and review. */
+/** Start a contract in three steps: customer & plan, benefits (entitlements, credit grants, commitments) and review. */
 const meta = {
   title: 'App/Contracts/Contract form',
   component: SubscriptionFormPlayground,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
   args: {
-    step: 'customer',
+    step: 'plan',
     prefilled: false,
     customerLocked: false,
     isSubmitting: false,
@@ -182,6 +182,27 @@ export const Create: Story = {
   },
 }
 
+/**
+ * The first step opens as one question.
+ *
+ * Customer and plan are one step, but the plan half is withheld until there is
+ * a customer — the step grows into itself rather than opening as a wall of
+ * fields for a decision that has not been made yet.
+ */
+export const PlanAppearsAfterTheCustomer: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('combobox', { name: /^Customer/ })).toBeVisible()
+    await expect(canvas.queryByText('Plan and billing')).toBeNull()
+
+    await userEvent.click(canvas.getByRole('combobox', { name: /^Customer/ }))
+    // The combobox portals its listbox, so the option is on `screen`, not in the canvas.
+    await userEvent.click(await screen.findByRole('option', { name: /Acme Robotics/ }))
+
+    await expect(await canvas.findByText('Plan and billing')).toBeVisible()
+  },
+}
+
 /** Next is gated on the step's fields: no customer, no progress. */
 export const CustomerIsRequired: Story = {
   play: async ({ canvasElement }) => {
@@ -191,12 +212,16 @@ export const CustomerIsRequired: Story = {
   },
 }
 
-/** Opened from a customer's own page: the Customer step is dropped. */
+/**
+ * Opened from a customer's own page: the customer card is dropped, not the
+ * step. The plan shows immediately, since the question it waits on is answered.
+ */
 export const CustomerLocked: Story = {
   args: { customerLocked: true, step: 'plan' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Plan and billing')).toBeVisible()
+    await expect(canvas.queryByRole('combobox', { name: /^Customer/ })).toBeNull()
   },
 }
 
