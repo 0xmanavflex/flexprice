@@ -1205,6 +1205,13 @@ function PriceUnitsRouteComponent() {
         void navigate({ to: '/price-units/$priceUnitId', params: { priceUnitId: priceUnit.id } })
       }
       onCreatePriceUnit={() => void navigate({ to: '/price-units/new' })}
+      onEditPriceUnit={(priceUnit) =>
+        void navigate({
+          to: '/price-units/$priceUnitId',
+          params: { priceUnitId: priceUnit.id },
+          search: { edit: true } as never,
+        })
+      }
     />
   )
 }

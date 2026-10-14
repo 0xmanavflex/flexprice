@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CopyIcon, PencilIcon, PlusIcon, PuzzleIcon } from '@ui/icons'
+import { BookOpenIcon, CopyIcon, PencilIcon, PlusIcon, PuzzleIcon, ArchiveIcon } from '@ui/icons'
 import {
   ADDON_SORT_LABEL,
   ADDON_STATUS_LABEL,
@@ -83,6 +83,8 @@ export interface AddonGridProps {
   onCreate?: () => void
   /** Row menu: open the add-on's editor. Left out of the menu when absent. */
   onEdit?: ((addon: Addon) => void) | undefined
+  /** Row menu: archive. Rendered destructive, last. */
+  onArchive?: ((addon: Addon) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   locale?: string
@@ -99,6 +101,7 @@ export function AddonGrid({
   onAddonClick,
   onCreate,
   onEdit,
+  onArchive,
   onClearFilters,
   locale,
 }: AddonGridProps) {
@@ -167,6 +170,14 @@ export function AddonGrid({
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(addon.id),
     })
+    if (onArchive && addon.status !== AddonStatus.Archived) {
+      actions.push({
+        label: 'Archive add-on',
+        icon: <ArchiveIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onArchive(addon),
+      })
+    }
     return actions
   }
 

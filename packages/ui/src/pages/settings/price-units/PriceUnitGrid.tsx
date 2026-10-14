@@ -1,5 +1,13 @@
 import { useMemo } from 'react'
-import { BookOpenIcon, CoinsIcon, CopyIcon, PencilIcon, ScaleIcon, PlusIcon } from '@ui/icons'
+import {
+  BookOpenIcon,
+  CoinsIcon,
+  CopyIcon,
+  PencilIcon,
+  ScaleIcon,
+  PlusIcon,
+  ArchiveIcon,
+} from '@ui/icons'
 import {
   DEFAULT_PRICE_UNIT_QUERY,
   PRICE_UNIT_SORT_LABEL,
@@ -86,6 +94,8 @@ export interface PriceUnitGridProps {
   onCreate?: () => void
   /** Row menu: open the editor. Only the name is editable once created. */
   onEdit?: ((priceUnit: PriceUnit) => void) | undefined
+  /** Row menu: archive. Rendered destructive, last. */
+  onArchive?: ((priceUnit: PriceUnit) => void) | undefined
   /** Offered when a filter is what emptied the list. */
   onClearFilters?: () => void
   locale?: string
@@ -102,6 +112,7 @@ export function PriceUnitGrid({
   onPriceUnitClick,
   onCreate,
   onEdit,
+  onArchive,
   onClearFilters,
   locale,
 }: PriceUnitGridProps) {
@@ -174,6 +185,14 @@ export function PriceUnitGrid({
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(priceUnit.id),
     })
+    if (onArchive && priceUnit.status !== PriceUnitStatus.Archived) {
+      actions.push({
+        label: 'Archive price unit',
+        icon: <ArchiveIcon aria-hidden className="size-4" />,
+        destructive: true,
+        onSelect: () => onArchive(priceUnit),
+      })
+    }
     return actions
   }
 
