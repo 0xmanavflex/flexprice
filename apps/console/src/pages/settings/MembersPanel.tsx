@@ -63,6 +63,7 @@ import { useDraft } from './useDraft'
  */
 export function MembersPanel() {
   const [isInviting, setIsInviting] = useState(false)
+  const [credentials, setCredentials] = useState<Credentials | null>(null)
   const [editing, setEditing] = useState<Member | null>(null)
   const [removing, setRemoving] = useState<Member | null>(null)
 
@@ -98,7 +99,7 @@ export function MembersPanel() {
           <EmptyState
             size="inline"
             title="Nobody else is on your team yet"
-            description="Invite a teammate by email and choose their roles. They can sign in as soon as the account exists."
+            description="Invite a teammate by email and choose their roles. You get a one-time password to share with them."
             action={invite}
           />
         }
@@ -165,7 +166,13 @@ export function MembersPanel() {
         onOpenChange={(open) => {
           if (!open) setIsInviting(false)
         }}
+        onInvited={(credentials) => {
+          setIsInviting(false)
+          if (credentials.password) setCredentials(credentials)
+        }}
       />
+
+      <CredentialsDialog credentials={credentials} onClose={() => setCredentials(null)} />
 
       {editing ? (
         <EditRolesDialog
@@ -212,10 +219,13 @@ function InviteDialog({
   open,
   roles,
   onOpenChange,
+  onInvited,
 }: {
   open: boolean
   roles: Role[]
   onOpenChange: (open: boolean) => void
+  /** The invitation went through; the password is the API's one-time one. */
+  onInvited: (credentials: Credentials) => void
 }) {
   const invite = useInviteMember()
   const draft = useDraft<InviteMember>(inviteMemberSchema, emptyInvite())
@@ -241,14 +251,18 @@ function InviteDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>Invite a member</DialogTitle>
-          <DialogDescription>They can sign in as soon as the account exists.</DialogDescription>
+          <DialogDescription>
+            You get a one-time password to share with them, shown once.
+          </DialogDescription>
         </DialogHeader>
         <form
           id="invite-member"
           className="flex max-h-[min(24rem,50vh)] flex-col gap-4 overflow-y-auto"
           noValidate
           onSubmit={draft.handleSubmit((value) =>
-            invite.mutate(value, { onSuccess: () => onOpenChange(false) }),
+            invite.mutate(value, {
+              onSuccess: ({ password }) => onInvited({ email: value.email, password }),
+            }),
           )}
         >
           <div className="grid gap-4 sm:grid-cols-2">
@@ -309,6 +323,130 @@ function InviteDialog({
           </Button>
           <Button type="submit" form="invite-member" disabled={busy}>
             {busy ? 'Inviting…' : 'Send invitation'}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+interface Credentials {
+  email: string
+  password: string
+}
+
+/** Where the new member signs in, with their email filled in. Never the password. */
+function signInLink(email: string): string {
+  return `${window.location.origin}/sign-in?email=${encodeURIComponent(email)}`
+}
+
+/** A CSV cell, quoted when it holds a comma, quote or line break. */
+function csvCell(value: string): string {
+  return /[",\r\n]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value
+}
+
+/**
+ * The new member's one-time password, shown once.
+ *
+ * The API returns it on the invite and keeps no copy, so this is the only time
+ * anyone sees it: it can be revealed, copied on its own or with the email and
+ * sign-in link, or saved as a CSV to hand over.
+ */
+function CredentialsDialog({
+  credentials,
+  onClose,
+}: {
+  credentials: Credentials | null
+  onClose: () => void
+}) {
+  const [revealed, setRevealed] = useState(false)
+  const [copied, setCopied] = useState<string | null>(null)
+  useEffect(() => {
+    if (credentials) {
+      setRevealed(false)
+      setCopied(null)
+    }
+  }, [credentials])
+  if (!credentials) return null
+  const link = signInLink(credentials.email)
+
+  const copy = (text: string, what: string) => {
+    void navigator.clipboard?.writeText(text).then(() => setCopied(what))
+  }
+  const download = () => {
+    const csv = `email,password,sign_in_link\r\n${[credentials.email, credentials.password, link].map(csvCell).join(',')}`
+    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
+    const anchor = document.createElement('a')
+    anchor.href = url
+    anchor.download = `flexprice-credentials-${credentials.email.replace(/@.*/, '').replace(/[^a-zA-Z0-9_-]/g, '_') || 'member'}.csv`
+    anchor.click()
+    URL.revokeObjectURL(url)
+  }
+
+  return (
+    <Dialog open onOpenChange={(open) => (open ? undefined : onClose())}>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Share these sign-in details</DialogTitle>
+          <DialogDescription>
+            {credentials.email} signs in with this one-time password. It is shown only now, so copy
+            it before you close this. They can change it after signing in.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="flex flex-col gap-4">
+          <Field label="One-time password">
+            {({ id, ...field }) => (
+              <span className="flex gap-2">
+                <Input
+                  id={id}
+                  readOnly
+                  type={revealed ? 'text' : 'password'}
+                  value={credentials.password}
+                  className="font-mono"
+                  {...field}
+                />
+                <Button type="button" variant="outline" onClick={() => setRevealed((v) => !v)}>
+                  {revealed ? 'Hide' : 'Show'}
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => copy(credentials.password, 'password')}
+                >
+                  {copied === 'password' ? 'Copied' : 'Copy'}
+                </Button>
+              </span>
+            )}
+          </Field>
+          <Field label="Sign-in link">
+            {({ id, ...field }) => (
+              <span className="flex gap-2">
+                <Input id={id} readOnly value={link} className="text-muted-foreground" {...field} />
+                <Button type="button" variant="outline" onClick={() => copy(link, 'link')}>
+                  {copied === 'link' ? 'Copied' : 'Copy'}
+                </Button>
+              </span>
+            )}
+          </Field>
+        </div>
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={download}>
+            Download CSV
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() =>
+              copy(
+                `Email: ${credentials.email}\nPassword: ${credentials.password}\nSign in: ${link}`,
+                'all',
+              )
+            }
+          >
+            {copied === 'all' ? 'Copied' : 'Copy all'}
+          </Button>
+          <Button type="button" onClick={onClose}>
+            Done
           </Button>
         </DialogFooter>
       </DialogContent>

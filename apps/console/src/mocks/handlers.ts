@@ -2555,7 +2555,11 @@ export const handlers = [
       tenant: TENANT_REF,
     }
     users.push(created)
-    return HttpResponse.json(created, { status: 201 })
+    // A person gets a one-time password, returned once; a service account does not.
+    return HttpResponse.json(
+      type === 'user' ? { ...created, password: `Tmp-${Date.now().toString(36)}!` } : created,
+      { status: 201 },
+    )
   }),
 
   http.put(`${BASE}/users/me`, async ({ request }) => {

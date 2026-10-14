@@ -189,6 +189,13 @@ export function toCreateServiceAccountRequest(
   }
 }
 
+/**
+ * Invite a teammate — `POST /users` with `type: 'user'`.
+ *
+ * Resolves with the new member and the one-time password the API generates for
+ * them. The password is returned once and stored nowhere, so the caller must
+ * show it now or it is lost.
+ */
 export function useInviteMember() {
   const client = useFlexprice()
   const queryClient = useQueryClient()
@@ -196,7 +203,8 @@ export function useInviteMember() {
   return useMutation({
     mutationFn: async (draft: InviteMember) => {
       const wire = await call(() => client.users.createUser(toInviteMemberRequest(draft) as never))
-      return toMember(wire as UserWire)
+      const password = (wire as { password?: string | undefined }).password ?? ''
+      return { member: toMember(wire as UserWire), password }
     },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.members.all() })
