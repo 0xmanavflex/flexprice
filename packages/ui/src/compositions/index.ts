@@ -42,7 +42,7 @@ export {
 } from './layout/Page'
 export type { PageHeaderProps } from './layout/Page'
 
-export { FilterBar, FilterBarProvenance, emptyFilterQuery } from './tables/FilterBar'
+export { FilterBar, FilterBarProvenance, emptyFilterQuery, granularFilter } from './tables/FilterBar'
 export type { FilterBarProps, FlatFilter } from './tables/FilterBar'
 export { SortMenu, SortMenuProvenance } from './tables/SortMenu'
 export type { SortMenuProps, SortOption } from './tables/SortMenu'

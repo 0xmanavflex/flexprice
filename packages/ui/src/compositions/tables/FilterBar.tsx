@@ -12,7 +12,20 @@ import {
   operatorTakesValue,
   resolveFilterOperators,
 } from '@ui/components/reui/filters/filters-operators'
-import type { FilterField, FilterQuery } from '@ui/components/reui/filters/filters-types'
+import type {
+  FilterEditorProps,
+  FilterField,
+  FilterQuery,
+} from '@ui/components/reui/filters/filters-types'
+import { Calendar } from '@ui/components/primitives/calendar'
+import {
+  FILTER_OPS,
+  runnableFilters,
+  type FilterKind,
+  type FilterOp,
+  type ListFilter,
+  type ListFilterSpec,
+} from '@fp/domain'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -366,6 +379,122 @@ export function singleChoiceFilter<S extends string>({
     onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
       const next = String(flat.find((entry) => entry.field === id)?.values[0] ?? '')
       onChange((allowed.has(next) ? next : empty) as S)
+    },
+  }
+}
+
+/* ---- Granular filters ---------------------------------------------------- */
+
+/** V1's operator wording, keyed by the backend operator each one sends. */
+const OP_LABEL: Record<FilterOp, string> = {
+  eq: 'is',
+  contains: 'contains',
+  not_contains: 'does not contain',
+  gt: 'is greater than',
+  lt: 'is less than',
+  in: 'is any of',
+  not_in: 'is none of',
+  before: 'is before',
+  after: 'is after',
+}
+
+const KIND_TYPE: Record<FilterKind, 'text' | 'select' | 'number'> = {
+  text: 'text',
+  options: 'select',
+  number: 'number',
+  date: 'text',
+}
+
+const dayLabel = new Intl.DateTimeFormat(undefined, {
+  dateStyle: 'medium',
+  timeZone: 'UTC',
+})
+
+/** `YYYY-MM-DD` as a readable day, for the chip. */
+function formatDay(value: unknown): string {
+  return typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+    ? dayLabel.format(new Date(`${value}T00:00:00Z`))
+    : ''
+}
+
+/** The date step: one calendar, a pick commits the day as `YYYY-MM-DD`. */
+function FilterDayEditor({ value, commit }: FilterEditorProps<string, unknown>) {
+  const selected = value ? new Date(`${value}T00:00:00`) : undefined
+  return (
+    <Calendar
+      mode="single"
+      {...(selected ? { selected, defaultMonth: selected } : {})}
+      onSelect={(day: Date | undefined) => {
+        if (!day) return
+        const iso = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`
+        commit(iso)
+      }}
+    />
+  )
+}
+
+/**
+ * Field-by-field filters, as V1's query builder offered them: pick a field,
+ * an operator its kind allows, and a value. Applied server-side through the
+ * search endpoint's filter DSL (`toFilterConditions` in `@fp/query`), so the
+ * totals and pages agree with what is filtered.
+ *
+ * The caller holds `ListFilter[]` (usually in the URL) and hears back the
+ * complete ones on every change; half-built chips stay inside the bar.
+ */
+export function granularFilter({
+  specs,
+  filters,
+  onChange,
+}: {
+  specs: readonly ListFilterSpec[]
+  filters: readonly ListFilter[]
+  onChange: (filters: ListFilter[]) => void
+}) {
+  const fields: FilterField[] = specs.map((spec) => ({
+    id: spec.field,
+    label: spec.label,
+    type: KIND_TYPE[spec.kind],
+    ...(spec.options ? { options: spec.options.map((option) => ({ ...option })) } : {}),
+    operators: FILTER_OPS[spec.kind].map((op) => ({
+      value: op,
+      label: OP_LABEL[op],
+      arity: spec.kind === 'options' ? ('many' as const) : ('one' as const),
+    })),
+    ...(spec.kind === 'date'
+      ? {
+          editor: FilterDayEditor,
+          renderValue: ({ value }: { value: unknown }) => formatDay(value),
+          valueText: ({ value }: { value: unknown }) => formatDay(value),
+        }
+      : {}),
+  }))
+
+  const valid = runnableFilters(filters, specs)
+  return {
+    fields,
+    query: createFilterQuery(
+      valid.map((filter, index) =>
+        createFilterRule({
+          id: `${filter.field}-${index}`,
+          path: [filter.field],
+          operator: filter.op,
+          value: filter.value,
+        }),
+      ),
+    ),
+    activeCount: valid.length,
+    onQueryChange: (_next: FilterQuery, flat: FlatFilter[]) => {
+      const next = flat.map((entry): ListFilter => {
+        const spec = specs.find((candidate) => candidate.field === entry.field)
+        return {
+          field: entry.field,
+          op: entry.operator as FilterOp,
+          value:
+            spec?.kind === 'options' ? entry.values.map(String) : String(entry.values[0] ?? ''),
+        }
+      })
+      onChange(runnableFilters(next, specs))
     },
   }
 }
