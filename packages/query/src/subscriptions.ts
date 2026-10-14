@@ -55,6 +55,7 @@ import {
   formatMoney,
   money,
   moneyOr,
+  SUBSCRIPTION_FILTERS,
 } from '@fp/domain'
 import {
   type CreditGrantWire,
@@ -65,6 +66,7 @@ import {
 import { toEntitlementRequest } from './entitlements'
 import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } from './invoices'
 import { queryKeys } from './keys'
+import { toFilterConditions } from './search'
 import { toChargeRequest, toTier } from './prices'
 import { toCreateTaxAssociationRequest } from './taxAssociations'
 import { toOverrideLineItem } from './priceOverrides'
@@ -340,6 +342,9 @@ export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, u
     offset: (query.page - 1) * query.pageSize,
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     expand: 'customer,plan',
+    ...((query.filters?.length ?? 0) > 0
+      ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }
+      : {}),
   }
 }
 

@@ -3,6 +3,9 @@ import {
   SubscriptionSortField,
   SubscriptionStatus,
   DEFAULT_SUBSCRIPTION_QUERY,
+  SUBSCRIPTION_FILTERS,
+  decodeListFilters,
+  runnableFilters,
 } from '@fp/domain'
 
 /**
@@ -47,6 +50,9 @@ export function parseSubscriptionSearch(raw: Record<string, unknown>): Subscript
       ? (String(param(raw, 'sort', 'sortBy')) as SubscriptionSortField)
       : DEFAULT_SUBSCRIPTION_QUERY.sortBy,
     sortDirection:
-      param(raw, 'dir', 'sortDirection') === 'asc' ? 'asc' : DEFAULT_SUBSCRIPTION_QUERY.sortDirection,
+      param(raw, 'dir', 'sortDirection') === 'asc'
+        ? 'asc'
+        : DEFAULT_SUBSCRIPTION_QUERY.sortDirection,
+    filters: runnableFilters(decodeListFilters(raw['filters']), SUBSCRIPTION_FILTERS),
   }
 }

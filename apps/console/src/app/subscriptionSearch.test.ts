@@ -17,6 +17,7 @@ describe('parseSubscriptionSearch', () => {
       statuses: [SubscriptionStatus.Paused],
       sortBy: 'startDate',
       sortDirection: 'asc',
+      filters: [],
     })
   })
 

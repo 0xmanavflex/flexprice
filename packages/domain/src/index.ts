@@ -33,6 +33,7 @@ export {
   encodeListFilters,
   isRunnableFilter,
   runnableFilters,
+  withFilterOptions,
 } from './listFilter'
 export type { FilterKind, ListFilter, ListFilterSpec } from './listFilter'
 
@@ -265,6 +266,7 @@ export type {
 
 export {
   DEFAULT_SUBSCRIPTION_QUERY,
+  SUBSCRIPTION_FILTERS,
   SUBSCRIPTION_BILLING_PERIODS,
   SUBSCRIPTION_CANCELLATION_TYPES,
   SUBSCRIPTION_SCHEDULE_LABEL,

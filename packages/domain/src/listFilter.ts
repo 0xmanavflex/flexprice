@@ -72,6 +72,21 @@ export function isRunnableFilter(filter: ListFilter, spec: ListFilterSpec | unde
   }
 }
 
+/**
+ * Fills in the choices of `options` fields whose choices are the account's own
+ * records — customers, plans — which the page loads and the static spec cannot
+ * know.
+ */
+export function withFilterOptions(
+  specs: readonly ListFilterSpec[],
+  options: Readonly<Record<string, readonly { value: string; label: string }[]>>,
+): ListFilterSpec[] {
+  return specs.map((spec) => {
+    const choices = options[spec.field]
+    return choices ? { ...spec, options: choices } : spec
+  })
+}
+
 /** Keeps the filters that are runnable against these specs. */
 export function runnableFilters(
   filters: readonly ListFilter[],

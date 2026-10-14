@@ -1,8 +1,9 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
 import { type LinePricing } from './contractCharge'
 import { type Money } from './money'
-import { BillingPeriod } from './price'
+import { BILLING_PERIOD_LABEL, BillingPeriod } from './price'
 import { priceOverrideSchema } from './priceOverride'
 
 /**
@@ -80,6 +81,8 @@ export interface SubscriptionQuery {
   statuses: SubscriptionStatus[]
   sortBy: SubscriptionSortField
   sortDirection: 'asc' | 'desc'
+  /** Granular field filters, applied by the search endpoint. See `SUBSCRIPTION_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const DEFAULT_SUBSCRIPTION_QUERY: SubscriptionQuery = {
@@ -89,6 +92,7 @@ export const DEFAULT_SUBSCRIPTION_QUERY: SubscriptionQuery = {
   statuses: [],
   sortBy: SubscriptionSortField.StartDate,
   sortDirection: 'desc',
+  filters: [],
 }
 
 /**
@@ -103,6 +107,36 @@ export const SUBSCRIPTION_BILLING_PERIODS = [
   BillingPeriod.HalfYearly,
   BillingPeriod.Annual,
 ] as const
+
+/**
+ * What the contract list can filter on — V1's fields, by their wire names.
+ * Customer and plan choices are the account's own records; the page fills them
+ * in with `withFilterOptions`.
+ */
+export const SUBSCRIPTION_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'customer_id', label: 'Customer', kind: 'options', options: [] },
+  { field: 'plan_id', label: 'Plan', kind: 'options', options: [] },
+  {
+    field: 'subscription_status',
+    label: 'Status',
+    kind: 'options',
+    options: Object.values(SubscriptionStatus).map((value) => ({
+      value,
+      label: SUBSCRIPTION_STATUS_LABEL[value],
+    })),
+  },
+  {
+    field: 'billing_period',
+    label: 'Billing period',
+    kind: 'options',
+    options: SUBSCRIPTION_BILLING_PERIODS.map((value) => ({
+      value,
+      label: BILLING_PERIOD_LABEL[value],
+    })),
+  },
+  { field: 'start_date', label: 'Start date', kind: 'date' },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+]
 
 /**
  * The rules for starting a subscription.
