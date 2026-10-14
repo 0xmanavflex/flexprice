@@ -39,6 +39,7 @@ export type { FilterKind, ListFilter, ListFilterSpec } from './listFilter'
 
 export {
   DEFAULT_INVOICE_QUERY,
+  INVOICE_FILTERS,
   InvoiceLinePriceType,
   InvoiceSortField,
   InvoiceStatus,

@@ -13,8 +13,10 @@ import {
   isZeroMoney,
   moneyOr,
   toPaymentStatus,
+  INVOICE_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
+import { toFilterConditions } from './search'
 import { useFlexprice } from './provider'
 
 /**
@@ -69,6 +71,9 @@ export function toInvoiceFilter(query: InvoiceQuery): Record<string, unknown> {
     sort: [{ field: SORT_FIELD_TO_API[query.sortBy], direction: query.sortDirection }],
     // Line items are never rendered in a list, and they dominate the payload.
     skipLineItems: true,
+    ...((query.filters?.length ?? 0) > 0
+      ? { filters: toFilterConditions(query.filters ?? [], INVOICE_FILTERS) }
+      : {}),
     ...(statuses.length > 0 ? { invoiceStatus: statuses } : {}),
     ...(query.search ? { externalCustomerId: query.search } : {}),
   }

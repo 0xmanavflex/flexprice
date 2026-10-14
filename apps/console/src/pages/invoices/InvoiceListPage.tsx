@@ -1,5 +1,10 @@
-import { type Invoice, type InvoiceQuery, isStoredInvoiceStatus } from '@fp/domain'
-import { useInvoices } from '@fp/query'
+import {
+  DEFAULT_CUSTOMER_QUERY,
+  type Invoice,
+  type InvoiceQuery,
+  isStoredInvoiceStatus,
+} from '@fp/domain'
+import { useCustomers, useInvoices } from '@fp/query'
 import { InvoiceGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { toListFailure } from '../shared/listFailure'
@@ -32,9 +37,16 @@ export function InvoiceListPage({
 }: InvoiceListPageProps) {
   const invoices = useInvoices(query)
 
-  const isFiltered = query.search.length > 0 || query.statuses.length > 0
+  const isFiltered =
+    query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+  // The choices behind the Customer filter: the first hundred customers.
+  const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
+  const filterOptions = {
+    customer_id: (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
+  }
   const fetched = invoices.data?.invoices ?? []
-  const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
+  const clearFilters = () =>
+    onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
   const failure = toListFailure(invoices.error, 'invoices')
 
@@ -102,6 +114,7 @@ export function InvoiceListPage({
             total={total}
             query={query}
             onQueryChange={onQueryChange}
+            filterOptions={filterOptions}
             {...(isPageLocal ? { pageLocal: { fetchedCount: fetched.length } } : {})}
             {...(onCreate ? { onCreate } : {})}
             {...(onInvoiceClick ? { onInvoiceClick } : {})}

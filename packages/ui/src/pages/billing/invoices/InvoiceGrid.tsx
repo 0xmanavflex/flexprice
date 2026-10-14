@@ -9,8 +9,10 @@ import {
   PAYMENT_STATUS_LABEL,
   PaymentStatus,
   isStoredInvoiceStatus,
+  INVOICE_FILTERS,
+  withFilterOptions,
 } from '@fp/domain'
-import { statusFilter } from '@ui/compositions/tables/FilterBar'
+import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { Button } from '@ui/components/primitives/button'
 import { provenance } from '@ui/provenance'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
@@ -111,21 +113,6 @@ const SORT_OPTIONS = Object.values(InvoiceSortField).map((value) => ({
   label: SORT_LABEL[value],
 }))
 
-/** The order the dropdown offers, which is the order a collections desk works
- *  in: what needs attention first, what is finished last. */
-const STATUS_ORDER: InvoiceStatus[] = [
-  InvoiceStatus.Draft,
-  InvoiceStatus.Open,
-  InvoiceStatus.Overdue,
-  InvoiceStatus.Paid,
-  InvoiceStatus.Void,
-  InvoiceStatus.Skipped,
-]
-const STATUS_CHOICES = STATUS_ORDER.map((value) => ({
-  value,
-  label: STATUS_LABEL[value],
-}))
-
 /** Every URL requested and confirmed 200. */
 const GUIDES: EntityGuide[] = [
   {
@@ -163,6 +150,8 @@ export interface InvoiceGridProps {
   total: number
   query: InvoiceQuery
   onQueryChange: (query: InvoiceQuery) => void
+  /** Choices for the customer filter, keyed by wire field (`customer_id`). */
+  filterOptions?: Readonly<Record<string, readonly { value: string; label: string }[]>>
   isLoading?: boolean
   /** Already a message; the grid does not know what an ApiError is. */
   error?: string | null
@@ -192,6 +181,7 @@ export function InvoiceGrid({
   total,
   query,
   onQueryChange,
+  filterOptions,
   isLoading = false,
   error = null,
   onRetry,
@@ -333,10 +323,10 @@ export function InvoiceGrid({
          * every option can be counted honestly or none of them shows a
          * number.
          */
-        filter={statusFilter({
-          values: query.statuses,
-          choices: STATUS_CHOICES,
-          onChange: (statuses) => onQueryChange({ ...query, statuses, page: 1 }),
+        filter={granularFilter({
+          specs: withFilterOptions(INVOICE_FILTERS, filterOptions ?? {}),
+          filters: query.filters ?? [],
+          onChange: (filters) => onQueryChange({ ...query, filters, page: 1 }),
         })}
         sort={{
           options: SORT_OPTIONS,
@@ -368,7 +358,9 @@ export function InvoiceGrid({
         isRefreshing={isRefreshing}
         isProvisional={isProvisional}
         isPageLocalFilter={isPageLocal}
-        isFiltered={query.search.length > 0 || query.statuses.length > 0}
+        isFiltered={
+          query.search.length > 0 || query.statuses.length > 0 || (query.filters?.length ?? 0) > 0
+        }
         {...(onClearFilters ? { onClearFilters } : {})}
         filteredEmptyTitle={
           isPageLocal ? 'No matching invoices on this page' : 'No invoices match these filters'

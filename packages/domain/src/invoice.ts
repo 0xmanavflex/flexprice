@@ -1,3 +1,4 @@
+import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import type { Money } from './money'
 import type { PaymentStatus } from './payment'
@@ -162,6 +163,8 @@ export interface InvoiceQuery {
   /** Empty means no filter, not "match nothing". */
   statuses: InvoiceStatus[]
   search: string
+  /** Granular field filters, applied by the search endpoint. See `INVOICE_FILTERS`. */
+  filters?: ListFilter[]
 }
 
 export const InvoiceSortField = {
@@ -180,7 +183,53 @@ export const DEFAULT_INVOICE_QUERY: InvoiceQuery = {
   sortDirection: 'desc',
   statuses: [],
   search: '',
+  filters: [],
 }
+/**
+ * What the invoice list can filter on — V1's fields, by their wire names.
+ * Customer choices are the account's own records; the page fills them in.
+ */
+export const INVOICE_FILTERS: readonly ListFilterSpec[] = [
+  { field: 'invoice_number', label: 'Invoice number', kind: 'text' },
+  { field: 'customer_id', label: 'Customer', kind: 'options', options: [] },
+  {
+    field: 'invoice_status',
+    label: 'Invoice status',
+    kind: 'options',
+    options: [
+      { value: 'DRAFT', label: 'Draft' },
+      { value: 'FINALIZED', label: 'Finalized' },
+      { value: 'VOIDED', label: 'Voided' },
+      { value: 'SKIPPED', label: 'Skipped' },
+    ],
+  },
+  {
+    field: 'payment_status',
+    label: 'Payment status',
+    kind: 'options',
+    options: [
+      { value: 'PENDING', label: 'Pending' },
+      { value: 'PROCESSING', label: 'Processing' },
+      { value: 'SUCCEEDED', label: 'Succeeded' },
+      { value: 'FAILED', label: 'Failed' },
+      { value: 'OVERPAID', label: 'Overpaid' },
+      { value: 'REFUNDED', label: 'Refunded' },
+      { value: 'PARTIALLY_REFUNDED', label: 'Partially refunded' },
+    ],
+  },
+  {
+    field: 'invoice_type',
+    label: 'Invoice type',
+    kind: 'options',
+    options: [
+      { value: 'SUBSCRIPTION', label: 'Subscription' },
+      { value: 'ONE_OFF', label: 'One-off' },
+      { value: 'CREDIT', label: 'Credit' },
+    ],
+  },
+  { field: 'created_at', label: 'Created', kind: 'date' },
+  { field: 'due_date', label: 'Due date', kind: 'date' },
+]
 
 /** One line of an invoice, as the detail page shows it. Amounts stay exact strings. */
 export interface InvoiceDetailLine {
