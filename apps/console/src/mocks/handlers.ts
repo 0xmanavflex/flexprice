@@ -3484,10 +3484,32 @@ export const handlers = [
       ],
     })
   }),
+  /*
+   * `PUT /invoices/{id}` — the narrow edit the API actually allows.
+   *
+   * Its whole body is `invoice_pdf_url`, `due_date`, `metadata` and
+   * `apply_discount`; the customer, the amounts and the lines are fixed once
+   * an invoice exists. The handler honours exactly those, so a request that
+   * tries to edit anything else is as ignored here as it is in production.
+   */
   http.put(`${BASE}/invoices/:id`, async ({ request, params }) => {
     const id = String(params['id'])
     const body = (await request.json()) as Record<string, unknown>
-    if (body['metadata']) patchRow(sourceFor('invoices').items, id, { metadata: body['metadata'] })
+    const patch: Record<string, unknown> = {}
+    if (body['metadata']) patch['metadata'] = body['metadata']
+    const dueDate = body['due_date'] ?? body['dueDate']
+    if (dueDate !== undefined) {
+      // The API refuses a date in the past; the form does too, so a request
+      // carrying one is a bug worth failing on rather than quietly accepting.
+      if (typeof dueDate === 'string' && new Date(dueDate) < new Date()) {
+        return HttpResponse.json(
+          { message: 'due_date cannot be in the past', http_status_code: 400 },
+          { status: 400 },
+        )
+      }
+      patch['due_date'] = dueDate
+    }
+    if (Object.keys(patch).length > 0) patchRow(sourceFor('invoices').items, id, patch)
     const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
     if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
     return HttpResponse.json(invoice)
