@@ -108,8 +108,7 @@ interface Window {
  * "the API cannot" when the truth is "we have not" sends the next person to
  * the wrong team.
  */
-const MARGIN_UNAVAILABLE =
-  'Gross margin is not wired up yet. The cost analytics endpoint does return revenue, cost and margin together, but no hook in this console calls it, so there is no figure to show rather than no figure to be had.'
+const MARGIN_UNAVAILABLE = 'Gross margin is not available yet.'
 
 /**
  * The per-customer table reads `POST /dashboard/revenue-dashboard` (see

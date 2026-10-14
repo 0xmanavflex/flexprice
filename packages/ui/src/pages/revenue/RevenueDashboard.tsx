@@ -13,7 +13,6 @@ import { ArcGauge } from '../shared/ArcGauge'
 import { BlurredEmpty, MetricChart, seriesTone } from '../shared/charts'
 import type { MetricTab } from '../shared/charts'
 import { HalfDonut } from '../shared/HalfDonut'
-import { Money } from '../shared/Money'
 import { SplitMeter } from '../shared/SplitMeter'
 import { DetailTable, type DetailColumn } from '../shared/DetailTable'
 
@@ -311,34 +310,6 @@ const PLACEHOLDER_POINTS = [18, 26, 21, 34, 29, 41, 38, 52, 47, 61, 55, 68, 74, 
   (value) => ({ label: '', value }),
 )
 
-function MeteredRevenueNote({
-  revenue,
-  rangeLabel,
-}: {
-  revenue: MoneyValue | null
-  rangeLabel: string
-}) {
-  return (
-    <p className="text-muted-foreground text-xs">
-      {revenue === null ? (
-        <>
-          The analytics API returned no priced subtotal for the {rangeLabel}, so this page cannot
-          show what that usage was worth.
-        </>
-      ) : (
-        <>
-          Metered usage in the {rangeLabel} priced at{' '}
-          <span className="text-foreground font-medium tabular-nums">
-            <Money value={revenue} />
-          </span>
-          . The API prices the window as a whole and returns no per-period figure, so the line above
-          plots volume, not money.
-        </>
-      )}
-    </p>
-  )
-}
-
 /** The strip's tabs when the page sent none because nothing has loaded. */
 const FALLBACK_TABS: Pick<MetricTab, 'id' | 'label'>[] = [
   { id: 'usage', label: 'Metered usage' },
@@ -348,13 +319,11 @@ const FALLBACK_TABS: Pick<MetricTab, 'id' | 'label'>[] = [
 
 function MetricPanel({
   chart,
-  meteredRevenue,
   rangeLabel,
   onGetStarted,
   onSeePlans,
 }: {
   chart: RevenueDashboardProps['chart']
-  meteredRevenue: MoneyValue | null
   rangeLabel: string
   onGetStarted: () => void
   onSeePlans: () => void
@@ -400,9 +369,6 @@ function MetricPanel({
       }))
     : chart.tabs
 
-  const usageTab = tabs.find((tab) => tab.id === 'usage')
-  const usageKnown = !forced && (usageTab?.status ?? 'ready') === 'ready'
-
   return (
     <div className="flex flex-col gap-2">
       <DataRegion
@@ -418,10 +384,6 @@ function MetricPanel({
           height={260}
         />
       </DataRegion>
-      {usageKnown ? <MeteredRevenueNote revenue={meteredRevenue} rangeLabel={rangeLabel} /> : null}
-      {chart.basedOn && !forced ? (
-        <p className="text-muted-foreground text-xs">{chart.basedOn}</p>
-      ) : null}
       {chart.stale && !forced ? (
         <DataFreshness
           updatedAt={chart.updatedAt}
@@ -818,9 +780,6 @@ function CollectionsPanel({
           ) : (
             <AbsentFigure caption={`No invoices were finalised in the ${rangeLabel}.`} />
           )}
-          {collections.status === 'ready' && collections.basedOn ? (
-            <p className="text-muted-foreground text-xs">{collections.basedOn}</p>
-          ) : null}
           {collections.stale ? (
             <DataFreshness
               updatedAt={collections.updatedAt}
@@ -840,7 +799,6 @@ function CollectionsPanel({
 export function RevenueDashboard({
   rangeLabel,
   chart,
-  meteredRevenue,
   mix,
   margin,
   collections,
@@ -862,7 +820,6 @@ export function RevenueDashboard({
 
       <MetricPanel
         chart={chart}
-        meteredRevenue={meteredRevenue}
         rangeLabel={rangeLabel}
         onGetStarted={() => go('/features')}
         onSeePlans={() => go('/plans')}

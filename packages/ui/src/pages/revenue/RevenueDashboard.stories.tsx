@@ -381,8 +381,8 @@ export const MeteredRevenueIsTheOnlyMoney: Story = {
   args: ready,
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('$9,417.32')).toBeInTheDocument()
-    await expect(canvas.getByText(/plots volume, not money/)).toBeInTheDocument()
+    // No caption under the chart: explanatory notes appeared and vanished and moved the page.
+    await expect(canvas.queryByText(/plots volume, not money/)).toBeNull()
   },
 }
 
@@ -391,7 +391,7 @@ export const NoPricedSubtotal: Story = {
   args: { ...ready, meteredRevenue: null },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText(/no priced subtotal/)).toBeInTheDocument()
+    await expect(canvas.queryByText(/no priced subtotal/)).toBeNull()
     await expect(canvas.queryByText(/\$/)).not.toBeInTheDocument()
   },
 }
@@ -587,7 +587,8 @@ export const TruncatedInvoices: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getAllByText('Based on the latest 200 invoices.')).toHaveLength(2)
+    // Sampling notes are not drawn under the panels.
+    await expect(canvas.queryAllByText('Based on the latest 200 invoices.')).toHaveLength(0)
   },
 }
 
