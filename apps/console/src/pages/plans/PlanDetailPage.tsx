@@ -346,7 +346,7 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
 
   return (
     <>
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
         <PlanChargesView
           charges={rows}
           readOnly={readOnly}
@@ -359,6 +359,8 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
           onTerminate={(charge) => setTerminating(charge)}
         />
         <PlanCustomerPreview
+          // Follows the charges table down; the grid is `items-start` so it can.
+          className="lg:sticky lg:top-6"
           charges={rows}
           entitlements={entitlements.data ?? []}
           grants={grants.data ?? []}

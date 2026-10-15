@@ -137,7 +137,7 @@ function PlanDetailPage({
         />
 
         {tab === 'overview' ? (
-          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+          <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
             <PlanChargesView
               charges={charges}
               readOnly={archived}
@@ -148,6 +148,8 @@ function PlanDetailPage({
             />
             {/* What a customer would be shown, beside what is being edited. */}
             <PlanCustomerPreview
+              // Follows the charges table down; the grid is `items-start` so it can.
+              className="lg:sticky lg:top-6"
               charges={charges}
               entitlements={entitlements}
               grants={grants}

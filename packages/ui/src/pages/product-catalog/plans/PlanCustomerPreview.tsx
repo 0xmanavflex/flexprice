@@ -10,6 +10,7 @@ export interface PlanCustomerPreviewProps {
   meterUnit?: (meterId: string) => string | undefined
   /** Plural unit of a feature ("tokens"), shown after a metered allowance. */
   featureUnit?: (featureId: string) => string | undefined
+  className?: string
 }
 
 /**
@@ -23,10 +24,12 @@ export function PlanCustomerPreview({
   trialDays,
   meterUnit,
   featureUnit,
+  className,
 }: PlanCustomerPreviewProps) {
   const meterNames = new Map(charges.map((c) => [c.meterId, c.meterName] as const))
   return (
     <PlanPreviewCard
+      {...(className ? { className } : {})}
       charges={charges.map(chargeToDraft)}
       meterLabel={(id) => meterNames.get(id) ?? id}
       {...(meterUnit ? { meterUnit } : {})}

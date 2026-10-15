@@ -45,6 +45,8 @@ export interface PlanPreviewCardProps {
   /** Credits the plan hands out, one line per grant. */
   credits?: PreviewLine[]
   locale?: string
+  /** Passed to the rail — `sticky top-6` on a detail page, nothing on a form. */
+  className?: string
 }
 
 export interface PreviewLine {
@@ -173,6 +175,7 @@ export function PlanPreviewCard({
   included = [],
   credits = [],
   locale,
+  className,
 }: PlanPreviewCardProps) {
   const currency = (charges.find((c) => c.currency)?.currency ?? 'USD').toUpperCase()
   const usageCharges = charges.filter((c) => c.type === PriceType.Usage)
@@ -186,7 +189,11 @@ export function PlanPreviewCard({
   const tail = [trial, usageCharges.length > 0 ? 'plus usage' : null].filter(Boolean).join(' · ')
 
   return (
-    <FormPreview title="What customers see" label="Plan preview">
+    <FormPreview
+      title="What customers see"
+      label="Plan preview"
+      {...(className ? { className } : {})}
+    >
       {charges.length === 0 ? (
         <p className="text-muted-foreground text-[13px]/relaxed">
           Add a charge and the price customers see builds up here.
