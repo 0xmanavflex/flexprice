@@ -315,3 +315,31 @@ export const Failed: Story = {
     ).toBeInTheDocument()
   },
 }
+
+/**
+ * The preview is a pricing card, and its titles go to the tables.
+ *
+ * It was a left-ruled rail, matching the earlier prototype; the handoff asks
+ * for "a live pricing card … its section titles jump to the matching table".
+ * The jump is the reason the card can stay short: a block summarises a table
+ * and takes you to it rather than repeating it.
+ */
+export const PreviewIsACardThatJumps: Story = {
+  args: { activeTab: 'overview' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const preview = await canvas.findByRole('complementary', { name: 'Plan preview' })
+
+    // The ids come from each table's own Section heading.
+    await expect(within(preview).getByRole('link', { name: 'Usage' })).toHaveAttribute(
+      'href',
+      '#section-charges',
+    )
+    await expect(within(preview).getByRole('link', { name: 'Included' })).toHaveAttribute(
+      'href',
+      '#section-entitlements',
+    )
+    // And the targets exist, so the links are not dead.
+    await expect(canvas.getByRole('region', { name: 'Charges table' })).toBeVisible()
+  },
+}

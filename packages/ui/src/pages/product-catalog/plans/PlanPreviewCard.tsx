@@ -47,6 +47,14 @@ export interface PlanPreviewCardProps {
   locale?: string
   /** Passed to the rail — `sticky top-6` on a detail page, nothing on a form. */
   className?: string
+  /** `card` boxes it, for a saved plan; `rail` is the form's column. */
+  variant?: 'rail' | 'card'
+  /**
+   * Element ids the section titles jump to, when the preview sits beside the
+   * tables it summarises. Omitted on a form, where there is nothing to jump
+   * to — the tables do not exist yet.
+   */
+  jumpTargets?: { charges?: string; included?: string; credits?: string }
 }
 
 export interface PreviewLine {
@@ -176,6 +184,8 @@ export function PlanPreviewCard({
   credits = [],
   locale,
   className,
+  variant = 'rail',
+  jumpTargets,
 }: PlanPreviewCardProps) {
   const currency = (charges.find((c) => c.currency)?.currency ?? 'USD').toUpperCase()
   const usageCharges = charges.filter((c) => c.type === PriceType.Usage)
@@ -192,6 +202,7 @@ export function PlanPreviewCard({
     <FormPreview
       title="What customers see"
       label="Plan preview"
+      variant={variant}
       {...(className ? { className } : {})}
     >
       {charges.length === 0 ? (
@@ -223,7 +234,10 @@ export function PlanPreviewCard({
           </div>
 
           {extras.length > 0 ? (
-            <PreviewSection title="Also billed">
+            <PreviewSection
+              title="Also billed"
+              {...(jumpTargets?.charges ? { jumpTo: jumpTargets.charges } : {})}
+            >
               <ul className="space-y-2 text-[13px]">
                 {extras.slice(0, CAP).map((charge, index) => (
                   <li key={index} className="flex justify-between gap-3">
@@ -241,7 +255,10 @@ export function PlanPreviewCard({
           ) : null}
 
           {usageCharges.length > 0 ? (
-            <PreviewSection title="Usage">
+            <PreviewSection
+              title="Usage"
+              {...(jumpTargets?.charges ? { jumpTo: jumpTargets.charges } : {})}
+            >
               <ul className="space-y-2.5 text-[13px]">
                 {usageCharges.slice(0, CAP).map((charge, index) => (
                   <li key={index} className="space-y-0.5">
@@ -262,7 +279,10 @@ export function PlanPreviewCard({
           ) : null}
 
           {included.length > 0 ? (
-            <PreviewSection title="Included">
+            <PreviewSection
+              title="Included"
+              {...(jumpTargets?.included ? { jumpTo: jumpTargets.included } : {})}
+            >
               <ul className="space-y-2 text-[13px]">
                 {included.slice(0, CAP).map((line) => (
                   <li key={line.key} className="flex items-start gap-2">
@@ -281,7 +301,10 @@ export function PlanPreviewCard({
           ) : null}
 
           {credits.length > 0 ? (
-            <PreviewSection title="Credits">
+            <PreviewSection
+              title="Credits"
+              {...(jumpTargets?.credits ? { jumpTo: jumpTargets.credits } : {})}
+            >
               <ul className="space-y-2 text-[13px]">
                 {credits.slice(0, CAP).map((line) => (
                   <li key={line.key} className="flex justify-between gap-3">

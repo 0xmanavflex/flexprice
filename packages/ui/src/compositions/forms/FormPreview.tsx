@@ -26,6 +26,13 @@ export const FormPreviewProvenance = provenance({
 
 export interface FormPreviewProps {
   title: string
+  /**
+   * `rail` is the left-ruled column a form sits beside; `card` is a boxed
+   * panel. A form rail should not look like a card — it is part of the form,
+   * not a thing on the page — but a saved plan's preview is a pricing card
+   * and the redesign asks for it to read as one.
+   */
+  variant?: 'rail' | 'card'
   /** Names the rail for assistive tech; defaults to the title. */
   label?: string
   /** A status or direction badge beside the title. */
@@ -34,14 +41,24 @@ export interface FormPreviewProps {
   className?: string
 }
 
-export function FormPreview({ title, label, badge, children, className }: FormPreviewProps) {
+export function FormPreview({
+  title,
+  label,
+  badge,
+  variant = 'rail',
+  children,
+  className,
+}: FormPreviewProps) {
   const headingId = useId()
   return (
     <aside
       aria-label={label ?? title}
       aria-labelledby={label ? undefined : headingId}
       className={cn(
-        'flex min-w-0 flex-col gap-5 border-t pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6',
+        'flex min-w-0 flex-col gap-5',
+        variant === 'card'
+          ? 'bg-background rounded-xl border p-5'
+          : 'border-t pt-5 lg:border-t-0 lg:border-l lg:pt-0 lg:pl-6',
         className,
       )}
     >
@@ -88,11 +105,34 @@ export function PreviewAmount({
   )
 }
 
-/** A titled group: `PreviewRows` for label/value pairs, or any text. */
-export function PreviewSection({ title, children }: { title: string; children: ReactNode }) {
+/**
+ * A titled group: `PreviewRows` for label/value pairs, or any text.
+ *
+ * `jumpTo` turns the title into a link to the element with that id — the
+ * preview summarises tables further down the page, and the title is the
+ * obvious way to get to the one you are reading about.
+ */
+export function PreviewSection({
+  title,
+  jumpTo,
+  children,
+}: {
+  title: string
+  jumpTo?: string | undefined
+  children: ReactNode
+}) {
   return (
     <section className="flex flex-col gap-2.5">
-      <h3 className="text-sm leading-5 font-medium">{title}</h3>
+      {jumpTo ? (
+        <a
+          href={`#${jumpTo}`}
+          className="focus-visible:ring-ring/50 w-fit rounded-sm text-sm leading-5 font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-3"
+        >
+          {title}
+        </a>
+      ) : (
+        <h3 className="text-sm leading-5 font-medium">{title}</h3>
+      )}
       {children}
     </section>
   )

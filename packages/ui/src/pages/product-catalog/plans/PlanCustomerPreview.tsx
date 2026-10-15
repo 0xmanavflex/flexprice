@@ -14,6 +14,18 @@ export interface PlanCustomerPreviewProps {
 }
 
 /**
+ * Where each block of the preview jumps to.
+ *
+ * `Section` derives its heading id from its title, so these are the ids of
+ * the Charges, Entitlements and Credit grants tables stacked beside this.
+ */
+const JUMP_TARGETS = {
+  charges: 'section-charges',
+  included: 'section-entitlements',
+  credits: 'section-credit-grants',
+} as const
+
+/**
  * "What customers see" for a saved plan: adapts the plan's persisted charges,
  * entitlements and grants to `PlanPreviewCard`, the one preview the form shares.
  */
@@ -29,6 +41,9 @@ export function PlanCustomerPreview({
   const meterNames = new Map(charges.map((c) => [c.meterId, c.meterName] as const))
   return (
     <PlanPreviewCard
+      // A saved plan's preview is a pricing card, not a form rail.
+      variant="card"
+      jumpTargets={JUMP_TARGETS}
       {...(className ? { className } : {})}
       charges={charges.map(chargeToDraft)}
       meterLabel={(id) => meterNames.get(id) ?? id}
