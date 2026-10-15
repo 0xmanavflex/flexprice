@@ -11,10 +11,6 @@ import animated_linesStack from '../reui/icons/animated/outline/lines-stack'
 import animated_receiptSquare from '../reui/icons/animated/outline/receipt-square'
 import animated_ringsLinked from '../reui/icons/animated/outline/rings-linked'
 import animated_squaresRing from '../reui/icons/animated/outline/squares-ring'
-import static_filled_cross from '../reui/icons/default/filled/cross'
-import static_filled_gear from '../reui/icons/default/filled/gear'
-import static_filled_link from '../reui/icons/default/filled/link'
-import static_filled_right from '../reui/icons/default/filled/right'
 import static_addFolder from '../reui/icons/default/outline/add-folder'
 import static_addUser from '../reui/icons/default/outline/add-user'
 import static_archive from '../reui/icons/default/outline/archive'
@@ -56,6 +52,7 @@ import static_colorSwatch from '../reui/icons/default/outline/color-swatch'
 import static_copy from '../reui/icons/default/outline/copy'
 import static_copyAdd from '../reui/icons/default/outline/copy-add'
 import static_creditCard from '../reui/icons/default/outline/credit-card'
+import static_cross from '../reui/icons/default/outline/cross'
 import static_crossCircle from '../reui/icons/default/outline/cross-circle'
 import static_cube from '../reui/icons/default/outline/cube'
 import static_cubeSquare from '../reui/icons/default/outline/cube-square'
@@ -77,6 +74,7 @@ import static_fileSheet from '../reui/icons/default/outline/file-sheet'
 import static_filterEdit from '../reui/icons/default/outline/filter-edit'
 import static_filterSearch from '../reui/icons/default/outline/filter-search'
 import static_flask from '../reui/icons/default/outline/flask'
+import static_gear from '../reui/icons/default/outline/gear'
 import static_globe from '../reui/icons/default/outline/globe'
 import static_hash from '../reui/icons/default/outline/hash'
 import static_home from '../reui/icons/default/outline/home'
@@ -89,6 +87,7 @@ import static_key from '../reui/icons/default/outline/key'
 import static_layoutDashboard from '../reui/icons/default/outline/layout-dashboard'
 import static_layoutHeader from '../reui/icons/default/outline/layout-header'
 import static_layoutSidebarLeft from '../reui/icons/default/outline/layout-sidebar-left'
+import static_link from '../reui/icons/default/outline/link'
 import static_loading from '../reui/icons/default/outline/loading'
 import static_lock from '../reui/icons/default/outline/lock'
 import static_magnifier from '../reui/icons/default/outline/magnifier'
@@ -115,6 +114,7 @@ import static_profileCircle from '../reui/icons/default/outline/profile-circle'
 import static_pulse from '../reui/icons/default/outline/pulse'
 import static_questionCircle from '../reui/icons/default/outline/question-circle'
 import static_refreshArrowClockwise from '../reui/icons/default/outline/refresh-arrow-clockwise'
+import static_right from '../reui/icons/default/outline/right'
 import static_rocket from '../reui/icons/default/outline/rocket'
 import static_route from '../reui/icons/default/outline/route'
 import static_rowsStacked from '../reui/icons/default/outline/rows-stacked'
@@ -206,15 +206,15 @@ export const Check: IconComponent = staticIcon(static_check, 'Check')
 export { Check as CheckIcon }
 export const CheckCircle2: IconComponent = staticIcon(static_checkCircle, 'CheckCircle2')
 export { CheckCircle2 as CheckCircle2Icon }
-export const ChevronDown: IconComponent = staticIcon(static_filled_right, 'ChevronDown', 90)
+export const ChevronDown: IconComponent = staticIcon(static_right, 'ChevronDown', 90)
 export { ChevronDown as ChevronDownIcon }
-export const ChevronLeft: IconComponent = staticIcon(static_filled_right, 'ChevronLeft', 180)
+export const ChevronLeft: IconComponent = staticIcon(static_right, 'ChevronLeft', 180)
 export { ChevronLeft as ChevronLeftIcon }
-export const ChevronRight: IconComponent = staticIcon(static_filled_right, 'ChevronRight')
+export const ChevronRight: IconComponent = staticIcon(static_right, 'ChevronRight')
 export { ChevronRight as ChevronRightIcon }
 export const ChevronsUpDown: IconComponent = staticIcon(static_chevronsUpDown, 'ChevronsUpDown')
 export { ChevronsUpDown as ChevronsUpDownIcon }
-export const ChevronUp: IconComponent = staticIcon(static_filled_right, 'ChevronUp', 270)
+export const ChevronUp: IconComponent = staticIcon(static_right, 'ChevronUp', 270)
 export { ChevronUp as ChevronUpIcon }
 export const Circle: IconComponent = staticIcon(static_circleRing, 'Circle')
 export { Circle as CircleIcon }
@@ -320,7 +320,7 @@ export const LayoutPanelLeft: IconComponent = staticIcon(static_layoutSidebarLef
 export { LayoutPanelLeft as LayoutPanelLeftIcon }
 export const LayoutTemplate: IconComponent = staticIcon(static_layoutDashboard, 'LayoutTemplate')
 export { LayoutTemplate as LayoutTemplateIcon }
-export const Link: IconComponent = staticIcon(static_filled_link, 'Link')
+export const Link: IconComponent = staticIcon(static_link, 'Link')
 export { Link as LinkIcon }
 export const List: IconComponent = staticIcon(static_squareBulletList, 'List')
 export { List as ListIcon }
@@ -404,7 +404,7 @@ export const SearchX: IconComponent = staticIcon(static_filterSearch, 'SearchX')
 export { SearchX as SearchXIcon }
 export const Send: IconComponent = staticIcon(static_paperPlane, 'Send')
 export { Send as SendIcon }
-export const Settings: IconComponent = staticIcon(static_filled_gear, 'Settings')
+export const Settings: IconComponent = staticIcon(static_gear, 'Settings')
 export { Settings as SettingsIcon }
 export const Settings2: IconComponent = staticIcon(static_sliders, 'Settings2')
 export { Settings2 as Settings2Icon }
@@ -474,7 +474,7 @@ export const Workflow: IconComponent = animatedIcon(animated_squaresRing, 'Workf
 export { Workflow as WorkflowIcon }
 export const Wrench: IconComponent = staticIcon(static_wrench, 'Wrench')
 export { Wrench as WrenchIcon }
-export const X: IconComponent = staticIcon(static_filled_cross, 'X')
+export const X: IconComponent = staticIcon(static_cross, 'X')
 export { X as XIcon }
 export const XCircle: IconComponent = staticIcon(static_crossCircle, 'XCircle')
 export { XCircle as XCircleIcon }
