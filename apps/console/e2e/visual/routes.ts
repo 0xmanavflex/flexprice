@@ -94,7 +94,9 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
     route: `/features/${FEATURE}`,
     reference: 'pages/feature-detail.tsx',
     pattern: 'detail',
-    ready: { heading: 'Plans attached' },
+    // "Plans attached" was a four-row preview of the charges; the Overview
+    // tab shows the Charges table in full now, so that is what to wait for.
+    ready: { heading: 'Charges' },
   },
   {
     name: 'feature-new',

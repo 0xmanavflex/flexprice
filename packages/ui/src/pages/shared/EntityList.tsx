@@ -301,9 +301,15 @@ export interface EntityListProps<T> {
 function HeaderLabel({ title, className }: { title: string; className?: string }) {
   return (
     <span
+      /*
+       * `flex` only when centring.
+       * Adding it unconditionally changed the box of every table header in
+       * the app — fourteen visual baselines moved for a change that was
+       * meant to touch four count columns.
+       */
       className={cn(
-        'text-muted-foreground flex text-[11px] font-medium tracking-wider uppercase',
-        className,
+        'text-muted-foreground text-[11px] font-medium tracking-wider uppercase',
+        className && `flex ${className}`,
       )}
     >
       {title}
