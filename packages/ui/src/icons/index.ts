@@ -12,7 +12,6 @@ import animated_receiptSquare from '../reui/icons/animated/outline/receipt-squar
 import animated_ringsLinked from '../reui/icons/animated/outline/rings-linked'
 import animated_squaresRing from '../reui/icons/animated/outline/squares-ring'
 import static_filled_cross from '../reui/icons/default/filled/cross'
-import static_filled_filterSearch from '../reui/icons/default/filled/filter-search'
 import static_filled_gear from '../reui/icons/default/filled/gear'
 import static_filled_home from '../reui/icons/default/filled/home'
 import static_filled_link from '../reui/icons/default/filled/link'
@@ -275,7 +274,7 @@ export const FileSignature: IconComponent = staticIcon(static_penNib, 'FileSigna
 export { FileSignature as FileSignatureIcon }
 export const FileText: IconComponent = staticIcon(static_document, 'FileText')
 export { FileText as FileTextIcon }
-export const Filter: IconComponent = staticIcon(static_filled_filterSearch, 'Filter')
+export const Filter: IconComponent = staticIcon(static_filterSearch, 'Filter')
 export { Filter as FilterIcon }
 export const FlaskConical: IconComponent = staticIcon(static_flask, 'FlaskConical')
 export { FlaskConical as FlaskConicalIcon }
@@ -325,7 +324,7 @@ export const Link: IconComponent = staticIcon(static_filled_link, 'Link')
 export { Link as LinkIcon }
 export const List: IconComponent = staticIcon(static_squareBulletList, 'List')
 export { List as ListIcon }
-export const ListFilter: IconComponent = staticIcon(static_filled_filterSearch, 'ListFilter')
+export const ListFilter: IconComponent = staticIcon(static_filterSearch, 'ListFilter')
 export { ListFilter as ListFilterIcon }
 export const ListFilterPlus: IconComponent = staticIcon(static_filterEdit, 'ListFilterPlus')
 export { ListFilterPlus as ListFilterPlusIcon }
