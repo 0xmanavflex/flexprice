@@ -43,7 +43,10 @@ describe('toCostSheetFilter', () => {
     })
     expect(filter).toMatchObject({
       queryFilter: { limit: 25, offset: 50 },
-      sort: [{ field: 'updated_at', direction: 'desc' }],
+      sort: [
+        { field: 'updated_at', direction: 'desc' },
+        { field: 'id', direction: 'desc' },
+      ],
     })
   })
 

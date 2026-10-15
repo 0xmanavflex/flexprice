@@ -204,13 +204,26 @@ function page(source: Corpus, body: SearchBody) {
     )
   }
 
-  const sort = body.sort?.[0]
-  if (sort) {
-    const { field, direction } = sort
+  /*
+   * Every sort entry, not just the first.
+   *
+   * The console sends a tie-break after the primary key (`sortWithTieBreak`),
+   * because sorting on a timestamp alone is not a total order and the real API
+   * is free to return tied rows in any order. A mock that read `sort[0]` and
+   * stopped would sort tied rows by corpus position instead — stable, so the
+   * tests would pass, and the one thing the tie-break exists to prevent would
+   * be the one thing they could never catch.
+   */
+  const sorts = body.sort ?? []
+  if (sorts.length > 0) {
     rows.sort((a, b) => {
-      const left = readString(a, field)
-      const right = readString(b, field)
-      return direction === 'desc' ? right.localeCompare(left) : left.localeCompare(right)
+      for (const { field, direction } of sorts) {
+        const left = readString(a, field)
+        const right = readString(b, field)
+        const order = direction === 'desc' ? right.localeCompare(left) : left.localeCompare(right)
+        if (order !== 0) return order
+      }
+      return 0
     })
   }
 

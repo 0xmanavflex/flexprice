@@ -17,6 +17,7 @@ import { toAlertConfigRequest } from './alertSettings'
 import { queryKeys } from './keys'
 import { toFilterConditions } from './search'
 import { useFlexprice } from './provider'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Features: the translation between product vocabulary and the API.
@@ -158,7 +159,7 @@ export function toFeatureFilter(query: FeatureQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'meters',
     ...(query.search ? { nameContains: query.search } : {}),
     ...((query.filters?.length ?? 0) > 0

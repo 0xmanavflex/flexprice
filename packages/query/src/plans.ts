@@ -12,6 +12,7 @@ import {
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 import { nameContainsFilter, toFilterConditions } from './search'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Plans: the translation between product vocabulary and the API.
@@ -99,7 +100,7 @@ export function toPlanFilter(query: PlanQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'prices',
     ...(query.search || (query.filters?.length ?? 0) > 0
       ? {

@@ -12,6 +12,7 @@ import {
 import { queryKeys } from './keys'
 import { statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Cost sheets: the translation between product vocabulary and the API.
@@ -70,7 +71,7 @@ export function toCostSheetFilter(query: CostSheetQuery): Record<string, unknown
   return {
     // Paging nests under `queryFilter` for this endpoint — see the note above.
     queryFilter: { limit: query.pageSize, offset: (query.page - 1) * query.pageSize },
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     /*
      * Status, server-side — it used to narrow the fetched page in the browser,
      * which left the pager reporting the server's unfiltered total above a

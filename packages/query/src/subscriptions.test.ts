@@ -51,7 +51,11 @@ describe('toSubscription', () => {
 
   it('keeps dates when present and null when absent', () => {
     const start = new Date('2026-01-01T00:00:00Z')
-    const withDates = toSubscription({ startDate: start, currentPeriodEnd: start, createdAt: start })
+    const withDates = toSubscription({
+      startDate: start,
+      currentPeriodEnd: start,
+      createdAt: start,
+    })
     expect(withDates.startDate).toEqual(start)
     expect(withDates.currentPeriodEnd).toEqual(start)
     expect(withDates.createdAt).toEqual(start)
@@ -75,7 +79,10 @@ describe('toSubscriptionFilter', () => {
     expect(filter).toMatchObject({
       limit: 25,
       offset: 50,
-      sort: [{ field: 'created_at', direction: 'asc' }],
+      sort: [
+        { field: 'created_at', direction: 'asc' },
+        { field: 'id', direction: 'asc' },
+      ],
     })
   })
 
@@ -85,7 +92,10 @@ describe('toSubscriptionFilter', () => {
     // updated_at, so this is a sort the backend really honours.
     expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).toMatchObject({
       offset: 0,
-      sort: [{ field: 'updated_at', direction: 'desc' }],
+      sort: [
+        { field: 'updated_at', direction: 'desc' },
+        { field: 'id', direction: 'desc' },
+      ],
     })
   })
 })

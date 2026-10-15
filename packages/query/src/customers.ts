@@ -23,6 +23,7 @@ import { useFlexprice } from './provider'
 import { type SubscriptionWire, toSubscription } from './subscriptions'
 import { type InvoicePage, fetchInvoices } from './invoices'
 import { type FeatureUsageWire, toFeatureUsage } from './tenant'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Customers: the translation between billing vocabulary and the API.
@@ -106,7 +107,7 @@ export function toCustomerFilter(query: CustomerQuery): Record<string, unknown> 
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     // The integration marks in the list: one batched lookup on the server
     // instead of a mappings request per row.
     expand: 'integrations',

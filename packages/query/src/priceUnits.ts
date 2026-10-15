@@ -11,6 +11,7 @@ import {
 import { queryKeys } from './keys'
 import { useFlexprice } from './provider'
 import { nameContainsFilter, statusFilterField, toFilterConditions } from './search'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Price units: the translation between product vocabulary and the API.
@@ -86,7 +87,7 @@ export function toPriceUnitFilter(query: PriceUnitQuery): Record<string, unknown
      * backend accepts, so there was never a reason not to send it.
      */
     ...statusFilterField(query.statuses, Object.values(PriceUnitStatus)),
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     ...(query.search || (query.filters?.length ?? 0) > 0
       ? {
           filters: [

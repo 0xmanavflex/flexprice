@@ -73,6 +73,7 @@ import { toChargeRequest, toTier } from './prices'
 import { toCreateTaxAssociationRequest } from './taxAssociations'
 import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Subscriptions: the translation between product vocabulary and the API.
@@ -343,7 +344,7 @@ export function toSubscriptionFilter(query: SubscriptionQuery): Record<string, u
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     expand: 'customer,plan',
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], SUBSCRIPTION_FILTERS) }

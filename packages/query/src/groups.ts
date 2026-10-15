@@ -12,6 +12,7 @@ import {
 import { queryKeys } from './keys'
 import { statusFilterField, toFilterConditions } from './search'
 import { useFlexprice } from './provider'
+import { sortWithTieBreak } from './listSort'
 
 /**
  * Groups: the translation between product vocabulary and the API.
@@ -82,7 +83,7 @@ export function toGroupFilter(query: GroupQuery): Record<string, unknown> {
      * backend accepts, so there was never a reason not to send it.
      */
     ...statusFilterField(query.statuses, Object.values(GroupStatus)),
-    sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
+    sort: sortWithTieBreak(SORT_FIELD[query.sortBy], query.sortDirection),
     ...(query.search ? { name: query.search } : {}),
     ...(query.entityType ? { entityType: query.entityType } : {}),
     ...((query.filters?.length ?? 0) > 0
