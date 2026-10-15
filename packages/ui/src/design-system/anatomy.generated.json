@@ -56,6 +56,7 @@
         "Section"
       ],
       "usedBy": [
+        "CreditNoteDetailView",
         "CustomerDetail",
         "InvoiceDetailView",
         "SubscriptionDetailView"
@@ -1577,6 +1578,19 @@
       "usedBy": [],
       "story": "./src/pages/product-catalog/credit-grants/CreditGrantTable.stories.tsx"
     },
+    "CreditNoteDetailView": {
+      "file": "src/pages/billing/credit-notes/CreditNoteDetailView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ActivitySection",
+        "DetailShell",
+        "MetadataCard",
+        "Pill",
+        "RelatedCard"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/billing/credit-notes/CreditNoteDetailView.stories.tsx"
+    },
     "CreditNoteForm": {
       "file": "src/pages/billing/credit-notes/CreditNoteForm.tsx",
       "layer": "surface",
@@ -1598,6 +1612,13 @@
       ],
       "usedBy": [],
       "story": "./src/pages/billing/credit-notes/CreditNoteGrid.stories.tsx"
+    },
+    "CreditSettlement": {
+      "file": "src/pages/billing/credit-notes/creditNoteDocument.ts",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [],
+      "story": null
     },
     "CrossCircleIcon": {
       "file": "src/reui/icons/default/outline/cross-circle.tsx",
@@ -1985,6 +2006,7 @@
       ],
       "usedBy": [
         "CatalogDetailFrame",
+        "CreditNoteDetailView",
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
@@ -4019,6 +4041,7 @@
         "Section"
       ],
       "usedBy": [
+        "CreditNoteDetailView",
         "CustomerDetail",
         "FeatureDetailView",
         "InvoiceDetailView",
@@ -4563,6 +4586,7 @@
       ],
       "usedBy": [
         "CatalogStatusBadge",
+        "CreditNoteDetailView",
         "CustomerDetail",
         "CustomerWalletView",
         "EventTypeName",
@@ -5081,6 +5105,7 @@
         "Section"
       ],
       "usedBy": [
+        "CreditNoteDetailView",
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
@@ -7303,6 +7328,14 @@
       "component": "SignUpScreen",
       "uses": [
         "SignUpScreen"
+      ]
+    },
+    "./src/pages/billing/credit-notes/CreditNoteDetailView.stories.tsx": {
+      "title": "App/Billing/Credit memos/Credit memo detail",
+      "component": "CreditNoteDetailView",
+      "uses": [
+        "CreditNoteDetailView",
+        "CreditSettlement"
       ]
     },
     "./src/pages/billing/credit-notes/CreditNoteForm.stories.tsx": {
