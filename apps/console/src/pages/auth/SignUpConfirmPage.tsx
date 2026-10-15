@@ -5,10 +5,9 @@ import { SignUpConfirmScreen } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
 import { useRegion } from '@/app/region'
 import {
-  SIGN_UP_METADATA,
+  completeAccount,
   forgetConfirmation,
   readConfirmedSession,
-  refreshedToken,
 } from '@/app/auth/supabaseSignUp'
 import { messageForConfirmError } from './signUpConfirmMessage'
 
@@ -40,23 +39,9 @@ export function SignUpConfirmPage() {
     void (async () => {
       try {
         const confirmed = await readConfirmedSession(region)
-        let credentials = {
-          token: confirmed.accessToken,
-          userId: confirmed.userId,
-          tenantId: confirmed.tenantId ?? '',
-        }
-        if (!confirmed.tenantId) {
-          const created = await createAccount.mutateAsync({
-            email: confirmed.email,
-            token: confirmed.accessToken,
-            metadata: SIGN_UP_METADATA,
-          })
-          credentials = {
-            token: await refreshedToken(region),
-            userId: created.userId || confirmed.userId,
-            tenantId: created.tenantId,
-          }
-        }
+        const credentials = await completeAccount(region, confirmed, (details) =>
+          createAccount.mutateAsync(details),
+        )
         session.signIn(credentials)
         await forgetConfirmation(region)
         void navigate({ to: '/', search: {} as never })

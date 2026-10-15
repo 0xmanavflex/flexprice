@@ -1,10 +1,24 @@
 import { useNavigate } from '@tanstack/react-router'
-import { useAuthCapabilitiesValue, useSignIn } from '@fp/query'
+import { useState } from 'react'
+import {
+  ApiError,
+  ErrorKind,
+  useAuthCapabilitiesValue,
+  useSignIn,
+  useSignUpWithToken,
+} from '@fp/query'
 import { RegionField, SignInScreen } from '@fp/ui/pages'
 import { useSession } from '@/app/session'
 import { useRegion } from '@/app/region'
 import { resetAvailableFor } from '@/app/auth/passwordReset'
 import { env } from '@/env'
+import {
+  EmailNotConfirmed,
+  completeAccount,
+  forgetConfirmation,
+  supabaseSignUpFor,
+  unfinishedSignUp,
+} from '@/app/auth/supabaseSignUp'
 import { messageForSignInError } from './signInMessage'
 
 /**
@@ -49,6 +63,10 @@ export function SignInPage({ redirect }: SignInPageProps) {
   const navigate = useNavigate()
   const session = useSession()
   const signIn = useSignIn()
+  const createAccount = useSignUpWithToken()
+  // Picking up a sign-up that stopped half way; see `unfinishedSignUp`.
+  const [recovering, setRecovering] = useState(false)
+  const [recoveryError, setRecoveryError] = useState<string | null>(null)
   const { regions, region, setRegion } = useRegion()
   // Google is drawn only where it exists. Reads password-only until the
   // backend serves `/auth/capabilities`, which is how the console behaves today.
@@ -104,21 +122,63 @@ export function SignInPage({ redirect }: SignInPageProps) {
                 void navigate({ to: '/forgot-password', search: {} as never }),
             }
           : {})}
-        isSubmitting={signIn.isPending}
-        error={signIn.error ? messageForSignInError(signIn.error) : null}
+        isSubmitting={signIn.isPending || recovering}
+        error={
+          recoveryError ??
+          (signIn.error && !recovering ? messageForSignInError(signIn.error) : null)
+        }
         onSubmit={(credentials) => {
+          setRecoveryError(null)
+          const enter = (result: { token: string; userId: string; tenantId: string }) => {
+            session.signIn(result)
+            void navigate({ to: safeRedirect(redirect), search: {} as never })
+          }
           signIn.mutate(credentials, {
-            onSuccess: (result) => {
-              session.signIn({
-                token: result.token,
-                userId: result.userId,
-                tenantId: result.tenantId,
-              })
-              void navigate({ to: safeRedirect(redirect), search: {} as never })
+            onSuccess: enter,
+            onError: (error) => {
+              // Refused credentials on a hosted region may be a sign-up that
+              // never finished; anything else is reported as it is.
+              if (!supabaseSignUpFor(region) || !isRefusal(error)) return
+              setRecovering(true)
+              void (async () => {
+                try {
+                  const pending = await unfinishedSignUp(
+                    region,
+                    credentials.email,
+                    credentials.password,
+                  )
+                  if (!pending) return
+                  const result = await completeAccount(region, pending, (details) =>
+                    createAccount.mutateAsync(details),
+                  )
+                  await forgetConfirmation(region)
+                  signIn.reset()
+                  enter(result)
+                } catch (cause) {
+                  await forgetConfirmation(region)
+                  setRecoveryError(
+                    cause instanceof EmailNotConfirmed
+                      ? `Confirm your email first: open the link we sent to ${cause.email}. No email? Sign up again with the same address to get a new one.`
+                      : 'Your account could not be finished. Try again in a moment.',
+                  )
+                } finally {
+                  setRecovering(false)
+                }
+              })()
             },
           })
         }}
       />
     </main>
+  )
+}
+
+/** A wrong-credentials answer from `POST /auth/login`, as opposed to a fault. */
+function isRefusal(error: unknown): boolean {
+  return (
+    error instanceof ApiError &&
+    (error.kind === ErrorKind.Unauthorized ||
+      error.kind === ErrorKind.Forbidden ||
+      error.kind === ErrorKind.NotFound)
   )
 }

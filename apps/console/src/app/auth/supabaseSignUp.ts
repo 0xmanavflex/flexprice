@@ -1,8 +1,8 @@
 import { env } from '@/env'
 import { clientFor } from './supabaseClient'
-import { ConfirmationLinkInvalid } from './signUpErrors'
+import { ConfirmationLinkInvalid, EmailNotConfirmed } from './signUpErrors'
 
-export { ConfirmationLinkInvalid }
+export { ConfirmationLinkInvalid, EmailNotConfirmed }
 
 /**
  * Sign-up on the hosted regions, which is two halves with an inbox between them.
@@ -130,4 +130,81 @@ export async function forgetConfirmation(region: string): Promise<void> {
   await clientFor(configFor(region))
     .auth.signOut({ scope: 'local' })
     .catch(() => undefined)
+}
+
+/**
+ * A sign-up that stopped half way, picked up at sign-in.
+ *
+ * If the confirmation page never finished — the tab was closed, the request
+ * failed, the link was opened twice — Supabase has a confirmed user and
+ * Flexprice has none, so `POST /auth/login` refuses and the one-use link is
+ * spent. V1 recovered by signing in through Supabase; so does this.
+ *
+ * Called only after `POST /auth/login` refused. Resolves with the confirmed
+ * session when there is an account to finish (no tenant yet), and with null
+ * when there is not — wrong password, or a user who already has an organisation
+ * and was refused for another reason, which must stand. Rejects with
+ * {@link EmailNotConfirmed} when the password is right but the email was never
+ * confirmed, which is worth saying.
+ */
+export async function unfinishedSignUp(
+  region: string,
+  email: string,
+  password: string,
+): Promise<ConfirmedSession | null> {
+  const client = clientFor(configFor(region))
+  const { data, error } = await client.auth.signInWithPassword({ email: email.trim(), password })
+  if (error) {
+    if (/not confirmed/i.test(error.message)) throw new EmailNotConfirmed(email.trim())
+    return null
+  }
+  const session = data.session
+  const tenant = (session?.user.app_metadata as { tenant_id?: unknown } | undefined)?.tenant_id
+  if (!session || !session.user.email || (typeof tenant === 'string' && tenant)) {
+    await client.auth.signOut({ scope: 'local' }).catch(() => undefined)
+    return null
+  }
+  return {
+    email: session.user.email,
+    userId: session.user.id,
+    accessToken: session.access_token,
+    tenantId: null,
+  }
+}
+
+/** The console session a finished sign-up hands over. */
+export interface NewSession {
+  token: string
+  userId: string
+  tenantId: string
+}
+
+/**
+ * Creates the account behind a confirmed session and returns the console's
+ * session for it: `create` is `POST /auth/signup` with the session's token, and
+ * the token is then refreshed so it carries the tenant the backend assigned.
+ * A session that already names a tenant has nothing to create.
+ */
+export async function completeAccount(
+  region: string,
+  confirmed: ConfirmedSession,
+  create: (details: {
+    email: string
+    token: string
+    metadata: Record<string, string>
+  }) => Promise<{ userId: string; tenantId: string }>,
+): Promise<NewSession> {
+  if (confirmed.tenantId) {
+    return { token: confirmed.accessToken, userId: confirmed.userId, tenantId: confirmed.tenantId }
+  }
+  const created = await create({
+    email: confirmed.email,
+    token: confirmed.accessToken,
+    metadata: SIGN_UP_METADATA,
+  })
+  return {
+    token: await refreshedToken(region),
+    userId: created.userId || confirmed.userId,
+    tenantId: created.tenantId,
+  }
 }
