@@ -54,14 +54,24 @@ const DAY_MS = 86_400_000
 /**
  * The window the whole page is measured over.
  *
- * Thirty days rather than the overview's seven, and not only for variety: the
+ * Ninety days rather than the overview's seven, and not only for variety: the
  * overview answers "what is happening", which is a question about this week,
  * while a revenue report answers "what did we bill", which is a question about
- * the billing cycle. It also keeps the two surfaces from quoting the same
- * number at each other as if they were two findings.
+ * the quarter. It also keeps the two surfaces from quoting the same number at
+ * each other as if they were two findings.
+ *
+ * Ninety is what the redesign opens on, agreed with the revenue API's owner.
+ *
+ * **And it opens with no comparison.** A prior window doubles the analytics
+ * requests on mount, and the point of the first paint is the figures, not a
+ * delta nobody asked for. The handoff puts the comparison behind a picker
+ * ("Δ badges only when Compare ≠ none"); the picker is not built yet, so for
+ * now the page simply does not compare, and nothing shows a change. The
+ * machinery for one window is the same as for two — when the picker lands it
+ * adds the second window, it does not have to unpick this.
  */
-const RANGE_DAYS = 30
-const RANGE_LABEL = 'last 30 days'
+const RANGE_DAYS = 90
+const RANGE_LABEL = 'last 90 days'
 
 /** Midnight UTC `daysAgo` days back — the boundary every window is cut on. */
 function dayStart(daysAgo: number): Date {
@@ -78,18 +88,6 @@ const dayLabel = new Intl.DateTimeFormat(undefined, {
 })
 const compact = new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 })
 const whole = new Intl.NumberFormat(undefined, { maximumFractionDigits: 0 })
-
-/**
- * Percentage change between two windows, or `null` when there is nothing to
- * compare against.
- *
- * Growth from zero is not a percentage — it is "the first one" — and printing
- * `+100%` for it is the confident nonsense this page exists to avoid.
- */
-function change(current: number, prior: number): number | null {
-  if (prior <= 0) return null
-  return ((current - prior) / prior) * 100
-}
 
 interface Window {
   start: Date
@@ -150,18 +148,11 @@ export function RevenuePage() {
   const windows = useMemo(() => {
     const end = new Date()
     const start = dayStart(RANGE_DAYS)
-    return {
-      current: { start, end },
-      prior: { start: new Date(start.getTime() - RANGE_DAYS * DAY_MS), end: start },
-    }
+    return { current: { start, end } }
   }, [])
 
   const analytics = useUsageAnalytics({
     window: windows.current,
-    windowSize: UsageWindowSize.Day,
-  })
-  const priorAnalytics = useUsageAnalytics({
-    window: windows.prior,
     windowSize: UsageWindowSize.Day,
   })
 
@@ -181,7 +172,7 @@ export function RevenuePage() {
   })
 
   const chart: RevenueDashboardProps['chart'] = {
-    ...toChartPanel(analytics, priorAnalytics, invoices, windows),
+    ...toChartPanel(analytics, invoices, windows),
     activeTab,
     onTabChange: setActiveTab,
   }
@@ -273,23 +264,23 @@ function invoiceCoverage(page: { invoices: Invoice[]; total: number }, windows: 
   const oldest = oldestIssued(page.invoices)
   return {
     current: !truncated || (oldest !== null && oldest < windows.current.start),
-    prior: !truncated || (oldest !== null && oldest < windows.prior.start),
     note: `Based on the latest ${page.invoices.length.toLocaleString()} invoices.`,
   }
 }
 
 interface Windows {
   current: Window
-  prior: Window
 }
 
 /**
  * The tab strip and its three series.
  *
- * Every tab's headline is the total of the series plotted beneath it, and every
- * change is the same metric measured over the window before this one. None of
+ * Every tab's headline is the total of the series plotted beneath it. None of
  * the three is money, and that is the finding rather than an omission: see the
  * file header.
+ *
+ * No tab carries a change, because the page does not compare — see
+ * `RANGE_DAYS`.
  *
  * Each tab has its own status, because two queries feed the strip and they can
  * disagree: metered usage can be on screen while the invoice list has failed,
@@ -300,7 +291,6 @@ interface Windows {
  */
 function toChartPanel(
   analytics: QueryView<UsageAnalytics>,
-  priorAnalytics: QueryView<UsageAnalytics>,
   invoices: InvoiceView,
   windows: Windows,
 ): Omit<RevenueDashboardProps['chart'], 'activeTab' | 'onTabChange'> {
@@ -345,11 +335,6 @@ function toChartPanel(
   }
 
   const coverage = page ? invoiceCoverage(page, windows) : undefined
-  // A prior window that is itself a held-over copy of another window is not a comparison.
-  const priorData =
-    priorAnalytics.data !== undefined && !priorAnalytics.isPlaceholderData
-      ? priorAnalytics.data
-      : undefined
 
   const tabs: MetricTab[] = []
 
@@ -370,13 +355,11 @@ function toChartPanel(
     }
   } else {
     const usage = data.points.reduce((sum, point) => sum + point.usage, 0)
-    const priorUsage = priorData?.points.reduce((sum, point) => sum + point.usage, 0) ?? 0
     tabs.push(
       {
         id: 'usage',
         label: 'Metered usage',
         value: compact.format(usage),
-        changePercent: change(usage, priorUsage) ?? undefined,
         points: data.points.map((point) => ({
           label: dayLabel.format(point.timestamp),
           value: point.usage,
@@ -388,7 +371,6 @@ function toChartPanel(
         id: 'events',
         label: 'Events ingested',
         value: compact.format(data.eventCount),
-        changePercent: change(data.eventCount, priorData?.eventCount ?? 0) ?? undefined,
         points: data.points.map((point) => ({
           label: dayLabel.format(point.timestamp),
           value: point.eventCount,
@@ -428,10 +410,6 @@ function toChartPanel(
       label: 'Invoices issued',
       // A floor is written as one, never as the total.
       value: `${whole.format(issued.length)}${complete ? '' : '+'}`,
-      changePercent:
-        complete && coverage?.prior
-          ? (change(issued.length, issuedIn(page.invoices, windows.prior).length) ?? undefined)
-          : undefined,
       points: invoiceBuckets,
       format: (value) => whole.format(value),
     })
