@@ -311,7 +311,7 @@ export const Summary: Story = {
   },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('1 of 3 active charges are changed here')).toBeInTheDocument()
+    await expect(canvas.getByText('1 of 3 active charges is changed here')).toBeInTheDocument()
     await expect(canvas.queryByText('Included storage')).not.toBeInTheDocument()
     await userEvent.click(canvas.getByRole('button', { name: /show all charges/i }))
     await expect(args.onShowAll).toHaveBeenCalled()

@@ -121,6 +121,16 @@ export interface ChargeVersion {
  * otherwise would invent a certainty the page does not have.
  */
 export interface ChargeDetail {
+  /**
+   * The price was changed here.
+   *
+   * Separate from `overriddenFrom` because the two are known at different
+   * costs: `parent_price_id` on the line says *that* it changed and comes
+   * free with the line, while *what it changed from* needs the parent price
+   * fetched. A page that knows only the first still flags the row honestly,
+   * and the sheet simply does not state a previous price.
+   */
+  overridden?: boolean | undefined
   /** The plan's price, formatted, when this charge's differs from it. */
   overriddenFrom?: string | undefined
   /** What the line bills, when it is not simply one of something. */
@@ -147,7 +157,9 @@ export interface ChargeFlag {
 export function chargeFlags(detail: ChargeDetail | undefined): ChargeFlag[] {
   if (!detail) return []
   const flags: ChargeFlag[] = []
-  if (detail.overriddenFrom) flags.push({ section: ChargeSection.Price, label: 'Price changed' })
+  if (detail.overridden || detail.overriddenFrom) {
+    flags.push({ section: ChargeSection.Price, label: 'Price changed' })
+  }
   if (detail.coupon) flags.push({ section: ChargeSection.Discount, label: 'Discount' })
   if (detail.commitment) flags.push({ section: ChargeSection.Commitment, label: 'Commitment' })
   if (detail.alerts && detail.alerts.length > 0) {

@@ -278,9 +278,10 @@ function toLinePricing(wire: SubscriptionLineWire): LinePricing | null {
 }
 
 export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): SubscriptionLine {
+  const name = wire.displayName || wire.planDisplayName || wire.meterDisplayName || 'Charge'
   return {
     id: wire.id ?? `line_${index}`,
-    name: wire.displayName || wire.planDisplayName || wire.meterDisplayName || 'Charge',
+    name,
     kind: wire.priceType === 'USAGE' ? 'usage' : 'fixed',
     quantity: wire.quantity ?? '',
     billingPeriodLabel: BILLING_PERIOD_LABEL[(wire.billingPeriod ?? '') as BillingPeriod] ?? '—',
@@ -302,7 +303,22 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
      * from the same embedded record, so neither has to guess at the other's.
      * Null when the API sent no price, which is a line that bills nothing.
      */
-    charge: wire.price ? toCharge({ ...wire.price, id: wire.priceId ?? wire.price.id }) : null,
+    charge: wire.price
+      ? toCharge({
+          ...wire.price,
+          id: wire.priceId ?? wire.price.id,
+          /*
+           * The line's name, not the price's.
+           *
+           * A price on a plan is often unnamed — what a contract calls the
+           * charge comes from `plan_display_name` or the meter, both of which
+           * are on the line and neither of which is on the price. Reusing the
+           * name the line already worked out keeps one answer to "what is this
+           * charge called" instead of two that disagree.
+           */
+          displayName: name,
+        })
+      : null,
     /*
      * `parent_price_id` is set when a subscription overrides a plan price, so
      * its presence *is* the "Price changed" flag. What it was changed *from*

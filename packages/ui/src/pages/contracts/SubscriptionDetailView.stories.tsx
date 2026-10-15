@@ -12,6 +12,7 @@ import {
   BillingPeriod,
   NO_USAGE_TERMS,
   TierMode,
+  formatMoney,
   money,
   FeatureType,
   InvoiceCadence,
@@ -109,7 +110,7 @@ function lineCharge(line: {
     type: line.kind === 'usage' ? PriceType.Usage : PriceType.Fixed,
     billingModel: line.pricing.billingModel,
     amount: line.amount.amount,
-    displayAmount: `$${line.amount.amount}`,
+    displayAmount: formatMoney(line.amount),
     currency: line.pricing.currency.toLowerCase(),
     billingPeriod: line.pricing.billingPeriod ?? BillingPeriod.Monthly,
     billingPeriodCount: 1,
@@ -668,7 +669,14 @@ export const PendingPlanChange: Story = {
   },
 }
 
-/** Charges is a standard grid: search, sort, facets, and a Manage pricing action. */
+/**
+ * Charges is the shared charges table: the same four columns, the same flags
+ * and the same sheet as every other surface that lists charges.
+ *
+ * Source moved out of its own column and into the grey line under the name,
+ * which is where the redesign puts the one extra fact a row carries. It is
+ * still what the Source filter narrows by.
+ */
 export const ChargesTab: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
@@ -677,9 +685,13 @@ export const ChargesTab: Story = {
     await expect(canvas.getByText('$1,500.00')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Manage pricing' })).toBeVisible()
     await expect(canvas.getByRole('textbox', { name: /^Search/ })).toBeVisible()
-    // Each charge says where it comes from.
-    await expect(canvas.getAllByText('Plan').length).toBeGreaterThan(0)
-    await expect(canvas.getAllByText('Contract').length).toBeGreaterThan(0)
+    // Each charge says where it comes from, in the line under its name.
+    await expect(canvas.getByText('Fixed · From Scale')).toBeVisible()
+    await expect(canvas.getByText('Fixed · Set on this contract')).toBeVisible()
+    // And the one the contract changed carries the flag for it.
+    await expect(
+      canvas.getByRole('button', { name: /Price changed: open Onboarding/ }),
+    ).toBeVisible()
     await expect(canvas.queryByText(/shared by every contract/)).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Activity' })).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Metadata' })).toBeNull()
@@ -702,7 +714,7 @@ export const OverviewSummary: Story = {
     const order = [
       'Contract details',
       'Upcoming invoice',
-      'Contract-specific charges',
+      'Charges',
       'Entitlements',
       'Credit grants',
       'Add-ons',
@@ -718,37 +730,49 @@ export const OverviewSummary: Story = {
         ).toBeTruthy()
       }
     })
-    // Charges no longer sit on Overview unless the contract overrides the plan.
-    await expect(canvas.queryByRole('heading', { name: 'Charges' })).toBeNull()
     await expect(canvas.queryByRole('heading', { name: 'Billing & collection' })).toBeNull()
-    // The contract-specific charges hand off to the Charges tab.
-    await userEvent.click(canvas.getByRole('button', { name: 'Manage pricing' }))
+    // The summary hands off to the Charges tab for the rest.
+    await userEvent.click(canvas.getByRole('button', { name: 'Show all charges' }))
     await waitFor(() =>
       expect(canvas.getByRole('tab', { name: /Charges/ })).toHaveAttribute('aria-selected', 'true'),
     )
   },
 }
 
-/** Overview lists only what the contract changed from its plan. */
+/** Overview's summary lists only what the contract changed from its plan. */
 export const ContractSpecificCharges: Story = {
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
     const section = within(
-      (
-        await within(canvasElement).findByRole('heading', { name: 'Contract-specific charges' })
-      ).closest('section')!,
+      (await canvas.findByRole('heading', { name: 'Charges' })).closest('section')!,
     )
+    await expect(section.getByText('2 of 3 active charges are changed here')).toBeVisible()
     await expect(section.getByText('Onboarding')).toBeVisible()
     await expect(section.queryByText('Platform fee')).toBeNull()
   },
 }
 
-/** A contract that follows its plan has no Contract-specific charges section at all. */
+/**
+ * A contract that follows its plan still gets the section — it says so.
+ *
+ * The old Overview dropped the section entirely, which read as "this contract
+ * has no charges" rather than "none of them were changed". The summary states
+ * which it is.
+ */
 export const NoContractSpecificCharges: Story = {
-  args: { ...BASE, lines: ready(LINES.filter((line) => line.source === 'plan')) },
+  // Only the line with nothing on it: the other plan line carries a
+  // commitment, which is a change the contract made even though the price
+  // came from the plan.
+  args: { ...BASE, lines: ready(LINES.filter((line) => line.id === 'line_1')) },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Entitlements' })).toBeVisible()
-    await expect(canvas.queryByRole('heading', { name: 'Contract-specific charges' })).toBeNull()
+    const section = within(
+      (await canvas.findByRole('heading', { name: 'Charges' })).closest('section')!,
+    )
+    await expect(section.getByText('1 active charge, all as the plan sets them')).toBeVisible()
+    await expect(
+      section.getByText('Every charge is billed as the plan sets it. Changed charges show here.'),
+    ).toBeVisible()
   },
 }
 
@@ -1088,6 +1112,17 @@ export const UnlinkIntegration: Story = {
     await waitFor(() =>
       expect(args.onUnlinkIntegration).toHaveBeenCalledWith({ providerType: 'stripe' }),
     )
+
+    /*
+     * Wait for the dialog to go before the a11y scan.
+     *
+     * Its confirm button is the vendored base-nova `destructive` variant — a
+     * soft fill whose text sits at 3.82:1 on its own tint, the design-token
+     * gap `ConfirmDialog.stories.tsx` documents and mutes. Here the dialog is
+     * already closing, so waiting keeps `color-contrast` enabled for the rest
+     * of the page rather than muting it for a button that is on its way out.
+     */
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument())
   },
 }
 
@@ -1344,8 +1379,15 @@ export const ChargeSaveFails: Story = {
   },
 }
 
-/** A cancelled contract cannot be edited. */
+/**
+ * A cancelled contract cannot be edited — but it can still be read.
+ *
+ * The row menu stays, because "View details" and "Copy price ID" are not
+ * edits and someone reconciling a cancelled contract needs both. What goes is
+ * every way to change it: no Manage pricing, no Edit, no End charge.
+ */
 export const CancelledPricingIsReadOnly: Story = {
+  parameters: menuA11y,
   args: withSubscription({
     status: SubscriptionStatus.Cancelled,
     cancelledAt: date('2026-09-30'),
@@ -1353,7 +1395,15 @@ export const CancelledPricingIsReadOnly: Story = {
   play: async ({ canvasElement }) => {
     const canvas = await openPricing(canvasElement)
     await expect(canvas.queryByRole('button', { name: 'Manage pricing' })).toBeNull()
-    await expect(canvas.queryByRole('button', { name: /^Actions for/ })).toBeNull()
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Actions for Onboarding' }))
+    const menu = within(await screen.findByRole('menu'))
+    await expect(menu.getByRole('menuitem', { name: 'View details' })).toBeVisible()
+    await expect(menu.queryByRole('menuitem', { name: 'Edit' })).toBeNull()
+    await expect(menu.queryByRole('menuitem', { name: 'End charge' })).toBeNull()
+
+    await userEvent.keyboard('{Escape}')
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
   },
 }
 

@@ -26,7 +26,19 @@ test.describe('the features list', () => {
     new CatalogListPage(page, { heading: 'Features', searchLabel: 'Search features' })
 
   const openRowMenu = async (page: Page, item: string) => {
+    /*
+     * Wait for the linkage columns before opening a menu.
+     *
+     * The list renders its rows, then fills the plan and entitlement counts
+     * from a second fan-out of requests. That arrival re-renders every row,
+     * including the trigger of an open dropdown, and the menu goes with it —
+     * so a click placed in the gap finds nothing and spends the whole timeout
+     * looking. It cost two CI runs, a different features journey each time,
+     * which is what a race looks like from the outside.
+     */
+    await expect(page.locator('[data-slot="skeleton"]')).toHaveCount(0)
     await list(page).rows().first().getByRole('button', { name: 'Row actions' }).click()
+    await expect(page.getByRole('menu')).toBeVisible()
     await page.getByRole('menuitem', { name: item }).click()
   }
 

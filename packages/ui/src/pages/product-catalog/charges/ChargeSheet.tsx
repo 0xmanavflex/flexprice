@@ -326,7 +326,7 @@ export function ChargeSheet({
             section={ChargeSection.Price}
             icon={<PencilIcon aria-hidden className="text-info-foreground" />}
             title="Price"
-            badge={detail?.overriddenFrom ? 'Changed here' : undefined}
+            badge={detail?.overridden || detail?.overriddenFrom ? 'Changed here' : undefined}
             onEdit={editAt(ChargeSection.Price)}
             focused={section === ChargeSection.Price}
           >

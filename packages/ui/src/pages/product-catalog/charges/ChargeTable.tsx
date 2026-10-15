@@ -83,9 +83,29 @@ export interface ChargeTableProps extends Partial<SubTabQuery> {
   variant?: 'summary' | 'full'
   /** `narrow` is the table beside a side rail: no quantity column, flags compact. */
   layout?: 'wide' | 'narrow'
+  /**
+   * Where the charge comes from, for the grey line's second half.
+   *
+   * A contract's charges arrive from its plan, from an add-on, or from the
+   * contract alone, and which is the most useful thing to know about a row
+   * there — more than the billing model, which is the default. It goes in the
+   * line rather than a column so the four columns the redesign specifies stay
+   * four. Narrowing by it is the `facets` prop's job.
+   */
+  source?: (charge: Charge) => string | undefined
+  /** Extra facet filters beside the billing-model one, e.g. Source. */
+  facets?: Array<{ id: string; label: string; value: (charge: Charge) => string }>
   onAdd?: () => void
+  /** The add button's wording; a contract calls it "Manage pricing". */
+  addLabel?: string
   onEdit?: (charge: Charge) => void
+  /** `false` leaves a row's Edit out — a contract cannot reprice every line. */
+  canEdit?: (charge: Charge) => boolean
   onTerminate?: (charge: Charge) => void
+  /** The destructive item's wording; "Terminate" on a catalogue, "End charge" on a contract. */
+  removeLabel?: string
+  /** Extra row-menu items, e.g. a contract's "Edit on plan". */
+  extraActions?: (charge: Charge) => Array<{ label: string; onSelect: () => void }>
   /**
    * Replaces opening the sheet.
    *
@@ -155,17 +175,26 @@ const DATE = new Intl.DateTimeFormat(undefined, { day: 'numeric', month: 'short'
  * different cycle from everything around it — falling back to the billing
  * model, which is the answer when nothing else is unusual.
  */
-function kindLine(charge: Charge, period: string | undefined, locale: string | undefined): string {
+function kindLine(
+  charge: Charge,
+  period: string | undefined,
+  locale: string | undefined,
+  source: string | undefined,
+): string {
   const kind = charge.type === PriceType.Usage ? 'Usage' : 'Fixed'
   const format = locale
     ? new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' })
     : DATE
-  if (charge.endDate) return `${kind} · Ended ${format.format(charge.endDate)}`
-  if (charge.startDate && charge.startDate.getTime() > Date.now()) {
-    return `${kind} · Starts ${format.format(charge.startDate)}`
-  }
-  if (period && charge.billingPeriod !== period) return `${kind} · ${billedLabel(charge)}`
-  return `${kind} · ${modelLabel(charge)}`
+  // Two parts, never three: a third would be a column wearing a grey font.
+  // Lifecycle first (it changes what the row means), then where the charge
+  // came from where a page can say, then the billing model as the default.
+  const rest = charge.endDate
+    ? `Ended ${format.format(charge.endDate)}`
+    : charge.startDate && charge.startDate.getTime() > Date.now()
+      ? `Starts ${format.format(charge.startDate)}`
+      : (source ??
+        (period && charge.billingPeriod !== period ? billedLabel(charge) : modelLabel(charge)))
+  return `${kind} · ${rest}`
 }
 
 /** Changed charges first (the more flags, the higher), then fixed before usage, then by name. */
@@ -183,9 +212,15 @@ export function ChargeTable({
   period,
   variant = 'full',
   layout = 'wide',
+  source,
+  facets,
   onAdd,
+  addLabel = 'Add charges',
   onEdit,
+  canEdit,
   onTerminate,
+  removeLabel = 'Terminate',
+  extraActions,
   onRowClick,
   onEditSection,
   onShowAll,
@@ -230,7 +265,7 @@ export function ChargeTable({
   const addButton = onAdd ? (
     <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
       <PlusIcon aria-hidden />
-      Add charges
+      {addLabel}
     </Button>
   ) : null
 
@@ -274,12 +309,12 @@ export function ChargeTable({
       header: 'Charge',
       width: narrow ? 220 : 280,
       sortBy: (charge) => nameOf(charge),
-      text: (charge) => `${nameOf(charge)} ${kindLine(charge, period, locale)}`,
+      text: (charge) => `${nameOf(charge)} ${kindLine(charge, period, locale, source?.(charge))}`,
       cell: (charge) => (
         <span className="block min-w-0">
           <span className="block truncate font-medium">{nameOf(charge)}</span>
           <span className="text-muted-foreground block truncate text-xs">
-            {kindLine(charge, period, locale)}
+            {kindLine(charge, period, locale, source?.(charge))}
           </span>
         </span>
       ),
@@ -328,14 +363,19 @@ export function ChargeTable({
             label={nameOf(charge)}
             extra={[
               ...(onRowClick ? [] : [{ label: 'View details', onSelect: () => openAt(charge) }]),
+              ...(extraActions?.(charge) ?? []),
               {
                 label: 'Copy price ID',
                 onSelect: () => void navigator.clipboard?.writeText(charge.id),
               },
             ]}
-            onEdit={onEdit && !charge.endDate ? () => onEdit(charge) : undefined}
+            onEdit={
+              onEdit && !charge.endDate && (canEdit?.(charge) ?? true)
+                ? () => onEdit(charge)
+                : undefined
+            }
             onRemove={onTerminate && !charge.endDate ? () => onTerminate(charge) : undefined}
-            removeLabel="Terminate"
+            removeLabel={removeLabel}
           />
         </span>
       ),
@@ -375,11 +415,12 @@ export function ChargeTable({
       </ButtonGroup>
     ) : undefined
 
+  const charge = (count: number) => `${count} active charge${count === 1 ? '' : 's'}`
   const description =
     variant === 'summary'
       ? changed.length > 0
-        ? `${changed.length} of ${active.length} active charges are changed here`
-        : `${active.length} active charges, all as the plan sets them`
+        ? `${changed.length} of ${charge(active.length)} ${changed.length === 1 ? 'is' : 'are'} changed here`
+        : `${charge(active.length)}, all as the plan sets them`
       : undefined
 
   return (
@@ -411,7 +452,14 @@ export function ChargeTable({
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
             // filter keeps it.
-            facet={{ label: 'Billing model', value: (charge: Charge) => modelLabel(charge) }}
+            facets={[
+              {
+                id: 'model',
+                label: 'Billing model',
+                value: (charge: Charge) => modelLabel(charge),
+              },
+              ...(facets ?? []),
+            ]}
             noun="charges"
             rows={rows}
             columns={columns}

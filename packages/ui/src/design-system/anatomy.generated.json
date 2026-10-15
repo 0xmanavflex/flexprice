@@ -794,7 +794,9 @@
         "Section",
         "SubTabState"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "SubscriptionDetailView"
+      ],
       "story": "./src/pages/product-catalog/charges/ChargeTable.stories.tsx"
     },
     "Chart": {
@@ -5864,6 +5866,7 @@
       "layer": "surface",
       "composes": [
         "ActivitySection",
+        "ChargeTable",
         "ConfirmDialog",
         "ContractChargeDialog",
         "ContractIntegrations",

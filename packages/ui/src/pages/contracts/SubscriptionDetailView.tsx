@@ -4,9 +4,6 @@ import {
   CircleAlertIcon,
   PlusIcon,
   CirclePauseIcon,
-  FileTextIcon,
-  LayersIcon,
-  PuzzleIcon,
   ClockIcon,
   InfoIcon,
   PlayIcon,
@@ -19,6 +16,7 @@ import {
   CREDIT_GRANT_PERIOD_LABEL,
   CreditGrantCadence,
   SUBSCRIPTION_SCHEDULE_LABEL,
+  PriceType,
   SubscriptionStatus,
   formatMoney,
   type AddContractCharge,
@@ -28,6 +26,8 @@ import {
   type AddContractAddon,
   type AddContractCoupon,
   type ChangeLineQuantity,
+  type Charge,
+  type ChargeDetail,
   type CreditGrant,
   type EditContractCharge,
   type IntegrationLink,
@@ -58,6 +58,7 @@ import {
   Properties,
 } from '../../compositions/detail/DetailKit'
 import { ActivitySection, type ActivityLogEntry } from '../../compositions/detail/ActivityLog'
+import { ChargeTable } from '../product-catalog/charges/ChargeTable'
 import { DetailShell } from '../../compositions/detail/DetailShell'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../compositions/detail/RelatedCard'
@@ -188,14 +189,58 @@ const LINE_SOURCE_LABEL: Record<SubscriptionLine['source'], string> = {
   contract: 'Contract',
 }
 
-const LINE_SOURCE_ICON: Record<SubscriptionLine['source'], typeof LayersIcon> = {
-  plan: LayersIcon,
-  addon: PuzzleIcon,
-  contract: FileTextIcon,
-}
+/**
+ * A contract's lines, as the shared charges table reads them.
+ *
+ * The line already carries its price (`line.charge`), so this is not a
+ * conversion — it is the pairing of that price with what the contract knows
+ * about it, and a way back to the line for the actions. A line with no price
+ * bills nothing and has no row.
+ *
+ * Keyed by the price id, which is what the row's "Copy price ID" copies and
+ * what the sheet is about. Two lines on one contract do not share a price.
+ */
+function chargesOfLines(lines: SubscriptionLine[]): {
+  charges: Charge[]
+  details: Map<string, ChargeDetail>
+  lineOf: Map<string, SubscriptionLine>
+} {
+  const charges: Charge[] = []
+  const details = new Map<string, ChargeDetail>()
+  const lineOf = new Map<string, SubscriptionLine>()
 
-const isEnded = (line: SubscriptionLine) =>
-  line.endDate !== null && line.endDate.getTime() <= Date.now()
+  for (const line of lines) {
+    if (!line.charge) continue
+    charges.push(line.charge)
+    lineOf.set(line.charge.id, line)
+
+    const commitment = line.pricing?.terms.commitment
+    const detail: ChargeDetail = {
+      ...(line.overridesPriceId ? { overridden: true } : {}),
+      ...(line.quantity ? { quantity: line.quantity } : {}),
+      ...(commitment
+        ? {
+            commitment: {
+              type: commitment.kind,
+              // The figure as the line states it; the unit is the charge's own.
+              value: commitment.value,
+              duration: null,
+              overageFactor: Number(commitment.overageFactor) || 1,
+              trueUp: commitment.trueUp,
+              windowed: commitment.windowed,
+              // `commitment_time_buckets` is not on the line read model yet, so
+              // a windowed commitment reads as "every bucket, all day" — which
+              // is what it is until the windows are read, not a guess at them.
+              windows: [],
+            },
+          }
+        : {}),
+    }
+    if (Object.keys(detail).length > 0) details.set(line.charge.id, detail)
+  }
+
+  return { charges, details, lineOf }
+}
 
 /** Upcoming-invoice lines shown before "More"; the rest appear on expanding, never paged. */
 const PREVIEW_LINES_SHOWN = 5
@@ -319,31 +364,6 @@ export function SubscriptionDetailView({
     line.kind === 'fixed' ? setQuantityLine(line) : setDialog({ mode: 'edit', line })
   const canEditLine = (line: SubscriptionLine) =>
     line.kind === 'fixed' ? canChangeQuantity : Boolean(onEditCharge)
-  const chargeActionColumns: DetailColumn<SubscriptionLine>[] =
-    canEditCharges && (onEditCharge || onEndCharge || canChangeQuantity)
-      ? [
-          {
-            key: 'actions',
-            header: '',
-            width: 48,
-            cell: (line) =>
-              isEnded(line) ? null : (
-                <RowActionsMenu
-                  label={line.name}
-                  extra={
-                    line.source === 'plan' && onOpenPlan
-                      ? [{ label: 'Edit on plan', onSelect: onOpenPlan }]
-                      : undefined
-                  }
-                  {...(canEditLine(line) ? { onEdit: () => editLine(line) } : {})}
-                  {...(onEndCharge ? { onRemove: () => setDialog({ mode: 'end', line }) } : {})}
-                  removeLabel="End charge"
-                />
-              ),
-          },
-        ]
-      : []
-
   const closeDialog = () => {
     setDialog(null)
     setSaveError(null)
@@ -390,9 +410,21 @@ export function SubscriptionDetailView({
     canModify && handler ? { label, onClick: open(kind) } : undefined
 
   const usageData = usage.data
-  const overriddenLines: SubscriptionPart<SubscriptionLine[]> = {
-    ...lines,
-    data: lines.data?.filter((line) => line.source === 'contract' && !isEnded(line)),
+  const chargeRows = chargesOfLines(lines.data ?? [])
+  const editCharge = (charge: Charge) => {
+    const line = chargeRows.lineOf.get(charge.id)
+    if (line) editLine(line)
+  }
+  const endCharge = (charge: Charge) => {
+    const line = chargeRows.lineOf.get(charge.id)
+    if (line) setDialog({ mode: 'end', line })
+  }
+  /** The grey line's second half on a contract: where the charge came from. */
+  const sourceOf = (charge: Charge) => {
+    const line = chargeRows.lineOf.get(charge.id)
+    if (!line) return undefined
+    if (line.source === 'plan') return s.planName ? `From ${s.planName}` : 'From the plan'
+    return line.source === 'addon' ? 'From an add-on' : 'Set on this contract'
   }
 
   const related: RelatedItem[] = [
@@ -418,55 +450,6 @@ export function SubscriptionDetailView({
           },
         ]
       : []),
-  ]
-
-  const managePricingButton = canAddCharge ? (
-    <Button size="sm" onClick={() => setDialog({ mode: 'add' })}>
-      <PlusIcon aria-hidden="true" />
-      Manage pricing
-    </Button>
-  ) : undefined
-
-  const chargeColumns = (
-    withType: boolean,
-    withActions: boolean,
-  ): DetailColumn<SubscriptionLine>[] => [
-    {
-      key: 'name',
-      header: 'Charge',
-      sortBy: (line) => line.name.toLowerCase(),
-      text: (line) => line.name,
-      cell: (line) => <Strong>{line.name}</Strong>,
-    },
-    {
-      key: 'source',
-      header: 'Source',
-      cell: (line) => <LineSourceBadge line={line} planName={s.planName} />,
-    },
-    ...(withType
-      ? [
-          {
-            key: 'kind',
-            header: 'Type',
-            cell: (line: SubscriptionLine) => (
-              <Muted>{line.kind === 'usage' ? 'Usage' : 'Fixed'}</Muted>
-            ),
-          },
-        ]
-      : []),
-    {
-      key: 'quantity',
-      header: 'Quantity',
-      cell: (line) => <Muted className="tabular-nums">{line.quantity || '—'}</Muted>,
-    },
-    { key: 'period', header: 'Billed', cell: (line) => <Muted>{line.billingPeriodLabel}</Muted> },
-    {
-      key: 'amount',
-      header: 'Price',
-      sortBy: (line) => Number(line.amount.amount),
-      cell: (line) => <Strong className="tabular-nums">{formatMoney(line.amount)}</Strong>,
-    },
-    ...(withActions ? chargeActionColumns : []),
   ]
 
   const activityEntries: ActivityLogEntry[] = activity.map((event) => ({
@@ -568,39 +551,24 @@ export function SubscriptionDetailView({
 
               {preview ? <InvoicePreviewSection status={s.status} preview={preview} /> : null}
 
-              {(overriddenLines.data?.length ?? 0) > 0 ? (
-                <PartSection
-                  title="Contract-specific charges"
-                  showTitle
-                  part={overriddenLines}
-                  failure="Charges could not be loaded"
-                  emptyTitle="No contract-specific charges"
-                  scene="billing"
-                  emptyDescription="Every charge on this contract comes from its plan."
-                  isEmpty={(rows) => rows.length === 0}
-                  action={
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="h-8 px-3"
-                      onClick={() => setTab('charges')}
-                    >
-                      {onAddCharge && canEditCharges ? 'Manage pricing' : 'View charges'}
-                    </Button>
-                  }
-                >
-                  {(rows) => (
-                    <DetailTable<SubscriptionLine>
-                      compact
-                      pageSize={5}
-                      label="Contract-specific charges"
-                      noun="charges"
-                      rows={rows}
-                      toolbar={false}
-                      columns={chargeColumns(false, false)}
-                    />
-                  )}
-                </PartSection>
+              {/*
+                The Overview's charges: only the ones this contract changed,
+                and a way to the rest. The same table the Charges tab uses, in
+                its summary shape, so a charge reads identically in both.
+              */}
+              {(lines.data?.length ?? 0) > 0 ? (
+                <ChargeTable
+                  title="Charges"
+                  variant="summary"
+                  charges={chargeRows.charges}
+                  details={chargeRows.details}
+                  source={sourceOf}
+                  {...(s.billingPeriod ? { period: s.billingPeriod } : {})}
+                  onShowAll={() => setTab('charges')}
+                  isLoading={lines.isLoading ?? false}
+                  error={lines.isError ? 'Charges could not be loaded' : null}
+                  {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
+                />
               ) : null}
 
               <PartSection
@@ -917,41 +885,46 @@ export function SubscriptionDetailView({
         ) : null}
 
         {tab === 'charges' ? (
-          <>
-            <PartSection
-              title="Charges"
-              part={lines}
-              failure="Charges could not be loaded"
-              emptyTitle="No charges"
-              scene="billing"
-              emptyDescription="This contract has no priced lines."
-              emptyAction={managePricingButton}
-              isEmpty={(rows) => rows.length === 0}
-            >
-              {(rows) => (
-                <DetailTable<SubscriptionLine>
-                  compact
-                  label="Charges"
-                  noun="charges"
-                  rows={rows}
-                  action={managePricingButton}
-                  facets={[
-                    {
-                      id: 'source',
-                      label: 'Source',
-                      value: (line) => LINE_SOURCE_LABEL[line.source],
-                    },
-                    {
-                      id: 'type',
-                      label: 'Type',
-                      value: (line) => (line.kind === 'usage' ? 'Usage' : 'Fixed'),
-                    },
-                  ]}
-                  columns={chargeColumns(true, true)}
-                />
-              )}
-            </PartSection>
-          </>
+          <ChargeTable
+            title="Charges"
+            charges={chargeRows.charges}
+            details={chargeRows.details}
+            source={sourceOf}
+            {...(s.billingPeriod ? { period: s.billingPeriod } : {})}
+            facets={[
+              {
+                id: 'source',
+                label: 'Source',
+                value: (charge) =>
+                  LINE_SOURCE_LABEL[chargeRows.lineOf.get(charge.id)?.source ?? 'plan'],
+              },
+              {
+                id: 'type',
+                label: 'Type',
+                value: (charge) => (charge.type === PriceType.Usage ? 'Usage' : 'Fixed'),
+              },
+            ]}
+            emptyDescription="This contract has no priced lines."
+            {...(canAddCharge ? { onAdd: () => setDialog({ mode: 'add' }) } : {})}
+            addLabel="Manage pricing"
+            {...(canEditCharges ? { onEdit: (charge: Charge) => editCharge(charge) } : {})}
+            canEdit={(charge) => {
+              const line = chargeRows.lineOf.get(charge.id)
+              return line ? canEditLine(line) : false
+            }}
+            {...(canEditCharges && onEndCharge
+              ? { onTerminate: (charge: Charge) => endCharge(charge) }
+              : {})}
+            removeLabel="End charge"
+            extraActions={(charge) =>
+              chargeRows.lineOf.get(charge.id)?.source === 'plan' && onOpenPlan
+                ? [{ label: 'Edit on plan', onSelect: onOpenPlan }]
+                : []
+            }
+            isLoading={lines.isLoading ?? false}
+            error={lines.isError ? 'Charges could not be loaded' : null}
+            {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
+          />
         ) : null}
 
         {tab === 'usage' ? (
@@ -1524,31 +1497,6 @@ function PaymentCell({ row }: { row: Invoice }) {
     <PaymentStatusBadge status={row.paymentStatus} />
   ) : (
     <span className="text-muted-foreground">—</span>
-  )
-}
-
-/** Where a charge comes from; an ended charge also says when it ended. */
-function LineSourceBadge({ line, planName }: { line: SubscriptionLine; planName: string }) {
-  const Icon = LINE_SOURCE_ICON[line.source]
-  // A plan charge is shared: say so where the badge is, not in a note under the table.
-  const hint =
-    line.source === 'plan'
-      ? `Shared by every contract on ${planName}. Editing it here changes this contract only.`
-      : undefined
-  return (
-    <span className="flex items-center gap-2">
-      <Badge
-        variant={line.source === 'contract' ? 'info-light' : 'secondary'}
-        size="sm"
-        {...(hint ? { title: hint } : {})}
-      >
-        <Icon aria-hidden="true" className="size-3" />
-        {LINE_SOURCE_LABEL[line.source]}
-      </Badge>
-      {isEnded(line) ? (
-        <span className="text-muted-foreground text-xs">Ended {day(line.endDate)}</span>
-      ) : null}
-    </span>
   )
 }
 
