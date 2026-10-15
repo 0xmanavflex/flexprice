@@ -171,6 +171,7 @@ export {
   createPlanSchema,
   emptyPlan,
   planKind,
+  planKindLabel,
 } from './plan'
 export type { CreatePlan, Plan, PlanHeadline, PlanQuery } from './plan'
 

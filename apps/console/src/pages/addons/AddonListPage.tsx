@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { type Addon, type AddonQuery } from '@fp/domain'
-import { useAddons, useDeleteAddon } from '@fp/query'
+import { useAddonLinkage, useAddons, useDeleteAddon } from '@fp/query'
 import { AddonGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -31,7 +31,9 @@ export function AddonListPage({
   const archive = useDeleteAddon()
   const [archiving, setArchiving] = useState<Addon | null>(null)
   const failure = toListFailure(addons.error, 'add-ons')
-  const rows = addons.data?.addons ?? []
+  const rows = useMemo(() => addons.data?.addons ?? [], [addons.data])
+  // Entitlement counts for the rows on screen; not on the add-on itself.
+  const linked = useAddonLinkage(useMemo(() => rows.map((addon) => addon.id), [rows]))
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
   const clearFilters = () =>
@@ -57,6 +59,8 @@ export function AddonListPage({
           emptyDescription="Add-ons are optional extras customers buy alongside a plan — extra seats, priority support. Create the first to offer one."
         >
           <AddonGrid
+            linkage={linked.byAddon}
+            linkageLoading={linked.isPending}
             onArchive={setArchiving}
             addons={rows}
             total={addons.data?.total ?? 0}

@@ -79,6 +79,20 @@ export const PLAN_KIND_LABEL: Record<PlanKind, string> = {
   [PlanKind.Hybrid]: 'Hybrid plan',
 }
 
+/**
+ * The same label for something that is not a plan.
+ *
+ * Add-ons carry the same pill — the mix of fixed and usage charges is the
+ * same question — but "Hybrid plan" on an add-on row is simply wrong. The
+ * noun is a parameter, as it is in the prototype.
+ */
+export function planKindLabel(kind: PlanKind, noun = 'plan'): string {
+  if (kind === PlanKind.Empty) return 'No charges yet'
+  const shape =
+    kind === PlanKind.Hybrid ? 'Hybrid' : kind === PlanKind.Usage ? 'Usage-based' : 'Flat-rate'
+  return `${shape} ${noun}`
+}
+
 export function planKind(plan: Pick<Plan, 'fixedChargeCount' | 'usageChargeCount'>): PlanKind {
   const { fixedChargeCount: fixed, usageChargeCount: usage } = plan
   if (fixed === 0 && usage === 0) return PlanKind.Empty

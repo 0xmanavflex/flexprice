@@ -9,12 +9,29 @@ import {
   AddonStatus,
   DEFAULT_ADDON_QUERY,
   ADDON_FILTERS,
+  planKind,
+  planKindLabel,
 } from '@fp/domain'
 import { Button } from '@ui/components/primitives/button'
+import { Skeleton } from '@ui/components/primitives/skeleton'
 import { provenance } from '@ui/provenance'
 import { granularFilter } from '@ui/compositions/tables/FilterBar'
 import { EntityList, type EntityGuide, type EntityRowAction } from '../../shared/EntityList'
-import { type EntityColumn, dateColumn, idColumn, pillColumn, textColumn } from '../../shared/cells'
+import {
+  EmDash,
+  Tag,
+  type EntityColumn,
+  dateColumn,
+  idColumn,
+  pillColumn,
+  textColumn,
+} from '../../shared/cells'
+
+/** A figure, or a dash — zero and unknown read the same, as on the plans grid. */
+function count(value: number | undefined, locale: string | undefined) {
+  if (!value) return <EmDash />
+  return <span className="tabular-nums">{new Intl.NumberFormat(locale).format(value)}</span>
+}
 
 /**
  * The add-on list, over the shared `EntityList`.
@@ -70,8 +87,22 @@ const GUIDES: EntityGuide[] = [
   },
 ]
 
+/**
+ * What an add-on contains, as the grid shows it.
+ *
+ * Contracts are absent on purpose — see `useAddonLinkage`; the subscriptions
+ * search ignores an add-on filter, so the figure cannot be read.
+ */
+export interface AddonLinkage {
+  entitlements: number | undefined
+}
+
 export interface AddonGridProps {
   addons: Addon[]
+  /** Entitlement counts per add-on id. */
+  linkage?: ReadonlyMap<string, AddonLinkage>
+  /** The linkage is still being read; its column shows a placeholder. */
+  linkageLoading?: boolean
   total: number
   query: AddonQuery
   onQueryChange: (query: AddonQuery) => void
@@ -104,20 +135,52 @@ export function AddonGrid({
   onArchive,
   onClearFilters,
   locale,
+  linkage,
+  linkageLoading = false,
 }: AddonGridProps) {
   const columns = useMemo<EntityColumn<Addon>[]>(
     () => [
       textColumn<Addon>('name', 'Add-on', (row) => row.name, {
-        width: 240,
+        width: 200,
         sortable: true,
         sortValue: AddonSortField.Name,
         hideable: false,
       }),
-      idColumn<Addon>('lookupKey', 'Key', (row) => row.lookupKey, { width: 180 }),
-      textColumn<Addon>('description', 'Description', (row) => row.description, {
-        width: 280,
-        muted: true,
-      }),
+      {
+        // Read off the charge mix, as on plans — the same question, a
+        // different noun, so "Hybrid add-on" rather than "Hybrid plan".
+        id: 'kind',
+        header: 'Type',
+        width: 170,
+        text: (row) => planKindLabel(planKind(row), 'add-on'),
+        cell: (row) => <Tag>{planKindLabel(planKind(row), 'add-on')}</Tag>,
+        skeleton: <Skeleton className="h-6 w-28 rounded-full" />,
+      },
+      {
+        id: 'charges',
+        header: 'Charges',
+        width: 100,
+        align: 'center',
+        text: (row) => String(row.chargeCount),
+        cell: (row) => count(row.chargeCount, locale),
+        skeleton: <Skeleton className="h-4 w-8" />,
+      },
+      {
+        id: 'entitlements',
+        header: 'Entitlements',
+        width: 120,
+        align: 'center',
+        text: (row) => {
+          const value = linkage?.get(row.id)?.entitlements
+          return value === undefined ? '' : String(value)
+        },
+        cell: (row) => {
+          const value = linkage?.get(row.id)?.entitlements
+          if (value === undefined && linkageLoading) return <Skeleton className="h-4 w-8" />
+          return count(value, locale)
+        },
+        skeleton: <Skeleton className="h-4 w-8" />,
+      },
       pillColumn<Addon>(
         'status',
         'Status',
@@ -125,15 +188,22 @@ export function AddonGrid({
           label: ADDON_STATUS_LABEL[row.status],
           tone: row.status === AddonStatus.Published ? 'success' : 'neutral',
         }),
-        { width: 130 },
+        { width: 110 },
       ),
+      idColumn<Addon>('lookupKey', 'Lookup key', (row) => row.lookupKey, { width: 180 }),
+      // Real, and on the old grid, but not in the redesign's default layout.
+      textColumn<Addon>('description', 'Description', (row) => row.description, {
+        width: 280,
+        muted: true,
+        hiddenByDefault: true,
+      }),
       dateColumn<Addon>('updatedAt', 'Updated', (row) => row.updatedAt, {
         width: 140,
         sortable: true,
         sortValue: AddonSortField.UpdatedAt,
+        hiddenByDefault: true,
         ...(locale ? { locale } : {}),
       }),
-      // Real, and on the old grid, but not in the redesign's default layout.
       dateColumn<Addon>('createdAt', 'Created', (row) => row.createdAt, {
         width: 140,
         sortable: true,
@@ -142,7 +212,7 @@ export function AddonGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [locale],
+    [locale, linkage, linkageLoading],
   )
 
   const isDefaultSort =

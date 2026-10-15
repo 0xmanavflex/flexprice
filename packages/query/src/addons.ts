@@ -31,11 +31,16 @@ export interface AddonWire {
   createdAt?: Date | undefined
   updatedAt?: Date | undefined
   metadata?: Record<string, string> | null | undefined
+  /** Present only with `expand: 'prices'`; absent when the add-on has none. */
+  prices?: unknown[] | null | undefined
 }
 
 const ADDON_STATUSES = new Set<string>(Object.values(AddonStatus))
 
 export function toAddon(wire: AddonWire): Addon {
+  const prices: Array<Record<string, unknown>> = Array.isArray(wire.prices)
+    ? (wire.prices as Array<Record<string, unknown>>)
+    : []
   const status = ADDON_STATUSES.has(wire.status ?? '')
     ? (wire.status as AddonStatus)
     : AddonStatus.Published
@@ -46,6 +51,11 @@ export function toAddon(wire: AddonWire): Addon {
     lookupKey: wire.lookupKey ?? '',
     description: wire.description ?? '',
     status,
+    chargeCount: prices.length,
+    // `type` is `FIXED` or `USAGE`; anything else counts as a charge but as
+    // neither kind, so a new price type cannot inflate one of the two.
+    fixedChargeCount: prices.filter((price) => price['type'] === 'FIXED').length,
+    usageChargeCount: prices.filter((price) => price['type'] === 'USAGE').length,
     metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,
     updatedAt: wire.updatedAt ?? null,
@@ -62,6 +72,8 @@ export function toAddonFilter(query: AddonQuery): Record<string, unknown> {
   return {
     limit: query.pageSize,
     offset: (query.page - 1) * query.pageSize,
+    // The Type pill and the Charges count are read off the add-on's prices.
+    expand: 'prices',
     /*
      * Status, server-side.
      *

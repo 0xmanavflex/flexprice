@@ -26,6 +26,11 @@ export interface Addon {
   lookupKey: string
   description: string
   status: AddonStatus
+  /** How many charges (prices) the add-on carries. */
+  chargeCount: number
+  /** Of those, how many are a fixed fee, and how many metered usage. */
+  fixedChargeCount: number
+  usageChargeCount: number
   /** Free-form key/value fields; absent or empty when none. */
   metadata?: Record<string, string>
   createdAt: Date | null

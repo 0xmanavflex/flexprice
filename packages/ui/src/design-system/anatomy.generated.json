@@ -96,9 +96,11 @@
         "ArchiveIcon",
         "BookOpenIcon",
         "CopyIcon",
+        "EmDash",
         "EntityList",
         "PencilIcon",
-        "PlusIcon"
+        "PlusIcon",
+        "Tag"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/addons/AddonGrid.stories.tsx"
@@ -2145,6 +2147,7 @@
         "PencilIcon"
       ],
       "usedBy": [
+        "AddonGrid",
         "CustomerDetail",
         "CustomerGrid",
         "EntitlementTable",
@@ -5993,6 +5996,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "AddonGrid",
         "EventGrid",
         "PlanAiSetupView",
         "PlanGrid"
