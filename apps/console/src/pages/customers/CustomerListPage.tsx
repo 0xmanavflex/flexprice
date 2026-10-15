@@ -1,6 +1,12 @@
 import { useState } from 'react'
 import { type Customer, type CustomerQuery } from '@fp/domain'
-import { ApiError, useCustomerContractCounts, useCustomers, useDeleteCustomer } from '@fp/query'
+import {
+  ApiError,
+  useCustomerContractCounts,
+  useCustomers,
+  useDeleteCustomer,
+  serverReason,
+} from '@fp/query'
 import { CustomerGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -112,11 +118,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change customers here.'
+        return serverReason(error) ?? 'You do not have permission to change customers here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the customer. Try again.'
+        return serverReason(error) ?? 'Could not save the customer. Try again.'
     }
   }
   return 'Could not save the customer. Try again.'

@@ -7,6 +7,7 @@ import {
   useTopUpWallet,
   useUpdateAutoTopup,
   useWalletTransactions,
+  serverReason,
 } from '@fp/query'
 import { CustomerWalletView, toast } from '@fp/ui/pages'
 import { subTab } from '@/pages/shared/subTab'
@@ -86,7 +87,7 @@ export function CustomerWalletPanel({ customerId }: CustomerWalletPanelProps) {
 function failure(error: unknown, what: string): string | null {
   if (!error) return null
   if (error instanceof ApiError && error.kind === 'forbidden')
-    return `You do not have permission to ${what}.`
+    return serverReason(error) ?? `You do not have permission to ${what}.`
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
   return `Could not ${what}. Try again.`

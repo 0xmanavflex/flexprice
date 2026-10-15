@@ -8,7 +8,13 @@ import {
   type CreditNoteReason,
   formatMoney,
 } from '@fp/domain'
-import { ApiError, useCreditNote, useFinalizeCreditNote, useVoidCreditNote } from '@fp/query'
+import {
+  ApiError,
+  useCreditNote,
+  useFinalizeCreditNote,
+  useVoidCreditNote,
+  serverReason,
+} from '@fp/query'
 import { CatalogDetailFrame, EntityLink, Pill, Status } from '@fp/ui/pages'
 import { ConfirmDialog, EditableCard } from '@fp/ui/compositions'
 import { detailGate } from '../shared/detailGate'
@@ -216,7 +222,7 @@ export function CreditNoteDetailPage({
 function toError(error: unknown, verb: 'finalize' | 'void'): string | null {
   if (!error) return null
   if (error instanceof ApiError && error.kind === 'forbidden')
-    return `You do not have permission to ${verb} credit notes here.`
+    return serverReason(error) ?? `You do not have permission to ${verb} credit notes here.`
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
   return `Could not ${verb} the credit note. Try again.`

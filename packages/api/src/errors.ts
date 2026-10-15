@@ -74,6 +74,12 @@ export class ApiError extends Error {
   readonly details: Record<string, string> | undefined
   /** From a `Retry-After` header on a 429, in milliseconds. */
   readonly retryAfterMs: number | undefined
+  /**
+   * Whether `message` is the server's own sentence, read from the response
+   * body, rather than one this package made up (a status, a transport fault).
+   * Screens prefer a server sentence to their generic copy: it says why.
+   */
+  readonly fromServer: boolean
 
   constructor(
     kind: ErrorKind,
@@ -83,6 +89,7 @@ export class ApiError extends Error {
       details?: Record<string, string>
       cause?: unknown
       retryAfterMs?: number
+      fromServer?: boolean
     } = {},
   ) {
     super(message, options.cause === undefined ? undefined : { cause: options.cause })
@@ -91,6 +98,7 @@ export class ApiError extends Error {
     this.status = options.status
     this.details = options.details
     this.retryAfterMs = options.retryAfterMs
+    this.fromServer = options.fromServer ?? false
   }
 
   /** True when retrying the identical request could plausibly succeed. */
@@ -114,7 +122,14 @@ export function kindForStatus(status: number): ErrorKind {
 }
 
 /**
- * Digs the human-readable message out of `{ success: false, error: {...} }`.
+ * Digs the human-readable message out of a failed response.
+ *
+ * The backend answers in several envelopes: `{ success: false, error: { message } }`,
+ * the flat `{ code, message, http_status_code }` its error handler writes, and
+ * `{ error: "Access denied", message }` from the auth middleware. Each carries
+ * the one sentence worth showing, and missing it meant the screen showed the
+ * HTTP status text instead — which over HTTP/2 is empty, so "The request
+ * failed (403)".
  *
  * `FlexPriceError.body` is the raw response text, so this has to parse and then
  * distrust what it parsed — a 502 from a load balancer is HTML, and a truncated
@@ -124,33 +139,53 @@ export function kindForStatus(status: number): ErrorKind {
 export function readErrorBody(
   body: string,
   fallback: string,
-): { message: string; details?: Record<string, string> } {
+): { message: string; details?: Record<string, string>; fromServer?: boolean } {
   let parsed: unknown
   try {
     parsed = JSON.parse(body)
   } catch {
     return { message: fallback }
   }
+  if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return { message: fallback }
+  const root = parsed as Record<string, unknown>
+  const text = (value: unknown): string | null =>
+    typeof value === 'string' && value.trim().length > 0 ? value.trim() : null
 
-  if (parsed && typeof parsed === 'object' && 'error' in parsed) {
-    const inner = (parsed as { error: unknown }).error
-    if (inner && typeof inner === 'object') {
-      const { message, details } = inner as { message?: unknown; details?: unknown }
-      if (typeof message === 'string' && message.length > 0) {
-        return isStringMap(details) ? { message, details } : { message }
-      }
-    }
+  // `{ success: false, error: { message, details } }` — the documented envelope.
+  const inner = root['error']
+  if (inner && typeof inner === 'object' && !Array.isArray(inner)) {
+    const { message, details } = inner as { message?: unknown; details?: unknown }
+    const said = text(message)
+    if (said) return withDetails(said, details)
   }
-  return { message: fallback }
+
+  // `{ code, message, http_status_code, details }` — what `ierr` handlers send —
+  // and `{ error: "Access denied", message }` from the auth middleware. The
+  // message is the sentence; a string `error` is only a label for it.
+  const message = text(root['message'])
+  if (message) return withDetails(message, root['details'])
+
+  // Supabase (`msg`, `error_description`), or a bare `{ error: "…" }`.
+  const other = text(root['msg']) ?? text(root['error_description']) ?? text(inner)
+  return other ? { message: other, fromServer: true } : { message: fallback }
 }
 
-function isStringMap(value: unknown): value is Record<string, string> {
-  return (
-    !!value &&
-    typeof value === 'object' &&
-    !Array.isArray(value) &&
-    Object.values(value).every((v) => typeof v === 'string')
+/** Keeps the string-valued details (field → complaint); anything else is not for display. */
+function withDetails(
+  message: string,
+  details: unknown,
+): { message: string; details?: Record<string, string>; fromServer: true } {
+  if (!details || typeof details !== 'object' || Array.isArray(details)) {
+    return { message, fromServer: true }
+  }
+  const strings = Object.fromEntries(
+    Object.entries(details as Record<string, unknown>).filter(
+      (entry): entry is [string, string] => typeof entry[1] === 'string',
+    ),
   )
+  return Object.keys(strings).length > 0
+    ? { message, details: strings, fromServer: true }
+    : { message, fromServer: true }
 }
 
 /**
@@ -187,9 +222,9 @@ export function toApiError(cause: unknown): ApiError {
   }
 
   if (cause instanceof FlexPriceError) {
-    const { message, details } = readErrorBody(
+    const { message, details, fromServer } = readErrorBody(
       cause.body,
-      cause.rawResponse.statusText || 'The request failed.',
+      cause.rawResponse.statusText || `The request failed (${cause.statusCode}).`,
     )
     const retryAfterMs =
       cause.statusCode === 429 || cause.statusCode === 503
@@ -198,6 +233,7 @@ export function toApiError(cause: unknown): ApiError {
     return new ApiError(kindForStatus(cause.statusCode), message, {
       status: cause.statusCode,
       ...(details ? { details } : {}),
+      ...(fromServer ? { fromServer } : {}),
       ...(retryAfterMs !== undefined ? { retryAfterMs } : {}),
       cause,
     })
@@ -221,4 +257,18 @@ export function toApiError(cause: unknown): ApiError {
     cause instanceof Error ? cause.message : 'Something went wrong.',
     { cause },
   )
+}
+
+/**
+ * The server's own reason for a failure, when it sent one.
+ *
+ * Screens map an error's kind to their own sentence ("You do not have
+ * permission to change plans here"), which is right when the server said
+ * nothing useful and wrong when it did: a 403 can mean a missing role, an
+ * environment the session cannot reach, or a business rule, and only the
+ * server's message tells them apart. Prefer this, and keep the screen's own
+ * copy as the fallback.
+ */
+export function serverReason(error: unknown): string | null {
+  return error instanceof ApiError && error.fromServer && error.message ? error.message : null
 }

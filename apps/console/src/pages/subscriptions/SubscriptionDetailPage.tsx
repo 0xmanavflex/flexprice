@@ -41,6 +41,7 @@ import {
   useSubscriptionTaxes,
   useSubscriptionUsage,
   useUpdateSubscriptionLineItem,
+  serverReason,
 } from '@fp/query'
 import { SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
@@ -348,7 +349,7 @@ export function SubscriptionDetailPage({
 function toError(error: unknown, verb: 'cancel' | 'activate'): string | null {
   if (!error) return null
   if (error instanceof ApiError && error.kind === 'forbidden')
-    return `You do not have permission to ${verb} contracts here.`
+    return serverReason(error) ?? `You do not have permission to ${verb} contracts here.`
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
   return `Could not ${verb} the contract. Try again.`

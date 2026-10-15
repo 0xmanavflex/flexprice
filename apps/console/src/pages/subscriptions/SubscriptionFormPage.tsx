@@ -6,6 +6,7 @@ import {
   usePlanEntitlements,
   usePlans,
   usePrices,
+  serverReason,
 } from '@fp/query'
 import { DEFAULT_CUSTOMER_QUERY, DEFAULT_PLAN_QUERY, PriceEntityType } from '@fp/domain'
 import { SubscriptionForm } from '@fp/ui/pages'
@@ -96,11 +97,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to create contracts here.'
+        return serverReason(error) ?? 'You do not have permission to create contracts here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not create the contract. Try again.'
+        return serverReason(error) ?? 'Could not create the contract. Try again.'
     }
   }
   return 'Could not create the contract. Try again.'

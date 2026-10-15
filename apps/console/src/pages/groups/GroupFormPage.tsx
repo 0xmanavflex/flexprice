@@ -1,5 +1,5 @@
 import { type CreateGroup } from '@fp/domain'
-import { ApiError, useCreateGroup } from '@fp/query'
+import { ApiError, useCreateGroup, serverReason } from '@fp/query'
 import { GroupForm } from '@fp/ui/pages'
 
 export interface GroupFormPageProps {
@@ -41,11 +41,11 @@ export function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change groups here.'
+        return serverReason(error) ?? 'You do not have permission to change groups here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the group. Try again.'
+        return serverReason(error) ?? 'Could not save the group. Try again.'
     }
   }
   return 'Could not save the group. Try again.'

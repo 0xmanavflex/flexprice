@@ -14,6 +14,7 @@ import {
   useUpdateInvoicePaymentStatus,
   useUserInfo,
   useVoidInvoice,
+  serverReason,
 } from '@fp/query'
 import { InvoiceDetailView, Toaster, toast, type InvoicePendingAction } from '@fp/ui/pages'
 import { ConfirmDialog, OptionSelect } from '@fp/ui/compositions'
@@ -200,7 +201,7 @@ function failure(error: unknown, verb = 'change the invoice'): string {
   if (error instanceof ApiError) {
     switch (error.kind) {
       case 'forbidden':
-        return `Your role does not include permission to ${verb}.`
+        return serverReason(error) ?? `Your role does not include permission to ${verb}.`
       case 'unauthorized':
         return 'Your session has expired. Sign in again, then retry.'
       case 'not_found':
@@ -214,7 +215,9 @@ function failure(error: unknown, verb = 'change the invoice'): string {
       case 'rate_limited':
         return `Could not ${verb}: too many requests. Wait a moment and try again.`
       default:
-        return `Could not ${verb}: Flexprice had a problem. Try again shortly.`
+        return (
+          serverReason(error) ?? `Could not ${verb}: Flexprice had a problem. Try again shortly.`
+        )
     }
   }
   return `Could not ${verb}. Try again.`

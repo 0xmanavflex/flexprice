@@ -1,4 +1,10 @@
-import { ApiError, useCreateCustomer, useCustomer, useUpdateCustomer } from '@fp/query'
+import {
+  ApiError,
+  useCreateCustomer,
+  useCustomer,
+  useUpdateCustomer,
+  serverReason,
+} from '@fp/query'
 import { customerToEdit, type CreateCustomer } from '@fp/domain'
 import { CustomerForm } from '@fp/ui/pages'
 import { detailGate } from '../shared/detailGate'
@@ -81,11 +87,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change customers here.'
+        return serverReason(error) ?? 'You do not have permission to change customers here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the customer. Try again.'
+        return serverReason(error) ?? 'Could not save the customer. Try again.'
     }
   }
   return 'Could not save the customer. Try again.'

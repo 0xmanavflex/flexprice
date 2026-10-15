@@ -460,8 +460,31 @@ describe('updateEnvironment', () => {
     expect(seen[0]?.method).toBe('PUT')
     expect(seen[0]?.url).toBe(`${SERVER}/environments/env_9`)
     expect(seen[0]?.headers.get('Authorization')).toBe(`Bearer ${TOKEN}`)
+    // Not a discovery route: without the header the API answers 403
+    // "Invalid or inaccessible environment".
+    expect(seen[0]?.headers.get('X-Environment-ID')).toBe('env_9')
     // The type is immutable server-side; sending it would only risk a refusal.
     await expect(seen[0]?.json()).resolves.toEqual({ name: 'EU staging' })
+  })
+
+  it("reports the API's own sentence, not the status, when refused", async () => {
+    harness(
+      () =>
+        new Response(
+          JSON.stringify({
+            error: 'Access denied',
+            message: 'Invalid or inaccessible environment',
+          }),
+          { status: 403, statusText: '' },
+        ),
+    )
+
+    const failure = await updateEnvironment(SERVER, TOKEN, 'env_9', { name: 'QA' }).catch(
+      (error: unknown) => error,
+    )
+    expect(failure).toBeInstanceOf(ApiError)
+    expect((failure as ApiError).message).toBe('Invalid or inaccessible environment')
+    expect((failure as ApiError).fromServer).toBe(true)
   })
 
   it('echoes the id and name back when the response omits them', async () => {

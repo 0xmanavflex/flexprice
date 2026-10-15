@@ -22,6 +22,7 @@ export {
   kindForStatus,
   parseRetryAfter,
   readErrorBody,
+  serverReason,
   toApiError,
 } from './errors'
 

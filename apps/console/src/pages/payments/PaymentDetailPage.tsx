@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { CreditCardIcon } from '@fp/ui/icons'
 import { PaymentStatus, formatMoney, PAYMENT_STATUS_LABEL } from '@fp/domain'
-import { ApiError, useDeletePayment, usePayment, useProcessPayment } from '@fp/query'
+import { ApiError, useDeletePayment, usePayment, useProcessPayment, serverReason } from '@fp/query'
 import {
   CatalogDetailFrame,
   EntityLink,
@@ -231,7 +231,7 @@ export function PaymentDetailPage({ paymentId, onBack, onOpenInvoice }: PaymentD
 function toError(error: unknown, verb: 'process' | 'delete'): string | null {
   if (!error) return null
   if (error instanceof ApiError && error.kind === 'forbidden')
-    return `You do not have permission to ${verb} payments here.`
+    return serverReason(error) ?? `You do not have permission to ${verb} payments here.`
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
   return `Could not ${verb} the payment. Try again.`

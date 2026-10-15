@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { type TaxRate, type TaxRateQuery } from '@fp/domain'
-import { ApiError, useDeleteTaxRate, useTaxRates } from '@fp/query'
+import { ApiError, useDeleteTaxRate, useTaxRates, serverReason } from '@fp/query'
 import { TaxRateGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -102,11 +102,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change tax rates here.'
+        return serverReason(error) ?? 'You do not have permission to change tax rates here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the tax rate. Try again.'
+        return serverReason(error) ?? 'Could not save the tax rate. Try again.'
     }
   }
   return 'Could not save the tax rate. Try again.'

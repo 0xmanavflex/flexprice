@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { DEFAULT_INVOICE_QUERY, emptyPayment } from '@fp/domain'
-import { ApiError, useInvoice, useInvoices, useRecordPayment } from '@fp/query'
+import { ApiError, useInvoice, useInvoices, useRecordPayment, serverReason } from '@fp/query'
 import { PaymentForm } from '@fp/ui/pages'
 import { LoadingRows, PageBody } from '@fp/ui/compositions'
 
@@ -74,7 +74,8 @@ function toSubmitError(error: unknown): string | null {
   if (!error) return null
   if (error instanceof ApiError) {
     if (error.kind === 'invalid') return error.message || 'Check the details and try again.'
-    if (error.kind === 'forbidden') return 'You do not have permission to record payments here.'
+    if (error.kind === 'forbidden')
+      return serverReason(error) ?? 'You do not have permission to record payments here.'
     if (error.kind === 'network') return 'Could not reach Flexprice. Check your connection.'
   }
   return 'Could not record the payment. Try again.'

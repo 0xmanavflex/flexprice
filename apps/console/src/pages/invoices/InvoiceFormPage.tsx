@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import { DEFAULT_CUSTOMER_QUERY, emptyInvoice } from '@fp/domain'
-import { ApiError, useCreateInvoice, useCustomers } from '@fp/query'
+import { ApiError, useCreateInvoice, useCustomers, serverReason } from '@fp/query'
 import { LoadingRows, PageBody } from '@fp/ui/compositions'
 import { InvoiceForm } from '@fp/ui/pages'
 
@@ -65,7 +65,8 @@ function toSubmitError(error: unknown): string | null {
   if (!error) return null
   if (error instanceof ApiError) {
     if (error.kind === 'invalid') return error.message || 'Check the details and try again.'
-    if (error.kind === 'forbidden') return 'You do not have permission to create invoices here.'
+    if (error.kind === 'forbidden')
+      return serverReason(error) ?? 'You do not have permission to create invoices here.'
     if (error.kind === 'network') return 'Could not reach Flexprice. Check your connection.'
   }
   return 'Could not create the invoice. Try again.'

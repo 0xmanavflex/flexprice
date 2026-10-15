@@ -72,11 +72,23 @@ function str(source: Record<string, unknown>, key: string): string {
 async function request(
   serverURL: string,
   path: string,
-  init: { method: string; token?: string | null; body?: unknown },
+  init: {
+    method: string
+    token?: string | null
+    body?: unknown
+    /**
+     * `X-Environment-ID`. Only the discovery routes (listing, creating and
+     * reading environments, `/users/me`) are served without one; anything else
+     * — renaming an environment included — is refused with 403 "Invalid or
+     * inaccessible environment" when it is missing.
+     */
+    environmentId?: string
+  },
 ): Promise<unknown> {
   const url = `${serverURL.replace(/\/+$/, '')}${path}`
   const headers = new Headers({ 'Content-Type': 'application/json' })
   if (init.token) headers.set('Authorization', `Bearer ${init.token}`)
+  if (init.environmentId) headers.set('X-Environment-ID', init.environmentId)
 
   let response: Response
   try {
@@ -94,7 +106,7 @@ async function request(
   const text = await response.text()
 
   if (!response.ok) {
-    const { message, details } = readErrorBody(
+    const { message, details, fromServer } = readErrorBody(
       text,
       response.statusText || `The request failed (${response.status}).`,
     )
@@ -102,6 +114,7 @@ async function request(
     throw new ApiError(kindForStatus(response.status), message, {
       status: response.status,
       ...(details ? { details } : {}),
+      ...(fromServer ? { fromServer } : {}),
       ...(response.status === 429 && retryAfterMs !== undefined ? { retryAfterMs } : {}),
     })
   }
@@ -294,6 +307,8 @@ export async function updateEnvironment(
   const body = await request(serverURL, `/environments/${encodeURIComponent(id)}`, {
     method: 'PUT',
     token,
+    // The route is environment-scoped; the environment being renamed is the scope.
+    environmentId: id,
     body: { name: patch.name },
   })
   const row = isRecord(body) ? body : {}

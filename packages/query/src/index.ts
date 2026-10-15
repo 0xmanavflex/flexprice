@@ -34,7 +34,7 @@ export { useDebouncedValue } from './useDebouncedValue'
 
 // Re-exported so a component can branch on failure without importing `@fp/api`,
 // which the boundary rule forbids. The error shape is part of the door.
-export { ApiError, ErrorKind } from '@fp/api'
+export { ApiError, ErrorKind, serverReason } from '@fp/api'
 
 export {
   FlexpriceProvider,

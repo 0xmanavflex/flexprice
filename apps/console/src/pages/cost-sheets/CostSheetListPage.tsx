@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { type CostSheet, type CostSheetQuery } from '@fp/domain'
-import { ApiError, useCostSheets, useDeleteCostSheet } from '@fp/query'
+import { ApiError, useCostSheets, useDeleteCostSheet, serverReason } from '@fp/query'
 import { CostSheetGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -104,11 +104,11 @@ function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change cost sheets here.'
+        return serverReason(error) ?? 'You do not have permission to change cost sheets here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the cost sheet. Try again.'
+        return serverReason(error) ?? 'Could not save the cost sheet. Try again.'
     }
   }
   return 'Could not save the cost sheet. Try again.'

@@ -96,36 +96,6 @@ function str(source: Record<string, unknown>, key: string): string {
 }
 
 /**
- * Digs a message out of the several failure envelopes these routes use.
- *
- * `readErrorBody` handles the documented one, `{success:false,error:{message}}`.
- * These handlers also answer with two others, both verified live:
- *
- *   - `{"code":"not_found","message":"SAML single sign-on is not available on
- *     this deployment"}` — flat, no wrapper.
- *   - `{"error":"Access denied","message":"Invalid or inaccessible
- *     environment"}` — where `error` is a *string*, so `readErrorBody` skips it.
- *
- * Both carry the only sentence worth showing a user, and both would otherwise
- * be reported as the HTTP status text. Hence a top-level `message` is preferred
- * here, with `readErrorBody` as the fallback rather than the other way round.
- */
-function describeFailure(
-  body: string,
-  fallback: string,
-): { message: string; details?: Record<string, string> } {
-  try {
-    const parsed: unknown = JSON.parse(body)
-    if (isRecord(parsed) && typeof parsed['message'] === 'string' && parsed['message'].length > 0) {
-      return { message: parsed['message'] }
-    }
-  } catch {
-    // Not JSON — an HTML 502 from a load balancer, or nothing at all.
-  }
-  return readErrorBody(body, fallback)
-}
-
-/**
  * One request path for every route in this file.
  *
  * Normalizing here rather than per-call is what lets the promise above hold: a
@@ -174,7 +144,7 @@ export async function request(
   const text = await response.text()
 
   if (!response.ok) {
-    const { message, details } = describeFailure(
+    const { message, details, fromServer } = readErrorBody(
       text,
       response.statusText || `The request failed (${response.status}).`,
     )
@@ -182,6 +152,7 @@ export async function request(
     throw new ApiError(kindForStatus(response.status), message, {
       status: response.status,
       ...(details ? { details } : {}),
+      ...(fromServer ? { fromServer } : {}),
       ...(response.status === 429 && retryAfterMs !== undefined ? { retryAfterMs } : {}),
     })
   }

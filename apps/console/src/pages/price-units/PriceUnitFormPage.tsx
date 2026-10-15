@@ -1,5 +1,5 @@
 import { type CreatePriceUnit } from '@fp/domain'
-import { ApiError, useCreatePriceUnit } from '@fp/query'
+import { ApiError, useCreatePriceUnit, serverReason } from '@fp/query'
 import { PriceUnitForm } from '@fp/ui/pages'
 
 export interface PriceUnitFormPageProps {
@@ -42,11 +42,11 @@ export function toSubmitError(error: unknown): string | null {
       case 'invalid':
         return error.message || 'Check the details and try again.'
       case 'forbidden':
-        return 'You do not have permission to change price units here.'
+        return serverReason(error) ?? 'You do not have permission to change price units here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return 'Could not save the price unit. Try again.'
+        return serverReason(error) ?? 'Could not save the price unit. Try again.'
     }
   }
   return 'Could not save the price unit. Try again.'

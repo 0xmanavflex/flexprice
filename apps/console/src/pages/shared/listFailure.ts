@@ -1,4 +1,4 @@
-import { ApiError } from '@fp/query'
+import { ApiError, serverReason } from '@fp/query'
 import type { ErrorKind as UiErrorKind } from '@fp/ui/compositions'
 
 export interface ListFailure {
@@ -25,7 +25,7 @@ export function toListFailure(error: unknown, noun: string): ListFailure | null 
     switch (error.kind) {
       case 'forbidden':
         return {
-          message: `Your role does not include access to ${noun}.`,
+          message: serverReason(error) ?? `Your role does not include access to ${noun}.`,
           canRetry: false,
           kind: 'denied',
         }
