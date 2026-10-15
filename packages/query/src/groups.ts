@@ -84,6 +84,7 @@ export function toGroupFilter(query: GroupQuery): Record<string, unknown> {
     ...statusFilterField(query.statuses, Object.values(GroupStatus)),
     sort: [{ field: SORT_FIELD[query.sortBy], direction: query.sortDirection }],
     ...(query.search ? { name: query.search } : {}),
+    ...(query.entityType ? { entityType: query.entityType } : {}),
     ...((query.filters?.length ?? 0) > 0
       ? { filters: toFilterConditions(query.filters ?? [], GROUP_FILTERS) }
       : {}),

@@ -55,7 +55,7 @@ type FeatureFormProps = {
   isSubmitting?: boolean
   /** Server-side failure, already a sentence. */
   submitError?: string | null
-  /** The labels (groups) a feature can be filed under; the field is hidden when there are none. */
+  /** The labels (groups) a feature can be filed under. Empty disables the picker, never hides it. */
   groups?: readonly Option[]
   trail: DetailCrumb[]
 } & (
@@ -345,21 +345,35 @@ export function FeatureForm(props: FeatureFormProps) {
           />
         )}
       </FormRow>
-      {groups.length > 0 ? (
-        <FormRow label="Label" hint="File the feature under a label." error={message('groupId')}>
-          {({ id, ...field }) => (
-            <OptionSelect
-              id={id}
-              aria-describedby={field['aria-describedby']}
-              value={form.watch('groupId')}
-              options={groups}
-              placeholder="No label"
-              disabled={isSubmitting}
-              onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
-            />
-          )}
-        </FormRow>
-      ) : null}
+      {/*
+        Always drawn, even with no labels to choose.
+        Hiding the field when the environment has none meant the question was
+        never asked: people filed nothing under a label because they never
+        learned the field was there, and reported the dropdown as missing. An
+        empty picker says what it is and that there is nothing in it yet,
+        which is information; an absent one is not.
+      */}
+      <FormRow
+        label="Label"
+        hint={
+          groups.length > 0
+            ? 'File the feature under a label.'
+            : 'File the feature under a label. None exist yet — create one under Groups.'
+        }
+        error={message('groupId')}
+      >
+        {({ id, ...field }) => (
+          <OptionSelect
+            id={id}
+            aria-describedby={field['aria-describedby']}
+            value={form.watch('groupId')}
+            options={groups}
+            placeholder="No label"
+            disabled={isSubmitting || groups.length === 0}
+            onValueChange={(next) => form.setValue('groupId', next, { shouldDirty: true })}
+          />
+        )}
+      </FormRow>
     </>
   )
 

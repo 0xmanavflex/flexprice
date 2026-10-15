@@ -85,6 +85,14 @@ export interface GroupQuery {
   view: GroupView
   /** Granular field filters, applied by the search endpoint. See `GROUP_FILTERS`. */
   filters?: ListFilter[]
+  /**
+   * Only the groups that hold this kind of thing.
+   *
+   * Server-side. The pickers want one kind — a feature form offers feature
+   * labels, never price ones — and narrowing a fetched page in the browser
+   * gets that wrong as soon as there are more groups than the page holds.
+   */
+  entityType?: GroupEntityType
 }
 
 export const DEFAULT_GROUP_QUERY: GroupQuery = {

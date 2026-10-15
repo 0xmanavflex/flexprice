@@ -29,12 +29,22 @@ export function FeatureFormPage(props: FeatureFormPageProps) {
   const create = useCreateFeature()
   const update = useUpdateFeature()
   const existing = useFeature(props.mode === 'edit' ? props.featureId : '')
-  const groups = useGroups({ ...DEFAULT_GROUP_QUERY, pageSize: 100 })
+  /*
+   * Feature labels, narrowed by the server.
+   *
+   * This used to fetch the first hundred groups of *any* kind and keep the
+   * feature ones in the browser. With a hundred price groups ahead of them
+   * the picker came back empty, which reads as "there are no labels" — the
+   * bug this page was reported for. `entityType` is a filter the search
+   * endpoint honours, checked against the live API.
+   */
+  const groups = useGroups({
+    ...DEFAULT_GROUP_QUERY,
+    pageSize: 100,
+    entityType: GroupEntityType.Feature,
+  })
   const groupOptions = useMemo(
-    () =>
-      (groups.data?.groups ?? [])
-        .filter((group) => group.entityType === GroupEntityType.Feature)
-        .map((group) => ({ value: group.id, label: group.name })),
+    () => (groups.data?.groups ?? []).map((group) => ({ value: group.id, label: group.name })),
     [groups.data],
   )
   const formProps = { onCancel, groups: groupOptions }

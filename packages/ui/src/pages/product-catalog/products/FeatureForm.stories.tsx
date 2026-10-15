@@ -367,3 +367,20 @@ export const LookupKeyFollowsName: Story = {
     await expect(canvas.getByLabelText(/^Lookup key/)).toHaveValue('mine')
   },
 }
+
+/**
+ * No labels yet: the field is still there, saying so.
+ *
+ * It used to be hidden when the environment had no groups, so the question
+ * was never asked and the dropdown was reported as missing. An empty picker
+ * is information; an absent one is not.
+ */
+export const NoLabelsYet: Story = {
+  args: { groups: [] },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Label')).toBeVisible()
+    await expect(canvas.getByText(/none exist yet/i)).toBeVisible()
+    await expect(canvas.getByRole('combobox', { name: /label/i })).toBeDisabled()
+  },
+}
