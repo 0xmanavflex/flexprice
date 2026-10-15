@@ -25,8 +25,12 @@ import {
   type CreateTaxAssociation,
   type AddContractAddon,
   type AddContractCoupon,
+  BILLING_PERIOD_LABEL,
+  ChargeSection,
+  type BillingPeriod,
   type ChangeLineQuantity,
   type Charge,
+  type ChargeCommitmentDetail,
   type ChargeDetail,
   type CreditGrant,
   type EditContractCharge,
@@ -58,6 +62,7 @@ import {
   Properties,
 } from '../../compositions/detail/DetailKit'
 import { ActivitySection, type ActivityLogEntry } from '../../compositions/detail/ActivityLog'
+import { ChargeSheet } from '../product-catalog/charges/ChargeSheet'
 import { ChargeTable } from '../product-catalog/charges/ChargeTable'
 import { DetailShell } from '../../compositions/detail/DetailShell'
 import { MetadataCard } from '../../compositions/detail/MetadataCard'
@@ -200,6 +205,16 @@ const LINE_SOURCE_LABEL: Record<SubscriptionLine['source'], string> = {
  * Keyed by the price id, which is what the row's "Copy price ID" copies and
  * what the sheet is about. Two lines on one contract do not share a price.
  */
+/** One row of the Overview's Commitments section. */
+interface CommitmentRow {
+  id: string
+  charge: Charge
+  name: string
+  commitment: ChargeCommitmentDetail
+  /** "per month", "every minute" — what the figure is measured against. */
+  per: string
+}
+
 function chargesOfLines(lines: SubscriptionLine[]): {
   charges: Charge[]
   details: Map<string, ChargeDetail>
@@ -302,6 +317,8 @@ export function SubscriptionDetailView({
   const [dialog, setDialog] = useState<ContractChargeDialogState | null>(null)
   const [saving, setSaving] = useState(false)
   const [quantityLine, setQuantityLine] = useState<SubscriptionLine | null>(null)
+  /** The charge whose sheet the Commitments section opened, at its commitment. */
+  const [commitmentCharge, setCommitmentCharge] = useState<Charge | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const [section, setSection] = useState<ContractSectionKind | null>(null)
   // One confirm for every removal on the page: what it says, and what it runs.
@@ -419,6 +436,31 @@ export function SubscriptionDetailView({
     const line = chargeRows.lineOf.get(charge.id)
     if (line) setDialog({ mode: 'end', line })
   }
+  /**
+   * The charges that carry a commitment, for the Overview section.
+   *
+   * Read off the same `details` the charges table uses, so the section and
+   * the row's Commitment flag can never disagree about which charges have
+   * one. `per` spells out what the figure is per, because "2,000,000 units"
+   * alone does not say whether that is a quarter or a minute.
+   */
+  const commitmentRows: CommitmentRow[] = chargeRows.charges.flatMap((charge) => {
+    const commitment = chargeRows.details.get(charge.id)?.commitment
+    if (!commitment) return []
+    const period = BILLING_PERIOD_LABEL[charge.billingPeriod as BillingPeriod] ?? 'period'
+    return [
+      {
+        id: charge.id,
+        charge,
+        name: charge.displayName || charge.meterName || 'Charge',
+        commitment,
+        per: commitment.windowed
+          ? `every ${period.toLowerCase().replace(/ly$/, '')}`
+          : `per ${period.toLowerCase()}`,
+      },
+    ]
+  })
+
   /** The grey line's second half on a contract: where the charge came from. */
   const sourceOf = (charge: Charge) => {
     const line = chargeRows.lineOf.get(charge.id)
@@ -569,6 +611,61 @@ export function SubscriptionDetailView({
                   error={lines.isError ? 'Charges could not be loaded' : null}
                   {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
                 />
+              ) : null}
+
+              {/*
+                Commitments, between Charges and Entitlements as the redesign
+                orders them. Only the charges that carry one: a contract with
+                no commitments is not told it has none in a box of its own,
+                it simply has one fewer section.
+
+                A commitment is set on a charge, so a row opens that charge's
+                sheet at its commitment rather than offering an editor here —
+                one place to change it, reached from either direction.
+              */}
+              {commitmentRows.length > 0 ? (
+                <Section table showTitle title="Commitments">
+                  <DetailTable<CommitmentRow>
+                    compact
+                    toolbar={false}
+                    footer={false}
+                    label="Commitments"
+                    noun="commitments"
+                    rows={commitmentRows}
+                    onRowClick={(row) => setCommitmentCharge(row.charge)}
+                    columns={[
+                      {
+                        key: 'charge',
+                        header: 'Charge',
+                        cell: (row) => <Strong>{row.name}</Strong>,
+                      },
+                      {
+                        key: 'commitment',
+                        header: 'Commitment',
+                        cell: (row) => (
+                          <span className="tabular-nums">
+                            {row.commitment.value}
+                            <span className="text-muted-foreground"> {row.per}</span>
+                          </span>
+                        ),
+                      },
+                      {
+                        key: 'overage',
+                        header: 'Overage',
+                        cell: (row) => (
+                          <Muted className="tabular-nums">×{row.commitment.overageFactor}</Muted>
+                        ),
+                      },
+                      {
+                        key: 'trueUp',
+                        header: 'True-up',
+                        cell: (row) => (
+                          <Muted>{row.commitment.trueUp ? 'Enabled' : 'Disabled'}</Muted>
+                        ),
+                      },
+                    ]}
+                  />
+                </Section>
               ) : null}
 
               <PartSection
@@ -1138,6 +1235,17 @@ export function SubscriptionDetailView({
         error={saveError}
         onRun={(action) => void runSection(action)}
         onClose={closeSection}
+      />
+      {/*
+        The Commitments section's own sheet. The charges table owns one for
+        its own rows; this opens the same surface from the other direction,
+        already at the commitment that was clicked.
+      */}
+      <ChargeSheet
+        charge={commitmentCharge}
+        {...(commitmentCharge ? { detail: chargeRows.details.get(commitmentCharge.id) } : {})}
+        section={ChargeSection.Commitment}
+        onClose={() => setCommitmentCharge(null)}
       />
     </DetailShell>
   )

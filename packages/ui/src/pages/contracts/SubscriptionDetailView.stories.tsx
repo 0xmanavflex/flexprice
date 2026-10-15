@@ -739,6 +739,39 @@ export const OverviewSummary: Story = {
   },
 }
 
+/**
+ * Commitments sit between Charges and Entitlements, and only the charges
+ * that carry one appear. A row opens that charge's sheet at its commitment,
+ * so there is one place to read or change it however you arrived.
+ */
+export const Commitments: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const section = within(
+      (await canvas.findByRole('heading', { name: 'Commitments' })).closest('section')!,
+    )
+    await expect(section.getByText('API requests')).toBeVisible()
+    await expect(section.getByText('×1.5')).toBeVisible()
+    await expect(section.getByText('Disabled')).toBeVisible()
+    // The charges with no commitment are not listed as having none.
+    await expect(section.queryByText('Platform fee')).toBeNull()
+
+    await userEvent.click(section.getByText('API requests'))
+    const sheet = within(await screen.findByRole('dialog'))
+    await expect(sheet.getByText('Commitment')).toBeVisible()
+  },
+}
+
+/** A contract with no commitments has one fewer section, not an empty one. */
+export const NoCommitments: Story = {
+  args: { ...BASE, lines: ready(LINES.filter((line) => line.id === 'line_1')) },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByRole('heading', { name: 'Entitlements' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Commitments' })).toBeNull()
+  },
+}
+
 /** Overview's summary lists only what the contract changed from its plan. */
 export const ContractSpecificCharges: Story = {
   play: async ({ canvasElement }) => {

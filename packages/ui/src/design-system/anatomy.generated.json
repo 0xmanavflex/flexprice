@@ -777,7 +777,8 @@
         "Sheet"
       ],
       "usedBy": [
-        "ChargeTable"
+        "ChargeTable",
+        "SubscriptionDetailView"
       ],
       "story": "./src/pages/product-catalog/charges/ChargeSheet.stories.tsx"
     },
@@ -5866,6 +5867,7 @@
       "layer": "surface",
       "composes": [
         "ActivitySection",
+        "ChargeSheet",
         "ChargeTable",
         "ConfirmDialog",
         "ContractChargeDialog",
