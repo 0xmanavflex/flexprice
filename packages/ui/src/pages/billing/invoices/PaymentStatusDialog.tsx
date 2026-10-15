@@ -17,7 +17,7 @@ import { Pill, type PillTone } from '../../shared/cells'
 
 export const PaymentStatusDialogProvenance = provenance({
   source: 'composition',
-  composes: ['compositions/FormDialog', 'compositions/ChoiceCards', 'ui/input-group'],
+  composes: ['compositions/FormDialog', 'compositions/detail-kit', 'ui/input-group'],
   note: "Manual payment status for an invoice: current state, the backend's allowed moves, and a partial amount for pending.",
 })
 

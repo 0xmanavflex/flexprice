@@ -13,6 +13,17 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
+/**
+ * The Void action, matched exactly.
+ *
+ * `name` is a substring match, and the payment-status item's hint reads
+ * "Void invoices cannot change" — so a loose `'Void invoice'` matched *that*
+ * once an invoice was voided, and the assertion that Void had gone found a
+ * disabled item belonging to another menu entry.
+ */
+const voidItem = (page: Page) =>
+  page.getByRole('menuitem', { name: 'Void invoice', exact: true })
+
 test('a created invoice is a draft, finalizing it sticks, and the list shows it', async ({
   page,
 }) => {
@@ -36,7 +47,7 @@ test('a created invoice is a draft, finalizing it sticks, and the list shows it'
 
   await page.getByRole('button', { name: 'More actions' }).click()
   await expect(page.getByRole('menuitem', { name: 'Finalize invoice' })).toBeHidden()
-  await expect(page.getByRole('menuitem', { name: 'Void invoice' })).toBeVisible()
+  await expect(voidItem(page)).toBeVisible()
   await page.keyboard.press('Escape')
   // Back through the breadcrumb, an in-app navigation, so the mock store keeps the new invoice.
   await page
@@ -123,11 +134,11 @@ test('finalize now creates an open invoice that can be voided from the detail', 
   await expect(page.getByText('Finalized', { exact: true }).first()).toBeVisible()
 
   await page.getByRole('button', { name: 'More actions' }).click()
-  await page.getByRole('menuitem', { name: 'Void invoice' }).click()
+  await voidItem(page).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Void invoice' }).click()
   await expect(page.getByText('The invoice was voided.')).toBeVisible()
   await page.getByRole('button', { name: 'More actions' }).click()
-  await expect(page.getByRole('menuitem', { name: 'Void invoice' })).toBeHidden()
+  await expect(voidItem(page)).toBeHidden()
 })
 
 test('cancelling a contract immediately marks it cancelled', async ({ page }) => {
