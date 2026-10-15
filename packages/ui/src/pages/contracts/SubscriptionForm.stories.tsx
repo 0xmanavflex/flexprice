@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
-import { BillingPeriod, type CreateSubscription } from '@fp/domain'
+import { BillingPeriod, type CreateSubscription, PriceType } from '@fp/domain'
 import type { Option } from '@ui/compositions/forms/OptionSelect'
-import { makeCharges, makeEntitlements } from '../product-catalog/plans/planDetailFixtures'
+import {
+  makeCharge,
+  makeCharges,
+  makeEntitlements,
+} from '../product-catalog/plans/planDetailFixtures'
 import { SubscriptionForm, type SubscriptionPlanContext } from './SubscriptionForm'
 
 const STEPS = ['plan', 'phases', 'commitments', 'billing', 'review'] as const
@@ -63,6 +67,8 @@ interface PlaygroundProps {
   entitlementCount: number
   /** The chosen plan's charges and entitlements are still loading. */
   planLoading: boolean
+  /** Adds a quarterly and a weekly charge, which a monthly contract does not bill by default. */
+  otherCadences?: boolean
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   onStepChange: (step: string) => void
@@ -80,6 +86,7 @@ function SubscriptionFormPlayground({
   chargeCount,
   entitlementCount,
   planLoading,
+  otherCadences = false,
   onSubmit,
   onCancel,
   onStepChange,
@@ -105,10 +112,32 @@ function SubscriptionFormPlayground({
       isLoading: planLoading,
       charges: planLoading
         ? []
-        : makeCharges(Math.ceil(chargeCount / 2), Math.floor(chargeCount / 2)),
+        : [
+            ...makeCharges(Math.ceil(chargeCount / 2), Math.floor(chargeCount / 2)),
+            ...(otherCadences
+              ? [
+                  {
+                    ...makeCharge(90, {
+                      type: PriceType.Fixed,
+                      billingPeriod: BillingPeriod.Quarterly,
+                    }),
+                    id: 'price_quarterly',
+                    displayName: 'Quarterly review',
+                  },
+                  {
+                    ...makeCharge(91, {
+                      type: PriceType.Fixed,
+                      billingPeriod: BillingPeriod.Weekly,
+                    }),
+                    id: 'price_weekly',
+                    displayName: 'Weekly report',
+                  },
+                ]
+              : []),
+          ],
       entitlements: planLoading ? [] : makeEntitlements(entitlementCount),
     }
-  }, [planId, planLoading, chargeCount, entitlementCount])
+  }, [planId, planLoading, chargeCount, entitlementCount, otherCadences])
 
   return (
     <SubscriptionForm
@@ -265,6 +294,39 @@ export const PhaseCharges: Story = {
     await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
   },
 }
+/**
+ * A monthly contract bills monthly and one-time charges. A quarterly charge
+ * fits and can be opted in; a weekly one never bills here — and the phase's
+ * charge list says only what will bill.
+ */
+export const ChargesAtOtherCadences: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2, otherCadences: true },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Charges at other cadences')).toBeVisible()
+    await expect(canvas.getByText(/Not billed on this contract: Weekly report/)).toBeVisible()
+    // Not opted in: the phase does not list it as billed.
+    await expect(canvas.queryByRole('button', { name: /Override Quarterly review/ })).toBeNull()
+    await userEvent.click(canvas.getByRole('switch', { name: 'Also bill Quarterly review' }))
+    await expect(
+      await canvas.findByRole('button', { name: /Override Quarterly review/ }),
+    ).toBeVisible()
+
+    for (const step of ['commitments', 'billing', 'review']) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+      await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
+    }
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          includePriceIds: expect.arrayContaining(['price_quarterly']),
+        }),
+      ),
+    )
+  },
+}
+
 export const PhaseNoCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 0 },
   play: async ({ canvasElement }) => {

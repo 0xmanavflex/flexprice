@@ -724,3 +724,6 @@ export { COUNTRY_CODES, countryName, countryOptions } from './countries'
 export type { CountryCode, CountryOption } from './countries'
 export { timezoneOptions as toTimezoneOptions, toTimezoneOption } from './timezones'
 export type { TimezoneOption } from './timezones'
+
+export { cadenceAllowed, selectContractCharges } from './contractCharges'
+export type { ContractChargeSelection } from './contractCharges'

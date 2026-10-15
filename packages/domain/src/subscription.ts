@@ -259,6 +259,13 @@ export const createSubscriptionSchema = z
       .optional(),
     /** At least one: the first phase is the contract itself. */
     phases: z.array(subscriptionPhaseSchema).min(1),
+    /** Plan charges at another cadence the person chose to bill too (see `selectContractCharges`). */
+    optedInChargeIds: z.array(z.string()),
+    /**
+     * `include_price_ids`, worked out from the plan's charges when the form is
+     * submitted: null keeps the API's default selection.
+     */
+    includePriceIds: z.array(z.string()).nullable(),
     /** A minimum spend on the whole contract per commitment period; blank for none. */
     commitmentAmount: optionalAmount('Enter an amount like 1000'),
     /** The period the commitment is measured over; blank is the billing period. */
@@ -362,6 +369,8 @@ export function emptySubscription(): CreateSubscription {
     billingPeriodCount: 1,
     startDate: '',
     phases: [emptyPhase()],
+    optedInChargeIds: [],
+    includePriceIds: null,
     commitmentAmount: '',
     commitmentDuration: '',
     overageFactor: '',

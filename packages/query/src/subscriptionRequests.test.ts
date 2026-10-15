@@ -164,6 +164,14 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
     expect(wire).not.toHaveProperty('phases')
   })
 
+  it('sends include_price_ids only when charges at other cadences are opted in', () => {
+    expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('includePriceIds')
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({ ...base, includePriceIds: ['price_m', 'price_q'] }),
+    ) as Record<string, unknown>
+    expect(wire['include_price_ids']).toEqual(['price_m', 'price_q'])
+  })
+
   it('sends several phases, each starting where the last ended, and the contract ending with the last', () => {
     const request = toCreateSubscriptionRequest({
       ...base,

@@ -20,6 +20,8 @@ import {
   type SubscriptionPhase,
   emptyPhase,
   phaseStarts,
+  selectContractCharges,
+  type ContractChargeSelection,
   CREDIT_GRANT_CADENCE_LABEL,
   CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
   CREDIT_GRANT_EXPIRY_TYPE_LABEL,
@@ -248,7 +250,12 @@ export function SubscriptionForm({
 
   const lastPhase = values.phases.length - 1
   const starts = phaseStarts(values)
-  const usageCharges = (plan?.charges ?? []).filter((charge) => charge.type === PriceType.Usage)
+  const usageCharges = selectContractCharges(plan?.charges ?? [], {
+    currency: values.currency,
+    billingPeriod: values.billingPeriod,
+    billingPeriodCount: values.billingPeriodCount,
+    optedInIds: values.optedInChargeIds,
+  }).attached.filter((charge) => charge.type === PriceType.Usage)
   const set = <K extends keyof CreateSubscription>(name: K, value: CreateSubscription[K]) =>
     form.setValue(name, value as never, { shouldDirty: true })
 
@@ -301,19 +308,59 @@ export function SubscriptionForm({
   }, [periodOptions, values.billingPeriod, form])
 
   // The charges this contract bills: the plan's, in the chosen currency.
-  const charges = useMemo(() => {
-    const all = plan?.charges ?? []
-    const currency = values.currency.toUpperCase()
-    const inCurrency = all.filter((c) => c.currency.toUpperCase() === currency)
-    return currency && inCurrency.length > 0 ? inCurrency : all
-  }, [plan, values.currency])
+  /*
+   * The charges this contract will bill, by the API's own rule: in the
+   * contract's currency, one-time or on its billing period — plus any charge at
+   * another cadence that fits and was opted into. Everything the form shows as
+   * billable comes from this, so it never lists a charge the API would drop.
+   */
+  const selection = useMemo(
+    () =>
+      selectContractCharges(plan?.charges ?? [], {
+        currency: values.currency,
+        billingPeriod: values.billingPeriod,
+        billingPeriodCount: values.billingPeriodCount,
+        optedInIds: values.optedInChargeIds,
+      }),
+    [
+      plan,
+      values.currency,
+      values.billingPeriod,
+      values.billingPeriodCount,
+      values.optedInChargeIds,
+    ],
+  )
+  const charges = selection.attached
 
-  const submitAll = form.handleSubmit(onSubmit, (failed) => {
-    const bad = flow.steps.find((s) =>
-      STEP_FIELDS[s.id]?.some((field) => failed[field] !== undefined),
-    )
-    if (bad) flow.goTo(bad.id)
-  })
+  /**
+   * What is sent: settings on charges this contract will not bill are dropped
+   * (they would be refused, or silently ignored), and `include_price_ids` is the
+   * selection's own.
+   */
+  const toSubmit = (draft: CreateSubscription): CreateSubscription => {
+    const billed = new Set(selection.attached.map((charge) => charge.id))
+    return {
+      ...draft,
+      phases: draft.phases.map((phase) => ({
+        ...phase,
+        priceOverrides: phase.priceOverrides.filter((o) => billed.has(o.priceId)),
+        discounts: phase.discounts.filter((d) => !d.priceId || billed.has(d.priceId)),
+      })),
+      chargeCommitments: draft.chargeCommitments.filter((c) => billed.has(c.priceId)),
+      optedInChargeIds: draft.optedInChargeIds.filter((id) => billed.has(id)),
+      includePriceIds: selection.includePriceIds,
+    }
+  }
+
+  const submitAll = form.handleSubmit(
+    (draft) => onSubmit(toSubmit(draft)),
+    (failed) => {
+      const bad = flow.steps.find((s) =>
+        STEP_FIELDS[s.id]?.some((field) => failed[field] !== undefined),
+      )
+      if (bad) flow.goTo(bad.id)
+    },
+  )
 
   const planLabel = plans.find((p) => p.value === values.planId)?.label
 
@@ -542,15 +589,22 @@ export function SubscriptionForm({
       </div>
     ),
     phases: values.planId ? (
-      <PhasesStep
-        phases={values.phases}
-        starts={starts}
-        charges={charges}
-        isLoading={plan?.isLoading ?? true}
-        coupons={coupons}
-        errors={errors.phases}
-        onChange={(next) => set('phases', next)}
-      />
+      <div className="flex flex-col gap-5">
+        <OtherCadences
+          selection={selection}
+          optedIn={values.optedInChargeIds}
+          onChange={(next) => set('optedInChargeIds', next)}
+        />
+        <PhasesStep
+          phases={values.phases}
+          starts={starts}
+          charges={charges}
+          isLoading={plan?.isLoading ?? true}
+          coupons={coupons}
+          errors={errors.phases}
+          onChange={(next) => set('phases', next)}
+        />
+      </div>
     ) : (
       noPlan('Charges')
     ),
@@ -761,6 +815,71 @@ function CloseSubForm({ label, onClick }: { label: string; onClick: () => void }
     <Button type="button" variant="ghost" size="icon-sm" aria-label={label} onClick={onClick}>
       <XIcon aria-hidden />
     </Button>
+  )
+}
+
+/**
+ * Charges the contract does not bill by default: those at another cadence that
+ * fits (which can be opted in, as V1's "additional plan prices"), and those it
+ * cannot bill at all — said plainly, so nothing looks billable that is not.
+ */
+function OtherCadences({
+  selection,
+  optedIn,
+  onChange,
+}: {
+  selection: ContractChargeSelection
+  optedIn: string[]
+  onChange: (next: string[]) => void
+}) {
+  const optedInCharges = selection.attached.filter((charge) => optedIn.includes(charge.id))
+  const offered = [...optedInCharges, ...selection.optional]
+  if (offered.length === 0 && selection.excluded.length === 0) return null
+  const why = (reason: 'currency' | 'cadence') =>
+    reason === 'currency' ? 'another currency' : "a cadence this contract can't bill"
+  return (
+    <FormCard title="Charges at other cadences" status="optional">
+      {offered.length > 0 ? (
+        <ul className="divide-y">
+          {offered.map((charge) => {
+            const on = optedIn.includes(charge.id)
+            const name = chargeName(charge)
+            return (
+              <li
+                key={charge.id}
+                className="flex items-center justify-between gap-4 px-5 py-4 sm:px-6"
+              >
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate text-sm font-medium">{name}</span>
+                  <PricingText
+                    pricing={chargePricing(charge, undefined)}
+                    period={BILLING_PERIOD_LABEL[charge.billingPeriod]}
+                  />
+                </div>
+                <Switch
+                  aria-label={`Also bill ${name}`}
+                  checked={on}
+                  onCheckedChange={(next) =>
+                    onChange(
+                      next ? [...optedIn, charge.id] : optedIn.filter((id) => id !== charge.id),
+                    )
+                  }
+                />
+              </li>
+            )
+          })}
+        </ul>
+      ) : null}
+      {selection.excluded.length > 0 ? (
+        <div className="text-muted-foreground border-t px-5 py-3 text-xs sm:px-6">
+          Not billed on this contract:{' '}
+          {selection.excluded
+            .map(({ charge, reason }) => `${chargeName(charge)} (${why(reason)})`)
+            .join(', ')}
+          .
+        </div>
+      ) : null}
+    </FormCard>
   )
 }
 

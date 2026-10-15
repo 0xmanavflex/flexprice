@@ -536,6 +536,7 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
     ...(contractStart ? { startDate: contractStart } : {}),
     ...(last?.endDate ? { endDate: utcDay(last.endDate) } : {}),
     ...(draft.trialPeriodDays ? { trialPeriodDays: draft.trialPeriodDays } : {}),
+    ...(draft.includePriceIds ? { includePriceIds: draft.includePriceIds } : {}),
     ...(first && first.priceOverrides.length > 0
       ? { overrideLineItems: first.priceOverrides.map(toOverrideLineItem) }
       : {}),
