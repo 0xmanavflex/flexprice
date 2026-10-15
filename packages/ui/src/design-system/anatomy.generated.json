@@ -2545,7 +2545,8 @@
         "Formula",
         "PencilIcon",
         "Pill",
-        "PlusIcon"
+        "PlusIcon",
+        "Status"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureGrid.stories.tsx"
@@ -5744,6 +5745,7 @@
         "AddonSubscriptionsView",
         "CustomerDetail",
         "FeatureDetailView",
+        "FeatureGrid",
         "InvoiceDetailView",
         "PlanGrid"
       ],

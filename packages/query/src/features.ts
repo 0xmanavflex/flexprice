@@ -134,6 +134,8 @@ export function toFeature(wire: FeatureWire): Feature {
 /** Product sort names to the wire's. The only place the two are related. */
 const SORT_FIELD: Record<FeatureSortField, string> = {
   [FeatureSortField.Name]: 'name',
+  [FeatureSortField.LookupKey]: 'lookup_key',
+  [FeatureSortField.Type]: 'type',
   [FeatureSortField.CreatedAt]: 'created_at',
   [FeatureSortField.UpdatedAt]: 'updated_at',
 }

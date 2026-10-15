@@ -14,6 +14,7 @@ import {
   aggregationFormula,
   DEFAULT_FEATURE_QUERY,
   FEATURE_SORT_LABEL,
+  FEATURE_STATUS_LABEL,
   FEATURE_TYPE_LABEL,
   type Feature,
   type FeatureQuery,
@@ -31,7 +32,9 @@ import {
   FeatureTypePill,
   Formula,
   Pill,
+  Status,
   type EntityColumn,
+  dateColumn,
   idColumn,
   textColumn,
 } from '../../shared/cells'
@@ -164,6 +167,7 @@ export function FeatureGrid({
   onClone,
   onDelete,
   onClearFilters,
+  locale,
 }: FeatureGridProps) {
   /*
    * Widths are shares, not pixels: `EntityList` scales every column so the set
@@ -175,7 +179,7 @@ export function FeatureGrid({
     () => [
       {
         ...textColumn<Feature>('name', 'Name', (row) => row.name, {
-          width: 220,
+          width: 200,
           sortable: true,
           sortValue: FeatureSortField.Name,
           // The column the list is *for*. Hiding it leaves a table of
@@ -184,28 +188,50 @@ export function FeatureGrid({
         }),
         cell: (row) => <EntityCell name={row.name} />,
       },
+      // The lookup key, as the redesign lists it: the stable handle code uses.
+      idColumn<Feature>('lookupKey', 'Key', (row) => row.lookupKey, {
+        width: 180,
+        sortable: true,
+        sortValue: FeatureSortField.LookupKey,
+      }),
       {
         // The glyph depends on the row, so the cell is written here rather
         // than through `pillColumn`, which takes one spec per row.
         id: 'type',
         header: 'Type',
-        width: 120,
+        width: 110,
+        sortable: true,
+        sortValue: FeatureSortField.Type,
         text: (row) => FEATURE_TYPE_LABEL[row.type],
         cell: (row) => <FeatureTypePill type={row.type} label={FEATURE_TYPE_LABEL[row.type]} />,
         skeleton: <Skeleton className="h-5 w-20 rounded-full" />,
       },
-      idColumn<Feature>('eventName', 'Event name', (row) => row.eventName, { width: 170 }),
+      idColumn<Feature>('eventName', 'Event', (row) => row.eventName, { width: 200 }),
       {
         id: 'aggregation',
         header: 'Aggregation',
-        width: 170,
+        width: 210,
         text: (row) => aggregationFormula(row) ?? '',
         cell: (row) => <Formula value={aggregationFormula(row)} />,
         skeleton: <Skeleton className="h-6 w-32 rounded-md" />,
       },
+      // The unit a metered feature counts in; non-metered features have none.
+      {
+        id: 'unit',
+        header: 'Unit',
+        width: 100,
+        text: (row) => row.unitSingular,
+        cell: (row) =>
+          row.unitSingular ? (
+            <span className="text-muted-foreground">{row.unitSingular}</span>
+          ) : (
+            <EmDash />
+          ),
+        skeleton: <Skeleton className="h-4 w-12" />,
+      },
       {
         id: 'plans',
-        header: 'Plans',
+        header: 'Used in',
         width: 200,
         text: (row) => (linkage?.get(row.id)?.plans ?? []).map((plan) => plan.name).join(', '),
         cell: (row) => {
@@ -242,6 +268,9 @@ export function FeatureGrid({
         id: 'entitlements',
         header: 'Entitlements',
         width: 160,
+        // Not in the redesign's default layout. Kept in the `⋯` column menu
+        // rather than dropped: the count is real and nothing else shows it.
+        hiddenByDefault: true,
         text: (row) => String(linkage?.get(row.id)?.entitlements ?? 0),
         cell: (row) => {
           const entry = linkage?.get(row.id)
@@ -280,6 +309,8 @@ export function FeatureGrid({
         id: 'subscriptions',
         header: 'Contracts',
         width: 120,
+        // Same as entitlements: off by default, one click away.
+        hiddenByDefault: true,
         text: (row) => String(linkage?.get(row.id)?.subscriptions ?? ''),
         cell: (row) => {
           const entry = linkage?.get(row.id)
@@ -289,8 +320,32 @@ export function FeatureGrid({
         },
         skeleton: <Skeleton className="h-4 w-8" />,
       },
+      {
+        id: 'status',
+        header: 'Status',
+        width: 110,
+        text: (row) => FEATURE_STATUS_LABEL[row.status],
+        cell: (row) => <Status value={FEATURE_STATUS_LABEL[row.status]} />,
+        skeleton: <Skeleton className="h-6 w-20 rounded-full" />,
+      },
+      // Real, and off by default exactly as the redesign has them — the layout
+      // does not spend a column on either, but both stay in the `⋯` menu.
+      dateColumn<Feature>('createdAt', 'Created', (row) => row.createdAt, {
+        width: 130,
+        sortable: true,
+        sortValue: FeatureSortField.CreatedAt,
+        hiddenByDefault: true,
+        ...(locale ? { locale } : {}),
+      }),
+      dateColumn<Feature>('updatedAt', 'Updated', (row) => row.updatedAt, {
+        width: 130,
+        sortable: true,
+        sortValue: FeatureSortField.UpdatedAt,
+        hiddenByDefault: true,
+        ...(locale ? { locale } : {}),
+      }),
     ],
-    [linkage, linkageLoading, onCreateEntitlement],
+    [linkage, linkageLoading, onCreateEntitlement, locale],
   )
 
   const isDefaultSort =
@@ -311,6 +366,16 @@ export function FeatureGrid({
         label: 'Edit product',
         icon: <PencilIcon aria-hidden className="size-4" />,
         onSelect: () => onEdit(feature),
+      })
+    }
+    if (onCreateEntitlement) {
+      // The redesign's layout has no entitlements column, and that column was
+      // the only way to reach this. Moved to the row menu rather than lost,
+      // which is also where the redesign puts its own "Add to plan".
+      actions.push({
+        label: 'Add entitlement',
+        icon: <PlusIcon aria-hidden className="size-4" />,
+        onSelect: () => onCreateEntitlement(feature),
       })
     }
     if (onClone) {
@@ -338,7 +403,7 @@ export function FeatureGrid({
 
   return (
     <EntityList<Feature>
-      label="Products"
+      label="Features"
       noun="products"
       rows={features}
       total={total}

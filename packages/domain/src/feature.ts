@@ -361,8 +361,22 @@ export const AGGREGATION_LABEL: Record<AggregationType, string> = {
  * product terms, mapped to wire field names in `@fp/query` — a screen should
  * never have to know that "Created" is `created_at`.
  */
+/**
+ * What the list can be ordered by.
+ *
+ * These five, and no more, because `/features/search` validates the sort field
+ * against the feature table's own columns and answers an unknown one with
+ * `400 Unknown field name '<x>' in feature query` — it does not fall back.
+ *
+ * Checked against the live API: `event_name` and `aggregation` are rejected
+ * (they belong to the meter, not the feature) and so are `plans` and
+ * `contracts` (derived counts, not columns). Sorting by any of those needs the
+ * backend to support it first.
+ */
 export const FeatureSortField = {
   Name: 'name',
+  LookupKey: 'lookupKey',
+  Type: 'type',
   CreatedAt: 'createdAt',
   UpdatedAt: 'updatedAt',
 } as const
@@ -370,6 +384,8 @@ export type FeatureSortField = (typeof FeatureSortField)[keyof typeof FeatureSor
 
 export const FEATURE_SORT_LABEL: Record<FeatureSortField, string> = {
   [FeatureSortField.Name]: 'Name',
+  [FeatureSortField.LookupKey]: 'Key',
+  [FeatureSortField.Type]: 'Type',
   [FeatureSortField.CreatedAt]: 'Created',
   [FeatureSortField.UpdatedAt]: 'Updated',
 }
@@ -408,8 +424,8 @@ export const DEFAULT_FEATURE_QUERY: FeatureQuery = {
   statuses: [],
   // Alphabetical, because a catalogue is looked *up* more often than it is
   // scanned for what changed.
-  sortBy: FeatureSortField.Name,
-  sortDirection: 'asc',
+  sortBy: FeatureSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: FeatureView.Table,
   filters: [],
 }

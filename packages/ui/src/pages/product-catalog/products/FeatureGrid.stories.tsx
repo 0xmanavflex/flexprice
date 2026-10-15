@@ -1,6 +1,6 @@
 import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
+import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { Feature } from '@fp/domain'
 import { FeatureGrid, type ProductLinkage } from './FeatureGrid'
 import { featureFixtures, fixtureFeatureQuery, manyFeatures } from './featureFixtures'
@@ -148,23 +148,38 @@ export const Populated: Story = {
   },
 }
 
-/** Plans as chips (the overflow collapses to +N), entitlements and subscriptions as counts. */
+/**
+ * Plans as chips, with the overflow collapsing to +N.
+ *
+ * Entitlements and contracts are counted too, but the redesign's layout does
+ * not spend a column on either, so both start hidden and live in the column
+ * menu. What stays on screen by default is what the design shows.
+ */
 export const Linkage: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('API calls')
     await expect(canvas.getAllByText('Starter').length).toBeGreaterThan(0)
     await expect(canvas.getByText('+1')).toBeInTheDocument()
-    await expect(canvas.getByText('3 entitlements')).toBeInTheDocument()
-    await expect(canvas.getByText('1,280')).toBeInTheDocument()
+    // Off by default, so neither count is on the page until someone asks.
+    await expect(canvas.queryByText('3 entitlements')).toBeNull()
+    await expect(canvas.queryByText('1,280')).toBeNull()
   },
 }
 
-/** A product no plan grants offers to create the entitlement, without opening the row. */
+/**
+ * Creating an entitlement without opening the row.
+ *
+ * It used to be a button inside the entitlements column. That column is not
+ * in the redesign's layout, so the action moved to the row menu rather than
+ * disappearing with it.
+ */
 export const AddEntitlement: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(await canvas.findByRole('button', { name: 'Add entitlement' }))
+    const rows = await canvas.findAllByRole('button', { name: 'Row actions' })
+    await userEvent.click(rows[0] as HTMLElement)
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Add entitlement' }))
     await expect(args.onCreateEntitlement).toHaveBeenCalledOnce()
     await expect(args.onFeatureClick).not.toHaveBeenCalled()
   },
