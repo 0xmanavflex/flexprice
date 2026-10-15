@@ -161,16 +161,41 @@ export const Information: Story = {
 }
 
 export const Overview: Story = {
-  args: { tab: 'overview' },
+  args: { tab: 'overview', chargeCount: 8, entitlementCount: 8 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // Both tables on one tab, beside the rail — this is the whole page.
+    await expect(
+      canvas.getByText('Every plan and add-on that bills for this feature'),
+    ).toBeInTheDocument()
+    await expect(
+      canvas.getByText('What each plan includes before charges apply'),
+    ).toBeInTheDocument()
+    await expect(canvas.getByText('Send a test event')).toBeInTheDocument()
+    await expect(canvas.getByText('Metadata')).toBeInTheDocument()
+  },
 }
 
-export const Charges: Story = {
-  args: { tab: 'charges', chargeCount: 8 },
+/**
+ * Two tabs, and no Usage panel.
+ *
+ * Charges and Entitlements were tabs of their own; Overview showed a Usage
+ * section that could never fill, because the API reports nothing per feature.
+ * This is the assertion that stops either coming back.
+ */
+export const TwoTabs: Story = {
+  args: { tab: 'overview' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const tabs = canvas.getAllByRole('tab').map((tab) => tab.textContent?.trim())
+    await expect(tabs).toEqual(['Overview', 'Information'])
+    await expect(canvas.queryByText(/usage for this feature is not available/i)).toBeNull()
+  },
 }
 
 /** Loading is a skeleton, never "No charges yet". */
 export const ChargesLoading: Story = {
-  args: { tab: 'charges', chargeCount: 0, chargesLoading: true },
+  args: { tab: 'overview', chargeCount: 0, chargesLoading: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Loading charges')).toBeInTheDocument()
@@ -179,7 +204,7 @@ export const ChargesLoading: Story = {
 }
 
 export const ChargesEmpty: Story = {
-  args: { tab: 'charges', chargeCount: 0 },
+  args: { tab: 'overview', chargeCount: 0 },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('No charges yet')).toBeInTheDocument()
   },
@@ -188,7 +213,7 @@ export const ChargesEmpty: Story = {
 /** A failed load says so; it never reads as "No charges yet". */
 export const ChargesError: Story = {
   args: {
-    tab: 'charges',
+    tab: 'overview',
     chargeCount: 0,
     chargesError: 'Could not load the charges for this feature.',
   },
@@ -201,19 +226,15 @@ export const ChargesError: Story = {
   },
 }
 
-export const Entitlements: Story = {
-  args: { tab: 'entitlements', entitlementCount: 8 },
-}
-
 export const EntitlementsEmpty: Story = {
-  args: { tab: 'entitlements', entitlementCount: 0 },
+  args: { tab: 'overview', chargeCount: 8, entitlementCount: 0 },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('No entitlements yet')).toBeInTheDocument()
   },
 }
 
 export const EntitlementsLoading: Story = {
-  args: { tab: 'entitlements', entitlementCount: 0, entitlementsLoading: true },
+  args: { tab: 'overview', entitlementCount: 0, entitlementsLoading: true },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Loading entitlements')).toBeInTheDocument()
@@ -224,7 +245,7 @@ export const EntitlementsLoading: Story = {
 /** A failed entitlements load says so; it never reads as "No entitlements yet". */
 export const EntitlementsError: Story = {
   args: {
-    tab: 'entitlements',
+    tab: 'overview',
     entitlementCount: 0,
     entitlementsError: 'Could not load the entitlements for this feature.',
   },
@@ -238,16 +259,24 @@ export const EntitlementsError: Story = {
 }
 
 export const ManyRows: Story = {
-  args: { tab: 'charges', chargeCount: 40, entitlementCount: 40 },
+  args: { tab: 'overview', chargeCount: 40, entitlementCount: 40 },
 }
 
-/** A boolean feature has no Overview or Charges tab, so the page opens on Entitlements. */
+/**
+ * A boolean feature has no meter, so nothing prices it and there is no event
+ * to send. Overview is its entitlements and its metadata, and the tabs are
+ * still the same two — the page no longer rearranges itself by type.
+ */
 export const BooleanFeature: Story = {
-  args: { featureType: FeatureType.Boolean, tab: 'overview' },
+  args: { featureType: FeatureType.Boolean, tab: 'overview', entitlementCount: 4 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.queryByRole('tab', { name: /Overview/ })).toBeNull()
-    await expect(canvas.getByRole('tab', { name: /Entitlements/ })).toBeInTheDocument()
+    await expect(canvas.getByRole('tab', { name: /Overview/ })).toBeInTheDocument()
+    await expect(
+      canvas.getByText('What each plan includes before charges apply'),
+    ).toBeInTheDocument()
+    await expect(canvas.queryByText('Send a test event')).toBeNull()
+    await expect(canvas.queryByText(/bills for this feature/)).toBeNull()
   },
 }
 
@@ -269,8 +298,8 @@ export const SwitchesTabs: Story = {
   args: { tab: 'overview' },
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Charges/ }))
-    await expect(args.onTabChange).toHaveBeenCalledWith('charges')
+    await userEvent.click(canvas.getByRole('tab', { name: /Information/ }))
+    await expect(args.onTabChange).toHaveBeenCalledWith('information')
     await expect(canvas.queryByText('Send a test event')).toBeNull()
   },
 }

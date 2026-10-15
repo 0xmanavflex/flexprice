@@ -21,8 +21,7 @@ import { Button } from '@ui/components/primitives/button'
 import { DetailHeader } from '../../../compositions/detail/DetailHeader'
 import { DetailBreadcrumb } from '../../../compositions/detail/DetailShell'
 import { EditableCard } from '../../../compositions/forms/EditableCard'
-import { EmptyState } from '../../../compositions/feedback/EmptyState'
-import { SubTabState, knownCount } from '../../../compositions/detail/SubTabState'
+import { SubTabState } from '../../../compositions/detail/SubTabState'
 import type { ErrorKind } from '../../../compositions/feedback/States'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { Section } from '../../../compositions/layout/Section'
@@ -35,7 +34,17 @@ import {
 import { FEATURE_TYPE_GLYPH, FeatureTypePill, Pill, Status } from '../../shared/cells'
 import { DetailTable } from '../../shared/DetailTable'
 
-export type FeatureTab = 'overview' | 'charges' | 'entitlements' | 'information'
+/**
+ * Two tabs, not four.
+ *
+ * Charges and Entitlements were tabs of their own, each holding one table, and
+ * Overview held a truncated copy of the charges plus a Usage panel that was
+ * always empty — Flexprice reports no usage, customers or billed amount per
+ * feature, so there was never anything to draw. The redesign puts both tables
+ * on Overview beside the test-event and metadata rail, which is the whole of
+ * what this page can actually say, and leaves Information for the fields.
+ */
+export type FeatureTab = 'overview' | 'information'
 
 /** A charge that prices this feature, and the plan or add-on it belongs to. */
 export interface FeatureChargeLink {
@@ -201,33 +210,9 @@ export function FeatureDetailView({
   const isMetered = feature.type === FeatureType.Metered
   const Glyph = FEATURE_TYPE_GLYPH[feature.type]
   const archived = feature.status === 'archived'
-  // Overview and Charges only exist for metered features; the rest start on Entitlements.
-  const active: FeatureTab =
-    !isMetered && (tab === 'overview' || tab === 'charges') ? 'entitlements' : tab
 
   const tabs = [
-    ...(isMetered
-      ? [
-          { value: 'overview', label: 'Overview' },
-          {
-            value: 'charges',
-            label: 'Charges',
-            ...withCount(
-              knownCount(charges.length, { isLoading: chargesLoading, error: chargesError }),
-            ),
-          },
-        ]
-      : []),
-    {
-      value: 'entitlements',
-      label: 'Entitlements',
-      ...withCount(
-        knownCount(entitlements.length, {
-          isLoading: entitlementsLoading,
-          error: entitlementsError,
-        }),
-      ),
-    },
+    { value: 'overview', label: 'Overview' },
     { value: 'information', label: 'Information' },
   ]
 
@@ -284,50 +269,39 @@ export function FeatureDetailView({
         actions={<DetailMoreMenu label="More actions" items={menu} />}
       />
 
-      <DetailTabs tabs={tabs} value={active} onChange={(next) => onTabChange(next as FeatureTab)} />
+      <DetailTabs tabs={tabs} value={tab} onChange={(next) => onTabChange(next as FeatureTab)} />
 
-      {active === 'overview' ? (
+      {tab === 'overview' ? (
         <OverviewTab
           feature={feature}
+          isMetered={isMetered}
+          archived={archived}
           charges={charges}
           chargesLoading={chargesLoading}
           chargesError={chargesError}
           chargesErrorKind={chargesErrorKind}
           onRetryCharges={onRetryCharges}
-          onSeeCharges={() => onTabChange('charges')}
+          {...(onAddPlan ? { onAddPlan } : {})}
+          entitlements={entitlements}
+          entitlementsLoading={entitlementsLoading}
+          entitlementsError={entitlementsError}
+          entitlementsErrorKind={entitlementsErrorKind}
+          onRetryEntitlements={onRetryEntitlements}
+          {...(onSaveMetadata ? { onSaveMetadata } : {})}
         />
-      ) : null}
-
-      {active === 'charges' ? (
-        <ChargesTab
-          rows={charges}
-          isLoading={chargesLoading}
-          error={chargesError}
-          errorKind={chargesErrorKind}
-          onRetry={onRetryCharges}
-          {...(onAddPlan ? { onAdd: onAddPlan } : {})}
-        />
-      ) : null}
-
-      {active === 'entitlements' ? (
-        <EntitlementsTab
-          rows={entitlements}
-          isLoading={entitlementsLoading}
-          error={entitlementsError}
-          errorKind={entitlementsErrorKind}
-          onRetry={onRetryEntitlements}
-        />
-      ) : null}
-
-      {active === 'information' ? (
+      ) : (
         <InformationTab
           feature={feature}
           isMetered={isMetered}
           archived={archived}
           onSave={onSave}
-          {...(onSaveMetadata ? { onSaveMetadata } : {})}
         />
-      ) : null}
+      )}
+    </div>
+  )
+}
+
+/** A tab's create button      ) : null}
     </div>
   )
 }
@@ -342,7 +316,7 @@ function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
   )
 }
 
-function ChargesTab({
+function ChargesSection({
   rows,
   isLoading,
   error,
@@ -360,7 +334,11 @@ function ChargesTab({
   const add = onAdd ? <AddButton label="Add plan" onClick={onAdd} /> : undefined
   if (rows.length === 0) {
     return (
-      <Section title="Charges" flush>
+      <Section
+        title="Charges"
+        description="Every plan and add-on that bills for this feature"
+        flush
+      >
         <SubTabState
           hasData={false}
           isLoading={isLoading}
@@ -382,7 +360,12 @@ function ChargesTab({
     )
   }
   return (
-    <Section table title="Charges">
+    <Section
+      table
+      showTitle
+      title="Charges"
+      description="Every plan and add-on that bills for this feature"
+    >
       <DetailTable
         compact
         label="Charges"
@@ -450,7 +433,7 @@ function ChargesTab({
   )
 }
 
-function EntitlementsTab({
+function EntitlementsSection({
   rows,
   isLoading,
   error,
@@ -465,7 +448,11 @@ function EntitlementsTab({
 }) {
   if (rows.length === 0) {
     return (
-      <Section title="Entitlements" flush>
+      <Section
+        title="Entitlements"
+        description="What each plan includes before charges apply"
+        flush
+      >
         <SubTabState
           hasData={false}
           isLoading={isLoading}
@@ -486,7 +473,12 @@ function EntitlementsTab({
     )
   }
   return (
-    <Section table title="Entitlements">
+    <Section
+      table
+      showTitle
+      title="Entitlements"
+      description="What each plan includes before charges apply"
+    >
       <DetailTable
         compact
         label="Entitlements"
@@ -543,83 +535,76 @@ function EntitlementsTab({
   )
 }
 
-/** A tab count as a spread: present only when known. */
-function withCount(count: number | undefined): { count?: number } {
-  return count === undefined ? {} : { count }
-}
-
+/**
+ * Everything the page can actually say about a feature, on one screen.
+ *
+ * Left: who bills for it (Charges) and who includes it (Entitlements) — the
+ * full tables, not a four-row preview of one of them. Right: how to send it an
+ * event, and the metadata carried with the record.
+ *
+ * A non-metered feature has no event and nothing prices it, so it gets the
+ * entitlements table and the metadata card, and neither of the other two.
+ */
 function OverviewTab({
   feature,
+  isMetered,
+  archived,
   charges,
   chargesLoading,
   chargesError,
   chargesErrorKind,
   onRetryCharges,
-  onSeeCharges,
+  onAddPlan,
+  entitlements,
+  entitlementsLoading,
+  entitlementsError,
+  entitlementsErrorKind,
+  onRetryEntitlements,
+  onSaveMetadata,
 }: {
   feature: Feature
+  isMetered: boolean
+  archived: boolean
   charges: FeatureChargeLink[]
   chargesLoading: boolean
   chargesError: string | null
   chargesErrorKind?: ErrorKind | undefined
   onRetryCharges?: (() => void) | undefined
-  onSeeCharges: () => void
+  onAddPlan?: (() => void) | undefined
+  entitlements: FeatureEntitlementLink[]
+  entitlementsLoading: boolean
+  entitlementsError: string | null
+  entitlementsErrorKind?: ErrorKind | undefined
+  onRetryEntitlements?: (() => void) | undefined
+  onSaveMetadata?: ((metadata: Record<string, string>) => Promise<unknown>) | undefined
 }) {
   return (
-    <div className="flex flex-col gap-5">
-      <Section title="Usage">
-        <EmptyState
-          scene="catalog"
-          size="inline"
-          title="Usage for this feature is not available yet"
-          description="Flexprice does not report usage, customers or billed amounts per feature, so none are shown."
+    <div className="grid gap-5 xl:grid-cols-3">
+      <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
+        {isMetered ? (
+          <ChargesSection
+            rows={charges}
+            isLoading={chargesLoading}
+            error={chargesError}
+            errorKind={chargesErrorKind}
+            onRetry={onRetryCharges}
+            {...(onAddPlan ? { onAdd: onAddPlan } : {})}
+          />
+        ) : null}
+        <EntitlementsSection
+          rows={entitlements}
+          isLoading={entitlementsLoading}
+          error={entitlementsError}
+          errorKind={entitlementsErrorKind}
+          onRetry={onRetryEntitlements}
         />
-      </Section>
-      <div className="grid gap-5 xl:grid-cols-5">
-        <Section
-          className="xl:col-span-3"
-          title="Plans attached"
-          flush
-          bodyClassName="flex flex-col"
-          action={
-            <Button variant="outline" size="sm" className="h-8 px-3" onClick={onSeeCharges}>
-              All charges
-            </Button>
-          }
-        >
-          {/* Rows share the height of the panel so both overview panels line up. */}
-          {charges.length === 0 ? (
-            <SubTabState
-              hasData={false}
-              isLoading={chargesLoading}
-              error={chargesError}
-              errorKind={chargesErrorKind}
-              onRetry={onRetryCharges}
-              columns={3}
-              loadingLabel="Loading plans"
-              empty={{
-                scene: 'catalog',
-                title: 'No plans attached yet',
-                description: 'No plan prices this feature yet.',
-              }}
-            >
-              {null}
-            </SubTabState>
-          ) : (
-            <ul className="divide-border/50 flex flex-1 flex-col divide-y">
-              {charges.slice(0, 4).map((row) => (
-                <li key={row.charge.id} className="flex min-h-12 flex-1 items-center gap-4 px-6">
-                  <span className="flex-1 text-sm">{row.parentName}</span>
-                  <span className="text-muted-foreground w-28 text-[13px]">
-                    {modelLabel(row.charge)}
-                  </span>
-                  <span className="w-56 text-[13px] tabular-nums">{priceLabel(row.charge)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </Section>
-        <TestEventPanel feature={feature} />
+      </div>
+      <div className="flex min-w-0 flex-col gap-5">
+        {isMetered ? <TestEventPanel feature={feature} /> : null}
+        <MetadataCard
+          metadata={feature.metadata ?? {}}
+          {...(onSaveMetadata && !archived ? { onSave: onSaveMetadata } : {})}
+        />
       </div>
     </div>
   )
@@ -708,13 +693,11 @@ function InformationTab({
   isMetered,
   archived,
   onSave,
-  onSaveMetadata,
 }: {
   feature: Feature
   isMetered: boolean
   archived: boolean
   onSave: (changes: Record<string, string>) => Promise<unknown>
-  onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
 }) {
   return (
     <div className="grid gap-5 xl:grid-cols-3">
@@ -790,7 +773,8 @@ function InformationTab({
         ) : null}
       </div>
       <div className="flex min-w-0 flex-col gap-5">
-        {/* The ids people copy into API calls stay in view above the free-form fields. */}
+        {/* The ids people copy into API calls. Metadata used to sit under them;
+            it is on Overview now, beside the event the metadata describes. */}
         <Section title="Identifiers">
           <Properties
             columns={2}
@@ -800,10 +784,6 @@ function InformationTab({
             ]}
           />
         </Section>
-        <MetadataCard
-          metadata={feature.metadata ?? {}}
-          {...(onSaveMetadata && !archived ? { onSave: onSaveMetadata } : {})}
-        />
       </div>
     </div>
   )

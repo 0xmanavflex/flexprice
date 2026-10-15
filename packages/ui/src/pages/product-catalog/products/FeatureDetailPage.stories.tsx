@@ -14,7 +14,7 @@ import { makeCharges, makeEntitlements } from '@ui/pages/product-catalog/plans/p
 import { PAGE_STORY_PARAMETERS, PageShell } from '../../shared/shellFixtures'
 
 const PARENTS = ['Starter', 'Growth', 'Scale', 'Enterprise', 'Internal']
-const TABS: FeatureTab[] = ['overview', 'charges', 'entitlements', 'information']
+const TABS: FeatureTab[] = ['overview', 'information']
 
 /** One fixture feature of the requested type, with the status overridden. */
 function pickFeature(type: FeatureType, status: FeatureStatus): Feature {
@@ -158,14 +158,14 @@ export const Overview: Story = {
   args: { activeTab: 'overview' },
 }
 
-/** `/features/$featureId` on the Charges tab, with a long list of plans pricing it. */
+/** `/features/$featureId` with a long list of plans pricing it. */
 export const Charges: Story = {
-  args: { activeTab: 'charges', chargeCount: 8 },
+  args: { activeTab: 'overview', chargeCount: 8 },
 }
 
-/** `/features/$featureId` on the Charges tab for a feature nothing prices yet. */
+/** `/features/$featureId` for a feature nothing prices yet. */
 export const NoCharges: Story = {
-  args: { activeTab: 'charges', chargeCount: 0 },
+  args: { activeTab: 'overview', chargeCount: 0 },
   play: async ({ canvasElement }) => {
     await expect(await within(canvasElement).findByText('No charges yet')).toBeInTheDocument()
   },

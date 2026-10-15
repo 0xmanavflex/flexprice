@@ -34,7 +34,7 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | environments | `EnvironmentRenameFormPage` | Form | Field, FormDialog | EnvironmentRenameForm |
 | events | `EventListPage` | List | DetailList, EmptyState, EntityList, FilterBar, SortMenu | DataFreshness, EMPTY_CATALOGUE, EventDetailSheet, EventGrid, ListState, PageBody |
 | exports | `ExportListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | DataExportGrid, ListState, PageBody |
-| features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EmptyState, EntityList, Field, FormActions, FormDialog, MetricRail, Properties, Section | FeatureCloneDialog, FeatureDetailView, FeatureTab |
+| features | `FeatureDetailPage` | Detail | ConfirmDialog, DetailHeader, DetailTabs, EntityList, Field, FormActions, FormDialog, MetricRail, Properties, Section | FeatureCloneDialog, FeatureDetailView, FeatureTab |
 | features | `FeatureFormPage` | Form | Field, FormCard, FormPage, Section, WorkflowStepper | AppFailure, FeatureForm, LoadingRows, PageBody |
 | features | `FeatureListPage` | List | ConfirmDialog, EmptyState, EntityList, Field, FilterBar, FormActions, FormDialog, SortMenu | Button, FeatureCloneDialog, FeatureGrid, FeatureLinkage, ListState, PageBody |
 | groups | `GroupDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EmptyState, EntityList, MetricRail, Section | CatalogDetailFrame, CatalogStatusBadge, EditableCard, GroupMembersView, LayersIcon, Pill, Trash2Icon |
