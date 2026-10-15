@@ -120,8 +120,8 @@ export const DEFAULT_COUPON_QUERY: CouponQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: CouponSortField.Name,
-  sortDirection: 'asc',
+  sortBy: CouponSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: CouponView.Table,
   filters: [],
 }

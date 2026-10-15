@@ -79,10 +79,13 @@ describe('toSubscriptionFilter', () => {
     })
   })
 
-  it('sorts by start_date by default', () => {
+  it('sorts by updated_at, newest first, like every other list', () => {
+    // Every list in the console opens on what changed most recently. Checked
+    // against the live API before changing it: /subscriptions/search accepts
+    // updated_at, so this is a sort the backend really honours.
     expect(toSubscriptionFilter(DEFAULT_SUBSCRIPTION_QUERY)).toMatchObject({
       offset: 0,
-      sort: [{ field: 'start_date', direction: 'desc' }],
+      sort: [{ field: 'updated_at', direction: 'desc' }],
     })
   })
 })

@@ -63,6 +63,7 @@ export interface Subscription {
 }
 
 export const SubscriptionSortField = {
+  UpdatedAt: 'updatedAt',
   StartDate: 'startDate',
   CreatedAt: 'createdAt',
 } as const
@@ -70,6 +71,7 @@ export type SubscriptionSortField =
   (typeof SubscriptionSortField)[keyof typeof SubscriptionSortField]
 
 export const SUBSCRIPTION_SORT_LABEL: Record<SubscriptionSortField, string> = {
+  [SubscriptionSortField.UpdatedAt]: 'Updated',
   [SubscriptionSortField.StartDate]: 'Started',
   [SubscriptionSortField.CreatedAt]: 'Created',
 }
@@ -90,7 +92,7 @@ export const DEFAULT_SUBSCRIPTION_QUERY: SubscriptionQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: SubscriptionSortField.StartDate,
+  sortBy: SubscriptionSortField.UpdatedAt,
   sortDirection: 'desc',
   filters: [],
 }

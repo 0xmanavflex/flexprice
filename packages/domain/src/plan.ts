@@ -96,8 +96,8 @@ export const DEFAULT_PLAN_QUERY: PlanQuery = {
   search: '',
   statuses: [],
   // Alphabetical: a catalogue is looked *up* more often than scanned for change.
-  sortBy: PlanSortField.Name,
-  sortDirection: 'asc',
+  sortBy: PlanSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: PlanView.Table,
   filters: [],
 }

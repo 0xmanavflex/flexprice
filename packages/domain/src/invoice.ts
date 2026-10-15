@@ -168,6 +168,7 @@ export interface InvoiceQuery {
 }
 
 export const InvoiceSortField = {
+  UpdatedAt: 'updatedAt',
   IssuedAt: 'issuedAt',
   DueDate: 'dueDate',
   Total: 'total',
@@ -179,7 +180,7 @@ export type InvoiceSortField = (typeof InvoiceSortField)[keyof typeof InvoiceSor
 export const DEFAULT_INVOICE_QUERY: InvoiceQuery = {
   page: 1,
   pageSize: 25,
-  sortBy: InvoiceSortField.IssuedAt,
+  sortBy: InvoiceSortField.UpdatedAt,
   sortDirection: 'desc',
   statuses: [],
   search: '',

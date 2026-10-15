@@ -88,8 +88,8 @@ export const DEFAULT_PRICE_UNIT_QUERY: PriceUnitQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: PriceUnitSortField.Name,
-  sortDirection: 'asc',
+  sortBy: PriceUnitSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: PriceUnitView.Table,
   filters: [],
 }

@@ -102,6 +102,7 @@ const PAYMENT_TONE: Record<PaymentStatus, PillTone> = {
 }
 
 const SORT_LABEL: Record<InvoiceSortField, string> = {
+  [InvoiceSortField.UpdatedAt]: 'Updated',
   [InvoiceSortField.IssuedAt]: 'Issued',
   [InvoiceSortField.DueDate]: 'Due date',
   [InvoiceSortField.Total]: 'Total',

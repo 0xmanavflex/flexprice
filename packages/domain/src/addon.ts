@@ -69,8 +69,8 @@ export const DEFAULT_ADDON_QUERY: AddonQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: AddonSortField.Name,
-  sortDirection: 'asc',
+  sortBy: AddonSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: AddonView.Table,
   filters: [],
 }

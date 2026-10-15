@@ -33,6 +33,7 @@ import { useFlexprice } from './provider'
 
 /** Domain vocabulary out, transport vocabulary in. */
 const SORT_FIELD_TO_API: Record<InvoiceSortField, string> = {
+  [InvoiceSortField.UpdatedAt]: 'updated_at',
   [InvoiceSortField.IssuedAt]: 'issue_date',
   [InvoiceSortField.DueDate]: 'due_date',
   [InvoiceSortField.Total]: 'amount_due',

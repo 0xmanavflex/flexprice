@@ -78,8 +78,8 @@ export const DEFAULT_COST_SHEET_QUERY: CostSheetQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: CostSheetSortField.Name,
-  sortDirection: 'asc',
+  sortBy: CostSheetSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: CostSheetView.Table,
   filters: [],
 }

@@ -142,8 +142,8 @@ export const DEFAULT_CUSTOMER_QUERY: CustomerQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: CustomerSortField.Name,
-  sortDirection: 'asc',
+  sortBy: CustomerSortField.UpdatedAt,
+  sortDirection: 'desc',
   filters: [],
 }
 

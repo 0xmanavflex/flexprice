@@ -92,8 +92,8 @@ export const DEFAULT_GROUP_QUERY: GroupQuery = {
   pageSize: 25,
   search: '',
   statuses: [],
-  sortBy: GroupSortField.Name,
-  sortDirection: 'asc',
+  sortBy: GroupSortField.UpdatedAt,
+  sortDirection: 'desc',
   view: GroupView.Table,
   filters: [],
 }

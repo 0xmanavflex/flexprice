@@ -318,6 +318,7 @@ export function toSubscriptionEntitlement(wire: SubscriptionFeatureWire): Subscr
 }
 
 const SORT_FIELD: Record<SubscriptionSortField, string> = {
+  [SubscriptionSortField.UpdatedAt]: 'updated_at',
   [SubscriptionSortField.StartDate]: 'start_date',
   [SubscriptionSortField.CreatedAt]: 'created_at',
 }
