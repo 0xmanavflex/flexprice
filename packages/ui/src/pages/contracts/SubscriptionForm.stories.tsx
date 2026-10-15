@@ -7,6 +7,7 @@ import {
   CreditGrantCadence,
   CreditGrantExpiryType,
   PriceType,
+  emptyPhase,
 } from '@fp/domain'
 import type { Option } from '@ui/compositions/forms/OptionSelect'
 import {
@@ -77,6 +78,8 @@ interface PlaygroundProps {
   otherCadences?: boolean
   /** Gives the plan a credit grant of its own. */
   planGrant?: boolean
+  /** Opens with this contract end date (`YYYY-MM-DD`). */
+  endDate?: string
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   onStepChange: (step: string) => void
@@ -96,6 +99,7 @@ function SubscriptionFormPlayground({
   planLoading,
   otherCadences = false,
   planGrant = false,
+  endDate,
   onSubmit,
   onCancel,
   onStepChange,
@@ -163,7 +167,13 @@ function SubscriptionFormPlayground({
     <SubscriptionForm
       // A different seed is a different form, so react-hook-form's defaults reset.
       key={`${prefilled}-${customerLocked}`}
-      {...(prefilled ? { defaultValue: PREFILLED } : {})}
+      {...(prefilled
+        ? {
+            defaultValue: endDate
+              ? { ...PREFILLED, phases: [{ ...emptyPhase(), endDate }] }
+              : PREFILLED,
+          }
+        : {})}
       customers={customers}
       plans={plans}
       plan={plan}
@@ -434,6 +444,19 @@ export const AddsAChargeForThisContract: Story = {
         }),
       ),
     )
+  },
+}
+
+/** A contract that would end before it starts is stopped on the first step, where the end date is. */
+export const EndDateCheckedOnTheFirstStep: Story = {
+  args: { prefilled: true, step: 'plan', endDate: '2000-01-01' },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+    await expect(
+      await canvas.findByText('The contract starts today, so it must end after today'),
+    ).toBeVisible()
+    await expect(args.onStepChange).not.toHaveBeenCalledWith('phases')
   },
 }
 

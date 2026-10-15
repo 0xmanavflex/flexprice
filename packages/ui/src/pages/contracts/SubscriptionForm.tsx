@@ -236,7 +236,13 @@ export function SubscriptionForm({
     steps,
     step,
     onStepChange,
-    validate: (id) => (STEP_FIELDS[id] ? form.trigger(STEP_FIELDS[id] as never) : true),
+    validate: (id) => {
+      const fields: string[] = [...(STEP_FIELDS[id] ?? [])]
+      // The contract's end date sits on the first step but lives on the last
+      // phase, so it is checked here rather than surfacing only at the end.
+      if (id === 'plan') fields.push(`phases.${form.getValues('phases').length - 1}.endDate`)
+      return fields.length > 0 ? form.trigger(fields as never) : true
+    },
   })
 
   // A picker has no blur to mark it touched, so a value it sets is validated

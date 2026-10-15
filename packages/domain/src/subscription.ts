@@ -346,7 +346,8 @@ export const createSubscriptionSchema = z
   })
   .superRefine((value, ctx) => {
     // Each phase but the last needs an end, and every end follows its start.
-    let start = value.startDate
+    // A contract with no start date starts today, so the first end must follow today.
+    let start = value.startDate || localToday()
     value.phases.forEach((phase, index) => {
       const last = index === value.phases.length - 1
       if (!last && !phase.endDate) {
@@ -360,7 +361,10 @@ export const createSubscriptionSchema = z
         ctx.addIssue({
           code: 'custom',
           path: ['phases', index, 'endDate'],
-          message: 'The end must be after the start',
+          message:
+            index === 0 && !value.startDate
+              ? 'The contract starts today, so it must end after today'
+              : 'The end must be after the start',
         })
       }
       start = phase.endDate || start
@@ -368,6 +372,13 @@ export const createSubscriptionSchema = z
   })
 
 export type CreateSubscription = z.infer<typeof createSubscriptionSchema>
+
+/** Today as a local `YYYY-MM-DD`, the form dates are picked in. */
+function localToday(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
 
 /** A blank phase: the plan's charges as they are, no discounts, open-ended. */
 export function emptyPhase(): SubscriptionPhase {

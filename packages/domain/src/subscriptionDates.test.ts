@@ -1,0 +1,62 @@
+import { describe, expect, it } from 'vitest'
+import { createSubscriptionSchema, emptyPhase, emptySubscription } from './subscription'
+
+const base = { ...emptySubscription(), customerId: 'c', planId: 'p', currency: 'USD' }
+const endErrors = (value: unknown) => {
+  const result = createSubscriptionSchema.safeParse(value)
+  return result.success
+    ? []
+    : result.error.issues.filter((i) => i.path.at(-1) === 'endDate').map((i) => i.message)
+}
+
+describe('contract and phase dates', () => {
+  it('accepts an open-ended contract and a later end', () => {
+    expect(endErrors(base)).toEqual([])
+    expect(
+      endErrors({
+        ...base,
+        startDate: '2030-01-01',
+        phases: [{ ...emptyPhase(), endDate: '2031-01-01' }],
+      }),
+    ).toEqual([])
+  })
+
+  it('refuses an end on or before the start', () => {
+    expect(
+      endErrors({
+        ...base,
+        startDate: '2030-01-01',
+        phases: [{ ...emptyPhase(), endDate: '2030-01-01' }],
+      }),
+    ).toEqual(['The end must be after the start'])
+  })
+
+  it('treats no start date as today', () => {
+    expect(endErrors({ ...base, phases: [{ ...emptyPhase(), endDate: '2000-01-01' }] })).toEqual([
+      'The contract starts today, so it must end after today',
+    ])
+  })
+
+  it('needs every phase but the last to end, each after the one before', () => {
+    expect(
+      endErrors({
+        ...base,
+        startDate: '2030-01-01',
+        phases: [
+          { ...emptyPhase(), endDate: '' },
+          { ...emptyPhase(), endDate: '2031-01-01' },
+        ],
+      }),
+    ).toEqual(['Choose when this phase ends'])
+    expect(
+      endErrors({
+        ...base,
+        startDate: '2030-01-01',
+        phases: [
+          { ...emptyPhase(), endDate: '2030-06-01' },
+          { ...emptyPhase(), endDate: '2030-03-01' },
+        ],
+      }),
+    ).toEqual(['The end must be after the start'])
+  })
+})
