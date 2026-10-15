@@ -2,11 +2,11 @@ import { type ComponentProps, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
 import type { Feature } from '@fp/domain'
-import { FeatureGrid, type ProductLinkage } from './FeatureGrid'
+import { FeatureGrid, type FeatureLinkage } from './FeatureGrid'
 import { featureFixtures, fixtureFeatureQuery, manyFeatures } from './featureFixtures'
 
-/** Plans, entitlements and subscriptions for the first three fixture products. */
-const linkage = new Map<string, ProductLinkage>([
+/** Plans, entitlements and subscriptions for the first three fixture features. */
+const linkage = new Map<string, FeatureLinkage>([
   [
     'feat_01',
     {
@@ -24,7 +24,7 @@ const linkage = new Map<string, ProductLinkage>([
 ])
 
 const meta = {
-  title: 'App/Product catalog/Products/Product table',
+  title: 'App/Product catalog/Features/Feature table',
   component: FeatureGrid,
   parameters: { layout: 'padded' },
   args: {
@@ -62,7 +62,7 @@ export default meta
 type Story = StoryObj<typeof meta>
 
 /** Plans, entitlements and subscriptions derived from the row index, so the columns vary. */
-function makeLinkage(features: Feature[]): Map<string, ProductLinkage> {
+function makeLinkage(features: Feature[]): Map<string, FeatureLinkage> {
   const plans = ['Starter', 'Growth', 'Scale', 'Enterprise']
   return new Map(
     features.map((feature, index) => [
@@ -106,7 +106,7 @@ function FeatureGridPlayground({
         setQuery(next)
         args.onQueryChange(next)
       }}
-      error={hasError ? 'You do not have access to products in this environment.' : null}
+      error={hasError ? 'You do not have access to features in this environment.' : null}
     />
   )
 }
@@ -142,7 +142,7 @@ export const Populated: Story = {
     // The measurement is shown as the aggregation's formula chip, not the event
     // name repeated from the feature's own key.
     await expect(canvas.getByText('COUNT()')).toBeInTheDocument()
-    // Non-metered products measure nothing; the cell says so rather than
+    // Non-metered features measure nothing; the cell says so rather than
     // rendering blank, which reads as missing data.
     await expect(canvas.getAllByText('—').length).toBeGreaterThan(0)
   },
@@ -211,7 +211,7 @@ export const FilteredEmpty: Story = {
   },
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText(/no products match these filters/i),
+      await within(canvasElement).findByText(/no features match these filters/i),
     ).toBeInTheDocument()
   },
 }

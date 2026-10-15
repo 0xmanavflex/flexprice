@@ -21,10 +21,10 @@ async function chooseOption(label: string, optionName: string) {
 }
 
 async function submit(canvas: ReturnType<typeof within>) {
-  await userEvent.click(canvas.getByRole('button', { name: /create product/i }))
+  await userEvent.click(canvas.getByRole('button', { name: /create feature/i }))
 }
 
-const trail: { label: string }[] = [{ label: 'Products' }, { label: 'Create product' }]
+const trail: { label: string }[] = [{ label: 'Features' }, { label: 'Create feature' }]
 
 const withHeight: Decorator = (Story) => (
   <div className="flex h-[720px] flex-col">
@@ -33,7 +33,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'App/Product catalog/Products/Product form',
+  title: 'App/Product catalog/Features/Feature form',
   component: FeatureForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
@@ -108,7 +108,7 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   },
   render: ({ mode, type, isSubmitting, submitError, showGroups }) => {
     const shared = {
-      trail: mode === 'edit' ? [{ label: 'Products' }, { label: 'Edit product' }] : trail,
+      trail: mode === 'edit' ? [{ label: 'Features' }, { label: 'Edit feature' }] : trail,
       isSubmitting,
       submitError: submitError || null,
       onCancel: fn(),
@@ -191,7 +191,7 @@ export const ValidationFromDomain: Story = {
   },
 }
 
-/** Two sections, centred on their own: what the product is, then how it is metered. */
+/** Two sections, centred on their own: what the feature is, then how it is metered. */
 export const DetailsThenMetering: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

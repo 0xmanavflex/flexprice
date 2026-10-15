@@ -304,7 +304,7 @@ export function FeatureForm(props: FeatureFormProps) {
     <>
       <FormRow
         label="Name"
-        hint="What the product is called in the console and on plans."
+        hint="What the feature is called in the console and on plans."
         required
         error={message('name')}
       >
@@ -331,7 +331,7 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
       <FormRow
         label="Description"
-        hint="What the product measures or unlocks. Optional."
+        hint="What the feature measures or unlocks. Optional."
         align="start"
         error={message('description')}
       >
@@ -346,7 +346,7 @@ export function FeatureForm(props: FeatureFormProps) {
         )}
       </FormRow>
       {groups.length > 0 ? (
-        <FormRow label="Label" hint="File the product under a label." error={message('groupId')}>
+        <FormRow label="Label" hint="File the feature under a label." error={message('groupId')}>
           {({ id, ...field }) => (
             <OptionSelect
               id={id}
@@ -369,12 +369,12 @@ export function FeatureForm(props: FeatureFormProps) {
       align="start"
       hint={
         isEdit
-          ? 'The type is fixed once the product exists.'
-          : 'What kind of product this is decides what you configure next.'
+          ? 'The type is fixed once the feature exists.'
+          : 'What kind of feature this is decides what you configure next.'
       }
     >
       <RadioGroup
-        aria-label="Product type"
+        aria-label="Feature type"
         value={type}
         disabled={isSubmitting || isEdit}
         className="grid gap-3"
@@ -599,7 +599,7 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
       <FormRow
         label="Reporting unit (singular)"
-        hint="How usage is displayed in reports: the product unit times a conversion rate. Fill all three or none."
+        hint="How usage is displayed in reports: the feature unit times a conversion rate. Fill all three or none."
         error={message('reportingUnit.unitSingular')}
       >
         {({ id, ...field }) => (
@@ -617,7 +617,7 @@ export function FeatureForm(props: FeatureFormProps) {
       </FormRow>
       <FormRow
         label="Conversion rate"
-        hint="How many product units make one reporting unit."
+        hint="How many feature units make one reporting unit."
         error={message('reportingUnit.conversionRate')}
       >
         {({ id, ...field }) => (
@@ -633,14 +633,14 @@ export function FeatureForm(props: FeatureFormProps) {
   ) : null
 
   /*
-   * Two sections: what the product *is* (Details), then how it is counted
-   * (Metering for a metered product, Usage for a static one). A boolean has
+   * Two sections: what the feature *is* (Details), then how it is counted
+   * (Metering for a metered feature, Usage for a static one). A boolean has
    * nothing to count, so it is Details alone.
    */
   const formEl = (
     <form id={FORM_ID} onSubmit={submitAll} noValidate>
       <fieldset className="flex min-w-0 flex-col gap-6 border-0 p-0" disabled={isSubmitting}>
-        <legend className="sr-only">Product</legend>
+        <legend className="sr-only">Feature</legend>
         <FormCard title="Details">
           {typeRows}
           {detailsRows}
@@ -660,11 +660,11 @@ export function FeatureForm(props: FeatureFormProps) {
 
   return (
     <FormPage
-      title={isEdit ? `Edit ${feature?.name ?? 'product'}` : 'Create product'}
+      title={isEdit ? `Edit ${feature?.name ?? 'feature'}` : 'Create feature'}
       trail={trail}
       toolbar={{
         mode,
-        noun: 'product',
+        noun: 'feature',
         formId: FORM_ID,
         onCancel,
         isSubmitting,

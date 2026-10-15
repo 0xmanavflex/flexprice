@@ -9,11 +9,11 @@ import { Button } from '@ui/components/primitives/button'
 import { PAGE_STORY_PARAMETERS, PageShell, listFailure, paginate } from '../../shared/shellFixtures'
 
 interface FeaturesListPageProps {
-  /** How many products exist in the catalogue. 0 shows the empty state. */
+  /** How many features exist in the catalogue. 0 shows the empty state. */
   rows: number
-  /** Type given to every product, or the fixtures' own mix. */
+  /** Type given to every feature, or the fixtures' own mix. */
   type: 'mixed' | FeatureType
-  /** Status given to every product, or the fixtures' own mix. */
+  /** Status given to every feature, or the fixtures' own mix. */
   status: 'mixed' | FeatureStatus
   isLoading: boolean
   hasError: boolean
@@ -21,10 +21,10 @@ interface FeaturesListPageProps {
   initialSearch: string
 }
 
-/** The products route as the console composes it: shell, PageBody, ListState, FeatureGrid. */
+/** The features route as the console composes it: shell, PageBody, ListState, FeatureGrid. */
 function FeaturesListPage(props: FeaturesListPageProps) {
   return (
-    <PageShell activeItemId="features" trail={['Product catalog', 'Products']}>
+    <PageShell activeItemId="features" trail={['Product catalog', 'Features']}>
       <FeaturesListBody key={props.initialSearch} {...props} />
     </PageShell>
   )
@@ -65,14 +65,14 @@ function FeaturesListBody({
     <PageBody>
       <ListState
         isLoading={isLoading}
-        error={listFailure(hasError, 'products')}
+        error={listFailure(hasError, 'features')}
         isEmpty={matches.length === 0 && !isFiltered}
         isFiltered={isFiltered}
         onRetry={fn()}
         onClearFilters={clearFilters}
-        createAction={<Button onClick={fn()}>New product</Button>}
+        createAction={<Button onClick={fn()}>New feature</Button>}
         emptyTitle="Nothing is being measured yet"
-        emptyDescription="A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
+        emptyDescription="A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
       >
         <FeatureGrid
           features={paginate(matches, query.page, query.pageSize)}
@@ -92,7 +92,7 @@ function FeaturesListBody({
 }
 
 const meta = {
-  title: 'App/Product catalog/Products/Product list',
+  title: 'App/Product catalog/Features/Feature list',
   component: FeaturesListPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,
@@ -120,7 +120,7 @@ type Story = StoryObj<typeof meta>
 /** `/features` with every control live: drag rows from 0 to 60, pick a type, flip loading and error. */
 export const Playground: Story = {}
 
-/** `/features` for a catalogue with no products yet. */
+/** `/features` for a catalogue with no features yet. */
 export const Empty: Story = {
   args: { rows: 0 },
   play: async ({ canvasElement }) => {
@@ -145,7 +145,7 @@ export const Failed: Story = {
   args: { hasError: true },
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText('Flexprice had a problem loading products.'),
+      await within(canvasElement).findByText('Flexprice had a problem loading features.'),
     ).toBeInTheDocument()
   },
 }

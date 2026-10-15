@@ -97,7 +97,7 @@ export function useGlobalSearch(rawTerm: string) {
       )
     }
     for (const f of features.data?.features ?? []) {
-      add({ id: `feature:${f.id}`, group: 'Products', label: f.name }, `/features/${f.id}`)
+      add({ id: `feature:${f.id}`, group: 'Features', label: f.name }, `/features/${f.id}`)
     }
     for (const i of invoices.data?.invoices ?? []) {
       add(

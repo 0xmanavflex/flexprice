@@ -59,7 +59,7 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
         label: 'Product catalog',
         icon: <PackageIcon className="size-4" />,
         items: [
-          { id: 'features', label: 'Products' },
+          { id: 'features', label: 'Features' },
           { id: 'plans', label: 'Plans' },
           { id: 'addons', label: 'Add-ons' },
           { id: 'coupons', label: 'Coupons' },

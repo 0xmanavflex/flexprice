@@ -34,7 +34,7 @@ export function FeatureCloneDialog({
   submitError = null,
 }: FeatureCloneDialogProps) {
   return (
-    <FormDialog open={open} onOpenChange={onOpenChange} size="sm" title="Clone product">
+    <FormDialog open={open} onOpenChange={onOpenChange} size="sm" title="Clone feature">
       {source ? (
         <CloneForm
           key={source.id}

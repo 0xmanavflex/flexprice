@@ -49,7 +49,7 @@ function FeatureCloneDialogHarness({
 
 /** The dialog portals to the document, so the play functions read from `screen`. */
 const meta = {
-  title: 'App/Product catalog/Products/Clone product dialog',
+  title: 'App/Product catalog/Features/Clone feature dialog',
   component: FeatureCloneDialogHarness,
   parameters: { layout: 'padded' },
   argTypes: {
@@ -71,7 +71,7 @@ const meta = {
 export default meta
 type Story = StoryObj<typeof meta>
 
-const openDialog = () => screen.findByRole('dialog', { name: 'Clone product' })
+const openDialog = () => screen.findByRole('dialog', { name: 'Clone feature' })
 
 /** Pick the source feature, flip submitting, set a server error, or close and re-open. */
 export const Playground: Story = {}

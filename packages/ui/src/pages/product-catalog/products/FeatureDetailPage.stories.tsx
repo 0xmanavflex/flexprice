@@ -45,13 +45,13 @@ interface FeatureDetailPageProps {
   activeTab: FeatureTab
   featureType: FeatureType
   status: FeatureStatus
-  /** Plans and add-ons that price this product. */
+  /** Plans and add-ons that price this feature. */
   chargeCount: number
-  /** Plans and add-ons that grant this product. */
+  /** Plans and add-ons that grant this feature. */
   entitlementCount: number
-  /** The product itself is still loading. */
+  /** The feature itself is still loading. */
   isLoading: boolean
-  /** The product request failed. */
+  /** The feature request failed. */
   hasError: boolean
   /** The charges and entitlements reads are still loading. */
   sectionsLoading: boolean
@@ -59,7 +59,7 @@ interface FeatureDetailPageProps {
   canManage: boolean
 }
 
-/** The product route as the console composes it: shell, then the detail view or its load and failure states. */
+/** The feature route as the console composes it: shell, then the detail view or its load and failure states. */
 function FeatureDetailPage({
   activeTab,
   featureType,
@@ -78,7 +78,7 @@ function FeatureDetailPage({
   const feature = pickFeature(featureType, status)
 
   return (
-    <PageShell activeItemId="features" trail={['Product catalog', 'Products', 'Product details']}>
+    <PageShell activeItemId="features" trail={['Product catalog', 'Features', 'Feature details']}>
       {isLoading ? (
         <PageBody>
           <div className="pt-4">
@@ -88,7 +88,7 @@ function FeatureDetailPage({
       ) : hasError ? (
         <PageBody>
           <AppFailure
-            title="Flexprice had a problem loading this product"
+            title="Flexprice had a problem loading this feature"
             detail="The rest of the console still works. Try again, or go back to the list."
             onRetry={fn()}
           />
@@ -113,7 +113,7 @@ function FeatureDetailPage({
 }
 
 const meta = {
-  title: 'App/Product catalog/Products/Product detail',
+  title: 'App/Product catalog/Features/Feature detail',
   component: FeatureDetailPage,
   tags: ['!autodocs'],
   parameters: PAGE_STORY_PARAMETERS,
@@ -163,7 +163,7 @@ export const Charges: Story = {
   args: { activeTab: 'charges', chargeCount: 8 },
 }
 
-/** `/features/$featureId` on the Charges tab for a product nothing prices yet. */
+/** `/features/$featureId` on the Charges tab for a feature nothing prices yet. */
 export const NoCharges: Story = {
   args: { activeTab: 'charges', chargeCount: 0 },
   play: async ({ canvasElement }) => {
@@ -171,12 +171,12 @@ export const NoCharges: Story = {
   },
 }
 
-/** `/features/$featureId` while the product is loading. */
+/** `/features/$featureId` while the feature is loading. */
 export const Loading: Story = {
   args: { isLoading: true },
 }
 
-/** `/features/$featureId` when the product request failed. */
+/** `/features/$featureId` when the feature request failed. */
 export const Failed: Story = {
   args: { hasError: true },
   play: async ({ canvasElement }) => {

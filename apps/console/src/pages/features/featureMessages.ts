@@ -12,12 +12,12 @@ export function toSubmitError(error: unknown, verb = 'save'): string | null {
         return detail || error.message || 'Check the details and try again.'
       }
       case 'forbidden':
-        return 'You do not have permission to change products here.'
+        return 'You do not have permission to change features here.'
       case 'network':
         return 'Could not reach Flexprice. Check your connection and try again.'
       default:
-        return `Could not ${verb} the product. Try again.`
+        return `Could not ${verb} the feature. Try again.`
     }
   }
-  return `Could not ${verb} the product. Try again.`
+  return `Could not ${verb} the feature. Try again.`
 }

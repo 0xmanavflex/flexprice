@@ -149,7 +149,7 @@ describe('breadcrumbForPath', () => {
   it('names the group before the page', () => {
     expect(breadcrumbForPath('/features')).toEqual([
       { label: 'Product catalog' },
-      { label: 'Products' },
+      { label: 'Features' },
     ])
   })
 

@@ -13,8 +13,8 @@ describe('parseGroupSearch', () => {
       pageSize: 50,
       search: 'storage',
       statuses: [GroupStatus.Archived],
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy: DEFAULT_GROUP_QUERY.sortBy,
+      sortDirection: DEFAULT_GROUP_QUERY.sortDirection,
       view: 'table',
       filters: [],
     })

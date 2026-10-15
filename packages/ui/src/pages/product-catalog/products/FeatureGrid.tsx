@@ -86,34 +86,34 @@ const SORT_OPTIONS = Object.values(FeatureSortField).map((value) => ({
  */
 const GUIDES: EntityGuide[] = [
   {
-    title: 'What a product is',
-    description: 'Metered, boolean and static products, and when to reach for each.',
+    title: 'What a feature is',
+    description: 'Metered, boolean and static features, and when to reach for each.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/features/use-cases',
     icon: <BookOpenIcon aria-hidden className="size-4" />,
   },
   {
     title: 'Sending usage events',
-    description: 'How a metered product turns raw events into something billable.',
+    description: 'How a metered feature turns raw events into something billable.',
     href: 'https://docs.flexprice.io/api-reference/events/ingest-event',
     icon: <ScrollTextIcon aria-hidden className="size-4" />,
   },
   {
-    title: 'Pricing a product',
-    description: 'Attach a product to a plan with a charge and an entitlement.',
+    title: 'Pricing a feature',
+    description: 'Attach a feature to a plan with a charge and an entitlement.',
     href: 'https://docs.flexprice.io/docs/product-catalogue/features/linking-to-plans',
     icon: <SquareStackIcon aria-hidden className="size-4" />,
   },
 ]
 
 /**
- * How a product is wired into the catalogue, as the grid shows it.
+ * How a feature is wired into the catalogue, as the grid shows it.
  *
  * Read from elsewhere (entitlements, plans, subscriptions) and handed in per
- * product id, so the grid stays a table and never becomes a data loader. A
- * product with no entry is still loading its linkage; `subscriptions` is
+ * feature id, so the grid stays a table and never becomes a data loader. A
+ * feature with no entry is still loading its linkage; `subscriptions` is
  * undefined when it could not be counted, which is not the same as zero.
  */
-export interface ProductLinkage {
+export interface FeatureLinkage {
   plans: { id: string; name: string }[]
   entitlements: number
   subscriptions: number | undefined
@@ -124,11 +124,11 @@ const VISIBLE_PLAN_CHIPS = 2
 
 export interface FeatureGridProps {
   features: Feature[]
-  /** Plans, entitlements and subscriptions per product id. */
-  linkage?: ReadonlyMap<string, ProductLinkage>
+  /** Plans, entitlements and subscriptions per feature id. */
+  linkage?: ReadonlyMap<string, FeatureLinkage>
   /** The linkage is still being read; its three columns show a placeholder. */
   linkageLoading?: boolean
-  /** The "Add entitlement" action on a product no plan grants yet. */
+  /** The "Add entitlement" action on a feature no plan grants yet. */
   onCreateEntitlement?: (feature: Feature) => void
   total: number
   query: FeatureQuery
@@ -137,7 +137,7 @@ export interface FeatureGridProps {
   error?: string | null
   onRetry?: () => void
   onFeatureClick?: (feature: Feature) => void
-  /** The primary create action; renders a "New product" CTA at the toolbar's end. */
+  /** The primary create action; renders a "New feature" CTA at the toolbar's end. */
   onCreate?: () => void
   /** Row-menu Edit; opens the editor dialog. */
   onEdit?: ((feature: Feature) => void) | undefined
@@ -356,14 +356,14 @@ export function FeatureGrid({
     const actions: EntityRowAction[] = []
     if (onFeatureClick) {
       actions.push({
-        label: 'View product',
+        label: 'View feature',
         icon: <GaugeIcon aria-hidden className="size-4" />,
         onSelect: () => onFeatureClick(feature),
       })
     }
     if (onEdit) {
       actions.push({
-        label: 'Edit product',
+        label: 'Edit feature',
         icon: <PencilIcon aria-hidden className="size-4" />,
         onSelect: () => onEdit(feature),
       })
@@ -380,19 +380,19 @@ export function FeatureGrid({
     }
     if (onClone) {
       actions.push({
-        label: 'Clone product',
+        label: 'Clone feature',
         icon: <CopyPlusIcon aria-hidden className="size-4" />,
         onSelect: () => onClone(feature),
       })
     }
     actions.push({
-      label: 'Copy product ID',
+      label: 'Copy feature ID',
       icon: <CopyIcon aria-hidden className="size-4" />,
       onSelect: () => void navigator.clipboard?.writeText(feature.id),
     })
     if (onDelete) {
       actions.push({
-        label: 'Delete product',
+        label: 'Delete feature',
         icon: <Trash2Icon aria-hidden className="size-4" />,
         onSelect: () => onDelete(feature),
         destructive: true,
@@ -404,7 +404,7 @@ export function FeatureGrid({
   return (
     <EntityList<Feature>
       label="Features"
-      noun="products"
+      noun="features"
       rows={features}
       total={total}
       columns={columns}
@@ -414,7 +414,7 @@ export function FeatureGrid({
       onPaginationChange={(page, pageSize) => onQueryChange({ ...query, page, pageSize })}
       search={query.search}
       onSearchChange={(search) => onQueryChange({ ...query, search, page: 1 })}
-      searchPlaceholder="Search products…"
+      searchPlaceholder="Search features…"
       filter={granularFilter({
         specs: FEATURE_FILTERS,
         filters: query.filters ?? [],
@@ -434,12 +434,12 @@ export function FeatureGrid({
           }),
       }}
       rowActions={rowActions}
-      exportFileName="products"
+      exportFileName="features"
       primaryAction={
         onCreate ? (
           <Button onClick={onCreate}>
             <PlusIcon aria-hidden />
-            New product
+            New feature
           </Button>
         ) : undefined
       }
@@ -454,18 +454,18 @@ export function FeatureGrid({
         (query.filters?.length ?? 0) > 0
       }
       {...(onClearFilters ? { onClearFilters } : {})}
-      filteredEmptyTitle="No products match these filters"
+      filteredEmptyTitle="No features match these filters"
       empty={{
         scene: 'catalog',
         title: 'Nothing is being measured yet',
         description:
-          'A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
+          'A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create.',
         ...(onCreate
           ? {
               actions: (
                 <Button onClick={onCreate}>
                   <PlusIcon aria-hidden />
-                  New product
+                  New feature
                 </Button>
               ),
             }

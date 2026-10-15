@@ -11,18 +11,18 @@ import { useCreateBulkEntitlements, usePlans } from '@fp/query'
 import { EntitlementCreateForm } from '@fp/ui/pages'
 import { Field, FormDialog, OptionSelect } from '@fp/ui/compositions'
 
-export interface ProductEntitlementDialogProps {
-  /** The product the entitlement grants; null keeps the dialog closed. */
+export interface FeatureEntitlementDialogProps {
+  /** The feature the entitlement grants; null keeps the dialog closed. */
   feature: Feature | null
   onClose: () => void
 }
 
 /**
- * "Add entitlement" from a product row: the entitlement form with that product
+ * "Add entitlement" from a feature row: the entitlement form with that feature
  * already chosen, and a plan picker above it — an entitlement always belongs
  * to a plan, so the plan is the one thing left to choose.
  */
-export function ProductEntitlementDialog({ feature, onClose }: ProductEntitlementDialogProps) {
+export function FeatureEntitlementDialog({ feature, onClose }: FeatureEntitlementDialogProps) {
   const plans = usePlans(
     { ...DEFAULT_PLAN_QUERY, page: 1, pageSize: 100 },
     {
@@ -68,7 +68,7 @@ export function ProductEntitlementDialog({ feature, onClose }: ProductEntitlemen
         <div className="flex flex-col gap-5">
           <Field
             label="Plan"
-            hint="The plan that grants this product."
+            hint="The plan that grants this feature."
             required
             error={planError ?? undefined}
           >

@@ -15,8 +15,8 @@ describe('parsePriceUnitSearch', () => {
       pageSize: 50,
       search: 'credits',
       statuses: [PriceUnitStatus.Archived],
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy: DEFAULT_PRICE_UNIT_QUERY.sortBy,
+      sortDirection: DEFAULT_PRICE_UNIT_QUERY.sortDirection,
       view: 'table',
       filters: [],
     })

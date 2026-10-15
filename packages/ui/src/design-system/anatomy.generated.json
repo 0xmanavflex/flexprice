@@ -7737,14 +7737,14 @@
       ]
     },
     "./src/pages/product-catalog/products/FeatureCloneDialog.stories.tsx": {
-      "title": "App/Product catalog/Products/Clone product dialog",
+      "title": "App/Product catalog/Features/Clone feature dialog",
       "component": null,
       "uses": [
         "FeatureCloneDialog"
       ]
     },
     "./src/pages/product-catalog/products/FeatureDetailPage.stories.tsx": {
-      "title": "App/Product catalog/Products/Product detail",
+      "title": "App/Product catalog/Features/Feature detail",
       "component": null,
       "uses": [
         "AppFailure",
@@ -7755,28 +7755,28 @@
       ]
     },
     "./src/pages/product-catalog/products/FeatureDetailView.stories.tsx": {
-      "title": "App/Product catalog/Products/Product detail view",
+      "title": "App/Product catalog/Features/Feature detail view",
       "component": null,
       "uses": [
         "FeatureDetailView"
       ]
     },
     "./src/pages/product-catalog/products/FeatureForm.stories.tsx": {
-      "title": "App/Product catalog/Products/Product form",
+      "title": "App/Product catalog/Features/Feature form",
       "component": "FeatureForm",
       "uses": [
         "FeatureForm"
       ]
     },
     "./src/pages/product-catalog/products/FeatureGrid.stories.tsx": {
-      "title": "App/Product catalog/Products/Product table",
+      "title": "App/Product catalog/Features/Feature table",
       "component": "FeatureGrid",
       "uses": [
         "FeatureGrid"
       ]
     },
     "./src/pages/product-catalog/products/FeaturesListPage.stories.tsx": {
-      "title": "App/Product catalog/Products/Product list",
+      "title": "App/Product catalog/Features/Feature list",
       "component": null,
       "uses": [
         "FeatureGrid",

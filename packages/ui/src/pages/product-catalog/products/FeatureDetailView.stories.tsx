@@ -96,7 +96,7 @@ function FeatureDetailHarness({
 
 /** A feature's detail page with Overview, Charges, Entitlements and Information tabs. */
 const meta = {
-  title: 'App/Product catalog/Products/Product detail view',
+  title: 'App/Product catalog/Features/Feature detail view',
   component: FeatureDetailHarness,
   parameters: {
     layout: 'fullscreen',

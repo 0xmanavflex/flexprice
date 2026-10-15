@@ -13,8 +13,8 @@ describe('parseCouponSearch', () => {
       pageSize: 50,
       search: 'launch',
       statuses: [CouponStatus.Archived],
-      sortBy: 'name',
-      sortDirection: 'asc',
+      sortBy: DEFAULT_COUPON_QUERY.sortBy,
+      sortDirection: DEFAULT_COUPON_QUERY.sortDirection,
       view: 'table',
       filters: [],
     })

@@ -267,8 +267,8 @@ export function FeatureDetailView({
         breadcrumb={
           <DetailBreadcrumb
             trail={[
-              { label: 'Products', ...(onBack ? { onClick: onBack } : {}) },
-              { label: 'Product details' },
+              { label: 'Features', ...(onBack ? { onClick: onBack } : {}) },
+              { label: 'Feature details' },
             ]}
           />
         }

@@ -33,7 +33,7 @@ test.beforeEach(async ({ context }) => {
  * `(\?|$)` rather than an end-anchored path.
  */
 const CATALOG = [
-  { name: 'Products', path: '/features' },
+  { name: 'Features', path: '/features' },
   { name: 'Plans', path: '/plans' },
   { name: 'Add-ons', path: '/addons' },
   { name: 'Pricing widgets', path: '/pricing-widget' },

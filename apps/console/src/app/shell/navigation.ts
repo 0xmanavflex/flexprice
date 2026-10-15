@@ -44,7 +44,7 @@ export const NAV: NavEntry[] = [
     id: 'catalog',
     label: 'Product catalog',
     children: [
-      { id: 'features', label: 'Products', path: '/features' },
+      { id: 'features', label: 'Features', path: '/features' },
       { id: 'plans', label: 'Plans', path: '/plans' },
       { id: 'addons', label: 'Add-ons', path: '/addons' },
       { id: 'pricing-widget', label: 'Pricing widgets', path: '/pricing-widget' },

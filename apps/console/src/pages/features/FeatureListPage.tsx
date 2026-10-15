@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react'
 import { type CloneFeature, type Feature, type FeatureQuery } from '@fp/domain'
 import { useCloneFeature, useDeleteFeature, useFeatureLinkage, useFeatures } from '@fp/query'
-import { FeatureCloneDialog, FeatureGrid, type ProductLinkage } from '@fp/ui/pages'
+import { FeatureCloneDialog, FeatureGrid, type FeatureLinkage } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
 import { toSubmitError } from './featureMessages'
-import { ProductEntitlementDialog } from './ProductEntitlementDialog'
+import { FeatureEntitlementDialog } from './FeatureEntitlementDialog'
 import { toListFailure } from '../shared/listFailure'
 
 export interface FeatureListPageProps {
@@ -48,19 +48,19 @@ export function FeatureListPage({
   const submitClone = (draft: CloneFeature) => {
     if (cloning) clone.mutate({ id: cloning.id, draft }, { onSuccess: closeClone })
   }
-  const failure = toListFailure(features.error, 'products')
+  const failure = toListFailure(features.error, 'features')
   const rows = useMemo(() => features.data?.features ?? [], [features.data])
 
   /*
-   * Plans, entitlements and subscriptions per product, for the rows on screen.
-   * A plan counts when it grants the product (an entitlement) *or* prices it
+   * Plans, entitlements and subscriptions per feature, for the rows on screen.
+   * A plan counts when it grants the feature (an entitlement) *or* prices it
    * (a charge on its meter), and its name is read for exactly the plans found
    * — not looked up in the first page of plans, which left any plan past it
    * showing as a raw id.
    */
   const linked = useFeatureLinkage(rows)
   const linkage = useMemo(() => {
-    const out = new Map<string, ProductLinkage>()
+    const out = new Map<string, FeatureLinkage>()
     for (const [featureId, entry] of linked.byFeature) {
       out.set(featureId, {
         plans: entry.plans,
@@ -105,15 +105,10 @@ export function FeatureListPage({
           isFiltered={isFiltered}
           onRetry={() => void features.refetch()}
           onClearFilters={clearFilters}
-          createAction={<Button onClick={onCreate}>New product</Button>}
+          createAction={<Button onClick={onCreate}>New feature</Button>}
           emptyTitle="Nothing is being measured yet"
-          emptyDescription="A product is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
+          emptyDescription="A feature is what you meter or gate — API calls, seats, SSO. Plans price them and entitlements limit them, so this is the first thing to create."
         >
-          {/*
-            No onFeatureClick: the feature detail page is not built yet, and a
-            row that navigates nowhere useful — the old behaviour dropped the
-            name into the search box — is worse than a row that does nothing.
-          */}
           <FeatureGrid
             features={rows}
             linkage={linkage}
@@ -132,7 +127,7 @@ export function FeatureListPage({
         </ListState>
       </PageBody>
 
-      <ProductEntitlementDialog feature={entitling} onClose={() => setEntitling(null)} />
+      <FeatureEntitlementDialog feature={entitling} onClose={() => setEntitling(null)} />
 
       <FeatureCloneDialog
         open={cloning !== null}
@@ -150,9 +145,9 @@ export function FeatureListPage({
         onOpenChange={(open) => {
           if (!open) closeDelete()
         }}
-        title="Delete product"
-        description={`Delete ${deleting?.name ?? 'this product'}? Plans and entitlements that use it lose it.`}
-        confirmLabel="Delete product"
+        title="Delete feature"
+        description={`Delete ${deleting?.name ?? 'this feature'}? Plans and entitlements that use it lose it.`}
+        confirmLabel="Delete feature"
         destructive
         isPending={remove.isPending}
         error={toSubmitError(remove.error, 'delete')}
