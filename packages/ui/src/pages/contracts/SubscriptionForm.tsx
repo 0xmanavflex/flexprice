@@ -7,6 +7,7 @@ import {
   BILLING_MODEL_LABEL,
   BILLING_PERIOD_LABEL,
   BillingModel,
+  type AddContractCharge,
   BillingCycle,
   type Charge,
   type ChargeCommitment,
@@ -52,6 +53,8 @@ import { type Option, OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import { useFormSteps } from '@ui/compositions/forms/useFormSteps'
 import { CreditGrantCreateForm } from '@ui/pages/product-catalog/credit-grants/CreditGrantForm'
 import { PriceOverrideForm } from '@ui/pages/product-catalog/charges/PriceOverrideForm'
+import type { MeterOption, PriceUnitOption } from '@ui/pages/product-catalog/charges/ChargeForm'
+import { ContractChargeDialog } from './ContractChargeDialog'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -131,6 +134,9 @@ export interface SubscriptionFormProps {
   customerTaxes?: CreateSubscription['taxes'] | null
   /** Add-ons the contract can start with. */
   addons?: readonly Option[]
+  /** For charges added to this contract alone: the metered features and price units. */
+  meters?: MeterOption[]
+  priceUnits?: PriceUnitOption[]
   customerLocked?: boolean
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
@@ -195,6 +201,8 @@ export function SubscriptionForm({
   taxRates = [],
   customerTaxes = null,
   addons = [],
+  meters = [],
+  priceUnits = [],
   customerLocked = false,
   onSubmit,
   onCancel,
@@ -615,6 +623,10 @@ export function SubscriptionForm({
           coupons={coupons}
           errors={errors.phases}
           onChange={(next) => set('phases', next)}
+          currency={values.currency}
+          billingPeriod={values.billingPeriod}
+          meters={meters}
+          priceUnits={priceUnits}
         />
       </div>
     ) : (
@@ -1019,6 +1031,74 @@ function ChargeOverrides({
   )
 }
 
+/**
+ * Charges for this contract (or this phase) alone, beyond the plan's — added
+ * with the same dialog a running contract uses.
+ */
+function ExtraCharges({
+  charges,
+  phaseLabel,
+  onRemove,
+  onAdd,
+}: {
+  charges: AddContractCharge[]
+  phaseLabel: string
+  onRemove: (index: number) => void
+  onAdd: () => void
+}) {
+  return (
+    <div className="flex flex-col gap-2 border-t px-5 py-4 sm:px-6">
+      {charges.map((extra, index) => (
+        <div
+          key={`${extra.charge.displayName ?? 'charge'}-${index}`}
+          className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+        >
+          <span className="flex min-w-0 flex-col">
+            <span className="truncate font-medium">
+              {extra.charge.displayName || 'Contract charge'}
+              {extra.charge.type === PriceType.Fixed && extra.quantity && extra.quantity !== '1'
+                ? ` × ${extra.quantity}`
+                : ''}
+            </span>
+            <span className="text-muted-foreground text-xs">{extraChargeSummary(extra)}</span>
+          </span>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            aria-label={`Remove ${extra.charge.displayName || 'contract charge'} from ${phaseLabel}`}
+            onClick={() => onRemove(index)}
+          >
+            Remove
+          </Button>
+        </div>
+      ))}
+      <Button
+        type="button"
+        variant="outline"
+        size="sm"
+        className="w-fit"
+        aria-label={`Add a charge to ${phaseLabel}`}
+        onClick={onAdd}
+      >
+        Add charge
+      </Button>
+      <p className="text-muted-foreground text-xs">
+        A charge for this contract alone, on top of the plan&apos;s.
+      </p>
+    </div>
+  )
+}
+
+/** "Usage · Monthly", or "Flat fee · $250.00 · One time". */
+function extraChargeSummary(extra: AddContractCharge): string {
+  const { charge } = extra
+  const amount =
+    'amount' in charge && charge.amount ? ` · ${money(charge.amount, charge.currency)}` : ''
+  const kind = charge.type === PriceType.Usage ? 'Usage' : BILLING_MODEL_LABEL[charge.billingModel]
+  return `${kind}${amount} · ${BILLING_PERIOD_LABEL[charge.billingPeriod]}`
+}
+
 /** A phase's discounts: coupons on the whole phase, or on one of its charges. */
 function PhaseDiscounts({
   discounts,
@@ -1133,6 +1213,10 @@ function PhasesStep({
   coupons,
   errors,
   onChange,
+  currency,
+  billingPeriod,
+  meters,
+  priceUnits,
 }: {
   phases: SubscriptionPhase[]
   starts: string[]
@@ -1141,9 +1225,15 @@ function PhasesStep({
   coupons: readonly Option[]
   errors: FieldErrors<CreateSubscription>['phases']
   onChange: (next: SubscriptionPhase[]) => void
+  currency: string
+  billingPeriod: CreateSubscription['billingPeriod']
+  meters: MeterOption[]
+  priceUnits: PriceUnitOption[]
 }) {
   const update = (index: number, patch: Partial<SubscriptionPhase>) =>
     onChange(phases.map((phase, i) => (i === index ? { ...phase, ...patch } : phase)))
+  // Which phase the add-charge dialog adds to; null while it is closed.
+  const [addingTo, setAddingTo] = useState<number | null>(null)
   const last = phases[phases.length - 1]
   const canAdd = Boolean(last?.endDate)
 
@@ -1227,6 +1317,14 @@ function PhasesStep({
                 {quantityError}
               </p>
             ) : null}
+            <ExtraCharges
+              charges={phase.extraCharges}
+              phaseLabel={label}
+              onRemove={(at) =>
+                update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
+              }
+              onAdd={() => setAddingTo(index)}
+            />
             <SubHeading>Discounts</SubHeading>
             <PhaseDiscounts
               discounts={phase.discounts}
@@ -1238,6 +1336,22 @@ function PhasesStep({
           </FormCard>
         )
       })}
+      <ContractChargeDialog
+        state={addingTo === null ? null : { mode: 'add' }}
+        onClose={() => setAddingTo(null)}
+        currency={currency}
+        billingPeriod={billingPeriod}
+        meters={meters}
+        priceUnits={priceUnits}
+        onAdd={(draft) => {
+          if (addingTo === null) return
+          const phase = phases[addingTo]
+          if (phase) update(addingTo, { extraCharges: [...phase.extraCharges, draft] })
+          setAddingTo(null)
+        }}
+        onEdit={() => undefined}
+        onEnd={() => undefined}
+      />
       <div className="flex flex-col items-start gap-1">
         <Button
           type="button"
@@ -2046,6 +2160,7 @@ function ReviewStep({
                 </span>
               </div>
               <span className="text-muted-foreground text-right text-xs">
+                {phase.extraCharges.length > 0 ? `${phase.extraCharges.length} added · ` : ''}
                 {phase.priceOverrides.length} overridden · {phase.discounts.length}{' '}
                 {phase.discounts.length === 1 ? 'discount' : 'discounts'}
               </span>
@@ -2110,6 +2225,27 @@ function ReviewStep({
         use. Listing only the changed ones meant the answer to "what does this
         customer get?" was not on the review page at all.
       */}
+      {values.phases.some((phase) => phase.extraCharges.length > 0) ? (
+        <ReviewCard
+          title="Charges for this contract"
+          step="phases"
+          onEdit={onEdit}
+          count={values.phases.reduce((n, phase) => n + phase.extraCharges.length, 0)}
+        >
+          {values.phases.flatMap((phase, index) =>
+            phase.extraCharges.map((extra, i) => (
+              <ReviewRow
+                key={`${index}-${i}`}
+                label={`${values.phases.length > 1 ? `Phase ${index + 1} · ` : ''}${
+                  extra.charge.displayName || 'Contract charge'
+                }`}
+                value={extraChargeSummary(extra)}
+              />
+            )),
+          )}
+        </ReviewCard>
+      ) : null}
+
       <ReviewCard
         title="Discounts"
         step="phases"

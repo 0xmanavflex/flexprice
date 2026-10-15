@@ -131,6 +131,7 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
           endDate: '2027-11-01',
           priceOverrides: [],
           quantities: [],
+          extraCharges: [],
           discounts: [{ couponId: 'cpn_all' }, { couponId: 'cpn_seat', priceId: 'price_seat' }],
         },
       ],
@@ -211,6 +212,47 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
     ])
   })
 
+  it('sends charges for this contract alone as line_items — on the contract, or on each phase', () => {
+    const extra = {
+      charge: {
+        type: 'FIXED' as const,
+        billingModel: 'FLAT_FEE' as const,
+        currency: 'USD',
+        billingPeriod: 'ONETIME' as const,
+        invoiceCadence: 'ADVANCE' as const,
+        displayName: 'Onboarding',
+        amount: '250.00',
+      },
+      quantity: '1',
+      startDate: '',
+      proration: 'none' as const,
+      terms: { bucketSize: '' as const, commitment: null },
+    }
+    const single = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        phases: [{ ...emptyPhase(), extraCharges: [extra] }],
+      }),
+    ) as Record<string, unknown>
+    expect(single['line_items']).toEqual([
+      expect.objectContaining({ display_name: 'Onboarding', price: expect.anything() }),
+    ])
+
+    const phased = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        startDate: '2026-11-01',
+        phases: [
+          { ...emptyPhase(), endDate: '2027-01-01' },
+          { ...emptyPhase(), extraCharges: [extra] },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(phased).not.toHaveProperty('line_items')
+    const phases = phased['phases'] as Record<string, unknown>[]
+    expect(phases[1]?.['line_items']).toHaveLength(1)
+  })
+
   it('sends include_price_ids only when charges at other cadences are opted in', () => {
     expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('includePriceIds')
     const wire = CreateSubscriptionRequest$outboundSchema.parse(
@@ -228,9 +270,16 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
           endDate: '2027-02-01',
           priceOverrides: [{ priceId: 'price_1', billingModel: BillingModel.FlatFee, amount: '0' }],
           quantities: [],
+          extraCharges: [],
           discounts: [{ couponId: 'cpn_intro' }],
         },
-        { endDate: '2027-11-01', priceOverrides: [], quantities: [], discounts: [] },
+        {
+          endDate: '2027-11-01',
+          priceOverrides: [],
+          quantities: [],
+          discounts: [],
+          extraCharges: [],
+        },
       ],
       chargeCommitments: [
         { priceId: 'price_api', type: 'amount', value: '50', overageFactor: '', trueUp: false },

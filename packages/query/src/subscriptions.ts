@@ -559,6 +559,11 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
       ? { overrideLineItems: overrideLines(first) }
       : {}),
     ...(first ? couponFields(first) : {}),
+    // Charges for this contract alone: on the contract when it has one phase,
+    // on each phase otherwise (the API starts them with their phase).
+    ...(!phased && first && first.extraCharges.length > 0
+      ? { lineItems: first.extraCharges.map(toCreateLineItemRequest) }
+      : {}),
     ...(phased
       ? {
           phases: draft.phases.map((phase, index) => ({
@@ -567,6 +572,9 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
             ...(phase.endDate ? { endDate: utcDay(phase.endDate) } : {}),
             ...(overrideLines(phase).length > 0 ? { overrideLineItems: overrideLines(phase) } : {}),
             ...couponFields(phase),
+            ...(phase.extraCharges.length > 0
+              ? { lineItems: phase.extraCharges.map(toCreateLineItemRequest) }
+              : {}),
           })),
         }
       : draft.chargeCommitments.length > 0

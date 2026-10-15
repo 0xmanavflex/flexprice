@@ -28,6 +28,7 @@ import {
   TaxRateStatus,
 } from '@fp/domain'
 import { SubscriptionForm } from '@fp/ui/pages'
+import { usePlanFormOptions } from '../plans/planFormOptions'
 
 export interface SubscriptionFormPageProps {
   /** Set when opened from a customer's own page: the Customer step is dropped. */
@@ -64,6 +65,8 @@ export function SubscriptionFormPage({
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = usePlanEntitlements(planId ? [planId] : [])
   const planGrants = useCreditGrants(CreditGrantScope.Plan, planId)
+  // The metered features and price units a charge added to this contract alone can use.
+  const formOptions = usePlanFormOptions()
   const coupons = useCoupons({
     ...DEFAULT_COUPON_QUERY,
     ...PICKER_PAGE,
@@ -126,6 +129,8 @@ export function SubscriptionFormPage({
       }
       onPlanChange={setPlanId}
       onCustomerChange={setChosenCustomer}
+      meters={formOptions.meters}
+      priceUnits={formOptions.units}
       coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
         value: coupon.id,
         label: coupon.code ? `${coupon.name} · ${coupon.code}` : coupon.name,

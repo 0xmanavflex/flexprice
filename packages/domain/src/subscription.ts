@@ -1,7 +1,7 @@
 import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
-import { type LinePricing } from './contractCharge'
+import { type AddContractCharge, type LinePricing } from './contractCharge'
 import { type Charge } from './price'
 import { type Money } from './money'
 import { BILLING_PERIOD_LABEL, BillingPeriod } from './price'
@@ -193,6 +193,11 @@ export const subscriptionPhaseSchema = z.object({
     }),
   ),
   discounts: z.array(subscriptionDiscountSchema),
+  /**
+   * Charges for this contract (or this phase) alone, beyond the plan's — each
+   * already checked by the add-charge form it came from.
+   */
+  extraCharges: z.array(z.custom<AddContractCharge>()),
 })
 export type SubscriptionPhase = z.infer<typeof subscriptionPhaseSchema>
 
@@ -366,7 +371,7 @@ export type CreateSubscription = z.infer<typeof createSubscriptionSchema>
 
 /** A blank phase: the plan's charges as they are, no discounts, open-ended. */
 export function emptyPhase(): SubscriptionPhase {
-  return { endDate: '', priceOverrides: [], quantities: [], discounts: [] }
+  return { endDate: '', priceOverrides: [], quantities: [], discounts: [], extraCharges: [] }
 }
 
 /**

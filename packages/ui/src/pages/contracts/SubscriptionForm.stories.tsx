@@ -400,6 +400,43 @@ export const PlanCreditGrants: Story = {
   },
 }
 
+/** A charge for this contract alone is added to the phase with the running contract's own dialog. */
+export const AddsAChargeForThisContract: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add a charge to Phase 1' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Continue' }))
+    const dialog = within(await screen.findByRole('dialog'))
+    await userEvent.type(await dialog.findByLabelText('Display name'), 'Onboarding')
+    await userEvent.type(dialog.getByLabelText(/^Amount/), '250')
+    await userEvent.click(dialog.getByRole('button', { name: 'Add charge' }))
+    await expect(await canvas.findByText('Onboarding')).toBeVisible()
+
+    for (const step of ['commitments', 'billing', 'review']) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+      await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
+    }
+    await expect(await canvas.findByText('Charges for this contract (1)')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [
+            expect.objectContaining({
+              extraCharges: [
+                expect.objectContaining({
+                  charge: expect.objectContaining({ displayName: 'Onboarding', amount: '250' }),
+                }),
+              ],
+            }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
 export const PhaseNoCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 0 },
   play: async ({ canvasElement }) => {
