@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { type RawEvent, type RawEventQuery } from '@fp/domain'
-import { useRawEvents } from '@fp/query'
+import { ApiError, ErrorKind, serverReason, useEventDebug, useRawEvents } from '@fp/query'
 import { EventDetailSheet, EventGrid } from '@fp/ui/pages'
 import {
   DataFreshness,
@@ -14,6 +14,28 @@ import { toListFailure } from '../shared/listFailure'
 export interface EventListPageProps {
   query: RawEventQuery
   onQueryChange: (query: RawEventQuery) => void
+  /** Opens a contract the opened event was matched to. */
+  onOpenSubscription?: ((subscriptionId: string) => void) | undefined
+}
+
+/**
+ * A failed trace, as a sentence.
+ *
+ * 404 is the common one and is not really an error: the backend searches a
+ * window around the event and says so, which is worth repeating rather than
+ * flattening into "not found".
+ */
+function toTraceError(error: unknown): string {
+  if (error instanceof ApiError) {
+    if (error.kind === ErrorKind.NotFound) {
+      return (
+        serverReason(error) ??
+        'This event is outside the window the trace searches. It may be too old to trace.'
+      )
+    }
+    return serverReason(error) ?? 'Could not trace this event. Try again.'
+  }
+  return 'Could not trace this event. Try again.'
 }
 
 /** Anything in the query that narrows the list. The one place that decides it. */
@@ -31,9 +53,17 @@ function isEventQueryFiltered(query: RawEventQuery): boolean {
  * both draw a loader. Rows already on screen stay through a refetch, a page
  * change and a failed refresh.
  */
-export function EventListPage({ query, onQueryChange }: EventListPageProps) {
+export function EventListPage({ query, onQueryChange, onOpenSubscription }: EventListPageProps) {
   const events = useRawEvents(query)
   const [selected, setSelected] = useState<RawEvent | null>(null)
+  /*
+   * The trace, read only while a sheet is open.
+   *
+   * `useEventDebug` disables itself when `selected` is null, so closing the
+   * sheet stops the request rather than leaving a five-stage server-side
+   * lookup running for a row nobody is looking at.
+   */
+  const debug = useEventDebug(selected)
 
   const rows = events.data?.events ?? []
   const hasData = events.data !== undefined
@@ -91,7 +121,15 @@ export function EventListPage({ query, onQueryChange }: EventListPageProps) {
           onClearFilters={clearFilters}
         />
       </ListState>
-      <EventDetailSheet event={selected} onClose={() => setSelected(null)} />
+      <EventDetailSheet
+        event={selected}
+        onClose={() => setSelected(null)}
+        debug={debug.data}
+        debugPending={debug.isPending}
+        debugError={debug.error ? toTraceError(debug.error) : null}
+        onRetryDebug={debug.refetch}
+        {...(onOpenSubscription ? { onOpenSubscription } : {})}
+      />
     </PageBody>
   )
 }

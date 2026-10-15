@@ -91,6 +91,12 @@ export { parsePricing } from './aiPricing'
 export type { ParsePricingParams } from './aiPricing'
 
 /**
+ * `GET /events/lookup`, live but absent from the SDK. See `eventDebug.ts`.
+ */
+export { fetchEventDebug } from './eventDebug'
+export type { EventDebugParams } from './eventDebug'
+
+/**
  * The SDK's request and response models, re-exported so the rest of the
  * workspace has one import path for them and the SDK can be swapped or pinned
  * in one place.

@@ -499,6 +499,7 @@ export { COUNT_CONCURRENCY, mapBounded, useFeatureLinkage } from './featureLinka
 export type { FeatureLinkage } from './featureLinkage'
 export { usePlanLinkage } from './planLinkage'
 export { APPLY_STEP_LABEL, applySteps, useApplyPricingSchema, useParsePricing } from './aiPricing'
+export { useEventDebug } from './eventDebug'
 export type { ApplyResult, ApplyStep } from './aiPricing'
 export type { PlanLinkage } from './planLinkage'
 export type { CountableId } from './counts'

@@ -3398,6 +3398,88 @@ export const handlers = [
    * render, with a metered feature, a hybrid plan and a grant, so the review
    * and the apply path are exercised without a model in the loop.
    */
+  /*
+   * One event's trace.
+   *
+   * The id is a query parameter, not a path segment, because event ids may
+   * contain `/`. The fixture walks all five stages for most events and fails
+   * at the meter for one of them, so the failure path is reachable under
+   * mocks — it is the branch people actually open the debugger to see.
+   */
+  http.get(`${BASE}/events/lookup`, ({ request }) => {
+    const url = new URL(request.url)
+    const id = url.searchParams.get('id') ?? ''
+    const externalCustomerId = url.searchParams.get('external_customer_id') ?? ''
+    const unmatched = id.endsWith('3')
+
+    return HttpResponse.json({
+      status: unmatched ? 'failed' : 'processed',
+      event: { id, idempotency_key: unmatched ? '' : `idem_${id}` },
+      events: [
+        {
+          id,
+          external_customer_id: externalCustomerId,
+          timestamp: '2026-10-11T16:20:48.685Z',
+          ingested_at: '2026-10-11T16:20:48Z',
+          source: 'api',
+          properties: { value: 1 },
+        },
+      ],
+      debug_tracker: {
+        customer_lookup: {
+          status: 'found',
+          customer: { id: 'cust_mock', external_id: externalCustomerId, name: 'Northwind' },
+        },
+        meter_matching: unmatched
+          ? { status: 'not_found', error: { message: 'No meter listens for this event name.' } }
+          : {
+              status: 'found',
+              matched_meters: [
+                { meter_id: 'meter_mock', event_name: 'api.calls', meter: { name: 'API Calls' } },
+              ],
+            },
+        price_lookup: unmatched
+          ? { status: 'skipped' }
+          : {
+              status: 'found',
+              matched_prices: [
+                {
+                  price_id: 'price_mock',
+                  meter_id: 'meter_mock',
+                  status: 'published',
+                  price: { amount: '0.01', currency: 'usd' },
+                },
+              ],
+            },
+        subscription_line_item_lookup: unmatched
+          ? { status: 'skipped' }
+          : {
+              status: 'found',
+              matched_line_items: [
+                {
+                  sub_line_item_id: 'subs_line_mock',
+                  subscription_id: 'subs_synth_0000',
+                  price_id: 'price_mock',
+                  is_active_for_event: true,
+                  timestamp_within_range: true,
+                },
+              ],
+            },
+        attributed_to_customer: unmatched
+          ? { status: 'skipped' }
+          : {
+              status: 'attributed',
+              meter_usage: {
+                meter_id: 'meter_mock',
+                external_customer_id: externalCustomerId,
+                qty_total: '1',
+              },
+            },
+        failure_point: unmatched ? { failure_point_type: 'meter_lookup' } : null,
+      },
+    })
+  }),
+
   http.post(`${BASE}/ai/pricing/parse-gemini`, () =>
     HttpResponse.json({
       features: [

@@ -865,6 +865,7 @@
         "DetailTabs",
         "Dot",
         "EnvironmentSwitcher",
+        "EventTrace",
         "InvoiceForm",
         "Mark",
         "OverviewTiles",
@@ -2391,6 +2392,7 @@
       "layer": "surface",
       "composes": [
         "DetailList",
+        "EventTrace",
         "Sheet"
       ],
       "usedBy": [],
@@ -2408,6 +2410,18 @@
       ],
       "usedBy": [],
       "story": "./src/pages/developers/events/EventGrid.stories.tsx"
+    },
+    "EventTrace": {
+      "file": "src/pages/developers/events/EventTrace.tsx",
+      "layer": "surface",
+      "composes": [
+        "CheckIcon",
+        "MinusIcon"
+      ],
+      "usedBy": [
+        "EventDetailSheet"
+      ],
+      "story": null
     },
     "EventTypeName": {
       "file": "src/pages/developers/webhooks/webhookCells.tsx",
@@ -2833,7 +2847,7 @@
       "story": null
     },
     "FilterSearchIcon": {
-      "file": "src/reui/icons/default/filled/filter-search.tsx",
+      "file": "src/reui/icons/default/outline/filter-search.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [],
@@ -4057,7 +4071,9 @@
       "file": "src/reui/icons/default/outline/minus.tsx",
       "layer": "other",
       "composes": [],
-      "usedBy": [],
+      "usedBy": [
+        "EventTrace"
+      ],
       "story": null
     },
     "Money": {

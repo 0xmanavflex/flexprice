@@ -57,6 +57,9 @@ export const queryKeys = {
     all: () => ['events'] as const,
     analytics: (filter: Readonly<Record<string, unknown>> = {}) =>
       ['events', 'analytics', filter] as const,
+    /** One event's trace. Keyed by both ids, because the route needs both. */
+    debug: (eventId: string, externalCustomerId: string) =>
+      ['events', 'debug', eventId, externalCustomerId] as const,
   },
   features: {
     all: () => ['features'] as const,

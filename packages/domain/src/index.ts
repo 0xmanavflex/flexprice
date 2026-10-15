@@ -692,3 +692,18 @@ export type {
   PricingUsageCharge,
 } from './pricingSchema'
 export { GEMINI_PRICING_SCHEMA, SYSTEM_PROMPT, buildPricingPrompt } from './pricingPrompt'
+
+export {
+  EVENT_DEBUG_STAGES,
+  EVENT_DEBUG_STAGE_LABEL,
+  eventDebugSummary,
+  toEventDebug,
+} from './eventDebug'
+export type {
+  EventDebug,
+  EventDebugMatch,
+  EventDebugOutcome,
+  EventDebugStage,
+  EventDebugStageResult,
+  EventVersion,
+} from './eventDebug'
