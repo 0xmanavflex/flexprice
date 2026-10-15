@@ -183,16 +183,21 @@ export function PlanGrid({
 }: PlanGridProps) {
   const columns = useMemo<EntityColumn<Plan>[]>(() => {
     /** A count the linkage has not produced: loading, or unreadable. */
-    const count = (value: number | undefined) =>
-      value === undefined ? (
-        linkageLoading ? (
-          <Skeleton className="h-4 w-8" />
-        ) : (
-          <EmDash />
-        )
-      ) : (
-        <span className="tabular-nums">{new Intl.NumberFormat(locale).format(value)}</span>
-      )
+    /*
+     * A figure, or a dash.
+     *
+     * Zero reads as a dash, as the redesign has it: a row of noughts across
+     * an empty plan is harder to scan past than blanks, and "none" is what
+     * the dash means here. Unknown — the linkage could not be read — is the
+     * same dash, because the distinction is not one the grid can usefully
+     * draw; it is still kept in the data, where `undefined` and `0` stay
+     * apart for anything that needs them.
+     */
+    const count = (value: number | undefined) => {
+      if (value === undefined && linkageLoading) return <Skeleton className="h-4 w-8" />
+      if (!value) return <EmDash />
+      return <span className="tabular-nums">{new Intl.NumberFormat(locale).format(value)}</span>
+    }
 
     /** A linkage column: same cell, same width, different figure. */
     const linkageColumn = (
@@ -242,11 +247,7 @@ export function PlanGrid({
         header: 'Charges',
         width: 110,
         text: (row) => String(row.chargeCount),
-        cell: (row) => (
-          <span className="tabular-nums">
-            {new Intl.NumberFormat(locale).format(row.chargeCount)}
-          </span>
-        ),
+        cell: (row) => count(row.chargeCount),
         skeleton: <Skeleton className="h-4 w-8" />,
       },
       linkageColumn('entitlements', 'Entitlements', (entry) => entry?.entitlements, 130),

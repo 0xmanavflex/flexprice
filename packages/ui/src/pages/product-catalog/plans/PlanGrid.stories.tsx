@@ -74,17 +74,21 @@ export const Populated: Story = {
  * "We could not find out" and "there are none" must not render the same,
  * which is why `plan_04` — which *is* answered for, with zeroes — shows them.
  */
-export const UnknownCountsAreNotZero: Story = {
+export const ZeroReadsAsADash: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    const enterprise = (await canvas.findByText('Enterprise')).closest('tr') as HTMLElement
-    await expect(within(enterprise).getAllByText('—').length).toBe(4)
 
-    // Legacy Team is answered for: no charges, no entitlements, no grants —
-    // three zeroes — and three contracts still sitting on it.
-    const legacy = canvas.getByText('Legacy Team').closest('tr') as HTMLElement
-    await expect(within(legacy).getAllByText('0').length).toBe(3)
+    // Legacy Team has no charges, no entitlements and no grants, and three
+    // contracts still on it. The noughts are dashes; the three is a three.
+    const legacy = (await canvas.findByText('Legacy Team')).closest('tr') as HTMLElement
+    await expect(within(legacy).getAllByText('—').length).toBe(3)
     await expect(within(legacy).getByText('3')).toBeInTheDocument()
+
+    // Enterprise has no linkage entry at all. Unknown reads the same as none
+    // — the grid does not draw that distinction — plus one for its empty
+    // lookup key.
+    const enterprise = (canvas.getByText('Enterprise').closest('tr') as HTMLElement) ?? null
+    await expect(within(enterprise).getAllByText('—').length).toBe(4)
   },
 }
 
