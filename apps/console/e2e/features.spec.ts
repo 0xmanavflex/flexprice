@@ -118,15 +118,16 @@ test.describe('the features list', () => {
     await list(page).rows().first().getByRole('cell').nth(2).click()
     await expect(page).toHaveURL(/\/features\/[^/?#]+$/)
 
-    // The Feature details card's pencil edits in place: fields become inputs, the URL does not change.
+    // Information is the create form's own shape, locked: the same cards, the
+    // same labels, the same order — and no second, smaller editor beside the
+    // real one. So the tab reads, and nothing on it offers to edit.
     const url = page.url()
     await page.getByRole('tab', { name: 'Information' }).click()
-    await page.getByRole('button', { name: 'Edit feature details' }).click()
-    await expect(page.getByLabel('Name')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Details' })).toBeVisible()
+    await expect(page.getByRole('button', { name: /^Edit/ })).toHaveCount(0)
     await expect(page).toHaveURL(url)
-    await page.getByRole('button', { name: 'Cancel' }).click()
 
-    // The header menu's Edit item opens the dedicated edit page.
+    // Editing is the one place it was always meant to be.
     await page.getByRole('button', { name: 'More actions' }).click()
     await page.getByRole('menuitem', { name: 'Edit details' }).click()
     await expect(page).toHaveURL(/\/edit$/)
