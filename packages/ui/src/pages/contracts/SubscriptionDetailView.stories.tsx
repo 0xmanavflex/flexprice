@@ -14,6 +14,10 @@ import {
   TierMode,
   money,
   FeatureType,
+  InvoiceCadence,
+  PriceEntityType,
+  PriceType,
+  type Charge,
   type CreditGrant,
   type IntegrationLink,
   type Invoice,
@@ -24,6 +28,7 @@ import {
   type SubscriptionDetail,
   type SubscriptionEntitlement,
   type LinePricing,
+  type Money,
   type SubscriptionLine,
   type SubscriptionSchedule,
   type SubscriptionUsage,
@@ -85,6 +90,49 @@ const flat = (): LinePricing => ({
 
 const METERS = [{ id: 'meter_api', name: 'API requests', unit: 'request' }]
 
+/**
+ * The price a line carries, as the charges table reads it.
+ *
+ * The real mapper builds this from the price the API embeds on the line; here
+ * it is assembled from the same figures the fixture already states, so a story
+ * cannot drift from its own line.
+ */
+function lineCharge(line: {
+  id: string
+  name: string
+  kind: 'fixed' | 'usage'
+  amount: Money
+  pricing: LinePricing
+}): Charge {
+  return {
+    id: `price_${line.id}`,
+    type: line.kind === 'usage' ? PriceType.Usage : PriceType.Fixed,
+    billingModel: line.pricing.billingModel,
+    amount: line.amount.amount,
+    displayAmount: `$${line.amount.amount}`,
+    currency: line.pricing.currency.toLowerCase(),
+    billingPeriod: line.pricing.billingPeriod ?? BillingPeriod.Monthly,
+    billingPeriodCount: 1,
+    invoiceCadence: line.kind === 'usage' ? InvoiceCadence.Arrear : InvoiceCadence.Advance,
+    billingCadence: 'RECURRING',
+    tierMode: line.pricing.tierMode,
+    tiers: line.pricing.tiers,
+    transformQuantity: null,
+    bucketSize: null,
+    meterId: line.pricing.meterId || null,
+    meterName: line.kind === 'usage' ? line.name : null,
+    entityType: PriceEntityType.Plan,
+    entityId: 'plan_01',
+    lookupKey: '',
+    description: '',
+    displayName: line.name,
+    startDate: null,
+    endDate: null,
+    sequence: 1,
+    createdAt: null,
+  }
+}
+
 const LINES: SubscriptionLine[] = [
   {
     id: 'line_1',
@@ -99,6 +147,14 @@ const LINES: SubscriptionLine[] = [
     priceId: 'price_platform',
     amountEditable: true,
     pricing: flat(),
+    charge: lineCharge({
+      id: 'line_1',
+      name: 'Platform fee',
+      kind: 'fixed',
+      amount: money('1500', 'USD'),
+      pricing: flat(),
+    }),
+    overridesPriceId: '',
   },
   {
     id: 'line_2',
@@ -135,6 +191,27 @@ const LINES: SubscriptionLine[] = [
         },
       },
     },
+    charge: lineCharge({
+      id: 'line_2',
+      name: 'API requests',
+      kind: 'usage',
+      amount: money('0.002', 'USD'),
+      pricing: {
+        billingModel: BillingModel.Tiered,
+        tierMode: TierMode.Slab,
+        tiers: [
+          { upTo: 1_000_000, unitAmount: '0.002' },
+          { upTo: null, unitAmount: '0.001' },
+        ],
+        divideBy: null,
+        priceUnit: '',
+        meterId: 'meter_api',
+        billingPeriod: BillingPeriod.Monthly,
+        currency: 'USD',
+        terms: NO_USAGE_TERMS,
+      },
+    }),
+    overridesPriceId: '',
   },
   {
     id: 'line_3',
@@ -149,6 +226,15 @@ const LINES: SubscriptionLine[] = [
     priceId: 'price_onboarding',
     amountEditable: true,
     pricing: flat(),
+    charge: lineCharge({
+      id: 'line_3',
+      name: 'Onboarding',
+      kind: 'fixed',
+      amount: money('250', 'USD'),
+      pricing: flat(),
+    }),
+    // Changed on this contract: the plan price it replaced.
+    overridesPriceId: 'price_onboarding_plan',
   },
 ]
 

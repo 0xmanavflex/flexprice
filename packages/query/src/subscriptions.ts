@@ -69,7 +69,7 @@ import { toEntitlementRequest } from './entitlements'
 import { type InvoiceDetailWire, type InvoiceWire, toInvoice, toInvoiceDetail } from './invoices'
 import { queryKeys } from './keys'
 import { toFilterConditions } from './search'
-import { toChargeRequest, toTier } from './prices'
+import { type ChargeWire, toCharge, toChargeRequest, toTier } from './prices'
 import { toCreateTaxAssociationRequest } from './taxAssociations'
 import { toOverrideLineItem } from './priceOverrides'
 import { useFlexprice, useFlexpriceAuth, useFlexpriceServerURL } from './provider'
@@ -193,22 +193,24 @@ export interface SubscriptionLineWire {
   billingPeriod?: string | undefined
   currency?: string | undefined
   meterId?: string | undefined
+  /**
+   * The whole price, as the API embeds it on the line.
+   *
+   * Typed as `ChargeWire` so `toCharge` can read it directly: a contract's
+   * charge *is* a price, and reconstructing one from the handful of fields the
+   * edit form happens to keep would be a second, lossier mapping of the same
+   * record. The extra keys are the custom-unit ones `toLinePricing` reads and
+   * `ChargeWire` has no use for.
+   */
   price?:
-    | {
-        amount?: string | undefined
-        currency?: string | undefined
-        billingModel?: string | undefined
-        priceUnitType?: string | undefined
+    | (ChargeWire & {
         priceUnit?: string | undefined
         priceUnitAmount?: string | undefined
         priceUnitTiers?: TierWire[] | undefined
-        tierMode?: string | undefined
-        tiers?: TierWire[] | undefined
-        transformQuantity?: { divideBy?: number | undefined } | undefined
-        bucketSize?: string | undefined
-        meterId?: string | undefined
-      }
+        parentPriceId?: string | undefined
+      })
     | undefined
+  invoiceCadence?: string | undefined
   commitmentType?: string | undefined
   commitmentAmount?: string | undefined
   commitmentQuantity?: string | undefined
@@ -292,6 +294,22 @@ export function toSubscriptionLine(wire: SubscriptionLineWire, index = 0): Subsc
       wire.price?.billingModel === 'FLAT_FEE' &&
       wire.price?.priceUnitType !== 'CUSTOM',
     pricing: toLinePricing(wire),
+    /*
+     * The price itself, for the shared charges table.
+     *
+     * The line's own fields answer the edit form's questions; this answers the
+     * table's — model, tiers, cadence, the amount already formatted. Both come
+     * from the same embedded record, so neither has to guess at the other's.
+     * Null when the API sent no price, which is a line that bills nothing.
+     */
+    charge: wire.price ? toCharge({ ...wire.price, id: wire.priceId ?? wire.price.id }) : null,
+    /*
+     * `parent_price_id` is set when a subscription overrides a plan price, so
+     * its presence *is* the "Price changed" flag. What it was changed *from*
+     * needs the parent price fetched, which the page does not do yet — so the
+     * flag can say that it changed and the sheet cannot yet say from what.
+     */
+    overridesPriceId: wire.price?.parentPriceId ?? '',
   }
 }
 

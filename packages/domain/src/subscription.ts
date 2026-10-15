@@ -2,6 +2,7 @@ import type { ListFilter, ListFilterSpec } from './listFilter'
 import { z } from 'zod'
 import { createCreditGrantSchema } from './creditGrant'
 import { type LinePricing } from './contractCharge'
+import { type Charge } from './price'
 import { type Money } from './money'
 import { BILLING_PERIOD_LABEL, BillingPeriod } from './price'
 import { priceOverrideSchema } from './priceOverride'
@@ -463,6 +464,16 @@ export interface SubscriptionLine {
   amountEditable: boolean
   /** How the price is built, for editing a metered charge; null when the API did not say. */
   pricing: LinePricing | null
+  /** The price as the shared charges table reads it; null when the line has none. */
+  charge: Charge | null
+  /**
+   * The plan price this line overrides (`parent_price_id`), or empty.
+   *
+   * Set only when the contract changed the price, which is what the charges
+   * table's "Price changed" flag reports. It is an id, not an amount: knowing
+   * *that* it changed needs no second request, knowing *from what* does.
+   */
+  overridesPriceId: string
 }
 
 export type SubscriptionLineSource = 'plan' | 'addon' | 'contract'
