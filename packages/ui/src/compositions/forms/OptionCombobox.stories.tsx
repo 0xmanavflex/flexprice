@@ -224,3 +224,20 @@ export const Invalid: Story = {
     )
   },
 }
+
+/**
+ * A picker over a catalogue says it is a search.
+ *
+ * The control has always filtered as you type; with the trigger hidden it read
+ * as a plain select, so people opened it, saw no search box and scrolled. The
+ * magnifier is the whole fix, and typing still filters.
+ */
+export const Searchable: Story = {
+  args: { searchable: true, placeholder: 'Search currencies…' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const input = canvas.getByPlaceholderText('Search currencies…')
+    await userEvent.type(input, 'eur')
+    await expect(await within(document.body).findByText(/EUR/)).toBeInTheDocument()
+  },
+}

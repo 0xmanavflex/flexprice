@@ -350,8 +350,9 @@ export function ChargeForm({
                         label: meter.name,
                         trailing: <FeatureTypeGlyph type="metered" />,
                       }))}
-                      placeholder="Choose a feature to meter"
-                      emptyText="No metered features."
+                      searchable
+                      placeholder="Search metered features…"
+                      emptyText="No metered features match."
                       disabled={isSubmitting || isEdit}
                       aria-describedby={describedBy}
                       aria-invalid={invalid}

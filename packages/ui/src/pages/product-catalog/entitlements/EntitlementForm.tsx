@@ -153,7 +153,8 @@ export function EntitlementCreateForm({
               ...(option.unit ? { hint: option.unit } : {}),
               trailing: <FeatureTypeGlyph type={option.type} />,
             }))}
-            placeholder="Choose a feature"
+            searchable
+            placeholder="Search features…"
             emptyText="Every feature is already granted."
             disabled={isSubmitting}
             aria-describedby={describedBy}

@@ -6,6 +6,8 @@ import {
   ComboboxItem,
   ComboboxList,
 } from '@ui/components/primitives/combobox'
+import { InputGroupAddon } from '@ui/components/primitives/input-group'
+import { SearchIcon } from '@ui/icons'
 import { provenance } from '@ui/provenance'
 import { OptionBody, type Option } from './OptionSelect'
 
@@ -26,6 +28,15 @@ export interface OptionComboboxProps {
   options: readonly Option[]
   placeholder?: string
   emptyText?: string
+  /**
+   * Lead the field with a magnifier.
+   *
+   * This control has always filtered as you type, but with the trigger hidden
+   * it reads as a plain select: people open it, see no search box, and scroll.
+   * For a picker over a catalogue — features, plans, customers — say what it
+   * is. For a short, fixed list it is noise.
+   */
+  searchable?: boolean
   disabled?: boolean
   'aria-describedby'?: string | undefined
   'aria-invalid'?: true | undefined
@@ -38,6 +49,7 @@ export function OptionCombobox({
   options,
   placeholder = 'Search…',
   emptyText = 'No matches.',
+  searchable = false,
   disabled,
   'aria-describedby': describedBy,
   'aria-invalid': invalid,
@@ -62,7 +74,13 @@ export function OptionCombobox({
         className="w-full"
         aria-describedby={describedBy}
         aria-invalid={invalid}
-      />
+      >
+        {searchable ? (
+          <InputGroupAddon align="inline-start">
+            <SearchIcon aria-hidden className="size-4" />
+          </InputGroupAddon>
+        ) : null}
+      </ComboboxInput>
       <ComboboxContent className="w-(--anchor-width) min-w-(--anchor-width)">
         <ComboboxEmpty>{emptyText}</ComboboxEmpty>
         <ComboboxList>
