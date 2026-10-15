@@ -3130,7 +3130,7 @@
       "story": null
     },
     "GearIcon": {
-      "file": "src/reui/icons/default/filled/gear.tsx",
+      "file": "src/reui/icons/default/outline/gear.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [],
@@ -3325,7 +3325,7 @@
       "story": null
     },
     "HomeIcon": {
-      "file": "src/reui/icons/default/filled/home.tsx",
+      "file": "src/reui/icons/default/outline/home.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [],
@@ -3739,7 +3739,7 @@
       "story": null
     },
     "LinkIcon": {
-      "file": "src/reui/icons/default/filled/link.tsx",
+      "file": "src/reui/icons/default/outline/link.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [
@@ -5118,13 +5118,6 @@
       ],
       "story": null
     },
-    "RightIcon": {
-      "file": "src/reui/icons/default/filled/right.tsx",
-      "layer": "other",
-      "composes": [],
-      "usedBy": [],
-      "story": null
-    },
     "Rocket": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -6242,6 +6235,13 @@
     },
     "Ungroup": {
       "file": "src/icons/index.ts",
+      "layer": "other",
+      "composes": [],
+      "usedBy": [],
+      "story": null
+    },
+    "UpIcon": {
+      "file": "src/reui/icons/default/filled/up.tsx",
       "layer": "other",
       "composes": [],
       "usedBy": [],

@@ -52,6 +52,15 @@ export interface EventDebugStageResult {
   error: string | null
   /** What this stage matched, one line each. Empty when it matched nothing. */
   matches: EventDebugMatch[]
+  /**
+   * The stage's own response, untouched.
+   *
+   * The readable rows above are a summary and a summary is a judgement about
+   * what matters. A debugger has to be able to show the thing itself, because
+   * the field that explains a given event is often one nobody thought to
+   * surface — V1 puts the raw JSON behind every step for the same reason.
+   */
+  raw: Record<string, unknown>
 }
 
 export interface EventDebugMatch {
@@ -78,6 +87,8 @@ export interface EventDebug {
   versions: EventVersion[]
   /** Set when the sender supplied one, so replays can be explained. */
   idempotencyKey: string | null
+  /** When the event reached Flexprice, which is where the trace starts. */
+  ingestedAt: Date | null
 }
 
 export interface EventVersion {
@@ -93,7 +104,14 @@ const PASSED = new Set(['found', 'matched', 'attributed', 'success', 'ok', 'comp
 /** Wire status words that mean it was never reached. */
 const SKIPPED = new Set(['skipped', 'not_run', 'pending', ''])
 
-const WIRE_STAGE: Record<EventDebugStage, string> = {
+/**
+ * The field each stage occupies on the wire.
+ *
+ * Exported because the debugger shows it: when you are reading a raw
+ * response, the useful label is the key it came from, not the friendly name
+ * of the row it sits under.
+ */
+export const EVENT_DEBUG_STAGE_WIRE: Record<EventDebugStage, string> = {
   customerLookup: 'customer_lookup',
   meterMatching: 'meter_matching',
   priceLookup: 'price_lookup',
@@ -104,7 +122,7 @@ const WIRE_STAGE: Record<EventDebugStage, string> = {
 /**
  * `failure_point_type` → stage.
  *
- * Not derivable from `WIRE_STAGE`: the meter stage is keyed `meter_matching`
+ * Not derivable from `EVENT_DEBUG_STAGE_WIRE`: the meter stage is keyed `meter_matching`
  * on the tracker but reported as `meter_lookup` when it is the failure point.
  * Deriving one from the other silently swallowed every meter failure — the
  * worst of the five to lose, since "no meter listens for that event name" is
@@ -223,7 +241,7 @@ export function toEventDebug(wire: unknown): EventDebug {
   const event = record(body['event'])
 
   const stages: EventDebugStageResult[] = EVENT_DEBUG_STAGES.map((stage) => {
-    const raw = record(tracker[WIRE_STAGE[stage]])
+    const raw = record(tracker[EVENT_DEBUG_STAGE_WIRE[stage]])
     const status = text(raw['status'])
     const error = errorOf(raw)
     return {
@@ -232,6 +250,7 @@ export function toEventDebug(wire: unknown): EventDebug {
       status,
       error,
       matches: matchesOf(stage, raw),
+      raw,
     }
   })
 
@@ -259,6 +278,12 @@ export function toEventDebug(wire: unknown): EventDebug {
       properties: record(row['properties']),
     })),
     idempotencyKey: text(event['idempotency_key']) || null,
+    // The newest stored row is the one the list showed, so its ingestion is
+    // the moment this trace begins.
+    ingestedAt:
+      date(record(list(body['events'])[0])['ingested_at']) ??
+      date(event['ingested_at']) ??
+      date(event['timestamp']),
   }
 }
 

@@ -1,6 +1,6 @@
 import type { ComponentProps } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, within } from 'storybook/test'
+import { expect, fn, userEvent, within } from 'storybook/test'
 import { toEventDebug } from '@fp/domain'
 import { EventDetailSheet } from './EventDetailSheet'
 
@@ -185,7 +185,8 @@ export const Traced: Story = {
     // All five stages, named in billing terms rather than wire terms.
     await expect(sheet.getByText('Customer matched')).toBeVisible()
     await expect(sheet.getByText('Counted towards usage')).toBeVisible()
-    await expect(sheet.getAllByLabelText('Passed')).toHaveLength(5)
+    // Six: the five stages plus the Ingested row the trace starts from.
+    await expect(sheet.getAllByLabelText('Passed')).toHaveLength(6)
   },
 }
 
@@ -233,5 +234,32 @@ export const TraceFailed: Story = {
     await expect(sheet.getByText('This event could not be traced')).toBeVisible()
     await expect(sheet.getByRole('button', { name: 'Try again' })).toBeVisible()
     await expect(sheet.getByText('Properties')).toBeVisible()
+  },
+}
+
+/**
+ * The trace starts where the event landed, and every stage can show its own
+ * response.
+ *
+ * The five stages are things Flexprice did *after* ingestion, so without the
+ * Ingested row the list quietly assumes the event arrived — the first thing
+ * to confirm when nothing else makes sense. And the readable rows are a
+ * summary: the field that explains a given event is often one nobody thought
+ * to surface, so the raw response stays one click away.
+ */
+export const IngestedStepAndRawResponses: Story = {
+  args: { debug: TRACED },
+  play: async ({ canvasElement }) => {
+    const sheet = within(canvasElement.ownerDocument.body)
+    await expect(sheet.getByText('Ingested')).toBeVisible()
+
+    // One disclosure per stage that the tracker actually answered for.
+    const responses = sheet.getAllByText('Response')
+    await expect(responses.length).toBe(5)
+
+    // The code block is titled with the wire key, which is the useful label
+    // when you are reading the response it came from.
+    await userEvent.click(responses[0] as HTMLElement)
+    await expect(sheet.getByText('customer_lookup')).toBeVisible()
   },
 }

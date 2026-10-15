@@ -185,6 +185,30 @@ describe('toEventDebug', () => {
     }
   })
 
+  /*
+   * A summary is a judgement about what matters, and the field that explains
+   * a given event is often one nobody thought to surface. Each stage keeps
+   * its own response so the sheet can show the thing itself.
+   */
+  it('keeps each stage’s raw response', () => {
+    const byStage = new Map(toEventDebug(LIVE).stages.map((s) => [s.stage, s]))
+    expect(byStage.get('meterMatching')?.raw).toMatchObject({
+      status: 'found',
+      matched_meters: [expect.objectContaining({ meter_id: 'meter_01M4GHF' })],
+    })
+    // A stage the tracker never sent is an empty object, not undefined.
+    expect(toEventDebug({}).stages[0]?.raw).toEqual({})
+  })
+
+  it('takes the ingestion time from the newest stored row', () => {
+    expect(toEventDebug(LIVE).ingestedAt?.toISOString()).toBe('2026-10-11T16:20:48.000Z')
+  })
+
+  it('falls back to the event’s own timestamp when no row carries one', () => {
+    const debug = toEventDebug({ event: { timestamp: '2026-01-02T03:04:05Z' } })
+    expect(debug.ingestedAt?.toISOString()).toBe('2026-01-02T03:04:05.000Z')
+  })
+
   it('does not read a bad timestamp as a date', () => {
     const debug = toEventDebug({ events: [{ id: 'e', ingested_at: 'not a date' }] })
     expect(debug.versions[0]?.ingestedAt).toBeNull()

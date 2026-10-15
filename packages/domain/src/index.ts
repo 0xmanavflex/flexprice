@@ -696,6 +696,7 @@ export { GEMINI_PRICING_SCHEMA, SYSTEM_PROMPT, buildPricingPrompt } from './pric
 export {
   EVENT_DEBUG_STAGES,
   EVENT_DEBUG_STAGE_LABEL,
+  EVENT_DEBUG_STAGE_WIRE,
   eventDebugSummary,
   toEventDebug,
 } from './eventDebug'

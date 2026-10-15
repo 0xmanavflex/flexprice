@@ -112,6 +112,7 @@ export function EventDetailSheet({
               {showTrace ? (
                 <EventTrace
                   debug={debug}
+                  {...(locale ? { locale } : {})}
                   isPending={debugPending}
                   error={debugError}
                   {...(onRetryDebug ? { onRetry: onRetryDebug } : {})}
@@ -119,7 +120,7 @@ export function EventDetailSheet({
                 />
               ) : null}
 
-              <CodeBlock code={payload} language="json" showLineNumbers>
+              <CodeBlock code={payload} language="json" showLineNumbers label="Event properties">
                 <CodeBlockHeader>
                   <CodeBlockTitle>Properties</CodeBlockTitle>
                   <CodeBlockCopyButton className="ml-auto" />

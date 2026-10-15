@@ -1,10 +1,17 @@
 import {
   EVENT_DEBUG_STAGE_LABEL,
+  EVENT_DEBUG_STAGE_WIRE,
   type EventDebug,
   type EventDebugStageResult,
   eventDebugSummary,
 } from '@fp/domain'
-import { CheckIcon, CircleAlertIcon, MinusIcon } from '@ui/icons'
+import { CheckIcon, ChevronRightIcon, CircleAlertIcon, MinusIcon } from '@ui/icons'
+import {
+  CodeBlock,
+  CodeBlockCopyButton,
+  CodeBlockHeader,
+  CodeBlockTitle,
+} from '@ui/components/reui/code-block/code-block'
 import { Button } from '@ui/components/primitives/button'
 import { Skeleton } from '@ui/components/primitives/skeleton'
 import { cn } from '@ui/lib/cn'
@@ -31,6 +38,7 @@ export const EventTraceProvenance = provenance({
 
 export interface EventTraceProps {
   debug: EventDebug | undefined
+  locale?: string | undefined
   isPending: boolean
   error?: string | null
   onRetry?: (() => void) | undefined
@@ -44,6 +52,7 @@ export function EventTrace({
   error = null,
   onRetry,
   onOpenSubscription,
+  locale,
 }: EventTraceProps) {
   if (isPending) {
     return (
@@ -85,6 +94,26 @@ export function EventTrace({
         </p>
       </div>
       <ol className="divide-border/60 flex flex-col divide-y rounded-lg border">
+        {/*
+          Where the trace starts.
+          The five stages are things Flexprice did *after* the event landed,
+          so without this row the list silently assumes the event arrived —
+          which is the first thing to confirm when nothing else makes sense.
+        */}
+        <li className="flex gap-3 px-4 py-3">
+          <CheckIcon aria-label="Passed" className="text-success mt-0.5 size-4 shrink-0" />
+          <div className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
+            <span className="text-sm font-medium">Ingested</span>
+            <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+              {debug.ingestedAt
+                ? new Intl.DateTimeFormat(locale, {
+                    dateStyle: 'medium',
+                    timeStyle: 'medium',
+                  }).format(debug.ingestedAt)
+                : 'Time unknown'}
+            </span>
+          </div>
+        </li>
         {debug.stages.map((stage) => (
           <Stage
             key={stage.stage}
@@ -158,6 +187,41 @@ function Stage({
               </li>
             ))}
           </ul>
+        ) : null}
+
+        {/*
+          The stage's own response.
+          `<details>` rather than a built accordion: it is keyboard and screen
+          reader accessible with no component behind it, and this is exactly
+          the disclosure it is for.
+        */}
+        {Object.keys(result.raw).length > 0 ? (
+          <details className="group mt-1">
+            <summary className="text-muted-foreground hover:text-foreground flex w-fit cursor-pointer items-center gap-1 text-xs select-none">
+              <ChevronRightIcon
+                aria-hidden
+                className="size-3 transition-transform group-open:rotate-90"
+              />
+              Response
+            </summary>
+            <div className="mt-2">
+              {/*
+                A unique `label`: it becomes the viewport's `aria-label`, and
+                six regions all called "json code" is an axe `landmark-unique`
+                failure as well as useless to anyone navigating by landmark.
+              */}
+              <CodeBlock
+                code={JSON.stringify(result.raw, null, 2)}
+                language="json"
+                label={`${EVENT_DEBUG_STAGE_WIRE[result.stage]} response`}
+              >
+                <CodeBlockHeader>
+                  <CodeBlockTitle>{EVENT_DEBUG_STAGE_WIRE[result.stage]}</CodeBlockTitle>
+                  <CodeBlockCopyButton className="ml-auto" />
+                </CodeBlockHeader>
+              </CodeBlock>
+            </div>
+          </details>
         ) : null}
       </div>
     </li>
