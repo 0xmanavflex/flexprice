@@ -374,6 +374,10 @@ export function useUpdateInvoice() {
   })
 }
 
+/** The modify body and its params, taken from the SDK rather than restated. */
+type ModifyBody = Parameters<Flexprice['invoices']['executeInvoiceModify']>[1]
+type LineItemParams = NonNullable<ModifyBody['lineItemParams']>
+
 /** One pending change to a draft invoice's lines, as the editor collects them. */
 export interface LineItemEdit {
   /** The line being changed; absent means a line being added. */
@@ -438,11 +442,11 @@ export interface InvoiceLineChanges {
  */
 export async function applyLineChanges(
   changes: InvoiceLineChanges,
-  execute: (invoiceId: string, params: Record<string, unknown>) => Promise<string | undefined>,
+  execute: (invoiceId: string, params: LineItemParams) => Promise<string | undefined>,
 ): Promise<string> {
   let id = changes.invoiceId
 
-  const run = async (params: Record<string, unknown>) => {
+  const run = async (params: LineItemParams) => {
     const next = await execute(id, params)
     // The response names the invoice the next call must address: the same one
     // for a draft, a fresh draft copy when a finalized invoice was modified.
@@ -481,7 +485,7 @@ export function useModifyInvoiceLineItems() {
           client.invoices.executeInvoiceModify(id, {
             type: 'line_item',
             lineItemParams,
-          } as never),
+          }),
         )
         return (response as { invoice?: { id?: string } }).invoice?.id
       })
