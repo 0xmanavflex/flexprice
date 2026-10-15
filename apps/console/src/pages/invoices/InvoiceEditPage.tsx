@@ -1,7 +1,14 @@
 import { useState } from 'react'
-import { ApiError, useInvoice, useUpdateInvoice } from '@fp/query'
+import {
+  ApiError,
+  useInvoice,
+  useModifyInvoiceLineItems,
+  useUpdateInvoice,
+  type LineItemEdit,
+} from '@fp/query'
 import { InvoiceStatus } from '@fp/domain'
 import { AppFailure, Field, LoadingRows, PageBody, Section } from '@fp/ui/compositions'
+import { InvoiceLinesEditor, type EditableLine } from '@fp/ui/pages'
 import { Button, Input } from '@fp/ui/primitives'
 
 export interface InvoiceEditPageProps {
@@ -32,8 +39,11 @@ export interface InvoiceEditPageProps {
 export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPageProps) {
   const invoice = useInvoice(invoiceId)
   const save = useUpdateInvoice()
+  const saveLines = useModifyInvoiceLineItems()
   const [dueDate, setDueDate] = useState<string | null>(null)
   const [applyDiscount, setApplyDiscount] = useState(false)
+  /** `null` until the editor is first touched, so the invoice's own lines show. */
+  const [lines, setLines] = useState<EditableLine[] | null>(null)
 
   if (invoice.isPending) {
     return (
@@ -59,6 +69,16 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
 
   const existing = invoice.data
   const isDraft = existing.status === InvoiceStatus.Draft
+  const original: EditableLine[] = existing.lines.map((line) => ({
+    id: line.id,
+    displayName: line.description,
+    amount: line.amount,
+    quantity: line.quantity,
+  }))
+  const current = lines ?? original
+  const lineChanges = diffLines(original, current)
+  const linesChanged =
+    lineChanges.removed.length > 0 || lineChanges.updated.length > 0 || lineChanges.added.length > 0
   // `null` means untouched, so the field shows what the invoice already has.
   const value = dueDate ?? toDateInput(existing.dueDate)
 
@@ -67,7 +87,7 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
    * Today is allowed: the check is against "now", and a date chosen today is
    * midnight UTC, which may already have passed — that one the API decides.
    */
-  const changed = value !== toDateInput(existing.dueDate) || applyDiscount
+  const changed = value !== toDateInput(existing.dueDate) || applyDiscount || linesChanged
 
   return (
     <PageBody>
@@ -79,16 +99,35 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
           className="flex max-w-md flex-col gap-5"
           onSubmit={(event) => {
             event.preventDefault()
-            save.mutate(
-              {
-                id: existing.id,
+            /*
+             * Lines first, then the due date.
+             *
+             * A line edit can hand back a different invoice id — modifying a
+             * finalized invoice replaces it — so the id the due date is saved
+             * against has to be the one the line edits ended on, not the one
+             * the page opened with.
+             */
+            const saveScalars = (id: string) => {
+              const patch = {
+                id,
                 ...(value !== toDateInput(existing.dueDate)
                   ? { dueDate: value ? new Date(`${value}T00:00:00Z`) : null }
                   : {}),
                 ...(applyDiscount ? { applyDiscount: true } : {}),
-              },
-              { onSuccess: onDone },
-            )
+              }
+              // Nothing but the id means nothing to say.
+              if (Object.keys(patch).length === 1) return onDone()
+              save.mutate(patch, { onSuccess: onDone })
+            }
+
+            if (linesChanged) {
+              saveLines.mutate(
+                { invoiceId: existing.id, ...lineChanges },
+                { onSuccess: (result) => saveScalars(result.invoiceId) },
+              )
+              return
+            }
+            saveScalars(existing.id)
           }}
         >
           <Field
@@ -106,6 +145,17 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
             )}
           </Field>
 
+          <InvoiceLinesEditor
+            lines={current}
+            onChange={setLines}
+            disabled={save.isPending || saveLines.isPending}
+            readOnlyReason={
+              isDraft
+                ? null
+                : 'Lines can only be edited while an invoice is a draft. Editing a finalized invoice voids it and replaces it with a draft copy, so Flexprice asks you to do that deliberately — void it and reissue, or raise a credit note.'
+            }
+          />
+
           {isDraft ? (
             <label className="text-muted-foreground flex items-start gap-2 text-sm">
               <input
@@ -122,20 +172,25 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
             </label>
           ) : null}
 
-          {save.error ? (
+          {save.error || saveLines.error ? (
             <p
               role="alert"
               className="border-destructive/20 bg-destructive/10 text-destructive-foreground dark:text-destructive rounded-lg border px-3 py-2 text-sm"
             >
-              {messageForSave(save.error)}
+              {messageForSave(save.error ?? saveLines.error)}
             </p>
           ) : null}
 
           <div className="flex items-center gap-2">
-            <Button type="submit" disabled={save.isPending || !changed}>
-              {save.isPending ? 'Saving…' : 'Save changes'}
+            <Button type="submit" disabled={save.isPending || saveLines.isPending || !changed}>
+              {save.isPending || saveLines.isPending ? 'Saving…' : 'Save changes'}
             </Button>
-            <Button type="button" variant="outline" onClick={onCancel} disabled={save.isPending}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onCancel}
+              disabled={save.isPending || saveLines.isPending}
+            >
               Cancel
             </Button>
           </div>
@@ -160,4 +215,68 @@ function toDateInput(date: Date | null): string {
 function messageForSave(error: unknown): string {
   if (error instanceof ApiError && error.message) return error.message
   return 'The invoice could not be saved. Try again.'
+}
+
+/**
+ * What changed, in the shape the modify endpoint takes.
+ *
+ * A row the editor still holds but the invoice does not is an add; one the
+ * invoice has and the editor dropped is a remove; one whose fields moved is an
+ * update. A row whose fields are untouched is left out entirely — every call
+ * costs a round trip, and an update that changes nothing still versions the
+ * line item and changes its id.
+ */
+/** The comparable form of a line: trimmed, with a blank quantity read as one. */
+function normalise(line: EditableLine): { displayName: string; amount: string; quantity: string } {
+  return {
+    displayName: line.displayName.trim(),
+    amount: line.amount.trim(),
+    quantity: line.quantity.trim() || '1',
+  }
+}
+
+function diffLines(
+  original: EditableLine[],
+  current: EditableLine[],
+): { removed: string[]; updated: LineItemEdit[]; added: LineItemEdit[] } {
+  const keptIds = new Set(current.map((line) => line.id).filter(Boolean))
+  const removed = original
+    .map((line) => line.id)
+    .filter((id): id is string => Boolean(id) && !keptIds.has(id))
+
+  const before = new Map(original.filter((l) => l.id).map((l) => [l.id as string, l]))
+  const updated: LineItemEdit[] = []
+  const added: LineItemEdit[] = []
+
+  for (const line of current) {
+    const edit: LineItemEdit = {
+      displayName: line.displayName.trim(),
+      amount: line.amount.trim(),
+      quantity: line.quantity.trim() || '1',
+      ...(line.description !== undefined ? { description: line.description } : {}),
+    }
+    if (!line.id) {
+      // A blank row the person added and never filled in is not a line.
+      if (edit.displayName !== '' || edit.amount !== '') added.push(edit)
+      continue
+    }
+    const was = before.get(line.id)
+    if (!was) continue
+    /*
+     * Both sides are normalised before comparing.
+     *
+     * The edited side is trimmed and defaults a blank quantity to 1, so
+     * comparing it against the raw original reported a change on every line
+     * the API sent with an empty quantity — which lit up Save before anyone
+     * had touched anything, and would have fired an update per line that
+     * versioned them all for nothing.
+     */
+    const same =
+      normalise(was).displayName === edit.displayName &&
+      normalise(was).amount === edit.amount &&
+      normalise(was).quantity === edit.quantity
+    if (!same) updated.push({ ...edit, id: line.id })
+  }
+
+  return { removed, updated, added }
 }

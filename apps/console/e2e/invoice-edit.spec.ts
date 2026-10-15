@@ -103,3 +103,41 @@ test('cancel goes back without saving', async ({ page }) => {
   await expect(page).toHaveURL(new RegExp(`/invoices/${id}$`))
   expect(sawPut).toBe(false)
 })
+
+/**
+ * A draft's lines are editable, through a different route from the due date:
+ * `POST /invoices/{id}/modify/execute`.
+ *
+ * The journey opens a draft specifically, because the editor is withheld on
+ * anything else — modifying a finalized invoice voids and replaces it, which
+ * is a decision, not a side effect of typing.
+ */
+test('edits a draft invoice line and saves it', async ({ page }) => {
+  await page.goto('/invoices?status=draft')
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
+  await expect(page).toHaveURL(/\/invoices\/[^/?]+/)
+  const id = new URL(page.url()).pathname.split('/')[2]
+  await page.goto(`/invoices/${id}/edit`)
+
+  const first = page.getByLabel('Description').first()
+  await expect(first).toBeVisible()
+  await first.fill('Renamed line')
+
+  const modify = page.waitForResponse(
+    (r) => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/modify/execute'),
+  )
+  await page.getByRole('button', { name: 'Save changes' }).click()
+  expect((await modify).status()).toBe(200)
+})
+
+test('a finalized invoice explains why its lines are locked', async ({ page }) => {
+  await page.goto('/invoices?status=finalized')
+  await page.getByRole('row').nth(1).getByRole('cell').first().click()
+  const id = new URL(page.url()).pathname.split('/')[2]
+  await page.goto(`/invoices/${id}/edit`)
+
+  await expect(page.getByText(/only be edited while an invoice is a draft/i)).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add line' })).toHaveCount(0)
+  // The due date is still editable — that is what PUT /invoices/{id} allows.
+  await expect(page.getByLabel('Due date')).toBeVisible()
+})

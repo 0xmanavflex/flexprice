@@ -374,6 +374,126 @@ export function useUpdateInvoice() {
   })
 }
 
+/** One pending change to a draft invoice's lines, as the editor collects them. */
+export interface LineItemEdit {
+  /** The line being changed; absent means a line being added. */
+  id?: string
+  displayName: string
+  amount: string
+  quantity: string
+  description?: string
+}
+
+export interface InvoiceLineChanges {
+  invoiceId: string
+  /** Lines whose id is gone from the editor. */
+  removed: string[]
+  /** Lines that exist and changed. */
+  updated: LineItemEdit[]
+  /** Lines typed into the blank row. */
+  added: LineItemEdit[]
+}
+
+/**
+ * Edits a draft invoice's lines — `POST /invoices/{id}/modify/execute`.
+ *
+ * This is the endpoint `PUT /invoices/{id}` is not: the update route takes a
+ * due date and metadata and nothing structural, while this one adds, updates
+ * and removes line items and recalculates the totals from what is left.
+ *
+ * ## Why this is a sequence and not one request
+ *
+ * The API takes one action per call, and two of its rules make the order and
+ * the chaining matter rather than being a style choice:
+ *
+ *   - **An update versions the line item**, so the id changes. A second update
+ *     addressed to the id the editor started with would miss. Updates
+ *     therefore go one at a time, and nothing may reuse an id afterwards.
+ *   - **Modifying a finalized invoice voids it and returns a draft copy under
+ *     a new id.** Every later call in the batch has to target that new id, and
+ *     the API rejects one that still names the voided original. So the id is
+ *     threaded through the loop, and the final one is returned for the caller
+ *     to navigate to.
+ *
+ * Removes run first and adds last. Removing before updating keeps the batch
+ * small, and adding last means a new line cannot be caught by an update
+ * intended for an existing one.
+ *
+ * Failure is deliberately not rolled back. There is no transaction here, and
+ * inventing a compensating one would mean issuing more edits against an
+ * invoice whose state is already not what this code expected. The error
+ * reaches the caller with the invoice id that survived, so the screen can
+ * re-read the truth rather than guess at it.
+ */
+/**
+ * Applies the edits in the order the API's rules require.
+ *
+ * Separated from the hook because the ordering and the id-threading *are* the
+ * logic, and they are worth testing without a React tree or a network. The
+ * hook supplies an `execute` that talks to the SDK; a test supplies one that
+ * records what it was asked to do.
+ *
+ * Returns the invoice id the batch ended on, which is not always the one it
+ * started with — see the note on {@link useModifyInvoiceLineItems}.
+ */
+export async function applyLineChanges(
+  changes: InvoiceLineChanges,
+  execute: (invoiceId: string, params: Record<string, unknown>) => Promise<string | undefined>,
+): Promise<string> {
+  let id = changes.invoiceId
+
+  const run = async (params: Record<string, unknown>) => {
+    const next = await execute(id, params)
+    // The response names the invoice the next call must address: the same one
+    // for a draft, a fresh draft copy when a finalized invoice was modified.
+    if (next) id = next
+  }
+
+  const body = (line: LineItemEdit) => ({
+    displayName: line.displayName,
+    amount: line.amount,
+    quantity: line.quantity,
+    ...(line.description !== undefined ? { description: line.description } : {}),
+  })
+
+  if (changes.removed.length > 0) {
+    await run({ action: 'remove', lineItemIds: changes.removed })
+  }
+  for (const line of changes.updated) {
+    if (!line.id) continue
+    await run({ action: 'update', lineItemId: line.id, update: body(line) })
+  }
+  if (changes.added.length > 0) {
+    await run({ action: 'add', items: changes.added.map(body) })
+  }
+
+  return id
+}
+
+export function useModifyInvoiceLineItems() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (changes: InvoiceLineChanges) => {
+      const invoiceId = await applyLineChanges(changes, async (id, lineItemParams) => {
+        const response = await call(() =>
+          client.invoices.executeInvoiceModify(id, {
+            type: 'line_item',
+            lineItemParams,
+          } as never),
+        )
+        return (response as { invoice?: { id?: string } }).invoice?.id
+      })
+      return { invoiceId }
+    },
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    },
+  })
+}
+
 /** Replace an invoice's metadata — `PUT /invoices/{id}` with `{metadata}` and nothing else. */
 export function useUpdateInvoiceMetadata() {
   const client = useFlexprice()

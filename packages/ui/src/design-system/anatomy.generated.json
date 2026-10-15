@@ -3539,6 +3539,13 @@
       "usedBy": [],
       "story": null
     },
+    "InvoiceLinesEditor": {
+      "file": "src/pages/billing/invoices/InvoiceLinesEditor.tsx",
+      "layer": "surface",
+      "composes": [],
+      "usedBy": [],
+      "story": "./src/pages/billing/invoices/InvoiceLinesEditor.stories.tsx"
+    },
     "InvoiceSection": {
       "file": "src/components/blocks/form-3/components/invoice-section.tsx",
       "layer": "vendor/blocks",
@@ -7235,6 +7242,13 @@
         "InvoiceGrid"
       ]
     },
+    "./src/pages/billing/invoices/InvoiceLinesEditor.stories.tsx": {
+      "title": "App/Billing/Invoice lines editor",
+      "component": null,
+      "uses": [
+        "InvoiceLinesEditor"
+      ]
+    },
     "./src/pages/billing/invoices/InvoicesListPage.stories.tsx": {
       "title": "App/Billing/Invoices/Invoice list",
       "component": null,
@@ -8480,6 +8494,7 @@
       "uses": [
         "AppFailure",
         "Field",
+        "InvoiceLinesEditor",
         "LoadingRows",
         "PageBody",
         "Section"

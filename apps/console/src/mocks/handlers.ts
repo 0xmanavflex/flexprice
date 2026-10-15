@@ -359,9 +359,50 @@ function invoicePayments(invoiceId: string): Record<string, unknown>[] {
   ]
 }
 
+/*
+ * The expands a route will refuse, as the live API refuses them.
+ *
+ * Only `/prices/search` is listed, and only because it was checked against
+ * production: it answers `400 validation_error` naming the field. That is how
+ * `plan,addon,meter` shipped — the values are plural, `addons` and `meters`,
+ * and a mock that accepted anything could not say so.
+ *
+ * Other routes are deliberately absent rather than guessed at. `/entitlements/search`
+ * accepts an unknown expand and quietly ignores it (checked: `plan,addon`
+ * returns 200 and changes nothing), and the live-API audit found the same of
+ * `/subscriptions/search`. Enforcing a stricter rule here than the API has
+ * would fail CI for a request production would accept, which is the same
+ * class of lie as the laxness it replaced — just pointing the other way.
+ */
+const ALLOWED_EXPANDS: Record<string, string[]> = {
+  prices: ['meters', 'priceunit', 'plan', 'addons', 'groups', 'features'],
+}
+
+/** The API's own refusal, for an expand the route does not offer. */
+function rejectUnknownExpand(key: string, expand: string | undefined) {
+  const allowed = ALLOWED_EXPANDS[key]
+  if (!allowed || !expand) return null
+  const bad = expand
+    .split(',')
+    .map((f) => f.trim())
+    .filter((f) => f.length > 0 && !allowed.includes(f))
+  if (bad.length === 0) return null
+  return HttpResponse.json(
+    {
+      code: 'validation_error',
+      message: 'Field is not allowed to be expanded',
+      http_status_code: 400,
+      details: { field: bad[0] },
+    },
+    { status: 400 },
+  )
+}
+
 const search = (path: string, key: string) =>
   http.post(`${BASE}${path}`, async ({ request }) => {
     const body = ((await request.json().catch(() => ({}))) ?? {}) as SearchBody
+    const refused = rejectUnknownExpand(key, body.expand)
+    if (refused) return refused
     if (demoEmpty()) return HttpResponse.json(emptyPage(body))
     const result = page(sourceFor(key), body)
     const payload =
@@ -3513,6 +3554,56 @@ export const handlers = [
     const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
     if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
     return HttpResponse.json(invoice)
+  }),
+  /*
+   * `POST /invoices/{id}/modify/execute` — the only route that changes what an
+   * invoice charges for.
+   *
+   * One action per call, like the API: add (bulk), update (one line, and the
+   * edit versions it so the id changes) and remove (bulk). The id change on
+   * update is mirrored here deliberately — it is the behaviour the client has
+   * to thread through a batch, so a mock that kept the id stable would hide
+   * the bug it is most likely to have.
+   */
+  http.post(`${BASE}/invoices/:id/modify/execute`, async ({ request, params }) => {
+    const id = String(params['id'])
+    const body = (await request.json()) as {
+      line_item_params?: Record<string, unknown>
+      lineItemParams?: Record<string, unknown>
+    }
+    const p = body.line_item_params ?? body.lineItemParams ?? {}
+    const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+    if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
+
+    const lines = (invoice['line_items'] as Record<string, unknown>[] | undefined) ?? []
+    const action = String(p['action'] ?? '')
+
+    if (action === 'remove') {
+      const ids = new Set((p['line_item_ids'] ?? p['lineItemIds'] ?? []) as string[])
+      invoice['line_items'] = lines.filter((l) => !ids.has(readString(l, 'id')))
+    } else if (action === 'update') {
+      const target = String(p['line_item_id'] ?? p['lineItemId'] ?? '')
+      const patch = (p['update'] ?? {}) as Record<string, unknown>
+      invoice['line_items'] = lines.map((l) =>
+        readString(l, 'id') === target
+          ? // The edit is versioned: the line comes back under a new id.
+            { ...l, ...patch, id: `${target}_v2` }
+          : l,
+      )
+    } else if (action === 'add') {
+      const items = ((p['items'] ?? []) as Record<string, unknown>[]).map((item, i) => ({
+        ...item,
+        id: `li_new_${lines.length + i}`,
+      }))
+      invoice['line_items'] = [...lines, ...items]
+    } else {
+      return HttpResponse.json(
+        { message: `unknown line item action: ${action}`, http_status_code: 400 },
+        { status: 400 },
+      )
+    }
+
+    return HttpResponse.json({ invoice })
   }),
   http.post(`${BASE}/invoices/:id/finalize`, ({ params }) => {
     patchRow(sourceFor('invoices').items, String(params['id']), {
