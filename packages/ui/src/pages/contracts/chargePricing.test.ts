@@ -32,6 +32,9 @@ const flat: Charge = {
   lookupKey: '',
   description: '',
   displayName: 'API calls',
+  startDate: null,
+  endDate: null,
+  sequence: 1,
   createdAt: null,
 }
 

@@ -44,7 +44,9 @@
       "composes": [
         "Section"
       ],
-      "usedBy": [],
+      "usedBy": [
+        "ChargeSheet"
+      ],
       "story": null
     },
     "ActivitySection": {
@@ -317,6 +319,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ChargeTable",
         "FormToolbar",
         "GuideGrid",
         "GuidedEmptyState"
@@ -733,6 +736,17 @@
       "usedBy": [],
       "story": "./src/pages/shared/StatusBadge.stories.tsx"
     },
+    "ChargeFlags": {
+      "file": "src/pages/product-catalog/charges/ChargeFlags.tsx",
+      "layer": "surface",
+      "composes": [
+        "PencilIcon"
+      ],
+      "usedBy": [
+        "ChargeTable"
+      ],
+      "story": null
+    },
     "ChargeForm": {
       "file": "src/pages/product-catalog/charges/ChargeForm.tsx",
       "layer": "surface",
@@ -754,10 +768,26 @@
       ],
       "story": "./src/pages/product-catalog/charges/ChargeForm.stories.tsx"
     },
+    "ChargeSheet": {
+      "file": "src/pages/product-catalog/charges/ChargeSheet.tsx",
+      "layer": "surface",
+      "composes": [
+        "ActivityLog",
+        "PencilIcon",
+        "Sheet"
+      ],
+      "usedBy": [
+        "ChargeTable"
+      ],
+      "story": "./src/pages/product-catalog/charges/ChargeSheet.stories.tsx"
+    },
     "ChargeTable": {
       "file": "src/pages/product-catalog/charges/ChargeTable.tsx",
       "layer": "surface",
       "composes": [
+        "ArrowRightIcon",
+        "ChargeFlags",
+        "ChargeSheet",
         "DetailTable",
         "PlusIcon",
         "RowActionsMenu",
@@ -4457,6 +4487,8 @@
       "composes": [],
       "usedBy": [
         "AddonGrid",
+        "ChargeFlags",
+        "ChargeSheet",
         "CostSheetGrid",
         "CouponGrid",
         "CustomerDetail",
@@ -5419,6 +5451,7 @@
       "layer": "other",
       "composes": [],
       "usedBy": [
+        "ChargeSheet",
         "ConnectIntegrationSheet",
         "CustomerEventsGrid",
         "EventDetailSheet",
@@ -7665,6 +7698,13 @@
       "component": "ChargeForm",
       "uses": [
         "ChargeForm"
+      ]
+    },
+    "./src/pages/product-catalog/charges/ChargeSheet.stories.tsx": {
+      "title": "App/Product catalog/Charges/Charge sheet",
+      "component": "ChargeSheet",
+      "uses": [
+        "ChargeSheet"
       ]
     },
     "./src/pages/product-catalog/charges/ChargeTable.stories.tsx": {

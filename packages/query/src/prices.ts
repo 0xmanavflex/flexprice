@@ -56,6 +56,9 @@ export interface ChargeWire {
   trialPeriodDays?: number | undefined
   priceUnitType?: string | undefined
   priceUnitConfig?: { priceUnit?: string } | undefined
+  startDate?: Date | undefined
+  endDate?: Date | undefined
+  sequence?: number | undefined
   createdAt?: Date | undefined
 }
 
@@ -146,6 +149,9 @@ export function toCharge(wire: ChargeWire): Charge {
     ...(wire.priceUnitType === 'CUSTOM' && wire.priceUnitConfig?.priceUnit
       ? { priceUnit: wire.priceUnitConfig.priceUnit }
       : {}),
+    startDate: wire.startDate ?? null,
+    endDate: wire.endDate ?? null,
+    sequence: typeof wire.sequence === 'number' ? wire.sequence : null,
     createdAt: wire.createdAt ?? null,
   }
 }

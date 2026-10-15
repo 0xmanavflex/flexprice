@@ -86,6 +86,16 @@ export {
   tiersSchema,
 } from './price'
 export type { Charge, CreateCharge, PriceTier, Tier } from './price'
+export { ChargeSection, chargeFlags, isChargeCustomised } from './chargeFlags'
+export type {
+  ChargeAlert,
+  ChargeCommitmentDetail,
+  ChargeCommitmentWindow,
+  ChargeCoupon,
+  ChargeDetail,
+  ChargeFlag,
+  ChargeVersion,
+} from './chargeFlags'
 
 export { emptyOverride, priceOverrideSchema } from './priceOverride'
 export type { PriceOverride } from './priceOverride'

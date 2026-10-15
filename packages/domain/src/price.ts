@@ -316,6 +316,23 @@ export interface Charge {
   trialPeriodDays?: number | null
   /** The custom price unit (e.g. `TOK`) the charge is denominated in; absent for plain currency. */
   priceUnit?: string | null
+  /** When this version of the charge took effect; null when the API did not say. */
+  startDate: Date | null
+  /**
+   * When it stops billing, or null while it still does.
+   *
+   * A charge is ended, not deleted — `DELETE /prices/{id}` sets this date so the
+   * invoices that referenced the charge stay explicable. It is what tells the
+   * Active, Changed and Ended views apart.
+   */
+  endDate: Date | null
+  /**
+   * Which version of the charge this is, as the API counts them.
+   *
+   * Every price edit ends one version and starts the next, and `sequence`
+   * numbers them. A charge whose sequence is above 1 has history worth a flag.
+   */
+  sequence: number | null
   createdAt: Date | null
 }
 
