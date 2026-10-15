@@ -217,6 +217,17 @@ export const AddEntitlement: Story = {
     await userEvent.click(await screen.findByRole('menuitem', { name: 'Add entitlement' }))
     await expect(args.onCreateEntitlement).toHaveBeenCalledOnce()
     await expect(args.onFeatureClick).not.toHaveBeenCalled()
+
+    /*
+     * Wait for the menu to actually go.
+     *
+     * Base UI leaves `aria-hidden` focus guards in the DOM while a popup
+     * closes, and the a11y scan runs the moment `play` returns — so on a
+     * loaded runner it caught them mid-teardown and failed `aria-hidden-focus`,
+     * green here and red in CI. Waiting removes the race; muting the rule
+     * would have hidden a real one later.
+     */
+    await waitFor(() => expect(screen.queryByRole('menu')).not.toBeInTheDocument())
   },
 }
 
