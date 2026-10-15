@@ -67,8 +67,6 @@ export interface FeatureDetailViewProps {
   onBack?: () => void
   /** The stepped configuration flow. */
   onEditConfiguration: () => void
-  /** Real save of name/description; rejects to show an inline error. */
-  onSave: (changes: Record<string, string>) => Promise<unknown>
   /** Header menu: Duplicate. Omitted, the item is not shown. */
   onDuplicate?: () => void
   /** Header menu: delete the feature. Omitted, the item is not shown. */
@@ -191,7 +189,6 @@ export function FeatureDetailView({
   onTabChange,
   onBack,
   onEditConfiguration,
-  onSave,
   onDuplicate,
   onDelete,
   charges = [],
@@ -290,12 +287,7 @@ export function FeatureDetailView({
           {...(onSaveMetadata ? { onSaveMetadata } : {})}
         />
       ) : (
-        <InformationTab
-          feature={feature}
-          isMetered={isMetered}
-          archived={archived}
-          onSave={onSave}
-        />
+        <InformationTab feature={feature} isMetered={isMetered} />
       )}
     </div>
   )
@@ -680,40 +672,35 @@ function EventProperties({ filters }: { filters: { key: string; values: string[]
   )
 }
 
-/** The user-defined unit: "call / calls", or the one name when only one is set. */
-function unitLabel(feature: Feature): string {
-  const { unitSingular: one, unitPlural: many } = feature
-  if (!one && !many) return '—'
-  if (!one || !many || one === many) return many || one
-  return `${one} / ${many}`
-}
 
-function InformationTab({
-  feature,
-  isMetered,
-  archived,
-  onSave,
-}: {
-  feature: Feature
-  isMetered: boolean
-  archived: boolean
-  onSave: (changes: Record<string, string>) => Promise<unknown>
-}) {
+/**
+ * The create form, shown read-only.
+ *
+ * It used to be a mix: an editable card holding a few fields, an "Event and
+ * aggregation" panel built out of `Properties`, and identifiers in a third
+ * box — three idioms for one thing, in an order that matched nothing. Someone
+ * who had just filled the create form could not find the field they had
+ * filled.
+ *
+ * So this is the form's own shape: **Details** then **Metering**, the same
+ * cards with the same labels in the same order, locked. Editing is the one
+ * place it was always meant to be — "Edit details" in the header's ⋯ menu
+ * opens the real form — so nothing here becomes unreachable, and there is no
+ * longer a second, smaller editor that knows about four of the fields.
+ */
+function InformationTab({ feature, isMetered }: { feature: Feature; isMetered: boolean }) {
+  const unit =
+    feature.unitSingular || feature.unitPlural
+      ? [feature.unitSingular, feature.unitPlural].filter(Boolean).join(' / ')
+      : ''
+
   return (
     <div className="grid gap-5 xl:grid-cols-3">
       <div className="flex min-w-0 flex-col gap-5 xl:col-span-2">
         <EditableCard
-          title="Feature details"
-          locked={archived}
+          title="Details"
+          locked
           fields={[
-            { key: 'name', label: 'Name', value: feature.name, required: true },
-            {
-              key: 'lookupKey',
-              label: 'Lookup key',
-              value: feature.lookupKey,
-              display: mono(feature.lookupKey),
-              readOnly: true,
-            },
             {
               key: 'type',
               label: 'Type',
@@ -723,16 +710,12 @@ function InformationTab({
               ),
               readOnly: true,
             },
+            { key: 'name', label: 'Name', value: feature.name, readOnly: true },
             {
-              key: 'created',
-              label: 'Created',
-              value: formatDate(feature.createdAt),
-              readOnly: true,
-            },
-            {
-              key: 'updated',
-              label: 'Updated',
-              value: formatDate(feature.updatedAt),
+              key: 'lookupKey',
+              label: 'Lookup key',
+              value: feature.lookupKey,
+              display: mono(feature.lookupKey),
               readOnly: true,
             },
             {
@@ -741,13 +724,14 @@ function InformationTab({
               value: feature.description,
               placeholder: 'No description',
               multiline: true,
+              readOnly: true,
             },
           ]}
-          onSave={onSave}
+          onSave={noSave}
         />
 
         {isMetered ? (
-          <Section title="Event and aggregation">
+          <Section title="Metering">
             <Properties
               items={[
                 { label: 'Event name', value: mono(feature.eventName) },
@@ -759,22 +743,24 @@ function InformationTab({
                     '—'
                   ),
                 },
+                // Only when the aggregation has one — the form hides it too.
                 ...(feature.aggregationField
-                  ? [{ label: 'Field', value: mono(feature.aggregationField) }]
+                  ? [{ label: 'Event field', value: mono(feature.aggregationField) }]
                   : []),
-                { label: 'Unit', value: unitLabel(feature) },
+                ...(unit ? [{ label: 'Unit', value: unit }] : []),
               ]}
             />
             <div className="mt-6 space-y-2 border-t pt-5">
-              <p className="text-muted-foreground text-xs">Event properties</p>
+              <p className="text-muted-foreground text-xs">Event filters</p>
               <EventProperties filters={feature.meterFilters ?? []} />
             </div>
           </Section>
         ) : null}
       </div>
       <div className="flex min-w-0 flex-col gap-5">
-        {/* The ids people copy into API calls. Metadata used to sit under them;
-            it is on Overview now, beside the event the metadata describes. */}
+        {/* Not create-form fields: the ids people paste into API calls, and
+            when the record changed. Metadata is on Overview, beside the event
+            it annotates. */}
         <Section title="Identifiers">
           <Properties
             columns={2}
@@ -784,7 +770,19 @@ function InformationTab({
             ]}
           />
         </Section>
+        <Section title="History">
+          <Properties
+            columns={2}
+            items={[
+              { label: 'Created', value: formatDate(feature.createdAt) },
+              { label: 'Updated', value: formatDate(feature.updatedAt) },
+            ]}
+          />
+        </Section>
       </div>
     </div>
   )
 }
+
+/** A locked card never saves; `EditableCard` wants the prop regardless. */
+const noSave = async () => undefined

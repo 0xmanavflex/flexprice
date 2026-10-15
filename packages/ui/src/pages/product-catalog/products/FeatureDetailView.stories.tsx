@@ -152,11 +152,28 @@ type Story = StoryObj<typeof meta>
 /** Every knob: feature type and status, tab, row counts, loading and error. */
 export const Playground: Story = {}
 
+/**
+ * Information is the create form, read-only.
+ *
+ * It was three idioms for one thing — a small editable card, an
+ * "Event and aggregation" panel and a box of ids — in an order that matched
+ * nothing anyone had just filled in. It is the form's own shape now, so this
+ * asserts the form's card titles rather than the old panel's name.
+ */
 export const Information: Story = {
+  args: { tab: 'information' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'API calls' })).toBeInTheDocument()
-    await expect(canvas.getByText('Event and aggregation')).toBeInTheDocument()
+
+    // The create form's two cards, in its order.
+    await expect(canvas.getByText('Details')).toBeVisible()
+    await expect(canvas.getByText('Metering')).toBeVisible()
+    await expect(canvas.queryByText('Event and aggregation')).toBeNull()
+
+    // Read-only: there is no pencil, because editing is the header's
+    // "Edit details", which opens the real form.
+    await expect(canvas.queryByRole('button', { name: /^Edit details$/i })).toBeNull()
   },
 }
 

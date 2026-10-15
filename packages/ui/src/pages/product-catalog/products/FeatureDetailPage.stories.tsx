@@ -100,7 +100,6 @@ function FeatureDetailPage({
           onTabChange={setTab}
           onBack={fn()}
           onEditConfiguration={fn()}
-          onSave={fn(() => Promise.resolve())}
           charges={chargeLinks(chargeCount)}
           chargesLoading={sectionsLoading}
           entitlements={entitlementLinks(entitlementCount)}

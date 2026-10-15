@@ -94,15 +94,6 @@ export function FeatureDetailPage({ featureId, onNavigateToList, onEdit }: Featu
         onSaveMetadata={(metadata) =>
           update.mutateAsync({ id: data.id, draft: { name: data.name, metadata } })
         }
-        onSave={(changes) =>
-          update.mutateAsync({
-            id: data.id,
-            draft: {
-              name: changes.name ?? data.name,
-              ...(changes.description !== undefined ? { description: changes.description } : {}),
-            },
-          })
-        }
       />
       <FeatureCloneDialog
         open={cloning}
