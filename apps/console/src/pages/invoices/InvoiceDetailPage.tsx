@@ -16,8 +16,21 @@ import {
   useVoidInvoice,
   serverReason,
 } from '@fp/query'
-import { InvoiceDetailView, Toaster, toast, type InvoicePendingAction } from '@fp/ui/pages'
-import { ConfirmDialog, OptionSelect } from '@fp/ui/compositions'
+import {
+  PAYMENT_STATUS_LABEL,
+  PaymentStatus,
+  manualPaymentStatusBlocked,
+  manualPaymentStatusChoices,
+  moneyOr,
+} from '@fp/domain'
+import {
+  InvoiceDetailView,
+  PaymentStatusDialog,
+  Toaster,
+  toast,
+  type InvoicePendingAction,
+} from '@fp/ui/pages'
+import { ConfirmDialog } from '@fp/ui/compositions'
 import { detailGate } from '../shared/detailGate'
 import { subTab } from '../shared/subTab'
 import { toInvoiceDocument } from './invoiceDocumentAdapter'
@@ -54,9 +67,6 @@ export function InvoiceDetailPage({
   const finalize = useFinalizeInvoice()
   const saveMetadata = useUpdateInvoiceMetadata()
   const setPaymentStatus = useUpdateInvoicePaymentStatus()
-  const [paymentStatus, setPaymentStatusChoice] = useState<'SUCCEEDED' | 'FAILED' | 'PENDING'>(
-    'SUCCEEDED',
-  )
   const voidInvoice = useVoidInvoice()
   const attempt = useAttemptInvoicePayment()
   const recalculate = useRecalculateInvoice()
@@ -108,6 +118,13 @@ export function InvoiceDetailPage({
         }
         onVoid={() => setDialog('void')}
         onUpdatePaymentStatus={() => setDialog('payment-status')}
+        paymentStatusBlocked={manualPaymentStatusBlocked({
+          status: data.status,
+          paymentStatus: data.paymentStatus,
+          succeededPayments: (payments.data ?? []).filter(
+            (payment) => payment.status === PaymentStatus.Succeeded,
+          ).length,
+        })}
         onSaveMetadata={(metadata) => saveMetadata.mutateAsync({ id: data.id, metadata })}
         onIssueCreditNote={() =>
           void navigate({ to: '/credit-notes/new', search: { invoice: data.id } })
@@ -150,43 +167,26 @@ export function InvoiceDetailPage({
         error={voidInvoice.error ? failure(voidInvoice.error) : null}
         onConfirm={() => voidInvoice.mutate(data.id, { onSuccess: () => setDialog(null) })}
       />
-      <ConfirmDialog
+      <PaymentStatusDialog
         open={dialog === 'payment-status'}
         onOpenChange={(open) => {
           if (!open) setPaymentStatus.reset()
           setDialog(open ? 'payment-status' : null)
         }}
-        title="Update payment status"
-        description={
-          <span className="flex flex-col gap-3 pt-2 text-left">
-            <span>For money that moved outside Flexprice. The invoice and its balance follow.</span>
-            <label htmlFor="payment-status" className="flex flex-col gap-1.5 text-sm">
-              Payment status
-              <OptionSelect
-                id="payment-status"
-                value={paymentStatus}
-                onValueChange={(value) =>
-                  setPaymentStatusChoice(value as 'SUCCEEDED' | 'FAILED' | 'PENDING')
-                }
-                options={[
-                  { value: 'SUCCEEDED', label: 'Succeeded' },
-                  { value: 'FAILED', label: 'Failed' },
-                  { value: 'PENDING', label: 'Pending' },
-                ]}
-              />
-            </label>
-          </span>
-        }
-        confirmLabel="Update status"
+        current={data.paymentStatus}
+        choices={manualPaymentStatusChoices(data.paymentStatus)}
+        amountDue={data.amountDue}
+        amountPaid={moneyOr(data.amountPaid, data.currency)}
+        amountRemaining={data.amountRemaining}
         isPending={setPaymentStatus.isPending}
         error={setPaymentStatus.error ? failure(setPaymentStatus.error) : null}
-        onConfirm={() =>
+        onSubmit={(change) =>
           setPaymentStatus.mutate(
-            { id: data.id, status: paymentStatus },
+            { id: data.id, ...change },
             {
               onSuccess: () => {
                 setDialog(null)
-                toast('Payment status updated')
+                toast(`Payment status set to ${PAYMENT_STATUS_LABEL[change.status].toLowerCase()}`)
               },
             },
           )

@@ -58,6 +58,11 @@ export type {
   InvoicePendingAction,
 } from './billing/invoices/InvoiceDetailView'
 export {
+  PaymentStatusDialog,
+  PaymentStatusDialogProvenance,
+} from './billing/invoices/PaymentStatusDialog'
+export type { PaymentStatusDialogProps } from './billing/invoices/PaymentStatusDialog'
+export {
   DEMO_INVOICE,
   displayStatus,
   invoiceTotals,

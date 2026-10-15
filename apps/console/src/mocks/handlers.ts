@@ -3334,6 +3334,25 @@ export const handlers = [
     HttpResponse.json({ success: true, id: params['id'] }),
   ),
 
+  /*
+   * The bulk list, which the plans grid counts grants with.
+   *
+   * `plan_ids` is repeatable and is the filter the real route honours;
+   * `plan_id` singular is accepted there and silently ignored, so it is
+   * ignored here too rather than being made to work — a mock that is kinder
+   * than the API hides the bug it would cause. Checked live, not assumed.
+   */
+  http.get(`${BASE}/creditgrants`, ({ request }) => {
+    const planIds = new URL(request.url).searchParams.getAll('plan_ids')
+    const all = (corpus['creditgrants'] as Corpus).items
+    const rows =
+      planIds.length > 0 ? all.filter((row) => planIds.includes(readString(row, 'plan_id'))) : all
+    return HttpResponse.json({
+      items: rows,
+      pagination: { total: rows.length, limit: 1000, offset: 0 },
+    })
+  }),
+
   // Credit grants have no search — only the scoped list endpoints — so the plan
   // and add-on tabs read from these, filtered by the id in the path.
   http.get(`${BASE}/plans/:id/creditgrants`, ({ params }) => {
@@ -3621,9 +3640,25 @@ export const handlers = [
   }),
   http.put(`${BASE}/invoices/:id/payment`, async ({ request, params }) => {
     const id = String(params['id'])
-    const body = (await request.json().catch(() => ({}))) as { payment_status?: string }
-    if (body.payment_status) {
-      patchRow(sourceFor('invoices').items, id, { payment_status: body.payment_status })
+    const body = (await request.json().catch(() => ({}))) as {
+      payment_status?: string
+      amount?: string
+    }
+    const current = sourceFor('invoices').items.find((item) => readString(item, 'id') === id)
+    if (body.payment_status && current) {
+      // What the backend does to the balance for each manual status.
+      const due = readString(current, 'amount_due') || '0'
+      const paid =
+        body.payment_status === 'SUCCEEDED' || body.payment_status === 'OVERPAID'
+          ? due
+          : body.payment_status === 'FAILED'
+            ? '0'
+            : (body.amount ?? readString(current, 'amount_paid')) || '0'
+      patchRow(sourceFor('invoices').items, id, {
+        payment_status: body.payment_status,
+        amount_paid: paid,
+        amount_remaining: String(Math.max(0, Number(due) - Number(paid))),
+      })
     }
     const row = sourceFor('invoices').items.find((item) => readString(item, 'id') === id)
     return row

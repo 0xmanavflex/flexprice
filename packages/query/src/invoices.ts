@@ -13,6 +13,8 @@ import {
   isZeroMoney,
   moneyOr,
   toPaymentStatus,
+  toWirePaymentStatus,
+  PaymentStatus,
   INVOICE_FILTERS,
 } from '@fp/domain'
 import { queryKeys } from './keys'
@@ -523,8 +525,14 @@ export function useUpdateInvoicePaymentStatus() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: ({ id, status }: { id: string; status: 'SUCCEEDED' | 'FAILED' | 'PENDING' }) =>
-      call(() => client.invoices.updateInvoicePaymentStatus(id, { paymentStatus: status })),
+    mutationFn: ({ id, status, amount }: { id: string; status: PaymentStatus; amount?: string }) =>
+      call(() =>
+        client.invoices.updateInvoicePaymentStatus(id, {
+          paymentStatus: toWirePaymentStatus(status),
+          // Only pending records a partial amount; the others set it themselves.
+          ...(status === PaymentStatus.Pending && amount ? { amount } : {}),
+        } as never),
+      ),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })

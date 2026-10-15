@@ -81,6 +81,11 @@ export interface InvoiceDetailViewProps {
   onVoid?: () => void
   /** Set the payment status by hand, for money that moved outside Flexprice. */
   onUpdatePaymentStatus?: () => void
+  /**
+   * Why the payment status cannot be set by hand right now (void, payments
+   * recorded…) — `manualPaymentStatusBlocked`. Shown as the disabled item's hint.
+   */
+  paymentStatusBlocked?: string | null
   /** Saves the invoice's metadata map. Omitted, the metadata card is read-only. */
   onSaveMetadata?: (metadata: Record<string, string>) => Promise<unknown>
   onIssueCreditNote?: () => void
@@ -130,6 +135,7 @@ export function InvoiceDetailView({
   onRecalculate,
   onVoid,
   onUpdatePaymentStatus,
+  paymentStatusBlocked = null,
   onSaveMetadata,
   onIssueCreditNote,
   onSend,
@@ -272,11 +278,13 @@ export function InvoiceDetailView({
                 disabled={!canIssueCreditNote}
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
               />
-              {onUpdatePaymentStatus && !isDraft && invoice.status !== InvoiceStatus.Void ? (
+              {onUpdatePaymentStatus ? (
                 <MenuAction
                   icon={<WalletIcon />}
                   label="Update payment status"
                   onSelect={onUpdatePaymentStatus}
+                  disabled={paymentStatusBlocked !== null}
+                  hint={paymentStatusBlocked ?? undefined}
                 />
               ) : null}
               <MenuAction
