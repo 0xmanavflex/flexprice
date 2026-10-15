@@ -26,9 +26,9 @@ import {
 } from '@ui/pages/product-catalog/plans/planDetailFixtures'
 import { PAGE_STORY_PARAMETERS, PageShell } from '../../shared/shellFixtures'
 
-type PlanTab = 'overview' | 'entitlements' | 'credit-grants' | 'information'
+type PlanTab = 'overview' | 'information'
 
-const TABS: PlanTab[] = ['overview', 'entitlements', 'credit-grants', 'information']
+const TABS: PlanTab[] = ['overview', 'information']
 const CREATED = new Date('2026-01-10T00:00:00Z')
 const UPDATED = new Date('2026-03-02T00:00:00Z')
 const DATE = new Intl.DateTimeFormat('en-US', { dateStyle: 'medium', timeZone: 'UTC' })
@@ -129,26 +129,34 @@ function PlanDetailPage({
           value={tab}
           onChange={(next) => setTab(next as PlanTab)}
           tabs={[
-            { value: 'overview', label: 'Charges', count: charges.length },
-            { value: 'entitlements', label: 'Entitlements', count: entitlements.length },
-            { value: 'credit-grants', label: 'Credit grants', count: grants.length },
+            { value: 'overview', label: 'Overview' },
             { value: 'information', label: 'Information' },
           ]}
         />
 
         {tab === 'overview' ? (
           <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-            <PlanChargesView
-              charges={charges}
-              readOnly={archived}
-              meterUnit={meterUnitOf}
-              onAdd={fn()}
-              onEdit={fn()}
-              onTerminate={fn()}
-            />
+            <div className="flex min-w-0 flex-col gap-5">
+              <PlanChargesView
+                charges={charges}
+                readOnly={archived}
+                meterUnit={meterUnitOf}
+                onAdd={fn()}
+                onEdit={fn()}
+                onTerminate={fn()}
+              />
+              <PlanEntitlementsView
+                entitlements={entitlements}
+                usagePrice={() => null}
+                onAdd={fn()}
+                onEdit={fn()}
+                onDelete={fn()}
+                onOpenFeature={fn()}
+              />
+              <PlanCreditGrantsView grants={grants} onAdd={fn()} onEdit={fn()} onDelete={fn()} />
+            </div>
             {/* What a customer would be shown, beside what is being edited. */}
             <PlanCustomerPreview
-              // Follows the charges table down; the grid is `items-start` so it can.
               className="lg:sticky lg:top-6"
               charges={charges}
               entitlements={entitlements}
@@ -156,21 +164,6 @@ function PlanDetailPage({
               meterUnit={meterUnitOf}
             />
           </div>
-        ) : null}
-
-        {tab === 'entitlements' ? (
-          <PlanEntitlementsView
-            entitlements={entitlements}
-            usagePrice={() => null}
-            onAdd={fn()}
-            onEdit={fn()}
-            onDelete={fn()}
-            onOpenFeature={fn()}
-          />
-        ) : null}
-
-        {tab === 'credit-grants' ? (
-          <PlanCreditGrantsView grants={grants} onAdd={fn()} onEdit={fn()} onDelete={fn()} />
         ) : null}
 
         {tab === 'information' ? (
@@ -271,14 +264,26 @@ export const Playground: Story = {
   },
 }
 
-/** `/plans/$planId` on the Entitlements tab. */
-export const Entitlements: Story = {
-  args: { activeTab: 'entitlements' },
-}
+/**
+ * All three tables on Overview, which is the whole point of two tabs.
+ *
+ * Charges, entitlements and credit grants each had a tab holding one table,
+ * so "what is in this plan?" cost three clicks and a memory. These
+ * assertions are what stops them being split up again.
+ */
+export const OverviewHoldsEveryTable: Story = {
+  args: { activeTab: 'overview' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const tabs = canvas.getAllByRole('tab').map((tab) => tab.textContent?.trim())
+    await expect(tabs).toEqual(['Overview', 'Information'])
 
-/** `/plans/$planId` on the Credit grants tab. */
-export const CreditGrants: Story = {
-  args: { activeTab: 'credit-grants' },
+    await expect(await canvas.findByRole('region', { name: 'Charges table' })).toBeVisible()
+    await expect(canvas.getByRole('region', { name: 'Entitlements table' })).toBeVisible()
+    await expect(canvas.getByRole('region', { name: 'Credit grants table' })).toBeVisible()
+    // And the customer's-eye rail beside them.
+    await expect(canvas.getByRole('complementary', { name: 'Plan preview' })).toBeVisible()
+  },
 }
 
 /** `/plans/$planId` on the Information tab, with the editable details card. */

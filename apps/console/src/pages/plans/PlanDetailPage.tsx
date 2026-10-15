@@ -101,14 +101,34 @@ import { subTab } from '../shared/subTab'
  */
 
 /**
- * The tabs, in order. The first id stays `overview` (the router strips it as the
- * default, so `/plans/:id` lands there) but it is labelled "Charges".
+ * Two tabs, not four.
+ *
+ * Charges, Entitlements and Credit grants were a tab each, holding one table
+ * apiece, so seeing what a plan actually contains meant three clicks and
+ * remembering the first two. They are all on Overview now, beside the
+ * customer's-eye rail — the same shape the feature detail page uses, and what
+ * the redesign shows.
  */
-export const PLAN_TABS = ['overview', 'entitlements', 'credit-grants', 'information'] as const
+export const PLAN_TABS = ['overview', 'information'] as const
 export type PlanTab = (typeof PLAN_TABS)[number]
 
+/**
+ * The tabs that used to exist, and where their links go now.
+ *
+ * `/plans/:id?tab=entitlements` is a link someone may have bookmarked or
+ * pasted in a ticket. It still opens the plan, on the tab that now holds
+ * entitlements, rather than silently falling back as if the parameter were
+ * a typo.
+ */
+const RETIRED_TABS: Record<string, PlanTab> = {
+  charges: 'overview',
+  entitlements: 'overview',
+  'credit-grants': 'overview',
+}
+
 export function parsePlanTab(value: unknown): PlanTab {
-  return PLAN_TABS.includes(value as PlanTab) ? (value as PlanTab) : 'overview'
+  if (PLAN_TABS.includes(value as PlanTab)) return value as PlanTab
+  return (typeof value === 'string' ? RETIRED_TABS[value] : undefined) ?? 'overview'
 }
 
 export interface PlanDetailPageProps {
@@ -143,10 +163,9 @@ export function PlanDetailPage({
   const archive = useArchivePlan()
   const sync = useSyncPlanPrices()
 
-  // The tabs and the preview read the same keys, so react-query serves each once.
+  // The header's kind badge is read off the charges. The Overview sections
+  // read the same key, so react-query serves them from this one fetch.
   const charges = usePrices(PriceEntityType.Plan, planId)
-  const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
-  const grants = useCreditGrants(CreditGrantScope.Plan, planId)
 
   const [archiving, setArchiving] = useState(false)
   const [duplicating, setDuplicating] = useState(false)
@@ -228,16 +247,12 @@ export function PlanDetailPage({
         value={tab}
         onChange={(next) => onTabChange(parsePlanTab(next))}
         tabs={[
-          { value: 'overview', label: 'Charges', ...count(charges.data) },
-          { value: 'entitlements', label: 'Entitlements', ...count(entitlements.data) },
-          { value: 'credit-grants', label: 'Credit grants', ...count(grants.data) },
+          { value: 'overview', label: 'Overview' },
           { value: 'information', label: 'Information' },
         ]}
       />
 
-      {tab === 'overview' ? <ChargesTab planId={planId} readOnly={isArchived} /> : null}
-      {tab === 'entitlements' ? <EntitlementsTab planId={planId} /> : null}
-      {tab === 'credit-grants' ? <CreditGrantsTab planId={planId} /> : null}
+      {tab === 'overview' ? <OverviewTab planId={planId} readOnly={isArchived} /> : null}
       {tab === 'information' ? (
         <InformationTab
           name={record.name}
@@ -294,23 +309,49 @@ export function PlanDetailPage({
  * An edit is saved as a new price version; terminate ends a charge behind a confirm.
  */
 /**
- * Charges, with the customer's view of the plan beside them.
+ * Everything a plan contains, on one screen.
  *
- * The preview is the same `PlanPreviewCard` the create form shows while a plan
- * is being written, fed here from what was saved. Editing a charge and seeing
- * only a table row change is the gap this closes: the card is what a customer
- * would be shown, and it is the reason to check a price twice.
+ * Charges, entitlements and credit grants were a tab each, holding one table
+ * apiece — so the answer to "what is in this plan?" was spread across three
+ * clicks. They stack here instead, beside the customer's-eye rail, which is
+ * the whole point of the rail: the price being edited and the price a
+ * customer would be shown, side by side.
  *
- * It reads entitlements and credit grants as well as charges, because the card
- * shows all three. Every one of those three queries is already made by the
- * tabs beside this one under the same keys, so react-query serves them from
- * cache rather than fetching again.
+ * Each section fetches its own rows. They are the same queries, under the same
+ * keys, so react-query serves the second and third reader from cache.
  */
-function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
+function OverviewTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
-  const { meters, units, priceGroups, allFeatures } = usePlanFormOptions()
+  const { meters, allFeatures } = usePlanFormOptions()
+
+  const meterUnit = (id: string) => meters.find((m) => m.id === id)?.unit
+  const featureUnit = (id: string) => allFeatures.find((f) => f.id === id)?.unitPlural
+
+  return (
+    <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="flex min-w-0 flex-col gap-5">
+        <ChargesSection planId={planId} readOnly={readOnly} />
+        <EntitlementsSection planId={planId} />
+        <CreditGrantsSection planId={planId} />
+      </div>
+      <PlanCustomerPreview
+        // Follows the sections down; the grid is `items-start` so it can.
+        className="lg:sticky lg:top-6"
+        charges={charges.data ?? []}
+        entitlements={entitlements.data ?? []}
+        grants={grants.data ?? []}
+        meterUnit={meterUnit}
+        featureUnit={featureUnit}
+      />
+    </div>
+  )
+}
+
+function ChargesSection({ planId, readOnly }: { planId: string; readOnly: boolean }) {
+  const charges = usePrices(PriceEntityType.Plan, planId)
+  const { meters, units, priceGroups } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const [form, setForm] = useState<'add' | Charge | null>(null)
@@ -341,33 +382,19 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
     )
   }
 
-  const meterUnit = (id: string) => meters.find((m) => m.id === id)?.unit
-  const featureUnit = (id: string) => allFeatures.find((f) => f.id === id)?.unitPlural
-
   return (
     <>
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1fr)_340px]">
-        <PlanChargesView
-          charges={rows}
-          readOnly={readOnly}
-          loading={loading}
-          error={failed}
-          onRetry={() => void charges.refetch()}
-          meterUnit={meterUnit}
-          onAdd={() => setForm('add')}
-          onEdit={(charge) => setForm(charge)}
-          onTerminate={(charge) => setTerminating(charge)}
-        />
-        <PlanCustomerPreview
-          // Follows the charges table down; the grid is `items-start` so it can.
-          className="lg:sticky lg:top-6"
-          charges={rows}
-          entitlements={entitlements.data ?? []}
-          grants={grants.data ?? []}
-          meterUnit={meterUnit}
-          featureUnit={featureUnit}
-        />
-      </div>
+      <PlanChargesView
+        charges={rows}
+        readOnly={readOnly}
+        loading={loading}
+        error={failed}
+        onRetry={() => void charges.refetch()}
+        meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
+        onAdd={() => setForm('add')}
+        onEdit={(charge) => setForm(charge)}
+        onTerminate={(charge) => setTerminating(charge)}
+      />
 
       <AddChargeDialog
         open={form !== null}
@@ -405,7 +432,7 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
  * the plan's usage price for a metered feature, found by matching the feature's
  * meter to a usage charge; usage beyond the value bills at that price.
  */
-function EntitlementsTab({ planId }: { planId: string }) {
+function EntitlementsSection({ planId }: { planId: string }) {
   const navigate = useNavigate()
   const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
   const charges = usePrices(PriceEntityType.Plan, planId)
@@ -528,7 +555,7 @@ function EntitlementsTab({ planId }: { planId: string }) {
 }
 
 /** Credit grants — the balances the plan hands its subscribers. */
-function CreditGrantsTab({ planId }: { planId: string }) {
+function CreditGrantsSection({ planId }: { planId: string }) {
   const grants = useCreditGrants(CreditGrantScope.Plan, planId)
   const create = useCreateCreditGrant()
   const updateGrant = useUpdateCreditGrant()
@@ -677,10 +704,6 @@ function InformationTab({
       />
     </div>
   )
-}
-
-function count(rows: readonly unknown[] | undefined): { count?: number } {
-  return rows ? { count: rows.length } : {}
 }
 
 /**

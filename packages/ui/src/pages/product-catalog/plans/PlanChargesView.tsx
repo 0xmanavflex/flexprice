@@ -180,7 +180,7 @@ export function PlanChargesView({
   ]
 
   return (
-    <Section table title="Charges">
+    <Section table showTitle title="Charges">
       <DetailTable<Charge>
         compact
         label="Charges"

@@ -101,7 +101,7 @@ export function PlanEntitlementsView({
   }
 
   return (
-    <Section table title="Entitlements">
+    <Section table showTitle title="Entitlements">
       <DetailTable
         compact
         label="Entitlements"

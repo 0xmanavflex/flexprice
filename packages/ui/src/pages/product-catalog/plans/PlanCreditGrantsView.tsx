@@ -72,7 +72,7 @@ export function PlanCreditGrantsView({
   }
 
   return (
-    <Section table title="Credit grants">
+    <Section table showTitle title="Credit grants">
       <DetailTable
         compact
         label="Credit grants"
