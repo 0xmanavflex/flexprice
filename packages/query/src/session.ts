@@ -57,7 +57,24 @@ export function useSignUp() {
   const serverURL = useFlexpriceServerURL()
 
   return useMutation<SessionCredentials, Error, { email: string; password: string }>({
-    mutationFn: ({ email, password }) => signUp(serverURL, email, password),
+    mutationFn: ({ email, password }) => signUp(serverURL, { email, password }),
+  })
+}
+
+/**
+ * Creates the account behind a confirmed Supabase sign-up — `POST /auth/signup`
+ * with the confirmed session's access token, as the hosted regions require.
+ * See `signUp` in `@fp/api`.
+ */
+export function useSignUpWithToken() {
+  const serverURL = useFlexpriceServerURL()
+
+  return useMutation<
+    SessionCredentials,
+    Error,
+    { email: string; token: string; metadata?: Record<string, string> }
+  >({
+    mutationFn: (details) => signUp(serverURL, details),
   })
 }
 

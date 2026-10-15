@@ -41,6 +41,15 @@ export interface SignUpScreenProps {
   /** Start Google sign-up. Omitted — and the button not drawn — when the
    * deployment does not offer it. */
   onProvider?: (providerId: string) => void
+  /**
+   * Switches the screen to "check your email" for this address: the account is
+   * created only once the link in that email is followed.
+   */
+  sentTo?: string | null
+  /** Sends the confirmation email again; drawn on the "check your email" screen. */
+  onResend?: () => void
+  /** The resend went out. */
+  resent?: boolean
 }
 
 /** A password box with the eye toggle, as the design draws it. */
@@ -95,6 +104,9 @@ export function SignUpScreen({
   region,
   onSignIn,
   onProvider,
+  sentTo = null,
+  onResend,
+  resent = false,
 }: SignUpScreenProps) {
   const form = useCalmForm<SignUpDetails>({
     resolver: standardSchemaResolver(signUpSchema) as Resolver<SignUpDetails>,
@@ -105,6 +117,49 @@ export function SignUpScreen({
   const passwordId = useId()
   const confirmId = useId()
   const errorId = (id: string, present: boolean) => (present ? `${id}-error` : undefined)
+
+  if (sentTo) {
+    return (
+      <AuthFrame quote="truffle">
+        <div className="flex w-full flex-col gap-6" role="status">
+          <FormHead
+            title="Check your email"
+            description={
+              <>
+                We sent a link to <span className="text-foreground font-medium">{sentTo}</span>.
+                Open it to confirm the address and finish creating your account.
+              </>
+            }
+          />
+          {error ? (
+            <p
+              role="alert"
+              className="border-destructive/20 bg-destructive/10 text-destructive-foreground dark:text-destructive rounded-lg border px-3 py-2 text-sm"
+            >
+              {error}
+            </p>
+          ) : null}
+          <div className="flex flex-wrap gap-2">
+            {onResend ? (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={onResend}
+                disabled={isSubmitting || resent}
+              >
+                {resent ? 'Email sent again' : isSubmitting ? 'Sending…' : 'Resend email'}
+              </Button>
+            ) : null}
+            {onSignIn ? (
+              <Button type="button" variant="ghost" onClick={onSignIn}>
+                Back to sign in
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </AuthFrame>
+    )
+  }
 
   return (
     <AuthFrame quote="truffle">
@@ -154,7 +209,7 @@ export function SignUpScreen({
             <FieldLabel htmlFor={passwordId}>Password</FieldLabel>
             <PasswordInput
               id={passwordId}
-              placeholder="At least 6 characters"
+              placeholder="At least 8 characters"
               autoComplete="new-password"
               invalid={Boolean(errors.password)}
               describedBy={errorId(passwordId, Boolean(errors.password))}

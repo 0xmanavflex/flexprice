@@ -90,3 +90,15 @@ export const ValidatesOnlyWhatWasTyped: Story = {
     await expect(canvas.queryByText('Use at least 6 characters')).toBeNull()
   },
 }
+
+/** After a hosted sign-up: the account waits on the link in the email, which can be sent again. */
+export const CheckYourEmail: Story = {
+  args: { sentTo: 'amara@northwind.example', onResend: fn() },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('heading', { level: 1 })).toHaveTextContent('Check your email')
+    await expect(canvas.getByText('amara@northwind.example')).toBeInTheDocument()
+    await userEvent.click(canvas.getByRole('button', { name: 'Resend email' }))
+    await expect(args.onResend).toHaveBeenCalled()
+  },
+}

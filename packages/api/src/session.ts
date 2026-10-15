@@ -134,14 +134,38 @@ export async function signIn(
   return toCredentials(body)
 }
 
+/**
+ * Creates the account and its organisation — `POST /auth/signup`.
+ *
+ * What it needs depends on the deployment's identity provider:
+ *
+ *   - **Supabase** (the hosted regions) takes no password. The person has
+ *     already registered with Supabase from the browser and confirmed their
+ *     email; `token` is that confirmed session's access token, and the backend
+ *     refuses without it ("A verified sign-in is required to create an
+ *     account"). The email must match the token's.
+ *   - **Flexprice's own provider** (self-hosted) takes the email and password
+ *     directly and needs no token.
+ *
+ * `metadata` is free-form attribution the backend stores on the tenant.
+ */
 export async function signUp(
   serverURL: string,
-  email: string,
-  password: string,
+  details: {
+    email: string
+    password?: string | undefined
+    token?: string | undefined
+    metadata?: Record<string, string> | undefined
+  },
 ): Promise<SessionCredentials> {
   const body = await request(serverURL, '/auth/signup', {
     method: 'POST',
-    body: { email, password },
+    body: {
+      email: details.email,
+      ...(details.password ? { password: details.password } : {}),
+      ...(details.token ? { token: details.token } : {}),
+      ...(details.metadata ? { metadata: details.metadata } : {}),
+    },
   })
   return toCredentials(body)
 }

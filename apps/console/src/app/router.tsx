@@ -278,6 +278,7 @@ const RevenuePage = lazy(() =>
  */
 import { SignInPage } from '@/pages/auth/SignInPage'
 import { SignUpPage } from '@/pages/auth/SignUpPage'
+import { SignUpConfirmPage } from '@/pages/auth/SignUpConfirmPage'
 import { ForgotPasswordPage } from '@/pages/auth/ForgotPasswordPage'
 import { ResetPasswordPage } from '@/pages/auth/ResetPasswordPage'
 
@@ -495,6 +496,17 @@ const signUpRoute = createRoute({
     if (hasSession()) throw redirect({ to: '/' })
   },
   component: SignUpPage,
+})
+
+/**
+ * The far end of the sign-up confirmation email. Does not step aside for an
+ * existing session: the link must be consumed wherever it lands, or the
+ * account it confirms is never created.
+ */
+const signUpConfirmRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/sign-up/confirm',
+  component: SignUpConfirmPage,
 })
 
 /**
@@ -2214,6 +2226,7 @@ const labelsRedirect = createRoute({
 export const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
+  signUpConfirmRoute,
   forgotPasswordRoute,
   resetPasswordRoute,
   shellRoute.addChildren([

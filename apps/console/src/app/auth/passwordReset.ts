@@ -1,5 +1,5 @@
-import { createClient, type SupabaseClient } from '@supabase/supabase-js'
-import { env, type SupabaseConfig } from '@/env'
+import { env } from '@/env'
+import { clientFor } from './supabaseClient'
 
 /**
  * Password reset, which is the one auth flow the Flexprice API does not have.
@@ -31,26 +31,6 @@ import { env, type SupabaseConfig } from '@/env'
  * returns false and the console shows no reset link. That is the honest state,
  * not a degraded one: self-hosted has never had password reset, in V1 either.
  */
-
-/** Per region, because the hosted regions are separate Supabase projects. */
-const clients = new Map<string, SupabaseClient>()
-
-function clientFor(config: SupabaseConfig): SupabaseClient {
-  const existing = clients.get(config.url)
-  if (existing) return existing
-
-  const client = createClient(config.url, config.anonKey, {
-    auth: {
-      // See the note above: this client must not become a second session.
-      persistSession: false,
-      autoRefreshToken: false,
-      // Required — the recovery link's tokens arrive in the URL fragment.
-      detectSessionInUrl: true,
-    },
-  })
-  clients.set(config.url, client)
-  return client
-}
 
 /** Whether this region can reset a password at all. */
 export function resetAvailableFor(region: string): boolean {

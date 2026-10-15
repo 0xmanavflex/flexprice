@@ -84,10 +84,26 @@ describe('request headers', () => {
   it('sends no Authorization on signup either', async () => {
     const { seen } = harness(ok({ token: 't' }))
 
-    await signUp(SERVER, 'new@example.com', 'hunter2')
+    await signUp(SERVER, { email: 'new@example.com', password: 'hunter2' })
 
     expect(seen[0]?.url).toBe(`${SERVER}/auth/signup`)
     expect(seen[0]?.headers.get('Authorization')).toBeNull()
+  })
+
+  it('sends the confirmed Supabase token, and no password, on a hosted signup', async () => {
+    const { seen } = harness(ok({ token: 't' }))
+
+    await signUp(SERVER, {
+      email: 'new@example.com',
+      token: 'supabase-access',
+      metadata: { signup_method: 'email' },
+    })
+
+    await expect(seen[0]?.json()).resolves.toEqual({
+      email: 'new@example.com',
+      token: 'supabase-access',
+      metadata: { signup_method: 'email' },
+    })
   })
 
   it.each([
