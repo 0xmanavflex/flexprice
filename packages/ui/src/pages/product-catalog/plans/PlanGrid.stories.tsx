@@ -2,8 +2,19 @@ import { type ComponentProps, useMemo, useState } from 'react'
 import type { Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, userEvent, waitFor, within } from 'storybook/test'
 import { DEFAULT_PLAN_QUERY, type PlanQuery, PlanStatus } from '@fp/domain'
-import { PlanGrid } from './PlanGrid'
+import { PlanGrid, type PlanLinkage } from './PlanGrid'
 import { fixturePlanQuery, manyPlans, planFixtures } from './planFixtures'
+
+/**
+ * What each fixture plan contains. `plan_05` is deliberately absent: a plan
+ * the linkage has not answered for yet renders a placeholder, never a zero.
+ */
+const linkage = new Map<string, PlanLinkage>([
+  ['plan_01', { entitlements: 6, creditGrants: 2, contracts: 6 }],
+  ['plan_02', { entitlements: 10, creditGrants: 2, contracts: 2 }],
+  ['plan_03', { entitlements: 6, creditGrants: 1, contracts: 8 }],
+  ['plan_04', { entitlements: 0, creditGrants: 0, contracts: 3 }],
+])
 
 /**
  * Wait for an open popup to finish unmounting.
@@ -25,6 +36,7 @@ const meta = {
   parameters: { layout: 'padded' },
   args: {
     plans: planFixtures,
+    linkage,
     total: planFixtures.length,
     query: fixturePlanQuery,
     onQueryChange: fn(),
@@ -43,37 +55,90 @@ export const Populated: Story = {
 
     await expect(await canvas.findByText('Starter')).toBeInTheDocument()
 
-    // The headline price carries its period the way a pricing page writes it,
-    // from BILLING_PERIOD_SHORT — never a string this side invents.
-    // The amount and the muted period are separate spans, as in the redesign.
-    await expect(canvas.getByText('$29').textContent).toBe('$29 / mo')
-    await expect(canvas.getByText('$499').textContent).toBe('$499 / yr')
-    // An unrecognised period falls back to the bare amount rather than
-    // printing the raw enum at someone.
-    await expect(canvas.getByText('Custom')).toBeInTheDocument()
+    // Type is read off the charge mix, not stored: all four shapes are here.
+    // Two fixtures are flat-rate, hence getAllByText for that one.
+    await expect(canvas.getAllByText('Flat-rate plan').length).toBe(2)
+    await expect(canvas.getByText('Hybrid plan')).toBeInTheDocument()
+    await expect(canvas.getByText('Usage-based plan')).toBeInTheDocument()
+    await expect(canvas.getByText('No charges yet')).toBeInTheDocument()
 
-    // A plan that prices nothing says so, rather than rendering blank.
-    await expect(canvas.getAllByText('—').length).toBeGreaterThan(0)
     await expect(canvas.getAllByText('Published').length).toBeGreaterThan(0)
   },
 }
 
 /**
- * The columns the API cannot fill are absent, not dashed.
+ * A count nobody could read is blank, not zero.
  *
- * Subscribers and Trial have no field on `PlanWire`, so there is no header for
- * them. This is the assertion that stops someone "helpfully" adding the column
- * back with a placeholder.
+ * `plan_05` has no linkage entry and the grid is not loading, so its three
+ * count cells show an em dash — a fourth comes from its empty lookup key.
+ * "We could not find out" and "there are none" must not render the same,
+ * which is why `plan_04` — which *is* answered for, with zeroes — shows them.
  */
-export const OmitsUnsourcedColumns: Story = {
+export const UnknownCountsAreNotZero: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const enterprise = (await canvas.findByText('Enterprise')).closest('tr') as HTMLElement
+    await expect(within(enterprise).getAllByText('—').length).toBe(4)
+
+    // Legacy Team is answered for: no charges, no entitlements, no grants —
+    // three zeroes — and three contracts still sitting on it.
+    const legacy = canvas.getByText('Legacy Team').closest('tr') as HTMLElement
+    await expect(within(legacy).getAllByText('0').length).toBe(3)
+    await expect(within(legacy).getByText('3')).toBeInTheDocument()
+  },
+}
+
+/**
+ * The default column set is the redesign's, in its order.
+ *
+ * Trial has no field on `PlanWire`, so there is no header for it — this is the
+ * assertion that stops someone "helpfully" adding the column back with a
+ * placeholder. Base price, Updated and Created are real but off by default;
+ * `BasePriceStaysReachable` proves they did not simply disappear.
+ */
+export const DefaultColumns: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('Starter')
 
-    await expect(canvas.queryByRole('columnheader', { name: /subscribers/i })).toBeNull()
+    const headers = canvas
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent?.trim())
+      .filter((text): text is string => Boolean(text))
+    await expect(headers.slice(0, 8)).toEqual([
+      'Plan',
+      'Type',
+      'Charges',
+      'Entitlements',
+      'Credit grants',
+      'Contracts',
+      'Status',
+      'Lookup key',
+    ])
+
     await expect(canvas.queryByRole('columnheader', { name: /trial/i })).toBeNull()
-    // What the API can give is here.
-    await expect(canvas.getByRole('columnheader', { name: /charges/i })).toBeInTheDocument()
+    await expect(canvas.queryByRole('columnheader', { name: /base price/i })).toBeNull()
+  },
+}
+
+/** Off by default is not gone: the `⋯` menu still offers it. */
+export const BasePriceStaysReachable: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('Starter')
+
+    await userEvent.click(canvas.getByRole('button', { name: 'Table options' }))
+    const menu = within(await within(document.body).findByRole('menu'))
+    await userEvent.click(await menu.findByText('Base price'))
+    await userEvent.keyboard('{Escape}')
+    await popupClosed('menu')
+
+    // The headline price carries its period the way a pricing page writes it,
+    // from BILLING_PERIOD_SHORT — never a string this side invents.
+    await expect(canvas.getByText('$29').textContent).toBe('$29 / mo')
+    // An unrecognised period falls back to the bare amount rather than
+    // printing the raw enum at someone.
+    await expect(canvas.getByText('Custom')).toBeInTheDocument()
   },
 }
 

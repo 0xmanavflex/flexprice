@@ -77,6 +77,12 @@ export { listCreditNotes } from './creditNotes'
 export type { ListCreditNotesParams } from './creditNotes'
 
 /**
+ * `GET /creditgrants`, live but absent from the SDK. See `creditGrants.ts`.
+ */
+export { listCreditGrants } from './creditGrants'
+export type { ListCreditGrantsParams } from './creditGrants'
+
+/**
  * The SDK's request and response models, re-exported so the rest of the
  * workspace has one import path for them and the SDK can be swapped or pinned
  * in one place.

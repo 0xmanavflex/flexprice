@@ -59,6 +59,9 @@ function toHeadline(prices: unknown[] | undefined): PlanHeadline | null {
 }
 
 export function toPlan(wire: PlanWire): Plan {
+  const prices: Array<Record<string, unknown>> = Array.isArray(wire.prices)
+    ? (wire.prices as Array<Record<string, unknown>>)
+    : []
   const status = PLAN_STATUSES.has(wire.status ?? '')
     ? (wire.status as PlanStatus)
     : // An unknown status is the API ahead of this client. Treating it as
@@ -71,7 +74,12 @@ export function toPlan(wire: PlanWire): Plan {
     lookupKey: wire.lookupKey ?? '',
     description: wire.description ?? '',
     status,
-    chargeCount: Array.isArray(wire.prices) ? wire.prices.length : 0,
+    chargeCount: prices.length,
+    // `type` is `FIXED` or `USAGE` on the wire. Anything else is counted as a
+    // charge but as neither kind, so a future price type shows the plan as
+    // having charges rather than silently inflating one of the two figures.
+    fixedChargeCount: prices.filter((price) => price['type'] === 'FIXED').length,
+    usageChargeCount: prices.filter((price) => price['type'] === 'USAGE').length,
     headline: toHeadline(wire.prices),
     metadata: wire.metadata ?? {},
     createdAt: wire.createdAt ?? null,

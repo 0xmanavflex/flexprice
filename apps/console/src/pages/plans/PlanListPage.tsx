@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { type Plan, type PlanQuery } from '@fp/domain'
-import { useArchivePlan, usePlans } from '@fp/query'
+import { useArchivePlan, usePlanLinkage, usePlans } from '@fp/query'
 import { DuplicatePlanDialog } from './DuplicatePlanDialog'
 import { PlanGrid } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
@@ -33,7 +33,10 @@ export function PlanListPage({
   const archive = useArchivePlan()
   const [archiving, setArchiving] = useState<Plan | null>(null)
   const failure = toListFailure(plans.error, 'plans')
-  const rows = plans.data?.plans ?? []
+  const rows = useMemo(() => plans.data?.plans ?? [], [plans.data])
+  // What each plan contains — entitlements, credit grants, contracts — read
+  // for the rows on screen. None of it is on the plan itself.
+  const linked = usePlanLinkage(useMemo(() => rows.map((plan) => plan.id), [rows]))
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
 
   const clearFilters = () =>
@@ -60,6 +63,8 @@ export function PlanListPage({
         >
           <PlanGrid
             plans={rows}
+            linkage={linked.byPlan}
+            linkageLoading={linked.isPending}
             total={plans.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}

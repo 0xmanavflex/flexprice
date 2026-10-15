@@ -160,13 +160,16 @@ export type {
 export {
   DEFAULT_PLAN_QUERY,
   PLAN_FILTERS,
+  PLAN_KIND_LABEL,
   PLAN_SORT_LABEL,
   PLAN_STATUS_LABEL,
+  PlanKind,
   PlanSortField,
   PlanStatus,
   PlanView,
   createPlanSchema,
   emptyPlan,
+  planKind,
 } from './plan'
 export type { CreatePlan, Plan, PlanHeadline, PlanQuery } from './plan'
 

@@ -44,12 +44,46 @@ export interface Plan {
   status: PlanStatus
   /** How many charges (prices) the plan carries. 0 means it bills nothing yet. */
   chargeCount: number
+  /** Of those charges, how many are a fixed fee. */
+  fixedChargeCount: number
+  /** Of those charges, how many are metered usage. */
+  usageChargeCount: number
   /** The pricing-card headline, or null when the plan prices nothing yet. */
   headline: PlanHeadline | null
   /** Free-form key/value fields, empty when none. */
   metadata: Record<string, string>
   createdAt: Date | null
   updatedAt: Date | null
+}
+
+/**
+ * What kind of plan this is, read off its charges rather than stored.
+ *
+ * Nothing on the plan says "hybrid": the shape is the mix of fixed fees and
+ * metered usage underneath it, which is exactly what someone scanning the list
+ * wants to know before opening anything. A plan with no charges is called that
+ * rather than being lumped in with flat-rate — it bills nothing at all.
+ */
+export const PlanKind = {
+  Empty: 'empty',
+  Flat: 'flat',
+  Usage: 'usage',
+  Hybrid: 'hybrid',
+} as const
+export type PlanKind = (typeof PlanKind)[keyof typeof PlanKind]
+
+export const PLAN_KIND_LABEL: Record<PlanKind, string> = {
+  [PlanKind.Empty]: 'No charges yet',
+  [PlanKind.Flat]: 'Flat-rate plan',
+  [PlanKind.Usage]: 'Usage-based plan',
+  [PlanKind.Hybrid]: 'Hybrid plan',
+}
+
+export function planKind(plan: Pick<Plan, 'fixedChargeCount' | 'usageChargeCount'>): PlanKind {
+  const { fixedChargeCount: fixed, usageChargeCount: usage } = plan
+  if (fixed === 0 && usage === 0) return PlanKind.Empty
+  if (fixed > 0 && usage > 0) return PlanKind.Hybrid
+  return usage > 0 ? PlanKind.Usage : PlanKind.Flat
 }
 
 /**

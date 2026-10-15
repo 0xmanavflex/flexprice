@@ -494,6 +494,8 @@ export type { AlertSettingPage, AlertSettingWire } from './alertSettings'
 export { useCount, useInvoiceCount, useNavCounts } from './counts'
 export { COUNT_CONCURRENCY, mapBounded, useFeatureLinkage } from './featureLinkage'
 export type { FeatureLinkage } from './featureLinkage'
+export { usePlanLinkage } from './planLinkage'
+export type { PlanLinkage } from './planLinkage'
 export type { CountableId } from './counts'
 
 export { useCatalogStats } from './catalogStats'
