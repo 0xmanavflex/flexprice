@@ -9,9 +9,12 @@ name: Visual
 #
 # The Playwright config starts the app itself (`VITE_USE_MOCKS=true`).
 on:
+  # Called by `pipeline.yml` on a push to main, so main runs these in order
+  # rather than all at once. The triggers below still fire on their own for
+  # every other branch and every pull request.
+  workflow_call:
   push:
     branches:
-      - main
       - develop
       - feat/v2-foundation
       - 'ci/**'

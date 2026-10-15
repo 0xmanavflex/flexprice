@@ -22,9 +22,9 @@ name: Deploy regions
 # A push to `main` is each region's production deployment. Start it by hand from
 # the Actions tab to redeploy a single commit or a single region.
 on:
-  push:
-    branches:
-      - main
+  # Called by `pipeline.yml` after the gate passes. Run it by hand from the
+  # Actions tab to redeploy a single commit or a single region.
+  workflow_call:
   workflow_dispatch:
     inputs:
       region:

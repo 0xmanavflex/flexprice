@@ -13,9 +13,12 @@ name: E2E
 # missing environment variable, which is the whole reason the layer exists.
 # Watchtower's CI already works that way and is the model to follow.
 on:
+  # Called by `pipeline.yml` on a push to main, so main runs these in order
+  # rather than all at once. The triggers below still fire on their own for
+  # every other branch and every pull request.
+  workflow_call:
   push:
     branches:
-      - main
       - develop
       - feat/v2-foundation
       # A change to CI should prove itself on its own branch, before it reaches
