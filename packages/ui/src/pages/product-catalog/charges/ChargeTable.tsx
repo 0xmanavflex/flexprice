@@ -390,15 +390,18 @@ export function ChargeTable({
     ...(ended.length > 0 ? [{ id: 'ended' as const, label: `Ended ${ended.length}` }] : []),
   ]
 
-  const action =
-    variant === 'summary' ? (
-      onShowAll ? (
-        <Button variant="outline" size="sm" className="h-7 px-2.5" onClick={onShowAll}>
-          Show all charges
-          <ArrowRightIcon aria-hidden />
-        </Button>
-      ) : undefined
-    ) : views.length > 1 ? (
+  /**
+   * `summary` is one of several sections stacked on an Overview, so it keeps
+   * the title row the redesign asks a sub-table to keep — and "Show all
+   * charges" lives on it.
+   *
+   * `full` is the whole body of a tab that is already called Charges, so the
+   * visible title would only say it twice. The heading stays for assistive
+   * tech (`Section table` without `showTitle`) and the views move into the
+   * toolbar, next to the search and the add button they belong with.
+   */
+  const viewSwitch =
+    views.length > 1 ? (
       <ButtonGroup>
         {views.map((option) => (
           <Button
@@ -413,6 +416,22 @@ export function ChargeTable({
           </Button>
         ))}
       </ButtonGroup>
+    ) : null
+
+  const titleAction =
+    variant === 'summary' && onShowAll ? (
+      <Button variant="outline" size="sm" className="h-7 px-2.5" onClick={onShowAll}>
+        Show all charges
+        <ArrowRightIcon aria-hidden />
+      </Button>
+    ) : undefined
+
+  const toolbarAction =
+    variant === 'full' && (viewSwitch || addButton) ? (
+      <span className="flex items-center gap-2">
+        {viewSwitch}
+        {addButton}
+      </span>
     ) : undefined
 
   const charge = (count: number) => `${count} active charge${count === 1 ? '' : 's'}`
@@ -427,13 +446,10 @@ export function ChargeTable({
     <>
       <Section
         table
-        // `showTitle` because the views and "Show all charges" live on the
-        // title's line; without it `Section table` keeps the heading for
-        // assistive tech only and has nowhere to put them.
-        showTitle
+        {...(variant === 'summary' ? { showTitle: true } : {})}
         title={title}
         {...(description ? { description } : {})}
-        {...(action ? { action } : {})}
+        {...(titleAction ? { action: titleAction } : {})}
       >
         {rows.length === 0 ? (
           <p className="text-muted-foreground px-6 py-8 text-center text-[13px]">
@@ -447,7 +463,7 @@ export function ChargeTable({
           <DetailTable
             compact
             label="Charges"
-            {...(addButton && variant === 'full' ? { action: addButton } : {})}
+            {...(toolbarAction ? { action: toolbarAction } : {})}
             toolbar={variant === 'full'}
             // The billing model left the columns for the grey line under the
             // name, but it is still what someone narrows a long list by, so the
