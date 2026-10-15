@@ -387,9 +387,17 @@ type PriceWithParent = ChargeWire & {
  *
  * A feature does not carry its prices. A metered feature points at a meter, and
  * the prices that bill that meter are found with `meterIds` on
- * `POST /prices/search`. Names come back on `expand: 'plan,addon'` when the
- * API honours it; anything still unnamed is looked up, because a row that
- * shows a ULID is not a plan.
+ * `POST /prices/search`.
+ *
+ * The expand values are **plural** — `addons` and `meters`, not `addon` and
+ * `meter`. This route does not ignore an unknown one the way the subscription
+ * search does; it answers `400 validation_error` naming the field, so the
+ * whole query failed and the Charges tab on every feature showed an error.
+ * `PriceExpandConfig` allows exactly: `meters`, `priceunit`, `plan`, `addons`,
+ * `groups`, `features`.
+ *
+ * Anything still unnamed after the expand is looked up below, because a row
+ * that shows a ULID is not a plan.
  */
 export function useFeatureCharges(meterId: string | null) {
   const client = useFlexprice()
@@ -402,7 +410,7 @@ export function useFeatureCharges(meterId: string | null) {
       const response = await call(() =>
         client.prices.queryPrice({
           meterIds: [id],
-          expand: 'plan,addon,meter',
+          expand: 'plan,addons,meters',
           limit: 100,
           offset: 0,
         } as never),

@@ -184,8 +184,16 @@ type GrantWire = EntitlementWire & {
 /**
  * Every plan and add-on entitlement that grants this feature.
  *
- * `POST /entitlements/search` takes `featureIds`. The parent name is on
- * `expand: 'plan,addon'` when the API sends it, and looked up otherwise.
+ * `POST /entitlements/search` takes `featureIds` and no expand.
+ *
+ * It used to ask for `expand: 'plan,addon'`. Unlike `/prices/search`, this
+ * route does not refuse that — checked against the live API, it answers `200`
+ * — but it does not honour it either: the rows come back with no `plan` and no
+ * `addon` key whether it is sent or not. So it was a field that travelled on
+ * every request and bought nothing.
+ *
+ * The parent names come from the lookup below, which is how the useless
+ * expand went unnoticed: nothing depended on it working.
  */
 export function useFeatureEntitlements(featureId: string) {
   const client = useFlexprice()
@@ -197,7 +205,6 @@ export function useFeatureEntitlements(featureId: string) {
       const response = await call(() =>
         client.entitlements.queryEntitlement({
           featureIds: [featureId],
-          expand: 'plan,addon',
           limit: 100,
           offset: 0,
         } as never),
@@ -237,11 +244,12 @@ export function useFeatureEntitlements(featureId: string) {
       return items.map((item) => {
         const looked =
           item.entityType === 'ADDON'
-            ? item.addon ?? (item.entityId ? addonById.get(item.entityId) : undefined)
-            : item.plan ?? (item.entityId ? planById.get(item.entityId) : undefined)
+            ? (item.addon ?? (item.entityId ? addonById.get(item.entityId) : undefined))
+            : (item.plan ?? (item.entityId ? planById.get(item.entityId) : undefined))
         return {
           entitlement: toEntitlement(item),
-          parentName: looked?.name || (item.entityType === 'ADDON' ? 'Untitled add-on' : 'Untitled plan'),
+          parentName:
+            looked?.name || (item.entityType === 'ADDON' ? 'Untitled add-on' : 'Untitled plan'),
           parentStatus: looked?.status || 'published',
         }
       })
