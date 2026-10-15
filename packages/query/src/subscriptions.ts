@@ -18,6 +18,8 @@ import {
   CommitmentKind,
   type CancelSubscription,
   type CreateSubscription,
+  type SubscriptionPhase,
+  phaseStarts,
   type ChangeLineQuantity,
   type CreateCreditGrant,
   type CreateEntitlement,
@@ -456,17 +458,91 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
  * validation error. Credit grants are scoped by the request itself, so each one
  * carries `scope: 'SUBSCRIPTION'` and no target id.
  */
+/** A `YYYY-MM-DD` day as midnight UTC. */
+const utcDay = (day: string) => new Date(`${day}T00:00:00Z`)
+
+/** A phase's discounts as the API's two coupon fields: whole-phase ids, and ids per charge. */
+function couponFields(phase: SubscriptionPhase): Record<string, unknown> {
+  const whole = phase.discounts.filter((d) => !d.priceId).map((d) => d.couponId)
+  const perCharge: Record<string, string[]> = {}
+  for (const discount of phase.discounts) {
+    if (!discount.priceId) continue
+    perCharge[discount.priceId] = [...(perCharge[discount.priceId] ?? []), discount.couponId]
+  }
+  return {
+    ...(whole.length > 0 ? { coupons: whole } : {}),
+    ...(Object.keys(perCharge).length > 0 ? { lineItemCoupons: perCharge } : {}),
+  }
+}
+
+/**
+ * `POST /subscriptions`, as V1 builds it.
+ *
+ * One phase is the plain contract: its overrides, discounts and per-charge
+ * commitments go at the top level. Several phases are sent as `phases`, each
+ * starting where the one before ends; the first phase's overrides and
+ * discounts are repeated at the top level (the API attaches the plan's charges
+ * from them), the contract ends where the last phase does, and per-charge
+ * commitments are not sent — the API takes them on the contract, not a phase.
+ */
 export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<string, unknown> {
+  const [first] = draft.phases
+  const last = draft.phases[draft.phases.length - 1]
+  const phased = draft.phases.length > 1
+  const starts = phaseStarts(draft)
+  const contractStart = draft.startDate ? utcDay(draft.startDate) : undefined
+
   return {
     customerId: draft.customerId,
     planId: draft.planId,
     currency: draft.currency.toLowerCase(),
     billingPeriod: draft.billingPeriod,
     billingPeriodCount: draft.billingPeriodCount,
-    ...(draft.startDate ? { startDate: new Date(`${draft.startDate}T00:00:00Z`) } : {}),
+    ...(contractStart ? { startDate: contractStart } : {}),
+    ...(last?.endDate ? { endDate: utcDay(last.endDate) } : {}),
     ...(draft.trialPeriodDays ? { trialPeriodDays: draft.trialPeriodDays } : {}),
-    ...(draft.priceOverrides.length > 0
-      ? { overrideLineItems: draft.priceOverrides.map(toOverrideLineItem) }
+    ...(first && first.priceOverrides.length > 0
+      ? { overrideLineItems: first.priceOverrides.map(toOverrideLineItem) }
+      : {}),
+    ...(first ? couponFields(first) : {}),
+    ...(phased
+      ? {
+          phases: draft.phases.map((phase, index) => ({
+            // The first phase starts with the contract, which is "now" when no date was set.
+            startDate: starts[index] ? utcDay(starts[index]) : (contractStart ?? new Date()),
+            ...(phase.endDate ? { endDate: utcDay(phase.endDate) } : {}),
+            ...(phase.priceOverrides.length > 0
+              ? { overrideLineItems: phase.priceOverrides.map(toOverrideLineItem) }
+              : {}),
+            ...couponFields(phase),
+          })),
+        }
+      : draft.chargeCommitments.length > 0
+        ? {
+            lineItemCommitments: Object.fromEntries(
+              draft.chargeCommitments.map((commitment) => [
+                commitment.priceId,
+                {
+                  commitmentType: commitment.type,
+                  ...(commitment.type === 'amount'
+                    ? { commitmentAmount: Number(commitment.value) }
+                    : { commitmentQuantity: Number(commitment.value) }),
+                  ...(commitment.overageFactor
+                    ? { overageFactor: Number(commitment.overageFactor) }
+                    : {}),
+                  enableTrueUp: commitment.trueUp,
+                },
+              ]),
+            ),
+          }
+        : {}),
+    ...(draft.commitmentAmount
+      ? {
+          commitmentAmount: draft.commitmentAmount,
+          ...(draft.commitmentDuration ? { commitmentDuration: draft.commitmentDuration } : {}),
+          ...(draft.overageFactor ? { overageFactor: draft.overageFactor } : {}),
+          enableTrueUp: draft.enableTrueUp,
+        }
       : {}),
     ...(draft.entitlementOverrides.length > 0
       ? {
@@ -488,6 +564,26 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
           })),
         }
       : {}),
+    ...(draft.taxes.length > 0
+      ? {
+          taxRateOverrides: draft.taxes.map((tax) => ({
+            taxRateCode: tax.taxRateCode,
+            currency: draft.currency.toLowerCase(),
+            taxBehavior: tax.taxBehavior,
+            priority: tax.priority,
+            autoApply: tax.autoApply,
+          })),
+        }
+      : {}),
+    ...(draft.addons.length > 0
+      ? { addons: draft.addons.map((addon) => ({ addonId: addon.addonId })) }
+      : {}),
+    billingCycle: draft.billingCycle,
+    ...(draft.billingAnchor ? { billingAnchor: utcDay(draft.billingAnchor) } : {}),
+    ...(draft.paymentTerms ? { paymentTerms: draft.paymentTerms } : {}),
+    prorationBehavior: draft.prorate ? 'create_prorations' : 'none',
+    ...(draft.autoInvoiceThreshold ? { autoInvoiceThreshold: draft.autoInvoiceThreshold } : {}),
+    ...(draft.draft ? { subscriptionStatus: 'draft' } : {}),
   }
 }
 

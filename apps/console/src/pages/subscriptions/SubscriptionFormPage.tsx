@@ -1,14 +1,29 @@
 import { useMemo, useState } from 'react'
 import {
   ApiError,
+  useAddons,
+  useCoupons,
   useCreateSubscription,
+  useCustomerTaxAssociations,
   useCustomers,
   usePlanEntitlements,
   usePlans,
   usePrices,
+  useTaxRates,
   serverReason,
 } from '@fp/query'
-import { DEFAULT_CUSTOMER_QUERY, DEFAULT_PLAN_QUERY, PriceEntityType } from '@fp/domain'
+import {
+  AddonStatus,
+  CouponStatus,
+  type CreateSubscription,
+  DEFAULT_ADDON_QUERY,
+  DEFAULT_COUPON_QUERY,
+  DEFAULT_CUSTOMER_QUERY,
+  DEFAULT_PLAN_QUERY,
+  DEFAULT_TAX_RATE_QUERY,
+  PriceEntityType,
+  TaxRateStatus,
+} from '@fp/domain'
 import { SubscriptionForm } from '@fp/ui/pages'
 
 export interface SubscriptionFormPageProps {
@@ -39,11 +54,42 @@ export function SubscriptionFormPage({
 }: SubscriptionFormPageProps) {
   const create = useCreateSubscription()
   const [planId, setPlanId] = useState('')
+  const [chosenCustomer, setChosenCustomer] = useState(customerId ?? '')
 
   const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, ...PICKER_PAGE })
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, ...PICKER_PAGE })
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = usePlanEntitlements(planId ? [planId] : [])
+  const coupons = useCoupons({
+    ...DEFAULT_COUPON_QUERY,
+    ...PICKER_PAGE,
+    statuses: [CouponStatus.Published],
+  })
+  const addons = useAddons({
+    ...DEFAULT_ADDON_QUERY,
+    ...PICKER_PAGE,
+    statuses: [AddonStatus.Published],
+  })
+  const taxRates = useTaxRates({
+    ...DEFAULT_TAX_RATE_QUERY,
+    ...PICKER_PAGE,
+    statuses: [TaxRateStatus.Published],
+  })
+  const associations = useCustomerTaxAssociations(chosenCustomer)
+  const customerTaxes = useMemo<CreateSubscription['taxes'] | null>(
+    () =>
+      associations.data
+        ? associations.data.map((association) => ({
+            taxRateCode: association.taxRateCode,
+            name: association.taxRateName,
+            percentage: association.percentage,
+            taxBehavior: association.taxBehavior,
+            priority: association.priority,
+            autoApply: association.autoApply,
+          }))
+        : null,
+    [associations.data],
+  )
 
   const customerOptions = useMemo(
     () =>
@@ -74,6 +120,18 @@ export function SubscriptionFormPage({
           : undefined
       }
       onPlanChange={setPlanId}
+      onCustomerChange={setChosenCustomer}
+      coupons={(coupons.data?.coupons ?? []).map((coupon) => ({
+        value: coupon.id,
+        label: coupon.code ? `${coupon.name} · ${coupon.code}` : coupon.name,
+      }))}
+      addons={(addons.data?.addons ?? []).map((addon) => ({ value: addon.id, label: addon.name }))}
+      taxRates={(taxRates.data?.taxRates ?? []).map((rate) => ({
+        code: rate.code,
+        name: rate.name,
+        percentage: rate.percentageValue,
+      }))}
+      customerTaxes={chosenCustomer ? customerTaxes : null}
       trail={[{ label: 'Contracts', onClick: onCancel }, { label: 'New contract' }]}
       {...(step ? { step } : {})}
       onStepChange={onStepChange}

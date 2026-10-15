@@ -4142,8 +4142,17 @@ export const handlers = [
     const row = {
       ...body,
       id: `sub_new_${Date.now()}`,
-      subscription_status: start > Date.now() ? 'incomplete' : 'active',
+      // A draft stays a draft; a future start waits to be activated.
+      subscription_status:
+        body['subscription_status'] === 'draft'
+          ? 'draft'
+          : start > Date.now()
+            ? 'incomplete'
+            : 'active',
       status: 'published',
+      // Lists open on the most recently updated, so a new contract leads them.
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
     sourceFor('subscriptions').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })

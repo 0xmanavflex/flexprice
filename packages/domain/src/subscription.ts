@@ -140,45 +140,217 @@ export const SUBSCRIPTION_FILTERS: readonly ListFilterSpec[] = [
   { field: 'created_at', label: 'Created', kind: 'date' },
 ]
 
+const PHASE_DECIMAL = /^\d+(\.\d+)?$/
+
+/** A day as `YYYY-MM-DD`, or blank. */
+const optionalDay = z
+  .string()
+  .trim()
+  .refine((value) => value === '' || /^\d{4}-\d{2}-\d{2}$/.test(value), 'Pick a date')
+
+/** A decimal amount, or blank for none. */
+const optionalAmount = (message: string) =>
+  z
+    .string()
+    .trim()
+    .refine((value) => value === '' || PHASE_DECIMAL.test(value), message)
+
 /**
- * The rules for starting a subscription.
- *
- * Six steps, one draft: who (`customerId`), what (`planId`, with the currency
- * and period it bills in), the price overrides for this customer alone, the
- * entitlement overrides, the credit grants, and — on review — nothing new. The
- * overrides and grants are lists because a subscription carries any number of
- * them, including none, and an empty list is the common case.
+ * A discount on a phase: a coupon on the whole phase, or — with `priceId` — on
+ * one of its charges. Sent by coupon id, as V1 does, since a coupon need not
+ * carry a redemption code.
  */
-export const createSubscriptionSchema = z.object({
-  customerId: z.string().min(1, 'Choose a customer'),
-  planId: z.string().min(1, 'Choose a plan'),
-  currency: z.string().trim().min(3, 'Choose a currency').max(3, 'Choose a currency'),
-  billingPeriod: z.enum(SUBSCRIPTION_BILLING_PERIODS, { error: 'Choose a billing period' }),
-  billingPeriodCount: z
-    .number({ error: 'Enter a number' })
-    .int('Must be a whole number')
-    .positive('Must be greater than zero'),
-  /** `YYYY-MM-DD`, or empty to start now. */
-  startDate: z.string(),
-  trialPeriodDays: z
-    .number({ error: 'Enter a number' })
-    .int('Must be a whole number')
-    .nonnegative('Cannot be negative')
-    .optional(),
-  priceOverrides: z.array(priceOverrideSchema),
-  entitlementOverrides: z.array(
-    z.object({
-      entitlementId: z.string().min(1),
-      /** Metered: the allowance for this customer; omitted keeps the plan's. */
-      usageLimit: z.number().int().nonnegative('Cannot be negative').optional(),
-      /** Boolean: whether the feature is on; omitted keeps the plan's. */
-      isEnabled: z.boolean().optional(),
-    }),
-  ),
-  creditGrants: z.array(createCreditGrantSchema),
+export const subscriptionDiscountSchema = z.object({
+  couponId: z.string().min(1, 'Choose a coupon'),
+  /** Absent: the whole phase. Set: only this charge. */
+  priceId: z.string().optional(),
 })
+export type SubscriptionDiscount = z.infer<typeof subscriptionDiscountSchema>
+
+/**
+ * One phase of a contract: a stretch of time with its own charges and
+ * discounts. The first phase is the contract itself; each later phase starts
+ * where the one before it ends, so only end dates are chosen. The last phase's
+ * end is the contract's end, and blank means it runs until cancelled.
+ */
+export const subscriptionPhaseSchema = z.object({
+  /** `YYYY-MM-DD`; blank on the last phase means open-ended. */
+  endDate: optionalDay,
+  /** The plan's charges, repriced for this phase. */
+  priceOverrides: z.array(priceOverrideSchema),
+  discounts: z.array(subscriptionDiscountSchema),
+})
+export type SubscriptionPhase = z.infer<typeof subscriptionPhaseSchema>
+
+export const CommitmentType = { Amount: 'amount', Quantity: 'quantity' } as const
+export type CommitmentType = (typeof CommitmentType)[keyof typeof CommitmentType]
+
+/** A minimum on one usage charge: spend (amount) or units (quantity) per period. */
+export const chargeCommitmentSchema = z.object({
+  priceId: z.string().min(1),
+  type: z.enum([CommitmentType.Amount, CommitmentType.Quantity]),
+  value: z
+    .string()
+    .trim()
+    .refine(
+      (value) => PHASE_DECIMAL.test(value) && Number(value) > 0,
+      'Enter a commitment above zero',
+    ),
+  /** Multiplier on usage beyond the commitment; blank is 1, the base rate. */
+  overageFactor: optionalAmount('Enter a factor like 1.2').refine(
+    (value) => value === '' || Number(value) >= 1,
+    'The overage factor is at least 1',
+  ),
+  /** Bill the shortfall when usage stays under the commitment. */
+  trueUp: z.boolean(),
+})
+export type ChargeCommitment = z.infer<typeof chargeCommitmentSchema>
+
+export const PaymentTerms = {
+  Net15: '15 NET',
+  Net30: '30 NET',
+  Net45: '45 NET',
+  Net60: '60 NET',
+  Net75: '75 NET',
+  Net90: '90 NET',
+  EndOfMonth: 'END_OF_MONTH',
+  EndOfNextMonth: 'END_OF_NEXT_MONTH',
+} as const
+export type PaymentTerms = (typeof PaymentTerms)[keyof typeof PaymentTerms]
+
+export const PAYMENT_TERMS_LABEL: Record<PaymentTerms, string> = {
+  [PaymentTerms.Net15]: 'Net 15',
+  [PaymentTerms.Net30]: 'Net 30',
+  [PaymentTerms.Net45]: 'Net 45',
+  [PaymentTerms.Net60]: 'Net 60',
+  [PaymentTerms.Net75]: 'Net 75',
+  [PaymentTerms.Net90]: 'Net 90',
+  [PaymentTerms.EndOfMonth]: 'End of month',
+  [PaymentTerms.EndOfNextMonth]: 'End of next month',
+}
+
+export const BillingCycle = { Anniversary: 'anniversary', Calendar: 'calendar' } as const
+export type BillingCycle = (typeof BillingCycle)[keyof typeof BillingCycle]
+
+/**
+ * The rules for starting a contract, in the order the form asks them — V1's:
+ * customer and plan with the contract's dates; phases, each with its own
+ * charges then discounts; commitments (on the contract and on usage charges);
+ * entitlement overrides and credit grants; taxes; add-ons; and the billing
+ * configuration last.
+ */
+export const createSubscriptionSchema = z
+  .object({
+    customerId: z.string().min(1, 'Choose a customer'),
+    planId: z.string().min(1, 'Choose a plan'),
+    currency: z.string().trim().min(3, 'Choose a currency').max(3, 'Choose a currency'),
+    billingPeriod: z.enum(SUBSCRIPTION_BILLING_PERIODS, { error: 'Choose a billing period' }),
+    billingPeriodCount: z
+      .number({ error: 'Enter a number' })
+      .int('Must be a whole number')
+      .positive('Must be greater than zero'),
+    /** `YYYY-MM-DD`, or empty to start now. */
+    startDate: z.string(),
+    trialPeriodDays: z
+      .number({ error: 'Enter a number' })
+      .int('Must be a whole number')
+      .nonnegative('Cannot be negative')
+      .optional(),
+    /** At least one: the first phase is the contract itself. */
+    phases: z.array(subscriptionPhaseSchema).min(1),
+    /** A minimum spend on the whole contract per commitment period; blank for none. */
+    commitmentAmount: optionalAmount('Enter an amount like 1000'),
+    /** The period the commitment is measured over; blank is the billing period. */
+    commitmentDuration: z.enum(['', ...SUBSCRIPTION_BILLING_PERIODS]),
+    overageFactor: optionalAmount('Enter a factor like 1.2').refine(
+      (value) => value === '' || Number(value) >= 1,
+      'The overage factor is at least 1',
+    ),
+    enableTrueUp: z.boolean(),
+    chargeCommitments: z.array(chargeCommitmentSchema),
+    entitlementOverrides: z.array(
+      z.object({
+        entitlementId: z.string().min(1),
+        /** Metered: the allowance for this customer; omitted keeps the plan's. */
+        usageLimit: z.number().int().nonnegative('Cannot be negative').optional(),
+        /** Boolean: whether the feature is on; omitted keeps the plan's. */
+        isEnabled: z.boolean().optional(),
+      }),
+    ),
+    creditGrants: z.array(createCreditGrantSchema),
+    /** Tax rates applied to the contract's invoices — prefilled from the customer, as V1 does. */
+    taxes: z.array(
+      z.object({
+        taxRateCode: z.string().min(1),
+        name: z.string(),
+        percentage: z.string(),
+        taxBehavior: z.enum(['exclusive', 'inclusive']),
+        priority: z.number().int(),
+        autoApply: z.boolean(),
+      }),
+    ),
+    addons: z.array(z.object({ addonId: z.string().min(1), name: z.string() })),
+    // Billing configuration.
+    billingCycle: z.enum([BillingCycle.Anniversary, BillingCycle.Calendar]),
+    /** `YYYY-MM-DD`: the day cycles are anchored to; blank follows the start date. */
+    billingAnchor: optionalDay,
+    paymentTerms: z.enum([
+      '',
+      PaymentTerms.Net15,
+      PaymentTerms.Net30,
+      PaymentTerms.Net45,
+      PaymentTerms.Net60,
+      PaymentTerms.Net75,
+      PaymentTerms.Net90,
+      PaymentTerms.EndOfMonth,
+      PaymentTerms.EndOfNextMonth,
+    ]),
+    /** Charge or credit the part of a period a change falls in. */
+    prorate: z.boolean(),
+    /** Invoice early once unbilled usage reaches this amount; blank for never. */
+    autoInvoiceThreshold: optionalAmount('Enter an amount like 500'),
+    /** Create as a draft to activate later, rather than starting it. */
+    draft: z.boolean(),
+  })
+  .superRefine((value, ctx) => {
+    // Each phase but the last needs an end, and every end follows its start.
+    let start = value.startDate
+    value.phases.forEach((phase, index) => {
+      const last = index === value.phases.length - 1
+      if (!last && !phase.endDate) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['phases', index, 'endDate'],
+          message: 'Choose when this phase ends',
+        })
+      }
+      if (phase.endDate && start && phase.endDate <= start) {
+        ctx.addIssue({
+          code: 'custom',
+          path: ['phases', index, 'endDate'],
+          message: 'The end must be after the start',
+        })
+      }
+      start = phase.endDate || start
+    })
+  })
 
 export type CreateSubscription = z.infer<typeof createSubscriptionSchema>
+
+/** A blank phase: the plan's charges as they are, no discounts, open-ended. */
+export function emptyPhase(): SubscriptionPhase {
+  return { endDate: '', priceOverrides: [], discounts: [] }
+}
+
+/**
+ * Where each phase starts: the first at the contract's start (blank = now), each
+ * later one where the phase before it ends.
+ */
+export function phaseStarts(draft: Pick<CreateSubscription, 'startDate' | 'phases'>): string[] {
+  return draft.phases.map((_, index) =>
+    index === 0 ? draft.startDate : (draft.phases[index - 1]?.endDate ?? ''),
+  )
+}
 
 export function emptySubscription(): CreateSubscription {
   return {
@@ -188,9 +360,22 @@ export function emptySubscription(): CreateSubscription {
     billingPeriod: BillingPeriod.Monthly as CreateSubscription['billingPeriod'],
     billingPeriodCount: 1,
     startDate: '',
-    priceOverrides: [],
+    phases: [emptyPhase()],
+    commitmentAmount: '',
+    commitmentDuration: '',
+    overageFactor: '',
+    enableTrueUp: false,
+    chargeCommitments: [],
     entitlementOverrides: [],
     creditGrants: [],
+    taxes: [],
+    addons: [],
+    billingCycle: BillingCycle.Anniversary,
+    billingAnchor: '',
+    paymentTerms: '',
+    prorate: true,
+    autoInvoiceThreshold: '',
+    draft: false,
   }
 }
 

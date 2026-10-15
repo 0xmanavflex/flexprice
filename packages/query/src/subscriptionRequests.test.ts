@@ -16,6 +16,7 @@ import {
   EntitlementEntityType,
   FeatureType,
   emptyCreditGrant,
+  emptyPhase,
   emptySubscription,
 } from '@fp/domain'
 import { toCreditGrantRequest } from './creditGrants'
@@ -42,6 +43,8 @@ describe('toCreateSubscriptionRequest', () => {
       currency: 'usd',
       billingPeriod: 'MONTHLY',
       billingPeriodCount: 1,
+      billingCycle: 'anniversary',
+      prorationBehavior: 'create_prorations',
     })
   })
 
@@ -50,7 +53,12 @@ describe('toCreateSubscriptionRequest', () => {
       ...base,
       startDate: '2026-11-01',
       trialPeriodDays: 14,
-      priceOverrides: [{ priceId: 'price_1', billingModel: BillingModel.FlatFee, amount: '9' }],
+      phases: [
+        {
+          ...emptyPhase(),
+          priceOverrides: [{ priceId: 'price_1', billingModel: BillingModel.FlatFee, amount: '9' }],
+        },
+      ],
       entitlementOverrides: [{ entitlementId: 'ent_1', usageLimit: 500 }],
       creditGrants: [
         {
@@ -88,6 +96,103 @@ describe('toCreateSubscriptionRequest', () => {
     const [grant] = request['creditGrants'] as Record<string, unknown>[]
     expect(grant).toMatchObject({ scope: 'SUBSCRIPTION' })
     expect(grant).not.toHaveProperty('planId')
+  })
+})
+
+describe('toCreateSubscriptionRequest — V1 contract fields', () => {
+  it('sends a single phase at the top level: discounts, commitments, taxes, add-ons, billing', () => {
+    const request = toCreateSubscriptionRequest({
+      ...base,
+      startDate: '2026-11-01',
+      phases: [
+        {
+          endDate: '2027-11-01',
+          priceOverrides: [],
+          discounts: [{ couponId: 'cpn_all' }, { couponId: 'cpn_seat', priceId: 'price_seat' }],
+        },
+      ],
+      commitmentAmount: '1000',
+      commitmentDuration: 'ANNUAL',
+      overageFactor: '1.2',
+      enableTrueUp: true,
+      chargeCommitments: [
+        { priceId: 'price_api', type: 'quantity', value: '5000', overageFactor: '', trueUp: false },
+      ],
+      taxes: [
+        {
+          taxRateCode: 'GST18',
+          name: 'GST',
+          percentage: '18',
+          taxBehavior: 'exclusive',
+          priority: 1,
+          autoApply: true,
+        },
+      ],
+      addons: [{ addonId: 'addon_1', name: 'Support' }],
+      billingCycle: 'calendar',
+      billingAnchor: '2026-11-01',
+      paymentTerms: '30 NET',
+      prorate: false,
+      autoInvoiceThreshold: '500',
+      draft: true,
+    })
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<string, unknown>
+    expect(wire).toMatchObject({
+      end_date: '2027-11-01T00:00:00.000Z',
+      coupons: ['cpn_all'],
+      line_item_coupons: { price_seat: ['cpn_seat'] },
+      commitment_amount: '1000',
+      commitment_duration: 'ANNUAL',
+      overage_factor: '1.2',
+      enable_true_up: true,
+      line_item_commitments: {
+        price_api: {
+          commitment_type: 'quantity',
+          commitment_quantity: 5000,
+          enable_true_up: false,
+        },
+      },
+      tax_rate_overrides: [{ tax_rate_code: 'GST18', currency: 'usd', tax_behavior: 'exclusive' }],
+      addons: [{ addon_id: 'addon_1' }],
+      billing_cycle: 'calendar',
+      billing_anchor: '2026-11-01T00:00:00.000Z',
+      payment_terms: '30 NET',
+      proration_behavior: 'none',
+      auto_invoice_threshold: '500',
+      subscription_status: 'draft',
+    })
+    expect(wire).not.toHaveProperty('phases')
+  })
+
+  it('sends several phases, each starting where the last ended, and the contract ending with the last', () => {
+    const request = toCreateSubscriptionRequest({
+      ...base,
+      startDate: '2026-11-01',
+      phases: [
+        {
+          endDate: '2027-02-01',
+          priceOverrides: [{ priceId: 'price_1', billingModel: BillingModel.FlatFee, amount: '0' }],
+          discounts: [{ couponId: 'cpn_intro' }],
+        },
+        { endDate: '2027-11-01', priceOverrides: [], discounts: [] },
+      ],
+      chargeCommitments: [
+        { priceId: 'price_api', type: 'amount', value: '50', overageFactor: '', trueUp: false },
+      ],
+    })
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(request) as Record<string, unknown>
+    expect(wire['end_date']).toBe('2027-11-01T00:00:00.000Z')
+    expect(wire['coupons']).toEqual(['cpn_intro'])
+    expect(wire).not.toHaveProperty('line_item_commitments')
+    expect(wire['phases']).toEqual([
+      {
+        start_date: '2026-11-01T00:00:00.000Z',
+        end_date: '2027-02-01T00:00:00.000Z',
+        override_line_items: [{ price_id: 'price_1', billing_model: 'FLAT_FEE', amount: '0' }],
+        coupons: ['cpn_intro'],
+      },
+      { start_date: '2027-02-01T00:00:00.000Z', end_date: '2027-11-01T00:00:00.000Z' },
+    ])
   })
 })
 

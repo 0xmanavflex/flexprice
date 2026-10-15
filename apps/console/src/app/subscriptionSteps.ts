@@ -8,11 +8,13 @@ import type { WorkflowStep } from '@fp/ui/compositions'
  * The stepper renders whatever it is handed.
  *
  * The ids mirror the form's own steps (`SUBSCRIPTION_FORM_STEPS` in
- * `@fp/ui`): customer & plan, benefits, review.
+ * `@fp/ui`): customer & plan, phases, commitments & benefits, billing, review.
  */
 export const SUBSCRIPTION_STEPS = [
   { id: 'plan', title: 'Customer & plan' },
-  { id: 'benefits', title: 'Benefits' },
+  { id: 'phases', title: 'Phases' },
+  { id: 'commitments', title: 'Commitments & benefits' },
+  { id: 'billing', title: 'Billing' },
   { id: 'review', title: 'Review' },
 ] as const
 
@@ -23,7 +25,11 @@ export const SUBSCRIPTION_STEPS = [
  * and in any link already shared, and `parseStep` would otherwise answer an
  * honest-looking URL by silently restarting the flow.
  */
-const RETIRED_STEPS: Record<string, SubscriptionStepId> = { customer: 'plan' }
+const RETIRED_STEPS: Record<string, SubscriptionStepId> = {
+  customer: 'plan',
+  // Benefits became "Commitments & benefits" when phases and billing got steps of their own.
+  benefits: 'commitments',
+}
 
 export type SubscriptionStepId = (typeof SUBSCRIPTION_STEPS)[number]['id']
 

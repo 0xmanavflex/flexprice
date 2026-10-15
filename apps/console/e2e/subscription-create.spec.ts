@@ -27,7 +27,7 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   // The step is gated on the customer: Next does not advance without one.
   await page.getByRole('button', { name: 'Next' }).click()
   await expect(page.getByText(/customer/i).first()).toBeVisible()
-  await expect(page).not.toHaveURL(/step=benefits/)
+  await expect(page).not.toHaveURL(/step=phases/)
 
   await page.getByRole('combobox').first().click()
   await page.getByRole('option').first().click()
@@ -45,7 +45,7 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
     await page.getByRole('option').first().click()
   }
 
-  for (const step of ['benefits', 'review']) {
+  for (const step of ['phases', 'commitments', 'billing', 'review']) {
     await page.getByRole('button', { name: 'Next' }).click()
     await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
   }

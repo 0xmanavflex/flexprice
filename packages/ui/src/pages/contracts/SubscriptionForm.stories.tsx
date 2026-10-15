@@ -6,7 +6,14 @@ import type { Option } from '@ui/compositions/forms/OptionSelect'
 import { makeCharges, makeEntitlements } from '../product-catalog/plans/planDetailFixtures'
 import { SubscriptionForm, type SubscriptionPlanContext } from './SubscriptionForm'
 
-const STEPS = ['plan', 'benefits', 'review'] as const
+const STEPS = ['plan', 'phases', 'commitments', 'billing', 'review'] as const
+
+const COUPONS: Option[] = [
+  { value: 'cpn_launch', label: 'Launch 20%' },
+  { value: 'cpn_loyal', label: 'Loyalty $50' },
+]
+const ADDONS: Option[] = [{ value: 'addon_support', label: 'Premium support' }]
+const TAX_RATES = [{ code: 'GST18', name: 'GST', percentage: '18' }]
 const PLAN_NAMES = ['Starter', 'Pro', 'Business', 'Scale', 'Enterprise']
 const CUSTOMER_NAMES = [
   'Acme Robotics',
@@ -112,6 +119,19 @@ function SubscriptionFormPlayground({
       plans={plans}
       plan={plan}
       onPlanChange={handlePlanChange}
+      coupons={COUPONS}
+      addons={ADDONS}
+      taxRates={TAX_RATES}
+      customerTaxes={[
+        {
+          taxRateCode: 'VAT20',
+          name: 'VAT',
+          percentage: '20',
+          taxBehavior: 'exclusive',
+          priority: 1,
+          autoApply: true,
+        },
+      ]}
       customerLocked={customerLocked}
       isSubmitting={isSubmitting}
       submitError={submitError || null}
@@ -130,7 +150,7 @@ const withHeight: Decorator = (Story) => (
   </div>
 )
 
-/** Start a contract in three steps: customer & plan, benefits (entitlements, credit grants, commitments) and review. */
+/** Start a contract in V1's order: customer & plan, phases (charges then discounts), commitments & benefits, billing, review. */
 const meta = {
   title: 'App/Contracts/Contract form',
   component: SubscriptionFormPlayground,
@@ -234,45 +254,97 @@ export const Prefilled: Story = {
 }
 
 /** The Plan & charges step lists the chosen plan's charges under the billing card; drag chargeCount to see none or many. */
-export const PlanCharges: Story = {
-  args: { prefilled: true, step: 'plan', chargeCount: 6 },
+export const PhaseCharges: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 6 },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('Charges')).toBeVisible()
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Charges and discounts')).toBeVisible()
+    // Charges first, then discounts, then the button for the next phase.
+    const headings = canvas.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
+    await expect(headings).toEqual(['Charges', 'Discounts'])
+    await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
   },
 }
-
-export const PlanNoCharges: Story = {
-  args: { prefilled: true, step: 'plan', chargeCount: 0 },
+export const PhaseNoCharges: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 0 },
   play: async ({ canvasElement }) => {
-    await expect(within(canvasElement).getByText('This plan has no charges')).toBeVisible()
+    await expect(
+      within(canvasElement).getByText('This plan has no charges to override.'),
+    ).toBeVisible()
   },
 }
-
-export const PlanLoading: Story = {
-  args: { prefilled: true, step: 'plan', planLoading: true },
+export const PhaseLoading: Story = {
+  args: { prefilled: true, step: 'phases', planLoading: true },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText(/Loading the plan's charges/)).toBeVisible()
   },
 }
 
-/** The Benefits step: the plan's entitlements, then credit grants and commitments. */
-export const BenefitsStep: Story = {
-  args: { prefilled: true, step: 'benefits', entitlementCount: 12 },
+/** A phase gets an end date, then a second phase starts where it ends, with its own discounts. */
+export const AddsAPhaseWithItsOwnDiscount: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByText('Entitlements')).toBeVisible()
-    await expect(canvas.getByText('Credit grants')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: /^Ends/ }))
+    const days = await screen.findAllByRole('gridcell')
+    await userEvent.click(within(days[20]!).getByRole('button'))
+    await userEvent.keyboard('{Escape}')
+    await userEvent.click(canvas.getByRole('button', { name: 'Add phase' }))
+    await expect(await canvas.findByText('Phase 2')).toBeVisible()
+
+    await userEvent.click(canvas.getByRole('combobox', { name: 'Coupon for Phase 2' }))
+    await userEvent.click(await screen.findByRole('option', { name: 'Launch 20%' }))
+    await userEvent.click(canvas.getAllByRole('button', { name: 'Add discount' })[1]!)
+    await expect(canvas.getByText('On the whole phase')).toBeVisible()
+  },
+}
+/** The Benefits step: the plan's entitlements, then credit grants and commitments. */
+export const CommitmentsStep: Story = {
+  args: { prefilled: true, step: 'commitments', chargeCount: 4, entitlementCount: 12 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    // V1's order: commitments, then benefits, credit grants, taxes and add-ons.
+    for (const title of [
+      'Commitment',
+      'Charge commitments',
+      'Entitlements',
+      'Credit grants',
+      'Taxes',
+      'Add-ons',
+    ]) {
+      await expect(await canvas.findByText(title, { exact: true })).toBeVisible()
+    }
+    // The customer's tax rate is applied for them.
+    await expect(canvas.getByText('VAT · 20%')).toBeVisible()
+    await userEvent.type(canvas.getByLabelText(/^Minimum commitment/), '1000')
+    await expect(await canvas.findByText('Commitment period')).toBeVisible()
   },
 }
 
+export const BillingStep: Story = {
+  args: { prefilled: true, step: 'billing' },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByText('Billing configuration')).toBeVisible()
+    for (const label of [
+      'Billing cycle',
+      'Billing anchor',
+      'Payment terms',
+      'Prorate',
+      'Auto-invoice threshold',
+      'Create as draft',
+    ]) {
+      await expect(canvas.getByText(label, { exact: true })).toBeVisible()
+    }
+  },
+}
 /** Entitlements come from the plan, so with none chosen the step says so. */
-export const BenefitsNoPlan: Story = {
-  args: { step: 'benefits' },
+export const PhasesNoPlan: Story = {
+  args: { step: 'phases' },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByText('No plan chosen yet')).toBeVisible()
   },
 }
-
 /** The last step swaps Next for the submit, which hands the validated draft over. */
 export const ReviewAndSubmit: Story = {
   args: { prefilled: true, step: 'review' },
