@@ -32,10 +32,10 @@
     "CalendarClock": { "reui": "calendar-dots" },
     "Check": { "reui": "check" },
     "CheckCircle2": { "reui": "check-circle" },
-    "ChevronDown": { "reui": "chevron-right-outline", "rotate": 90 },
-    "ChevronLeft": { "reui": "chevron-right-outline", "rotate": 180 },
-    "ChevronRight": { "reui": "chevron-right-outline" },
-    "ChevronUp": { "reui": "chevron-right-outline", "rotate": 270 },
+    "ChevronDown": { "reui": "up", "style": "filled", "rotate": 180 },
+    "ChevronLeft": { "reui": "up", "style": "filled", "rotate": 270 },
+    "ChevronRight": { "reui": "up", "style": "filled", "rotate": 90 },
+    "ChevronUp": { "reui": "up", "style": "filled" },
     "ChevronsUpDown": { "reui": "chevrons-up-down" },
     "Circle": { "reui": "circle-ring" },
     "CircleAlert": { "reui": "exclamation-circle" },
@@ -166,7 +166,7 @@
     "Webhook": { "reui": "rings-linked", "animated": true },
     "Workflow": { "reui": "squares-ring", "animated": true },
     "Wrench": { "reui": "wrench" },
-    "X": { "reui": "cross-outline" },
+    "X": { "reui": "cross", "style": "filled" },
     "XCircle": { "reui": "cross-circle" },
     "Zap": { "reui": "bolt", "animated": true }
   }

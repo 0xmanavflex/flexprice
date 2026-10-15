@@ -11,6 +11,8 @@ import animated_linesStack from '../reui/icons/animated/outline/lines-stack'
 import animated_receiptSquare from '../reui/icons/animated/outline/receipt-square'
 import animated_ringsLinked from '../reui/icons/animated/outline/rings-linked'
 import animated_squaresRing from '../reui/icons/animated/outline/squares-ring'
+import static_filled_cross from '../reui/icons/default/filled/cross'
+import static_filled_up from '../reui/icons/default/filled/up'
 import static_addFolder from '../reui/icons/default/outline/add-folder'
 import static_addUser from '../reui/icons/default/outline/add-user'
 import static_archive from '../reui/icons/default/outline/archive'
@@ -42,7 +44,6 @@ import static_chartArrowUp from '../reui/icons/default/outline/chart-arrow-up'
 import static_chartBarsSquare from '../reui/icons/default/outline/chart-bars-square'
 import static_check from '../reui/icons/default/outline/check'
 import static_checkCircle from '../reui/icons/default/outline/check-circle'
-import static_chevronRightOutline from '../reui/icons/default/outline/chevron-right-outline'
 import static_chevronsUpDown from '../reui/icons/default/outline/chevrons-up-down'
 import static_circleRing from '../reui/icons/default/outline/circle-ring'
 import static_cloud from '../reui/icons/default/outline/cloud'
@@ -54,7 +55,6 @@ import static_copy from '../reui/icons/default/outline/copy'
 import static_copyAdd from '../reui/icons/default/outline/copy-add'
 import static_creditCard from '../reui/icons/default/outline/credit-card'
 import static_crossCircle from '../reui/icons/default/outline/cross-circle'
-import static_crossOutline from '../reui/icons/default/outline/cross-outline'
 import static_cube from '../reui/icons/default/outline/cube'
 import static_cubeSquare from '../reui/icons/default/outline/cube-square'
 import static_deleteFiles from '../reui/icons/default/outline/delete-files'
@@ -206,15 +206,15 @@ export const Check: IconComponent = staticIcon(static_check, 'Check')
 export { Check as CheckIcon }
 export const CheckCircle2: IconComponent = staticIcon(static_checkCircle, 'CheckCircle2')
 export { CheckCircle2 as CheckCircle2Icon }
-export const ChevronDown: IconComponent = staticIcon(static_chevronRightOutline, 'ChevronDown', 90)
+export const ChevronDown: IconComponent = staticIcon(static_filled_up, 'ChevronDown', 180)
 export { ChevronDown as ChevronDownIcon }
-export const ChevronLeft: IconComponent = staticIcon(static_chevronRightOutline, 'ChevronLeft', 180)
+export const ChevronLeft: IconComponent = staticIcon(static_filled_up, 'ChevronLeft', 270)
 export { ChevronLeft as ChevronLeftIcon }
-export const ChevronRight: IconComponent = staticIcon(static_chevronRightOutline, 'ChevronRight')
+export const ChevronRight: IconComponent = staticIcon(static_filled_up, 'ChevronRight', 90)
 export { ChevronRight as ChevronRightIcon }
 export const ChevronsUpDown: IconComponent = staticIcon(static_chevronsUpDown, 'ChevronsUpDown')
 export { ChevronsUpDown as ChevronsUpDownIcon }
-export const ChevronUp: IconComponent = staticIcon(static_chevronRightOutline, 'ChevronUp', 270)
+export const ChevronUp: IconComponent = staticIcon(static_filled_up, 'ChevronUp')
 export { ChevronUp as ChevronUpIcon }
 export const Circle: IconComponent = staticIcon(static_circleRing, 'Circle')
 export { Circle as CircleIcon }
@@ -474,7 +474,7 @@ export const Workflow: IconComponent = animatedIcon(animated_squaresRing, 'Workf
 export { Workflow as WorkflowIcon }
 export const Wrench: IconComponent = staticIcon(static_wrench, 'Wrench')
 export { Wrench as WrenchIcon }
-export const X: IconComponent = staticIcon(static_crossOutline, 'X')
+export const X: IconComponent = staticIcon(static_filled_cross, 'X')
 export { X as XIcon }
 export const XCircle: IconComponent = staticIcon(static_crossCircle, 'XCircle')
 export { XCircle as XCircleIcon }
