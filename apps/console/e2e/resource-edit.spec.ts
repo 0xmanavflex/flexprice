@@ -28,14 +28,25 @@ test('edits an add-on in place from its detail page', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Renamed add-on' })).toBeVisible()
 })
 
-test('edits a coupon and a cost sheet in place from their detail pages', async ({ page }) => {
+/*
+ * One resource per test, deliberately.
+ *
+ * These two were a single test that walked both journeys — two cold route
+ * loads and two menu flows — inside one 30s budget. It passed locally in
+ * ~15s and timed out at 31.5s on a loaded CI runner, which is the worst kind
+ * of red: nothing was broken, and the signal was indistinguishable from a
+ * real regression. Split, each gets its own budget and neither is near it.
+ */
+test('edits a coupon in place from its detail page', async ({ page }) => {
   await page.goto('/coupons')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Coupon actions' }).click()
   await page.getByRole('menuitem', { name: 'Edit details' }).click()
   await page.getByRole('button', { name: 'Edit coupon details' }).click()
   await expect(page.getByRole('button', { name: 'Save', exact: true })).toBeVisible()
+})
 
+test('edits a cost sheet in place from its detail page', async ({ page }) => {
   await page.goto('/cost-sheets')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Cost sheet actions' }).click()
