@@ -214,10 +214,25 @@ export const BooleanHasNoUnits: Story = {
     await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
     await expect(canvas.queryByLabelText(/^Event name/)).not.toBeInTheDocument()
     await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+  },
+}
 
-    await userEvent.click(canvas.getByRole('radio', { name: /Static/ }))
-    await expect(await canvas.findByRole('heading', { name: 'Usage' })).toBeInTheDocument()
-    await expect(canvas.getByLabelText(/^Unit \(singular\)/)).toBeInTheDocument()
+/** A static feature is a fixed quantity on the plan: nothing is counted, so no usage section or units. */
+export const StaticHasNoUsage: Story = {
+  args: {
+    defaultValue: { name: 'Support tier', lookupKey: 'support-tier', type: FeatureType.Static },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    await expect(canvas.queryByRole('heading', { name: 'Usage' })).not.toBeInTheDocument()
+    await expect(canvas.queryByRole('heading', { name: 'Metering' })).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Unit/)).not.toBeInTheDocument()
+    await expect(canvas.queryByLabelText(/^Reporting unit/)).not.toBeInTheDocument()
+
+    // Units belong to metered features, where usage is counted.
+    await userEvent.click(canvas.getByRole('radio', { name: /Metered/ }))
+    await expect(await canvas.findByLabelText(/^Unit \(singular\)/)).toBeInTheDocument()
   },
 }
 

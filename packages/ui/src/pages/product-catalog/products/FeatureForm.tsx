@@ -200,8 +200,12 @@ const splitValues = (text: string): string[] =>
     .map((v) => v.trim())
     .filter(Boolean)
 
-/** Whether a type has a quantity, and so a unit and a reporting unit. A boolean is on or off. */
-const hasUnits = (type: FeatureType) => type !== FeatureType.Boolean
+/**
+ * Whether a type is measured, and so has a usage unit and a reporting unit.
+ * Only a metered feature counts usage: a boolean is on or off, and a static
+ * feature is a fixed quantity set on the plan, with nothing to count.
+ */
+const hasUnits = (type: FeatureType) => type === FeatureType.Metered
 
 /**
  * The schema candidate: anything hidden or blank is left out rather than sent stale.
@@ -580,7 +584,7 @@ export function FeatureForm(props: FeatureFormProps) {
     </>
   )
 
-  /* A boolean is on or off: it has no quantity, so no unit and no reporting unit. */
+  /* Only a metered feature is counted, so only it has units. */
   const unitRows = hasUnits(type) ? (
     <>
       <FormRow
@@ -647,9 +651,9 @@ export function FeatureForm(props: FeatureFormProps) {
   ) : null
 
   /*
-   * Two sections: what the feature *is* (Details), then how it is counted
-   * (Metering for a metered feature, Usage for a static one). A boolean has
-   * nothing to count, so it is Details alone.
+   * What the feature *is* (Details), then, for a metered feature only, how it
+   * is counted (Metering). Boolean and static features have no usage to count,
+   * so they are Details alone.
    */
   const formEl = (
     <form id={FORM_ID} onSubmit={submitAll} noValidate>
@@ -665,8 +669,6 @@ export function FeatureForm(props: FeatureFormProps) {
             {aggregationRows}
             {unitRows}
           </FormCard>
-        ) : unitRows ? (
-          <FormCard title="Usage">{unitRows}</FormCard>
         ) : null}
       </fieldset>
     </form>
