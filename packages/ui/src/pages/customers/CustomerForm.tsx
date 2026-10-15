@@ -8,7 +8,9 @@ import {
   createCustomerSchema,
   emptyCustomer,
   KEY_PREFIX,
+  countryOptions,
   suggestKey,
+  toTimezoneOptions,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -100,11 +102,28 @@ function listTimezones(): readonly string[] {
 
 const TIMEZONES = listTimezones()
 
-/** The IANA zones as options; a saved value the runtime does not know is kept, not dropped. */
-function timezoneOptions(current: string | undefined) {
+/**
+ * The IANA zones as options; a saved value the runtime does not know is kept.
+ *
+ * Each carries its abbreviation and UTC offset, and matches on both — typing
+ * "IST" or "+05:30" found nothing when the label was the bare zone name.
+ */
+function timezoneChoices(current: string | undefined) {
   const zones = current && !TIMEZONES.includes(current) ? [current, ...TIMEZONES] : TIMEZONES
-  return zones.map((zone) => ({ value: zone, label: zone }))
+  // The label already carries the abbreviation and the offset, and the
+  // combobox filters on it — a hint repeating them only doubles the option's
+  // accessible name.
+  return toTimezoneOptions(zones).map((option) => ({
+    value: option.zone,
+    label: option.label,
+  }))
 }
+
+/** Countries, named in the viewer's language and found by name or code. */
+const COUNTRY_CHOICES = countryOptions().map((option) => ({
+  value: option.code,
+  label: option.label,
+}))
 
 const TAX_OPTIONS = Object.values(CustomerTaxTreatment).map((value) => ({
   value,
@@ -230,16 +249,26 @@ export function CustomerForm({
       </FormRow>
       <FormRow
         label="Country"
-        hint="Two-letter code, e.g. GB."
+        hint="Stored as the two-letter code; search by name."
         error={errors.addressCountry?.message}
       >
         {({ id, ...field }) => (
-          <Input
-            id={id}
-            maxLength={2}
-            disabled={isSubmitting}
-            {...field}
-            {...form.register('addressCountry')}
+          <Controller
+            control={form.control}
+            name="addressCountry"
+            render={({ field: control }) => (
+              <OptionCombobox
+                id={id}
+                {...field}
+                searchable
+                value={control.value || undefined}
+                onValueChange={(value) => control.onChange(value)}
+                options={COUNTRY_CHOICES}
+                placeholder="Search countries…"
+                emptyText="No matching country."
+                disabled={isSubmitting}
+              />
+            )}
           />
         )}
       </FormRow>
@@ -263,7 +292,7 @@ export function CustomerForm({
                 {...field}
                 value={control.value || undefined}
                 onValueChange={(value) => control.onChange(value)}
-                options={timezoneOptions(control.value)}
+                options={timezoneChoices(control.value)}
                 placeholder="Search time zones…"
                 emptyText="No matching time zone."
                 disabled={isSubmitting}
