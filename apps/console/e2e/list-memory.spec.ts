@@ -52,6 +52,19 @@ test('clearing the filter is remembered too', async ({ page }) => {
   await search(page).fill('')
   await expect(page).toHaveURL(/\/features$/)
 
+  /*
+   * Wait for the clear to be *written*, not just shown.
+   *
+   * The URL goes bare on the keystroke; the memory is written by an effect
+   * on the render after it. `page.goto` is a full load that tears the app
+   * down, so navigating on the URL alone raced the write — the store still
+   * held "api", and coming back restored it. It failed only under CI's
+   * parallel load, which is exactly the kind of race a URL assertion hides.
+   */
+  await expect
+    .poll(() => page.evaluate(() => window.sessionStorage.getItem('fp.listMemory.v1') ?? ''))
+    .not.toContain('"search":"api"')
+
   await page.goto('/customers')
   await expect(page.getByRole('table')).toBeVisible({ timeout: 45_000 })
   await page.goto('/features')
