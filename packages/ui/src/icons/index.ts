@@ -13,7 +13,6 @@ import animated_ringsLinked from '../reui/icons/animated/outline/rings-linked'
 import animated_squaresRing from '../reui/icons/animated/outline/squares-ring'
 import static_filled_cross from '../reui/icons/default/filled/cross'
 import static_filled_gear from '../reui/icons/default/filled/gear'
-import static_filled_home from '../reui/icons/default/filled/home'
 import static_filled_link from '../reui/icons/default/filled/link'
 import static_filled_right from '../reui/icons/default/filled/right'
 import static_addFolder from '../reui/icons/default/outline/add-folder'
@@ -80,6 +79,7 @@ import static_filterSearch from '../reui/icons/default/outline/filter-search'
 import static_flask from '../reui/icons/default/outline/flask'
 import static_globe from '../reui/icons/default/outline/globe'
 import static_hash from '../reui/icons/default/outline/hash'
+import static_home from '../reui/icons/default/outline/home'
 import static_hotel from '../reui/icons/default/outline/hotel'
 import static_inbox from '../reui/icons/default/outline/inbox'
 import static_informationCircle from '../reui/icons/default/outline/information-circle'
@@ -298,7 +298,7 @@ export const Headphones: IconComponent = staticIcon(static_message24, 'Headphone
 export { Headphones as HeadphonesIcon }
 export const HelpCircle: IconComponent = staticIcon(static_questionCircle, 'HelpCircle')
 export { HelpCircle as HelpCircleIcon }
-export const House: IconComponent = staticIcon(static_filled_home, 'House')
+export const House: IconComponent = staticIcon(static_home, 'House')
 export { House as HouseIcon }
 export const Inbox: IconComponent = staticIcon(static_inbox, 'Inbox')
 export { Inbox as InboxIcon }

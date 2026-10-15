@@ -78,7 +78,7 @@
     "Hash": { "reui": "hash" },
     "Headphones": { "reui": "message-24" },
     "HelpCircle": { "reui": "question-circle" },
-    "House": { "reui": "home", "style": "filled" },
+    "House": { "reui": "home" },
     "Inbox": { "reui": "inbox" },
     "Info": { "reui": "information-circle" },
     "Kanban": { "reui": "kanban" },
