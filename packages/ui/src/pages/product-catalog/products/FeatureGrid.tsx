@@ -33,6 +33,7 @@ import {
   Formula,
   Pill,
   Status,
+  Tag,
   type EntityColumn,
   dateColumn,
   idColumn,
@@ -124,6 +125,14 @@ const VISIBLE_PLAN_CHIPS = 2
 
 export interface FeatureGridProps {
   features: Feature[]
+  /**
+   * A group id as its name, for the Group chip.
+   *
+   * Resolved by the page: `POST /features/search` refuses `expand=groups`
+   * (checked — it answers 400 "Field is not allowed to be expanded"), so the
+   * feature carries only `groupId` and the names are fetched alongside.
+   */
+  groupName?: ((groupId: string) => string | undefined) | undefined
   /** Plans, entitlements and subscriptions per feature id. */
   linkage?: ReadonlyMap<string, FeatureLinkage>
   /** The linkage is still being read; its three columns show a placeholder. */
@@ -152,6 +161,7 @@ export interface FeatureGridProps {
 
 export function FeatureGrid({
   features,
+  groupName,
   linkage,
   linkageLoading = false,
   onCreateEntitlement,
@@ -189,10 +199,12 @@ export function FeatureGrid({
         cell: (row) => <EntityCell name={row.name} />,
       },
       // The lookup key, as the redesign lists it: the stable handle code uses.
+      // Off by default in the handoff's column set; still one click away.
       idColumn<Feature>('lookupKey', 'Key', (row) => row.lookupKey, {
         width: 180,
         sortable: true,
         sortValue: FeatureSortField.LookupKey,
+        hiddenByDefault: true,
       }),
       {
         // The glyph depends on the row, so the cell is written here rather
@@ -206,7 +218,7 @@ export function FeatureGrid({
         cell: (row) => <FeatureTypePill type={row.type} label={FEATURE_TYPE_LABEL[row.type]} />,
         skeleton: <Skeleton className="h-5 w-20 rounded-full" />,
       },
-      idColumn<Feature>('eventName', 'Event', (row) => row.eventName, { width: 200 }),
+      idColumn<Feature>('eventName', 'Event name', (row) => row.eventName, { width: 200 }),
       {
         id: 'aggregation',
         header: 'Aggregation',
@@ -215,11 +227,27 @@ export function FeatureGrid({
         cell: (row) => <Formula value={aggregationFormula(row)} />,
         skeleton: <Skeleton className="h-6 w-32 rounded-md" />,
       },
+      {
+        // The label the feature is filed under, as a chip.
+        id: 'group',
+        header: 'Group',
+        width: 140,
+        text: (row) => (row.groupId ? (groupName?.(row.groupId) ?? row.groupId) : ''),
+        cell: (row) => {
+          if (!row.groupId) return <EmDash />
+          const name = groupName?.(row.groupId)
+          // The id until the names arrive — never a blank cell for a feature
+          // that does have a group.
+          return <Tag>{name ?? row.groupId}</Tag>
+        },
+        skeleton: <Skeleton className="h-6 w-20 rounded-full" />,
+      },
       // The unit a metered feature counts in; non-metered features have none.
       {
         id: 'unit',
         header: 'Unit',
         width: 100,
+        hiddenByDefault: true,
         text: (row) => row.unitSingular,
         cell: (row) =>
           row.unitSingular ? (
@@ -233,6 +261,7 @@ export function FeatureGrid({
         id: 'plans',
         header: 'Used in',
         width: 200,
+        hiddenByDefault: true,
         text: (row) => (linkage?.get(row.id)?.plans ?? []).map((plan) => plan.name).join(', '),
         cell: (row) => {
           const entry = linkage?.get(row.id)
@@ -268,9 +297,7 @@ export function FeatureGrid({
         id: 'entitlements',
         header: 'Entitlements',
         width: 160,
-        // Not in the redesign's default layout. Kept in the `⋯` column menu
-        // rather than dropped: the count is real and nothing else shows it.
-        hiddenByDefault: true,
+        align: 'center',
         text: (row) => String(linkage?.get(row.id)?.entitlements ?? 0),
         cell: (row) => {
           const entry = linkage?.get(row.id)
@@ -309,8 +336,7 @@ export function FeatureGrid({
         id: 'subscriptions',
         header: 'Contracts',
         width: 120,
-        // Same as entitlements: off by default, one click away.
-        hiddenByDefault: true,
+        align: 'center',
         text: (row) => String(linkage?.get(row.id)?.subscriptions ?? ''),
         cell: (row) => {
           const entry = linkage?.get(row.id)
@@ -324,6 +350,8 @@ export function FeatureGrid({
         id: 'status',
         header: 'Status',
         width: 110,
+        // Removed from the default set by the handoff; status is a filter.
+        hiddenByDefault: true,
         text: (row) => FEATURE_STATUS_LABEL[row.status],
         cell: (row) => <Status value={FEATURE_STATUS_LABEL[row.status]} />,
         skeleton: <Skeleton className="h-6 w-20 rounded-full" />,
@@ -345,7 +373,7 @@ export function FeatureGrid({
         ...(locale ? { locale } : {}),
       }),
     ],
-    [linkage, linkageLoading, onCreateEntitlement, locale],
+    [linkage, linkageLoading, onCreateEntitlement, locale, groupName],
   )
 
   const isDefaultSort =

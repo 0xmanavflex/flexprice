@@ -159,11 +159,46 @@ export const Linkage: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await canvas.findByText('API calls')
-    await expect(canvas.getAllByText('Starter').length).toBeGreaterThan(0)
-    await expect(canvas.getByText('+1')).toBeInTheDocument()
-    // Off by default, so neither count is on the page until someone asks.
-    await expect(canvas.queryByText('3 entitlements')).toBeNull()
-    await expect(canvas.queryByText('1,280')).toBeNull()
+
+    // Entitlements and Contracts are in the handoff's column set, so their
+    // counts are on the page without asking.
+    await expect(canvas.getByRole('columnheader', { name: 'Entitlements' })).toBeInTheDocument()
+    await expect(canvas.getByRole('columnheader', { name: 'Contracts' })).toBeInTheDocument()
+
+    // "Used in" is not, so the plan chips are behind the `⋯` menu.
+    await expect(canvas.queryByRole('columnheader', { name: 'Used in' })).toBeNull()
+    await expect(canvas.queryByText('+1')).toBeNull()
+  },
+}
+
+/**
+ * The columns the handoff asks for, in its order.
+ *
+ * §3: "Name, Type, Event name, Aggregation, Group, Entitlements, Contracts —
+ * aggregation as a formula, group as a chip; Status, Updated and Charges
+ * removed". Key, Unit, Used in and Status are real and stay in the `⋯` menu
+ * rather than being dropped.
+ */
+export const DefaultColumns: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await canvas.findByText('API calls')
+    const headers = canvas
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent?.trim())
+      .filter((text): text is string => Boolean(text))
+    await expect(headers.slice(0, 7)).toEqual([
+      'Name',
+      'Type',
+      'Event name',
+      'Aggregation',
+      'Group',
+      'Entitlements',
+      'Contracts',
+    ])
+    for (const gone of ['Key', 'Unit', 'Used in', 'Status']) {
+      await expect(canvas.queryByRole('columnheader', { name: gone })).toBeNull()
+    }
   },
 }
 

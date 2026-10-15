@@ -1,6 +1,18 @@
 import { useMemo, useState } from 'react'
-import { type CloneFeature, type Feature, type FeatureQuery } from '@fp/domain'
-import { useCloneFeature, useDeleteFeature, useFeatureLinkage, useFeatures } from '@fp/query'
+import {
+  DEFAULT_GROUP_QUERY,
+  GroupEntityType,
+  type CloneFeature,
+  type Feature,
+  type FeatureQuery,
+} from '@fp/domain'
+import {
+  useCloneFeature,
+  useDeleteFeature,
+  useFeatureLinkage,
+  useFeatures,
+  useGroups,
+} from '@fp/query'
 import { FeatureCloneDialog, FeatureGrid, type FeatureLinkage } from '@fp/ui/pages'
 import { ConfirmDialog, ListState, PageBody } from '@fp/ui/compositions'
 import { Button } from '@fp/ui/primitives'
@@ -50,6 +62,24 @@ export function FeatureListPage({
   }
   const failure = toListFailure(features.error, 'features')
   const rows = useMemo(() => features.data?.features ?? [], [features.data])
+
+  /*
+   * Group names for the Group chip.
+   *
+   * The feature carries only `groupId`: `POST /features/search` refuses
+   * `expand=groups` with a 400, so the names are a second read. Narrowed to
+   * feature groups server-side, so a hundred price groups cannot crowd them
+   * out of the page.
+   */
+  const groups = useGroups({
+    ...DEFAULT_GROUP_QUERY,
+    pageSize: 100,
+    entityType: GroupEntityType.Feature,
+  })
+  const groupNames = useMemo(
+    () => new Map((groups.data?.groups ?? []).map((group) => [group.id, group.name])),
+    [groups.data],
+  )
 
   /*
    * Plans, entitlements and subscriptions per feature, for the rows on screen.
@@ -111,6 +141,7 @@ export function FeatureListPage({
         >
           <FeatureGrid
             features={rows}
+            groupName={(groupId) => groupNames.get(groupId)}
             linkage={linkage}
             linkageLoading={linked.isPending}
             onCreateEntitlement={setEntitling}

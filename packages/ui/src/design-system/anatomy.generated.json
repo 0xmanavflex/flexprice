@@ -2568,7 +2568,8 @@
         "PencilIcon",
         "Pill",
         "PlusIcon",
-        "Status"
+        "Status",
+        "Tag"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/products/FeatureGrid.stories.tsx"
@@ -5998,6 +5999,7 @@
       "usedBy": [
         "AddonGrid",
         "EventGrid",
+        "FeatureGrid",
         "PlanAiSetupView",
         "PlanGrid"
       ],
