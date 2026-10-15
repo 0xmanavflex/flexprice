@@ -14,6 +14,7 @@ import {
   Section,
 } from '@ui/compositions'
 import { Status, Tag } from '@ui/pages'
+import { PlanCustomerPreview } from '@ui/pages/product-catalog/plans/PlanCustomerPreview'
 import { PlanChargesView } from '@ui/pages/product-catalog/plans/PlanChargesView'
 import { PlanCreditGrantsView } from '@ui/pages/product-catalog/plans/PlanCreditGrantsView'
 import { PlanEntitlementsView } from '@ui/pages/product-catalog/plans/PlanEntitlementsView'
@@ -136,14 +137,23 @@ function PlanDetailPage({
         />
 
         {tab === 'overview' ? (
-          <PlanChargesView
-            charges={charges}
-            readOnly={archived}
-            meterUnit={meterUnitOf}
-            onAdd={fn()}
-            onEdit={fn()}
-            onTerminate={fn()}
-          />
+          <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+            <PlanChargesView
+              charges={charges}
+              readOnly={archived}
+              meterUnit={meterUnitOf}
+              onAdd={fn()}
+              onEdit={fn()}
+              onTerminate={fn()}
+            />
+            {/* What a customer would be shown, beside what is being edited. */}
+            <PlanCustomerPreview
+              charges={charges}
+              entitlements={entitlements}
+              grants={grants}
+              meterUnit={meterUnitOf}
+            />
+          </div>
         ) : null}
 
         {tab === 'entitlements' ? (

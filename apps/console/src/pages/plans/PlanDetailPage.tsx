@@ -14,6 +14,7 @@ import {
   type Entitlement,
   EntitlementEntityType,
   FeatureType,
+  PLAN_KIND_LABEL,
   PLAN_STATUS_LABEL,
   PriceEntityType,
   PriceType,
@@ -21,6 +22,7 @@ import {
   chargeToDraft,
   creditGrantToEdit,
   entitlementToEdit,
+  planKind,
 } from '@fp/domain'
 import {
   useArchivePlan,
@@ -49,6 +51,7 @@ import {
   EntitlementEditForm,
   type FeatureOption,
   PlanChargesView,
+  PlanCustomerPreview,
   PlanEntitlementsView,
   Pill,
   Status,
@@ -171,7 +174,7 @@ export function PlanDetailPage({
         badges={
           <>
             <Status value={PLAN_STATUS_LABEL[record.status]} />
-            {charges.isSuccess ? <Pill>{planKind(charged)}</Pill> : null}
+            {charges.isSuccess ? <Pill>{planKindLabel(charged)}</Pill> : null}
             {billedLabel(charged) ? <Pill>{billedLabel(charged)}</Pill> : null}
           </>
         }
@@ -290,9 +293,24 @@ export function PlanDetailPage({
  * dialog that asks Fixed or Usage first; a row's Edit opens the form directly.
  * An edit is saved as a new price version; terminate ends a charge behind a confirm.
  */
+/**
+ * Charges, with the customer's view of the plan beside them.
+ *
+ * The preview is the same `PlanPreviewCard` the create form shows while a plan
+ * is being written, fed here from what was saved. Editing a charge and seeing
+ * only a table row change is the gap this closes: the card is what a customer
+ * would be shown, and it is the reason to check a price twice.
+ *
+ * It reads entitlements and credit grants as well as charges, because the card
+ * shows all three. Every one of those three queries is already made by the
+ * tabs beside this one under the same keys, so react-query serves them from
+ * cache rather than fetching again.
+ */
 function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean }) {
   const charges = usePrices(PriceEntityType.Plan, planId)
-  const { meters, units, priceGroups } = usePlanFormOptions()
+  const entitlements = useEntitlements(EntitlementEntityType.Plan, planId)
+  const grants = useCreditGrants(CreditGrantScope.Plan, planId)
+  const { meters, units, priceGroups, allFeatures } = usePlanFormOptions()
   const create = useCreateBulkPrices()
   const updatePrice = useUpdatePrice()
   const [form, setForm] = useState<'add' | Charge | null>(null)
@@ -323,19 +341,31 @@ function ChargesTab({ planId, readOnly }: { planId: string; readOnly: boolean })
     )
   }
 
+  const meterUnit = (id: string) => meters.find((m) => m.id === id)?.unit
+  const featureUnit = (id: string) => allFeatures.find((f) => f.id === id)?.unitPlural
+
   return (
     <>
-      <PlanChargesView
-        charges={rows}
-        readOnly={readOnly}
-        loading={loading}
-        error={failed}
-        onRetry={() => void charges.refetch()}
-        meterUnit={(id) => meters.find((m) => m.id === id)?.unit}
-        onAdd={() => setForm('add')}
-        onEdit={(charge) => setForm(charge)}
-        onTerminate={(charge) => setTerminating(charge)}
-      />
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_340px]">
+        <PlanChargesView
+          charges={rows}
+          readOnly={readOnly}
+          loading={loading}
+          error={failed}
+          onRetry={() => void charges.refetch()}
+          meterUnit={meterUnit}
+          onAdd={() => setForm('add')}
+          onEdit={(charge) => setForm(charge)}
+          onTerminate={(charge) => setTerminating(charge)}
+        />
+        <PlanCustomerPreview
+          charges={rows}
+          entitlements={entitlements.data ?? []}
+          grants={grants.data ?? []}
+          meterUnit={meterUnit}
+          featureUnit={featureUnit}
+        />
+      </div>
 
       <AddChargeDialog
         open={form !== null}
@@ -651,12 +681,20 @@ function count(rows: readonly unknown[] | undefined): { count?: number } {
   return rows ? { count: rows.length } : {}
 }
 
-function planKind(charges: Charge[]): string {
-  const hasFixed = charges.some((c) => c.type === PriceType.Fixed)
-  const hasUsage = charges.some((c) => c.type === PriceType.Usage)
-  if (charges.length === 0) return 'No charges yet'
-  if (hasFixed && hasUsage) return 'Hybrid plan'
-  return hasUsage ? 'Usage-based plan' : 'Flat-rate plan'
+/**
+ * The same label the Type column shows in the plans grid.
+ *
+ * The grid reads the split off the plan's expanded prices; here the charges
+ * are already loaded, so they are counted directly. Both go through
+ * `planKind`, so the badge and the column cannot drift apart.
+ */
+function planKindLabel(charges: Charge[]): string {
+  return PLAN_KIND_LABEL[
+    planKind({
+      fixedChargeCount: charges.filter((c) => c.type === PriceType.Fixed).length,
+      usageChargeCount: charges.filter((c) => c.type === PriceType.Usage).length,
+    })
+  ]
 }
 
 function billedLabel(charges: Charge[]): string | null {

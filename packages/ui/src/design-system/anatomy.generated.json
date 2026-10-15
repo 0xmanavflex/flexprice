@@ -435,6 +435,7 @@
       "usedBy": [
         "GoogleButton",
         "SignInScreen",
+        "SignUpConfirmScreen",
         "SignUpScreen",
         "SwitchLine"
       ],
@@ -2989,6 +2990,7 @@
       ],
       "usedBy": [
         "SignInForm",
+        "SignUpConfirmScreen",
         "SignUpScreen"
       ],
       "story": null
@@ -5516,6 +5518,16 @@
       "usedBy": [],
       "story": "./src/pages/auth/SignInScreen.stories.tsx"
     },
+    "SignUpConfirmScreen": {
+      "file": "src/pages/auth/SignUpConfirmScreen.tsx",
+      "layer": "surface",
+      "composes": [
+        "AuthFrame",
+        "FormHead"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/auth/SignUpConfirmScreen.stories.tsx"
+    },
     "SignUpScreen": {
       "file": "src/pages/auth/SignUpScreen.tsx",
       "layer": "surface",
@@ -7182,6 +7194,13 @@
         "SignInScreen"
       ]
     },
+    "./src/pages/auth/SignUpConfirmScreen.stories.tsx": {
+      "title": "App/Sign-in/Sign-up confirmation",
+      "component": "SignUpConfirmScreen",
+      "uses": [
+        "SignUpConfirmScreen"
+      ]
+    },
     "./src/pages/auth/SignUpScreen.stories.tsx": {
       "title": "App/Sign-in/Sign-up screen",
       "component": "SignUpScreen",
@@ -7682,6 +7701,7 @@
         "PencilIcon",
         "PlanChargesView",
         "PlanCreditGrantsView",
+        "PlanCustomerPreview",
         "PlanEntitlementsView",
         "Properties",
         "Section",
@@ -8190,6 +8210,14 @@
         "SignInScreen"
       ]
     },
+    "SignUpConfirmPage": {
+      "file": "apps/console/src/pages/auth/SignUpConfirmPage.tsx",
+      "pattern": "Other",
+      "route": null,
+      "uses": [
+        "SignUpConfirmScreen"
+      ]
+    },
     "SignUpPage": {
       "file": "apps/console/src/pages/auth/SignUpPage.tsx",
       "pattern": "Other",
@@ -8581,6 +8609,7 @@
         "Pill",
         "PlanChargesView",
         "PlanCreditGrantsView",
+        "PlanCustomerPreview",
         "PlanEntitlementsView",
         "Status"
       ]
