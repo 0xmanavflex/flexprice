@@ -209,6 +209,7 @@ export function PlanGrid({
       id,
       header,
       width,
+      align: 'center',
       text: (row) => {
         const value = of(linkage?.get(row.id))
         return value === undefined ? '' : String(value)
@@ -246,6 +247,7 @@ export function PlanGrid({
         id: 'charges',
         header: 'Charges',
         width: 110,
+        align: 'center',
         text: (row) => String(row.chargeCount),
         cell: (row) => count(row.chargeCount),
         skeleton: <Skeleton className="h-4 w-8" />,

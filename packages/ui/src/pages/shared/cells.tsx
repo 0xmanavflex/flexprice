@@ -29,7 +29,8 @@ import { Money } from './Money'
  *   column only pays off when you are summing a column by eye, which nobody
  *   does in a list of invoices; what it actually does is put the amount an
  *   arm's length from the row it belongs to. Numbers get `tabular-nums` so the
- *   digits still line up.
+ *   digits still line up. The one exception is `align: 'center'`, for a narrow
+ *   column that is nothing but a count — see the prop.
  *
  *   **Medium is the heaviest weight.** Nothing here is bold. In a table, weight
  *   is the strongest signal there is, and a bold name column spends it on the
@@ -96,6 +97,17 @@ export interface EntityColumn<T> {
   hiddenByDefault?: boolean | undefined
   /** Extra classes on the `<td>`. Layout only — the helpers own the type. */
   cellClassName?: string | undefined
+  /**
+   * `center` centres the header and the cell. Left is the default and the
+   * rule; see the note at the top of this file for why amounts stay left.
+   *
+   * The exception is a narrow column of counts — Charges, Entitlements,
+   * Credit grants, Contracts on the catalogue lists. There the number *is*
+   * the column: there is no label beside it for the eye to start from, so
+   * left-aligning a one or two digit figure under a wider header leaves it
+   * adrift. The redesign asks for these centred and it is right about them.
+   */
+  align?: 'start' | 'center' | undefined
 }
 
 /* ------------------------------------------------------------------ *

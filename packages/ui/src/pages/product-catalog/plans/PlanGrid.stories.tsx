@@ -312,3 +312,32 @@ export const Playground: StoryObj<PlaygroundArgs> = {
   },
   render: (args) => <PlanGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
 }
+
+/**
+ * The count columns are centred.
+ *
+ * `cells.tsx` says everything is left-aligned, and for amounts it is right —
+ * a figure an arm's length from its row helps nobody. A column that is
+ * *only* a count is the exception the handoff calls out: there is no label
+ * beside the number for the eye to start from, so a one-digit figure under a
+ * wider header reads as adrift. Name and Status stay left.
+ */
+export const CountColumnsAreCentred: Story = {
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    const starter = (await canvas.findByText('Starter')).closest('tr') as HTMLElement
+    const cells = Array.from(starter.querySelectorAll('td'))
+    const headers = canvas
+      .getAllByRole('columnheader')
+      .map((header) => header.textContent?.trim() ?? '')
+
+    const centred = ['Charges', 'Entitlements', 'Credit grants', 'Contracts']
+    for (const name of centred) {
+      const cell = cells[headers.indexOf(name)] as HTMLElement
+      await expect(getComputedStyle(cell).textAlign).toBe('center')
+    }
+    // And the columns that are not counts are untouched.
+    const plan = cells[headers.indexOf('Plan')] as HTMLElement
+    await expect(getComputedStyle(plan).textAlign).not.toBe('center')
+  },
+}

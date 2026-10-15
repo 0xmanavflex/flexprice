@@ -298,9 +298,14 @@ export interface EntityListProps<T> {
  * more spent on the data. Tracking is what keeps 11px uppercase from setting
  * as a single grey smudge.
  */
-function HeaderLabel({ title }: { title: string }) {
+function HeaderLabel({ title, className }: { title: string; className?: string }) {
   return (
-    <span className="text-muted-foreground text-[11px] font-medium tracking-wider uppercase">
+    <span
+      className={cn(
+        'text-muted-foreground flex text-[11px] font-medium tracking-wider uppercase',
+        className,
+      )}
+    >
       {title}
     </span>
   )
@@ -662,7 +667,14 @@ export function EntityList<T extends object>({
         meta: {
           headerTitle: column.header,
           skeleton: column.skeleton ?? <Skeleton className="h-4 w-24" />,
-          ...(column.cellClassName ? { cellClassName: column.cellClassName } : {}),
+          ...(column.cellClassName || column.align === 'center'
+            ? {
+                cellClassName: cn(
+                  column.align === 'center' && 'text-center [&>*]:mx-auto',
+                  column.cellClassName,
+                ),
+              }
+            : {}),
         },
         header: () =>
           column.sortable && onSortChange ? (
@@ -678,7 +690,10 @@ export function EntityList<T extends object>({
               }}
             />
           ) : column.header ? (
-            <HeaderLabel title={column.header} />
+            <HeaderLabel
+              title={column.header}
+              {...(column.align === 'center' ? { className: 'justify-center' } : {})}
+            />
           ) : (
             <span className="sr-only">Actions</span>
           ),
