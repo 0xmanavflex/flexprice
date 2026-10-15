@@ -327,6 +327,31 @@ export const ChargesAtOtherCadences: Story = {
   },
 }
 
+/** A fixed charge can be billed at another quantity — 25 seats — and the review says so. */
+export const SetsAFixedChargeQuantity: Story = {
+  args: { prefilled: true, step: 'phases', chargeCount: 2 },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    const [quantity] = canvas.getAllByLabelText(/^Quantity of .* in Phase 1$/)
+    await userEvent.type(quantity!, '25')
+    for (const step of ['commitments', 'billing', 'review']) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+      await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
+    }
+    await expect(await canvas.findByText(/× 25$/)).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({
+          phases: [
+            expect.objectContaining({ quantities: [expect.objectContaining({ quantity: '25' })] }),
+          ],
+        }),
+      ),
+    )
+  },
+}
+
 export const PhaseNoCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 0 },
   play: async ({ canvasElement }) => {

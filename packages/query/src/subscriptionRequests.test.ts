@@ -108,6 +108,7 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
         {
           endDate: '2027-11-01',
           priceOverrides: [],
+          quantities: [],
           discounts: [{ couponId: 'cpn_all' }, { couponId: 'cpn_seat', priceId: 'price_seat' }],
         },
       ],
@@ -164,6 +165,30 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
     expect(wire).not.toHaveProperty('phases')
   })
 
+  it('folds a fixed charge quantity into its override, or sends it alone', () => {
+    const wire = CreateSubscriptionRequest$outboundSchema.parse(
+      toCreateSubscriptionRequest({
+        ...base,
+        phases: [
+          {
+            ...emptyPhase(),
+            priceOverrides: [
+              { priceId: 'price_a', billingModel: BillingModel.FlatFee, amount: '9' },
+            ],
+            quantities: [
+              { priceId: 'price_a', quantity: '3' },
+              { priceId: 'price_seats', quantity: '25' },
+            ],
+          },
+        ],
+      }),
+    ) as Record<string, unknown>
+    expect(wire['override_line_items']).toEqual([
+      { price_id: 'price_a', billing_model: 'FLAT_FEE', amount: '9', quantity: '3' },
+      { price_id: 'price_seats', quantity: '25' },
+    ])
+  })
+
   it('sends include_price_ids only when charges at other cadences are opted in', () => {
     expect(toCreateSubscriptionRequest(base)).not.toHaveProperty('includePriceIds')
     const wire = CreateSubscriptionRequest$outboundSchema.parse(
@@ -180,9 +205,10 @@ describe('toCreateSubscriptionRequest — V1 contract fields', () => {
         {
           endDate: '2027-02-01',
           priceOverrides: [{ priceId: 'price_1', billingModel: BillingModel.FlatFee, amount: '0' }],
+          quantities: [],
           discounts: [{ couponId: 'cpn_intro' }],
         },
-        { endDate: '2027-11-01', priceOverrides: [], discounts: [] },
+        { endDate: '2027-11-01', priceOverrides: [], quantities: [], discounts: [] },
       ],
       chargeCommitments: [
         { priceId: 'price_api', type: 'amount', value: '50', overageFactor: '', trueUp: false },

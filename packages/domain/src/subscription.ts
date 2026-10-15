@@ -179,6 +179,19 @@ export const subscriptionPhaseSchema = z.object({
   endDate: optionalDay,
   /** The plan's charges, repriced for this phase. */
   priceOverrides: z.array(priceOverrideSchema),
+  /** Fixed charges billed at another quantity in this phase, e.g. 25 seats. */
+  quantities: z.array(
+    z.object({
+      priceId: z.string().min(1),
+      quantity: z
+        .string()
+        .trim()
+        .refine(
+          (value) => /^\d+(\.\d+)?$/.test(value) && Number(value) > 0,
+          'Enter a quantity above zero',
+        ),
+    }),
+  ),
   discounts: z.array(subscriptionDiscountSchema),
 })
 export type SubscriptionPhase = z.infer<typeof subscriptionPhaseSchema>
@@ -347,7 +360,7 @@ export type CreateSubscription = z.infer<typeof createSubscriptionSchema>
 
 /** A blank phase: the plan's charges as they are, no discounts, open-ended. */
 export function emptyPhase(): SubscriptionPhase {
-  return { endDate: '', priceOverrides: [], discounts: [] }
+  return { endDate: '', priceOverrides: [], quantities: [], discounts: [] }
 }
 
 /**

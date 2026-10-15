@@ -344,6 +344,7 @@ export function SubscriptionForm({
       phases: draft.phases.map((phase) => ({
         ...phase,
         priceOverrides: phase.priceOverrides.filter((o) => billed.has(o.priceId)),
+        quantities: phase.quantities.filter((q) => billed.has(q.priceId)),
         discounts: phase.discounts.filter((d) => !d.priceId || billed.has(d.priceId)),
       })),
       chargeCommitments: draft.chargeCommitments.filter((c) => billed.has(c.priceId)),
@@ -889,14 +890,26 @@ function ChargeOverrides({
   isLoading,
   overrides,
   onChange,
+  quantities,
+  onQuantities,
   phaseLabel,
 }: {
   charges: Charge[]
   isLoading: boolean
   overrides: PriceOverride[]
   onChange: (next: PriceOverride[]) => void
+  quantities: SubscriptionPhase['quantities']
+  onQuantities: (next: SubscriptionPhase['quantities']) => void
   phaseLabel: string
 }) {
+  const quantityOf = (priceId: string) =>
+    quantities.find((q) => q.priceId === priceId)?.quantity ?? ''
+  const setQuantity = (priceId: string, quantity: string) =>
+    onQuantities(
+      quantity.trim() === ''
+        ? quantities.filter((q) => q.priceId !== priceId)
+        : [...quantities.filter((q) => q.priceId !== priceId), { priceId, quantity }],
+    )
   const [editing, setEditing] = useState<string | null>(null)
   const byId = new Map(overrides.map((o) => [o.priceId, o]))
 
@@ -929,6 +942,17 @@ function ChargeOverrides({
                 />
               </div>
               <div className="flex shrink-0 items-center gap-2">
+                {/* A fixed charge can be billed at another quantity, e.g. 25 seats. */}
+                {charge.type === PriceType.Fixed ? (
+                  <Input
+                    aria-label={`Quantity of ${name} in ${phaseLabel}`}
+                    inputMode="decimal"
+                    placeholder="Qty 1"
+                    className="h-8 w-20"
+                    value={quantityOf(charge.id)}
+                    onChange={(event) => setQuantity(charge.id, event.target.value)}
+                  />
+                ) : null}
                 {override ? <Badge variant="info-light">Overridden</Badge> : null}
                 {override && editing !== charge.id ? (
                   <Button
@@ -1109,6 +1133,12 @@ function PhasesStep({
         const label = `Phase ${index + 1}`
         const start = starts[index]
         const endError = errors?.[index]?.endDate?.message
+        const quantityErrors = errors?.[index]?.quantities
+        const quantityError = quantityErrors
+          ? Object.values(quantityErrors as Record<string, { quantity?: { message?: string } }>)
+              .map((row) => row?.quantity?.message)
+              .find(Boolean)
+          : undefined
         return (
           <FormCard
             key={index}
@@ -1168,8 +1198,15 @@ function PhasesStep({
               isLoading={isLoading}
               overrides={phase.priceOverrides}
               onChange={(priceOverrides) => update(index, { priceOverrides })}
+              quantities={phase.quantities}
+              onQuantities={(quantities) => update(index, { quantities })}
               phaseLabel={label}
             />
+            {quantityError ? (
+              <p className="text-destructive px-5 pb-3 text-xs sm:px-6" role="alert">
+                {quantityError}
+              </p>
+            ) : null}
             <SubHeading>Discounts</SubHeading>
             <PhaseDiscounts
               discounts={phase.discounts}
@@ -1940,13 +1977,17 @@ function ReviewStep({
           charges.map((charge) => {
             const override = overrides.get(charge.id)
             const pricing = chargePricing(charge, override)
+            const quantity = values.phases[0]?.quantities.find((q) => q.priceId === charge.id)
             return (
               <div
                 key={charge.id}
                 className="flex items-start justify-between gap-4 px-5 py-3 text-sm sm:px-6"
               >
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate font-medium">{chargeName(charge)}</span>
+                  <span className="truncate font-medium">
+                    {chargeName(charge)}
+                    {quantity ? ` × ${quantity.quantity}` : ''}
+                  </span>
                   <PricingText
                     pricing={pricing}
                     period={BILLING_PERIOD_LABEL[charge.billingPeriod]}

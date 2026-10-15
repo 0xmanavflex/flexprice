@@ -496,6 +496,24 @@ export function useCustomerContractCounts(customerIds: readonly string[]) {
 /** A `YYYY-MM-DD` day as midnight UTC. */
 const utcDay = (day: string) => new Date(`${day}T00:00:00Z`)
 
+/**
+ * A phase's charge overrides as `override_line_items`: each repricing, with
+ * the charge's quantity folded in when one was set, and a quantity on its own
+ * for a charge only re-counted (the API takes a `price_id` and `quantity`).
+ */
+function overrideLines(phase: SubscriptionPhase): Record<string, unknown>[] {
+  const quantity = new Map(phase.quantities.map((q) => [q.priceId, q.quantity]))
+  const repriced = phase.priceOverrides.map((override) => ({
+    ...toOverrideLineItem(override),
+    ...(quantity.has(override.priceId) ? { quantity: quantity.get(override.priceId) } : {}),
+  }))
+  const priced = new Set(phase.priceOverrides.map((o) => o.priceId))
+  const counted = phase.quantities
+    .filter((q) => !priced.has(q.priceId))
+    .map((q) => ({ priceId: q.priceId, quantity: q.quantity }))
+  return [...repriced, ...counted]
+}
+
 /** A phase's discounts as the API's two coupon fields: whole-phase ids, and ids per charge. */
 function couponFields(phase: SubscriptionPhase): Record<string, unknown> {
   const whole = phase.discounts.filter((d) => !d.priceId).map((d) => d.couponId)
@@ -537,8 +555,8 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
     ...(last?.endDate ? { endDate: utcDay(last.endDate) } : {}),
     ...(draft.trialPeriodDays ? { trialPeriodDays: draft.trialPeriodDays } : {}),
     ...(draft.includePriceIds ? { includePriceIds: draft.includePriceIds } : {}),
-    ...(first && first.priceOverrides.length > 0
-      ? { overrideLineItems: first.priceOverrides.map(toOverrideLineItem) }
+    ...(first && overrideLines(first).length > 0
+      ? { overrideLineItems: overrideLines(first) }
       : {}),
     ...(first ? couponFields(first) : {}),
     ...(phased
@@ -547,9 +565,7 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
             // The first phase starts with the contract, which is "now" when no date was set.
             startDate: starts[index] ? utcDay(starts[index]) : (contractStart ?? new Date()),
             ...(phase.endDate ? { endDate: utcDay(phase.endDate) } : {}),
-            ...(phase.priceOverrides.length > 0
-              ? { overrideLineItems: phase.priceOverrides.map(toOverrideLineItem) }
-              : {}),
+            ...(overrideLines(phase).length > 0 ? { overrideLineItems: overrideLines(phase) } : {}),
             ...couponFields(phase),
           })),
         }
