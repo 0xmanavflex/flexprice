@@ -44,8 +44,8 @@ pieces are domain components (a plan form, a charge row); they may not re-implem
 | home | `HomePage` | Dashboard | Panel | CUSTOM_RANGE_ID, DashboardHome |
 | integrations | `IntegrationListPage` | List | ConfirmDialog, ConnectorCard, EmptyState, Field, WorkflowStepper | ConnectIntegrationSheet, ConnectionContext, IntegrationLogo, IntegrationsBlock, ManageConnectionSheet |
 | integrations | `OAuthCallbackPage` | Other | — | Button, ErrorState, PageBody, PageLoadingState |
-| invoices | `InvoiceDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, EntityList, MetricRail, Section | InvoiceDetailView, InvoicePendingAction, OptionSelect, Toaster |
-| invoices | `InvoiceEditPage` | Form | Field, Section | AppFailure, Button, EditableLine, Input, InvoiceLinesEditor, LoadingRows, PageBody |
+| invoices | `InvoiceDetailPage` | Detail | ChoiceCards, ConfirmDialog, DetailShell, DetailTabs, EntityList, Field, FormDialog, MetricRail, Section | InvoiceDetailView, InvoicePendingAction, PaymentStatusDialog, Toaster |
+| invoices | `InvoiceEditPage` | Form | ConfirmDialog, Section | AppFailure, EditableInvoice, EditableLine, InvoiceEditDraft, InvoiceEditView, LoadingRows, PageBody |
 | invoices | `InvoiceFormPage` | Form | Field | InvoiceForm, LoadingRows, PageBody |
 | invoices | `InvoiceListPage` | List | EmptyState, EntityList, FilterBar, SortMenu | InvoiceGrid, ListState, PageBody, Toaster |
 | payments | `PaymentDetailPage` | Detail | ConfirmDialog, DetailShell, DetailTabs, MetricRail, Section | AppFailure, CatalogDetailFrame, CreditCardIcon, EditableCard, EntityLink, IntegrationMark, LoadingRows, PageBody, PaymentStatusBadge, Pill |

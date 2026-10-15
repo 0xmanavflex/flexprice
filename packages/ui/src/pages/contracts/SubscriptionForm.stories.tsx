@@ -301,3 +301,31 @@ export const SubmitError: Story = {
     await expect(within(canvasElement).getByRole('alert')).toBeInTheDocument()
   },
 }
+
+/**
+ * The review shows the whole contract, not a list of the bits that differ.
+ *
+ * The old version named the overrides and said "As the plan" for the rest, so
+ * answering "what does this customer actually get?" meant stepping back
+ * through the wizard. These assertions are what stops it being summarised
+ * away again: every charge and every entitlement has a row, whether or not it
+ * was changed.
+ */
+export const ReviewShowsEverything: Story = {
+  args: { prefilled: true, step: 'review', chargeCount: 4, entitlementCount: 3 },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+
+    // Counted in the card titles, so the page says how much there is to read.
+    await expect(canvas.getByText('Charges (4)')).toBeVisible()
+    await expect(canvas.getByText('Entitlements (3)')).toBeVisible()
+
+    // Unchanged rows are present and say so, rather than being left out.
+    await expect(canvas.getAllByText('As the plan').length).toBeGreaterThan(0)
+
+    // The plan's own terms are on the page, not one step back.
+    await expect(canvas.getByText('Billing period')).toBeVisible()
+    await expect(canvas.getByText('14 days')).toBeVisible()
+    await expect(canvas.getByText('Immediately')).toBeVisible()
+  },
+}

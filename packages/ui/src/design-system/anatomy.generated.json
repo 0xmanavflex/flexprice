@@ -277,7 +277,8 @@
       "composes": [],
       "usedBy": [
         "ContextualSection",
-        "FormToolbar"
+        "FormToolbar",
+        "InvoiceEditView"
       ],
       "story": null
     },
@@ -938,6 +939,7 @@
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
+        "PaymentStatusDialog",
         "PriceOverrideForm"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1098,6 +1100,7 @@
         "CustomerWalletView",
         "EnvironmentForm",
         "EnvironmentRenameForm",
+        "PaymentStatusDialog",
         "TaxDialog"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
@@ -1110,6 +1113,7 @@
         "ContractIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
+        "InvoiceEditView",
         "ManageConnectionSheet",
         "SubscriptionDetailView",
         "TaxDialog",
@@ -1827,6 +1831,8 @@
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
+        "InvoiceEditView",
+        "InvoiceLinesEditor",
         "SubscriptionForm"
       ],
       "story": "./src/compositions/forms/DateInput.stories.tsx"
@@ -2617,6 +2623,7 @@
         "InvoiceForm",
         "ManageConnectionSheet",
         "MeteredEntitlementFields",
+        "PaymentStatusDialog",
         "PriceOverrideForm",
         "RegionField",
         "SetPasswordForm",
@@ -2957,6 +2964,7 @@
         "EnvironmentForm",
         "EnvironmentRenameForm",
         "FeatureCloneDialog",
+        "PaymentStatusDialog",
         "TaxDialog",
         "WebhookEndpointDetail"
       ],
@@ -3496,6 +3504,21 @@
       "usedBy": [],
       "story": "./src/pages/billing/invoices/InvoiceDetailView.stories.tsx"
     },
+    "InvoiceEditView": {
+      "file": "src/pages/billing/invoices/InvoiceEditView.tsx",
+      "layer": "surface",
+      "composes": [
+        "ArrowLeftIcon",
+        "ConfirmDialog",
+        "DateInput",
+        "InvoiceLinesEditor",
+        "OptionSelect",
+        "PlusIcon",
+        "Section"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/billing/invoices/InvoiceEditView.stories.tsx"
+    },
     "InvoiceForm": {
       "file": "src/pages/billing/invoices/InvoiceForm.tsx",
       "layer": "surface",
@@ -3543,8 +3566,12 @@
     "InvoiceLinesEditor": {
       "file": "src/pages/billing/invoices/InvoiceLinesEditor.tsx",
       "layer": "surface",
-      "composes": [],
-      "usedBy": [],
+      "composes": [
+        "DateInput"
+      ],
+      "usedBy": [
+        "InvoiceEditView"
+      ],
       "story": "./src/pages/billing/invoices/InvoiceLinesEditor.stories.tsx"
     },
     "InvoiceSection": {
@@ -4205,6 +4232,7 @@
         "CustomerWalletView",
         "FeatureForm",
         "GroupForm",
+        "InvoiceEditView",
         "MeteredEntitlementFields",
         "PaymentForm",
         "SpecField",
@@ -4406,6 +4434,19 @@
       ],
       "story": "./src/pages/collections/payments/PaymentStatusBadge.stories.tsx"
     },
+    "PaymentStatusDialog": {
+      "file": "src/pages/billing/invoices/PaymentStatusDialog.tsx",
+      "layer": "surface",
+      "composes": [
+        "ChoiceCards",
+        "Composer",
+        "Field",
+        "FormDialog",
+        "Pill"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/billing/invoices/PaymentStatusDialog.stories.tsx"
+    },
     "Pencil": {
       "file": "src/icons/index.ts",
       "layer": "other",
@@ -4500,6 +4541,7 @@
         "InvoiceDetailView",
         "InvoiceStatusBadge",
         "PaymentStatusBadge",
+        "PaymentStatusDialog",
         "SubscriptionDetailView",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
@@ -4737,6 +4779,7 @@
         "FeatureForm",
         "FeatureGrid",
         "GroupGrid",
+        "InvoiceEditView",
         "InvoiceForm",
         "InvoiceGrid",
         "Mark",
@@ -5228,6 +5271,7 @@
         "FormPage",
         "GroupMembersView",
         "InvoiceDetailView",
+        "InvoiceEditView",
         "MetadataCard",
         "PlanChargesView",
         "PlanCreditGrantsView",
@@ -7247,6 +7291,13 @@
         "InvoiceDetailView"
       ]
     },
+    "./src/pages/billing/invoices/InvoiceEditView.stories.tsx": {
+      "title": "App/Billing/Invoices/Invoice edit",
+      "component": "InvoiceEditView",
+      "uses": [
+        "InvoiceEditView"
+      ]
+    },
     "./src/pages/billing/invoices/InvoiceForm.stories.tsx": {
       "title": "App/Billing/Invoices/Invoice form",
       "component": "InvoiceForm",
@@ -7276,6 +7327,13 @@
         "ListState",
         "PageBody",
         "PageShell"
+      ]
+    },
+    "./src/pages/billing/invoices/PaymentStatusDialog.stories.tsx": {
+      "title": "App/Billing/Invoices/Payment status dialog",
+      "component": "PaymentStatusDialog",
+      "uses": [
+        "PaymentStatusDialog"
       ]
     },
     "./src/pages/collections/payments/CollectionsSummary.stories.tsx": {
@@ -8512,7 +8570,7 @@
       "uses": [
         "ConfirmDialog",
         "InvoiceDetailView",
-        "OptionSelect"
+        "PaymentStatusDialog"
       ]
     },
     "InvoiceEditPage": {
@@ -8521,11 +8579,9 @@
       "route": "/invoices/$invoiceId/edit",
       "uses": [
         "AppFailure",
-        "Field",
-        "InvoiceLinesEditor",
+        "InvoiceEditView",
         "LoadingRows",
-        "PageBody",
-        "Section"
+        "PageBody"
       ]
     },
     "InvoiceFormPage": {

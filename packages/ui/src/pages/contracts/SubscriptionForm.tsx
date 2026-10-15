@@ -11,6 +11,11 @@ import {
   type CreateCreditGrant,
   type CreateSubscription,
   CREDIT_GRANT_CADENCE_LABEL,
+  CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL,
+  CREDIT_GRANT_EXPIRY_TYPE_LABEL,
+  CREDIT_GRANT_PERIOD_LABEL,
+  CreditGrantCadence,
+  CreditGrantExpiryType,
   type Entitlement,
   FeatureType,
   type PriceOverride,
@@ -892,6 +897,19 @@ function CommitmentsSection() {
   )
 }
 
+/**
+ * Everything the contract will be, on one screen.
+ *
+ * The previous version summarised: it showed the overrides and said "As the
+ * plan" for the rest, so checking what a customer would actually get meant
+ * stepping back through the wizard. A review that sends you back to the form
+ * is not a review.
+ *
+ * So each card now shows the full set in the same shape the step used — every
+ * charge with how it prices, every entitlement with the value that will apply,
+ * every grant with its cadence and expiry — and marks the ones that differ
+ * from the plan rather than showing only those.
+ */
 function ReviewStep({
   values,
   customerLabel,
@@ -914,10 +932,10 @@ function ReviewStep({
     values.billingPeriodCount > 1
       ? `Every ${values.billingPeriodCount} × ${BILLING_PERIOD_LABEL[values.billingPeriod]}`
       : BILLING_PERIOD_LABEL[values.billingPeriod]
-  const entitlementName = (id: string) => {
-    const match = entitlements.find((e) => e.id === id)
-    return match?.featureName ?? match?.featureId ?? id
-  }
+  const entitlementOverride = new Map(values.entitlementOverrides.map((o) => [o.entitlementId, o]))
+
+  const overriddenCount = values.priceOverrides.length
+  const changedEntitlements = values.entitlementOverrides.length
 
   return (
     <div className="flex flex-col gap-5">
@@ -927,86 +945,226 @@ function ReviewStep({
         </ReviewCard>
       ) : null}
 
-      <ReviewCard title="Plan & charges" step="plan" onEdit={onEdit}>
+      <ReviewCard title="Plan" step="plan" onEdit={onEdit}>
         <ReviewRow label="Plan" value={planLabel ?? '—'} />
-        <ReviewRow label="Billing" value={`${values.currency.toUpperCase() || '—'} · ${every}`} />
-        <ReviewRow label="Starts" value={values.startDate || 'Now'} />
+        <ReviewRow label="Currency" value={values.currency.toUpperCase() || '—'} />
+        <ReviewRow label="Billing period" value={every} />
+        <ReviewRow label="Starts" value={values.startDate || 'Immediately'} />
         <ReviewRow
           label="Trial"
-          value={values.trialPeriodDays ? `${values.trialPeriodDays} days` : 'None'}
+          value={values.trialPeriodDays ? `${values.trialPeriodDays} days` : 'No trial'}
         />
+      </ReviewCard>
+
+      {/*
+        Every charge, priced as it will bill — not just the overridden ones.
+        A charge left at the plan's price says so, next to one that was
+        changed, so the two are compared here rather than from memory.
+      */}
+      <ReviewCard
+        title="Charges"
+        step="plan"
+        onEdit={onEdit}
+        count={charges.length}
+        note={overriddenCount > 0 ? `${overriddenCount} overridden` : undefined}
+      >
         {charges.length === 0 ? (
           <ReviewRow label="Charges" value="None" />
         ) : (
           charges.map((charge) => {
-            const pricing = chargePricing(charge, overrides.get(charge.id))
+            const override = overrides.get(charge.id)
+            const pricing = chargePricing(charge, override)
             return (
               <div
                 key={charge.id}
                 className="flex items-start justify-between gap-4 px-5 py-3 text-sm sm:px-6"
               >
                 <div className="flex min-w-0 flex-col gap-0.5">
-                  <span className="truncate">{chargeName(charge)}</span>
+                  <span className="truncate font-medium">{chargeName(charge)}</span>
                   <PricingText
                     pricing={pricing}
                     period={BILLING_PERIOD_LABEL[charge.billingPeriod]}
                   />
+                  {/*
+                    What it would have been. Shown only when overridden, which
+                    is the only time the difference is the point.
+                  */}
+                  {pricing.overridden ? (
+                    <span className="text-muted-foreground text-xs">
+                      Plan price: <PlanPriceText charge={charge} />
+                    </span>
+                  ) : null}
                 </div>
-                {pricing.overridden ? <Badge variant="info-light">Overridden</Badge> : null}
+                {pricing.overridden ? (
+                  <Badge variant="info-light" className="shrink-0">
+                    Overridden
+                  </Badge>
+                ) : (
+                  <span className="text-muted-foreground shrink-0 text-xs">As the plan</span>
+                )}
               </div>
             )
           })
         )}
       </ReviewCard>
 
-      <ReviewCard title="Benefits" step="benefits" onEdit={onEdit}>
-        {values.entitlementOverrides.length === 0 ? (
-          <ReviewRow label="Entitlements" value="As the plan" />
+      {/*
+        Every entitlement the plan grants, at the value this contract will
+        use. Listing only the changed ones meant the answer to "what does this
+        customer get?" was not on the review page at all.
+      */}
+      <ReviewCard
+        title="Entitlements"
+        step="benefits"
+        onEdit={onEdit}
+        count={entitlements.length}
+        note={changedEntitlements > 0 ? `${changedEntitlements} changed` : undefined}
+      >
+        {entitlements.length === 0 ? (
+          <ReviewRow label="Entitlements" value="This plan grants none" />
         ) : (
-          values.entitlementOverrides.map((o) => (
-            <ReviewRow
-              key={o.entitlementId}
-              label={entitlementName(o.entitlementId)}
-              value={
-                o.usageLimit !== undefined
-                  ? `Limit ${o.usageLimit.toLocaleString('en-US')}`
-                  : o.isEnabled
-                    ? 'On'
-                    : 'Off'
-              }
-            />
-          ))
+          entitlements.map((entitlement) => {
+            const override = entitlementOverride.get(entitlement.id)
+            const changed = override !== undefined
+            return (
+              <div
+                key={entitlement.id}
+                className="flex items-start justify-between gap-4 px-5 py-3 text-sm sm:px-6"
+              >
+                <div className="flex min-w-0 flex-col gap-0.5">
+                  <span className="truncate font-medium">
+                    {entitlement.featureName ?? entitlement.featureId}
+                  </span>
+                  {changed ? (
+                    <span className="text-muted-foreground text-xs">
+                      Plan: {planEntitlementValue(entitlement)}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="flex shrink-0 items-center gap-2">
+                  <span className="font-medium">
+                    {effectiveEntitlementValue(entitlement, override)}
+                  </span>
+                  {changed ? <Badge variant="info-light">Changed</Badge> : null}
+                </div>
+              </div>
+            )
+          })
         )}
+      </ReviewCard>
+
+      <ReviewCard
+        title="Credit grants"
+        step="benefits"
+        onEdit={onEdit}
+        count={values.creditGrants.length}
+      >
         {values.creditGrants.length === 0 ? (
           <ReviewRow label="Credit grants" value="None" />
         ) : (
           values.creditGrants.map((grant, index) => (
-            <ReviewRow
+            <div
               key={`${grant.name}-${index}`}
-              label={grant.name}
-              value={`${grant.credits} credits · ${CREDIT_GRANT_CADENCE_LABEL[grant.cadence]}`}
-            />
+              className="flex items-start justify-between gap-4 px-5 py-3 text-sm sm:px-6"
+            >
+              <div className="flex min-w-0 flex-col gap-0.5">
+                <span className="truncate font-medium">{grant.name}</span>
+                <span className="text-muted-foreground text-xs">{grantCadenceText(grant)}</span>
+              </div>
+              <div className="flex shrink-0 flex-col items-end gap-0.5">
+                <span className="font-medium tabular-nums">
+                  {Number(grant.credits || 0).toLocaleString()} credits
+                </span>
+                <span className="text-muted-foreground text-xs">{grantExpiryText(grant)}</span>
+              </div>
+            </div>
           ))
         )}
-        <ReviewRow label="Commitments" value="None" />
       </ReviewCard>
     </div>
   )
+}
+
+/** The plan's own price for a charge, ignoring any override on it. */
+function PlanPriceText({ charge }: { charge: Charge }) {
+  return (
+    <PricingText
+      pricing={chargePricing(charge, undefined)}
+      period={BILLING_PERIOD_LABEL[charge.billingPeriod]}
+    />
+  )
+}
+
+/** What the plan grants, in words. */
+function planEntitlementValue(entitlement: Entitlement): string {
+  switch (entitlement.featureType) {
+    case FeatureType.Metered:
+      return entitlement.usageLimit == null
+        ? 'Unlimited'
+        : entitlement.usageLimit.toLocaleString('en-US')
+    case FeatureType.Static:
+      return entitlement.staticValue || '—'
+    default:
+      return entitlement.isEnabled ? 'On' : 'Off'
+  }
+}
+
+/** What this contract will grant: the override where there is one, else the plan's. */
+function effectiveEntitlementValue(
+  entitlement: Entitlement,
+  override: CreateSubscription['entitlementOverrides'][number] | undefined,
+): string {
+  if (override?.usageLimit !== undefined) return override.usageLimit.toLocaleString('en-US')
+  if (override?.isEnabled !== undefined) return override.isEnabled ? 'On' : 'Off'
+  return planEntitlementValue(entitlement)
+}
+
+/** "Every month", "Every 3 × month", or "Once". */
+function grantCadenceText(grant: CreateSubscription['creditGrants'][number]): string {
+  if (grant.cadence !== CreditGrantCadence.Recurring || !grant.period) {
+    return CREDIT_GRANT_CADENCE_LABEL[grant.cadence]
+  }
+  const period = CREDIT_GRANT_PERIOD_LABEL[grant.period]
+  return grant.periodCount && grant.periodCount > 1
+    ? `Every ${grant.periodCount} × ${period.toLowerCase()}`
+    : `Every ${period.toLowerCase()}`
+}
+
+/** "Never expires", "Expires with the billing cycle", or "Expires after 30 days". */
+function grantExpiryText(grant: CreateSubscription['creditGrants'][number]): string {
+  if (
+    grant.expirationType === CreditGrantExpiryType.Duration &&
+    grant.expirationDuration &&
+    grant.expirationDurationUnit
+  ) {
+    const unit = CREDIT_GRANT_EXPIRY_DURATION_UNIT_LABEL[grant.expirationDurationUnit].toLowerCase()
+    return `Expires after ${grant.expirationDuration} ${unit}${grant.expirationDuration === 1 ? '' : 's'}`
+  }
+  return CREDIT_GRANT_EXPIRY_TYPE_LABEL[grant.expirationType]
 }
 
 function ReviewCard({
   title,
   step,
   onEdit,
+  count,
+  note,
   children,
 }: {
   title: string
   step: string
   onEdit: (stepId: string) => void
+  /** How many rows the card holds, beside its title. */
+  count?: number
+  /** A short qualifier, e.g. "2 overridden". */
+  note?: string | undefined
   children: ReactNode
 }) {
   return (
-    <FormCard title={title}>
+    <FormCard
+      title={count === undefined ? title : `${title} (${count})`}
+      {...(note ? { adornment: <Badge variant="info-light">{note}</Badge> } : {})}
+    >
       <div className="divide-y">{children}</div>
       <div className="border-t px-5 py-2 sm:px-6">
         <Button
