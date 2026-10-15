@@ -14,6 +14,8 @@ export interface PlanListPageProps {
   onOpenPlan: (planId: string) => void
   /** Start the full-page create flow. */
   onCreatePlan: () => void
+  /** Opens the describe-your-pricing flow. */
+  onCreateWithAi: () => void
   /** Open the full-page edit form. */
   onEditPlan: (planId: string) => void
 }
@@ -26,6 +28,7 @@ export function PlanListPage({
   onQueryChange,
   onOpenPlan,
   onCreatePlan,
+  onCreateWithAi,
   onEditPlan,
 }: PlanListPageProps) {
   const plans = usePlans(query)
@@ -68,6 +71,7 @@ export function PlanListPage({
             total={plans.data?.total ?? 0}
             query={query}
             onQueryChange={onQueryChange}
+            onCreateWithAi={onCreateWithAi}
             onPlanClick={(plan) => onOpenPlan(plan.id)}
             onEdit={(plan) => onEditPlan(plan.id)}
             onAddCharges={(plan) => onOpenPlan(plan.id)}

@@ -84,6 +84,13 @@ export { listCreditGrants } from './creditGrants'
 export type { ListCreditGrantsParams } from './creditGrants'
 
 /**
+ * `POST /ai/pricing/parse-gemini`, live but absent from the SDK. See
+ * `aiPricing.ts`.
+ */
+export { parsePricing } from './aiPricing'
+export type { ParsePricingParams } from './aiPricing'
+
+/**
  * The SDK's request and response models, re-exported so the rest of the
  * workspace has one import path for them and the SDK can be swapped or pinned
  * in one place.

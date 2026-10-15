@@ -498,6 +498,8 @@ export { useCount, useInvoiceCount, useNavCounts } from './counts'
 export { COUNT_CONCURRENCY, mapBounded, useFeatureLinkage } from './featureLinkage'
 export type { FeatureLinkage } from './featureLinkage'
 export { usePlanLinkage } from './planLinkage'
+export { APPLY_STEP_LABEL, applySteps, useApplyPricingSchema, useParsePricing } from './aiPricing'
+export type { ApplyResult, ApplyStep } from './aiPricing'
 export type { PlanLinkage } from './planLinkage'
 export type { CountableId } from './counts'
 

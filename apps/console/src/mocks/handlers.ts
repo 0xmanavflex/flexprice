@@ -3390,6 +3390,59 @@ export const handlers = [
    * ignored here too rather than being made to work — a mock that is kinder
    * than the API hides the bug it would cause. Checked live, not assumed.
    */
+  /*
+   * The pricing parser, answering a fixed schema.
+   *
+   * The real route proxies a model, so the mock cannot reproduce what it
+   * would say — what it can do is answer the *shape* the screen has to
+   * render, with a metered feature, a hybrid plan and a grant, so the review
+   * and the apply path are exercised without a model in the loop.
+   */
+  http.post(`${BASE}/ai/pricing/parse-gemini`, () =>
+    HttpResponse.json({
+      features: [
+        {
+          name: 'API Calls',
+          key: 'api_calls',
+          type: 'metered',
+          unit_singular: 'call',
+          unit_plural: 'calls',
+          meter_event_name: 'api.calls',
+          aggregation: 'count',
+        },
+        {
+          name: 'Seats',
+          key: 'seats',
+          type: 'static',
+          unit_singular: 'seat',
+          unit_plural: 'seats',
+        },
+      ],
+      plans: [
+        {
+          name: 'Starter',
+          description: 'Entry tier, monthly',
+          prices: [{ amount: 29, currency: 'USD', billing_period: 'monthly' }],
+          entitlements: [
+            { feature_key: 'api_calls', is_unlimited: false, value: 10000 },
+            { feature_key: 'seats', is_unlimited: false, value: 3 },
+          ],
+          usage_charges: [
+            {
+              feature_key: 'api_calls',
+              amount_per_unit: 0.01,
+              currency: 'USD',
+              billing_period: 'monthly',
+            },
+          ],
+        },
+      ],
+      credit_grants: [
+        { plan_name: 'Starter', name: 'Welcome credits', credits: 5000, cadence: 'onetime' },
+      ],
+    }),
+  ),
+
   http.get(`${BASE}/creditgrants`, ({ request }) => {
     const planIds = new URL(request.url).searchParams.getAll('plan_ids')
     const all = (corpus['creditgrants'] as Corpus).items

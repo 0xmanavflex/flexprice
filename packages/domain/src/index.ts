@@ -663,3 +663,20 @@ export {
   manualPaymentStatusChoices,
   toWirePaymentStatus,
 } from './invoicePaymentStatus'
+
+export {
+  AI_SETUP_METADATA,
+  normalisePricingSchema,
+  pricingSchemaProblems,
+  pricingSchemaTotals,
+} from './pricingSchema'
+export type {
+  PricingCreditGrant,
+  PricingEntitlement,
+  PricingFeature,
+  PricingPlan,
+  PricingPrice,
+  PricingSchema,
+  PricingUsageCharge,
+} from './pricingSchema'
+export { GEMINI_PRICING_SCHEMA, SYSTEM_PROMPT, buildPricingPrompt } from './pricingPrompt'

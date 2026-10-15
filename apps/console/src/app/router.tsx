@@ -76,6 +76,9 @@ import { DEFAULT_PLAN_QUERY, type PlanQuery } from '@fp/domain'
 const PlanListPage = lazy(() =>
   import('@/pages/plans/PlanListPage').then((m) => ({ default: m.PlanListPage })),
 )
+const PlanAiSetupPage = lazy(() =>
+  import('@/pages/plans/PlanAiSetupPage').then((m) => ({ default: m.PlanAiSetupPage })),
+)
 const PlanFormPage = lazy(() =>
   import('@/pages/plans/PlanFormPage').then((m) => ({ default: m.PlanFormPage })),
 )
@@ -812,11 +815,28 @@ function PlansRouteComponent() {
         void navigate({ to: '/plans/$planId', params: { planId }, search: {} as never })
       }
       onCreatePlan={() => void navigate({ to: '/plans/new' })}
+      onCreateWithAi={() => void navigate({ to: '/plans/ai' })}
       onEditPlan={(planId) =>
         void navigate({ to: '/plans/$planId/edit', params: { planId }, search: {} as never })
       }
     />
   )
+}
+
+/**
+ * `/plans/ai` — describe a pricing page, review what it would create, create
+ * it. A page of its own rather than a dialog: what comes back is long enough
+ * to scroll, and leaving half way should cost nothing.
+ */
+const planAiRoute = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/plans/ai',
+  component: PlanAiRouteComponent,
+})
+
+function PlanAiRouteComponent() {
+  const navigate = useNavigate()
+  return <PlanAiSetupPage onDone={() => void navigate({ to: '/plans', search: {} as never })} />
 }
 
 /**
@@ -2243,6 +2263,7 @@ export const routeTree = rootRoute.addChildren([
     featureEditRoute,
     featureDetailRoute,
     plansRoute,
+    planAiRoute,
     planCreateRoute,
     planEditRoute,
     planDetailRoute,

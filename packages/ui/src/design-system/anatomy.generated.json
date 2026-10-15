@@ -168,6 +168,7 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
+        "PlanAiSetupView",
         "TaxDialog"
       ],
       "story": "./src/compositions/feedback/AppFailure.stories.tsx"
@@ -277,8 +278,7 @@
       "composes": [],
       "usedBy": [
         "ContextualSection",
-        "FormToolbar",
-        "InvoiceEditView"
+        "FormToolbar"
       ],
       "story": null
     },
@@ -676,7 +676,6 @@
         "DashboardHome",
         "DateInput",
         "FilterBar",
-        "InvoiceForm",
         "UsageCard"
       ],
       "story": null
@@ -704,7 +703,6 @@
         "CustomerAnalyticsView",
         "DashboardHome",
         "DateInput",
-        "InvoiceForm",
         "RevenueDashboard",
         "UsageCard"
       ],
@@ -870,6 +868,7 @@
         "InvoiceForm",
         "Mark",
         "OverviewTiles",
+        "PlanAiSetupView",
         "PlanPreviewCard",
         "Properties",
         "RegionField",
@@ -1113,7 +1112,7 @@
         "ContractIntegrations",
         "CustomerTaxSection",
         "CustomerWalletView",
-        "InvoiceEditView",
+        "InvoiceForm",
         "ManageConnectionSheet",
         "SubscriptionDetailView",
         "TaxDialog",
@@ -1831,7 +1830,7 @@
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
         "CustomerWalletView",
-        "InvoiceEditView",
+        "InvoiceForm",
         "InvoiceLinesEditor",
         "SubscriptionForm"
       ],
@@ -2151,6 +2150,7 @@
         "EventGrid",
         "EventTypeName",
         "FeatureGrid",
+        "PlanAiSetupView",
         "PlanEntitlementsView",
         "PlanGrid",
         "WebhookMessageSheet",
@@ -2938,6 +2938,7 @@
         "FormDisclosure",
         "GroupForm",
         "PaymentForm",
+        "PlanAiSetupView",
         "PlanForm",
         "PriceUnitForm",
         "SubscriptionForm",
@@ -3289,7 +3290,6 @@
         "FeatureTypePill",
         "Formula",
         "GlyphBadge",
-        "InvoiceForm",
         "InvoiceStatusBadge",
         "Pill",
         "Status"
@@ -3477,9 +3477,7 @@
       "file": "src/components/blocks/form-3/components/invoice-date-field.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "InvoiceForm"
-      ],
+      "usedBy": [],
       "story": null
     },
     "InvoiceDetailView": {
@@ -3504,34 +3502,17 @@
       "usedBy": [],
       "story": "./src/pages/billing/invoices/InvoiceDetailView.stories.tsx"
     },
-    "InvoiceEditView": {
-      "file": "src/pages/billing/invoices/InvoiceEditView.tsx",
-      "layer": "surface",
-      "composes": [
-        "ArrowLeftIcon",
-        "ConfirmDialog",
-        "DateInput",
-        "InvoiceLinesEditor",
-        "OptionSelect",
-        "PlusIcon",
-        "Section"
-      ],
-      "usedBy": [],
-      "story": "./src/pages/billing/invoices/InvoiceEditView.stories.tsx"
-    },
     "InvoiceForm": {
       "file": "src/pages/billing/invoices/InvoiceForm.tsx",
       "layer": "surface",
       "composes": [
-        "Calendar",
-        "CalendarIcon",
         "CheckIcon",
+        "ConfirmDialog",
+        "DateInput",
         "Field",
-        "HashIcon",
-        "InvoiceDateField",
         "InvoiceSection",
-        "InvoiceSummary",
         "LabelWithHint",
+        "OptionSelect",
         "PlusIcon"
       ],
       "usedBy": [],
@@ -3569,9 +3550,7 @@
       "composes": [
         "DateInput"
       ],
-      "usedBy": [
-        "InvoiceEditView"
-      ],
+      "usedBy": [],
       "story": "./src/pages/billing/invoices/InvoiceLinesEditor.stories.tsx"
     },
     "InvoiceSection": {
@@ -3599,9 +3578,7 @@
       "file": "src/components/blocks/form-3/components/invoice-summary.tsx",
       "layer": "vendor/blocks",
       "composes": [],
-      "usedBy": [
-        "InvoiceForm"
-      ],
+      "usedBy": [],
       "story": null
     },
     "InvoiceToolbar": {
@@ -4232,7 +4209,7 @@
         "CustomerWalletView",
         "FeatureForm",
         "GroupForm",
-        "InvoiceEditView",
+        "InvoiceForm",
         "MeteredEntitlementFields",
         "PaymentForm",
         "SpecField",
@@ -4542,6 +4519,7 @@
         "InvoiceStatusBadge",
         "PaymentStatusBadge",
         "PaymentStatusDialog",
+        "PlanAiSetupView",
         "SubscriptionDetailView",
         "UsageSyncDetailSheet",
         "WebhookEndpointDetail",
@@ -4589,6 +4567,21 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "PlanAiSetupView": {
+      "file": "src/pages/product-catalog/plans/PlanAiSetupView.tsx",
+      "layer": "surface",
+      "composes": [
+        "AppFailure",
+        "CheckIcon",
+        "EmDash",
+        "FormCard",
+        "Pill",
+        "Section",
+        "Tag"
+      ],
+      "usedBy": [],
+      "story": "./src/pages/product-catalog/plans/PlanAiSetupView.stories.tsx"
     },
     "PlanChangeWizard": {
       "file": "src/components/blocks/solution-billing-8/components/plan-change-wizard.tsx",
@@ -4779,7 +4772,6 @@
         "FeatureForm",
         "FeatureGrid",
         "GroupGrid",
-        "InvoiceEditView",
         "InvoiceForm",
         "InvoiceGrid",
         "Mark",
@@ -5271,8 +5263,8 @@
         "FormPage",
         "GroupMembersView",
         "InvoiceDetailView",
-        "InvoiceEditView",
         "MetadataCard",
+        "PlanAiSetupView",
         "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
@@ -5993,6 +5985,7 @@
       "composes": [],
       "usedBy": [
         "EventGrid",
+        "PlanAiSetupView",
         "PlanGrid"
       ],
       "story": null
@@ -7291,13 +7284,6 @@
         "InvoiceDetailView"
       ]
     },
-    "./src/pages/billing/invoices/InvoiceEditView.stories.tsx": {
-      "title": "App/Billing/Invoices/Invoice edit",
-      "component": "InvoiceEditView",
-      "uses": [
-        "InvoiceEditView"
-      ]
-    },
     "./src/pages/billing/invoices/InvoiceForm.stories.tsx": {
       "title": "App/Billing/Invoices/Invoice form",
       "component": "InvoiceForm",
@@ -7722,6 +7708,13 @@
       "component": null,
       "uses": [
         "AddChargeDialog"
+      ]
+    },
+    "./src/pages/product-catalog/plans/PlanAiSetupView.stories.tsx": {
+      "title": "App/Product catalog/Plans/Create with AI",
+      "component": null,
+      "uses": [
+        "PlanAiSetupView"
       ]
     },
     "./src/pages/product-catalog/plans/PlanChargesView.stories.tsx": {
@@ -8579,7 +8572,7 @@
       "route": "/invoices/$invoiceId/edit",
       "uses": [
         "AppFailure",
-        "InvoiceEditView",
+        "InvoiceForm",
         "LoadingRows",
         "PageBody"
       ]
@@ -8640,6 +8633,15 @@
         "ListState",
         "PageBody",
         "PaymentGrid"
+      ]
+    },
+    "PlanAiSetupPage": {
+      "file": "apps/console/src/pages/plans/PlanAiSetupPage.tsx",
+      "pattern": "Other",
+      "route": "/plans/ai",
+      "uses": [
+        "PageBody",
+        "PlanAiSetupView"
       ]
     },
     "PlanDetailPage": {

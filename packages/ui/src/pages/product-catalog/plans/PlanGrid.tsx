@@ -7,6 +7,7 @@ import {
   LayersIcon,
   PencilIcon,
   ReceiptTextIcon,
+  SparklesIcon,
   SquareStackIcon,
 } from '@ui/icons'
 import {
@@ -145,6 +146,8 @@ export interface PlanGridProps {
   onPlanClick?: (plan: Plan) => void
   /** The primary create action; renders a "New plan" CTA at the toolbar's end. */
   onCreate?: () => void
+  /** Opens the describe-your-pricing flow. Left out when it is not wired. */
+  onCreateWithAi?: (() => void) | undefined
   /** Row menu: open the plan's editor. Left out of the menu when absent. */
   onEdit?: ((plan: Plan) => void) | undefined
   /** Row menu: clone the plan. `useClonePlan` backs this. */
@@ -170,6 +173,7 @@ export function PlanGrid({
   onRetry,
   onPlanClick,
   onCreate,
+  onCreateWithAi,
   onEdit,
   onDuplicate,
   onAddCharges,
@@ -377,7 +381,19 @@ export function PlanGrid({
       }}
       rowActions={rowActions}
       exportFileName="plans"
-      primaryAction={onCreate ? <Button onClick={onCreate}>New plan</Button> : undefined}
+      primaryAction={
+        onCreate || onCreateWithAi ? (
+          <>
+            {onCreateWithAi ? (
+              <Button variant="outline" onClick={onCreateWithAi}>
+                <SparklesIcon aria-hidden />
+                Create with AI
+              </Button>
+            ) : null}
+            {onCreate ? <Button onClick={onCreate}>New plan</Button> : null}
+          </>
+        ) : undefined
+      }
       {...(onPlanClick ? { onRowClick: onPlanClick } : {})}
       isLoading={isLoading}
       error={error}
