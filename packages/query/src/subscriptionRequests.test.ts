@@ -60,6 +60,7 @@ describe('toCreateSubscriptionRequest', () => {
         },
       ],
       entitlementOverrides: [{ entitlementId: 'ent_1', usageLimit: 500 }],
+      creditGrantsChanged: true,
       creditGrants: [
         {
           name: 'Welcome',
@@ -80,9 +81,30 @@ describe('toCreateSubscriptionRequest', () => {
     expect(parsed['override_entitlements']).toHaveLength(1)
   })
 
+  it("leaves the plan's grants alone until they are changed, then sends the whole list", () => {
+    const grant = {
+      name: 'Plan credits',
+      credits: '100',
+      cadence: CreditGrantCadence.OneTime,
+      expirationType: CreditGrantExpiryType.Never,
+      priority: 0,
+    }
+    // Untouched: the API applies the plan's own grants.
+    expect(toCreateSubscriptionRequest({ ...base, creditGrants: [grant] })).not.toHaveProperty(
+      'creditGrants',
+    )
+    // All removed: an empty list replaces them.
+    expect(
+      toCreateSubscriptionRequest({ ...base, creditGrants: [], creditGrantsChanged: true })[
+        'creditGrants'
+      ],
+    ).toEqual([])
+  })
+
   it('scopes a grant to the subscription, with no plan target', () => {
     const request = toCreateSubscriptionRequest({
       ...base,
+      creditGrantsChanged: true,
       creditGrants: [
         {
           name: 'Top-up',

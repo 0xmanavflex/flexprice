@@ -298,7 +298,13 @@ export const createSubscriptionSchema = z
         isEnabled: z.boolean().optional(),
       }),
     ),
+    /**
+     * The contract's credit grants. Opens as the plan's; once changed, this whole
+     * list is sent and replaces the plan's on this contract (the API's rule).
+     */
     creditGrants: z.array(createCreditGrantSchema),
+    /** Whether the grants differ from the plan's, and so must be sent. */
+    creditGrantsChanged: z.boolean(),
     /** Tax rates applied to the contract's invoices — prefilled from the customer, as V1 does. */
     taxes: z.array(
       z.object({
@@ -391,6 +397,7 @@ export function emptySubscription(): CreateSubscription {
     chargeCommitments: [],
     entitlementOverrides: [],
     creditGrants: [],
+    creditGrantsChanged: false,
     taxes: [],
     addons: [],
     billingCycle: BillingCycle.Anniversary,

@@ -1,7 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { Decorator, Meta, StoryObj } from '@storybook/react-vite'
 import { expect, fn, screen, userEvent, waitFor, within } from 'storybook/test'
-import { BillingPeriod, type CreateSubscription, PriceType } from '@fp/domain'
+import {
+  BillingPeriod,
+  type CreateSubscription,
+  CreditGrantCadence,
+  CreditGrantExpiryType,
+  PriceType,
+} from '@fp/domain'
 import type { Option } from '@ui/compositions/forms/OptionSelect'
 import {
   makeCharge,
@@ -69,6 +75,8 @@ interface PlaygroundProps {
   planLoading: boolean
   /** Adds a quarterly and a weekly charge, which a monthly contract does not bill by default. */
   otherCadences?: boolean
+  /** Gives the plan a credit grant of its own. */
+  planGrant?: boolean
   onSubmit: (subscription: CreateSubscription) => void
   onCancel: () => void
   onStepChange: (step: string) => void
@@ -87,6 +95,7 @@ function SubscriptionFormPlayground({
   entitlementCount,
   planLoading,
   otherCadences = false,
+  planGrant = false,
   onSubmit,
   onCancel,
   onStepChange,
@@ -136,8 +145,19 @@ function SubscriptionFormPlayground({
               : []),
           ],
       entitlements: planLoading ? [] : makeEntitlements(entitlementCount),
+      creditGrants: planGrant
+        ? [
+            {
+              name: 'Welcome credits',
+              credits: '500',
+              cadence: CreditGrantCadence.OneTime,
+              expirationType: CreditGrantExpiryType.Never,
+              priority: 0,
+            },
+          ]
+        : [],
     }
-  }, [planId, planLoading, chargeCount, entitlementCount, otherCadences])
+  }, [planId, planLoading, chargeCount, entitlementCount, otherCadences, planGrant])
 
   return (
     <SubscriptionForm
@@ -347,6 +367,34 @@ export const SetsAFixedChargeQuantity: Story = {
             expect.objectContaining({ quantities: [expect.objectContaining({ quantity: '25' })] }),
           ],
         }),
+      ),
+    )
+  },
+}
+
+/**
+ * The plan's credit grants open on the contract and can be removed for it
+ * alone; the card then says they replace the plan's, and the draft says so.
+ */
+export const PlanCreditGrants: Story = {
+  args: { prefilled: true, step: 'commitments', planGrant: true },
+  play: async ({ args, canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(await canvas.findByText('Welcome credits')).toBeVisible()
+    await expect(canvas.getByText('From the plan')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Remove Welcome credits' }))
+    await expect(
+      await canvas.findByText("All of the plan's grants are removed from this contract."),
+    ).toBeVisible()
+    await expect(canvas.getByRole('button', { name: "Use the plan's grants" })).toBeVisible()
+    for (const step of ['billing', 'review']) {
+      await userEvent.click(canvas.getByRole('button', { name: 'Next' }))
+      await expect(args.onStepChange).toHaveBeenLastCalledWith(step)
+    }
+    await userEvent.click(canvas.getByRole('button', { name: 'Create contract' }))
+    await waitFor(() =>
+      expect(args.onSubmit).toHaveBeenCalledWith(
+        expect.objectContaining({ creditGrants: [], creditGrantsChanged: true }),
       ),
     )
   },

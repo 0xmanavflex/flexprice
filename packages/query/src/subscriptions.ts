@@ -605,7 +605,9 @@ export function toCreateSubscriptionRequest(draft: CreateSubscription): Record<s
           })),
         }
       : {}),
-    ...(draft.creditGrants.length > 0
+    // The API uses this list *instead of* the plan's grants, so it is sent only
+    // when the grants were changed — an empty list then removes them all.
+    ...(draft.creditGrantsChanged
       ? {
           creditGrants: draft.creditGrants.map((grant) => ({
             name: grant.name,

@@ -97,6 +97,8 @@ export const SubscriptionFormProvenance = provenance({
 export interface SubscriptionPlanContext {
   charges: Charge[]
   entitlements: Entitlement[]
+  /** The plan's own credit grants, as drafts; undefined while they load. */
+  creditGrants?: CreateCreditGrant[] | undefined
   isLoading: boolean
 }
 
@@ -247,6 +249,15 @@ export function SubscriptionForm({
     form.setValue('taxes', [...customerTaxes], { shouldDirty: true })
     setTaxesFor(values.customerId)
   }, [values.customerId, customerTaxes, taxesFor, form])
+
+  // A contract starts with its plan's credit grants, once per plan.
+  const [grantsFor, setGrantsFor] = useState<string | null>(null)
+  useEffect(() => {
+    if (!values.planId || !plan?.creditGrants || grantsFor === values.planId) return
+    form.setValue('creditGrants', [...plan.creditGrants])
+    form.setValue('creditGrantsChanged', false)
+    setGrantsFor(values.planId)
+  }, [values.planId, plan?.creditGrants, grantsFor, form])
 
   const lastPhase = values.phases.length - 1
   const starts = phaseStarts(values)
@@ -632,7 +643,16 @@ export function SubscriptionForm({
         )}
         <CreditsSection
           grants={values.creditGrants}
-          onChange={(next) => form.setValue('creditGrants', next, { shouldDirty: true })}
+          changed={values.creditGrantsChanged}
+          fromPlan={(plan?.creditGrants?.length ?? 0) > 0}
+          onChange={(next) => {
+            form.setValue('creditGrants', next, { shouldDirty: true })
+            form.setValue('creditGrantsChanged', true)
+          }}
+          onReset={() => {
+            form.setValue('creditGrants', [...(plan?.creditGrants ?? [])])
+            form.setValue('creditGrantsChanged', false)
+          }}
         />
         <TaxesSection
           taxes={values.taxes}
@@ -1343,43 +1363,113 @@ function EntitlementsSection({
   )
 }
 
+/**
+ * The contract's credit grants. They open as the plan's own, and each can be
+ * edited or removed for this contract alone, or new ones added. The API uses
+ * a changed list *instead of* the plan's, so the card says when that happens
+ * and offers the way back.
+ */
 function CreditsSection({
   grants,
+  changed,
+  fromPlan,
   onChange,
+  onReset,
 }: {
   grants: CreateCreditGrant[]
+  changed: boolean
+  fromPlan: boolean
   onChange: (next: CreateCreditGrant[]) => void
+  onReset: () => void
 }) {
   const [adding, setAdding] = useState(false)
+  const [editing, setEditing] = useState<number | null>(null)
 
   return (
-    <FormCard title="Credit grants" status="optional">
+    <FormCard
+      title="Credit grants"
+      status="optional"
+      {...(fromPlan
+        ? {
+            adornment: changed ? (
+              <Button type="button" variant="ghost" size="sm" onClick={onReset}>
+                Use the plan&apos;s grants
+              </Button>
+            ) : (
+              <Badge variant="secondary">From the plan</Badge>
+            ),
+          }
+        : {})}
+    >
+      {fromPlan && changed ? (
+        <p className="text-muted-foreground border-b px-5 py-3 text-xs sm:px-6">
+          These grants replace the plan&apos;s on this contract.
+        </p>
+      ) : null}
       {grants.length > 0 ? (
         <ul className="divide-y">
           {grants.map((grant, index) => (
-            <li
-              key={`${grant.name}-${index}`}
-              className="flex items-center justify-between gap-3 px-5 py-4 sm:px-6"
-            >
-              <div className="flex min-w-0 flex-col">
-                <span className="truncate text-sm font-medium">{grant.name}</span>
-                <span className="text-muted-foreground text-xs">
-                  {grant.credits} credits · {CREDIT_GRANT_CADENCE_LABEL[grant.cadence]}
-                </span>
+            <li key={`${grant.name}-${index}`} className="flex flex-col gap-3 px-5 py-4 sm:px-6">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-sm font-medium">{grant.name}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {Number(grant.credits || 0).toLocaleString()} credits ·{' '}
+                    {grantCadenceText(grant)} · {grantExpiryText(grant)}
+                  </span>
+                </div>
+                <div className="flex shrink-0 items-center gap-1">
+                  {editing === index ? (
+                    <CloseSubForm
+                      label={`Close edit of ${grant.name}`}
+                      onClick={() => setEditing(null)}
+                    />
+                  ) : (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      aria-label={`Edit ${grant.name}`}
+                      onClick={() => setEditing(index)}
+                    >
+                      Edit
+                    </Button>
+                  )}
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    aria-label={`Remove ${grant.name}`}
+                    onClick={() => {
+                      setEditing(null)
+                      onChange(grants.filter((_, i) => i !== index))
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </div>
               </div>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => onChange(grants.filter((_, i) => i !== index))}
-              >
-                Remove
-              </Button>
+              {editing === index ? (
+                <CreditGrantCreateForm
+                  defaultValue={grant}
+                  submitLabel="Save grant"
+                  onSubmit={(next) => {
+                    onChange(grants.map((g, i) => (i === index ? next : g)))
+                    setEditing(null)
+                  }}
+                />
+              ) : null}
             </li>
           ))}
         </ul>
-      ) : null}
-      <div className="px-5 py-4 sm:px-6">
+      ) : (
+        <p className="text-muted-foreground px-5 py-4 text-sm sm:px-6">
+          {fromPlan
+            ? "All of the plan's grants are removed from this contract."
+            : 'No credit grants.'}
+        </p>
+      )}
+      <div className="border-t px-5 py-4 sm:px-6">
         {adding ? (
           <div className="flex flex-col gap-2">
             <div className="flex items-center justify-between gap-2">

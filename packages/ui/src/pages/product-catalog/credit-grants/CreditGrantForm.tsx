@@ -55,6 +55,8 @@ export interface CreditGrantFormProps<T> {
    */
   onCancel?: (() => void) | undefined
   submitLabel?: string
+  /** Opens on this grant instead of a blank one — editing a plan's grant on a contract. */
+  defaultValue?: T
 }
 
 const messageOf = (errors: unknown, key: string): string | undefined =>
@@ -139,10 +141,11 @@ export function CreditGrantCreateForm({
   submitError = null,
   onSubmit,
   submitLabel,
+  defaultValue,
 }: CreditGrantFormProps<CreateCreditGrant>) {
   const form = useCalmForm<CreateCreditGrant>({
     resolver: standardSchemaResolver(createCreditGrantSchema) as Resolver<CreateCreditGrant>,
-    defaultValues: emptyCreditGrant(),
+    defaultValues: defaultValue ?? emptyCreditGrant(),
   })
 
   const errors = form.formState.errors

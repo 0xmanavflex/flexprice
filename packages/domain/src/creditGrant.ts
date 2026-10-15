@@ -214,6 +214,27 @@ export function emptyCreditGrant(): CreateCreditGrant {
 }
 
 /**
+ * A saved grant as a draft — how a contract starts from its plan's grants and
+ * lets them be changed for that contract alone.
+ */
+export function creditGrantToDraft(grant: CreditGrant): CreateCreditGrant {
+  return {
+    name: grant.name,
+    credits: grant.credits,
+    cadence: grant.cadence,
+    ...(grant.period ? { period: grant.period } : {}),
+    ...(grant.periodCount ? { periodCount: grant.periodCount } : {}),
+    expirationType: grant.expirationType,
+    ...(grant.expirationDuration ? { expirationDuration: grant.expirationDuration } : {}),
+    ...(grant.expirationDurationUnit
+      ? { expirationDurationUnit: grant.expirationDurationUnit }
+      : {}),
+    ...(grant.conversionRate ? { conversionRate: grant.conversionRate } : {}),
+    priority: grant.priority,
+  }
+}
+
+/**
  * What editing a credit grant can change: its name, its metadata and an end
  * date. The credits, cadence and expiry are fixed once issued — a grant already
  * applied to subscriptions cannot be re-priced — so they are not in this shape.

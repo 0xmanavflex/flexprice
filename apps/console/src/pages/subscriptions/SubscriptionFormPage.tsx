@@ -4,6 +4,7 @@ import {
   useAddons,
   useCoupons,
   useCreateSubscription,
+  useCreditGrants,
   useCustomerTaxAssociations,
   useCustomers,
   usePlanEntitlements,
@@ -16,6 +17,8 @@ import {
   AddonStatus,
   CouponStatus,
   type CreateSubscription,
+  CreditGrantScope,
+  creditGrantToDraft,
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
   DEFAULT_CUSTOMER_QUERY,
@@ -60,6 +63,7 @@ export function SubscriptionFormPage({
   const plans = usePlans({ ...DEFAULT_PLAN_QUERY, ...PICKER_PAGE })
   const charges = usePrices(PriceEntityType.Plan, planId)
   const entitlements = usePlanEntitlements(planId ? [planId] : [])
+  const planGrants = useCreditGrants(CreditGrantScope.Plan, planId)
   const coupons = useCoupons({
     ...DEFAULT_COUPON_QUERY,
     ...PICKER_PAGE,
@@ -115,6 +119,7 @@ export function SubscriptionFormPage({
           ? {
               charges: charges.data ?? [],
               entitlements: entitlements.data ?? [],
+              creditGrants: planGrants.data?.map(creditGrantToDraft),
               isLoading: charges.isPending || entitlements.isPending,
             }
           : undefined
