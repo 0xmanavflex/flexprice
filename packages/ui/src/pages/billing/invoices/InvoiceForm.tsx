@@ -1,18 +1,22 @@
-import { useRef, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { CheckIcon, PlusIcon, ReceiptIcon, SaveIcon, Trash2Icon, XIcon } from '@ui/icons'
+import type { z } from 'zod'
 import {
-  Building2Icon,
-  CalendarIcon,
-  CheckIcon,
-  ReceiptIcon,
-  HashIcon,
-  PlusIcon,
-  SaveIcon,
-  Trash2Icon,
-  XIcon,
-} from '@ui/icons'
-import { z } from 'zod'
-import { type CreateInvoice, createInvoiceSchema, emptyInvoice, sumLineAmounts } from '@fp/domain'
+  type CreateInvoice,
+  InvoiceStatus,
+  type InvoiceTax,
+  type Money,
+  PAYMENT_STATUS_LABEL,
+  type PaymentStatus,
+  PaymentStatus as Payment,
+  createInvoiceSchema,
+  currencyCodes,
+  emptyInvoice,
+  formatMoney,
+  sumLineAmounts,
+} from '@fp/domain'
 import { Badge } from '@ui/components/reui/badge'
+import { Alert, AlertDescription, AlertTitle } from '@ui/components/reui/alert'
 import { Button } from '@ui/components/primitives/button'
 // eslint-disable-next-line no-restricted-imports -- the redesign's form-3 InvoiceCreator block is built on Card, kept as in the reference
 import {
@@ -41,15 +45,8 @@ import {
 } from '@ui/components/primitives/field'
 import { Input } from '@ui/components/primitives/input'
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@ui/components/primitives/input-group'
-import {
-  Select,
-  SelectContent,
-  SelectGroup,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@ui/components/primitives/select'
 import { Separator } from '@ui/components/primitives/separator'
+import { Switch } from '@ui/components/primitives/switch'
 // eslint-disable-next-line no-restricted-imports -- the redesign's form-3 line-items table uses the table primitive, kept as in the reference
 import {
   Table,
@@ -60,33 +57,32 @@ import {
   TableRow,
 } from '@ui/components/primitives/table'
 import { Textarea } from '@ui/components/primitives/textarea'
-import {
-  COLLECTION_METHOD_OPTIONS,
-  CURRENCY_OPTIONS,
-  PAYMENT_TERMS_OPTIONS,
-  TAX_RATE_OPTIONS,
-  type SelectOption,
-} from '@ui/components/blocks/form-3/components/data'
-import { format } from 'date-fns'
-import { Calendar } from '@ui/components/primitives/calendar'
-import { Popover, PopoverContent, PopoverTrigger } from '@ui/components/primitives/popover'
-import { InvoiceDateField } from '@ui/components/blocks/form-3/components/invoice-date-field'
 import { InvoiceSection } from '@ui/components/blocks/form-3/components/invoice-section'
-import { InvoiceSummary } from '@ui/components/blocks/form-3/components/invoice-summary'
+import { ConfirmDialog } from '@ui/compositions/feedback/ConfirmDialog'
+import { DateInput } from '@ui/compositions/forms/DateInput'
 import { LabelWithHint } from '@ui/compositions/forms/LabelWithHint'
+import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { usePublishDetailTrail } from '@ui/compositions/shell/ShellDetailTrail'
 import { provenance } from '@ui/provenance'
+import type { EditableLine } from './InvoiceLinesEditor'
 
 /**
- * Create or edit a one-off invoice with ReUI Form 3.
+ * One invoice form for creating and editing, so the two look and read the same.
  *
- * The block is the invoice creator: customer, terms, an editable line-item
- * table, notes, and a live summary. This page keeps that layout and feeds it
- * the customers and the draft this console already has. Line amounts stay
- * exact strings; the total sent is their sum.
+ * It follows V1's invoice page: invoice details (customer, number, dates,
+ * currency), who it is from and who it bills, the line items with their notes
+ * and service periods, the customer's taxes, a memo and metadata, and a summary.
+ * Every field here reaches the API — nothing is drawn that is not sent.
  *
- * Preview: https://reui.io/blocks/application/form/form-3
+ * Editing adds what only an existing invoice has: its status and payment
+ * status, and re-applying discounts. Fields the API cannot change after
+ * creation (customer, number, issue date, currency, memo) are shown, not
+ * offered. A finalized invoice changes in place, except that changing its lines
+ * or re-applying discounts makes the API void it and carry the edit onto a new
+ * draft — the form says so and asks before saving.
+ *
+ * Preview of the layout it keeps: https://reui.io/blocks/application/form/form-3
  */
 export const InvoiceFormProvenance = provenance({
   source: 'composition',
@@ -96,13 +92,13 @@ export const InvoiceFormProvenance = provenance({
     'ui/combobox',
     'ui/field',
     'ui/table',
-    'ui/select',
+    'compositions/DateInput',
     'compositions/LabelWithHint',
   ],
-  note: 'Form 3 invoice creator for create and edit. Line total is sumLineAmounts.',
+  note: 'One create/edit invoice form on the form-3 layout, V1 fields only; line total is quantity × unit price, summed exactly.',
 })
 
-const FORM_ID = 'form-3-invoice'
+const FORM_ID = 'invoice-form'
 
 export interface InvoiceCustomerOption {
   id: string
@@ -110,82 +106,111 @@ export interface InvoiceCustomerOption {
   email: string
 }
 
-export interface InvoiceFormProps {
-  mode?: 'create' | 'edit'
-  customers: readonly InvoiceCustomerOption[]
+/** Who the invoice is from, or who it bills, as the From / Bill to blocks print it. */
+export interface InvoiceFormParty {
+  name: string
+  email: string
+  /** Address lines, already joined; empty ones left out. */
+  address: string[]
+}
+
+/** A tax rate the person can add to a new invoice. */
+export interface InvoiceTaxRateOption {
+  code: string
+  name: string
+  percentage: string
+}
+
+/** The invoice as the form opens it for editing. */
+export interface EditableInvoice {
+  number: string
+  customerName: string
+  status: InvoiceStatus
+  paymentStatus: PaymentStatus | null
+  currency: string
+  /** `YYYY-MM-DD`, or blank. */
+  issueDate: string
+  dueDate: string
+  description: string
+  amountDue: Money
+  amountPaid: Money
+  amountRemaining: Money
+  tax: Money
+  total: Money
+  metadata: Readonly<Record<string, string>>
+  lines: EditableLine[]
+}
+
+export type InvoiceLifecycleStep = 'keep' | 'finalize' | 'void'
+
+/** What an edit asked for; the page works out what changed and saves it. */
+export interface InvoiceEditDraft {
+  dueDate: string
+  metadata: Record<string, string>
+  applyDiscount: boolean
+  /** `null` keeps the current payment status. */
+  paymentStatus: PaymentStatus | null
+  /** Pending only: the amount paid so far; blank keeps it. */
+  paymentAmount: string
+  lines: EditableLine[]
+  nextStatus: InvoiceLifecycleStep
+}
+
+interface CommonProps {
   /** The way back, then this form. The shell header draws it. */
   trail: DetailCrumb[]
-  defaultValue?: CreateInvoice
-  /** Shown on edit, when the invoice already has a number. */
-  invoiceNumber?: string
-  onSubmit: (invoice: CreateInvoice) => void
+  billFrom?: InvoiceFormParty | null
+  billTo?: InvoiceFormParty | null
   onCancel?: () => void
   isSubmitting?: boolean
   submitError?: string | null
 }
 
-interface Line {
-  id: string
-  description: string
+export interface InvoiceCreateProps extends CommonProps {
+  mode?: 'create'
+  customers: readonly InvoiceCustomerOption[]
+  defaultValue?: CreateInvoice
+  /** The customer changed: the page loads its address and taxes. */
+  onCustomerChange?: (customerId: string) => void
+  /** Rates that can be added. */
+  taxRates?: readonly InvoiceTaxRateOption[]
+  /** The chosen customer's tax associations, applied when the customer is picked (as V1 does). */
+  customerTaxes?: readonly InvoiceTax[] | null
+  onSubmit: (invoice: CreateInvoice) => void
+}
+
+export interface InvoiceEditProps extends CommonProps {
+  mode: 'edit'
+  invoice: EditableInvoice
+  /** Where the payment status may go — `manualPaymentStatusChoices`. */
+  paymentChoices: readonly PaymentStatus[]
+  /** Why the payment status cannot be set by hand, or null — `manualPaymentStatusBlocked`. */
+  paymentStatusBlocked: string | null
+  onSave: (draft: InvoiceEditDraft) => void
+}
+
+export type InvoiceFormProps = InvoiceCreateProps | InvoiceEditProps
+
+/** A line as the form holds it: a unit price, so the amount is quantity × unit. */
+interface FormLine {
+  key: string
+  id?: string
+  name: string
   quantity: string
-  rate: string
-  taxRate: string
+  unit: string
+  note: string
+  periodStart: string
+  periodEnd: string
+  /** An existing line's amount, kept until its quantity or price is touched. */
+  originalAmount?: string
 }
 
-function linesFromDraft(draft: CreateInvoice): Line[] {
-  return draft.lines.map((line, index) => {
-    const quantity = line.quantity || '1'
-    return {
-      id: `line-${index + 1}`,
-      description: line.description,
-      quantity,
-      rate: unitRate(quantity, line.amount),
-      taxRate: '0',
-    }
-  })
-}
+const DECIMAL = /^(\d+)(?:\.(\d+))?$/
 
-/** Line amount is the total. The rate field is per unit, so edit divides it back. */
-function unitRate(quantity: string, amount: string): string {
-  const qty = /^(\d+)(?:\.(\d+))?$/.exec(quantity.trim())
-  const amt = /^(\d+)(?:\.(\d+))?$/.exec(amount.trim())
-  if (!qty || !amt) return amount
-  const qtyFrac = qty[2] ?? ''
-  const amtFrac = amt[2] ?? ''
-  const qtyInt = BigInt(qty[1]!) * 10n ** BigInt(qtyFrac.length) + BigInt(qtyFrac || '0')
-  if (qtyInt === 0n) return amount
-  const amtInt = BigInt(amt[1]!) * 10n ** BigInt(amtFrac.length) + BigInt(amtFrac || '0')
-  const scale = 8
-  const quotient =
-    (amtInt * 10n ** BigInt(scale + qtyFrac.length)) / (qtyInt * 10n ** BigInt(amtFrac.length))
-  const digits = quotient.toString().padStart(scale + 1, '0')
-  const whole = digits.slice(0, -scale)
-  const fraction = digits.slice(-scale).replace(/0+$/, '')
-  return fraction ? `${whole}.${fraction}` : whole
-}
-
-function optionLabel(options: readonly SelectOption[], value: string) {
-  return options.find((option) => option.value === value)?.label ?? value
-}
-
-function formatMoney(value: number, currency: string) {
-  const code = currency.trim().toUpperCase()
-  if (!/^[A-Z]{3}$/.test(code)) return '—'
-  return new Intl.NumberFormat('en-US', {
-    style: 'currency',
-    currencyDisplay: 'narrowSymbol',
-    currency: code,
-  }).format(value)
-}
-
-function lineAmount(line: Line): string | null {
-  return mulDecimal(line.quantity, line.rate)
-}
-
-/** Exact decimal product, so a typed rate never becomes a float before it is saved. */
+/** Exact decimal product, so a typed price never becomes a float before it is saved. */
 function mulDecimal(a: string, b: string): string | null {
-  const left = /^(\d+)(?:\.(\d+))?$/.exec(a.trim())
-  const right = /^(\d+)(?:\.(\d+))?$/.exec(b.trim())
+  const left = DECIMAL.exec(a.trim())
+  const right = DECIMAL.exec(b.trim())
   if (!left || !right) return null
   const leftFrac = left[2] ?? ''
   const rightFrac = right[2] ?? ''
@@ -198,229 +223,450 @@ function mulDecimal(a: string, b: string): string | null {
   return fraction ? `${whole}.${fraction}` : whole
 }
 
-function asNumber(amount: string | null): number {
-  if (!amount) return 0
-  const value = Number(amount)
-  return Number.isFinite(value) ? value : 0
+/** A line's total is its amount; the form edits a unit price, so divide it back. */
+function unitPrice(quantity: string, amount: string): string {
+  const qty = DECIMAL.exec(quantity.trim())
+  const amt = DECIMAL.exec(amount.trim())
+  if (!qty || !amt) return amount
+  const qtyFrac = qty[2] ?? ''
+  const amtFrac = amt[2] ?? ''
+  const qtyInt = BigInt(qty[1]!) * 10n ** BigInt(qtyFrac.length) + BigInt(qtyFrac || '0')
+  if (qtyInt === 0n) return amount
+  const amtInt = BigInt(amt[1]!) * 10n ** BigInt(amtFrac.length) + BigInt(amtFrac || '0')
+  const scale = 8
+  const quotient =
+    (amtInt * 10n ** BigInt(scale + qtyFrac.length)) / (qtyInt * 10n ** BigInt(amtFrac.length))
+  const digits = quotient.toString().padStart(scale + 1, '0')
+  const fraction = digits.slice(-scale).replace(/0+$/, '')
+  return fraction ? `${digits.slice(0, -scale)}.${fraction}` : digits.slice(0, -scale)
 }
 
-function issue(error: z.ZodError, path: string): string | undefined {
-  return error.issues.find((item) => item.path.join('.') === path)?.message
+function lineAmount(line: FormLine): string | null {
+  return line.originalAmount ?? mulDecimal(line.quantity || '1', line.unit)
 }
 
-function currencyError(error: z.ZodError | null): { error: string } | Record<string, never> {
-  const message = error ? issue(error, 'currency') : undefined
-  return message ? { error: message } : {}
+function money(amount: string | null, currency: string): string {
+  const code = currency.trim().toUpperCase()
+  const value = Number(amount ?? '0')
+  if (!/^[A-Z]{3}$/.test(code) || !Number.isFinite(value)) return '—'
+  return new Intl.NumberFormat(undefined, {
+    style: 'currency',
+    currencyDisplay: 'narrowSymbol',
+    currency: code,
+  }).format(value)
 }
 
-export function InvoiceForm({
-  mode = 'create',
-  customers,
-  trail,
-  defaultValue,
-  invoiceNumber = '',
-  onSubmit,
-  onCancel,
-  isSubmitting = false,
-  submitError = null,
-}: InvoiceFormProps) {
+function today(): string {
+  const now = new Date()
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`
+}
+
+/** The comparable form of an edit line: trimmed, quantity defaulted. */
+function normalise(line: EditableLine) {
+  return {
+    id: line.id ?? '',
+    displayName: line.displayName.trim(),
+    amount: line.amount.trim(),
+    quantity: line.quantity.trim() || '1',
+    description: (line.description ?? '').trim(),
+    periodStart: line.periodStart ?? '',
+    periodEnd: line.periodEnd ?? '',
+  }
+}
+
+/** Whether the lines differ from what the invoice has, ignoring blank rows never filled in. */
+export function linesChanged(before: EditableLine[], after: EditableLine[]): boolean {
+  const kept = after.filter((line) => line.id || line.displayName.trim() || line.amount.trim())
+  return JSON.stringify(before.map(normalise)) !== JSON.stringify(kept.map(normalise))
+}
+
+const VOIDABLE: readonly PaymentStatus[] = [
+  Payment.Pending,
+  Payment.Failed,
+  Payment.Succeeded,
+  Payment.Overpaid,
+]
+
+function issue(error: z.ZodError | null, path: string): string | undefined {
+  return error?.issues.find((item) => item.path.join('.') === path)?.message
+}
+
+let keySeed = 0
+const nextKey = () => `line-${++keySeed}`
+
+export function InvoiceForm(props: InvoiceFormProps) {
+  const { trail, billFrom = null, billTo = null, onCancel, isSubmitting = false } = props
+  const submitError = props.submitError ?? null
   usePublishDetailTrail(trail)
-  const draft = defaultValue ?? emptyInvoice()
-  const formRef = useRef<HTMLFormElement>(null)
-  const nextLineId = useRef(draft.lines.length + 1)
-  const finalizeRef = useRef(false)
-  const [lines, setLines] = useState<Line[]>(() => linesFromDraft(draft))
-  const [customerId, setCustomerId] = useState(draft.customerId)
-  const [taxId, setTaxId] = useState('')
-  const [number, setNumber] = useState(invoiceNumber)
-  const [poNumber, setPoNumber] = useState('')
-  const [issueDate, setIssueDate] = useState(() => new Date())
-  const [dueDate, setDueDate] = useState<Date | null>(() =>
-    draft.dueDate ? new Date(`${draft.dueDate}T00:00:00`) : null,
-  )
-  const [currency, setCurrency] = useState(draft.currency.toLowerCase() || 'usd')
-  const [paymentTerms, setPaymentTerms] = useState('due-receipt')
-  const [collectionMethod, setCollectionMethod] = useState('manual')
-  const [billingAddress, setBillingAddress] = useState('')
-  const [memo, setMemo] = useState(draft.description)
-  const [footerNote, setFooterNote] = useState('')
-  const [discountPercent, setDiscountPercent] = useState(0)
-  const [error, setError] = useState<z.ZodError | null>(null)
+  const edit = props.mode === 'edit' ? props : null
+  const create = props.mode === 'edit' ? null : props
+  const seed = create?.defaultValue ?? emptyInvoice()
 
-  const customer = customers.find((item) => item.id === customerId) ?? null
+  const [customerId, setCustomerId] = useState(seed.customerId)
+  const [invoiceNumber, setInvoiceNumber] = useState(seed.invoiceNumber)
+  const [issueDate, setIssueDate] = useState(
+    edit ? edit.invoice.issueDate : seed.issueDate || today(),
+  )
+  const [dueDate, setDueDate] = useState(edit ? edit.invoice.dueDate : seed.dueDate)
+  const [currency, setCurrency] = useState(
+    (edit ? edit.invoice.currency : seed.currency || 'USD').toUpperCase(),
+  )
+  const [memo, setMemo] = useState(edit ? edit.invoice.description : seed.description)
+  const [lines, setLines] = useState<FormLine[]>(() =>
+    edit
+      ? edit.invoice.lines.map((line) => ({
+          key: nextKey(),
+          ...(line.id ? { id: line.id } : {}),
+          name: line.displayName,
+          quantity: line.quantity || '1',
+          unit: unitPrice(line.quantity || '1', line.amount),
+          note: line.description ?? '',
+          periodStart: line.periodStart ?? '',
+          periodEnd: line.periodEnd ?? '',
+          originalAmount: line.amount,
+        }))
+      : seed.lines.map((line) => ({
+          key: nextKey(),
+          name: line.description,
+          quantity: line.quantity || '1',
+          unit: line.amount ? unitPrice(line.quantity || '1', line.amount) : '',
+          note: line.note,
+          periodStart: line.periodStart,
+          periodEnd: line.periodEnd,
+        })),
+  )
+  const [taxes, setTaxes] = useState<InvoiceTax[]>(seed.taxes)
+  const [taxesFor, setTaxesFor] = useState<string | null>(
+    seed.taxes.length > 0 ? seed.customerId : null,
+  )
+  const [rows, setRows] = useState(() =>
+    Object.entries(edit ? edit.invoice.metadata : seed.metadata).map(([key, value]) => ({
+      key: nextKey(),
+      name: key,
+      value,
+    })),
+  )
+  // Edit only.
+  const [nextStatus, setNextStatus] = useState<InvoiceLifecycleStep>('keep')
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus | null>(null)
+  const [paymentAmount, setPaymentAmount] = useState('')
+  const [applyDiscount, setApplyDiscount] = useState(false)
+  const [confirming, setConfirming] = useState(false)
+
+  const [error, setError] = useState<z.ZodError | null>(null)
+  const [problem, setProblem] = useState<string | null>(null)
+  const finalizeRef = useRef(false)
+
+  // V1 applies the chosen customer's tax associations to a new invoice.
+  const customerTaxes = create?.customerTaxes ?? null
+  useEffect(() => {
+    if (!create || !customerId || !customerTaxes || taxesFor === customerId) return
+    setTaxes([...customerTaxes])
+    setTaxesFor(customerId)
+  }, [create, customerId, customerTaxes, taxesFor])
+
   const amounts = lines.map(lineAmount)
-  const subtotalText = sumLineAmounts(amounts.map((amount) => amount ?? ''))
-  const subtotal = asNumber(subtotalText)
-  const discountAmount = subtotal * (discountPercent / 100)
-  const taxAmount = lines.reduce((total, line, index) => {
-    const amount = asNumber(amounts[index] ?? null)
-    return total + amount * (Number(line.taxRate) / 100)
-  }, 0)
-  const total = Math.max(subtotal - discountAmount + taxAmount, 0)
+  const subtotal = sumLineAmounts(amounts.map((amount) => amount ?? '')) ?? '0'
+  const metadata = Object.fromEntries(
+    rows.filter((row) => row.name.trim()).map((row) => [row.name.trim(), row.value]),
+  )
+
+  // ---- edit: what changed, and whether it replaces the invoice -------------
+  const editLines: EditableLine[] = lines.map((line, index) => ({
+    ...(line.id ? { id: line.id } : {}),
+    displayName: line.name,
+    amount: amounts[index] ?? line.unit,
+    quantity: line.quantity,
+    description: line.note,
+    periodStart: line.periodStart,
+    periodEnd: line.periodEnd,
+  }))
+  const isDraft = edit ? edit.invoice.status === InvoiceStatus.Draft : true
+  const lineEdit = edit ? linesChanged(edit.invoice.lines, editLines) : false
+  const paymentChanged =
+    paymentStatus !== null &&
+    (paymentStatus !== edit?.invoice.paymentStatus || paymentAmount.trim() !== '')
+  const editChanged = edit
+    ? dueDate !== edit.invoice.dueDate ||
+      JSON.stringify(metadata) !== JSON.stringify({ ...edit.invoice.metadata }) ||
+      applyDiscount ||
+      paymentChanged ||
+      lineEdit ||
+      nextStatus !== 'keep'
+    : true
+  const replacesInvoice = Boolean(edit) && !isDraft && (lineEdit || applyDiscount)
+
+  const updateLine = (key: string, patch: Partial<FormLine>) =>
+    setLines((items) =>
+      items.map((item) => {
+        if (item.key !== key) return item
+        const next = { ...item, ...patch }
+        // A changed quantity or price makes the amount the product again.
+        if ('quantity' in patch || 'unit' in patch) delete next.originalAmount
+        return next
+      }),
+    )
+  const addLine = () =>
+    setLines((items) => [
+      ...items,
+      {
+        key: nextKey(),
+        name: '',
+        quantity: '1',
+        unit: '',
+        note: '',
+        periodStart: '',
+        periodEnd: '',
+      },
+    ])
+
+  const validateEdit = (): string | null => {
+    if (!edit) return null
+    if (dueDate && dueDate !== edit.invoice.dueDate && dueDate < today()) {
+      return 'The due date cannot be in the past.'
+    }
+    const keys = rows.map((row) => row.name.trim()).filter(Boolean)
+    if (new Set(keys).size !== keys.length) return 'Each metadata key can appear once.'
+    for (const [index, line] of lines.entries()) {
+      const blank = !line.id && !line.name.trim() && !line.unit.trim()
+      if (blank) continue
+      if (!line.name.trim()) return 'Every line needs a name.'
+      if (amounts[index] === null) return `Enter a quantity and price for “${line.name}”.`
+      if (line.periodStart && line.periodEnd && line.periodEnd < line.periodStart) {
+        return `The period of “${line.name}” ends before it starts.`
+      }
+    }
+    if (paymentStatus === Payment.Pending && paymentAmount.trim()) {
+      if (!DECIMAL.test(paymentAmount.trim())) return 'Enter the amount paid as a number.'
+      if (Number(paymentAmount) > Number(edit.invoice.amountDue.amount)) {
+        return `The amount paid cannot be more than ${formatMoney(edit.invoice.amountDue)}.`
+      }
+    }
+    if (nextStatus === 'void' && (lineEdit || applyDiscount)) {
+      return 'Voiding discards the invoice, so it cannot be combined with line or discount changes.'
+    }
+    return null
+  }
+
+  const editDraft = (): InvoiceEditDraft => ({
+    dueDate,
+    metadata,
+    applyDiscount,
+    paymentStatus: paymentChanged ? paymentStatus : null,
+    paymentAmount: paymentAmount.trim(),
+    lines: editLines.filter((line) => line.id || line.displayName.trim() || line.amount.trim()),
+    nextStatus,
+  })
 
   const submit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
+    if (edit) {
+      const found = validateEdit()
+      setProblem(found)
+      if (found) return
+      if (replacesInvoice) return setConfirming(true)
+      edit.onSave(editDraft())
+      return
+    }
+    if (!create) return
+    const keys = rows.map((row) => row.name.trim()).filter(Boolean)
+    if (new Set(keys).size !== keys.length) return setProblem('Each metadata key can appear once.')
+    setProblem(null)
     const payload: CreateInvoice = {
       customerId,
       currency: currency.toUpperCase(),
+      invoiceNumber,
       description: memo,
-      dueDate: dueDate
-        ? `${dueDate.getFullYear()}-${String(dueDate.getMonth() + 1).padStart(2, '0')}-${String(dueDate.getDate()).padStart(2, '0')}`
-        : '',
-      total: subtotalText ?? '',
+      issueDate,
+      dueDate,
+      total: subtotal,
       finalize: finalizeRef.current,
+      metadata,
+      taxes,
       lines: lines.map((line, index) => ({
-        description: line.description,
+        description: line.name,
         quantity: line.quantity,
         amount: amounts[index] ?? '',
+        note: line.note,
+        periodStart: line.periodStart,
+        periodEnd: line.periodEnd,
       })),
     }
     const parsed = createInvoiceSchema.safeParse(payload)
-    if (!parsed.success) {
-      setError(parsed.error)
-      return
-    }
+    if (!parsed.success) return setError(parsed.error)
     setError(null)
-    onSubmit(parsed.data)
+    create.onSubmit(parsed.data)
   }
 
-  const addLine = () => {
-    const id = `line-${nextLineId.current}`
-    nextLineId.current += 1
-    setLines((items) => [...items, { id, description: '', quantity: '1', rate: '', taxRate: '0' }])
-  }
+  const customer = create?.customers.find((item) => item.id === customerId) ?? null
+  const statusLabel = isDraft ? 'Draft' : 'Finalized'
+  const title = edit ? `Edit ${edit.invoice.number || 'invoice'}` : 'New invoice'
+  const availableRates = (create?.taxRates ?? []).filter(
+    (rate) => !taxes.some((tax) => tax.taxRateCode === rate.code),
+  )
+  const canVoid =
+    edit !== null &&
+    (edit.invoice.paymentStatus === null || VOIDABLE.includes(edit.invoice.paymentStatus))
 
   return (
-    <>
-      <div className="bg-background flex min-h-0 w-full flex-1 flex-col">
-        <header className="border-border bg-background/95 sticky top-0 z-20 flex min-h-14 w-full shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur">
-          <div className="flex min-w-0 items-center gap-2">
-            {onCancel ? (
-              <>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  className="-ms-2 size-8 shrink-0"
-                  aria-label="Close form"
-                  disabled={isSubmitting}
-                  onClick={onCancel}
-                >
-                  <XIcon aria-hidden="true" />
-                </Button>
-                <Separator orientation="vertical" className="my-auto mr-2 h-4 shrink-0" />
-              </>
-            ) : null}
-            {mode === 'edit' ? (
-              <h1 className="text-foreground truncate text-base leading-5 font-medium">
-                Edit invoice
-              </h1>
-            ) : null}
-            <Badge
-              variant="warning-light"
-              className="hidden translate-y-px self-center sm:inline-flex"
-            >
-              Draft
-            </Badge>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              className="hidden sm:inline-flex"
-              disabled={isSubmitting}
-              onClick={() => {
-                finalizeRef.current = false
-                formRef.current?.requestSubmit()
-              }}
-            >
-              <SaveIcon data-icon="inline-start" aria-hidden />
-              Save draft
-            </Button>
-            <Button
-              type="submit"
-              form={FORM_ID}
-              disabled={isSubmitting}
-              onClick={() => {
-                finalizeRef.current = true
-              }}
-            >
-              <CheckIcon data-icon="inline-start" aria-hidden />
-              Finalize invoice
-            </Button>
-          </div>
-        </header>
-
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-7 sm:px-8 sm:py-9 lg:px-10">
-          <form
-            ref={formRef}
-            id={FORM_ID}
-            onSubmit={submit}
-            noValidate
-            className="mx-auto my-auto w-full max-w-5xl"
+    <div className="bg-background flex min-h-0 w-full flex-1 flex-col">
+      <header className="border-border bg-background/95 sticky top-0 z-20 flex min-h-14 w-full shrink-0 items-center justify-between gap-3 border-b px-4 backdrop-blur">
+        <div className="flex min-w-0 items-center gap-2">
+          {onCancel ? (
+            <>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="-ms-2 size-8 shrink-0"
+                aria-label="Close form"
+                disabled={isSubmitting}
+                onClick={onCancel}
+              >
+                <XIcon aria-hidden="true" />
+              </Button>
+              <Separator orientation="vertical" className="my-auto mr-2 h-4 shrink-0" />
+            </>
+          ) : null}
+          <h1 className="text-foreground truncate text-base leading-5 font-medium">{title}</h1>
+          <Badge
+            variant={isDraft ? 'warning-light' : 'info-light'}
+            className="hidden translate-y-px self-center sm:inline-flex"
           >
-            <Card className="gap-0 p-0">
-              <CardHeader className="gap-1 px-5 py-5 sm:px-6">
-                <CardTitle>Invoice Details</CardTitle>
-                <CardDescription>Customer, terms, items, and payment notes.</CardDescription>
-                <CardAction className="flex items-center gap-1.5 self-center">
-                  <Badge variant="warning-light">
-                    <ReceiptIcon aria-hidden />
-                    <span className="sr-only">Status</span>
-                    Draft
+            {statusLabel}
+          </Badge>
+        </div>
+        <div className="flex shrink-0 items-center gap-2">
+          {edit ? (
+            <>
+              {onCancel ? (
+                <Button type="button" variant="outline" disabled={isSubmitting} onClick={onCancel}>
+                  Cancel
+                </Button>
+              ) : null}
+              <Button type="submit" form={FORM_ID} disabled={isSubmitting || !editChanged}>
+                <CheckIcon data-icon="inline-start" aria-hidden />
+                {isSubmitting ? 'Saving…' : 'Save changes'}
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                type="submit"
+                form={FORM_ID}
+                variant="outline"
+                className="hidden sm:inline-flex"
+                disabled={isSubmitting}
+                onClick={() => {
+                  finalizeRef.current = false
+                }}
+              >
+                <SaveIcon data-icon="inline-start" aria-hidden />
+                Save draft
+              </Button>
+              <Button
+                type="submit"
+                form={FORM_ID}
+                disabled={isSubmitting}
+                onClick={() => {
+                  finalizeRef.current = true
+                }}
+              >
+                <CheckIcon data-icon="inline-start" aria-hidden />
+                Finalize invoice
+              </Button>
+            </>
+          )}
+        </div>
+      </header>
+
+      <div className="flex min-h-0 flex-1 flex-col overflow-y-auto px-4 py-7 sm:px-8 sm:py-9 lg:px-10">
+        <form
+          id={FORM_ID}
+          onSubmit={submit}
+          noValidate
+          className="mx-auto my-auto w-full max-w-5xl"
+        >
+          <Card className="gap-0 p-0">
+            <CardHeader className="gap-1 px-5 py-5 sm:px-6">
+              <CardTitle>Invoice details</CardTitle>
+              <CardDescription>
+                {edit
+                  ? 'Change the dates, lines, statuses and metadata of this invoice.'
+                  : 'Customer, dates, items and taxes for a one-off invoice.'}
+              </CardDescription>
+              <CardAction className="flex items-center gap-1.5 self-center">
+                <Badge variant={isDraft ? 'warning-light' : 'info-light'}>
+                  <ReceiptIcon aria-hidden />
+                  <span className="sr-only">Status</span>
+                  {statusLabel}
+                </Badge>
+                {currency ? (
+                  <Badge variant="primary-outline" className="hidden sm:inline-flex">
+                    {currency}
                   </Badge>
-                  {currency ? (
-                    <Badge variant="primary-outline" className="hidden sm:inline-flex">
-                      {optionLabel(CURRENCY_OPTIONS, currency)}
-                    </Badge>
-                  ) : null}
-                </CardAction>
-              </CardHeader>
-              <Separator />
-              <CardContent className="flex flex-col gap-7 px-5 py-5 sm:px-6 sm:py-6">
-                <FieldSet className="gap-0">
-                  <FieldLegend className="sr-only">Invoice form</FieldLegend>
-                  <FieldDescription className="sr-only">
-                    Customer, billing terms, line items, and payment notes.
-                  </FieldDescription>
-                  <FieldGroup className="gap-7">
-                    <InvoiceSection
-                      title="Customer"
-                      description="Billable account and invoice reference."
-                      badge="Required"
-                      badgeVariant="success-light"
-                    >
-                      <FieldGroup className="grid gap-4 md:grid-cols-2">
-                        <Field
-                          data-invalid={issue(error ?? emptyZod(), 'customerId') ? true : undefined}
+                ) : null}
+              </CardAction>
+            </CardHeader>
+            <Separator />
+            <CardContent className="flex flex-col gap-7 px-5 py-5 sm:px-6 sm:py-6">
+              {edit && !isDraft ? (
+                <Alert>
+                  <AlertTitle>This invoice is finalized</AlertTitle>
+                  <AlertDescription>
+                    The due date, metadata and statuses change in place. Changing lines or
+                    re-applying discounts voids this invoice and creates a draft copy with your
+                    changes; you are asked to confirm first.
+                  </AlertDescription>
+                </Alert>
+              ) : null}
+              <FieldSet className="gap-0">
+                <FieldLegend className="sr-only">Invoice form</FieldLegend>
+                <FieldDescription className="sr-only">
+                  Customer, dates, line items, taxes and notes.
+                </FieldDescription>
+                <FieldGroup className="gap-7">
+                  <InvoiceSection
+                    title="Customer"
+                    description="Who the invoice bills, and its number."
+                    {...(edit ? {} : { badge: 'Required', badgeVariant: 'success-light' as const })}
+                  >
+                    <FieldGroup className="grid gap-4 md:grid-cols-2">
+                      <Field data-invalid={issue(error, 'customerId') ? true : undefined}>
+                        <LabelWithHint
+                          htmlFor="invoice-customer"
+                          hint={
+                            edit
+                              ? 'An invoice keeps the customer it was raised for.'
+                              : 'This customer becomes the bill-to record on the invoice.'
+                          }
                         >
-                          <LabelWithHint
-                            htmlFor="form-3-customer"
-                            hint="This customer becomes the bill-to record on the invoice."
-                          >
-                            Customer
-                          </LabelWithHint>
+                          Customer
+                        </LabelWithHint>
+                        {create ? (
                           <Combobox
-                            items={customers}
+                            items={create.customers}
                             value={customer}
-                            onValueChange={(next) => setCustomerId(next?.id ?? '')}
+                            onValueChange={(next) => {
+                              setCustomerId(next?.id ?? '')
+                              create.onCustomerChange?.(next?.id ?? '')
+                            }}
                             itemToStringLabel={(item) => item.name}
                             itemToStringValue={(item) => item.name}
                           >
                             <ComboboxInput
-                              id="form-3-customer"
+                              id="invoice-customer"
                               placeholder="Find a customer..."
                               className="w-full"
                               showClear
                               disabled={isSubmitting}
-                              aria-invalid={
-                                issue(error ?? emptyZod(), 'customerId') ? true : undefined
-                              }
+                              aria-invalid={issue(error, 'customerId') ? true : undefined}
                             />
                             <ComboboxContent className="w-(--anchor-width) min-w-(--anchor-width)">
                               <ComboboxEmpty>No customers found.</ComboboxEmpty>
                               <ComboboxList>
-                                {(item) => (
+                                {(item: InvoiceCustomerOption) => (
                                   <ComboboxItem key={item.id} value={item}>
                                     <span className="flex min-w-0 flex-col">
                                       <span className="truncate">{item.name}</span>
@@ -435,449 +681,705 @@ export function InvoiceForm({
                               </ComboboxList>
                             </ComboboxContent>
                           </Combobox>
-                          {error && issue(error, 'customerId') ? (
-                            <p className="text-destructive text-xs" role="alert">
-                              {issue(error, 'customerId')}
-                            </p>
-                          ) : null}
-                        </Field>
-                        <Field>
-                          <LabelWithHint
-                            htmlFor="form-3-tax-id"
-                            hint="Shown for finance teams that match invoices against vendor records."
-                          >
-                            Tax ID
-                          </LabelWithHint>
-                          <InputGroup>
-                            <InputGroupAddon>
-                              <Building2Icon aria-hidden />
-                            </InputGroupAddon>
-                            <InputGroupInput
-                              id="form-3-tax-id"
-                              value={taxId}
-                              disabled={isSubmitting}
-                              onChange={(event) => setTaxId(event.target.value)}
-                            />
-                          </InputGroup>
-                        </Field>
-                        <Field>
-                          <LabelWithHint
-                            htmlFor="form-3-invoice-number"
-                            hint="Assigned when the invoice is created. On edit, this is the number already issued."
-                          >
-                            Invoice Number
-                          </LabelWithHint>
-                          <InputGroup>
-                            <InputGroupAddon>
-                              <HashIcon aria-hidden />
-                            </InputGroupAddon>
-                            <InputGroupInput
-                              id="form-3-invoice-number"
-                              value={number}
-                              disabled={isSubmitting || mode === 'edit'}
-                              onChange={(event) => setNumber(event.target.value)}
-                            />
-                          </InputGroup>
-                        </Field>
-                        <Field>
-                          <LabelWithHint
-                            htmlFor="form-3-po-number"
-                            hint="Your customer's purchase order number, printed on the invoice. Optional."
-                          >
-                            PO Reference
-                          </LabelWithHint>
+                        ) : (
                           <Input
-                            id="form-3-po-number"
-                            value={poNumber}
-                            disabled={isSubmitting}
-                            onChange={(event) => setPoNumber(event.target.value)}
+                            id="invoice-customer"
+                            value={edit?.invoice.customerName}
+                            disabled
                           />
-                        </Field>
-                      </FieldGroup>
-                    </InvoiceSection>
+                        )}
+                        <FieldError message={issue(error, 'customerId')} />
+                      </Field>
+                      <Field>
+                        <LabelWithHint
+                          htmlFor="invoice-number"
+                          hint={
+                            edit
+                              ? 'The number the invoice was issued with.'
+                              : 'Optional. Flexprice numbers the invoice when left blank.'
+                          }
+                        >
+                          Invoice number
+                        </LabelWithHint>
+                        <Input
+                          id="invoice-number"
+                          value={edit ? edit.invoice.number : invoiceNumber}
+                          placeholder={edit ? 'Assigned when finalized' : 'Assigned automatically'}
+                          disabled={isSubmitting || Boolean(edit)}
+                          onChange={(event) => setInvoiceNumber(event.target.value)}
+                        />
+                        <FieldError message={issue(error, 'invoiceNumber')} />
+                      </Field>
+                    </FieldGroup>
+                    <div className="bg-muted/30 grid gap-6 rounded-lg border p-4 md:grid-cols-2">
+                      <PartyBlock label="From" party={billFrom} />
+                      <PartyBlock
+                        label="Bill to"
+                        party={billTo}
+                        empty={create ? 'Choose a customer to see their billing details.' : '—'}
+                      />
+                    </div>
+                  </InvoiceSection>
 
-                    <Separator />
+                  <Separator />
 
+                  <InvoiceSection
+                    title="Dates and currency"
+                    description="When it is issued and due, and what it is billed in."
+                  >
+                    <FieldGroup className="grid gap-4 md:grid-cols-3">
+                      <Field data-invalid={issue(error, 'issueDate') ? true : undefined}>
+                        <LabelWithHint
+                          htmlFor="invoice-issue-date"
+                          hint={
+                            edit
+                              ? 'Fixed once the invoice exists.'
+                              : 'The date printed as when the invoice was issued.'
+                          }
+                        >
+                          Issue date
+                        </LabelWithHint>
+                        <DateInput
+                          id="invoice-issue-date"
+                          value={issueDate}
+                          onValueChange={setIssueDate}
+                          placeholder="Today"
+                          disabled={isSubmitting || Boolean(edit)}
+                        />
+                      </Field>
+                      <Field data-invalid={issue(error, 'dueDate') ? true : undefined}>
+                        <LabelWithHint
+                          htmlFor="invoice-due-date"
+                          hint="When payment is expected. It cannot be in the past."
+                        >
+                          Due date
+                        </LabelWithHint>
+                        <DateInput
+                          id="invoice-due-date"
+                          value={dueDate}
+                          onValueChange={setDueDate}
+                          placeholder="No due date"
+                          disabled={isSubmitting}
+                        />
+                      </Field>
+                      <Field data-invalid={issue(error, 'currency') ? true : undefined}>
+                        <LabelWithHint
+                          htmlFor="invoice-currency"
+                          hint={
+                            edit
+                              ? 'Fixed once the invoice exists.'
+                              : 'The currency the invoice is issued in.'
+                          }
+                        >
+                          Currency
+                        </LabelWithHint>
+                        <OptionSelect
+                          id="invoice-currency"
+                          value={currency}
+                          onValueChange={setCurrency}
+                          options={currencyCodes().map((code) => ({ value: code, label: code }))}
+                          disabled={isSubmitting || Boolean(edit)}
+                        />
+                        <FieldError message={issue(error, 'currency')} />
+                      </Field>
+                    </FieldGroup>
+                  </InvoiceSection>
+
+                  <Separator />
+
+                  <InvoiceSection
+                    title="Line items"
+                    description="What the invoice charges for: quantity × unit price, with a note and service period."
+                    badge={`${lines.length} item${lines.length === 1 ? '' : 's'}`}
+                    badgeVariant="secondary"
+                    action={
+                      <Button
+                        type="button"
+                        variant="outline"
+                        disabled={isSubmitting}
+                        onClick={addLine}
+                      >
+                        <PlusIcon data-icon="inline-start" aria-hidden />
+                        Add item
+                      </Button>
+                    }
+                  >
+                    <Table aria-label="Invoice line items" className="min-w-[760px]">
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[44%]">Item</TableHead>
+                          <TableHead className="w-24">Qty</TableHead>
+                          <TableHead className="w-40">Unit price</TableHead>
+                          <TableHead className="w-32 text-right">Amount</TableHead>
+                          <TableHead className="w-10">
+                            <span className="sr-only">Remove</span>
+                          </TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lines.map((line, index) => (
+                          <LineRows
+                            key={line.key}
+                            line={line}
+                            index={index}
+                            amount={amounts[index] ?? null}
+                            currency={currency}
+                            disabled={isSubmitting}
+                            canRemove={Boolean(edit) || lines.length > 1}
+                            nameError={issue(error, `lines.${index}.description`)}
+                            amountError={
+                              issue(error, `lines.${index}.amount`) ??
+                              issue(error, `lines.${index}.quantity`)
+                            }
+                            periodError={issue(error, `lines.${index}.periodEnd`)}
+                            onChange={(patch) => updateLine(line.key, patch)}
+                            onRemove={() =>
+                              setLines((items) => items.filter((item) => item.key !== line.key))
+                            }
+                          />
+                        ))}
+                      </TableBody>
+                    </Table>
+                    {lines.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">
+                        No lines. Add one, or the invoice bills nothing.
+                      </p>
+                    ) : null}
+                    <FieldError message={issue(error, 'lines')} />
+                  </InvoiceSection>
+
+                  <Separator />
+
+                  {create ? (
                     <InvoiceSection
-                      title="Terms"
-                      description="Dates, currency, and collection method."
-                      badge={optionLabel(PAYMENT_TERMS_OPTIONS, paymentTerms)}
-                      badgeVariant="info-light"
+                      title="Taxes"
+                      description="Applied by Flexprice on top of the lines. Starts from the customer's tax rates."
+                      badge={`${taxes.length} rate${taxes.length === 1 ? '' : 's'}`}
+                      badgeVariant="secondary"
+                    >
+                      <div className="flex flex-col gap-2">
+                        {taxes.length === 0 ? (
+                          <p className="text-muted-foreground text-sm">No taxes are applied.</p>
+                        ) : (
+                          taxes.map((tax) => (
+                            <div
+                              key={tax.taxRateCode}
+                              className="flex items-center justify-between gap-3 rounded-lg border px-3 py-2 text-sm"
+                            >
+                              <span className="flex min-w-0 flex-col">
+                                <span className="truncate font-medium">
+                                  {tax.name || tax.taxRateCode}
+                                  {tax.percentage ? ` · ${tax.percentage}%` : ''}
+                                </span>
+                                <span className="text-muted-foreground text-xs">
+                                  {tax.taxRateCode} ·{' '}
+                                  {tax.taxBehavior === 'inclusive'
+                                    ? 'Included in the price'
+                                    : 'Added on top of the price'}
+                                </span>
+                              </span>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon-sm"
+                                aria-label={`Remove ${tax.name || tax.taxRateCode}`}
+                                disabled={isSubmitting}
+                                onClick={() =>
+                                  setTaxes((items) =>
+                                    items.filter((item) => item.taxRateCode !== tax.taxRateCode),
+                                  )
+                                }
+                              >
+                                <Trash2Icon aria-hidden />
+                              </Button>
+                            </div>
+                          ))
+                        )}
+                        {availableRates.length > 0 ? (
+                          <div className="max-w-xs">
+                            <OptionSelect
+                              aria-describedby={undefined}
+                              value={undefined}
+                              placeholder="Add a tax rate"
+                              disabled={isSubmitting}
+                              options={availableRates.map((rate) => ({
+                                value: rate.code,
+                                label: `${rate.name}${rate.percentage ? ` (${rate.percentage}%)` : ''}`,
+                              }))}
+                              onValueChange={(code) => {
+                                const rate = availableRates.find((item) => item.code === code)
+                                if (!rate) return
+                                setTaxes((items) => [
+                                  ...items,
+                                  {
+                                    taxRateCode: rate.code,
+                                    name: rate.name,
+                                    percentage: rate.percentage,
+                                    taxBehavior: 'exclusive',
+                                    priority: items.length + 1,
+                                    autoApply: true,
+                                  },
+                                ])
+                              }}
+                            />
+                          </div>
+                        ) : null}
+                      </div>
+                    </InvoiceSection>
+                  ) : (
+                    <InvoiceSection
+                      title="Status and payment"
+                      description="Applied after the other changes are saved."
                     >
                       <FieldGroup className="grid gap-4 md:grid-cols-3">
                         <Field>
                           <LabelWithHint
-                            htmlFor="form-3-issue-date"
-                            hint="The date shown on the invoice as when it was issued."
+                            htmlFor="invoice-next-status"
+                            hint="Finalize locks a draft and issues it; void means it is no longer owed."
                           >
-                            Issue Date
+                            Invoice status
                           </LabelWithHint>
-                          <InvoiceDateField
-                            id="form-3-issue-date"
-                            label="Choose issue date"
-                            date={issueDate}
-                            onSelect={setIssueDate}
-                          />
-                        </Field>
-                        <Field>
-                          <LabelWithHint
-                            htmlFor="form-3-due-date"
-                            hint="The date payment is expected by."
-                          >
-                            Due Date
-                          </LabelWithHint>
-                          <DueDateField id="form-3-due-date" date={dueDate} onSelect={setDueDate} />
-                        </Field>
-                        <SelectField
-                          id="form-3-currency"
-                          label="Currency"
-                          hint="The currency the invoice is issued in."
-                          value={currency}
-                          options={CURRENCY_OPTIONS}
-                          disabled={isSubmitting}
-                          onValueChange={setCurrency}
-                          {...currencyError(error)}
-                        />
-                        <SelectField
-                          id="form-3-payment-terms"
-                          label="Payment Terms"
-                          hint="How long the customer has to pay after the issue date."
-                          value={paymentTerms}
-                          options={PAYMENT_TERMS_OPTIONS}
-                          disabled={isSubmitting}
-                          onValueChange={setPaymentTerms}
-                        />
-                        <SelectField
-                          id="form-3-collection-method"
-                          label="Collection"
-                          hint="Whether the customer is charged automatically or sent the invoice to pay."
-                          value={collectionMethod}
-                          options={COLLECTION_METHOD_OPTIONS}
-                          disabled={isSubmitting}
-                          onValueChange={setCollectionMethod}
-                        />
-                        <Field>
-                          <LabelWithHint
-                            htmlFor="form-3-billing-address"
-                            hint="Where the invoice is addressed. Defaults to the customer's address."
-                          >
-                            Billing Address
-                          </LabelWithHint>
-                          <Input
-                            id="form-3-billing-address"
-                            value={billingAddress}
+                          <OptionSelect
+                            id="invoice-next-status"
+                            value={nextStatus}
+                            onValueChange={(value) => setNextStatus(value as InvoiceLifecycleStep)}
+                            options={[
+                              {
+                                value: 'keep',
+                                label: isDraft ? 'Keep as draft' : 'Keep finalized',
+                              },
+                              ...(isDraft ? [{ value: 'finalize', label: 'Finalize' }] : []),
+                              ...(canVoid ? [{ value: 'void', label: 'Void' }] : []),
+                            ]}
                             disabled={isSubmitting}
-                            onChange={(event) => setBillingAddress(event.target.value)}
                           />
                         </Field>
+                        <Field>
+                          <LabelWithHint
+                            htmlFor="invoice-payment-status"
+                            hint="For money that moved outside Flexprice."
+                          >
+                            Payment status
+                          </LabelWithHint>
+                          {edit?.paymentStatusBlocked ? (
+                            <p className="text-muted-foreground text-sm">
+                              {edit.invoice.paymentStatus
+                                ? PAYMENT_STATUS_LABEL[edit.invoice.paymentStatus]
+                                : 'Not set'}{' '}
+                              — {edit.paymentStatusBlocked.toLowerCase()}.
+                            </p>
+                          ) : (
+                            <OptionSelect
+                              id="invoice-payment-status"
+                              value={paymentStatus ?? 'keep'}
+                              onValueChange={(value) =>
+                                setPaymentStatus(value === 'keep' ? null : (value as PaymentStatus))
+                              }
+                              options={[
+                                {
+                                  value: 'keep',
+                                  label: `Keep ${
+                                    edit?.invoice.paymentStatus
+                                      ? PAYMENT_STATUS_LABEL[
+                                          edit.invoice.paymentStatus
+                                        ].toLowerCase()
+                                      : 'as is'
+                                  }`,
+                                },
+                                ...(edit?.paymentChoices ?? [])
+                                  .filter(
+                                    (choice) =>
+                                      choice !== edit?.invoice.paymentStatus ||
+                                      choice === Payment.Pending,
+                                  )
+                                  .map((choice) => ({
+                                    value: choice,
+                                    label:
+                                      choice === edit?.invoice.paymentStatus
+                                        ? `${PAYMENT_STATUS_LABEL[choice]} — record an amount`
+                                        : PAYMENT_STATUS_LABEL[choice],
+                                  })),
+                              ]}
+                              disabled={isSubmitting}
+                            />
+                          )}
+                          {edit ? (
+                            <p className="text-muted-foreground text-xs">
+                              Paid {formatMoney(edit.invoice.amountPaid)} of{' '}
+                              {formatMoney(edit.invoice.amountDue)}.
+                            </p>
+                          ) : null}
+                        </Field>
+                        {paymentStatus === Payment.Pending ? (
+                          <Field>
+                            <LabelWithHint
+                              htmlFor="invoice-payment-amount"
+                              hint="Optional. Leave blank to keep what is recorded."
+                            >
+                              Amount paid so far
+                            </LabelWithHint>
+                            <InputGroup>
+                              <InputGroupInput
+                                id="invoice-payment-amount"
+                                inputMode="decimal"
+                                placeholder={edit?.invoice.amountPaid.amount}
+                                value={paymentAmount}
+                                disabled={isSubmitting}
+                                onChange={(event) => setPaymentAmount(event.target.value)}
+                              />
+                              <InputGroupAddon align="inline-end">{currency}</InputGroupAddon>
+                            </InputGroup>
+                          </Field>
+                        ) : (
+                          <Field>
+                            <LabelWithHint
+                              htmlFor="invoice-apply-discount"
+                              hint={
+                                isDraft
+                                  ? "Recalculates the discount from this invoice's coupons."
+                                  : "Recalculates the discount from this invoice's coupons, on a draft copy."
+                              }
+                            >
+                              Re-apply discounts
+                            </LabelWithHint>
+                            <Switch
+                              id="invoice-apply-discount"
+                              checked={applyDiscount}
+                              onCheckedChange={setApplyDiscount}
+                              disabled={isSubmitting}
+                            />
+                          </Field>
+                        )}
                       </FieldGroup>
                     </InvoiceSection>
+                  )}
 
-                    <Separator />
+                  <Separator />
 
-                    <InvoiceSection
-                      title="Line Items"
-                      description="Description, quantity, rate, tax, and amount."
-                      badge={`${lines.length} item${lines.length === 1 ? '' : 's'}`}
-                      badgeVariant="secondary"
-                      action={
+                  <InvoiceSection
+                    title="Notes"
+                    description="A memo printed on the invoice, and metadata for your own systems."
+                    badge="Optional"
+                    badgeVariant="secondary"
+                  >
+                    <FieldGroup className="grid gap-4 md:grid-cols-2">
+                      <Field>
+                        <LabelWithHint
+                          htmlFor="invoice-memo"
+                          hint={
+                            edit
+                              ? 'Fixed once the invoice exists.'
+                              : 'A note shown to the customer on the invoice.'
+                          }
+                        >
+                          Memo
+                        </LabelWithHint>
+                        <Textarea
+                          id="invoice-memo"
+                          value={memo}
+                          placeholder={edit ? 'No memo' : undefined}
+                          disabled={isSubmitting || Boolean(edit)}
+                          onChange={(event) => setMemo(event.target.value)}
+                        />
+                      </Field>
+                      <div className="flex flex-col gap-2">
+                        <span className="text-sm font-medium">Metadata</span>
+                        {rows.map((row) => (
+                          <div
+                            key={row.key}
+                            className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto] gap-2"
+                          >
+                            <Input
+                              aria-label="Metadata key"
+                              placeholder="Key"
+                              value={row.name}
+                              disabled={isSubmitting}
+                              onChange={(event) =>
+                                setRows((items) =>
+                                  items.map((item) =>
+                                    item.key === row.key
+                                      ? { ...item, name: event.target.value }
+                                      : item,
+                                  ),
+                                )
+                              }
+                            />
+                            <Input
+                              aria-label="Metadata value"
+                              placeholder="Value"
+                              value={row.value}
+                              disabled={isSubmitting}
+                              onChange={(event) =>
+                                setRows((items) =>
+                                  items.map((item) =>
+                                    item.key === row.key
+                                      ? { ...item, value: event.target.value }
+                                      : item,
+                                  ),
+                                )
+                              }
+                            />
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon-sm"
+                              aria-label={`Remove ${row.name || 'this key'}`}
+                              disabled={isSubmitting}
+                              onClick={() =>
+                                setRows((items) => items.filter((item) => item.key !== row.key))
+                              }
+                            >
+                              <Trash2Icon aria-hidden />
+                            </Button>
+                          </div>
+                        ))}
                         <Button
                           type="button"
                           variant="outline"
+                          size="sm"
+                          className="w-fit"
                           disabled={isSubmitting}
-                          onClick={addLine}
+                          onClick={() =>
+                            setRows((items) => [...items, { key: nextKey(), name: '', value: '' }])
+                          }
                         >
                           <PlusIcon data-icon="inline-start" aria-hidden />
-                          Add item
+                          Add key
                         </Button>
-                      }
-                    >
-                      <Table aria-label="Invoice line items" className="min-w-[820px]">
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="w-[42%]">Item</TableHead>
-                            <TableHead className="w-24">Qty</TableHead>
-                            <TableHead className="w-36">Rate</TableHead>
-                            <TableHead className="w-32">Tax</TableHead>
-                            <TableHead className="w-32 text-right">Amount</TableHead>
-                            <TableHead className="w-10" />
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {lines.map((line, index) => (
-                            <TableRow key={line.id}>
-                              <TableCell className="align-middle">
-                                <Input
-                                  aria-label={`Line ${index + 1} description`}
-                                  value={line.description}
-                                  disabled={isSubmitting}
-                                  placeholder="Description"
-                                  onChange={(event) =>
-                                    updateLine(setLines, line.id, {
-                                      description: event.target.value,
-                                    })
-                                  }
-                                />
-                                {error && issue(error, `lines.${index}.description`) ? (
-                                  <p className="text-destructive mt-1 text-xs" role="alert">
-                                    {issue(error, `lines.${index}.description`)}
-                                  </p>
-                                ) : null}
-                              </TableCell>
-                              <TableCell className="align-middle">
-                                <Input
-                                  inputMode="decimal"
-                                  aria-label={`Quantity for line ${index + 1}`}
-                                  value={line.quantity}
-                                  disabled={isSubmitting}
-                                  className="w-20"
-                                  onChange={(event) =>
-                                    updateLine(setLines, line.id, { quantity: event.target.value })
-                                  }
-                                />
-                              </TableCell>
-                              <TableCell className="align-middle">
-                                <InputGroup className="min-w-28">
-                                  <InputGroupAddon>$</InputGroupAddon>
-                                  <InputGroupInput
-                                    inputMode="decimal"
-                                    aria-label={`Line ${index + 1} amount`}
-                                    value={line.rate}
-                                    disabled={isSubmitting}
-                                    onChange={(event) =>
-                                      updateLine(setLines, line.id, { rate: event.target.value })
-                                    }
-                                  />
-                                </InputGroup>
-                              </TableCell>
-                              <TableCell className="align-middle">
-                                <Select
-                                  value={line.taxRate}
-                                  onValueChange={(value) =>
-                                    value && updateLine(setLines, line.id, { taxRate: value })
-                                  }
-                                >
-                                  <SelectTrigger
-                                    aria-label={`Tax rate for line ${index + 1}`}
-                                    className="min-w-24"
-                                    disabled={isSubmitting}
-                                  >
-                                    <SelectValue>
-                                      {optionLabel(TAX_RATE_OPTIONS, line.taxRate)}
-                                    </SelectValue>
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                    <SelectGroup>
-                                      {TAX_RATE_OPTIONS.map((option) => (
-                                        <SelectItem key={option.value} value={option.value}>
-                                          {option.label}
-                                        </SelectItem>
-                                      ))}
-                                    </SelectGroup>
-                                  </SelectContent>
-                                </Select>
-                              </TableCell>
-                              <TableCell className="text-right align-middle font-medium tabular-nums">
-                                <span className="inline-flex min-h-9 items-center justify-end">
-                                  {formatMoney(asNumber(amounts[index] ?? null), currency || 'USD')}
-                                </span>
-                              </TableCell>
-                              <TableCell className="align-middle">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  aria-label={`Remove line ${index + 1}`}
-                                  disabled={isSubmitting || lines.length === 1}
-                                  onClick={() =>
-                                    setLines((items) =>
-                                      items.length === 1
-                                        ? items
-                                        : items.filter((item) => item.id !== line.id),
-                                    )
-                                  }
-                                >
-                                  <Trash2Icon aria-hidden />
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                      {error && issue(error, 'lines') ? (
-                        <p className="text-destructive text-xs" role="alert">
-                          {issue(error, 'lines')}
-                        </p>
-                      ) : null}
-                    </InvoiceSection>
-
-                    <Separator />
-
-                    <InvoiceSection
-                      title="Notes"
-                      description="Customer-facing memo and payment footer."
-                      badge="Optional"
-                      badgeVariant="secondary"
-                    >
-                      <FieldGroup className="grid gap-4 md:grid-cols-2">
-                        <Field>
-                          <LabelWithHint
-                            htmlFor="form-3-memo"
-                            hint="A note shown to the customer on the invoice."
-                          >
-                            Memo
-                          </LabelWithHint>
-                          <Textarea
-                            id="form-3-memo"
-                            value={memo}
-                            disabled={isSubmitting}
-                            onChange={(event) => setMemo(event.target.value)}
-                          />
-                        </Field>
-                        <Field>
-                          <LabelWithHint
-                            htmlFor="form-3-footer-note"
-                            hint="Printed at the bottom of the invoice, for example payment instructions."
-                          >
-                            Footer Note
-                          </LabelWithHint>
-                          <Textarea
-                            id="form-3-footer-note"
-                            value={footerNote}
-                            disabled={isSubmitting}
-                            onChange={(event) => setFooterNote(event.target.value)}
-                          />
-                        </Field>
-                      </FieldGroup>
-                    </InvoiceSection>
-                  </FieldGroup>
-                </FieldSet>
-              </CardContent>
-              <CardFooter className="flex-col items-stretch gap-4 px-5 py-5 sm:px-6">
-                {submitError ? (
-                  <p className="text-destructive text-sm" role="alert">
-                    {submitError}
-                  </p>
-                ) : null}
-                <InvoiceSummary
-                  subtotal={subtotal}
-                  discountPercent={discountPercent}
-                  discountAmount={discountAmount}
-                  taxAmount={taxAmount}
-                  total={total}
-                  currency={currency || 'usd'}
-                  onDiscountChange={(value) =>
-                    setDiscountPercent(Math.min(Math.max(value, 0), 100))
-                  }
-                />
-              </CardFooter>
-            </Card>
-          </form>
-        </div>
+                      </div>
+                    </FieldGroup>
+                  </InvoiceSection>
+                </FieldGroup>
+              </FieldSet>
+            </CardContent>
+            <CardFooter className="flex-col items-stretch gap-4 px-5 py-5 sm:px-6">
+              {problem || submitError ? (
+                <p className="text-destructive text-sm" role="alert">
+                  {problem ?? submitError}
+                </p>
+              ) : null}
+              <Summary
+                subtotal={money(subtotal, currency)}
+                tax={
+                  edit && !lineEdit
+                    ? formatMoney(edit.invoice.tax)
+                    : taxes.length > 0 || edit
+                      ? 'Calculated by Flexprice'
+                      : money('0', currency)
+                }
+                total={
+                  edit && !lineEdit ? formatMoney(edit.invoice.total) : money(subtotal, currency)
+                }
+                totalLabel={edit && !lineEdit ? 'Total' : 'Total before tax'}
+              />
+            </CardFooter>
+          </Card>
+        </form>
       </div>
+
+      {edit ? (
+        <ConfirmDialog
+          open={confirming}
+          onOpenChange={setConfirming}
+          title="Replace this invoice with a draft?"
+          description={`Changing the lines or re-applying discounts on ${edit.invoice.number || 'a finalized invoice'} voids it and creates a draft copy with your changes. The voided invoice stays on record.`}
+          confirmLabel="Void and create draft"
+          destructive
+          onConfirm={() => {
+            setConfirming(false)
+            edit.onSave(editDraft())
+          }}
+        />
+      ) : null}
+    </div>
+  )
+}
+
+/** One line: the item row, then its note and service period beneath it. */
+function LineRows({
+  line,
+  index,
+  amount,
+  currency,
+  disabled,
+  canRemove,
+  nameError,
+  amountError,
+  periodError,
+  onChange,
+  onRemove,
+}: {
+  line: FormLine
+  index: number
+  amount: string | null
+  currency: string
+  disabled: boolean
+  canRemove: boolean
+  nameError: string | undefined
+  amountError: string | undefined
+  periodError: string | undefined
+  onChange: (patch: Partial<FormLine>) => void
+  onRemove: () => void
+}) {
+  return (
+    <>
+      <TableRow className="border-b-0">
+        <TableCell className="align-top">
+          <Input
+            aria-label={`Line ${index + 1} name`}
+            value={line.name}
+            disabled={disabled}
+            placeholder="What this line charges for"
+            onChange={(event) => onChange({ name: event.target.value })}
+          />
+          <FieldError message={nameError} />
+        </TableCell>
+        <TableCell className="align-top">
+          <Input
+            inputMode="decimal"
+            aria-label={`Quantity for line ${index + 1}`}
+            value={line.quantity}
+            disabled={disabled}
+            className="w-20"
+            onChange={(event) => onChange({ quantity: event.target.value })}
+          />
+        </TableCell>
+        <TableCell className="align-top">
+          <InputGroup className="min-w-28">
+            <InputGroupAddon>{currency}</InputGroupAddon>
+            <InputGroupInput
+              inputMode="decimal"
+              aria-label={`Unit price for line ${index + 1}`}
+              value={line.unit}
+              placeholder="0.00"
+              disabled={disabled}
+              onChange={(event) => onChange({ unit: event.target.value })}
+            />
+          </InputGroup>
+          <FieldError message={amountError} />
+        </TableCell>
+        <TableCell className="text-right align-top font-medium tabular-nums">
+          <span className="inline-flex min-h-9 items-center justify-end">
+            {money(amount, currency)}
+          </span>
+        </TableCell>
+        <TableCell className="align-top">
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Remove line ${index + 1}`}
+            disabled={disabled || !canRemove}
+            onClick={onRemove}
+          >
+            <Trash2Icon aria-hidden />
+          </Button>
+        </TableCell>
+      </TableRow>
+      <TableRow>
+        <TableCell colSpan={5} className="pt-0">
+          <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_11rem_11rem]">
+            <Input
+              aria-label={`Note for line ${index + 1}`}
+              value={line.note}
+              disabled={disabled}
+              placeholder="Note, printed under the line (optional)"
+              onChange={(event) => onChange({ note: event.target.value })}
+            />
+            <DateInput
+              value={line.periodStart}
+              onValueChange={(periodStart) => onChange({ periodStart })}
+              placeholder="Period from"
+              disabled={disabled}
+            />
+            <DateInput
+              value={line.periodEnd}
+              onValueChange={(periodEnd) => onChange({ periodEnd })}
+              placeholder="Period to"
+              disabled={disabled}
+            />
+          </div>
+          <FieldError message={periodError} />
+        </TableCell>
+      </TableRow>
     </>
   )
 }
 
-function emptyZod(): z.ZodError {
-  return new z.ZodError([])
-}
-
-function updateLine(
-  setLines: (update: (items: Line[]) => Line[]) => void,
-  id: string,
-  patch: Partial<Line>,
-) {
-  setLines((items) => items.map((item) => (item.id === id ? { ...item, ...patch } : item)))
-}
-
-function DueDateField({
-  id,
-  date,
-  onSelect,
-}: {
-  id: string
-  date: Date | null
-  onSelect: (date: Date) => void
-}) {
-  return (
-    <Popover>
-      <PopoverTrigger
-        render={
-          <Button
-            type="button"
-            id={id}
-            variant="outline"
-            className="w-full justify-between font-normal"
-            aria-label="Choose due date"
-          />
-        }
-      >
-        <span className={date ? 'truncate' : 'text-muted-foreground truncate'}>
-          {date ? format(date, 'LLL dd, y') : 'Choose a date'}
-        </span>
-        <CalendarIcon data-icon="inline-end" aria-hidden className="text-muted-foreground/80" />
-      </PopoverTrigger>
-      <PopoverContent className="w-auto p-0" align="start">
-        <Calendar
-          mode="single"
-          {...(date ? { selected: date, defaultMonth: date } : {})}
-          onSelect={(next) => {
-            if (next) onSelect(next)
-          }}
-        />
-      </PopoverContent>
-    </Popover>
-  )
-}
-
-function SelectField({
-  id,
+function PartyBlock({
   label,
-  hint,
-  value,
-  options,
-  onValueChange,
-  disabled,
-  error,
+  party,
+  empty = '—',
 }: {
-  id: string
   label: string
-  hint: string
-  value: string
-  options: readonly SelectOption[]
-  onValueChange: (value: string) => void
-  disabled?: boolean
-  error?: string
+  party: InvoiceFormParty | null
+  empty?: string
 }) {
   return (
-    <Field data-invalid={error ? true : undefined}>
-      <LabelWithHint htmlFor={id} hint={hint}>
+    <div className="flex flex-col gap-1 text-sm">
+      <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
         {label}
-      </LabelWithHint>
-      <Select
-        value={value}
-        onValueChange={(next) => next && onValueChange(next)}
-        disabled={disabled}
-      >
-        <SelectTrigger id={id} className="w-full" aria-invalid={error ? true : undefined}>
-          <SelectValue>{value ? optionLabel(options, value) : 'Choose'}</SelectValue>
-        </SelectTrigger>
-        <SelectContent className="w-(--anchor-width)">
-          <SelectGroup>
-            {options.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-      {error ? (
-        <p className="text-destructive text-xs" role="alert">
-          {error}
-        </p>
-      ) : null}
-    </Field>
+      </span>
+      {party ? (
+        <>
+          <span className="font-medium">{party.name || '—'}</span>
+          {party.email ? <span className="text-muted-foreground">{party.email}</span> : null}
+          {party.address.map((line) => (
+            <span key={line} className="text-muted-foreground">
+              {line}
+            </span>
+          ))}
+        </>
+      ) : (
+        <span className="text-muted-foreground">{empty}</span>
+      )}
+    </div>
   )
+}
+
+function Summary({
+  subtotal,
+  tax,
+  total,
+  totalLabel,
+}: {
+  subtotal: string
+  tax: string
+  total: string
+  totalLabel: string
+}) {
+  return (
+    <dl className="ml-auto flex w-full max-w-xs flex-col gap-2 text-sm">
+      <SummaryRow label="Subtotal">{subtotal}</SummaryRow>
+      <SummaryRow label="Tax">{tax}</SummaryRow>
+      <SummaryRow label={totalLabel} strong>
+        {total}
+      </SummaryRow>
+    </dl>
+  )
+}
+
+function SummaryRow({
+  label,
+  strong = false,
+  children,
+}: {
+  label: string
+  strong?: boolean
+  children: ReactNode
+}) {
+  return (
+    <div className={`flex justify-between gap-4 ${strong ? 'border-t pt-2 font-medium' : ''}`}>
+      <dt className={strong ? '' : 'text-muted-foreground'}>{label}</dt>
+      <dd className="tabular-nums">{children}</dd>
+    </div>
+  )
+}
+
+function FieldError({ message }: { message: string | undefined }) {
+  return message ? (
+    <p className="text-destructive mt-1 text-xs" role="alert">
+      {message}
+    </p>
+  ) : null
 }

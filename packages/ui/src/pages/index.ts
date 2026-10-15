@@ -44,21 +44,18 @@ export {
   InvoiceLinesEditorProvenance,
 } from './billing/invoices/InvoiceLinesEditor'
 export type { EditableLine, InvoiceLinesEditorProps } from './billing/invoices/InvoiceLinesEditor'
-export {
-  InvoiceEditView,
-  InvoiceEditViewProvenance,
-  linesChanged,
-} from './billing/invoices/InvoiceEditView'
-export type {
-  EditableInvoice,
-  InvoiceEditDraft,
-  InvoiceEditViewProps,
-  InvoiceLifecycleStep,
-} from './billing/invoices/InvoiceEditView'
 export { InvoiceGrid, InvoiceGridProvenance } from './billing/invoices/InvoiceGrid'
 export type { InvoiceGridProps } from './billing/invoices/InvoiceGrid'
-export { InvoiceForm, InvoiceFormProvenance } from './billing/invoices/InvoiceForm'
-export type { InvoiceFormProps } from './billing/invoices/InvoiceForm'
+export { InvoiceForm, InvoiceFormProvenance, linesChanged } from './billing/invoices/InvoiceForm'
+export type {
+  EditableInvoice,
+  InvoiceCustomerOption,
+  InvoiceEditDraft,
+  InvoiceFormProps,
+  InvoiceLifecycleStep,
+  InvoiceFormParty,
+  InvoiceTaxRateOption,
+} from './billing/invoices/InvoiceForm'
 export { InvoiceBillingDetailBlock } from './billing/invoices/InvoiceBillingDetailBlock'
 export {
   InvoiceDetailView,

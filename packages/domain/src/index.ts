@@ -58,6 +58,7 @@ export type {
   InvoiceDetailLine,
   InvoiceQuery,
   InvoiceStatusInput,
+  InvoiceTax,
 } from './invoice'
 
 export {

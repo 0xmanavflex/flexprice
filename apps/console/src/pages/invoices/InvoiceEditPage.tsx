@@ -8,18 +8,22 @@ import {
   type InvoiceEditSave,
   type LineItemEdit,
   serverReason,
+  useCustomer,
   useInvoice,
   useInvoicePayments,
   useSaveInvoiceEdit,
+  useTenant,
+  useUserInfo,
 } from '@fp/query'
 import { AppFailure, LoadingRows, PageBody } from '@fp/ui/compositions'
 import {
-  InvoiceEditView,
+  InvoiceForm,
   type EditableInvoice,
   type EditableLine,
   type InvoiceEditDraft,
   linesChanged,
 } from '@fp/ui/pages'
+import { customerParty, tenantParty } from './invoiceParties'
 
 export interface InvoiceEditPageProps {
   invoiceId: string
@@ -41,6 +45,9 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
   const invoice = useInvoice(invoiceId)
   const payments = useInvoicePayments(invoiceId)
   const save = useSaveInvoiceEdit()
+  const customer = useCustomer(invoice.data?.customerId ?? '')
+  const me = useUserInfo()
+  const tenant = useTenant(me.data?.tenantId || invoice.data?.tenantId || '')
 
   if (invoice.isPending) {
     return (
@@ -90,6 +97,10 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
     customerName: data.customerName,
     status: data.status,
     paymentStatus: data.paymentStatus,
+    currency: data.currency,
+    issueDate: toDay(data.issuedAt),
+    description: data.description,
+    tax: moneyOr(data.tax, data.currency),
     total: data.total,
     amountDue: data.amountDue,
     amountPaid: moneyOr(data.amountPaid, data.currency),
@@ -124,29 +135,33 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
   }
 
   return (
-    <PageBody>
-      <div className="mx-auto w-full max-w-5xl pt-4">
-        <InvoiceEditView
-          invoice={editable}
-          paymentChoices={manualPaymentStatusChoices(data.paymentStatus)}
-          paymentStatusBlocked={manualPaymentStatusBlocked({
-            status: data.status,
-            paymentStatus: data.paymentStatus,
-            succeededPayments: (payments.data ?? []).filter(
-              (payment) => payment.status === PaymentStatus.Succeeded,
-            ).length,
-          })}
-          isSaving={save.isPending}
-          error={
-            save.error
-              ? (serverReason(save.error) ?? 'The invoice could not be saved. Try again.')
-              : null
-          }
-          onCancel={onCancel}
-          onSave={(draft) => save.mutate(toSave(draft), { onSuccess: (id) => onDone(id) })}
-        />
-      </div>
-    </PageBody>
+    <InvoiceForm
+      mode="edit"
+      trail={[
+        { label: 'Invoices' },
+        { label: data.number || 'Invoice', onClick: onCancel },
+        { label: 'Edit' },
+      ]}
+      invoice={editable}
+      billFrom={tenantParty(tenant.data)}
+      billTo={customerParty(customer.data)}
+      paymentChoices={manualPaymentStatusChoices(data.paymentStatus)}
+      paymentStatusBlocked={manualPaymentStatusBlocked({
+        status: data.status,
+        paymentStatus: data.paymentStatus,
+        succeededPayments: (payments.data ?? []).filter(
+          (payment) => payment.status === PaymentStatus.Succeeded,
+        ).length,
+      })}
+      isSubmitting={save.isPending}
+      submitError={
+        save.error
+          ? (serverReason(save.error) ?? 'The invoice could not be saved. Try again.')
+          : null
+      }
+      onCancel={onCancel}
+      onSave={(draft) => save.mutate(toSave(draft), { onSuccess: (id) => onDone(id) })}
+    />
   )
 }
 

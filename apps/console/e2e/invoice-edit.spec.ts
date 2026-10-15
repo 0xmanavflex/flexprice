@@ -34,7 +34,7 @@ async function openEdit(page: Page, status: 'draft' | 'finalized') {
 test('opens on the invoice as it is, with nothing to save yet', async ({ page }) => {
   await openEdit(page, 'draft')
   await expect(page.getByLabel('Invoice status')).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Add line' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add item' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Add key' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled()
 })
@@ -68,7 +68,7 @@ test('a finalized invoice asks before its lines replace it, then opens the draft
   const id = await openEdit(page, 'finalized')
   await expect(page.getByText('This invoice is finalized')).toBeVisible()
 
-  await page.getByRole('button', { name: 'Add line' }).click()
+  await page.getByRole('button', { name: 'Add item' }).click()
   await page.getByPlaceholder('What this line charges for').last().fill('Onboarding')
   await page.getByPlaceholder('0.00').last().fill('250')
   await page.getByRole('button', { name: 'Save changes' }).click()

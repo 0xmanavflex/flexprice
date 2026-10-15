@@ -77,6 +77,8 @@ export function useCustomerTaxAssociations(customerId: string) {
       )
       return (response.items ?? []).map((item) => toTaxAssociation(item as TaxAssociationWire))
     },
+    // No customer chosen yet (a new invoice) means nothing to ask for.
+    enabled: customerId.length > 0,
   })
 }
 

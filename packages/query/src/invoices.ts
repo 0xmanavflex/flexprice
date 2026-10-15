@@ -294,20 +294,42 @@ export function useInvoice(id: string, options: { enabled?: boolean } = {}) {
 /** Builds `POST /invoices`. Money stays a string; the form's total is sent as given. */
 export function toCreateInvoiceRequest(draft: CreateInvoice): Record<string, unknown> {
   const description = draft.description.trim()
+  const number = draft.invoiceNumber.trim()
+  const day = (value: string) => new Date(`${value}T00:00:00Z`)
+  const currency = draft.currency.toUpperCase()
   return {
     customerId: draft.customerId,
-    currency: draft.currency.toUpperCase(),
+    currency,
     subtotal: draft.total,
     total: draft.total,
     amountDue: draft.total,
     invoiceType: 'ONE_OFF',
+    billingReason: 'MANUAL',
     invoiceStatus: draft.finalize ? 'FINALIZED' : 'DRAFT',
+    paymentStatus: 'PENDING',
+    ...(number ? { invoiceNumber: number } : {}),
     ...(description ? { description } : {}),
-    ...(draft.dueDate ? { dueDate: new Date(`${draft.dueDate}T00:00:00Z`) } : {}),
+    issueDate: draft.issueDate ? day(draft.issueDate) : new Date(),
+    ...(draft.dueDate ? { dueDate: day(draft.dueDate) } : {}),
+    ...(Object.keys(draft.metadata).length > 0 ? { metadata: draft.metadata } : {}),
+    ...(draft.taxes.length > 0
+      ? {
+          taxRateOverrides: draft.taxes.map((tax) => ({
+            taxRateCode: tax.taxRateCode,
+            currency: currency.toLowerCase(),
+            taxBehavior: tax.taxBehavior,
+            priority: tax.priority,
+            autoApply: tax.autoApply,
+          })),
+        }
+      : {}),
     lineItems: draft.lines.map((line) => ({
       displayName: line.description.trim(),
       quantity: line.quantity,
       amount: line.amount,
+      ...(line.periodStart ? { periodStart: day(line.periodStart) } : {}),
+      ...(line.periodEnd ? { periodEnd: day(line.periodEnd) } : {}),
+      ...(line.note.trim() ? { metadata: { description: line.note.trim() } } : {}),
     })),
   }
 }

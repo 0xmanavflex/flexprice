@@ -3729,6 +3729,9 @@ export const handlers = [
       ...body,
       id: `inv_new_${Date.now()}`,
       status: 'published',
+      // Lists open on the most recently updated, so a new invoice leads them.
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
     }
     sourceFor('invoices').items.unshift(row)
     return HttpResponse.json(row, { status: 201 })

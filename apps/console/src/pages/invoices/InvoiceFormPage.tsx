@@ -1,37 +1,76 @@
-import { useMemo } from 'react'
-import { DEFAULT_CUSTOMER_QUERY, emptyInvoice } from '@fp/domain'
-import { ApiError, useCreateInvoice, useCustomers, serverReason } from '@fp/query'
+import { useMemo, useState } from 'react'
+import {
+  DEFAULT_CUSTOMER_QUERY,
+  DEFAULT_TAX_RATE_QUERY,
+  type InvoiceTax,
+  TaxRateStatus,
+  emptyInvoice,
+} from '@fp/domain'
+import {
+  ApiError,
+  serverReason,
+  useCreateInvoice,
+  useCustomer,
+  useCustomerTaxAssociations,
+  useCustomers,
+  useTaxRates,
+  useTenant,
+  useUserInfo,
+} from '@fp/query'
 import { LoadingRows, PageBody } from '@fp/ui/compositions'
 import { InvoiceForm } from '@fp/ui/pages'
+import { customerParty, tenantParty } from './invoiceParties'
 
 export interface InvoiceFormPageProps {
-  /** Set when this page edits an existing invoice. Create leaves it out. */
-  /** Create only: start with this customer chosen. */
+  /** Start with this customer chosen — the customer page's "Create invoice", as in V1. */
   customerId?: string
   onCancel: () => void
   onDone: (invoiceId: string) => void
 }
 
 /**
- * Create an invoice on its own page — `POST /invoices`.
+ * Raise a one-off invoice — `POST /invoices`, as V1's create page does.
  *
- * Create only. This page used to serve `/invoices/:id/edit` as well, filling
- * the same form from an existing invoice and then refusing every save, because
- * `PUT /invoices/{id}` accepts none of the fields it collects: its whole body
- * is `invoice_pdf_url`, `due_date`, `metadata` and `apply_discount`. Editing
- * now lives in `InvoiceEditPage`, scoped to what the API will change.
+ * Feeds the shared invoice form what V1 shows around the fields: who it is
+ * from (the tenant), who it bills (the chosen customer's address), and the
+ * customer's tax rates, which a new invoice starts with.
  */
 export function InvoiceFormPage({ customerId, onCancel, onDone }: InvoiceFormPageProps) {
   const create = useCreateInvoice()
+  const [chosen, setChosen] = useState(customerId ?? '')
   const customers = useCustomers({ ...DEFAULT_CUSTOMER_QUERY, page: 1, pageSize: 100 })
+  const customer = useCustomer(chosen)
+  const associations = useCustomerTaxAssociations(chosen)
+  const rates = useTaxRates({
+    ...DEFAULT_TAX_RATE_QUERY,
+    pageSize: 100,
+    statuses: [TaxRateStatus.Published],
+  })
+  const me = useUserInfo()
+  const tenant = useTenant(me.data?.tenantId ?? '')
+
   const options = useMemo(
     () =>
-      (customers.data?.customers ?? []).map((customer) => ({
-        id: customer.id,
-        name: customer.name,
-        email: customer.email,
+      (customers.data?.customers ?? []).map((item) => ({
+        id: item.id,
+        name: item.name,
+        email: item.email,
       })),
     [customers.data],
+  )
+  const customerTaxes = useMemo<InvoiceTax[] | null>(
+    () =>
+      associations.data
+        ? associations.data.map((association) => ({
+            taxRateCode: association.taxRateCode,
+            name: association.taxRateName,
+            percentage: association.percentage,
+            taxBehavior: association.taxBehavior,
+            priority: association.priority,
+            autoApply: association.autoApply,
+          }))
+        : null,
+    [associations.data],
   )
 
   // A preset customer can only be shown once the list it is picked from has arrived.
@@ -47,10 +86,18 @@ export function InvoiceFormPage({ customerId, onCancel, onDone }: InvoiceFormPag
 
   return (
     <InvoiceForm
-      mode="create"
       customers={options}
       trail={[{ label: 'Invoices', onClick: onCancel }, { label: 'New invoice' }]}
       {...(customerId ? { defaultValue: { ...emptyInvoice(), customerId } } : {})}
+      onCustomerChange={setChosen}
+      billFrom={tenantParty(tenant.data)}
+      billTo={chosen ? customerParty(customer.data) : null}
+      taxRates={(rates.data?.taxRates ?? []).map((rate) => ({
+        code: rate.code,
+        name: rate.name,
+        percentage: rate.percentageValue,
+      }))}
+      customerTaxes={chosen ? customerTaxes : null}
       onCancel={onCancel}
       isSubmitting={create.isPending}
       submitError={toSubmitError(create.error)}
@@ -69,5 +116,5 @@ function toSubmitError(error: unknown): string | null {
       return serverReason(error) ?? 'You do not have permission to create invoices here.'
     if (error.kind === 'network') return 'Could not reach Flexprice. Check your connection.'
   }
-  return 'Could not create the invoice. Try again.'
+  return serverReason(error) ?? 'Could not create the invoice. Try again.'
 }
