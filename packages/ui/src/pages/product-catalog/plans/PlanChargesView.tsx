@@ -16,7 +16,7 @@ import { Button } from '@ui/components/primitives/button'
 import { RowActionsMenu } from '../../shared/RowActionsMenu'
 import { DetailTable, type DetailColumn } from '../../shared/DetailTable'
 import { Section } from '@ui/compositions/layout/Section'
-import { chargeLabel, pricingSummary } from './PlanPreviewCard'
+import { chargeLabel, money, pricingSummary } from './PlanPreviewCard'
 
 export interface PlanChargesViewProps {
   charges: Charge[]
@@ -32,6 +32,38 @@ export interface PlanChargesViewProps {
   onRetry?: () => void
   /** Singular unit of a meter ("call"), for "per call" wording. */
   meterUnit?: (meterId: string) => string | undefined
+}
+
+/**
+ * The bands of a tiered charge, as a pricing page writes them.
+ *
+ * `upTo` is the top of the band and `null` is the unbounded last one, so the
+ * ranges are built from the previous band's ceiling rather than stored. A
+ * flat amount is a fee charged on top of the per-unit rate for that band, and
+ * is only printed when there is one.
+ */
+function TierBands({ charge, unit }: { charge: Charge; unit?: string | undefined }) {
+  const currency = (charge.currency || 'usd').toUpperCase()
+  const per = unit ?? 'unit'
+  let floor = 0
+  return (
+    <ul className="text-muted-foreground flex flex-col gap-0.5 text-xs tabular-nums">
+      {charge.tiers.map((tier, index) => {
+        const from = floor + 1
+        const to = tier.upTo
+        floor = to ?? floor
+        const flat = Number(tier.flatAmount ?? 0)
+        return (
+          <li key={index}>
+            {from.toLocaleString()}
+            {to === null ? '+' : `–${to.toLocaleString()}`}:{' '}
+            {money(Number(tier.unitAmount || 0), currency)} / {per}
+            {flat > 0 ? ` + ${money(flat, currency)}` : ''}
+          </li>
+        )
+      })}
+    </ul>
+  )
 }
 
 /** "Flat fee", "Volume tiered", "Slab tiered", "Package". */
@@ -152,7 +184,25 @@ export function PlanChargesView({
       key: 'price',
       header: 'Price',
       text: priceOf,
-      cell: (charge) => <span className="tabular-nums">{priceOf(charge)}</span>,
+      /*
+       * A tiered charge shows its tiers, not just "3 tiers, from $0.01".
+       *
+       * The summary is what the row had, and it is not enough to check a
+       * price with — the only place the actual bands existed was inside the
+       * edit form, so reading a plan meant opening every tiered charge in
+       * turn and closing it again. They are few and short; they fit here.
+       */
+      cell: (charge) => (
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="tabular-nums">{priceOf(charge)}</span>
+          {charge.billingModel === BillingModel.Tiered && charge.tiers.length > 0 ? (
+            <TierBands
+              charge={charge}
+              unit={charge.meterId ? meterUnit?.(charge.meterId) : undefined}
+            />
+          ) : null}
+        </div>
+      ),
     },
     ...(readOnly
       ? []
