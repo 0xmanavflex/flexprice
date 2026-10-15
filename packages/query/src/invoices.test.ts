@@ -1,7 +1,9 @@
+import { PaymentStatus } from '@fp/domain'
 import { describe, expect, it } from 'vitest'
 import { DEFAULT_INVOICE_QUERY, InvoiceSortField, InvoiceStatus } from '@fp/domain'
 import {
   applyLineChanges,
+  runInvoiceEdit,
   isServerFilterable,
   toInvoice,
   toInvoiceFilter,
@@ -252,5 +254,86 @@ describe('applyLineChanges — the order and the id-threading are the logic', ()
       ),
     ).rejects.toThrow('rejected')
     expect(calls).toEqual(['remove', 'update'])
+  })
+})
+
+describe('runInvoiceEdit — the whole edit page, in the order the API needs', () => {
+  function recorder(ids: Record<string, string> = {}) {
+    const log: string[] = []
+    return {
+      log,
+      calls: {
+        update: async (id: string, body: object) => {
+          log.push(`update ${id} ${JSON.stringify(body)}`)
+          return ids['update'] ?? id
+        },
+        paymentStatus: async (id: string, change: { status: string }) => {
+          log.push(`payment ${id} ${change.status}`)
+        },
+        modify: async (id: string, params: { action?: string }) => {
+          log.push(`modify ${id} ${params.action}`)
+          return ids['modify'] ?? id
+        },
+        finalize: async (id: string) => {
+          log.push(`finalize ${id}`)
+        },
+        void: async (id: string) => {
+          log.push(`void ${id}`)
+        },
+      },
+    }
+  }
+
+  it('saves fields, then payment, then lines, then the lifecycle step', async () => {
+    const { log, calls } = recorder()
+    const id = await runInvoiceEdit(
+      {
+        invoiceId: 'inv_1',
+        metadata: { po: '7' },
+        paymentStatus: { status: PaymentStatus.Failed },
+        lines: {
+          removed: ['li_1'],
+          updated: [],
+          added: [{ displayName: 'Setup', amount: '10', quantity: '1' }],
+        },
+        nextStatus: 'finalize',
+      },
+      calls as never,
+    )
+    expect(log).toEqual([
+      'update inv_1 {"metadata":{"po":"7"}}',
+      'payment inv_1 failed',
+      'modify inv_1 remove',
+      'modify inv_1 add',
+      'finalize inv_1',
+    ])
+    expect(id).toBe('inv_1')
+  })
+
+  it('follows the draft copy a finalized invoice is replaced by', async () => {
+    const { log, calls } = recorder({ update: 'inv_copy' })
+    const id = await runInvoiceEdit(
+      {
+        invoiceId: 'inv_1',
+        applyDiscount: true,
+        lines: {
+          removed: [],
+          updated: [{ id: 'li_1', displayName: 'A', amount: '1', quantity: '1' }],
+          added: [],
+        },
+      },
+      calls as never,
+    )
+    expect(log).toEqual(['update inv_1 {"applyDiscount":true}', 'modify inv_copy update'])
+    expect(id).toBe('inv_copy')
+  })
+
+  it('makes no call for an untouched page', async () => {
+    const { log, calls } = recorder()
+    await runInvoiceEdit(
+      { invoiceId: 'inv_1', lines: { removed: [], updated: [], added: [] } },
+      calls as never,
+    )
+    expect(log).toEqual([])
   })
 })

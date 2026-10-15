@@ -213,6 +213,7 @@ export interface InvoiceDetailWire extends InvoiceWire {
         priceType?: string | undefined
         periodStart?: Date | undefined
         periodEnd?: Date | undefined
+        metadata?: Record<string, string> | undefined
       }[]
     | undefined
 }
@@ -262,6 +263,9 @@ export function toInvoiceDetail(wire: InvoiceDetailWire, now?: Date): InvoiceDet
       quantity: line.quantity ?? '',
       amount: line.amount ?? '0',
       priceType: toLinePriceType(line.priceType),
+      note: line.metadata?.['description'] ?? '',
+      periodStart: line.periodStart ?? null,
+      periodEnd: line.periodEnd ?? null,
     })),
     finalizedAt: wire.finalizedAt ?? null,
     paidAt: wire.paidAt ?? null,
@@ -389,6 +393,9 @@ export interface LineItemEdit {
   amount: string
   quantity: string
   description?: string
+  /** The service period, as calendar days (`YYYY-MM-DD`). */
+  periodStart?: string
+  periodEnd?: string
 }
 
 export interface InvoiceLineChanges {
@@ -461,6 +468,8 @@ export async function applyLineChanges(
     amount: line.amount,
     quantity: line.quantity,
     ...(line.description !== undefined ? { description: line.description } : {}),
+    ...(line.periodStart ? { periodStart: new Date(`${line.periodStart}T00:00:00Z`) } : {}),
+    ...(line.periodEnd ? { periodEnd: new Date(`${line.periodEnd}T00:00:00Z`) } : {}),
   })
 
   if (changes.removed.length > 0) {
@@ -497,6 +506,133 @@ export function useModifyInvoiceLineItems() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
       void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+    },
+  })
+}
+
+/** Everything the edit page can change, in one save. Absent means untouched. */
+export interface InvoiceEditSave {
+  invoiceId: string
+  /** A new due date; `null` clears it. */
+  dueDate?: Date | null
+  metadata?: Record<string, string>
+  applyDiscount?: boolean
+  paymentStatus?: { status: PaymentStatus; amount?: string }
+  lines?: Omit<InvoiceLineChanges, 'invoiceId'>
+  /** A lifecycle step taken after everything else. */
+  nextStatus?: 'finalize' | 'void'
+}
+
+/** The calls a save is made of, so the order can be tested without a network. */
+export interface InvoiceEditCalls {
+  /** `PUT /invoices/{id}`; resolves with the invoice the update landed on. */
+  update: (
+    id: string,
+    body: { dueDate?: Date | null; metadata?: Record<string, string>; applyDiscount?: boolean },
+  ) => Promise<string | undefined>
+  paymentStatus: (id: string, change: { status: PaymentStatus; amount?: string }) => Promise<void>
+  /** One `modify/execute`; resolves with the invoice the next call must address. */
+  modify: (
+    id: string,
+    params: Parameters<typeof applyLineChanges>[1] extends (
+      invoiceId: string,
+      params: infer P,
+    ) => Promise<string | undefined>
+      ? P
+      : never,
+  ) => Promise<string | undefined>
+  finalize: (id: string) => Promise<void>
+  void: (id: string) => Promise<void>
+}
+
+/**
+ * Saves an invoice edit in the order the API's rules require — V1's order:
+ *
+ *   1. **The invoice's own fields** (due date, metadata, re-applying discounts).
+ *      Re-applying discounts on a finalized invoice voids it and returns a
+ *      draft copy, so every later step follows the id it hands back.
+ *   2. **Payment status**, while the invoice is still the one it was.
+ *   3. **Line edits**, removes then updates then adds — see {@link applyLineChanges}.
+ *      On a finalized invoice the first one voids it into a draft copy too.
+ *   4. **A lifecycle step** last: finalizing must see the finished draft, and
+ *      voiding discards it.
+ *
+ * Resolves with the id the edit ended on — the page to show afterwards.
+ */
+export async function runInvoiceEdit(
+  edit: InvoiceEditSave,
+  calls: InvoiceEditCalls,
+): Promise<string> {
+  let id = edit.invoiceId
+
+  const fields = {
+    ...(edit.dueDate !== undefined ? { dueDate: edit.dueDate } : {}),
+    ...(edit.metadata !== undefined ? { metadata: edit.metadata } : {}),
+    ...(edit.applyDiscount ? { applyDiscount: true } : {}),
+  }
+  if (Object.keys(fields).length > 0) id = (await calls.update(id, fields)) ?? id
+
+  if (edit.paymentStatus) await calls.paymentStatus(id, edit.paymentStatus)
+
+  if (edit.lines) {
+    const { removed, updated, added } = edit.lines
+    if (removed.length > 0 || updated.length > 0 || added.length > 0) {
+      id = await applyLineChanges({ invoiceId: id, ...edit.lines }, calls.modify)
+    }
+  }
+
+  if (edit.nextStatus === 'finalize') await calls.finalize(id)
+  if (edit.nextStatus === 'void') await calls.void(id)
+  return id
+}
+
+/** Saves the whole edit page — {@link runInvoiceEdit} over the SDK. */
+export function useSaveInvoiceEdit() {
+  const client = useFlexprice()
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (edit: InvoiceEditSave) =>
+      runInvoiceEdit(edit, {
+        update: async (id, body) => {
+          const response = await call(() =>
+            client.invoices.updateInvoice(id, {
+              ...(body.dueDate !== undefined ? { dueDate: body.dueDate ?? undefined } : {}),
+              ...(body.metadata !== undefined ? { metadata: body.metadata } : {}),
+              ...(body.applyDiscount ? { applyDiscount: true } : {}),
+            }),
+          )
+          return (response as { id?: string } | undefined)?.id
+        },
+        paymentStatus: async (id, change) => {
+          await call(() =>
+            client.invoices.updateInvoicePaymentStatus(id, {
+              paymentStatus: toWirePaymentStatus(change.status),
+              ...(change.status === PaymentStatus.Pending && change.amount
+                ? { amount: change.amount }
+                : {}),
+            } as never),
+          )
+        },
+        modify: async (id, lineItemParams) => {
+          const response = await call(() =>
+            client.invoices.executeInvoiceModify(id, { type: 'line_item', lineItemParams }),
+          )
+          return (response as { invoice?: { id?: string } }).invoice?.id
+        },
+        finalize: async (id) => {
+          await call(() => client.invoices.finalizeInvoice(id))
+        },
+        void: async (id) => {
+          await call(() => client.invoices.voidInvoice(id))
+        },
+      }),
+    // Settled, not success: a save that failed half way has still changed
+    // something, and the screen must re-read the truth rather than trust its form.
+    onSettled: () => {
+      void queryClient.invalidateQueries({ queryKey: queryKeys.invoices.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.counts.all() })
+      void queryClient.invalidateQueries({ queryKey: queryKeys.payments.all() })
     },
   })
 }

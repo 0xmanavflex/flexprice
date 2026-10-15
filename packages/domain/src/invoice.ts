@@ -242,6 +242,11 @@ export interface InvoiceDetailLine {
   amount: string
   /** How the line is priced: metered usage or a fixed charge. `null` when the API does not say. */
   priceType: InvoiceLinePriceType | null
+  /** The free-text note on the line (`metadata.description`), which the PDF prints. */
+  note?: string
+  /** The service period the line covers, when it has one. */
+  periodStart?: Date | null
+  periodEnd?: Date | null
 }
 
 export const InvoiceLinePriceType = {

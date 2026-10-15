@@ -242,7 +242,9 @@ export function InvoiceDetailView({
                   onSelect={onFinalize}
                 />
               ) : null}
-              {isDraft && onEdit ? (
+              {onEdit &&
+              invoice.status !== InvoiceStatus.Void &&
+              invoice.status !== InvoiceStatus.Skipped ? (
                 <MenuAction icon={<PencilIcon />} label="Edit invoice" onSelect={onEdit} />
               ) : null}
               <MenuAction

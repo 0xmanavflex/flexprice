@@ -1814,6 +1814,54 @@ function patchRow(rows: Record<string, unknown>[], id: string, patch: Record<str
   return HttpResponse.json(rows[index])
 }
 
+/**
+ * An invoice as the edit routes see it: its lines materialised (generated rows
+ * carry none, and the detail read invents one), and — like the backend — a
+ * finalized invoice voided and replaced by a draft copy before it is changed.
+ */
+function invoiceForEdit(id: string): Record<string, unknown> | null {
+  const rows = sourceFor('invoices').items
+  const invoice = rows.find((row) => readString(row, 'id') === id)
+  if (!invoice) return null
+  if (!Array.isArray(invoice['line_items']) || (invoice['line_items'] as unknown[]).length === 0) {
+    invoice['line_items'] = [
+      {
+        id: `${id}_line_1`,
+        display_name: 'Platform subscription',
+        amount: String(invoice['total'] ?? '0'),
+        quantity: '1',
+        currency: 'usd',
+      },
+    ]
+  }
+  if (readString(invoice, 'invoice_status') !== 'FINALIZED') return invoice
+  invoice['invoice_status'] = 'VOIDED'
+  const copy = {
+    ...invoice,
+    id: `${id}_draft`,
+    invoice_status: 'DRAFT',
+    invoice_number: '',
+    line_items: (invoice['line_items'] as Record<string, unknown>[]).map((line, index) => ({
+      ...line,
+      id: `${id}_draft_line_${index + 1}`,
+    })),
+  }
+  invoice['recalculated_invoice_id'] = copy.id
+  rows.unshift(copy)
+  return copy
+}
+
+/** Totals from what the lines now charge, as the backend recomputes them. */
+function recomputeInvoice(invoice: Record<string, unknown>) {
+  const lines = (invoice['line_items'] as Record<string, unknown>[] | undefined) ?? []
+  const total = lines.reduce((sum, line) => sum + Number(readString(line, 'amount') || '0'), 0)
+  const paid = Number(readString(invoice, 'amount_paid') || '0')
+  invoice['subtotal'] = total.toFixed(2)
+  invoice['total'] = total.toFixed(2)
+  invoice['amount_due'] = total.toFixed(2)
+  invoice['amount_remaining'] = Math.max(0, total - paid).toFixed(2)
+}
+
 /** The embedded meter a usage price carries under `expand=meters`, from the features that own it. */
 function meterOf(meterId: string): Record<string, unknown> | null {
   for (const feature of (corpus['features'] as Corpus).items) {
@@ -3569,8 +3617,11 @@ export const handlers = [
       }
       patch['due_date'] = dueDate
     }
-    if (Object.keys(patch).length > 0) patchRow(sourceFor('invoices').items, id, patch)
-    const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+    // Re-applying discounts on a finalized invoice lands on a draft copy, as in the API.
+    const target = body['apply_discount'] ? invoiceForEdit(id) : null
+    const targetId = target ? readString(target, 'id') : id
+    if (Object.keys(patch).length > 0) patchRow(sourceFor('invoices').items, targetId, patch)
+    const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === targetId)
     if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
     return HttpResponse.json(invoice)
   }),
@@ -3591,7 +3642,7 @@ export const handlers = [
       lineItemParams?: Record<string, unknown>
     }
     const p = body.line_item_params ?? body.lineItemParams ?? {}
-    const invoice = sourceFor('invoices').items.find((row) => readString(row, 'id') === id)
+    const invoice = invoiceForEdit(id)
     if (!invoice) return HttpResponse.json({ message: 'Invoice not found' }, { status: 404 })
 
     const lines = (invoice['line_items'] as Record<string, unknown>[] | undefined) ?? []
@@ -3622,6 +3673,7 @@ export const handlers = [
       )
     }
 
+    recomputeInvoice(invoice)
     return HttpResponse.json({ invoice })
   }),
   http.post(`${BASE}/invoices/:id/finalize`, ({ params }) => {

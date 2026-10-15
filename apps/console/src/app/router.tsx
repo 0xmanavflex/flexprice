@@ -1891,8 +1891,10 @@ const invoiceEditRoute = createRoute({
 function InvoiceEditRouteComponent() {
   const { invoiceId } = invoiceEditRoute.useParams()
   const navigate = useNavigate()
-  const toDetail = () => void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
-  return <InvoiceEditPage invoiceId={invoiceId} onCancel={toDetail} onDone={toDetail} />
+  const toDetail = (id: string = invoiceId) =>
+    void navigate({ to: '/invoices/$invoiceId', params: { invoiceId: id } })
+  // A finalized invoice whose lines changed comes back as a new draft: open that one.
+  return <InvoiceEditPage invoiceId={invoiceId} onCancel={() => toDetail()} onDone={toDetail} />
 }
 
 const invoiceDetailRoute = createRoute({

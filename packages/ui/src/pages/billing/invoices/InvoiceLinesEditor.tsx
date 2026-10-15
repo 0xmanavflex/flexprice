@@ -2,6 +2,7 @@ import { useId } from 'react'
 import { XIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import { Input } from '@ui/components/primitives/input'
+import { DateInput } from '@ui/compositions/forms/DateInput'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -11,14 +12,12 @@ import { provenance } from '@ui/provenance'
  * from the one that saves a due date — and the only one that can change what
  * an invoice actually charges for.
  *
- * ## Why only drafts
+ * ## Finalized invoices
  *
- * The API will modify a finalized invoice, but doing so **voids it and
+ * The API also modifies a finalized invoice, but doing so **voids it and
  * recreates it as a draft copy under a new id**. That is a reasonable thing
- * for a person to choose and a terrible thing to discover: nobody types in an
- * amount field expecting the invoice they were looking at to be voided and
- * replaced. So this editor is offered on drafts, and a finalized invoice is
- * told plainly what editing would cost it.
+ * for a person to choose and a terrible thing to discover, so the page that
+ * holds this editor says so up front and confirms before saving.
  *
  * A manual edit also marks the invoice as manually edited, which disables
  * recompute — the caller surfaces that before the first change, not after.
@@ -36,7 +35,11 @@ export interface EditableLine {
   displayName: string
   amount: string
   quantity: string
+  /** The line's note, printed under it on the PDF. */
   description?: string
+  /** The service period, as calendar days (`YYYY-MM-DD`); blank for none. */
+  periodStart?: string
+  periodEnd?: string
 }
 
 export interface InvoiceLinesEditorProps {
@@ -90,48 +93,76 @@ export function InvoiceLinesEditor({
 
       <ul className="flex flex-col gap-2">
         {lines.map((line, index) => (
-          <li
-            key={line.id ?? `new-${index}`}
-            className="grid grid-cols-[minmax(0,1fr)_7rem_6rem_auto] items-end gap-2"
-          >
-            <label className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">Description</span>
-              <Input
-                value={line.displayName}
+          <li key={line.id ?? `new-${index}`} className="flex flex-col gap-2 rounded-lg border p-3">
+            <div className="grid grid-cols-[minmax(0,1fr)_7rem_6rem_auto] items-end gap-2">
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground text-xs">Name</span>
+                <Input
+                  value={line.displayName}
+                  disabled={disabled}
+                  placeholder="What this line charges for"
+                  onChange={(event) => update(index, { displayName: event.target.value })}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground text-xs">Amount</span>
+                <Input
+                  value={line.amount}
+                  inputMode="decimal"
+                  disabled={disabled}
+                  placeholder="0.00"
+                  onChange={(event) => update(index, { amount: event.target.value })}
+                />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground text-xs">Qty</span>
+                <Input
+                  value={line.quantity}
+                  inputMode="decimal"
+                  disabled={disabled}
+                  onChange={(event) => update(index, { quantity: event.target.value })}
+                />
+              </label>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
                 disabled={disabled}
-                placeholder="What this line charges for"
-                onChange={(event) => update(index, { displayName: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">Amount</span>
-              <Input
-                value={line.amount}
-                inputMode="decimal"
-                disabled={disabled}
-                placeholder="0.00"
-                onChange={(event) => update(index, { amount: event.target.value })}
-              />
-            </label>
-            <label className="flex flex-col gap-1">
-              <span className="text-muted-foreground text-xs">Qty</span>
-              <Input
-                value={line.quantity}
-                inputMode="decimal"
-                disabled={disabled}
-                onChange={(event) => update(index, { quantity: event.target.value })}
-              />
-            </label>
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              disabled={disabled}
-              aria-label={`Remove ${line.displayName || `line ${index + 1}`}`}
-              onClick={() => onChange(lines.filter((_, i) => i !== index))}
-            >
-              <XIcon aria-hidden="true" />
-            </Button>
+                aria-label={`Remove ${line.displayName || `line ${index + 1}`}`}
+                onClick={() => onChange(lines.filter((_, i) => i !== index))}
+              >
+                <XIcon aria-hidden="true" />
+              </Button>
+            </div>
+            <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_10rem_10rem]">
+              <label className="flex flex-col gap-1">
+                <span className="text-muted-foreground text-xs">Note</span>
+                <Input
+                  value={line.description ?? ''}
+                  disabled={disabled}
+                  placeholder="Optional, printed under the line"
+                  onChange={(event) => update(index, { description: event.target.value })}
+                />
+              </label>
+              <div className="flex flex-col gap-1">
+                <span className="text-muted-foreground text-xs">Period from</span>
+                <DateInput
+                  value={line.periodStart ?? ''}
+                  onValueChange={(periodStart) => update(index, { periodStart })}
+                  placeholder="No period"
+                  disabled={disabled}
+                />
+              </div>
+              <div className="flex flex-col gap-1">
+                <span className="text-muted-foreground text-xs">Period to</span>
+                <DateInput
+                  value={line.periodEnd ?? ''}
+                  onValueChange={(periodEnd) => update(index, { periodEnd })}
+                  placeholder="No period"
+                  disabled={disabled}
+                />
+              </div>
+            </div>
           </li>
         ))}
       </ul>

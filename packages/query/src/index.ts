@@ -71,6 +71,8 @@ export {
   useFinalizeInvoice,
   applyLineChanges,
   useModifyInvoiceLineItems,
+  useSaveInvoiceEdit,
+  runInvoiceEdit,
   useUpdateInvoice,
   useUpdateInvoiceMetadata,
   useUpdateInvoicePaymentStatus,
@@ -80,7 +82,7 @@ export {
   useSendInvoice,
   useVoidInvoice,
 } from './invoices'
-export type { InvoiceEdit, InvoiceLineChanges, LineItemEdit } from './invoices'
+export type { InvoiceEdit, InvoiceEditSave, InvoiceLineChanges, LineItemEdit } from './invoices'
 export type { InvoiceDetailWire, InvoicePage, InvoiceWire } from './invoices'
 
 export {

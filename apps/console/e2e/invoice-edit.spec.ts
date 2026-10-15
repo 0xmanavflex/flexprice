@@ -14,130 +14,66 @@ test.beforeEach(async ({ context }) => {
 })
 
 /**
- * Editing an invoice, which is a much smaller thing than editing a draft of one.
+ * Editing an invoice completely, as V1 does: status, payment status, due date,
+ * discounts, metadata and lines in one save.
  *
- * `PUT /invoices/{id}` accepts `due_date`, `metadata`, `invoice_pdf_url` and
- * `apply_discount` — and nothing else. An issued invoice's customer, currency
- * and lines are a financial record, corrected by voiding or a credit note.
- *
- * This journey exists because the page it covers replaced one that could not
- * work: `/invoices/:id/edit` used to render the *create* form and answer every
- * save with "not available yet". The assertions below are mostly about what is
- * **not** on the page, because that is the part a future change is most likely
- * to get wrong — putting the amount back on an edit screen would look like a
- * feature and behave like a dead end.
+ * A draft changes in place. A finalized invoice keeps its id for its fields,
+ * but a line change makes the API void it and carry the edit onto a draft copy
+ * — so the page asks first, and then opens the copy.
  */
-async function openFirstInvoiceEdit(page: Page) {
-  await page.goto('/invoices')
+async function openEdit(page: Page, status: 'draft' | 'finalized') {
+  await page.goto(`/invoices?status=${status}`)
   await page.getByRole('row').nth(1).getByRole('cell').first().click()
   await expect(page).toHaveURL(/\/invoices\/[^/?]+/)
-  const id = new URL(page.url()).pathname.split('/')[2]
+  const id = new URL(page.url()).pathname.split('/')[2] ?? ''
   await page.goto(`/invoices/${id}/edit`)
+  await expect(page.getByRole('heading', { name: /^Edit / })).toBeVisible()
   return id
 }
 
-test('edits only what the API will change, and says so', async ({ page }) => {
-  await openFirstInvoiceEdit(page)
-
-  await expect(page.getByRole('heading', { name: 'Edit invoice' })).toBeVisible()
-  await expect(page.getByText(/only the due date can be changed/i)).toBeVisible()
-
-  // The due date is the field. The create form's fields are not here.
-  await expect(page.getByLabel('Due date')).toBeVisible()
-  await expect(page.getByRole('combobox', { name: /Customer/ })).toHaveCount(0)
-  await expect(page.getByRole('combobox', { name: /Currency/ })).toHaveCount(0)
-  await expect(page.getByLabel('Line 1 amount')).toHaveCount(0)
-
-  // Nothing has changed yet, so there is nothing to save.
+test('opens on the invoice as it is, with nothing to save yet', async ({ page }) => {
+  await openEdit(page, 'draft')
+  await expect(page.getByLabel('Invoice status')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add line' })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Add key' })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Save changes' })).toBeDisabled()
 })
 
-test('saves a new due date and returns to the invoice', async ({ page }) => {
-  const id = await openFirstInvoiceEdit(page)
-
-  // A year out, so the API's "not in the past" rule cannot be tripped by the
-  // test running near midnight.
-  const future = new Date()
-  future.setFullYear(future.getFullYear() + 1)
-  const value = future.toISOString().slice(0, 10)
-
-  await page.getByLabel('Due date').fill(value)
-  await expect(page.getByRole('button', { name: 'Save changes' })).toBeEnabled()
-
-  /*
-   * The outcome, not the wire.
-   *
-   * Playwright cannot read this body — the SDK streams it, so `postData()` is
-   * null — so asserting on the request's JSON would assert on nothing. What is
-   * worth pinning is that the save reached the API and the new date stuck, and
-   * the mock only patches `due_date` when the request actually carries it.
-   */
-  const response = page.waitForResponse(
-    (r) => r.request().method() === 'PUT' && new URL(r.url()).pathname.endsWith(`/invoices/${id}`),
-  )
-  await page.getByRole('button', { name: 'Save changes' }).click()
-  expect((await response).status()).toBe(200)
-
-  // Back on the invoice, through the page's own navigation.
-  await expect(page).toHaveURL(new RegExp(`/invoices/${id}$`))
-
-  /*
-   * Persistence is deliberately not asserted past this point. The fixture
-   * corpus lives in the page, so a reload rebuilds it and any mutation is
-   * gone — a `goto` back to the form would read the original date and fail
-   * for a reason that has nothing to do with the code under test. What this
-   * does pin is the part the page owns: the save reaches the API, is
-   * accepted, and returns the person to the invoice.
-   */
-})
-
 test('cancel goes back without saving', async ({ page }) => {
-  const id = await openFirstInvoiceEdit(page)
-
-  let sawPut = false
+  const id = await openEdit(page, 'draft')
+  let sawWrite = false
   page.on('request', (r) => {
-    if (r.method() === 'PUT') sawPut = true
+    if (r.method() !== 'GET' && !r.url().includes('/search')) sawWrite = true
   })
-
   await page.getByRole('button', { name: 'Cancel' }).click()
   await expect(page).toHaveURL(new RegExp(`/invoices/${id}$`))
-  expect(sawPut).toBe(false)
+  expect(sawWrite).toBe(false)
 })
 
-/**
- * A draft's lines are editable, through a different route from the due date:
- * `POST /invoices/{id}/modify/execute`.
- *
- * The journey opens a draft specifically, because the editor is withheld on
- * anything else — modifying a finalized invoice voids and replaces it, which
- * is a decision, not a side effect of typing.
- */
-test('edits a draft invoice line and saves it', async ({ page }) => {
-  await page.goto('/invoices?status=draft')
-  await page.getByRole('row').nth(1).getByRole('cell').first().click()
-  await expect(page).toHaveURL(/\/invoices\/[^/?]+/)
-  const id = new URL(page.url()).pathname.split('/')[2]
-  await page.goto(`/invoices/${id}/edit`)
-
-  const first = page.getByLabel('Description').first()
-  await expect(first).toBeVisible()
-  await first.fill('Renamed line')
+test('a draft line is renamed in place', async ({ page }) => {
+  const id = await openEdit(page, 'draft')
+  await page.getByPlaceholder('What this line charges for').first().fill('Renamed line')
 
   const modify = page.waitForResponse(
     (r) => r.request().method() === 'POST' && new URL(r.url()).pathname.endsWith('/modify/execute'),
   )
   await page.getByRole('button', { name: 'Save changes' }).click()
   expect((await modify).status()).toBe(200)
+  await expect(page).toHaveURL(new RegExp(`/invoices/${id}$`))
 })
 
-test('a finalized invoice explains why its lines are locked', async ({ page }) => {
-  await page.goto('/invoices?status=finalized')
-  await page.getByRole('row').nth(1).getByRole('cell').first().click()
-  const id = new URL(page.url()).pathname.split('/')[2]
-  await page.goto(`/invoices/${id}/edit`)
+test('a finalized invoice asks before its lines replace it, then opens the draft copy', async ({
+  page,
+}) => {
+  const id = await openEdit(page, 'finalized')
+  await expect(page.getByText('This invoice is finalized')).toBeVisible()
 
-  await expect(page.getByText(/only be edited while an invoice is a draft/i)).toBeVisible()
-  await expect(page.getByRole('button', { name: 'Add line' })).toHaveCount(0)
-  // The due date is still editable — that is what PUT /invoices/{id} allows.
-  await expect(page.getByLabel('Due date')).toBeVisible()
+  await page.getByRole('button', { name: 'Add line' }).click()
+  await page.getByPlaceholder('What this line charges for').last().fill('Onboarding')
+  await page.getByPlaceholder('0.00').last().fill('250')
+  await page.getByRole('button', { name: 'Save changes' }).click()
+
+  await page.getByRole('button', { name: 'Void and create draft' }).click()
+  await expect(page).not.toHaveURL(new RegExp(`/invoices/${id}(/edit)?$`))
+  await expect(page.getByText('Onboarding')).toBeVisible()
 })
