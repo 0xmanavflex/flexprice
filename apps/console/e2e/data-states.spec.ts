@@ -52,9 +52,12 @@ test.describe('data states on the plans list', () => {
 
     // Forbidden is not retryable, and it must not read as "No plans yet".
     await expect(page.getByText(/no plans yet/i)).toHaveCount(0)
-    await expect(page.getByText(/does not include access|do not have access/i)).toBeVisible({
-      timeout: 45_000,
-    })
+    // The API's own reason is shown in preference to a generic line about
+    // roles — `serverReason` in `listFailure.ts`. Here that reason is the
+    // injected "boom"; the fallback copy only appears when the server sends
+    // none, so asserting on the fallback would test the wrong branch.
+    await expect(page.getByText('boom')).toBeVisible({ timeout: 45_000 })
+    await expect(page.getByText(/ask an administrator/i)).toBeVisible()
     await expect(page.getByRole('button', { name: /try again/i })).toHaveCount(0)
   })
 

@@ -16,6 +16,7 @@ import {
   writeEnvironmentId,
   writeSession,
 } from './storage'
+import { clearListMemory } from '../listMemory'
 import { setActiveEnvironmentId } from './activeEnvironment'
 
 /** The credentials a signed-in console holds. */
@@ -103,6 +104,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
     setEnvironmentIdState(null)
     clearSession()
     clearEnvironmentId()
+    // The remembered list filters are this person's view of this tenant's
+    // data. They say what someone was looking for, which is not the next
+    // user's business.
+    clearListMemory(globalThis.sessionStorage)
     /*
      * The cache is the other half of signing out.
      *
@@ -150,6 +155,10 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       if (previous !== null && previous !== id) {
         void queryClient.cancelQueries()
         void queryClient.invalidateQueries({ refetchType: 'none' })
+        // Filters name rows — a customer, a plan, a status that exists here
+        // and not there. Carried across a switch they would silently empty
+        // every list in the new environment.
+        clearListMemory(globalThis.sessionStorage)
       }
       latestEnvironmentId.current = id
       setEnvironmentIdState(id)

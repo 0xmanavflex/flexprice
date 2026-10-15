@@ -19,6 +19,7 @@ import { AppFailure, ErrorState, PageLoadingState } from '@fp/ui/compositions'
 import { useCurrentUser } from '@fp/query'
 import { toListFailure } from '@/pages/shared/listFailure'
 import { ConsoleShell } from './shell/ConsoleShell'
+import { useListMemory } from './shell/useListMemory'
 import { hasSession, needsSignIn, useSession } from './session'
 import { listPathAfterEnvironmentSwitch } from './shell/environmentSwitch'
 import { useEnvironments } from './shell/useEnvironments'
@@ -309,6 +310,9 @@ function ShellLayout() {
    */
   const currentUser = useCurrentUser(session?.token ?? null)
   const user = currentUser.data
+
+  // Each list's filters, kept across a trip into a detail page and back.
+  useListMemory()
 
   return (
     <ConsoleShell

@@ -48,6 +48,11 @@ test.describe('plan charges, entitlements and credit grants', () => {
     await expect(plan.main.getByRole('heading', { name: 'Add entitlement' })).toBeVisible()
     await plan.main.getByRole('combobox', { name: 'Feature' }).click()
     await page.getByRole('option').first().click()
+    // A metered feature needs an allowance; a boolean one has no Value field.
+    // Which kind sorts first is not this test's business, so it fills the
+    // field when the chosen feature asks for one.
+    const value = plan.main.getByRole('textbox', { name: 'Value' })
+    if (await value.isVisible()) await value.fill('25')
     await plan.main.getByRole('button', { name: /^Create entitlement$/ }).click()
     await expect(plan.main).toBeHidden()
 
