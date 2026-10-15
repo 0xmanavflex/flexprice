@@ -7,6 +7,7 @@ import { SignInScreen } from './SignInScreen'
 const REGIONS = [
   { id: 'in' as const, label: 'India' },
   { id: 'us' as const, label: 'United States' },
+  { id: 'ca' as const, label: 'Canada' },
 ]
 
 function Harness({ onChange }: { onChange: (region: RegionId) => void }) {

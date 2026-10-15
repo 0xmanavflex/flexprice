@@ -29,7 +29,7 @@ export const RegionFieldProvenance = provenance({
   note: 'Data region field from the dashboard redesign.',
 })
 
-export type RegionId = 'in' | 'us'
+export type RegionId = 'in' | 'us' | 'ca'
 
 export interface RegionOption {
   id: RegionId
@@ -53,6 +53,14 @@ const REGION_INFO: Record<RegionId, { title: string; points: string[] }> = {
       'Hosted in Mumbai, India (ap-south-1)',
     ],
   },
+  ca: {
+    title: 'Canada hosting',
+    points: [
+      'Faster if you and your users are based in Canada',
+      'Keeps billing data inside Canada',
+      'Hosted in Montréal, Canada (ca-central-1)',
+    ],
+  },
 }
 
 /** Small flags, drawn rather than fetched. */
@@ -65,6 +73,19 @@ function Flag({ id }: { id: RegionId }) {
         <rect width="30" height="6.67" fill="#ff9933" />
         <rect y="13.33" width="30" height="6.67" fill="#138808" />
         <circle cx="15" cy="10" r="2.6" fill="none" stroke="#000080" strokeWidth="0.7" />
+      </svg>
+    )
+  }
+  if (id === 'ca') {
+    return (
+      <svg viewBox="0 0 30 20" aria-hidden="true" className={frame}>
+        <rect width="30" height="20" fill="#ffffff" />
+        <rect width="7.5" height="20" fill="#d52b1e" />
+        <rect x="22.5" width="7.5" height="20" fill="#d52b1e" />
+        <path
+          d="M15 5.2l1 2 2.1-.5-.7 2 1.8 1.1-1.8 1.1.4 1.6-1.9-.3-.3 1.9h-1.2l-.3-1.9-1.9.3.4-1.6L11 9.8l1.8-1.1-.7-2 2.1.5z"
+          fill="#d52b1e"
+        />
       </svg>
     )
   }
