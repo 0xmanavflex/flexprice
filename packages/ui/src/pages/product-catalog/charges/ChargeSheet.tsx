@@ -40,6 +40,12 @@ import { provenance } from '@ui/provenance'
  * Boxes appear only for parts that exist. A charge with a price and nothing
  * else is one box, not five empty ones, and no box explains in a paragraph
  * what its own figures already say.
+ *
+ * The boxes run in the same order as the flags — Price, Discount, Commitment,
+ * Alerts, History — because a flag is a promise about where its click lands.
+ * The prototype put Commitment second and the handoff calls that out as a
+ * quirk to fix rather than copy: two orders for the same five things is one
+ * order too many.
  */
 export const ChargeSheetProvenance = provenance({
   source: 'composition',
@@ -347,18 +353,6 @@ export function ChargeSheet({
             />
           </Box>
 
-          {detail?.commitment ? (
-            <Box
-              section={ChargeSection.Commitment}
-              icon={<ScaleIcon aria-hidden className="text-primary" />}
-              title="Commitment"
-              onEdit={editAt(ChargeSection.Commitment)}
-              focused={section === ChargeSection.Commitment}
-            >
-              <CommitmentBody commitment={detail.commitment} charge={charge} />
-            </Box>
-          ) : null}
-
           {detail?.coupon ? (
             <Box
               section={ChargeSection.Discount}
@@ -374,6 +368,18 @@ export function ChargeSheet({
                   ['Ends', detail.coupon.endsAt ? dates.format(detail.coupon.endsAt) : 'Never'],
                 ]}
               />
+            </Box>
+          ) : null}
+
+          {detail?.commitment ? (
+            <Box
+              section={ChargeSection.Commitment}
+              icon={<ScaleIcon aria-hidden className="text-primary" />}
+              title="Commitment"
+              onEdit={editAt(ChargeSection.Commitment)}
+              focused={section === ChargeSection.Commitment}
+            >
+              <CommitmentBody commitment={detail.commitment} charge={charge} />
             </Box>
           ) : null}
 

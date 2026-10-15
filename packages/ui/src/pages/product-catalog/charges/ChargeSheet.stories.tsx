@@ -234,6 +234,25 @@ export const OpenedAtASection: Story = {
   },
   play: async ({ canvasElement }) => {
     const screen = within(canvasElement.ownerDocument.body)
+
+    /*
+     * The boxes run in flag order, not the prototype's.
+     *
+     * A flag is a promise about where its click lands, so two orders for the
+     * same five things is one too many. The prototype put Commitment second
+     * and the handoff names that as a quirk to fix.
+     */
+    const boxes = screen
+      .getAllByRole('region')
+      .map((region) => region.getAttribute('id'))
+      .filter((id): id is string => Boolean(id?.startsWith('charge-')))
+    await expect(boxes).toEqual([
+      'charge-price',
+      'charge-discount',
+      'charge-commitment',
+      'charge-alerts',
+    ])
+
     await expect(await screen.findByText('WELCOME20')).toBeInTheDocument()
     await expect(screen.getByText('Dec 31, 2026')).toBeInTheDocument()
     await expect(screen.getByText('Warning, above')).toBeInTheDocument()
