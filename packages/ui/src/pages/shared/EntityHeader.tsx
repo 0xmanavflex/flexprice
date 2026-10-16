@@ -1,11 +1,7 @@
 import type { ReactNode } from 'react'
 import { DetailBreadcrumb, type DetailCrumb } from '../../compositions/detail/DetailShell'
-import {
-  DetailHeaderCluster,
-  DetailMoreMenu,
-  type DetailMenuItem,
-} from '../../compositions/detail/DetailKit'
-import { DetailPills } from '../../compositions/detail/pillSize'
+import { DetailMoreMenu, type DetailMenuItem } from '../../compositions/detail/DetailKit'
+import { DetailHeader } from '../../compositions/detail/DetailHeader'
 
 export interface EntityHeaderProps {
   trail: DetailCrumb[]
@@ -46,30 +42,17 @@ export function EntityHeader({
   menu = [],
 }: EntityHeaderProps) {
   return (
-    <header className="flex flex-col gap-4 px-6 pt-6 pb-4">
-      <DetailBreadcrumb trail={trail} />
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          <span
-            aria-hidden
-            className="bg-muted text-muted-foreground flex size-10 shrink-0 items-center justify-center rounded-lg border"
-          >
-            {icon}
-          </span>
-          <div className="min-w-0">
-            <h1 className="min-w-0 truncate text-xl leading-tight font-medium tracking-tight">
-              {title}
-            </h1>
-            <DetailPills>{badges}</DetailPills>
-          </div>
-        </div>
-        <DetailHeaderCluster
-          {...(leading ? { leading } : {})}
-          id={id}
-          email={email}
-          more={<DetailMoreMenu label={menuLabel} items={menu} />}
-        />
-      </div>
-    </header>
+    <div className="mx-auto w-full max-w-[var(--shell-max)] px-6 pt-5 pb-5">
+      <DetailHeader
+        breadcrumb={<DetailBreadcrumb trail={trail} />}
+        icon={icon}
+        title={title}
+        badges={badges}
+        id={id}
+        leading={leading}
+        email={email}
+        actions={<DetailMoreMenu label={menuLabel} items={menu} />}
+      />
+    </div>
   )
 }

@@ -184,7 +184,7 @@ export function DetailHeaderCluster({
 }: {
   /** Legacy inline action slot; prefer menu items. */
   primary?: ReactNode
-  /** Sits immediately before the copy-ID chip. Connected integration marks. */
+  /** Connected integration marks, after the copy chips and before the menu. */
   leading?: ReactNode
   id?: string | undefined
   email?: string | undefined
@@ -195,9 +195,9 @@ export function DetailHeaderCluster({
   return (
     <div className="flex flex-wrap items-center justify-end gap-2">
       {primary}
-      {leading}
       {id ? <CopyId value={id} /> : null}
       {email ? <CopyEmail value={email} /> : null}
+      {leading}
       {more}
     </div>
   )

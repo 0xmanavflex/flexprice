@@ -45,6 +45,9 @@ export interface LinkableProvider {
 }
 
 export interface ContractIntegrationsProps {
+  /** Header marks or rows in the Related card. */
+  layout?: 'marks' | 'rows'
+  showLink?: boolean
   links: IntegrationLink[]
   /** Connected providers this customer has no mapping for yet. */
   linkable: LinkableProvider[]
@@ -65,6 +68,8 @@ function when(value: Date | null): string {
 }
 
 export function ContractIntegrations({
+  layout = 'marks',
+  showLink = true,
   links,
   linkable,
   onLink,
@@ -91,19 +96,36 @@ export function ContractIntegrations({
   }
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div
+      className={layout === 'rows' ? 'flex flex-col gap-3 px-6 py-3' : 'flex items-center gap-1.5'}
+    >
       {links.map((link) => (
         <DropdownMenu key={link.providerType}>
           <Tooltip>
             <TooltipTrigger
               render={
                 <DropdownMenuTrigger
-                  aria-label={`${link.name} integration`}
-                  className="focus-visible:outline-ring cursor-pointer rounded-lg focus-visible:outline-2 focus-visible:outline-offset-2"
+                  aria-label={
+                    layout === 'rows'
+                      ? `Manage ${link.name} integration`
+                      : `${link.name} integration`
+                  }
+                  className="focus-visible:outline-ring flex w-full min-w-0 cursor-pointer items-center gap-3 rounded-lg text-left focus-visible:outline-2 focus-visible:outline-offset-2"
                 />
               }
             >
               <IntegrationMark integration={link} />
+              {layout === 'rows' ? (
+                <span className="min-w-0">
+                  <span className="block text-sm">{link.name}</span>
+                  <span
+                    className="text-muted-foreground block truncate font-mono text-xs"
+                    title={link.providerEntityId}
+                  >
+                    {link.providerEntityId}
+                  </span>
+                </span>
+              ) : null}
             </TooltipTrigger>
             <TooltipContent side="bottom" className="block max-w-72 p-3">
               <p className="mb-2 text-xs font-medium">{link.name}</p>
@@ -141,14 +163,14 @@ export function ContractIntegrations({
           </DropdownMenuContent>
         </DropdownMenu>
       ))}
-      {linkable.length > 0 ? (
+      {showLink && linkable.length > 0 ? (
         <Tooltip>
           <TooltipTrigger
             render={
               <Button
                 variant="outline"
-                size="icon"
-                className="size-7 rounded-lg"
+                size={layout === 'rows' ? 'sm' : 'icon'}
+                className={layout === 'rows' ? 'w-full' : 'size-7 rounded-lg'}
                 aria-label="Link an integration"
                 onClick={() => {
                   setError(null)
@@ -158,6 +180,7 @@ export function ContractIntegrations({
             }
           >
             <PlusIcon aria-hidden className="size-3.5" />
+            {layout === 'rows' ? 'Link integration' : null}
           </TooltipTrigger>
           <TooltipContent side="bottom">Link an integration</TooltipContent>
         </Tooltip>

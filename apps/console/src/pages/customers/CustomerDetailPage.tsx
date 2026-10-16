@@ -3,6 +3,10 @@ import { useNavigate } from '@tanstack/react-router'
 import type { TenantFeatureUsage } from '@fp/domain'
 import {
   useCustomer,
+  useCustomerIntegrationLinks,
+  useIntegrations,
+  useLinkCustomerIntegration,
+  useUnlinkCustomerIntegration,
   useCustomerInvoices,
   useCustomerPayments,
   useCustomerSubscriptions,
@@ -58,6 +62,10 @@ export function CustomerDetailPage({
   onEdit,
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
+  const integrationLinks = useCustomerIntegrationLinks(customerId)
+  const integrations = useIntegrations()
+  const linkIntegration = useLinkCustomerIntegration(customerId)
+  const unlinkIntegration = useUnlinkCustomerIntegration(customerId)
   const externalId = customer.data?.externalId ?? ''
   const subscriptions = useCustomerSubscriptions(externalId)
   const invoices = useCustomerInvoices(externalId)
@@ -91,6 +99,25 @@ export function CustomerDetailPage({
   return (
     <>
       <CustomerDetail
+        {...(integrationLinks.isSuccess && integrations.isSuccess
+          ? {
+              integrationControls: {
+                links: integrationLinks.data,
+                linkable: integrations.data
+                  .filter(
+                    (integration) =>
+                      integration.connection &&
+                      !integrationLinks.data.some(
+                        (link) => link.providerType === integration.providerType,
+                      ),
+                  )
+                  .map(({ providerType, name }) => ({ providerType, name })),
+                onLink: (input: { providerType: string; providerEntityId: string }) =>
+                  linkIntegration.mutateAsync(input),
+                onUnlink: (input: { providerType: string }) => unlinkIntegration.mutateAsync(input),
+              },
+            }
+          : {})}
         customer={customer.data}
         subscriptions={subscriptions.data ?? []}
         invoices={invoices.data?.invoices ?? []}

@@ -34,13 +34,13 @@ export interface SectionProps {
   /** No header band: the title stays as a screen-reader heading and the body (a table) leads with its own search. */
   bare?: boolean
   /**
-   * For a table: no title row. The name stays for assistive tech, and a create
-   * action belongs on the table toolbar beside the filter, not above the box.
+   * For a table: title and actions stay above the bordered body.
+   * Empty, loading and populated content share that same frame.
    */
   table?: boolean
   /**
-   * With `table`: a small visible title above the box, with the action on its
-   * right. For tables on an Overview tab; a dedicated tab keeps no visible title.
+   * With `table`: defaults to a visible title and action above the box.
+   * Set false only when the surrounding context already supplies the heading.
    */
   showTitle?: boolean
   /** With `table` and `showTitle`: sits on the title's line, right after it ("View all"). */
@@ -61,7 +61,7 @@ export function Section({
   flush,
   bare,
   table,
-  showTitle,
+  showTitle = true,
   titleAction,
   description,
   as: Heading = 'h2',

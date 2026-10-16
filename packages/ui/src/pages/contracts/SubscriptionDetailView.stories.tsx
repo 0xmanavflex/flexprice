@@ -1126,8 +1126,12 @@ export const HeaderIntegrations: Story = {
     const canvas = within(canvasElement)
     const mark = await canvas.findByRole('button', { name: 'Stripe integration' })
     await userEvent.hover(mark)
-    const id = await screen.findByText('cus_Qx81nKd02')
-    const tip = within(id.closest('dl')!)
+    const details = await waitFor(() => {
+      const match = screen.getAllByText('cus_Qx81nKd02').find((node) => node.closest('dl'))
+      expect(match).toBeDefined()
+      return match!.closest('dl')!
+    })
+    const tip = within(details)
     await expect(tip.getByText('Created')).toBeVisible()
     await expect(tip.getByText('Updated')).toBeVisible()
     await expect(tip.getByText('Sep 18, 2026', { exact: false })).toBeVisible()

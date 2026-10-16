@@ -8,6 +8,9 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-16
 
+- Detail layout: DetailShell and EntityHeader now compose DetailHeader; all share icon, title, pills and integration/ID/menu placement, with narrow-width coverage. Customer Overview gains Metadata and Related below Activity. Customer and contract integration controls appear in Related with link/unlink actions; header marks remain available.
+- Tables: Section table headings/actions now default above the stable frame. Customer contract counts are centred and show a muted dash for zero. Guided first-run states add a secondary documentation action using their existing guide URL.
+
 - Billing: rename visible Credit notes terminology to Credit memos across lists, forms, invoice tabs, detail trails and stories, following the October 15 admin handoff. API types and endpoints keep their existing names.
 
 ## 2026-10-06

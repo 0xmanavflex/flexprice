@@ -195,6 +195,8 @@ export function CustomerGrid({
       // never a zero that nobody counted.
       numberColumn<Customer>('contracts', 'Contracts', (row) => contractCounts?.[row.id], {
         width: 110,
+        align: 'center',
+        zeroAsDash: true,
         ...(locale ? { locale } : {}),
       }),
       dateColumn<Customer>('createdAt', 'Created on', (row) => row.createdAt, {

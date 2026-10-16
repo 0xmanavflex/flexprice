@@ -4,8 +4,7 @@ import { ChevronRightIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { provenance } from '@ui/provenance'
 import { MetricRail, type DetailMetric } from './MetricRail'
-import { DetailHeaderCluster } from './DetailKit'
-import { DetailPills } from './pillSize'
+import { DetailHeader } from './DetailHeader'
 
 /**
  * The one shell every detail page opens with.
@@ -158,30 +157,20 @@ export function DetailShell({
     // content region (which is `overflow-hidden`): header + body together, so a
     // long page is never clipped.
     <div className={cn('flex min-h-0 flex-1 flex-col overflow-y-auto', className)}>
-      <header className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-5 px-6 pt-5 pb-5">
+      <div className="mx-auto flex w-full max-w-[var(--shell-max)] flex-col gap-5 px-6 pt-5 pb-5">
         {trail && trail.length > 0 ? <DetailBreadcrumb trail={trail} /> : breadcrumb}
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-4">
-            {icon ? (
-              <span className="bg-muted/60 text-foreground/70 flex size-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-5">
-                {icon}
-              </span>
-            ) : null}
-            <div className="min-w-0">
-              <h1 className="min-w-0 truncate text-xl font-medium tracking-tight">{title}</h1>
-              <DetailPills>{badges}</DetailPills>
-            </div>
-          </div>
-          <DetailHeaderCluster
-            primary={primary}
-            leading={leading}
-            id={id ?? identifier}
-            email={email}
-            more={actions}
-          />
-        </div>
+        <DetailHeader
+          title={title}
+          icon={icon}
+          badges={badges}
+          id={id ?? identifier}
+          email={email}
+          leading={leading}
+          primary={primary}
+          actions={actions}
+        />
         {metrics && metrics.length > 0 ? <MetricRail metrics={metrics} /> : null}
-      </header>
+      </div>
       {/* Header and body each cap at `--shell-max` and centre, so they align
           with each other and with the shell header, and the detail page fills a
           1440 screen but stops sprawling edge-to-edge at 2560.

@@ -312,15 +312,16 @@ export const Prefilled: Story = {
   },
 }
 
-/** The Plan & charges step lists the chosen plan's charges under the billing card; drag chargeCount to see none or many. */
+/** The phases step lists the plan's charges, with a usage charge's minimum on the charge itself. */
 export const PhaseCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 6 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByText('Charges and discounts')).toBeVisible()
-    // Charges first, then discounts, then the button for the next phase.
-    const headings = canvas.getAllByRole('heading', { level: 3 }).map((h) => h.textContent)
-    await expect(headings).toEqual(['Charges', 'Discounts'])
+    await expect(canvas.getByRole('heading', { name: 'Phase 1' })).toBeVisible()
+    await expect(canvas.queryByRole('heading', { name: 'Charges' })).toBeNull()
+    await expect(canvas.queryByRole('heading', { name: 'Discounts' })).toBeNull()
+    await expect(canvas.getByText('Immediately')).toBeVisible()
+    await expect(canvas.getAllByText('Minimum on this charge').length).toBeGreaterThan(0)
     await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
   },
 }
@@ -463,9 +464,7 @@ export const EndDateCheckedOnTheFirstStep: Story = {
 export const PhaseNoCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 0 },
   play: async ({ canvasElement }) => {
-    await expect(
-      within(canvasElement).getByText('This plan has no charges to override.'),
-    ).toBeVisible()
+    await expect(within(canvasElement).getByText('This plan has no charges.')).toBeVisible()
   },
 }
 export const PhaseLoading: Story = {
@@ -493,15 +492,13 @@ export const AddsAPhaseWithItsOwnDiscount: Story = {
     await expect(canvas.getByText('On the whole phase')).toBeVisible()
   },
 }
-/** The Benefits step: the plan's entitlements, then credit grants and commitments. */
+/** The benefits step: the contract's minimum spend, then entitlements, grants, taxes and add-ons. */
 export const CommitmentsStep: Story = {
   args: { prefilled: true, step: 'commitments', chargeCount: 4, entitlementCount: 12 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    // V1's order: commitments, then benefits, credit grants, taxes and add-ons.
     for (const title of [
-      'Commitment',
-      'Charge commitments',
+      'Minimum spend',
       'Entitlements',
       'Credit grants',
       'Taxes',
@@ -509,6 +506,7 @@ export const CommitmentsStep: Story = {
     ]) {
       await expect(await canvas.findByText(title, { exact: true })).toBeVisible()
     }
+    await expect(canvas.queryByText('Charge commitments')).toBeNull()
     // The customer's tax rate is applied for them.
     await expect(canvas.getByText('VAT · 20%')).toBeVisible()
     await userEvent.type(canvas.getByLabelText(/^Minimum commitment/), '1000')

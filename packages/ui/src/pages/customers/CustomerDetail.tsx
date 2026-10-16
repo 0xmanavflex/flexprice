@@ -29,6 +29,7 @@ import { ActivitySection, type ActivityLogEntry } from '@ui/compositions/detail/
 import { DetailTabs, OverviewTiles, type DetailMenuItem } from '@ui/compositions/detail/DetailKit'
 import { Section } from '@ui/compositions/layout/Section'
 import { EditableCard } from '@ui/compositions/forms/EditableCard'
+import { RelatedCard } from '@ui/compositions/detail/RelatedCard'
 import { MetadataCard } from '@ui/compositions/detail/MetadataCard'
 import { EmptyState } from '@ui/compositions/feedback/EmptyState'
 import { SubTabState, truncationNote } from '@ui/compositions/detail/SubTabState'
@@ -38,6 +39,10 @@ import { provenance } from '@ui/provenance'
 import { EmDash, EntityLink, Pill, Status, type PillTone } from '../shared/cells'
 import { DetailTable } from '../shared/DetailTable'
 import { RowActionsMenu } from '../shared/RowActionsMenu'
+import {
+  ContractIntegrations,
+  type ContractIntegrationsProps,
+} from '../contracts/ContractIntegrations'
 import { IntegrationMark, IntegrationMarks } from './IntegrationMark'
 import { CopyValue } from '../shared/CopyValue'
 
@@ -80,6 +85,7 @@ export const CUSTOMER_TABS = [
 
 export interface CustomerDetailProps {
   customer: CustomerDetailModel
+  integrationControls?: ContractIntegrationsProps
   subscriptions: Subscription[]
   invoices: Invoice[]
   tab: CustomerTab
@@ -173,6 +179,7 @@ const Muted = ({ children }: { children: ReactNode }) => (
 
 export function CustomerDetail({
   customer,
+  integrationControls,
   subscriptions,
   invoices,
   tab,
@@ -272,14 +279,18 @@ export function CustomerDetail({
         title={customer.name}
         badges={<Status value={CUSTOMER_STATUS_LABEL[customer.status]} />}
         id={customer.externalId || customer.id}
-        {...(customer.integrations.length > 0
-          ? { leading: <IntegrationMarks integrations={customer.integrations} /> }
-          : {})}
+        leading={
+          integrationControls ? (
+            <ContractIntegrations {...integrationControls} showLink={false} />
+          ) : (
+            <IntegrationMarks integrations={customer.integrations} />
+          )
+        }
         {...(customer.email ? { email: customer.email } : {})}
         menuLabel="Customer actions"
         menu={menu}
       />
-      <div className="flex flex-col gap-6 px-6 pb-10">
+      <div className="mx-auto flex w-full max-w-[var(--shell-max)] min-w-0 flex-col gap-6 px-6 pb-10">
         <DetailTabs
           value={tab}
           onValueChange={(next) => onTabChange(next as CustomerTab)}
@@ -320,6 +331,8 @@ export function CustomerDetail({
             onOpenInvoice={onOpenInvoice}
             onViewAllInvoices={() => onTabChange('invoices')}
             onViewAllPayments={onViewAllPayments}
+            integrationControls={integrationControls}
+            onUpdateMetadata={onUpdateMetadata}
           />
         ) : null}
 
@@ -476,6 +489,8 @@ function OverviewTab({
   onOpenInvoice,
   onViewAllInvoices,
   onViewAllPayments,
+  integrationControls,
+  onUpdateMetadata,
 }: {
   customer: CustomerDetailModel
   subscriptions: Subscription[]
@@ -498,6 +513,8 @@ function OverviewTab({
   onOpenInvoice: ((invoiceId: string) => void) | undefined
   onViewAllInvoices: () => void
   onViewAllPayments: (() => void) | undefined
+  onUpdateMetadata: CustomerDetailProps['onUpdateMetadata']
+  integrationControls: CustomerDetailProps['integrationControls']
 }) {
   // A loading or failed read is "not known", never "none": the tiles and the
   // activity note say so rather than count what has not arrived.
@@ -602,10 +619,23 @@ function OverviewTab({
           </Section>
         ) : null}
       </div>
-      <ActivitySection
-        entries={activityEntries(customer, subscriptions, invoices, locale)}
-        className="xl:sticky xl:top-6"
-      />
+      <aside
+        aria-label="Customer details"
+        className="flex min-w-0 flex-col gap-5 xl:sticky xl:top-6"
+      >
+        <ActivitySection entries={activityEntries(customer, subscriptions, invoices, locale)} />
+        <MetadataCard
+          metadata={customer.metadata}
+          {...(onUpdateMetadata ? { onSave: onUpdateMetadata } : {})}
+        />
+        {integrationControls ? (
+          <RelatedCard items={[]}>
+            <ContractIntegrations {...integrationControls} layout="rows" />
+          </RelatedCard>
+        ) : (
+          <IntegrationsCard integrations={customer.integrations} />
+        )}
+      </aside>
     </div>
   )
 }
@@ -1109,11 +1139,11 @@ function InformationTab({
       </div>
 
       <div className="flex flex-col gap-5">
-        <IntegrationsCard integrations={customer.integrations} />
         <MetadataCard
           metadata={customer.metadata}
           {...(onUpdateMetadata ? { onSave: onUpdateMetadata } : {})}
         />
+        <IntegrationsCard integrations={customer.integrations} />
       </div>
     </div>
   )
@@ -1122,7 +1152,7 @@ function InformationTab({
 /** Where this customer is mirrored: one row per connected provider, with the customer's id there. */
 function IntegrationsCard({ integrations }: { integrations: CustomerDetailModel['integrations'] }) {
   return (
-    <Section title="Integrations" flush>
+    <RelatedCard items={[]}>
       {integrations.length === 0 ? (
         <p className="text-muted-foreground px-6 py-5 text-[13px]">
           Not mirrored to any connected integration.
@@ -1147,6 +1177,6 @@ function IntegrationsCard({ integrations }: { integrations: CustomerDetailModel[
           ))}
         </ul>
       )}
-    </Section>
+    </RelatedCard>
   )
 }

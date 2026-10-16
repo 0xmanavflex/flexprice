@@ -1,4 +1,5 @@
-import type { ReactNode } from 'react'
+import { Children, Fragment, isValidElement, type ReactNode } from 'react'
+import { Button } from '@ui/components/primitives/button'
 import { ArrowRightIcon } from '@ui/icons'
 import { cn } from '@ui/lib/cn'
 import { SceneIllustration, type EmptyScene } from './SceneIllustration'
@@ -37,6 +38,10 @@ export function GuidedEmptyState({
   label,
   scene = 'table',
 }: GuidedEmptyStateProps) {
+  const actionCount =
+    isValidElement<{ children?: ReactNode }>(actions) && actions.type === Fragment
+      ? Children.count(actions.props.children)
+      : Children.count(actions)
   return (
     <div
       className="flex w-full flex-col items-center gap-16 pt-12 pb-8"
@@ -51,7 +56,20 @@ export function GuidedEmptyState({
             <p className="text-muted-foreground text-sm/relaxed text-balance">{description}</p>
           ) : null}
         </div>
-        {actions ? <div className="flex items-center gap-2">{actions}</div> : null}
+        {actions ? (
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            {actions}
+            {actionCount === 1 && guides?.[0] ? (
+              <Button
+                nativeButton={false}
+                variant="outline"
+                render={<a href={guides[0].href} target="_blank" rel="noopener noreferrer" />}
+              >
+                View documentation
+              </Button>
+            ) : null}
+          </div>
+        ) : null}
       </div>
 
       {guides && guides.length > 0 ? (

@@ -513,6 +513,7 @@ export function SubscriptionDetailView({
       leading={
         integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
           <ContractIntegrations
+            showLink={false}
             links={integrationLinks}
             linkable={linkableProviders}
             onLink={onLinkIntegration}
@@ -976,7 +977,17 @@ export function SubscriptionDetailView({
                         'Set when the contract is created. The API does not support editing it yet.',
                     })}
               />
-              <RelatedCard items={related} />
+              <RelatedCard items={related}>
+                {integrationLinks && onLinkIntegration && onUnlinkIntegration ? (
+                  <ContractIntegrations
+                    layout="rows"
+                    links={integrationLinks}
+                    linkable={linkableProviders}
+                    onLink={onLinkIntegration}
+                    onUnlink={onUnlinkIntegration}
+                  />
+                ) : null}
+              </RelatedCard>
             </div>
           </div>
         ) : null}

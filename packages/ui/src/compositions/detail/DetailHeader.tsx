@@ -24,13 +24,15 @@ export interface DetailHeaderProps {
   /** Status and type pills, shown small under the title (status first). */
   badges?: ReactNode
   /** The record id, rendered as an "ID" copy chip. */
-  id?: string
+  id?: string | undefined
   /** Alias of `id`. */
   identifier?: string
   /** An email, rendered as a mail-icon copy chip beside the id. */
-  email?: string
+  email?: string | undefined
   /** Legacy inline action slot. Prefer putting every action in `actions` via `DetailMoreMenu`. */
   primary?: ReactNode
+  /** Connected integration marks beside the record identifier. */
+  leading?: ReactNode
   /** The overflow (More) menu, last in the right-hand cluster. Build it with `DetailMoreMenu`. */
   actions?: ReactNode
   breadcrumb?: ReactNode
@@ -44,6 +46,7 @@ export function DetailHeader({
   identifier,
   email,
   primary,
+  leading,
   actions,
   breadcrumb,
 }: DetailHeaderProps) {
@@ -51,7 +54,7 @@ export function DetailHeader({
     <header className="flex flex-col gap-3">
       {breadcrumb}
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-4">
+        <div className="flex min-w-0 flex-1 items-center gap-4">
           {icon ? (
             <span className="bg-muted/60 text-foreground/70 flex size-11 shrink-0 items-center justify-center rounded-xl border [&_svg]:size-5">
               {icon}
@@ -62,7 +65,13 @@ export function DetailHeader({
             <DetailPills>{badges}</DetailPills>
           </div>
         </div>
-        <DetailHeaderCluster primary={primary} id={id ?? identifier} email={email} more={actions} />
+        <DetailHeaderCluster
+          primary={primary}
+          leading={leading}
+          id={id ?? identifier}
+          email={email}
+          more={actions}
+        />
       </div>
     </header>
   )

@@ -657,7 +657,11 @@ export function numberColumn<T>(
   id: string,
   header: string,
   get: (row: T) => number | null | undefined,
-  options?: ColumnOptions & { locale?: string | undefined },
+  options?: ColumnOptions & {
+    locale?: string | undefined
+    zeroAsDash?: boolean
+    align?: 'start' | 'center'
+  },
 ): EntityColumn<T> {
   const format = (value: number) => new Intl.NumberFormat(options?.locale).format(value)
   return {
@@ -665,7 +669,13 @@ export function numberColumn<T>(
     header,
     cell: (row) => {
       const value = get(row)
-      if (value === null || value === undefined || Number.isNaN(value)) return <EmDash />
+      if (
+        value === null ||
+        value === undefined ||
+        Number.isNaN(value) ||
+        (options?.zeroAsDash && value === 0)
+      )
+        return <EmDash />
       const text = format(value)
       return (
         <span title={text} className="block min-w-0 truncate tabular-nums">
@@ -677,6 +687,7 @@ export function numberColumn<T>(
       const value = get(row)
       return value === null || value === undefined ? '' : format(value)
     },
+    align: options?.align,
     width: 120,
     skeleton: <Skeleton className="h-4 w-16" />,
     ...spreadOptions(options),
