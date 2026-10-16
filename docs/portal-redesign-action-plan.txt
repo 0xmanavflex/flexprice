@@ -64,11 +64,11 @@ Dependencies: item 08; coordinate catalog counts with item 54.
 [IMPLEMENTED; live count validation pending] 10. Customers: Name, Email, External ID, Integrations, Contracts, Created on.
 [IMPLEMENTED; live count validation pending] 11. Contracts: Customer, Plan, Billing, Status, Current period, Started.
     Remove MRR; display period as a range.
-[IN PROGRESS] 12. Invoices: Invoice number, Customer, Invoice date, Due date, Amount,
+[IMPLEMENTED; live mapping verification pending] 12. Invoices: Invoice number, Customer, Invoice date, Due date, Amount,
     Amount due, Payment status, Integrations. Invoice status becomes a filter.
 [DONE] 13. Credit memos: Credit memo, Customer, Invoice number, Date, Amount, Status.
     Remove Reason/Type columns; connect row navigation when item 39 is implemented.
-[ ] 14. Payments: Receipt number, Invoice number, Customer, Amount,
+[IN PROGRESS; receipt/customer API blocked] 14. Payments: Receipt number, Invoice number, Customer, Amount,
     Payment method, Status, Integration.
 [IMPLEMENTED; live count validation pending] 15. Features: Name, Type, Event name, Aggregation, Group, Entitlements,
     Contracts. Render aggregation as a formula and Group as a chip; remove
@@ -122,12 +122,12 @@ Dependencies: Phases 1 and 3.
 [ ] 22. Move Commitments, Entitlements, Credit grants, Add-ons and Coupons
     into consistent sub-table frames below the contract overview content.
 [IMPLEMENTED; visual review pending] 23. Apply Activity → Metadata → Related to the contract sidebar.
-[IN PROGRESS] 24. Plan: Overview / Information tabs; stack Charges, Entitlements and
+[IMPLEMENTED; visual baseline review pending] 24. Plan: Overview / Information tabs; stack Charges, Entitlements and
     Credit grants on Overview. Information contains plan details and
     Metadata/Related side by side. Update Type pill when charges change.
 [IMPLEMENTED; visual baseline pending] 25. Keep live What customers see pricing card on both Plan tabs;
     make its section headings jump to matching tables.
-[ ] 26. Move Plan Link integration into the overflow menu.
+[IMPLEMENTED; live mapping verification pending] 26. Move Plan Link integration into the overflow menu.
 [ ] 27. Feature: Overview / Information tabs; show charges by billing plan
     and entitlements on Overview; present the create form read-only on Information.
 [IMPLEMENTED; visual review pending] 28. Feature sidebar: Send a test event with Copy cURL and Metadata;
@@ -358,3 +358,31 @@ CATALOG LISTS AND PLAN INFORMATION FOLLOW-UP
   setup was replaced because the first listed plan's mock grant read did not return
   the created grant; no backend claim is made from that fixture.
 - Separate concurrent FormCard/SubscriptionForm edits were preserved untouched.
+
+
+INTEGRATION COLUMNS AND DETAIL LAYOUTS — OCTOBER 16
+- Items 06/12: invoice list integrations now read entity-specific SDK mappings;
+  invoice header and Related share link/unlink controls and query invalidation.
+  Provider ID copy/tooltip labels identify the invoice rather than the customer.
+- Item 14: Payments now has an Integration column from payment mappings. Receipt
+  number and customer remain unavailable in its read model; gateway reference
+  keeps its real label. Loading, retry and empty states use the shared column.
+- Items 24/26: Plan Information places Metadata/Related side by side at desktop,
+  retains the pricing preview, and shows actual provider mappings. Link integration
+  lives in the overflow menu; header and Related support copy/unlink.
+- SDK confirms plan/invoice/payment entity types and generic mapping endpoints.
+  List reads are limited to current-page IDs with a shared 60-second cache and
+  cancellation. No batch mapping endpoint was verified; request count scales with
+  page size. Live backend support/performance still requires verification.
+- Mock mappings now isolate entity type plus ID and return the SDK's documented
+  HTTP 200 link response. Non-customer entities do not inherit customer fixtures.
+- Verified external Open URLs remain pending; prototype placeholder URLs omitted.
+- Validation: 3 query unit tests, 111 component/a11y tests and 3 assembled journeys
+  pass (invoice link/list refresh/unlink, Plan overflow link/unlink, customer
+  unlink regression). TypeScript, scoped ESLint and production build passed.
+- Four visual comparisons differ from existing baselines. Received screenshots
+  reviewed; invoice default columns narrowed so Integrations fits desktop width.
+  Baselines unchanged; Linux visual baseline verification remains pending.
+- Concurrent SubscriptionForm, its stories and generated anatomy edits preserved.
+- Next: continue outstanding shared detail/charge actions (19–22, 31–38), with
+  version/revert and coupon/alert backend contracts verified before wiring actions.

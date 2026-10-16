@@ -1,3 +1,8 @@
+import type { IntegrationLink } from '@fp/domain'
+import {
+  ContractIntegrations,
+  type ContractIntegrationsProps,
+} from '../../contracts/ContractIntegrations'
 import { useState, type ReactNode } from 'react'
 import {
   CalculatorIcon,
@@ -62,10 +67,14 @@ export const InvoiceDetailViewProvenance = provenance({
     'ui/spinner',
     '@reui/badge',
   ],
-  note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit memos tabs.',
+  note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit memos tabs. Entity-specific integration controls share header and Related mappings, following the supplied HTML reference.',
 })
 
 export interface InvoiceDetailViewProps {
+  integrationControls?: ContractIntegrationsProps | undefined
+  integrationLinks?: IntegrationLink[] | undefined
+  integrationsError?: boolean
+  onRetryIntegrations?: () => void
   invoice: InvoiceDocument
   onBack?: () => void
   /** Drafts only: open the edit page. */
@@ -125,6 +134,10 @@ type InvoiceTab = 'details' | 'payments' | 'credit-notes'
  * Metadata, Related rail beside it), Payments and Credit memos.
  */
 export function InvoiceDetailView({
+  integrationLinks,
+  integrationControls,
+  integrationsError,
+  onRetryIntegrations,
   invoice,
   onBack,
   onEdit,
@@ -204,6 +217,13 @@ export function InvoiceDetailView({
       icon={<ReceiptIcon />}
       title="Invoice"
       id={invoice.id}
+      leading={
+        integrationControls ? (
+          <ContractIntegrations {...integrationControls} entityLabel="invoice" showLink={false} />
+        ) : integrationLinks?.length ? (
+          <ContractIntegrations links={integrationLinks} linkable={[]} entityLabel="invoice" />
+        ) : undefined
+      }
       badges={statusChips(invoice).map((chip) => (
         <Pill key={chip.label} tone={chip.tone}>
           {chip.label}
@@ -360,7 +380,30 @@ export function InvoiceDetailView({
                 metadata={invoice.metadata ?? {}}
                 {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
               />
-              <RelatedCard items={related} />
+              <RelatedCard items={related}>
+                {integrationControls ? (
+                  <ContractIntegrations
+                    {...integrationControls}
+                    entityLabel="invoice"
+                    layout="rows"
+                  />
+                ) : integrationLinks?.length ? (
+                  <ContractIntegrations
+                    layout="rows"
+                    links={integrationLinks}
+                    linkable={[]}
+                    entityLabel="invoice"
+                  />
+                ) : integrationsError ? (
+                  <button
+                    type="button"
+                    className="px-6 py-3 text-sm underline"
+                    onClick={onRetryIntegrations}
+                  >
+                    Retry integrations
+                  </button>
+                ) : null}
+              </RelatedCard>
             </div>
           </div>
         ) : null}

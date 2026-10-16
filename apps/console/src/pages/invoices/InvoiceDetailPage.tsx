@@ -5,6 +5,7 @@ import {
   useAttemptInvoicePayment,
   useFinalizeInvoice,
   useInvoice,
+  useEntityIntegrationControls,
   useInvoiceCreditNotes,
   useInvoicePayments,
   useRecalculateInvoice,
@@ -57,6 +58,7 @@ export function InvoiceDetailPage({
 }: InvoiceDetailPageProps) {
   const navigate = useNavigate()
   const invoice = useInvoice(invoiceId)
+  const mappings = useEntityIntegrationControls('invoice', invoiceId)
   // "Bill from" is the signed-in tenant: `GET /tenants/{id}` only answers for
   // one's own tenant, which is also the invoice's issuer. The invoice's own
   // `tenant_id` stands in until the user record has loaded.
@@ -101,6 +103,12 @@ export function InvoiceDetailPage({
   return (
     <>
       <InvoiceDetailView
+        integrationLinks={mappings.data}
+        integrationControls={mappings.controls}
+        integrationsError={mappings.isError}
+        onRetryIntegrations={() => {
+          void mappings.refetch()
+        }}
         invoice={toInvoiceDocument(data, {
           tenant: tenant.data,
           payments: payments.data,

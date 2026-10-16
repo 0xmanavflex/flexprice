@@ -34,6 +34,8 @@ import {
   useDeleteEntitlement,
   useEntitlements,
   usePlan,
+  useEntityIntegrationControls,
+  useEntityIntegrationLinks,
   usePrices,
   useSyncPlanPrices,
   useUpdateCreditGrant,
@@ -52,6 +54,8 @@ import {
   type FeatureOption,
   PlanChargesView,
   PlanCustomerPreview,
+  ContractIntegrations,
+  type ContractIntegrationsProps,
   PlanEntitlementsView,
   Pill,
   Status,
@@ -65,6 +69,7 @@ import {
   EditableCard,
   FormDialog,
   MetadataCard,
+  RelatedCard,
 } from '@fp/ui/compositions'
 import {
   Button,
@@ -158,6 +163,7 @@ export function PlanDetailPage({
   onEdit,
   onNavigateToList,
 }: PlanDetailPageProps) {
+  const [linkingIntegration, setLinkingIntegration] = useState(false)
   const [jumpTarget, setJumpTarget] = useState<string | null>(null)
   useEffect(() => {
     if (tab !== 'overview' || !jumpTarget) return
@@ -170,6 +176,7 @@ export function PlanDetailPage({
     setJumpTarget(null)
   }, [tab, jumpTarget])
   const plan = usePlan(planId)
+  const mappings = useEntityIntegrationControls('plan', planId)
   const update = useUpdatePlan()
   const archive = useArchivePlan()
   const sync = useSyncPlanPrices()
@@ -201,6 +208,17 @@ export function PlanDetailPage({
         icon={<LayersIcon />}
         title={record.name}
         id={record.lookupKey || record.id}
+        leading={
+          mappings.controls ? (
+            <ContractIntegrations
+              {...mappings.controls}
+              entityLabel="plan"
+              showLink={false}
+              linkOpen={linkingIntegration}
+              onLinkOpenChange={setLinkingIntegration}
+            />
+          ) : undefined
+        }
         badges={
           <>
             <Status value={PLAN_STATUS_LABEL[record.status]} />
@@ -224,6 +242,11 @@ export function PlanDetailPage({
                 <MoreHorizontalIcon aria-hidden />
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-48">
+                {mappings.controls?.linkable.length ? (
+                  <DropdownMenuItem onClick={() => setLinkingIntegration(true)}>
+                    Link integration
+                  </DropdownMenuItem>
+                ) : null}
                 <DropdownMenuItem
                   disabled={sync.isPending || isArchived}
                   onClick={() => sync.mutate(planId)}
@@ -268,6 +291,8 @@ export function PlanDetailPage({
           {tab === 'overview' ? <OverviewTab planId={planId} readOnly={isArchived} /> : null}
           {tab === 'information' ? (
             <InformationTab
+              integrationControls={mappings.controls}
+              planId={planId}
               name={record.name}
               lookupKey={record.lookupKey}
               description={record.description}
@@ -669,6 +694,8 @@ function CreditGrantsSection({ planId }: { planId: string }) {
  * place; the metadata card on the right edits, adds and removes key/value fields.
  */
 function InformationTab({
+  planId,
+  integrationControls,
   name,
   lookupKey,
   description,
@@ -678,6 +705,8 @@ function InformationTab({
   readOnly,
   onSave,
 }: {
+  integrationControls?: ContractIntegrationsProps | undefined
+  planId: string
   name: string
   lookupKey: string
   description: string
@@ -692,6 +721,7 @@ function InformationTab({
     metadata?: Record<string, string>
   }) => Promise<unknown>
 }) {
+  const mappings = useEntityIntegrationLinks('plan', planId)
   return (
     <div className="flex min-w-0 flex-col gap-5">
       <EditableCard
@@ -722,12 +752,49 @@ function InformationTab({
         ]}
         onSave={(changes) => onSave(changes)}
       />
-      <MetadataCard
-        metadata={metadata}
-        {...(readOnly
-          ? {}
-          : { onSave: (next: Record<string, string>) => onSave({ metadata: next }) })}
-      />
+      <div className="grid gap-5 xl:grid-cols-2">
+        <MetadataCard
+          metadata={metadata}
+          {...(readOnly
+            ? {}
+            : { onSave: (next: Record<string, string>) => onSave({ metadata: next }) })}
+        />
+        <RelatedCard items={[]}>
+          {integrationControls?.links.length ? (
+            <ContractIntegrations
+              {...integrationControls}
+              layout="rows"
+              entityLabel="plan"
+              showLink={false}
+            />
+          ) : mappings.data?.length ? (
+            <ContractIntegrations
+              layout="rows"
+              links={mappings.data}
+              linkable={[]}
+              entityLabel="plan"
+            />
+          ) : (
+            <div className="text-muted-foreground px-6 py-4 text-sm">
+              {mappings.isPending ? (
+                'Loading integrations…'
+              ) : mappings.isError ? (
+                <button
+                  type="button"
+                  className="underline"
+                  onClick={() => {
+                    void mappings.refetch()
+                  }}
+                >
+                  Retry integrations
+                </button>
+              ) : (
+                'No linked integrations.'
+              )}
+            </div>
+          )}
+        </RelatedCard>
+      </div>
     </div>
   )
 }

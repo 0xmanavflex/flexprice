@@ -1,3 +1,4 @@
+import { integrationColumn, type IntegrationMappings } from '../../shared/integrationColumn'
 import { useMemo } from 'react'
 import { CopyIcon, InfoIcon, ReceiptIcon, SettingsIcon, WalletIcon, PlusIcon } from '@ui/icons'
 import {
@@ -133,6 +134,7 @@ function hasDerivedStatus(statuses: InvoiceStatus[]): boolean {
 }
 
 export interface InvoiceGridProps {
+  integrationMappings?: IntegrationMappings
   invoices: Invoice[]
   /** Server-side total. Drives the record count and page count. */
   total: number
@@ -167,6 +169,7 @@ export interface InvoiceGridProps {
 }
 
 export function InvoiceGrid({
+  integrationMappings,
   invoices,
   total,
   query,
@@ -188,28 +191,28 @@ export function InvoiceGrid({
   const columns = useMemo<EntityColumn<Invoice>[]>(
     () => [
       textColumn<Invoice>('number', 'Invoice number', (row) => row.number, {
-        width: 210,
+        width: 180,
         // The document's own identity. A row without it is unciteable.
         hideable: false,
       }),
       textColumn<Invoice>('customer', 'Customer', (row) => row.customerName, {
-        width: 200,
+        width: 180,
         onOpen: onOpenCustomer ? (row) => onOpenCustomer(row.customerId) : undefined,
       }),
       dateColumn<Invoice>('issuedAt', 'Invoice date', (row) => row.issuedAt, {
-        width: 140,
+        width: 120,
         sortable: true,
         sortValue: InvoiceSortField.IssuedAt,
         ...(locale ? { locale } : {}),
       }),
       dateColumn<Invoice>('dueDate', 'Due date', (row) => row.dueDate, {
-        width: 140,
+        width: 120,
         sortable: true,
         sortValue: InvoiceSortField.DueDate,
         ...(locale ? { locale } : {}),
       }),
       moneyColumn<Invoice>('total', 'Amount', (row) => row.total, {
-        width: 150,
+        width: 120,
         sortable: true,
         sortValue: InvoiceSortField.Total,
         ...(locale ? { locale } : {}),
@@ -218,7 +221,7 @@ export function InvoiceGrid({
       // collections view is actually reading. Zero is muted so a column of
       // settled invoices does not shout.
       moneyColumn<Invoice>('amountDue', 'Amount due', (row) => row.amountRemaining, {
-        width: 150,
+        width: 120,
         muteZero: true,
         ...(locale ? { locale } : {}),
       }),
@@ -239,6 +242,7 @@ export function InvoiceGrid({
             }
           : null,
       ),
+      integrationColumn<Invoice>(integrationMappings, 'invoice'),
       // Off by default and switched on from the `⋯` menu, as in the reference.
       textColumn<Invoice>(
         'period',
@@ -250,7 +254,7 @@ export function InvoiceGrid({
         { width: 220, muted: true, hiddenByDefault: true },
       ),
     ],
-    [locale, onOpenCustomer],
+    [locale, onOpenCustomer, integrationMappings],
   )
 
   const isDefaultSort =

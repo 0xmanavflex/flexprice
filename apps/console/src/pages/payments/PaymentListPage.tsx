@@ -1,5 +1,5 @@
 import type { Payment, PaymentQuery } from '@fp/domain'
-import { usePayments } from '@fp/query'
+import { usePayments, useEntityIntegrationColumns } from '@fp/query'
 import { PaymentGrid } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { toListFailure } from '../shared/listFailure'
@@ -28,6 +28,10 @@ export function PaymentListPage({
 
   const failure = toListFailure(payments.error, 'payments')
   const rows = payments.data?.payments ?? []
+  const integrationMappings = useEntityIntegrationColumns(
+    'payment',
+    rows.map((payment) => payment.id),
+  )
   const total = payments.data?.total ?? 0
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
   const clearFilters = () => onQueryChange({ ...query, search: '', statuses: [], page: 1 })
@@ -53,6 +57,7 @@ export function PaymentListPage({
           emptyDescription="Payments appear here as they are collected against invoices, successful or failed."
         >
           <PaymentGrid
+            integrationMappings={integrationMappings}
             payments={rows}
             total={total}
             query={query}

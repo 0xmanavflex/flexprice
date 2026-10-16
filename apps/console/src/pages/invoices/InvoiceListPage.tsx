@@ -4,7 +4,7 @@ import {
   type InvoiceQuery,
   isStoredInvoiceStatus,
 } from '@fp/domain'
-import { useCustomers, useInvoices } from '@fp/query'
+import { useCustomers, useInvoices, useEntityIntegrationColumns } from '@fp/query'
 import { InvoiceGrid, Toaster } from '@fp/ui/pages'
 import { ListState, PageBody } from '@fp/ui/compositions'
 import { useInvoiceRowActions } from './useInvoiceRowActions'
@@ -57,6 +57,10 @@ export function InvoiceListPage({
     customer_id: (customers.data?.customers ?? []).map((c) => ({ value: c.id, label: c.name })),
   }
   const fetched = invoices.data?.invoices ?? []
+  const integrationMappings = useEntityIntegrationColumns(
+    'invoice',
+    fetched.map((invoice) => invoice.id),
+  )
   const clearFilters = () =>
     onQueryChange({ ...query, search: '', statuses: [], filters: [], page: 1 })
 
@@ -122,6 +126,7 @@ export function InvoiceListPage({
           onClearFilters={clearFilters}
         >
           <InvoiceGrid
+            integrationMappings={integrationMappings}
             invoices={rows}
             total={total}
             query={query}

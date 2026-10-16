@@ -491,3 +491,29 @@ export const Sending: Story = {
     await expect(item).toHaveAttribute('aria-disabled', 'true')
   },
 }
+
+export const ProviderInvoiceMapping: Story = {
+  args: {
+    integrationLinks: [
+      {
+        id: 'stripe',
+        name: 'Stripe',
+        providerType: 'stripe',
+        mappingId: 'map_invoice',
+        providerEntityId: 'in_external',
+        createdAt: null,
+        updatedAt: null,
+      },
+    ],
+  },
+  parameters: menuA11y,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByRole('button', { name: 'Manage Stripe integration' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Stripe integration', exact: true }))
+    const screen = within(canvasElement.ownerDocument.body)
+    await expect(await screen.findByRole('menuitem', { name: 'Copy invoice ID' })).toBeVisible()
+    await expect(screen.queryByRole('menuitem', { name: 'Copy customer ID' })).toBeNull()
+    await expect(screen.queryByRole('menuitem', { name: 'Unlink Stripe' })).toBeNull()
+  },
+}

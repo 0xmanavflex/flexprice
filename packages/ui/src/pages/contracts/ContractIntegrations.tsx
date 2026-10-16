@@ -36,7 +36,7 @@ export const ContractIntegrationsProvenance = provenance({
     'compositions/ConfirmDialog',
     'pages/customers/IntegrationMark',
   ],
-  note: 'Header integration marks: detail tooltip, link and unlink menu, and the dialogs behind them.',
+  note: 'Shared header marks and Related rows for customer, invoice and plan mappings, with entity-specific copy labels and optional link/unlink controls. Plan supports an overflow-triggered link dialog; supplied HTML reference.',
 })
 
 export interface LinkableProvider {
@@ -48,11 +48,14 @@ export interface ContractIntegrationsProps {
   /** Header marks or rows in the Related card. */
   layout?: 'marks' | 'rows'
   showLink?: boolean
+  entityLabel?: string
+  linkOpen?: boolean | undefined
+  onLinkOpenChange?: ((open: boolean) => void) | undefined
   links: IntegrationLink[]
   /** Connected providers this customer has no mapping for yet. */
   linkable: LinkableProvider[]
-  onLink: (input: { providerType: string; providerEntityId: string }) => Promise<unknown>
-  onUnlink: (input: { providerType: string }) => Promise<unknown>
+  onLink?: (input: { providerType: string; providerEntityId: string }) => Promise<unknown>
+  onUnlink?: (input: { providerType: string }) => Promise<unknown>
 }
 
 const stamp = new Intl.DateTimeFormat('en-US', {
@@ -69,6 +72,9 @@ function when(value: Date | null): string {
 
 export function ContractIntegrations({
   layout = 'marks',
+  entityLabel = 'customer',
+  linkOpen,
+  onLinkOpenChange,
   showLink = true,
   links,
   linkable,
@@ -76,7 +82,9 @@ export function ContractIntegrations({
   onUnlink,
 }: ContractIntegrationsProps) {
   const [unlinking, setUnlinking] = useState<IntegrationLink | null>(null)
-  const [linking, setLinking] = useState(false)
+  const [internalLinking, setInternalLinking] = useState(false)
+  const linking = linkOpen ?? internalLinking
+  const setLinking = onLinkOpenChange ?? setInternalLinking
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
@@ -130,7 +138,7 @@ export function ContractIntegrations({
             <TooltipContent side="bottom" className="block max-w-72 p-3">
               <p className="mb-2 text-xs font-medium">{link.name}</p>
               <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-xs">
-                <dt className="opacity-70">Customer ID</dt>
+                <dt className="opacity-70">Provider {entityLabel} ID</dt>
                 <dd className="font-mono break-all">{link.providerEntityId}</dd>
                 <dt className="opacity-70">Created</dt>
                 <dd>{when(link.createdAt)}</dd>
@@ -144,26 +152,30 @@ export function ContractIntegrations({
               onClick={() => {
                 void navigator.clipboard
                   ?.writeText(link.providerEntityId)
-                  .then(() => toast.success(`${link.name} customer ID copied`))
+                  .then(() => toast.success(`${link.name} ${entityLabel} ID copied`))
                   .catch(() => toast.error('Copy failed'))
               }}
             >
-              <CopyIcon aria-hidden /> Copy customer ID
+              <CopyIcon aria-hidden /> Copy {entityLabel} ID
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
-            <DropdownMenuItem
-              variant="destructive"
-              onClick={() => {
-                setError(null)
-                setUnlinking(link)
-              }}
-            >
-              Unlink {link.name}
-            </DropdownMenuItem>
+            {onUnlink ? (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem
+                  variant="destructive"
+                  onClick={() => {
+                    setError(null)
+                    setUnlinking(link)
+                  }}
+                >
+                  Unlink {link.name}
+                </DropdownMenuItem>
+              </>
+            ) : null}
           </DropdownMenuContent>
         </DropdownMenu>
       ))}
-      {showLink && linkable.length > 0 ? (
+      {showLink && onLink && linkable.length > 0 ? (
         <Tooltip>
           <TooltipTrigger
             render={
@@ -190,7 +202,7 @@ export function ContractIntegrations({
         open={unlinking !== null}
         onOpenChange={(next) => (next || pending ? undefined : setUnlinking(null))}
         title={`Unlink ${unlinking?.name ?? 'integration'}?`}
-        description={`This customer stops syncing with ${unlinking?.name ?? 'the provider'}. Nothing is deleted there, and you can link it again later.`}
+        description={`This ${entityLabel} is unlinked from ${unlinking?.name ?? 'the provider'}. Nothing is deleted there, and you can link it again later.`}
         confirmLabel="Unlink"
         pendingLabel="Unlinking…"
         destructive
@@ -198,6 +210,7 @@ export function ContractIntegrations({
         error={error}
         onConfirm={() =>
           unlinking &&
+          onUnlink &&
           void run(
             () => onUnlink({ providerType: unlinking.providerType }),
             () => setUnlinking(null),
@@ -205,12 +218,14 @@ export function ContractIntegrations({
         }
       />
       <LinkDialog
+        entityLabel={entityLabel}
         open={linking}
         providers={linkable}
         pending={pending}
         error={error}
         onClose={() => setLinking(false)}
         onSubmit={(input) =>
+          onLink &&
           void run(
             () => onLink(input),
             () => setLinking(false),
@@ -222,6 +237,7 @@ export function ContractIntegrations({
 }
 
 function LinkDialog({
+  entityLabel,
   open,
   providers,
   pending,
@@ -229,6 +245,7 @@ function LinkDialog({
   onClose,
   onSubmit,
 }: {
+  entityLabel: string
   open: boolean
   providers: LinkableProvider[]
   pending: boolean
@@ -258,7 +275,7 @@ function LinkDialog({
         onSubmit={() => {
           const id = providerEntityId.trim()
           if (!selected) return setProblem('Choose an integration')
-          if (!id) return setProblem('Enter the customer ID at the provider')
+          if (!id) return setProblem(`Enter the ${entityLabel} ID at the provider`)
           setProblem(null)
           onSubmit({ providerType: selected, providerEntityId: id })
         }}
@@ -277,9 +294,9 @@ function LinkDialog({
         <div className="flex flex-col gap-2">
           <LabelWithHint
             htmlFor="link-customer-id"
-            hint="The id this customer already has at the provider, for example cus_123."
+            hint={`The ID this ${entityLabel} already has at the provider.`}
           >
-            Customer ID at the provider
+            {entityLabel.charAt(0).toUpperCase() + entityLabel.slice(1)} ID at the provider
           </LabelWithHint>
           <Input
             id="link-customer-id"

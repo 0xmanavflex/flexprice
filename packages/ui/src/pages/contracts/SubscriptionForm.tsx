@@ -9,6 +9,7 @@ import {
   PuzzleIcon,
   ReceiptIcon,
   ScaleIcon,
+  SlidersHorizontalIcon,
   TicketPercentIcon,
   XIcon,
 } from '@ui/icons'
@@ -1076,6 +1077,8 @@ function ChargeOverrides({
         : [...quantities.filter((q) => q.priceId !== priceId), { priceId, quantity }],
     )
   const [editing, setEditing] = useState<string | null>(null)
+  // Charges whose commitment options are open. A saved commitment stays open.
+  const [configuring, setConfiguring] = useState<ReadonlySet<string>>(new Set())
   const byId = new Map(overrides.map((o) => [o.priceId, o]))
   const commitmentOf = new Map((commitments ?? []).map((c) => [c.priceId, c]))
 
@@ -1097,6 +1100,11 @@ function ChargeOverrides({
       {charges.map((charge) => {
         const override = byId.get(charge.id)
         const name = chargeName(charge)
+        const commitment = commitmentOf.get(charge.id)
+        const commitmentOpen =
+          Boolean(onCommitment) &&
+          charge.type === PriceType.Usage &&
+          (configuring.has(charge.id) || Boolean(commitment))
         return (
           <li key={charge.id} className="flex flex-col gap-3 px-5 py-4 sm:px-6">
             <div className="flex items-start justify-between gap-3">
@@ -1146,6 +1154,34 @@ function ChargeOverrides({
                     {override ? 'Edit' : 'Override'}
                   </Button>
                 )}
+                {onCommitment && charge.type === PriceType.Usage ? (
+                  <RowActionsMenu
+                    label={name}
+                    extra={
+                      commitmentOpen
+                        ? [
+                            {
+                              label: 'Remove commitment',
+                              onSelect: () => {
+                                setConfiguring((current) => {
+                                  const next = new Set(current)
+                                  next.delete(charge.id)
+                                  return next
+                                })
+                                onCommitment(charge.id, null)
+                              },
+                            },
+                          ]
+                        : [
+                            {
+                              label: 'Configure commitment',
+                              onSelect: () =>
+                                setConfiguring((current) => new Set(current).add(charge.id)),
+                            },
+                          ]
+                    }
+                  />
+                ) : null}
               </div>
             </div>
             {editing === charge.id ? (
@@ -1158,10 +1194,11 @@ function ChargeOverrides({
                 }}
               />
             ) : null}
-            {onCommitment && charge.type === PriceType.Usage ? (
+            {commitmentOpen && onCommitment ? (
               <ChargeMinimum
+                priceId={charge.id}
                 name={name}
-                commitment={commitmentOf.get(charge.id)}
+                commitment={commitment}
                 error={
                   commitmentErrors?.[
                     (commitments ?? []).findIndex((c) => c.priceId === charge.id)
@@ -1270,6 +1307,10 @@ function PhaseDiscounts({
 
   return (
     <div className="flex flex-col gap-3 px-5 py-4 sm:px-6">
+      <div className="flex items-center gap-2">
+        <TicketPercentIcon aria-hidden className="text-success-foreground size-4 shrink-0" />
+        <h3 className="text-sm font-medium">Discounts</h3>
+      </div>
       <p className="text-muted-foreground text-xs">
         Apply a coupon to this phase, or to one of its charges.
       </p>
@@ -1402,8 +1443,25 @@ function PhasesStep({
   }
   // Which phase the add-charge dialog adds to; null while it is closed.
   const [addingTo, setAddingTo] = useState<number | null>(null)
+  // Phases folded away so a newly added one can take the page.
+  const [collapsed, setCollapsed] = useState<ReadonlySet<number>>(new Set())
   const last = phases[phases.length - 1]
   const canAdd = Boolean(last?.endDate)
+  const expand = (index: number) =>
+    setCollapsed((current) => {
+      const next = new Set(current)
+      next.delete(index)
+      return next
+    })
+  const shiftCollapsed = (removed: number) =>
+    setCollapsed((current) => {
+      const next = new Set<number>()
+      for (const i of current) {
+        if (i === removed) continue
+        next.add(i > removed ? i - 1 : i)
+      }
+      return next
+    })
 
   return (
     <div className="flex flex-col gap-5">
@@ -1417,6 +1475,25 @@ function PhasesStep({
               .map((row) => row?.quantity?.message)
               .find(Boolean)
           : undefined
+        if (collapsed.has(index)) {
+          const range = `${start ? formatDay(start) : 'Immediately'} – ${
+            phase.endDate ? formatDay(phase.endDate) : 'until cancelled'
+          }`
+          return (
+            <button
+              key={index}
+              type="button"
+              onClick={() => expand(index)}
+              className="bg-background hover:bg-muted/40 flex w-full items-center justify-between gap-4 rounded-xl border px-5 py-4 text-left sm:px-6"
+            >
+              <span className="flex min-w-0 flex-col gap-0.5">
+                <span className="text-sm font-medium">{label}</span>
+                <span className="text-muted-foreground text-xs">{range}</span>
+              </span>
+              <span className="text-muted-foreground shrink-0 text-xs">Edit</span>
+            </button>
+          )
+        }
         return (
           <FormCard
             key={index}
@@ -1435,6 +1512,7 @@ function PhasesStep({
                     if (before && index === phases.length - 1) {
                       next[index - 1] = { ...before, endDate: phase.endDate }
                     }
+                    shiftCollapsed(index)
                     onChange(next)
                   }}
                 >
@@ -1476,43 +1554,47 @@ function PhasesStep({
                 />
               )}
             </FormRow>
-            {phases.length > 1 &&
-            index === 0 &&
-            charges.some((charge) => charge.type === PriceType.Usage) ? (
-              <p className="text-muted-foreground px-5 py-3 text-xs sm:px-6">
-                A minimum on an individual charge is kept for a contract with one phase. Remove the
-                extra phases to set one.
-              </p>
-            ) : null}
-            <ChargeOverrides
-              charges={charges}
-              isLoading={isLoading}
-              overrides={phase.priceOverrides}
-              onChange={(priceOverrides) => update(index, { priceOverrides })}
-              quantities={phase.quantities}
-              onQuantities={(quantities) => update(index, { quantities })}
-              phaseLabel={label}
-              {...(phases.length === 1
-                ? {
-                    commitments,
-                    commitmentErrors,
-                    onCommitment: setCommitment,
-                  }
-                : {})}
-            />
-            {quantityError ? (
-              <p className="text-destructive px-5 pb-3 text-xs sm:px-6" role="alert">
-                {quantityError}
-              </p>
-            ) : null}
-            <ExtraCharges
-              charges={phase.extraCharges}
-              phaseLabel={label}
-              onRemove={(at) =>
-                update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
-              }
-              onAdd={() => setAddingTo(index)}
-            />
+            <div>
+              <SectionTitle icon={PencilIcon} tone="text-info-foreground">
+                Charges
+              </SectionTitle>
+              {phases.length > 1 &&
+              charges.some((charge) => charge.type === PriceType.Usage) ? (
+                <p className="text-muted-foreground px-5 pt-2 text-xs sm:px-6">
+                  A commitment on an individual charge is kept for a contract with one phase.
+                  Remove the extra phases to set one.
+                </p>
+              ) : null}
+              <ChargeOverrides
+                charges={charges}
+                isLoading={isLoading}
+                overrides={phase.priceOverrides}
+                onChange={(priceOverrides) => update(index, { priceOverrides })}
+                quantities={phase.quantities}
+                onQuantities={(quantities) => update(index, { quantities })}
+                phaseLabel={label}
+                {...(phases.length === 1
+                  ? {
+                      commitments,
+                      commitmentErrors,
+                      onCommitment: setCommitment,
+                    }
+                  : {})}
+              />
+              {quantityError ? (
+                <p className="text-destructive px-5 pb-3 text-xs sm:px-6" role="alert">
+                  {quantityError}
+                </p>
+              ) : null}
+              <ExtraCharges
+                charges={phase.extraCharges}
+                phaseLabel={label}
+                onRemove={(at) =>
+                  update(index, { extraCharges: phase.extraCharges.filter((_, i) => i !== at) })
+                }
+                onAdd={() => setAddingTo(index)}
+              />
+            </div>
             <PhaseDiscounts
               discounts={phase.discounts}
               charges={charges}
@@ -1544,7 +1626,10 @@ function PhasesStep({
           type="button"
           variant="outline"
           disabled={!canAdd}
-          onClick={() => onChange([...phases, emptyPhase()])}
+          onClick={() => {
+            setCollapsed(new Set(phases.map((_, i) => i)))
+            onChange([...phases, emptyPhase()])
+          }}
         >
           Add phase
         </Button>
@@ -1595,7 +1680,11 @@ function EntitlementsSection({
   }
 
   return (
-    <FormCard title="Entitlements" status="optional">
+    <FormCard
+      title="Entitlements"
+      status="optional"
+      icon={<KeyRoundIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+    >
       {editable.length === 0 ? (
         <p className="text-muted-foreground px-5 py-4 text-sm sm:px-6">
           This plan has no metered or on/off entitlements to change.
@@ -1680,6 +1769,7 @@ function CreditsSection({
     <FormCard
       title="Credit grants"
       status="optional"
+      icon={<CoinsIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
       {...(fromPlan
         ? {
             adornment: changed ? (
@@ -1786,8 +1876,9 @@ function CreditsSection({
 }
 
 /**
- * The contract's minimum spend, across every charge. A minimum on one charge
- * is edited beside that charge, on the phases step.
+ * The contract-wide commitment, across every charge. A commitment on one
+ * charge is edited beside that charge, on the phases step. Period, overage,
+ * and true-up stay visible so they can be found before an amount is entered.
  */
 function CommitmentsSection({
   values,
@@ -1803,10 +1894,14 @@ function CommitmentsSection({
   onTrueUp: (value: boolean) => void
 }) {
   return (
-    <FormCard title="Minimum spend" status="optional">
+    <FormCard
+      title="Commitment"
+      status="optional"
+      icon={<ScaleIcon aria-hidden className="text-primary size-4 shrink-0" />}
+    >
         <FormRow
           label="Minimum commitment"
-          hint={`The least this contract bills per period, across every charge, in ${values.currency || 'the contract currency'}. A minimum on one charge is set beside that charge. Leave empty for none.`}
+          hint={`The least this contract bills per period, across every charge, in ${values.currency || 'the contract currency'}. A commitment on one charge is set beside that charge. Leave empty for none.`}
           error={errors.commitmentAmount?.message}
         >
           {({ id, ...field }) => (
@@ -1819,59 +1914,50 @@ function CommitmentsSection({
             />
           )}
         </FormRow>
-        {values.commitmentAmount ? (
-          <>
-            <FormRow
-              label="Commitment period"
-              hint="The period the commitment is measured over, e.g. annual on a monthly contract."
-            >
-              {({ id, ...field }) => (
-                <OptionSelect
-                  id={id}
-                  {...field}
-                  value={values.commitmentDuration || 'billing'}
-                  onValueChange={(value) =>
-                    onDuration(
-                      (value === 'billing'
-                        ? ''
-                        : value) as CreateSubscription['commitmentDuration'],
-                    )
-                  }
-                  options={[
-                    { value: 'billing', label: 'The billing period' },
-                    ...SUBSCRIPTION_BILLING_PERIODS.map((period) => ({
-                      value: period,
-                      label: BILLING_PERIOD_LABEL[period],
-                    })),
-                  ]}
-                />
-              )}
-            </FormRow>
-            <FormRow
-              label="Overage factor"
-              hint="Multiplier on usage beyond the commitment. 1 bills it at the normal rate."
-              error={errors.overageFactor?.message}
-            >
-              {({ id, ...field }) => (
-                <Input
-                  id={id}
-                  inputMode="decimal"
-                  placeholder="1"
-                  {...field}
-                  {...register('overageFactor')}
-                />
-              )}
-            </FormRow>
-            <FormRow
-              label="True-up"
-              hint="Bill the shortfall when spend stays under the commitment."
-            >
-              {({ id }) => (
-                <Switch id={id} checked={values.enableTrueUp} onCheckedChange={onTrueUp} />
-              )}
-            </FormRow>
-          </>
-        ) : null}
+        <FormRow
+          label="Commitment period"
+          hint="The period the commitment is measured over, e.g. annual on a monthly contract."
+        >
+          {({ id, ...field }) => (
+            <OptionSelect
+              id={id}
+              {...field}
+              value={values.commitmentDuration || 'billing'}
+              onValueChange={(value) =>
+                onDuration(
+                  (value === 'billing' ? '' : value) as CreateSubscription['commitmentDuration'],
+                )
+              }
+              options={[
+                { value: 'billing', label: 'The billing period' },
+                ...SUBSCRIPTION_BILLING_PERIODS.map((period) => ({
+                  value: period,
+                  label: BILLING_PERIOD_LABEL[period],
+                })),
+              ]}
+            />
+          )}
+        </FormRow>
+        <FormRow
+          label="Overage factor"
+          hint="Multiplier on usage beyond the commitment. 1 bills it at the normal rate."
+          error={errors.overageFactor?.message}
+        >
+          {({ id, ...field }) => (
+            <Input
+              id={id}
+              inputMode="decimal"
+              placeholder="1"
+              {...field}
+              {...register('overageFactor')}
+            />
+          )}
+        </FormRow>
+        <FormRow label="True-up" hint="Bill the shortfall when spend stays under the commitment.">
+          {({ id }) => (
+            <Switch id={id} checked={values.enableTrueUp} onCheckedChange={onTrueUp} />
+          )}
+        </FormRow>
     </FormCard>
   )
 }
@@ -1888,7 +1974,11 @@ function TaxesSection({
 }) {
   const available = taxRates.filter((rate) => !taxes.some((tax) => tax.taxRateCode === rate.code))
   return (
-    <FormCard title="Taxes" status="optional">
+    <FormCard
+      title="Taxes"
+      status="optional"
+      icon={<ReceiptIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+    >
       <div className="flex flex-col gap-2 px-5 py-4 sm:px-6">
         {taxes.length === 0 ? (
           <p className="text-muted-foreground text-sm">No taxes are applied to this contract.</p>
@@ -1970,7 +2060,11 @@ function AddonsSection({
   // A fresh picker after each pick, so its list closes and it reads empty again.
   const [pickerKey, setPickerKey] = useState(0)
   return (
-    <FormCard title="Add-ons" status="optional">
+    <FormCard
+      title="Add-ons"
+      status="optional"
+      icon={<PuzzleIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+    >
       <div className="flex flex-col gap-2 px-5 py-4 sm:px-6">
         {selected.length === 0 ? (
           <p className="text-muted-foreground text-sm">No add-ons. The plan alone is billed.</p>
@@ -2035,7 +2129,10 @@ function BillingStep({
   onChange: <K extends keyof CreateSubscription>(name: K, value: CreateSubscription[K]) => void
 }) {
   return (
-    <FormCard title="Billing configuration">
+    <FormCard
+      title="Billing configuration"
+      icon={<SlidersHorizontalIcon aria-hidden className="text-muted-foreground size-4 shrink-0" />}
+    >
       <FormRow
         label="Billing cycle"
         hint="Anniversary bills on the day the contract started; calendar bills on the first of each period."

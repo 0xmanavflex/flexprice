@@ -493,3 +493,7 @@ export type { WebhookActivityProps } from './developers/webhooks/WebhookActivity
 export { CreditNoteDetailView } from './billing/credit-notes/CreditNoteDetailView'
 export { CreditSettlement } from './billing/credit-notes/creditNoteDocument'
 export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocument'
+
+export { ContractIntegrations } from './contracts/ContractIntegrations'
+
+export type { ContractIntegrationsProps } from './contracts/ContractIntegrations'

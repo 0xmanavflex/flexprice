@@ -312,16 +312,21 @@ export const Prefilled: Story = {
   },
 }
 
-/** The phases step lists the plan's charges, with a usage charge's minimum on the charge itself. */
+/** The phases step lists the plan's charges. A usage charge's commitment opens in place. */
 export const PhaseCharges: Story = {
   args: { prefilled: true, step: 'phases', chargeCount: 6 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('heading', { name: 'Phase 1' })).toBeVisible()
-    await expect(canvas.queryByRole('heading', { name: 'Charges' })).toBeNull()
-    await expect(canvas.queryByRole('heading', { name: 'Discounts' })).toBeNull()
+    await expect(canvas.getByRole('heading', { name: 'Charges' })).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Discounts' })).toBeVisible()
     await expect(canvas.getByText('Immediately')).toBeVisible()
-    await expect(canvas.getAllByText('Minimum on this charge').length).toBeGreaterThan(0)
+    await expect(canvas.queryByText('Minimum on this charge')).toBeNull()
+    const [menu] = canvas.getAllByRole('button', { name: /^Actions for / })
+    await userEvent.click(menu!)
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Configure commitment' }))
+    await expect(canvas.getByText('True-up')).toBeVisible()
+    await expect(canvas.getByText('Overage factor')).toBeVisible()
     await expect(canvas.getByRole('button', { name: 'Add phase' })).toBeDisabled()
   },
 }
@@ -484,11 +489,14 @@ export const AddsAPhaseWithItsOwnDiscount: Story = {
     await userEvent.click(within(days[20]!).getByRole('button'))
     await userEvent.keyboard('{Escape}')
     await userEvent.click(canvas.getByRole('button', { name: 'Add phase' }))
-    await expect(await canvas.findByText('Phase 2')).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Phase 2' })).toBeVisible()
+    // The phase just left is folded, so the form stays on the new one.
+    await expect(canvas.queryByRole('combobox', { name: 'Coupon for Phase 1' })).toBeNull()
+    await expect(canvas.getByRole('button', { name: /Phase 1/ })).toBeVisible()
 
     await userEvent.click(canvas.getByRole('combobox', { name: 'Coupon for Phase 2' }))
     await userEvent.click(await screen.findByRole('option', { name: 'Launch 20%' }))
-    await userEvent.click(canvas.getAllByRole('button', { name: 'Add discount' })[1]!)
+    await userEvent.click(canvas.getByRole('button', { name: 'Add discount' }))
     await expect(canvas.getByText('On the whole phase')).toBeVisible()
   },
 }
@@ -497,20 +505,16 @@ export const CommitmentsStep: Story = {
   args: { prefilled: true, step: 'commitments', chargeCount: 4, entitlementCount: 12 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    for (const title of [
-      'Minimum spend',
-      'Entitlements',
-      'Credit grants',
-      'Taxes',
-      'Add-ons',
-    ]) {
-      await expect(await canvas.findByText(title, { exact: true })).toBeVisible()
+    for (const title of ['Commitment', 'Entitlements', 'Credit grants', 'Taxes', 'Add-ons']) {
+      await expect(await canvas.findByRole('heading', { name: title })).toBeVisible()
     }
     await expect(canvas.queryByText('Charge commitments')).toBeNull()
+    // Period, overage, and true-up are visible before an amount is entered.
+    await expect(canvas.getByText('Commitment period')).toBeVisible()
+    await expect(canvas.getByText('True-up')).toBeVisible()
     // The customer's tax rate is applied for them.
     await expect(canvas.getByText('VAT · 20%')).toBeVisible()
     await userEvent.type(canvas.getByLabelText(/^Minimum commitment/), '1000')
-    await expect(await canvas.findByText('Commitment period')).toBeVisible()
   },
 }
 

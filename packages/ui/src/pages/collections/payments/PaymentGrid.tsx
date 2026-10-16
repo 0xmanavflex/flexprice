@@ -1,3 +1,4 @@
+import { integrationColumn, type IntegrationMappings } from '../../shared/integrationColumn'
 import { useMemo } from 'react'
 import { BanknoteIcon, CopyIcon, CreditCardIcon, InfoIcon, ReceiptIcon } from '@ui/icons'
 import {
@@ -104,6 +105,7 @@ const GUIDES: EntityGuide[] = [
 ]
 
 export interface PaymentGridProps {
+  integrationMappings?: IntegrationMappings
   payments: Payment[]
   /** Server-side total. Drives the record count and page count. */
   total: number
@@ -128,6 +130,7 @@ export interface PaymentGridProps {
 }
 
 export function PaymentGrid({
+  integrationMappings,
   payments,
   total,
   query,
@@ -164,11 +167,12 @@ export function PaymentGrid({
         label: PAYMENT_STATUS_LABEL[row.status],
         tone: STATUS_TONE[row.status],
       })),
+      integrationColumn<Payment>(integrationMappings, 'payment', 'Integration'),
       idColumn<Payment>('reference', 'Gateway reference', (row) => row.gatewayPaymentId ?? '', {
         width: 180,
       }),
     ],
-    [locale],
+    [locale, integrationMappings],
   )
 
   const isDefaultSort =

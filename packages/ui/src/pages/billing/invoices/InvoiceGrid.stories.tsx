@@ -39,6 +39,7 @@ export const PaymentStatus: Story = {
       'Amount',
       'Amount due',
       'Payment status',
+      'Integrations',
       'Actions',
     ])
     await expect(canvas.getByText('Succeeded')).toBeInTheDocument()
@@ -240,4 +241,38 @@ export const Playground: StoryObj<PlaygroundArgs> = {
     hasError: { control: 'boolean' },
   },
   render: (args) => <InvoiceGridPlayground key={`${args.page}-${args.pageSize}`} {...args} />,
+}
+
+export const IntegrationMappings: Story = {
+  args: {
+    onInvoiceClick: fn(),
+    integrationMappings: new Map([
+      [
+        invoiceFixtures[0]!.id,
+        {
+          state: 'ready',
+          links: [
+            {
+              id: 'stripe',
+              name: 'Stripe',
+              providerType: 'stripe',
+              mappingId: 'mapping',
+              providerEntityId: 'in_external',
+              createdAt: null,
+              updatedAt: null,
+            },
+          ],
+          retry: fn(),
+        },
+      ],
+      [invoiceFixtures[1]!.id, { state: 'error', links: undefined, retry: fn() }],
+    ]),
+  },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getByLabelText('Stripe invoice ID in_external')).toBeVisible()
+    await userEvent.click(canvas.getByRole('button', { name: 'Retry integrations' }))
+    await expect(args.integrationMappings!.get(invoiceFixtures[1]!.id)!.retry).toHaveBeenCalled()
+    await expect(args.onInvoiceClick).not.toHaveBeenCalled()
+  },
 }

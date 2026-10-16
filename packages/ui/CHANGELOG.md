@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-16
 
+- Integration layouts: invoice and payment lists gain shared entity mapping columns with loading/retry states. Invoice header/Related and Plan header/Information share provider ID copy and link/unlink controls; Plan linking opens from More. Plan Metadata and Related sit side by side at desktop. Invoice widths keep default integration columns visible. Source: supplied HTML billing.tsx, invoice-detail.tsx, and plan-detail.tsx; no placeholder provider URLs.
+
 - Catalog lists: plain Feature entitlement counts, zero-contract dash, and matching concise Plan/Add-on Type labels. Plan Information retains the live customer pricing card; preview links switch to Overview and focus the matching section. Shared PreviewSection supports an optional navigation callback. Source: supplied HTML catalog.tsx and plan-detail.tsx.
 
 - Credit memo document is now connected to the console route: exact API totals, original invoice-line comparisons, lifecycle controls and Activity/Related sidebar. Removed calculated balances and assumed refund destinations. Added keyboard-accessible narrow line scrolling. Source: supplied HTML credit-memo-detail.tsx; metadata/tax/settlement details are omitted when unavailable.

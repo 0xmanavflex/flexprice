@@ -797,6 +797,9 @@
         "SubTabState"
       ],
       "usedBy": [
+        "FeatureDetailView",
+        "GroupMembersView",
+        "PlanChargesView",
         "SubscriptionDetailView"
       ],
       "story": "./src/pages/product-catalog/charges/ChargeTable.stories.tsx"
@@ -1223,7 +1226,8 @@
         "FormDialog"
       ],
       "usedBy": [
-        "SubscriptionDetailView"
+        "SubscriptionDetailView",
+        "SubscriptionForm"
       ],
       "story": null
     },
@@ -1241,6 +1245,8 @@
         "PlusIcon"
       ],
       "usedBy": [
+        "CustomerDetail",
+        "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
       "story": null
@@ -1674,6 +1680,7 @@
       "composes": [
         "ActivitySection",
         "ArchiveIcon",
+        "ContractIntegrations",
         "CopyValue",
         "DetailTable",
         "DetailTabs",
@@ -1691,6 +1698,7 @@
         "PencilIcon",
         "Pill",
         "PlusIcon",
+        "RelatedCard",
         "RowActionsMenu",
         "Section",
         "Status",
@@ -1721,7 +1729,8 @@
         "FormPage",
         "FormRow",
         "OptionCombobox",
-        "OptionSelect"
+        "OptionSelect",
+        "TimezoneCombobox"
       ],
       "usedBy": [],
       "story": "./src/pages/customers/CustomerForm.stories.tsx"
@@ -1920,8 +1929,7 @@
       "file": "src/compositions/detail/DetailShell.tsx",
       "layer": "composition",
       "composes": [
-        "DetailHeaderCluster",
-        "DetailPills",
+        "DetailHeader",
         "MetricRail"
       ],
       "usedBy": [
@@ -1938,6 +1946,9 @@
         "DetailPills"
       ],
       "usedBy": [
+        "DetailBreadcrumb",
+        "DetailShell",
+        "EntityHeader",
         "FeatureDetailView"
       ],
       "story": "./src/compositions/detail/DetailHeader.stories.tsx"
@@ -1950,10 +1961,7 @@
         "CopyIcon"
       ],
       "usedBy": [
-        "DetailBreadcrumb",
-        "DetailHeader",
-        "DetailShell",
-        "EntityHeader"
+        "DetailHeader"
       ],
       "story": "./src/compositions/detail/DetailKit.stories.tsx"
     },
@@ -1989,10 +1997,7 @@
       "layer": "composition",
       "composes": [],
       "usedBy": [
-        "DetailBreadcrumb",
-        "DetailHeader",
-        "DetailShell",
-        "EntityHeader"
+        "DetailHeader"
       ],
       "story": null
     },
@@ -2000,8 +2005,7 @@
       "file": "src/compositions/detail/DetailShell.tsx",
       "layer": "composition",
       "composes": [
-        "DetailHeaderCluster",
-        "DetailPills",
+        "DetailHeader",
         "MetricRail"
       ],
       "usedBy": [
@@ -2040,7 +2044,6 @@
         "FeatureDetailView",
         "GroupMembersView",
         "InvoiceDetailView",
-        "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "RevenueDashboard",
@@ -2322,9 +2325,8 @@
       "layer": "surface",
       "composes": [
         "DetailBreadcrumb",
-        "DetailHeaderCluster",
-        "DetailMoreMenu",
-        "DetailPills"
+        "DetailHeader",
+        "DetailMoreMenu"
       ],
       "usedBy": [
         "CustomerDetail"
@@ -2438,7 +2440,6 @@
         "EntityList",
         "IntegrationLogo",
         "IntegrationsBlock",
-        "PlanChargesView",
         "SubTabState",
         "WebhookActivity",
         "WebhookEventCatalog"
@@ -2575,6 +2576,7 @@
       "layer": "surface",
       "composes": [
         "ArchiveIcon",
+        "ChargeTable",
         "CopyIcon",
         "DetailBreadcrumb",
         "DetailHeader",
@@ -2586,7 +2588,6 @@
         "MetadataCard",
         "PencilIcon",
         "Pill",
-        "PlusIcon",
         "Properties",
         "Section",
         "Status",
@@ -3291,9 +3292,11 @@
       "file": "src/pages/settings/groups/GroupMembersView.tsx",
       "layer": "surface",
       "composes": [
+        "ChargeTable",
         "DetailTable",
         "EmptyState",
-        "Section"
+        "Section",
+        "SubTabState"
       ],
       "usedBy": [],
       "story": "./src/pages/settings/groups/GroupMembersView.stories.tsx"
@@ -3467,7 +3470,8 @@
       "layer": "surface",
       "composes": [],
       "usedBy": [
-        "CustomerGrid"
+        "CustomerGrid",
+        "InvoiceGrid"
       ],
       "story": null
     },
@@ -3559,6 +3563,7 @@
       "composes": [
         "ActivitySection",
         "CalculatorIcon",
+        "ContractIntegrations",
         "DetailShell",
         "DetailTable",
         "DetailTabs",
@@ -3597,6 +3602,7 @@
       "composes": [
         "CopyIcon",
         "EntityList",
+        "IntegrationChips",
         "PlusIcon",
         "WalletIcon"
       ],
@@ -3901,7 +3907,6 @@
       "usedBy": [
         "CustomerTaxSection",
         "CustomerWalletView",
-        "PlanChargesView",
         "SubscriptionDetailView",
         "TaxDialog"
       ],
@@ -4263,6 +4268,7 @@
         "EntitlementCreateForm",
         "EntitlementEditForm",
         "SubscriptionForm",
+        "TimezoneCombobox",
         "WebhookEndpointDetail"
       ],
       "story": "./src/compositions/forms/OptionCombobox.stories.tsx"
@@ -4537,6 +4543,7 @@
         "PlanGrid",
         "PriceUnitGrid",
         "Status",
+        "SubscriptionForm",
         "TaxRateGrid"
       ],
       "story": null
@@ -4673,13 +4680,7 @@
       "file": "src/pages/product-catalog/plans/PlanChargesView.tsx",
       "layer": "surface",
       "composes": [
-        "DetailTable",
-        "ErrorState",
-        "LoadingRows",
-        "PlusIcon",
-        "RowActionsMenu",
-        "Section",
-        "SectionEmpty"
+        "ChargeTable"
       ],
       "usedBy": [],
       "story": "./src/pages/product-catalog/plans/PlanChargesView.stories.tsx"
@@ -4847,7 +4848,6 @@
         "CustomerWalletView",
         "EntitlementTable",
         "EnvironmentSwitcher",
-        "FeatureDetailView",
         "FeatureForm",
         "FeatureGrid",
         "GroupGrid",
@@ -4855,7 +4855,6 @@
         "InvoiceGrid",
         "Mark",
         "MetadataCard",
-        "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "PlanForm",
@@ -5106,6 +5105,7 @@
       ],
       "usedBy": [
         "CreditNoteDetailView",
+        "CustomerDetail",
         "InvoiceDetailView",
         "SubscriptionDetailView"
       ],
@@ -5233,10 +5233,10 @@
         "CreditGrantTable",
         "CustomerDetail",
         "EntitlementTable",
-        "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
-        "SubscriptionDetailView"
+        "SubscriptionDetailView",
+        "SubscriptionForm"
       ],
       "story": "./src/pages/shared/RowActionsMenu.stories.tsx"
     },
@@ -5338,7 +5338,6 @@
         "InvoiceDetailView",
         "MetadataCard",
         "PlanAiSetupView",
-        "PlanChargesView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView",
         "RelatedCard",
@@ -5356,7 +5355,6 @@
         "SceneIllustration"
       ],
       "usedBy": [
-        "PlanChargesView",
         "SubTabState",
         "SubscriptionDetailView"
       ],
@@ -5925,6 +5923,7 @@
       "file": "src/pages/contracts/SubscriptionForm.tsx",
       "layer": "surface",
       "composes": [
+        "ContractChargeDialog",
         "CreditGrantCreateForm",
         "DateInput",
         "EmptyState",
@@ -5933,7 +5932,9 @@
         "FormRow",
         "OptionCombobox",
         "OptionSelect",
-        "PriceOverrideForm"
+        "PencilIcon",
+        "PriceOverrideForm",
+        "RowActionsMenu"
       ],
       "usedBy": [],
       "story": "./src/pages/contracts/SubscriptionForm.stories.tsx"
@@ -5978,6 +5979,7 @@
         "CustomerWalletView",
         "EntitlementTable",
         "FeatureDetailView",
+        "GroupMembersView",
         "InvoiceDetailView",
         "PlanCreditGrantsView",
         "PlanEntitlementsView"
@@ -6216,6 +6218,17 @@
       "composes": [],
       "usedBy": [],
       "story": null
+    },
+    "TimezoneCombobox": {
+      "file": "src/compositions/forms/TimezoneCombobox.tsx",
+      "layer": "composition",
+      "composes": [
+        "OptionCombobox"
+      ],
+      "usedBy": [
+        "CustomerForm"
+      ],
+      "story": "./src/compositions/forms/TimezoneCombobox.stories.tsx"
     },
     "ToggleOnIcon": {
       "file": "src/reui/icons/default/outline/toggle-on.tsx",
@@ -7049,6 +7062,13 @@
         "OptionSelect"
       ]
     },
+    "./src/compositions/forms/TimezoneCombobox.stories.tsx": {
+      "title": "Building blocks/Forms/TimezoneCombobox",
+      "component": "TimezoneCombobox",
+      "uses": [
+        "TimezoneCombobox"
+      ]
+    },
     "./src/compositions/forms/WorkflowStepper.stories.tsx": {
       "title": "Building blocks/Forms/WorkflowStepper",
       "component": "WorkflowStepper",
@@ -7339,14 +7359,14 @@
       ]
     },
     "./src/pages/billing/credit-notes/CreditNoteForm.stories.tsx": {
-      "title": "App/Billing/Credit notes/Credit note form",
+      "title": "App/Billing/Credit memos/Credit memo form",
       "component": "CreditNoteForm",
       "uses": [
         "CreditNoteForm"
       ]
     },
     "./src/pages/billing/credit-notes/CreditNoteGrid.stories.tsx": {
-      "title": "App/Billing/Credit notes/Credit note table",
+      "title": "App/Billing/Credit memos/Credit memo table",
       "component": "CreditNoteGrid",
       "uses": [
         "CreditNoteGrid"
@@ -8463,20 +8483,16 @@
     "CreditNoteDetailPage": {
       "file": "apps/console/src/pages/credit-notes/CreditNoteDetailPage.tsx",
       "pattern": "Detail",
-      "route": "/credit-notes/$creditNoteId",
+      "route": "/credit-memos/$creditNoteId",
       "uses": [
-        "CatalogDetailFrame",
         "ConfirmDialog",
-        "EditableCard",
-        "EntityLink",
-        "Pill",
-        "Status"
+        "CreditNoteDetailView"
       ]
     },
     "CreditNoteFormPage": {
       "file": "apps/console/src/pages/credit-notes/CreditNoteFormPage.tsx",
       "pattern": "Form",
-      "route": "/credit-notes/new",
+      "route": "/credit-memos/new",
       "uses": [
         "CreditNoteForm"
       ]
@@ -8484,7 +8500,7 @@
     "CreditNoteListPage": {
       "file": "apps/console/src/pages/credit-notes/CreditNoteListPage.tsx",
       "pattern": "List",
-      "route": "/credit-notes",
+      "route": "/credit-memos",
       "uses": [
         "CreditNoteGrid",
         "ListState",
@@ -8752,6 +8768,7 @@
         "AddChargeDialog",
         "ArchiveIcon",
         "ConfirmDialog",
+        "ContractIntegrations",
         "CopyIcon",
         "CreditGrantCreateForm",
         "CreditGrantEditForm",
@@ -8769,6 +8786,7 @@
         "PlanCreditGrantsView",
         "PlanCustomerPreview",
         "PlanEntitlementsView",
+        "RelatedCard",
         "Status"
       ]
     },
@@ -8858,7 +8876,7 @@
     "CustomerSubscriptionFormPage": {
       "file": "apps/console/src/pages/subscriptions/CustomerSubscriptionFormPage.tsx",
       "pattern": "Form",
-      "route": "/customers/$customerId/subscriptions/new",
+      "route": "/customers/$customerId/contracts/new",
       "uses": [
         "AppFailure",
         "LoadingRows",
@@ -8868,7 +8886,7 @@
     "SubscriptionDetailPage": {
       "file": "apps/console/src/pages/subscriptions/SubscriptionDetailPage.tsx",
       "pattern": "Detail",
-      "route": "/subscriptions/$subscriptionId",
+      "route": "/contracts/$subscriptionId",
       "uses": [
         "ConfirmDialog",
         "DateInput",
@@ -8879,7 +8897,7 @@
     "SubscriptionFormPage": {
       "file": "apps/console/src/pages/subscriptions/SubscriptionFormPage.tsx",
       "pattern": "Form",
-      "route": "/subscriptions/new",
+      "route": "/contracts/new",
       "uses": [
         "SubscriptionForm"
       ]
@@ -8887,7 +8905,7 @@
     "SubscriptionListPage": {
       "file": "apps/console/src/pages/subscriptions/SubscriptionListPage.tsx",
       "pattern": "List",
-      "route": "/subscriptions",
+      "route": "/contracts",
       "uses": [
         "ConfirmDialog",
         "ListState",

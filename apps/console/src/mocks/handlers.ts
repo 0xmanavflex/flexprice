@@ -305,6 +305,14 @@ function demoMappingRows(customerId: string): Record<string, unknown>[] {
   }))
 }
 
+const otherEntityMappings = new Map<string, Record<string, unknown>[]>()
+function mappingsForEntity(type: string, id: string): Record<string, unknown>[] {
+  if (type === 'customer') return mappingsFor(id)
+  const key = `${type}:${id}`
+  if (!otherEntityMappings.has(key)) otherEntityMappings.set(key, [])
+  return otherEntityMappings.get(key)!
+}
+
 function mappingsFor(customerId: string): Record<string, unknown>[] {
   const existing = customerMappings.get(customerId)
   if (existing) return existing
@@ -3996,25 +4004,28 @@ export const handlers = [
   http.get(`${BASE}/integrations/mappings`, ({ request }) => {
     const url = new URL(request.url)
     const entityId = url.searchParams.get('entity_id') ?? ''
-    const items = entityId ? mappingsFor(entityId) : []
+    const items = entityId
+      ? mappingsForEntity(url.searchParams.get('entity_type') ?? '', entityId)
+      : []
     return HttpResponse.json({ items, pagination: { total: items.length, limit: 50, offset: 0 } })
   }),
   http.post(`${BASE}/integrations/link`, async ({ request }) => {
     const body = await readBody(request)
     const customerId = String(body['entity_id'] ?? '')
     const providerType = String(body['provider_type'] ?? '')
-    const rows = mappingsFor(customerId)
+    const entityType = String(body['entity_type'] ?? 'customer')
+    const rows = mappingsForEntity(entityType, customerId)
     const now = new Date().toISOString()
     const existing = rows.find((row) => row['provider_type'] === providerType)
     if (existing) {
       existing['provider_entity_id'] = body['provider_entity_id']
       existing['updated_at'] = now
-      return HttpResponse.json(existing)
+      return HttpResponse.json({ mapping: existing })
     }
     const row = {
       id: `intmap_new_${Date.now()}`,
       entity_id: customerId,
-      entity_type: 'customer',
+      entity_type: entityType,
       provider_type: providerType,
       provider_entity_id: body['provider_entity_id'],
       status: 'published',
@@ -4022,11 +4033,14 @@ export const handlers = [
       updated_at: now,
     }
     rows.push(row)
-    return HttpResponse.json(row, { status: 201 })
+    return HttpResponse.json({ mapping: row })
   }),
   http.delete(`${BASE}/integrations/link`, async ({ request }) => {
     const body = await readBody(request)
-    const rows = mappingsFor(String(body['entity_id'] ?? ''))
+    const rows = mappingsForEntity(
+      String(body['entity_type'] ?? 'customer'),
+      String(body['entity_id'] ?? ''),
+    )
     const index = rows.findIndex((row) => row['provider_type'] === body['provider_type'])
     if (index >= 0) rows.splice(index, 1)
     return HttpResponse.json({ success: true })
