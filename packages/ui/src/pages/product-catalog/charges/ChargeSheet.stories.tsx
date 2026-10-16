@@ -1,5 +1,5 @@
 import type { Meta, StoryObj } from '@storybook/react-vite'
-import { expect, fn, userEvent, within } from 'storybook/test'
+import { expect, fn, userEvent, within, waitFor } from 'storybook/test'
 import {
   BillingModel,
   BillingPeriod,
@@ -235,6 +235,8 @@ export const OpenedAtASection: Story = {
   play: async ({ canvasElement }) => {
     const screen = within(canvasElement.ownerDocument.body)
 
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Commitment' })).toHaveFocus())
+
     /*
      * The boxes run in flag order, not the prototype's.
      *
@@ -251,6 +253,7 @@ export const OpenedAtASection: Story = {
       'charge-discount',
       'charge-commitment',
       'charge-alerts',
+      'charge-history',
     ])
 
     await expect(await screen.findByText('WELCOME20')).toBeInTheDocument()

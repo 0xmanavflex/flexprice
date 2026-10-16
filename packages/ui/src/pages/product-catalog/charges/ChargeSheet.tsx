@@ -130,6 +130,7 @@ function Box({
   return (
     <section
       id={`charge-${section}`}
+      tabIndex={-1}
       aria-labelledby={`charge-${section}-title`}
       className="scroll-mt-4"
     >
@@ -278,12 +279,24 @@ export function ChargeSheet({
   // Opened from a flag: bring that box into view once the sheet has settled.
   useEffect(() => {
     if (!charge || !section) return
-    const timer = window.setTimeout(() => {
-      body.current
-        ?.querySelector(`#charge-${section}`)
-        ?.scrollIntoView({ block: 'start', behavior: 'smooth' })
-    }, 250)
-    return () => window.clearTimeout(timer)
+    let frame = 0
+    let cancelled = false
+    const focusSection = () => {
+      if (cancelled) return
+      const target = body.current?.querySelector<HTMLElement>(`#charge-${section}`)
+      if (!target && body.current) return
+      if (!target) {
+        frame = window.requestAnimationFrame(focusSection)
+        return
+      }
+      target.focus({ preventScroll: true })
+      target.scrollIntoView({ block: 'start', behavior: 'instant' })
+    }
+    frame = window.requestAnimationFrame(focusSection)
+    return () => {
+      cancelled = true
+      window.cancelAnimationFrame(frame)
+    }
   }, [charge, section])
 
   if (!charge) {
@@ -407,7 +420,12 @@ export function ChargeSheet({
           ) : null}
 
           {history.length > 1 ? (
-            <section id={`charge-${ChargeSection.History}`} className="scroll-mt-4 space-y-4 pt-2">
+            <section
+              id={`charge-${ChargeSection.History}`}
+              tabIndex={-1}
+              aria-label="History"
+              className="scroll-mt-4 space-y-4 pt-2"
+            >
               <h3 className="flex items-center gap-2 text-sm font-medium">
                 <ClockIcon aria-hidden className="text-muted-foreground size-4" />
                 History

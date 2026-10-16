@@ -566,8 +566,8 @@ export const Default: Story = {
     await expect(canvas.getByRole('heading', { name: 'Activity' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Metadata' })).toBeVisible()
     await expect(canvas.getByRole('heading', { name: 'Related' })).toBeVisible()
-    await expect(canvas.getByRole('heading', { name: 'Contract details' })).toBeVisible()
-    await expect(canvas.getByText('Plan started on')).toBeVisible()
+    await expect(canvas.getByRole('heading', { name: 'Contract' })).toBeVisible()
+    await expect(canvas.getByText('Start date')).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Recent invoices' })).toBeNull()
     await expect(canvas.queryByRole('alert')).toBeNull()
   },
@@ -712,7 +712,8 @@ export const OverviewSummary: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     const order = [
-      'Contract details',
+      'Contract',
+      'Billing & collection',
       'Upcoming invoice',
       'Charges',
       'Entitlements',
@@ -730,7 +731,7 @@ export const OverviewSummary: Story = {
         ).toBeTruthy()
       }
     })
-    await expect(canvas.queryByRole('heading', { name: 'Billing & collection' })).toBeNull()
+    await expect(canvas.getByRole('heading', { name: 'Billing & collection' })).toBeVisible()
     // The summary hands off to the Charges tab for the rest.
     await userEvent.click(canvas.getByRole('button', { name: 'Show all charges' }))
     await waitFor(() =>
@@ -903,7 +904,7 @@ export const NoUpcomingInvoiceWhenCancelled: Story = {
   }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Contract details' })).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Contract' })).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
   },
 }
@@ -912,7 +913,7 @@ export const NoUpcomingInvoiceWhenIncomplete: Story = {
   args: withSubscription({ status: SubscriptionStatus.Incomplete, currentPeriodStart: null }),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(await canvas.findByRole('heading', { name: 'Contract details' })).toBeVisible()
+    await expect(await canvas.findByRole('heading', { name: 'Contract' })).toBeVisible()
     await expect(canvas.queryByRole('heading', { name: 'Upcoming invoice' })).toBeNull()
   },
 }
@@ -921,19 +922,26 @@ export const NoUpcomingInvoiceWhenIncomplete: Story = {
 export const ContractDetails: Story = {
   play: async ({ canvasElement }) => {
     const section = within(
-      (await within(canvasElement).findByRole('heading', { name: 'Contract details' })).closest(
-        'section',
-      )!,
+      (await within(canvasElement).findByRole('heading', { name: 'Contract' })).closest('section')!,
     )
-    await expect(section.getByText('Plan started on')).toBeVisible()
+    await expect(section.getByText('Start date')).toBeVisible()
     await expect(section.getByText('Mar 1, 2026')).toBeVisible()
     await expect(section.getByText('Current period')).toBeVisible()
-    await expect(section.getByText('Collection')).toBeVisible()
-    await expect(section.getByText('Billing cycle')).toBeVisible()
-    await expect(section.getByText('Payment terms')).toBeVisible()
-    await expect(section.getByText('Time zone')).toBeVisible()
-    await expect(section.getByText('Commitment')).toBeVisible()
-    await expect(section.getByText(/\$2,500\.00/)).toBeVisible()
+    const billing = within(
+      within(canvasElement)
+        .getByRole('heading', { name: 'Billing & collection' })
+        .closest('section')!,
+    )
+    for (const label of [
+      'Collection',
+      'Billing cycle',
+      'Payment terms',
+      'Time zone',
+      'Commitment',
+    ]) {
+      await expect(billing.getByText(label)).toBeVisible()
+    }
+    await expect(billing.getByText(/\$2,500\.00/)).toBeVisible()
   },
 }
 
@@ -1602,5 +1610,18 @@ export const RemovesATax: Story = {
     const dialog = within(await screen.findByRole('dialog'))
     await userEvent.click(dialog.getByRole('button', { name: 'Remove tax' }))
     await expect(args.onRemoveTax).toHaveBeenCalledOnce()
+  },
+}
+
+export const OverviewChargesFailed: Story = {
+  args: { ...BASE, lines: { data: undefined, isError: true, onRetry: fn() } },
+  play: async ({ canvasElement, args }) => {
+    const canvas = within(canvasElement)
+    const section = within(
+      canvas.getByRole('heading', { name: 'Charges', exact: true }).closest('section')!,
+    )
+    await expect(section.getByText('Charges could not be loaded')).toBeVisible()
+    await userEvent.click(section.getByRole('button', { name: /Try again/ }))
+    await expect(args.lines.onRetry).toHaveBeenCalled()
   },
 }

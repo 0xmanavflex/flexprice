@@ -99,7 +99,7 @@ export const SubscriptionDetailViewProvenance = provenance({
     '@reui/badge',
     'compositions/ActivityLog',
   ],
-  note: 'Contract detail (read-only): DetailShell header with every action in More, four tabs (Overview, Charges, Usage, Invoices) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners lead the Overview tab, then contract details, the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes.',
+  note: 'Contract detail (read-only): DetailShell header with every action in More, four tabs (Overview, Charges, Usage, Invoices) directly under it, and an Activity, Metadata, Related rail on Overview only. Lifecycle banners lead the Overview tab, then side-by-side Contract and Billing & collection panels, the upcoming invoice preview, contract-specific charges, entitlements, credit grants, add-ons, coupons and taxes.',
 })
 
 /** One section's data with its own loading and failure state, so a slow tab never blocks the page. */
@@ -563,7 +563,9 @@ export function SubscriptionDetailView({
             {
               value: 'charges',
               label: 'Charges',
-              ...(lines.data ? { count: lines.data.length } : {}),
+              ...(lines.data
+                ? { count: chargeRows.charges.filter((charge) => !charge.endDate).length }
+                : {}),
             },
             { value: 'usage', label: 'Usage' },
             {
@@ -599,20 +601,19 @@ export function SubscriptionDetailView({
                 and a way to the rest. The same table the Charges tab uses, in
                 its summary shape, so a charge reads identically in both.
               */}
-              {(lines.data?.length ?? 0) > 0 ? (
-                <ChargeTable
-                  title="Charges"
-                  variant="summary"
-                  charges={chargeRows.charges}
-                  details={chargeRows.details}
-                  source={sourceOf}
-                  {...(s.billingPeriod ? { period: s.billingPeriod } : {})}
-                  onShowAll={() => setTab('charges')}
-                  isLoading={lines.isLoading ?? false}
-                  error={lines.isError ? 'Charges could not be loaded' : null}
-                  {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
-                />
-              ) : null}
+              <ChargeTable
+                title="Charges"
+                variant="summary"
+                layout="narrow"
+                charges={chargeRows.charges}
+                details={chargeRows.details}
+                source={sourceOf}
+                {...(s.billingPeriod ? { period: s.billingPeriod } : {})}
+                onShowAll={() => setTab('charges')}
+                isLoading={lines.isLoading ?? false}
+                error={lines.isError ? 'Charges could not be loaded' : null}
+                {...(lines.onRetry ? { onRetry: lines.onRetry } : {})}
+              />
 
               {/*
                 Commitments, between Charges and Entitlements as the redesign
@@ -1301,44 +1302,12 @@ function ContractDetails({
   onOpenCustomer?: () => void
   onOpenPlan?: () => void
 }) {
-  const facts = [
-    { label: 'Plan started on', value: day(s.startDate) },
-    { label: 'Current period', value: `${day(s.currentPeriodStart)} – ${day(s.currentPeriodEnd)}` },
-    { label: 'Collection', value: sentence(s.collectionMethod ? words(s.collectionMethod) : '') },
-    {
-      label: 'Billing cycle',
-      value:
-        s.billingPeriodCount > 1
-          ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
-          : s.billingPeriodLabel,
-    },
-  ]
   return (
-    <Section title="Contract details" flush>
-      <dl className="grid grid-cols-2 gap-y-5 border-b px-6 py-5 md:grid-cols-4 md:divide-x">
-        {facts.map((fact, index) => (
-          <div key={fact.label} className={cn('min-w-0 space-y-1', index > 0 && 'md:pl-6')}>
-            <dt className="text-muted-foreground text-xs">{fact.label}</dt>
-            <dd className="text-foreground text-sm font-medium break-words">{fact.value}</dd>
-          </div>
-        ))}
-      </dl>
-      <div className="p-6">
+    <div className="grid items-start gap-5 lg:grid-cols-2">
+      <Section title="Contract">
         <Properties
-          columns={4}
+          columns={2}
           items={[
-            {
-              label: 'Payment terms',
-              value: sentence(s.paymentTerms ? words(s.paymentTerms) : ''),
-            },
-            { label: 'Time zone', value: s.timezone || '—' },
-            {
-              label: 'Commitment',
-              value: s.commitmentAmount
-                ? `${formatMoney(s.commitmentAmount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
-                : 'None',
-            },
-            { label: endLabel, value: day(endsOn) },
             {
               label: 'Customer',
               value: onOpenCustomer ? (
@@ -1355,11 +1324,12 @@ function ContractDetails({
                 s.planName
               ),
             },
-            { label: 'Currency', value: s.currency || '—' },
+            { label: 'Start date', value: day(s.startDate) },
             {
-              label: 'Usage this period',
-              value: usage ? formatMoney(usage.total) : '—',
+              label: 'Current period',
+              value: `${day(s.currentPeriodStart)} – ${day(s.currentPeriodEnd)}`,
             },
+            { label: endLabel, value: day(endsOn) },
             ...(s.trialStart || s.trialEnd
               ? [{ label: 'Trial', value: `${day(s.trialStart)} – ${day(s.trialEnd)}` }]
               : []),
@@ -1375,8 +1345,39 @@ function ContractDetails({
             { label: 'Created', value: day(s.createdAt) },
           ]}
         />
-      </div>
-    </Section>
+      </Section>
+      <Section title="Billing & collection">
+        <Properties
+          columns={2}
+          items={[
+            {
+              label: 'Payment terms',
+              value: sentence(s.paymentTerms ? words(s.paymentTerms) : ''),
+            },
+            {
+              label: 'Collection',
+              value: sentence(s.collectionMethod ? words(s.collectionMethod) : ''),
+            },
+            { label: 'Time zone', value: s.timezone || '—' },
+            { label: 'Currency', value: s.currency || '—' },
+            {
+              label: 'Billing cycle',
+              value:
+                s.billingPeriodCount > 1
+                  ? `Every ${s.billingPeriodCount} × ${s.billingPeriodLabel.toLowerCase()}`
+                  : s.billingPeriodLabel,
+            },
+            {
+              label: 'Commitment',
+              value: s.commitmentAmount
+                ? `${formatMoney(s.commitmentAmount)}${usage?.commitmentUtilized ? ` · ${formatMoney(usage.commitmentUtilized)} used` : ''}`
+                : 'None',
+            },
+            { label: 'Usage this period', value: usage ? formatMoney(usage.total) : '—' },
+          ]}
+        />
+      </Section>
+    </div>
   )
 }
 

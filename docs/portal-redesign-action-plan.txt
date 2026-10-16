@@ -90,12 +90,12 @@ Implement this before completing pages that consume the charges table.
     Active / Changed / Ended filtering. Feature rows navigate to their plan.
 [IN PROGRESS] 31. Render Charge / Price / Flags, optional Quantity on wide tables,
     short grey model description and tier count. No row expansion or nested table.
-[ ] 32. Render flags in this order: Price changed, Discount, Commitment, Alerts,
+[IMPLEMENTED; live coupon/alert coverage pending] 32. Render flags in this order: Price changed, Discount, Commitment, Alerts,
     History. Neutral chips, coloured icons, no values in labels. Provisional narrow
     behavior: first two labelled, remaining flags icon-only with tooltips.
-[ ] 33. Open the charge side sheet at the section corresponding to the clicked flag.
+[IMPLEMENTED; broader keyboard journey review pending] 33. Open the charge side sheet at the section corresponding to the clicked flag.
     Verify keyboard access, focus handling, scrolling and closing behavior.
-[ ] 34. Render only applicable sheet sections; show current price prominently and
+[IMPLEMENTED; live coupon/alert coverage pending] 34. Render only applicable sheet sections; show current price prominently and
     plan price in grey without strikethrough. Fix the stated prototype quirks:
     derive Discount flag and section from the same coupon data and align section
     order with flag order: Price, Discount, Commitment, Alerts, History.
@@ -113,13 +113,13 @@ Implement this before completing pages that consume the charges table.
 PHASE 4 — CONTRACT, CATALOG AND CUSTOMER DETAIL PAGES
 Dependencies: Phases 1 and 3.
 
-[ ] 19. Contract: title “{Customer} on {Plan}”, status/cadence pills and
+[IMPLEMENTED with preserved Usage tab] 19. Contract: title “{Customer} on {Plan}”, status/cadence pills and
     Overview / Charges / Invoices tabs with appropriate counts.
-[ ] 20. Place Contract and Billing & collection cards side by side, followed
+[IMPLEMENTED; visual baseline review pending] 20. Place Contract and Billing & collection cards side by side, followed
     by Upcoming invoice above Charges.
-[ ] 21. Show only changed charges in Overview and link Show all charges to
+[IMPLEMENTED] 21. Show only changed charges in Overview and link Show all charges to
     the complete Charges tab.
-[ ] 22. Move Commitments, Entitlements, Credit grants, Add-ons and Coupons
+[IMPLEMENTED for supported actions] 22. Move Commitments, Entitlements, Credit grants, Add-ons and Coupons
     into consistent sub-table frames below the contract overview content.
 [IMPLEMENTED; visual review pending] 23. Apply Activity → Metadata → Related to the contract sidebar.
 [IMPLEMENTED; visual baseline review pending] 24. Plan: Overview / Information tabs; stack Charges, Entitlements and
@@ -386,3 +386,29 @@ INTEGRATION COLUMNS AND DETAIL LAYOUTS — OCTOBER 16
 - Concurrent SubscriptionForm, its stories and generated anatomy edits preserved.
 - Next: continue outstanding shared detail/charge actions (19–22, 31–38), with
   version/revert and coupon/alert backend contracts verified before wiring actions.
+
+
+CONTRACT LAYOUT AND CHARGE ACTION FOLLOW-UP — OCTOBER 16
+- Contract and Billing & collection now use side-by-side shared Sections and
+  two-column Properties, stacking on narrow screens. Customer/Plan links remain;
+  lifecycle dates, lookup key, billing cadence, commitment and usage facts are
+  retained beyond the prototype's minimal four fields. Existing Usage tab retained.
+- Upcoming invoice stays above changed-charge summary. Overview summary now
+  uses compact flags and keeps its section during loading, empty and error states.
+  Retry is tested. Show all charges continues to open the full Charges tab.
+- Charge tab count now reflects active charges, excluding ended lines, matching
+  the table's default Active view. Existing charge edit/end handlers are retained.
+- Shared charge sheet moves keyboard focus to the requested section after it
+  mounts and scrolls it into view without a fixed animation delay. History is a
+  named focusable section too. Missing sections do not trigger an endless retry.
+- Audited shared flag/section order: Price, Discount, Commitment, Alerts, History;
+  Discount flag and section both use detail.coupon. Narrow flags retain first two
+  labels. These patterns already existed; no parallel implementation added.
+- Version list/revert API is still unverified: SDK subscriptions expose no matching
+  version/revert methods in this audit. No simulated Revert action was introduced.
+  Coupon/alert read coverage and window-specific tier rendering remain pending.
+- Validation: 80 component/a11y tests passed, including section focus and Overview
+  error retry; 3 contract journeys passed. TypeScript, scoped ESLint and production
+  build passed. Contract desktop screenshot reviewed; 2% baseline difference,
+  baseline unchanged. Build retains existing chunk/config warnings.
+- Prior staged work and concurrent form/anatomy changes remain untouched.
