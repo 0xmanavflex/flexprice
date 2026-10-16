@@ -35,6 +35,8 @@ test.describe('credit memos', () => {
     await expect(row).toBeVisible()
     await row.click()
     await expect(page).toHaveURL(/\/credit-memos\/[^/?]+/)
+    await page.reload()
+    await expect(page.getByRole('article', { name: 'Credit memo document' })).toBeVisible()
     const rail = page.getByRole('complementary', { name: 'Credit memo details' })
     await expect(rail.getByRole('heading', { name: 'Activity', exact: true })).toBeVisible()
     const related = rail.getByRole('region', { name: 'Related', exact: true })

@@ -489,3 +489,7 @@ export {
 export type { WebhookEventTypePickerProps } from './developers/webhooks/WebhookEventTypePicker'
 export { WebhookActivity, WebhookActivityProvenance } from './developers/webhooks/WebhookActivity'
 export type { WebhookActivityProps } from './developers/webhooks/WebhookActivity'
+
+export { CreditNoteDetailView } from './billing/credit-notes/CreditNoteDetailView'
+export { CreditSettlement } from './billing/credit-notes/creditNoteDocument'
+export type { CreditNoteDocument } from './billing/credit-notes/creditNoteDocument'

@@ -24,9 +24,9 @@ export interface CreditNoteLine {
    * an em dash rather than a zero, because "we do not know" and "nothing was
    * charged" are different and only one of them is reassuring.
    */
-  invoiced: number | null
+  invoiced: string | null
   /** What this memo credits back. */
-  credited: number
+  credited: string
 }
 
 /** How the credit was settled, once it is final. */
@@ -37,6 +37,7 @@ export const CreditSettlement = {
   Adjusted: 'adjusted',
   /** Raised, not yet applied. */
   Pending: 'pending',
+  Unknown: 'unknown',
   /** Cancelled before it settled; it credits nothing. */
   Void: 'void',
 } as const
@@ -47,9 +48,12 @@ export interface CreditNoteDocument {
   number: string
   status: CreditNoteStatus
   currency: string
-  /** The total credited, as a number so the view formats it with the rest. */
-  amount: number
+  /** Exact API decimal, never recalculated from lines. */
+  amount: string
   issuedAt: string | null
+  invoiceTotal?: string
+  invoiceAmountDue?: string
+  refundStatus?: string
   /** Who is being credited. */
   creditTo: InvoiceParty
   customerId: string
@@ -75,11 +79,15 @@ export interface CreditNoteDocument {
 export function settlementNote(document: CreditNoteDocument, amount: string): string {
   switch (document.settlement) {
     case CreditSettlement.Refunded:
-      return `${amount} was refunded to the payment method on file.`
+      return `${amount} was refunded.`
     case CreditSettlement.Adjusted:
       return `${amount} came off invoice ${document.invoiceNumber}; nothing was refunded.`
     case CreditSettlement.Void:
-      return 'This memo was voided. It credits nothing and the invoice is unchanged.'
+      return 'This memo was voided and no longer applies.'
+    case CreditSettlement.Unknown:
+      return document.refundStatus
+        ? `Refund status: ${document.refundStatus}.`
+        : 'Settlement details are not available.'
     case CreditSettlement.Pending:
       return document.status === CreditNoteStatus.Draft
         ? `A draft credits nothing yet. Finalizing applies ${amount} to invoice ${document.invoiceNumber}.`
@@ -103,20 +111,4 @@ export function creditNoteChips(document: CreditNoteDocument): StatusChip[] {
     chips.push({ label: 'Invoice adjusted', tone: 'info' })
   }
   return chips
-}
-
-/** Totals for the lines table: what was invoiced, what is credited, what is left. */
-export function creditNoteTotals(document: CreditNoteDocument): {
-  invoiced: number | null
-  credited: number
-  remaining: number | null
-} {
-  // A single unmatched line makes the invoiced column a guess, so the total is
-  // withheld rather than quietly summing the lines that did match.
-  const known = document.lines.every((line) => line.invoiced !== null)
-  const invoiced = known
-    ? document.lines.reduce((sum, line) => sum + (line.invoiced ?? 0), 0)
-    : null
-  const credited = document.lines.reduce((sum, line) => sum + line.credited, 0)
-  return { invoiced, credited, remaining: invoiced === null ? null : invoiced - credited }
 }

@@ -33,6 +33,9 @@ test('creates a draft credit memo, finalizes it, then voids it', async ({ page }
 
   await expect(page).toHaveURL(/\/credit-memos\/cnote_new_/)
   await expect(page.getByText('Draft').first()).toBeVisible()
+  const document = page.getByRole('article', { name: 'Credit memo document' })
+  await expect(document.getByText('Total credited')).toBeVisible()
+  await expect(document.getByRole('table', { name: 'Credited lines' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Credit memo actions' }).click()
   await page.getByRole('menuitem', { name: 'Finalize' }).click()

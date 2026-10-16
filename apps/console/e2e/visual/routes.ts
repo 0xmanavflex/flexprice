@@ -327,9 +327,9 @@ export const VISUAL_CONTRACTS: readonly VisualContract[] = [
   {
     name: 'credit-note-detail',
     route: `/credit-memos/${CREDIT_NOTE}`,
-    reference: 'pages/billing.tsx',
+    reference: 'pages/credit-memo-detail.tsx',
     pattern: 'detail',
-    ready: { heading: 'Credited lines' },
+    ready: { text: 'Total credited' },
   },
   {
     name: 'taxes-list',

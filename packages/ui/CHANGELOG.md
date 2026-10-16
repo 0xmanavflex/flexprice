@@ -8,6 +8,8 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-16
 
+- Credit memo document is now connected to the console route: exact API totals, original invoice-line comparisons, lifecycle controls and Activity/Related sidebar. Removed calculated balances and assumed refund destinations. Added keyboard-accessible narrow line scrolling. Source: supplied HTML credit-memo-detail.tsx; metadata/tax/settlement details are omitted when unavailable.
+
 - Feature charges and price-group members now use the shared ChargeTable. Feature rows open their parent plan/add-on/cost sheet; group rows open ChargeSheet, retaining missing-member IDs and query errors. Shared table accepts contextual column labels and descriptions. Source: supplied HTML charges-table.tsx, Feature context.
 
 

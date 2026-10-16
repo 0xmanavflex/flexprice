@@ -1,4 +1,4 @@
-import { CreditNoteStatus } from '@fp/domain'
+import { CreditNoteStatus, formatMoney } from '@fp/domain'
 import { CheckCircle2Icon, FileMinusIcon, MoreHorizontalIcon, XCircleIcon } from '@ui/icons'
 import { Button } from '@ui/components/primitives/button'
 import {
@@ -14,12 +14,7 @@ import { ActivitySection } from '../../../compositions/detail/ActivityLog'
 import { MetadataCard } from '../../../compositions/detail/MetadataCard'
 import { RelatedCard, type RelatedItem } from '../../../compositions/detail/RelatedCard'
 import { Pill } from '../../shared/cells'
-import {
-  creditNoteChips,
-  creditNoteTotals,
-  settlementNote,
-  type CreditNoteDocument,
-} from './creditNoteDocument'
+import { creditNoteChips, settlementNote, type CreditNoteDocument } from './creditNoteDocument'
 
 /**
  * One credit memo, as a document rather than a list of fields.
@@ -68,13 +63,9 @@ export function CreditNoteDetailView({
   onSaveMetadata,
   locale,
 }: CreditNoteDetailViewProps) {
-  const money = (value: number) =>
-    new Intl.NumberFormat(locale, {
-      style: 'currency',
-      currency: document.currency.toUpperCase() || 'USD',
-    }).format(value)
+  const money = (value: string) =>
+    formatMoney({ amount: value, currency: document.currency }, locale)
 
-  const totals = creditNoteTotals(document)
   const isDraft = document.status === CreditNoteStatus.Draft
   const isVoid = document.status === CreditNoteStatus.Voided
 
@@ -112,7 +103,7 @@ export function CreditNoteDetailView({
         </Pill>
       ))}
       actions={
-        isDraft || !isVoid ? (
+        (isDraft && onFinalize) || (!isVoid && onVoid) ? (
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
@@ -120,7 +111,7 @@ export function CreditNoteDetailView({
                   variant="outline"
                   size="icon"
                   className="size-8"
-                  aria-label="More actions"
+                  aria-label="Credit memo actions"
                 />
               }
             >
@@ -131,13 +122,13 @@ export function CreditNoteDetailView({
                 {isDraft && onFinalize ? (
                   <DropdownMenuItem onClick={onFinalize}>
                     <CheckCircle2Icon aria-hidden />
-                    Finalize memo
+                    Finalize
                   </DropdownMenuItem>
                 ) : null}
                 {!isVoid && onVoid ? (
                   <DropdownMenuItem variant="destructive" onClick={onVoid}>
                     <XCircleIcon aria-hidden />
-                    Void memo
+                    Void credit memo
                   </DropdownMenuItem>
                 ) : null}
               </DropdownMenuGroup>
@@ -146,11 +137,16 @@ export function CreditNoteDetailView({
         ) : undefined
       }
     >
-      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_320px]">
-        <article className="bg-background w-full overflow-hidden rounded-xl border shadow-[0_1px_2px_rgba(0,0,0,0.04)]">
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1fr)_300px]">
+        <article
+          aria-label="Credit memo document"
+          className="bg-background w-full min-w-0 overflow-hidden rounded-xl border shadow-[0_1px_2px_rgba(0,0,0,0.04)]"
+        >
           <div className="flex flex-wrap items-start justify-between gap-6 px-8 pt-8">
             <div className="space-y-2">
-              <p className="text-3xl font-medium tracking-tight tabular-nums">
+              <p
+                className={`text-3xl font-medium tracking-tight tabular-nums ${isVoid ? 'text-muted-foreground line-through' : ''}`}
+              >
                 {money(document.amount)}
               </p>
               <p className="text-muted-foreground text-[13px]">Amount credited</p>
@@ -159,7 +155,9 @@ export function CreditNoteDetailView({
               <dt className="text-muted-foreground">Memo number</dt>
               <dd className="tabular-nums">{document.number}</dd>
               <dt className="text-muted-foreground">Date</dt>
-              <dd className="tabular-nums">{document.issuedAt ?? 'On finalize'}</dd>
+              <dd className="tabular-nums">
+                {document.issuedAt ?? (isDraft ? 'On finalize' : '—')}
+              </dd>
               <dt className="text-muted-foreground">Against invoice</dt>
               <dd className="tabular-nums">
                 {onOpenInvoice && document.invoiceId ? (
@@ -177,12 +175,22 @@ export function CreditNoteDetailView({
             </dl>
           </div>
 
-          <div className="grid gap-6 px-8 py-8 sm:grid-cols-2">
+          <div className="grid gap-6 px-8 py-8 sm:grid-cols-3">
             <div className="space-y-1.5 text-[13px]">
               <p className="text-muted-foreground text-[11px] tracking-wider uppercase">
                 Credit to
               </p>
-              <p className="font-medium">{document.creditTo.name}</p>
+              {onOpenCustomer && document.customerId ? (
+                <button
+                  type="button"
+                  className="font-medium hover:underline"
+                  onClick={() => onOpenCustomer(document.customerId)}
+                >
+                  {document.creditTo.name}
+                </button>
+              ) : (
+                <p className="font-medium">{document.creditTo.name}</p>
+              )}
               {document.creditTo.email ? (
                 <p className="text-muted-foreground">{document.creditTo.email}</p>
               ) : null}
@@ -195,14 +203,24 @@ export function CreditNoteDetailView({
             <div className="space-y-1.5 text-[13px]">
               <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Reason</p>
               <p>{document.reason || '—'}</p>
+            </div>
+            <div className="space-y-1.5 text-[13px]">
+              <p className="text-muted-foreground text-[11px] tracking-wider uppercase">Memo</p>
               {document.memo ? (
                 <p className="text-muted-foreground whitespace-pre-line">{document.memo}</p>
-              ) : null}
+              ) : (
+                <p className="text-muted-foreground">—</p>
+              )}
             </div>
           </div>
 
-          <div className="mx-8 border-t pt-3">
-            <div role="table" aria-label="Credited lines" className="text-sm">
+          <div
+            role="region"
+            aria-label="Credited line comparison"
+            tabIndex={0}
+            className="mx-8 overflow-x-auto border-t pt-3"
+          >
+            <div role="table" aria-label="Credited lines" className="min-w-[360px] text-sm">
               <div
                 role="row"
                 className="text-muted-foreground grid grid-cols-[minmax(0,1fr)_7rem_7rem] gap-4 border-b pb-3 text-xs"
@@ -241,22 +259,26 @@ export function CreditNoteDetailView({
             </div>
           </div>
 
-          <dl className="mx-8 grid grid-cols-[minmax(0,1fr)_7rem] gap-y-2 border-t py-5 text-[13px]">
-            {totals.invoiced === null ? null : (
-              <>
-                <dt className="text-muted-foreground text-right">Invoiced</dt>
-                <dd className="text-right tabular-nums">{money(totals.invoiced)}</dd>
-              </>
-            )}
-            <dt className="text-muted-foreground text-right">Credited</dt>
-            <dd className="text-right tabular-nums">{money(totals.credited)}</dd>
-            {totals.remaining === null ? null : (
-              <>
-                <dt className="text-right font-medium">Still invoiced</dt>
-                <dd className="text-right font-medium tabular-nums">{money(totals.remaining)}</dd>
-              </>
-            )}
-          </dl>
+          <div className="mx-8 flex justify-end border-t py-6">
+            <dl className="w-full max-w-xs space-y-2.5 text-[13px]">
+              {document.invoiceTotal !== undefined ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Invoice total</dt>
+                  <dd className="tabular-nums">{money(document.invoiceTotal)}</dd>
+                </div>
+              ) : null}
+              <div className="flex justify-between gap-4 border-t pt-3 text-base font-medium">
+                <dt>Total credited</dt>
+                <dd className="tabular-nums">{money(document.amount)}</dd>
+              </div>
+              {document.invoiceAmountDue !== undefined ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-muted-foreground">Current invoice amount due</dt>
+                  <dd className="tabular-nums">{money(document.invoiceAmountDue)}</dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
 
           {/*
             The last question a credit memo raises, answered in a sentence
@@ -267,7 +289,7 @@ export function CreditNoteDetailView({
           </p>
         </article>
 
-        <div className="flex flex-col gap-5 xl:sticky xl:top-6">
+        <aside aria-label="Credit memo details" className="flex flex-col gap-5 xl:sticky xl:top-6">
           <ActivitySection
             entries={document.events.map((event) => ({
               id: event.id,
@@ -277,12 +299,14 @@ export function CreditNoteDetailView({
             }))}
             emptyText="No dates recorded yet."
           />
-          <MetadataCard
-            metadata={document.metadata ?? {}}
-            {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
-          />
+          {document.metadata !== undefined ? (
+            <MetadataCard
+              metadata={document.metadata}
+              {...(onSaveMetadata ? { onSave: onSaveMetadata } : {})}
+            />
+          ) : null}
           <RelatedCard items={related} />
-        </div>
+        </aside>
       </div>
     </DetailShell>
   )

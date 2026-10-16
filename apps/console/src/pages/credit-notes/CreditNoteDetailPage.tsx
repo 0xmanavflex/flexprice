@@ -1,22 +1,16 @@
 import { useState } from 'react'
-import { FileMinusIcon } from '@fp/ui/icons'
-import {
-  CREDIT_NOTE_REASON_LABEL,
-  CREDIT_NOTE_STATUS_LABEL,
-  CREDIT_NOTE_TYPE_LABEL,
-  CreditNoteStatus,
-  type CreditNoteReason,
-  formatMoney,
-} from '@fp/domain'
+import { CreditNoteStatus } from '@fp/domain'
 import {
   ApiError,
   useCreditNote,
+  useInvoice,
   useFinalizeCreditNote,
   useVoidCreditNote,
   serverReason,
 } from '@fp/query'
-import { CatalogDetailFrame, EntityLink, Pill, Status } from '@fp/ui/pages'
-import { ActivitySection, RelatedCard, ConfirmDialog, EditableCard } from '@fp/ui/compositions'
+import { CreditNoteDetailView } from '@fp/ui/pages'
+import { ConfirmDialog } from '@fp/ui/compositions'
+import { toCreditNoteDocument } from './creditNoteDocument'
 import { detailGate } from '../shared/detailGate'
 
 export interface CreditNoteDetailPageProps {
@@ -25,9 +19,6 @@ export interface CreditNoteDetailPageProps {
   onOpenInvoice: (invoiceId: string) => void
   onOpenCustomer: (customerId: string) => void
 }
-
-const formatDate = (value: Date | null) =>
-  value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value) : '—'
 
 /**
  * One credit memo, with what the API lets you do to it: finalize a draft or
@@ -41,6 +32,7 @@ export function CreditNoteDetailPage({
   onOpenCustomer,
 }: CreditNoteDetailPageProps) {
   const note = useCreditNote(creditNoteId)
+  const invoice = useInvoice(note.data?.invoiceId ?? '', { enabled: Boolean(note.data?.invoiceId) })
   const finalize = useFinalizeCreditNote()
   const voidNote = useVoidCreditNote()
   const [dialog, setDialog] = useState<'finalize' | 'void' | null>(null)
@@ -54,195 +46,15 @@ export function CreditNoteDetailPage({
   const close = () => setDialog(null)
 
   return (
-    <CatalogDetailFrame
-      listLabel="Credit memos"
-      onBack={onBack}
-      icon={<FileMinusIcon />}
-      title={`Credit memo ${data.number}`}
-      badges={
-        <>
-          <Pill>{formatMoney(data.amount)}</Pill>
-          <Status value={CREDIT_NOTE_STATUS_LABEL[data.status]} />
-        </>
-      }
-      id={data.id}
-      menuLabel="Credit memo actions"
-      menu={[
-        ...(isDraft
-          ? [{ id: 'finalize', label: 'Finalize', onSelect: () => setDialog('finalize') }]
-          : []),
-        {
-          id: 'void',
-          label: 'Void credit memo',
-          destructive: true,
-          disabled: data.status === CreditNoteStatus.Voided,
-          onSelect: () => setDialog('void'),
-        },
-      ]}
-      tabs={[
-        {
-          value: 'overview',
-          label: 'Overview',
-          content: (
-            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_288px]">
-              <div className="flex min-w-0 flex-col gap-6">
-                <EditableCard
-                  title="Credit memo"
-                  locked
-                  fields={[
-                    {
-                      key: 'status',
-                      label: 'Status',
-                      value: CREDIT_NOTE_STATUS_LABEL[data.status],
-                      readOnly: true,
-                    },
-                    {
-                      key: 'type',
-                      label: 'Type',
-                      value: data.type ? CREDIT_NOTE_TYPE_LABEL[data.type] : '—',
-                      readOnly: true,
-                    },
-                    {
-                      key: 'total',
-                      label: 'Total',
-                      value: formatMoney(data.amount),
-                      readOnly: true,
-                    },
-                    {
-                      key: 'reason',
-                      label: 'Reason',
-                      value:
-                        CREDIT_NOTE_REASON_LABEL[data.reason as CreditNoteReason] ??
-                        (data.reason || '—'),
-                      readOnly: true,
-                    },
-                    ...(data.invoiceId
-                      ? [
-                          {
-                            key: 'invoice',
-                            label: 'Invoice',
-                            value: data.invoiceNumber,
-                            display: (
-                              <EntityLink
-                                label={data.invoiceNumber}
-                                onOpen={() => onOpenInvoice(data.invoiceId)}
-                              />
-                            ),
-                            readOnly: true,
-                          },
-                        ]
-                      : []),
-                    ...(data.customerId
-                      ? [
-                          {
-                            key: 'customer',
-                            label: 'Customer',
-                            value: data.customerName || data.customerId,
-                            display: (
-                              <EntityLink
-                                label={data.customerName || data.customerId}
-                                onOpen={() => onOpenCustomer(data.customerId)}
-                              />
-                            ),
-                            readOnly: true,
-                          },
-                        ]
-                      : []),
-                    ...(data.memo
-                      ? [{ key: 'memo', label: 'Memo', value: data.memo, readOnly: true }]
-                      : []),
-                    {
-                      key: 'created',
-                      label: 'Created',
-                      value: formatDate(data.createdAt),
-                      readOnly: true,
-                    },
-                    ...(data.finalizedAt
-                      ? [
-                          {
-                            key: 'finalized',
-                            label: 'Finalized',
-                            value: formatDate(data.finalizedAt),
-                            readOnly: true,
-                          },
-                        ]
-                      : []),
-                    ...(data.voidedAt
-                      ? [
-                          {
-                            key: 'voided',
-                            label: 'Voided',
-                            value: formatDate(data.voidedAt),
-                            readOnly: true,
-                          },
-                        ]
-                      : []),
-                  ]}
-                  onSave={async () => undefined}
-                />
-                <EditableCard
-                  title="Credited lines"
-                  locked
-                  fields={
-                    data.lines.length === 0
-                      ? [{ key: 'none', label: 'Lines', value: 'No lines', readOnly: true }]
-                      : data.lines.map((line) => ({
-                          key: line.id,
-                          label: line.description,
-                          value: formatMoney(line.amount),
-                          readOnly: true,
-                        }))
-                  }
-                  onSave={async () => undefined}
-                />
-              </div>
-              <aside aria-label="Credit memo details" className="flex min-w-0 flex-col gap-4">
-                <ActivitySection
-                  entries={[
-                    { id: 'created', title: 'Credit memo created', date: data.createdAt },
-                    { id: 'finalized', title: 'Credit memo finalized', date: data.finalizedAt },
-                    { id: 'voided', title: 'Credit memo voided', date: data.voidedAt },
-                  ]
-                    .filter((entry) => entry.date !== null)
-                    .sort((a, b) => b.date!.getTime() - a.date!.getTime())
-                    .map((entry) => ({
-                      id: entry.id,
-                      title: entry.title,
-                      at: new Intl.DateTimeFormat(undefined, {
-                        dateStyle: 'medium',
-                        timeStyle: 'short',
-                      }).format(entry.date!),
-                      record: data.number,
-                    }))}
-                />
-                <RelatedCard
-                  items={[
-                    ...(data.invoiceId
-                      ? [
-                          {
-                            label: 'Invoice',
-                            value: data.invoiceNumber || data.invoiceId,
-                            onOpen: () => onOpenInvoice(data.invoiceId),
-                          },
-                        ]
-                      : []),
-                    ...(data.customerId
-                      ? [
-                          {
-                            label: 'Customer',
-                            value: data.customerName || data.customerId,
-                            onOpen: () => onOpenCustomer(data.customerId),
-                          },
-                        ]
-                      : []),
-                  ]}
-                />
-              </aside>
-            </div>
-          ),
-        },
-      ]}
-    >
+    <>
+      <CreditNoteDetailView
+        document={toCreditNoteDocument(data, invoice.data)}
+        onBack={onBack}
+        onOpenInvoice={onOpenInvoice}
+        onOpenCustomer={onOpenCustomer}
+        {...(isDraft ? { onFinalize: () => setDialog('finalize') } : {})}
+        {...(data.status !== CreditNoteStatus.Voided ? { onVoid: () => setDialog('void') } : {})}
+      />
       <ConfirmDialog
         open={dialog === 'finalize'}
         onOpenChange={(open) => (open ? undefined : close())}
@@ -264,7 +76,7 @@ export function CreditNoteDetailPage({
         error={toError(voidNote.error, 'void')}
         onConfirm={() => voidNote.mutate(data.id, { onSuccess: close })}
       />
-    </CatalogDetailFrame>
+    </>
   )
 }
 

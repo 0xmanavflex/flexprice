@@ -25,7 +25,9 @@ const BASE: CreditNoteDocument = {
   number: 'CM-1042',
   status: CreditNoteStatus.Finalized,
   currency: 'usd',
-  amount: 320,
+  amount: '320',
+  invoiceTotal: '2280',
+  invoiceAmountDue: '1960',
   issuedAt: 'Sep 28, 2026',
   creditTo: {
     name: 'Northwind Logistics',
@@ -39,8 +41,8 @@ const BASE: CreditNoteDocument = {
   memo: 'Double-charged for the September seat uplift.',
   settlement: CreditSettlement.Adjusted,
   lines: [
-    { id: 'l1', description: 'Platform fee — September', invoiced: 1800, credited: 200 },
-    { id: 'l2', description: 'Additional seats (4)', invoiced: 480, credited: 120 },
+    { id: 'l1', description: 'Platform fee — September', invoiced: '1800', credited: '200' },
+    { id: 'l2', description: 'Additional seats (4)', invoiced: '480', credited: '120' },
   ],
   metadata: { raised_by: 'support' },
   events: [
@@ -66,9 +68,9 @@ export const Adjusted: Story = {
     await expect(lines.getByText('$1,800.00')).toBeVisible()
     await expect(lines.getByText('$200.00')).toBeVisible()
 
-    // Totals: invoiced, credited, and what the invoice still carries.
+    // Totals come from the invoice API, not a sum of the credited lines.
     await expect(canvas.getByText('$2,280.00')).toBeVisible()
-    await expect(canvas.getByText('Still invoiced')).toBeVisible()
+    await expect(canvas.getByText('Current invoice amount due')).toBeVisible()
     await expect(canvas.getByText('$1,960.00')).toBeVisible()
 
     await expect(
@@ -88,9 +90,7 @@ export const Refunded: Story = {
   args: { document: { ...BASE, settlement: CreditSettlement.Refunded } },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(
-      await canvas.findByText('$320.00 was refunded to the payment method on file.'),
-    ).toBeVisible()
+    await expect(await canvas.findByText('$320.00 was refunded.')).toBeVisible()
     await expect(canvas.getByText('Refunded')).toBeVisible()
   },
 }
@@ -117,9 +117,9 @@ export const Draft: Story = {
       ),
     ).toBeVisible()
 
-    await userEvent.click(canvas.getByRole('button', { name: 'More actions' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Credit memo actions' }))
     const screen = within(canvasElement.ownerDocument.body)
-    await userEvent.click(await screen.findByRole('menuitem', { name: 'Finalize memo' }))
+    await userEvent.click(await screen.findByRole('menuitem', { name: 'Finalize' }))
     await expect(args.onFinalize).toHaveBeenCalled()
   },
 }
@@ -133,12 +133,10 @@ export const Voided: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(
-      await canvas.findByText(
-        'This memo was voided. It credits nothing and the invoice is unchanged.',
-      ),
+      await canvas.findByText('This memo was voided and no longer applies.'),
     ).toBeVisible()
     await expect(canvas.getByText('Voided')).toBeVisible()
-    await expect(canvas.queryByRole('button', { name: 'More actions' })).toBeNull()
+    await expect(canvas.queryByRole('button', { name: 'Credit memo actions' })).toBeNull()
   },
 }
 
@@ -154,8 +152,8 @@ export const UnmatchedLine: Story = {
     document: {
       ...BASE,
       lines: [
-        { id: 'l1', description: 'Platform fee — September', invoiced: 1800, credited: 200 },
-        { id: 'l2', description: 'A line since removed', invoiced: null, credited: 120 },
+        { id: 'l1', description: 'Platform fee — September', invoiced: '1800', credited: '200' },
+        { id: 'l2', description: 'A line since removed', invoiced: null, credited: '120' },
       ],
     },
   },
@@ -163,11 +161,37 @@ export const UnmatchedLine: Story = {
     const canvas = within(canvasElement)
     const lines = within(await canvas.findByRole('table', { name: 'Credited lines' }))
     await expect(lines.getByText('—')).toBeVisible()
-    // Credited is still known and still totalled; "Invoiced" is not, so the
-    // totals row drops both it and what would be left.
+    // A missing source line never produces a calculated remaining balance.
     await expect(canvas.queryByText('Still invoiced')).toBeNull()
-    // "Invoiced" survives as the column header and nowhere else: with a line
-    // unmatched there is no honest total to put under it.
+    // The original invoice total stays independent of the matched lines.
     await expect(canvas.getAllByText('Invoiced')).toHaveLength(1)
   },
+}
+
+export const ExactTotalAndUnknownSettlement: Story = {
+  args: {
+    document: {
+      ...BASE,
+      amount: '12345678901234567.89',
+      settlement: CreditSettlement.Unknown,
+      refundStatus: 'FAILED',
+    },
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement)
+    await expect(canvas.getAllByText('$12,345,678,901,234,567.89')).toHaveLength(2)
+    await expect(canvas.getByText('Refund status: FAILED.')).toBeVisible()
+    await expect(canvas.getByText('Total credited')).toBeVisible()
+  },
+}
+
+export const Narrow: Story = {
+  args: { document: BASE },
+  decorators: [
+    (Story) => (
+      <div style={{ width: 390 }}>
+        <Story />
+      </div>
+    ),
+  ],
 }
