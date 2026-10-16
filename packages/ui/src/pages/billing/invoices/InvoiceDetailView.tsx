@@ -373,8 +373,11 @@ export function InvoiceDetailView({
                   title: event.title,
                   at: event.at,
                   summary: event.summary,
+                  ...(event.record ? { record: event.record } : {}),
+                  ...(event.by ? { by: event.by } : {}),
                 }))}
-                emptyText="No dates recorded yet."
+                emptyText={invoice.activityEmptyText ?? 'No dates recorded yet.'}
+                awaiting={invoice.activityAwaiting ?? false}
               />
               <MetadataCard
                 metadata={invoice.metadata ?? {}}

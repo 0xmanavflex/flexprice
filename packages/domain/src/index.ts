@@ -17,6 +17,13 @@
  * SDK already has them, and they are only interesting once something renders.
  */
 export {
+  activityByline,
+  activitySourceLabel,
+  activityTitle,
+  describeActivity,
+} from './activity'
+export type { ActivityEntry, ActivityFacts } from './activity'
+export {
   InvalidMoneyError,
   compareMoney,
   formatMoney,

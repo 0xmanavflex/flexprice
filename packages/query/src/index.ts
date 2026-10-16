@@ -16,6 +16,9 @@
  * here fetches a `CustomerResponse` and returns a domain `Customer`. Nothing
  * above this layer sees a `WalletResponse`.
  */
+export { useActivityLog } from './activity'
+export type { ActivityFilter } from './activity'
+
 export { queryKeys } from './keys'
 export {
   MAX_RETRY_AFTER_MS,

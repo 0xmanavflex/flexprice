@@ -31,11 +31,11 @@ export function ActivityLog({ entries }: { entries: ActivityLogEntry[] }) {
       {entries.map((entry, index) => (
         <li key={entry.id} className="relative flex gap-3 pb-5 last:pb-0">
           {index < entries.length - 1 ? (
-            <span aria-hidden className="bg-border absolute top-4 bottom-0 left-[3px] w-px" />
+            <span aria-hidden className="bg-border absolute top-4 bottom-0 left-[3.5px] w-px" />
           ) : null}
           <span
             aria-hidden
-            className="bg-muted-foreground/50 relative mt-[7px] size-[7px] shrink-0 rounded-full"
+            className="border-muted-foreground/50 bg-background relative mt-1.5 size-2 shrink-0 rounded-full border"
           />
           <div className="min-w-0 space-y-0.5">
             <p className="text-sm leading-5 font-medium">{entry.title}</p>
@@ -64,17 +64,20 @@ export function ActivitySection({
   entries,
   className,
   note,
+  awaiting = false,
   emptyText = 'No activity yet.',
 }: {
   entries: ActivityLogEntry[]
   className?: string
   /** Optional line under the log. */
   note?: string
+  /** A change just succeeded and the new row has not been written yet. */
+  awaiting?: boolean
   emptyText?: string
 }) {
   return (
     <Section title="Activity" flush {...(className ? { className } : {})}>
-      {entries.length === 0 ? (
+      {entries.length === 0 && !awaiting ? (
         <p className="text-muted-foreground px-6 py-5 text-[13px]">{emptyText}</p>
       ) : (
         <div
@@ -84,11 +87,24 @@ export function ActivitySection({
           className={`${ACTIVITY_MAX_HEIGHT} overflow-y-auto`}
         >
           <div className="p-6">
-            <ActivityLog entries={entries} />
+            {awaiting ? <ActivityWait /> : null}
+            {entries.length > 0 ? <ActivityLog entries={entries} /> : null}
           </div>
         </div>
       )}
       {note ? <p className="text-muted-foreground border-t px-6 py-3 text-xs">{note}</p> : null}
     </Section>
+  )
+}
+
+function ActivityWait() {
+  return (
+    <p role="status" className="text-muted-foreground mb-4 flex items-center gap-2 text-[13px]">
+      <span
+        aria-hidden
+        className="border-foreground/40 size-2 animate-pulse rounded-full border border-dashed"
+      />
+      Waiting for the next activity
+    </p>
   )
 }

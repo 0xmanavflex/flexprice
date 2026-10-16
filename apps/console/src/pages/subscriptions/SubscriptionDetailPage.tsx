@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import {
   DEFAULT_ADDON_QUERY,
   DEFAULT_COUPON_QUERY,
@@ -43,13 +43,14 @@ import {
   useSubscriptionUsage,
   useUpdateAlertSetting,
   useUpdateSubscriptionLineItem,
+  useActivityLog,
   serverReason,
 } from '@fp/query'
 import { SubscriptionDetailView, type SubscriptionPart } from '@fp/ui/pages'
 import { ConfirmDialog, DateInput, OptionSelect } from '@fp/ui/compositions'
 import { Input, Switch } from '@fp/ui/primitives'
 import { usePlanFormOptions } from '../plans/planFormOptions'
-import { subscriptionLifecycle } from './subscriptionLifecycle'
+import { railActivity } from '@/pages/shared/activityLog'
 import { detailGate } from '../shared/detailGate'
 
 export interface SubscriptionDetailPageProps {
@@ -152,10 +153,8 @@ export function SubscriptionDetailPage({
   const [cancelProblem, setCancelProblem] = useState<string | null>(null)
   const [startDate, setStartDate] = useState(today())
 
-  const activity = useMemo(
-    () => (subscription.data ? subscriptionLifecycle(subscription.data) : []),
-    [subscription.data],
-  )
+  const activityLog = useActivityLog({ entityType: 'subscription', entityId: subscriptionId })
+  const activity = activityLog.data ? railActivity(activityLog.data) : []
 
   if (!subscription.data) {
     return detailGate(subscription, {
@@ -218,6 +217,12 @@ export function SubscriptionDetailPage({
             })),
         }}
         activity={activity}
+        {...(activityLog.isPending
+          ? { activityEmptyText: 'Loading activity…' }
+          : activityLog.isError
+            ? { activityEmptyText: 'Could not load activity.' }
+            : {})}
+        activityAwaiting={activityLog.isAwaiting}
         onBack={onNavigateToList}
         onOpenCustomer={() => onOpenCustomer(data.customerId)}
         onOpenPlan={() => onOpenPlan(data.planId)}

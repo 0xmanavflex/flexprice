@@ -8,7 +8,9 @@ import {
   type Tenant,
   formatAddress,
 } from '@fp/domain'
+import type { ActivityEntry } from '@fp/domain'
 import type { InvoiceDocument, InvoiceLine } from '@fp/ui/pages'
+import { railActivity } from '../shared/activityLog'
 import { invoiceLifecycle } from './invoiceLifecycle'
 
 const day = (date: Date | null) =>
@@ -40,6 +42,10 @@ export interface InvoiceDocumentSources {
   tenant?: Tenant | undefined
   payments?: Payment[] | undefined
   creditNotes?: CreditNote[] | undefined
+  /** Audit trail. When set, it replaces the timestamps assembled from the invoice. */
+  activity?: ActivityEntry[] | undefined
+  activityEmptyText?: string | undefined
+  activityAwaiting?: boolean | undefined
 }
 
 /**
@@ -54,7 +60,8 @@ export function toInvoiceDocument(
   invoice: InvoiceDetail,
   sources: InvoiceDocumentSources = {},
 ): InvoiceDocument {
-  const { tenant, payments = [], creditNotes = [] } = sources
+  const { tenant, payments = [], creditNotes = [], activity, activityEmptyText, activityAwaiting } =
+    sources
   const supportEmail = tenant ? tenant.helpEmail || tenant.billingEmail : ''
 
   return {
@@ -120,6 +127,8 @@ export function toInvoiceDocument(
       date: day(note.createdAt) ?? '—',
       status: CREDIT_NOTE_STATUS_LABEL[note.status],
     })),
-    events: invoiceLifecycle(invoice),
+    events: activity ? railActivity(activity) : invoiceLifecycle(invoice),
+    ...(activityEmptyText ? { activityEmptyText } : {}),
+    ...(activityAwaiting ? { activityAwaiting } : {}),
   }
 }

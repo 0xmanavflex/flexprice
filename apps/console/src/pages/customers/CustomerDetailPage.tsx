@@ -10,6 +10,7 @@ import {
   useCustomerInvoices,
   useCustomerPayments,
   useCustomerSubscriptions,
+  useActivityLog,
   useCustomerUsageSummary,
   useDeleteCustomer,
   useUpdateCustomer,
@@ -19,6 +20,7 @@ import { CustomerEventsPanel } from '@/pages/customers/CustomerEventsPanel'
 import { CustomerTaxPanel } from '@/pages/customers/CustomerTaxPanel'
 import { CustomerWalletPanel } from '@/pages/customers/CustomerWalletPanel'
 import { AppFailure, ConfirmDialog, EmptyState, LoadingRows, Section } from '@fp/ui/compositions'
+import { toActivityLogEntry } from '@/pages/shared/activityLog'
 import { detailGate } from '@/pages/shared/detailGate'
 import { useInvoiceRowActions } from '@/pages/invoices/useInvoiceRowActions'
 
@@ -62,6 +64,7 @@ export function CustomerDetailPage({
   onEdit,
 }: CustomerDetailPageProps) {
   const customer = useCustomer(customerId)
+  const activity = useActivityLog({ customerId })
   const integrationLinks = useCustomerIntegrationLinks(customerId)
   const integrations = useIntegrations()
   const linkIntegration = useLinkCustomerIntegration(customerId)
@@ -119,6 +122,10 @@ export function CustomerDetailPage({
             }
           : {})}
         customer={customer.data}
+        activity={activity.data ? activity.data.map(toActivityLogEntry) : []}
+        activityLoading={activity.isPending}
+        activityError={activity.isError}
+        activityAwaiting={activity.isAwaiting}
         subscriptions={subscriptions.data ?? []}
         invoices={invoices.data?.invoices ?? []}
         tab={tab}

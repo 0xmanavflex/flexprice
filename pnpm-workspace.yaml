@@ -16,3 +16,4 @@ allowBuilds:
 
 minimumReleaseAgeExclude:
   - '@flexprice/sdk@2.1.35'
+  - '@flexprice/sdk@2.1.39'

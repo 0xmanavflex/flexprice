@@ -140,6 +140,16 @@ export interface CustomerDetailProps {
   paymentsError?: boolean | undefined
   onRetryPayments?: (() => void) | undefined
   /**
+   * The audit trail from `POST /activity`. When set, it replaces the dates
+   * assembled from the customer, contracts and invoices already on the page.
+   * Stories omit it and keep that assembled log.
+   */
+  activity?: ActivityLogEntry[] | undefined
+  activityLoading?: boolean | undefined
+  activityError?: boolean | undefined
+  /** A change just landed and the new activity row is still being written. */
+  activityAwaiting?: boolean | undefined
+  /**
    * The Events tab's contents (the customer's recent ingested events). It is a
    * slot because the events read has its own loading and failure states. Omitted,
    * the tab says events are not available here yet.
@@ -206,6 +216,10 @@ export function CustomerDetail({
   paymentsLoading = false,
   paymentsError = false,
   onRetryPayments,
+  activity,
+  activityLoading = false,
+  activityError = false,
+  activityAwaiting = false,
   events,
   usage,
   wallet,
@@ -331,6 +345,10 @@ export function CustomerDetail({
             onOpenInvoice={onOpenInvoice}
             onViewAllInvoices={() => onTabChange('invoices')}
             onViewAllPayments={onViewAllPayments}
+            activity={activity}
+            activityLoading={activityLoading}
+            activityError={activityError}
+            activityAwaiting={activityAwaiting}
             integrationControls={integrationControls}
             onUpdateMetadata={onUpdateMetadata}
           />
@@ -489,6 +507,10 @@ function OverviewTab({
   onOpenInvoice,
   onViewAllInvoices,
   onViewAllPayments,
+  activity,
+  activityLoading,
+  activityError,
+  activityAwaiting,
   integrationControls,
   onUpdateMetadata,
 }: {
@@ -513,6 +535,10 @@ function OverviewTab({
   onOpenInvoice: ((invoiceId: string) => void) | undefined
   onViewAllInvoices: () => void
   onViewAllPayments: (() => void) | undefined
+  activity: ActivityLogEntry[] | undefined
+  activityLoading: boolean | undefined
+  activityError: boolean | undefined
+  activityAwaiting: boolean | undefined
   onUpdateMetadata: CustomerDetailProps['onUpdateMetadata']
   integrationControls: CustomerDetailProps['integrationControls']
 }) {
@@ -623,7 +649,20 @@ function OverviewTab({
         aria-label="Customer details"
         className="flex min-w-0 flex-col gap-5 xl:sticky xl:top-6"
       >
-        <ActivitySection entries={activityEntries(customer, subscriptions, invoices, locale)} />
+        <ActivitySection
+          entries={
+            activity ??
+            (activityLoading || activityError
+              ? []
+              : activityEntries(customer, subscriptions, invoices, locale))
+          }
+          {...(activityLoading
+            ? { emptyText: 'Loading activity…' }
+            : activityError
+              ? { emptyText: 'Could not load activity.' }
+              : {})}
+          awaiting={activityAwaiting ?? false}
+        />
         <MetadataCard
           metadata={customer.metadata}
           {...(onUpdateMetadata ? { onSave: onUpdateMetadata } : {})}

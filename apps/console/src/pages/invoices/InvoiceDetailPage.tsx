@@ -14,6 +14,7 @@ import {
   useUpdateInvoiceMetadata,
   useUpdateInvoicePaymentStatus,
   useUserInfo,
+  useActivityLog,
   useVoidInvoice,
   serverReason,
 } from '@fp/query'
@@ -58,6 +59,7 @@ export function InvoiceDetailPage({
 }: InvoiceDetailPageProps) {
   const navigate = useNavigate()
   const invoice = useInvoice(invoiceId)
+  const activity = useActivityLog({ entityType: 'invoice', entityId: invoiceId })
   const mappings = useEntityIntegrationControls('invoice', invoiceId)
   // "Bill from" is the signed-in tenant: `GET /tenants/{id}` only answers for
   // one's own tenant, which is also the invoice's issuer. The invoice's own
@@ -113,6 +115,13 @@ export function InvoiceDetailPage({
           tenant: tenant.data,
           payments: payments.data,
           creditNotes: creditNotes.data,
+          activity: activity.data ?? [],
+          ...(activity.isPending
+            ? { activityEmptyText: 'Loading activity…' }
+            : activity.isError
+              ? { activityEmptyText: 'Could not load activity.' }
+              : {}),
+          ...(activity.isAwaiting ? { activityAwaiting: true } : {}),
         })}
         payments={subTab(payments, 'payments')}
         creditNotes={subTab(creditNotes, 'credit memos')}

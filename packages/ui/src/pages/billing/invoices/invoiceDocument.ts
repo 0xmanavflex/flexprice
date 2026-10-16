@@ -28,6 +28,10 @@ export interface InvoiceActivity {
   at: string
   status: 'completed' | 'active' | 'pending' | 'issue'
   summary: string
+  /** The record, drawn in front of the summary. */
+  record?: string
+  /** The person who acted. Omitted when the system did. */
+  by?: string
 }
 
 export interface InvoicePaymentRow {
@@ -74,6 +78,10 @@ export interface InvoiceDocument {
   creditNotes: InvoiceCreditNoteRow[]
   payments: InvoicePaymentRow[]
   events: InvoiceActivity[]
+  /** Replaces the empty-rail sentence while the audit trail is loading or failed. */
+  activityEmptyText?: string
+  /** A change just landed and the new activity row is still being written. */
+  activityAwaiting?: boolean
 }
 
 export interface StatusChip {

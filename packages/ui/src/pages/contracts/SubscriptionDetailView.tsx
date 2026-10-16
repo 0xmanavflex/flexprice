@@ -128,6 +128,10 @@ export interface SubscriptionDetailViewProps {
   invoices: SubscriptionPart<Invoice[]>
   schedules: SubscriptionPart<SubscriptionSchedule[]>
   activity: SubscriptionActivity[]
+  /** Shown under an empty rail, for example while the audit trail is loading. */
+  activityEmptyText?: string | undefined
+  /** A change just landed and the new activity row is still being written. */
+  activityAwaiting?: boolean | undefined
   /** The next invoice as it would be created now. Leave out to hide the section. */
   preview?: SubscriptionPart<InvoicePreview> | undefined
   addons?: SubscriptionPart<SubscriptionAddon[]> | undefined
@@ -302,6 +306,8 @@ export function SubscriptionDetailView({
   invoices,
   schedules,
   activity,
+  activityEmptyText,
+  activityAwaiting = false,
   preview,
   addons,
   coupons,
@@ -578,6 +584,8 @@ export function SubscriptionDetailView({
     title: event.title,
     at: event.at,
     summary: event.summary,
+    ...(event.record ? { record: event.record } : {}),
+    ...(event.by ? { by: event.by } : {}),
   }))
 
   return (
@@ -1065,7 +1073,11 @@ export function SubscriptionDetailView({
             </div>
 
             <div className="flex flex-col gap-5 xl:sticky xl:top-6">
-              <ActivitySection entries={activityEntries} />
+              <ActivitySection
+                entries={activityEntries}
+                {...(activityEmptyText ? { emptyText: activityEmptyText } : {})}
+                awaiting={activityAwaiting}
+              />
               <MetadataCard
                 metadata={s.metadata}
                 {...(onSaveMetadata
