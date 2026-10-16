@@ -107,7 +107,7 @@ test('price unit inline edit persists across a reload', async ({ page }) => {
 })
 
 test('cancelling a contract at period end is reflected on the detail', async ({ page }) => {
-  await page.goto('/subscriptions')
+  await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Contract actions' }).click()
   await page.getByRole('menuitem', { name: 'Cancel contract' }).click()
@@ -142,7 +142,7 @@ test('finalize now creates an open invoice that can be voided from the detail', 
 })
 
 test('cancelling a contract immediately marks it cancelled', async ({ page }) => {
-  await page.goto('/subscriptions')
+  await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()
   await page.getByRole('button', { name: 'Contract actions' }).click()
   await page.getByRole('menuitem', { name: 'Cancel contract' }).click()
@@ -156,7 +156,7 @@ test('cancelling a contract immediately marks it cancelled', async ({ page }) =>
 })
 
 test('a future-dated contract is incomplete until it is activated', async ({ page }) => {
-  await page.goto('/subscriptions/new')
+  await page.goto('/contracts/new')
   // Customer and plan share the first step; the plan appears once the customer
   // is chosen, so there is no Next between them.
   await page.getByRole('combobox').first().click()
@@ -178,7 +178,7 @@ test('a future-dated contract is incomplete until it is activated', async ({ pag
     await expect(page).toHaveURL(new RegExp(`step=${step}`), { timeout: 15_000 })
   }
   await page.getByRole('button', { name: 'Create contract' }).click()
-  await expect(page).toHaveURL(/\/subscriptions$/)
+  await expect(page).toHaveURL(/\/contracts$/)
 
   await page.getByRole('row').nth(1).click()
   await expect(page.getByText('Incomplete').first()).toBeVisible()

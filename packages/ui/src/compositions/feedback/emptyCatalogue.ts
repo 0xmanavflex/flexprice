@@ -120,7 +120,7 @@ export const EMPTY_CATALOGUE: Record<EmptyKind, EmptyCopy> = {
     figure: 'ledger',
     motion: 'ambient',
     title: 'No credits yet',
-    description: 'Credit notes and wallet credits appear here once they are issued.',
+    description: 'Credit memos and wallet credits appear here once they are issued.',
   },
   'usage-period': {
     figure: 'plot',

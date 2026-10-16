@@ -30,7 +30,7 @@ const formatDate = (value: Date | null) =>
   value ? new Intl.DateTimeFormat(undefined, { dateStyle: 'medium' }).format(value) : '—'
 
 /**
- * One credit note, with what the API lets you do to it: finalize a draft or
+ * One credit memo, with what the API lets you do to it: finalize a draft or
  * void it. There is no update endpoint, so a draft that is wrong is voided and
  * recreated rather than edited.
  */
@@ -46,7 +46,7 @@ export function CreditNoteDetailPage({
   const [dialog, setDialog] = useState<'finalize' | 'void' | null>(null)
 
   if (!note.data) {
-    return detailGate(note, { noun: 'this credit note', listName: 'credit notes', onBack: onBack })
+    return detailGate(note, { noun: 'this credit memo', listName: 'credit memos', onBack: onBack })
   }
 
   const data = note.data
@@ -55,10 +55,10 @@ export function CreditNoteDetailPage({
 
   return (
     <CatalogDetailFrame
-      listLabel="Credit notes"
+      listLabel="Credit memos"
       onBack={onBack}
       icon={<FileMinusIcon />}
-      title={`Credit note ${data.number}`}
+      title={`Credit memo ${data.number}`}
       badges={
         <>
           <Pill>{formatMoney(data.amount)}</Pill>
@@ -66,14 +66,14 @@ export function CreditNoteDetailPage({
         </>
       }
       id={data.id}
-      menuLabel="Credit note actions"
+      menuLabel="Credit memo actions"
       menu={[
         ...(isDraft
           ? [{ id: 'finalize', label: 'Finalize', onSelect: () => setDialog('finalize') }]
           : []),
         {
           id: 'void',
-          label: 'Void credit note',
+          label: 'Void credit memo',
           destructive: true,
           disabled: data.status === CreditNoteStatus.Voided,
           onSelect: () => setDialog('void'),
@@ -86,7 +86,7 @@ export function CreditNoteDetailPage({
           content: (
             <div className="flex flex-col gap-6">
               <EditableCard
-                title="Credit note"
+                title="Credit memo"
                 locked
                 fields={[
                   {
@@ -197,7 +197,7 @@ export function CreditNoteDetailPage({
       <ConfirmDialog
         open={dialog === 'finalize'}
         onOpenChange={(open) => (open ? undefined : close())}
-        title="Finalize this credit note?"
+        title="Finalize this credit memo?"
         description="It is applied to the invoice and can no longer be changed."
         confirmLabel="Finalize"
         isPending={finalize.isPending}
@@ -207,9 +207,9 @@ export function CreditNoteDetailPage({
       <ConfirmDialog
         open={dialog === 'void'}
         onOpenChange={(open) => (open ? undefined : close())}
-        title="Void this credit note?"
-        description="A voided credit note no longer reduces the invoice. This cannot be undone."
-        confirmLabel="Void credit note"
+        title="Void this credit memo?"
+        description="A voided credit memo no longer reduces the invoice. This cannot be undone."
+        confirmLabel="Void credit memo"
         destructive
         isPending={voidNote.isPending}
         error={toError(voidNote.error, 'void')}
@@ -222,8 +222,8 @@ export function CreditNoteDetailPage({
 function toError(error: unknown, verb: 'finalize' | 'void'): string | null {
   if (!error) return null
   if (error instanceof ApiError && error.kind === 'forbidden')
-    return serverReason(error) ?? `You do not have permission to ${verb} credit notes here.`
+    return serverReason(error) ?? `You do not have permission to ${verb} credit memos here.`
   if (error instanceof ApiError && error.kind === 'invalid')
     return error.message || 'Check the details and try again.'
-  return `Could not ${verb} the credit note. Try again.`
+  return `Could not ${verb} the credit memo. Try again.`
 }

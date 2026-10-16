@@ -7,7 +7,7 @@ import {
   type CreditNoteInvoiceLine,
 } from './CreditNoteForm'
 
-const trail = [{ label: 'Credit notes' }, { label: 'New credit note' }]
+const trail = [{ label: 'Credit memos' }, { label: 'New credit memo' }]
 
 const INVOICES = [
   { value: 'inv_1450', label: 'INV-2026-01450', hint: 'Acme Robotics' },
@@ -40,7 +40,7 @@ const withHeight: Decorator = (Story) => (
 )
 
 const meta = {
-  title: 'App/Billing/Credit notes/Credit note form',
+  title: 'App/Billing/Credit memos/Credit memo form',
   component: CreditNoteForm,
   parameters: { layout: 'fullscreen' },
   decorators: [withHeight],
@@ -138,7 +138,7 @@ export const ManyLines: Story = { args: { invoiceLines: makeLines(12) } }
 export const Submitting: Story = { args: { invoiceLines: makeLines(3), isSubmitting: true } }
 
 export const SubmitError: Story = {
-  args: { submitError: 'Could not create the credit note. Try again.' },
+  args: { submitError: 'Could not create the credit memo. Try again.' },
   play: async ({ canvasElement }) => {
     await expect(within(canvasElement).getByRole('alert')).toBeInTheDocument()
   },
@@ -148,7 +148,7 @@ export const SubmitError: Story = {
 export const ValidatesInvoice: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('button', { name: /create credit note/i }))
+    await userEvent.click(canvas.getByRole('button', { name: /create credit memo/i }))
     await waitFor(() => {
       const error = canvasElement.querySelector('[id$="-error"]')
       expect(error).not.toBeNull()

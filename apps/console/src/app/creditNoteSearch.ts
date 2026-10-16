@@ -1,7 +1,7 @@
 import { type CreditNoteQuery, CreditNoteStatus, DEFAULT_CREDIT_NOTE_QUERY } from '@fp/domain'
 
 /**
- * The credit note query, as URL search params. Total, like every list codec
+ * The credit memo query, as URL search params. Total, like every list codec
  * here: a hand-edited URL shows the first page rather than an error.
  */
 const STATUSES = new Set<string>(Object.values(CreditNoteStatus))

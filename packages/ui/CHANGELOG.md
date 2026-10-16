@@ -6,6 +6,10 @@ reconstructed at the end. See `docs/component-guardrails.md` for the policy.
 
 Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
+## 2026-10-16
+
+- Billing: rename visible Credit notes terminology to Credit memos across lists, forms, invoice tabs, detail trails and stories, following the October 15 admin handoff. API types and endpoints keep their existing names.
+
 ## 2026-10-06
 
 - 2026-10-13 — pages/shared/EntityList + pages/shared/DetailTable + pages/contracts/SubscriptionDetailView: New `footer={false}` on DetailTable (`hideFooter` on EntityList) drops the page-size picker and range footer; the contract's upcoming-invoice lines use it, so the preview has no pagination.

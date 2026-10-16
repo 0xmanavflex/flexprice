@@ -46,7 +46,7 @@ type Dialog = 'void' | 'payment-status' | null
 
 /**
  * One invoice, read through `useInvoice`, with its issuer (`useTenant`),
- * payments and credit notes (filtered to this invoice). Every action — finalize,
+ * payments and credit memos (filtered to this invoice). Every action — finalize,
  * record payment, recalculate, void, send, retry — runs here, outside the view.
  */
 export function InvoiceDetailPage({
@@ -107,7 +107,7 @@ export function InvoiceDetailPage({
           creditNotes: creditNotes.data,
         })}
         payments={subTab(payments, 'payments')}
-        creditNotes={subTab(creditNotes, 'credit notes')}
+        creditNotes={subTab(creditNotes, 'credit memos')}
         pendingAction={pendingAction}
         onBack={onBack}
         {...(onEdit ? { onEdit } : {})}
@@ -127,7 +127,7 @@ export function InvoiceDetailPage({
         })}
         onSaveMetadata={(metadata) => saveMetadata.mutateAsync({ id: data.id, metadata })}
         onIssueCreditNote={() =>
-          void navigate({ to: '/credit-notes/new', search: { invoice: data.id } })
+          void navigate({ to: '/credit-memos/new', search: { invoice: data.id } })
         }
         onSend={() => run('send', send, 'Invoice sent to the customer', 'send the invoice')}
         onRetryPayment={() =>
@@ -141,7 +141,7 @@ export function InvoiceDetailPage({
           ? {
               onOpenSubscription: () =>
                 void navigate({
-                  to: '/subscriptions/$subscriptionId',
+                  to: '/contracts/$subscriptionId',
                   params: { subscriptionId: data.subscriptionId ?? '' },
                 }),
             }
@@ -150,7 +150,7 @@ export function InvoiceDetailPage({
           void navigate({ to: '/payments/$paymentId', params: { paymentId } })
         }
         onOpenCreditNote={(creditNoteId) =>
-          void navigate({ to: '/credit-notes/$creditNoteId', params: { creditNoteId } })
+          void navigate({ to: '/credit-memos/$creditNoteId', params: { creditNoteId } })
         }
       />
       <ConfirmDialog

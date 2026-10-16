@@ -40,10 +40,10 @@ export const PLACEHOLDER_ROUTES: readonly PlaceholderRoute[] = [
   // `/pricing-widget` is a real page — see `pricingWidgetRoute` in router.tsx.
   // Billing
   // `/customers` is a real page now — see `customersRoute` in router.tsx.
-  // `/subscriptions` is a real page now — see `subscriptionsRoute` in router.tsx.
+  // `/contracts` is a real page now — see `subscriptionsRoute` in router.tsx.
   // `/payments` is a real page now — see `paymentsRoute` in router.tsx.
   // `/invoices` is a real page (invoicesRoute); `/taxes` too (taxesRoute).
-  // `/credit-notes` is a real page — see `creditNotesRoute` in router.tsx.
+  // `/credit-memos` is a real page — see `creditNotesRoute` in router.tsx.
   // `/revenue` is a real page now — see `revenueRoute` in router.tsx.
   // Developers
   // `/api-keys`, `/service-accounts` are real: each lands on its Developers

@@ -1,3 +1,5 @@
+import ZONES from './timezones.json' with { type: 'json' }
+
 /**
  * Time zones a person can actually find.
  *
@@ -158,4 +160,34 @@ export function toTimezoneOption(zone: string, at: Date = new Date()): TimezoneO
 /** Every zone the runtime knows, as options. Falls back to a usable set. */
 export function timezoneOptions(zones: readonly string[], at: Date = new Date()): TimezoneOption[] {
   return zones.map((zone) => toTimezoneOption(zone, at))
+}
+
+/**
+ * The IANA catalogue in `timezones.json`, plus aliases that list drops.
+ *
+ * `Intl.supportedValuesOf('timeZone')` is what the JSON was generated from.
+ * It keeps `Asia/Calcutta` and omits `Asia/Kolkata`. The abbreviation list
+ * names the aliases people store and search for, so those are added here.
+ */
+export const IANA_TIMEZONES: readonly string[] = buildCatalogue()
+
+function buildCatalogue(): readonly string[] {
+  const listed = new Set<string>(ZONES)
+  const extra = Object.keys(KNOWN_ABBREVIATIONS).filter((zone) => !listed.has(zone))
+  const rest = [...ZONES.filter((zone) => zone !== 'UTC'), ...extra].sort((a, b) =>
+    a.localeCompare(b),
+  )
+  return ['UTC', ...rest]
+}
+
+/**
+ * Options for the picker.
+ *
+ * A saved zone the catalogue does not know stays at the front, so editing
+ * does not drop it.
+ */
+export function timezoneChoices(current?: string, at: Date = new Date()): TimezoneOption[] {
+  const zones =
+    current && !IANA_TIMEZONES.includes(current) ? [current, ...IANA_TIMEZONES] : IANA_TIMEZONES
+  return timezoneOptions(zones, at)
 }

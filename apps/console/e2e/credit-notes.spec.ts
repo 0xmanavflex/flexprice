@@ -15,15 +15,15 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test.describe('credit notes', () => {
+test.describe('credit memos', () => {
   const list = (page: Page) =>
-    new CatalogListPage(page, { heading: 'Credit Notes', searchLabel: 'Search credit notes' })
+    new CatalogListPage(page, { heading: 'Credit memos', searchLabel: 'Search credit memos' })
 
-  test('lists credit notes with their status and invoice', async ({ page }) => {
+  test('lists credit memos with their status and invoice', async ({ page }) => {
     const notes = list(page)
-    await page.goto('/credit-notes')
+    await page.goto('/credit-memos')
 
-    await expect(page.getByRole('link', { name: 'Credit Notes' })).toBeAttached()
+    await expect(page.getByRole('link', { name: 'Credit memos' })).toBeAttached()
     await expect(notes.rows().first()).toBeVisible()
     await expect(notes.rows().first()).toContainText('CN-0001')
     await expect(notes.rows().first()).toContainText('INV-1000')
@@ -31,7 +31,7 @@ test.describe('credit notes', () => {
 
   test('puts the search in the URL and survives a reload', async ({ page }) => {
     const notes = list(page)
-    await page.goto('/credit-notes')
+    await page.goto('/credit-memos')
     await expect(notes.rows().first()).toBeVisible()
 
     await notes.search.fill('lumen')

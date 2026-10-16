@@ -14,9 +14,9 @@ test.beforeEach(async ({ context }) => {
 })
 
 test('opens a contract from the list and cancels it', async ({ page }) => {
-  await page.goto('/subscriptions')
+  await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()
-  await expect(page).toHaveURL(/\/subscriptions\/[^/]+$/)
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
   await expect(page.getByRole('button', { name: 'Contract actions' })).toBeVisible()
 
   await page.getByRole('button', { name: 'Contract actions' }).click()

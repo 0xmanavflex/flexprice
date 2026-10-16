@@ -42,7 +42,7 @@ function detailPageLabel(listLabel: string): string {
     'Add-ons': 'Add-on details',
     Coupons: 'Coupon details',
     Payments: 'Payment details',
-    'Credit notes': 'Credit note details',
+    'Credit memos': 'Credit memo details',
     'Price Units': 'Price unit details',
     Groups: 'Group details',
     'Cost sheets': 'Cost sheet details',

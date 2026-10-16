@@ -73,7 +73,7 @@ function makeTransactions(count: number): WalletTransaction[] {
 const BARE_TOP_UP: WalletTransaction = {
   id: 'wtx_bare',
   direction: 'in',
-  reason: 'Credit note',
+  reason: 'Credit memo',
   description: '',
   credits: '200',
   amount: money('100.00', 'USD'),

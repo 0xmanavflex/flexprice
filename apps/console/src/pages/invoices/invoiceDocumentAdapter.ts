@@ -46,7 +46,7 @@ export interface InvoiceDocumentSources {
  * Maps the invoice read model onto the document the detail view renders.
  *
  * Figures come from the API (`totals`), not from the lines. The issuer comes
- * from the tenant record, payments and credit notes from their own lists
+ * from the tenant record, payments and credit memos from their own lists
  * filtered to this invoice. The activity rail lists the invoice's own lifecycle
  * timestamps (`invoiceLifecycle.ts`), not an audit log.
  */

@@ -44,7 +44,7 @@ export const SHELL_NAV_GROUPS: ShellNavGroup[] = [
         icon: <ReceiptIcon className="size-4" />,
         items: [
           { id: 'invoices', label: 'Invoices' },
-          { id: 'credit-notes', label: 'Credit notes' },
+          { id: 'credit-notes', label: 'Credit memos' },
         ],
       },
       {

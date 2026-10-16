@@ -13,34 +13,34 @@ test.beforeEach(async ({ context }) => {
   )
 })
 
-test('creates a draft credit note, finalizes it, then voids it', async ({ page }) => {
-  await page.goto('/credit-notes')
-  await page.getByRole('button', { name: 'New credit note' }).click()
-  await expect(page).toHaveURL(/\/credit-notes\/new$/)
+test('creates a draft credit memo, finalizes it, then voids it', async ({ page }) => {
+  await page.goto('/credit-memos')
+  await page.getByRole('button', { name: 'New credit memo' }).click()
+  await expect(page).toHaveURL(/\/credit-memos\/new$/)
 
   await page.getByRole('combobox', { name: /Invoice/ }).click()
   await page.getByRole('option').first().click()
 
   const firstLine = page.getByLabel(/^Credit for /).first()
   await expect(firstLine).toBeVisible()
-  await page.getByRole('button', { name: 'Create credit note' }).click()
+  await page.getByRole('button', { name: 'Create credit memo' }).click()
   await expect(
     page.getByRole('alert').filter({ hasText: 'Credit at least one line' }),
   ).toBeVisible()
 
   await firstLine.fill('10.00')
-  await page.getByRole('button', { name: 'Create credit note' }).click()
+  await page.getByRole('button', { name: 'Create credit memo' }).click()
 
-  await expect(page).toHaveURL(/\/credit-notes\/cnote_new_/)
+  await expect(page).toHaveURL(/\/credit-memos\/cnote_new_/)
   await expect(page.getByText('Draft').first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'Credit note actions' }).click()
+  await page.getByRole('button', { name: 'Credit memo actions' }).click()
   await page.getByRole('menuitem', { name: 'Finalize' }).click()
   await page.getByRole('dialog').getByRole('button', { name: 'Finalize' }).click()
   await expect(page.getByText('Finalized').first()).toBeVisible()
 
-  await page.getByRole('button', { name: 'Credit note actions' }).click()
-  await page.getByRole('menuitem', { name: 'Void credit note' }).click()
-  await page.getByRole('dialog').getByRole('button', { name: 'Void credit note' }).click()
+  await page.getByRole('button', { name: 'Credit memo actions' }).click()
+  await page.getByRole('menuitem', { name: 'Void credit memo' }).click()
+  await page.getByRole('dialog').getByRole('button', { name: 'Void credit memo' }).click()
   await expect(page.getByText('Voided').first()).toBeVisible()
 })

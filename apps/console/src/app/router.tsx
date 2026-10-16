@@ -1,3 +1,4 @@
+import { legacyDestination } from './legacyRoutes'
 import { useQueryErrorResetBoundary } from '@tanstack/react-query'
 import {
   type ErrorComponentProps,
@@ -607,7 +608,7 @@ function InvoicesRouteComponent() {
       onCreate={() => void navigate({ to: '/invoices/new' })}
       onRecordPayment={(invoice) => void navigate({ to: '/payments/new', search: { invoice } })}
       onIssueCreditNote={(invoice) =>
-        void navigate({ to: '/credit-notes/new', search: { invoice } })
+        void navigate({ to: '/credit-memos/new', search: { invoice } })
       }
       onOpenCustomer={(customerId) =>
         void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
@@ -632,21 +633,21 @@ function InvoicesRouteComponent() {
 /**
  * Subscription creation.
  *
- * The step lives in the URL — `/subscriptions/new?step=prices` — so a
+ * The step lives in the URL — `/contracts/new?step=prices` — so a
  * half-finished subscription is linkable, resumable, and navigable with the
  * back button. See `docs/architecture.md`: the stepper owns presentation, the
  * route owns workflow state.
  */
 const subscriptionCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/subscriptions/new',
+  path: '/contracts/new',
   validateSearch: (search: Record<string, unknown>) => ({ step: parseStep(search['step']) }),
   component: SubscriptionCreateRouteComponent,
 })
 
 const subscriptionDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/subscriptions/$subscriptionId',
+  path: '/contracts/$subscriptionId',
   component: SubscriptionDetailRouteComponent,
 })
 
@@ -657,7 +658,7 @@ function SubscriptionDetailRouteComponent() {
   return (
     <SubscriptionDetailPage
       subscriptionId={subscriptionId}
-      onNavigateToList={() => void navigate({ to: '/subscriptions', search: {} as never })}
+      onNavigateToList={() => void navigate({ to: '/contracts', search: {} as never })}
       onOpenCustomer={(customerId) =>
         void navigate({ to: '/customers/$customerId', params: { customerId }, search: {} as never })
       }
@@ -680,13 +681,13 @@ function SubscriptionCreateRouteComponent() {
       {...(step === DEFAULT_STEP ? {} : { step })}
       onStepChange={(next) =>
         void navigate({
-          to: '/subscriptions/new',
+          to: '/contracts/new',
           search: toStepSearch(parseStep(next)) as never,
           replace: true,
         })
       }
-      onCancel={() => void navigate({ to: '/subscriptions', search: {} as never })}
-      onDone={() => void navigate({ to: '/subscriptions', search: {} as never })}
+      onCancel={() => void navigate({ to: '/contracts', search: {} as never })}
+      onDone={() => void navigate({ to: '/contracts', search: {} as never })}
     />
   )
 }
@@ -1218,7 +1219,7 @@ function CouponDetailRouteComponent() {
       onBack={() => void navigate({ to: '/coupons', search: {} as never })}
       onOpenContract={(subscriptionId) =>
         void navigate({
-          to: '/subscriptions/$subscriptionId',
+          to: '/contracts/$subscriptionId',
           params: { subscriptionId },
           search: {} as never,
         })
@@ -1330,14 +1331,16 @@ function GroupsRouteComponent() {
   const navigate = useNavigate()
 
   return (
-    <GroupListPage
-      query={query}
-      onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
-      onOpenGroup={(group) =>
-        void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })
-      }
-      onCreateGroup={() => void navigate({ to: '/groups/new' })}
-    />
+    <SettingsListFrame sectionId="groups">
+      <GroupListPage
+        query={query}
+        onQueryChange={(next) => void navigate({ to: '/groups', search: next, replace: true })}
+        onOpenGroup={(group) =>
+          void navigate({ to: '/groups/$groupId', params: { groupId: group.id } })
+        }
+        onCreateGroup={() => void navigate({ to: '/groups/new' })}
+      />
+    </SettingsListFrame>
   )
 }
 
@@ -1561,13 +1564,13 @@ function CustomerEditRouteComponent() {
 /**
  * Create a subscription for a customer who is already open.
  *
- * `/customers/$customerId/subscriptions/new` — the id is the path, so the form
+ * `/customers/$customerId/contracts/new` — the id is the path, so the form
  * does not ask which customer this is. Cancel returns to that customer's
  * Overview tab.
  */
 const customerSubscriptionCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/customers/$customerId/subscriptions/new',
+  path: '/customers/$customerId/contracts/new',
   component: CustomerSubscriptionCreateRouteComponent,
 })
 
@@ -1626,7 +1629,7 @@ function CustomerDetailRouteComponent() {
 
 const subscriptionsRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/subscriptions',
+  path: '/contracts',
   validateSearch: (search: Record<string, unknown>): SubscriptionQuery =>
     parseSubscriptionSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_SUBSCRIPTION_QUERY)] },
@@ -1640,11 +1643,11 @@ function SubscriptionsRouteComponent() {
   return (
     <SubscriptionListPage
       query={query}
-      onQueryChange={(next) => void navigate({ to: '/subscriptions', search: next, replace: true })}
-      onCreate={() => void navigate({ to: '/subscriptions/new', search: {} as never })}
+      onQueryChange={(next) => void navigate({ to: '/contracts', search: next, replace: true })}
+      onCreate={() => void navigate({ to: '/contracts/new', search: {} as never })}
       onOpen={(subscriptionId) =>
         void navigate({
-          to: '/subscriptions/$subscriptionId',
+          to: '/contracts/$subscriptionId',
           params: { subscriptionId },
           search: {} as never,
         })
@@ -1735,7 +1738,7 @@ function PaymentDetailRouteComponent() {
 
 const creditNotesRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/credit-notes',
+  path: '/credit-memos',
   validateSearch: (search: Record<string, unknown>): CreditNoteQuery =>
     parseCreditNoteSearch(search),
   search: { middlewares: [stripSearchParams(DEFAULT_CREDIT_NOTE_QUERY)] },
@@ -1749,19 +1752,19 @@ function CreditNotesRouteComponent() {
   return (
     <CreditNoteListPage
       query={query}
-      onCreate={() => void navigate({ to: '/credit-notes/new' })}
+      onCreate={() => void navigate({ to: '/credit-memos/new' })}
       onCreditNoteClick={(note) =>
-        void navigate({ to: '/credit-notes/$creditNoteId', params: { creditNoteId: note.id } })
+        void navigate({ to: '/credit-memos/$creditNoteId', params: { creditNoteId: note.id } })
       }
-      onQueryChange={(next) => void navigate({ to: '/credit-notes', search: next, replace: true })}
+      onQueryChange={(next) => void navigate({ to: '/credit-memos', search: next, replace: true })}
     />
   )
 }
 
 const creditNoteCreateRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/credit-notes/new',
-  // `?invoice=` preselects the invoice to credit, from an invoice's "Issue credit note".
+  path: '/credit-memos/new',
+  // `?invoice=` preselects the invoice to credit, from an invoice's "Issue credit memo".
   validateSearch: (search: Record<string, unknown>): { invoice?: string } =>
     typeof search['invoice'] === 'string' && search['invoice']
       ? { invoice: search['invoice'] }
@@ -1772,7 +1775,7 @@ const creditNoteCreateRoute = createRoute({
 function CreditNoteCreateRouteComponent() {
   const navigate = useNavigate()
   const { invoice } = creditNoteCreateRoute.useSearch()
-  const toList = () => void navigate({ to: '/credit-notes', search: {} as never })
+  const toList = () => void navigate({ to: '/credit-memos', search: {} as never })
   return (
     <CreditNoteFormPage
       {...(invoice ? { invoiceId: invoice } : {})}
@@ -1780,8 +1783,8 @@ function CreditNoteCreateRouteComponent() {
       onDone={(creditNoteId) =>
         void navigate(
           creditNoteId
-            ? { to: '/credit-notes/$creditNoteId', params: { creditNoteId } }
-            : { to: '/credit-notes', search: {} as never },
+            ? { to: '/credit-memos/$creditNoteId', params: { creditNoteId } }
+            : { to: '/credit-memos', search: {} as never },
         )
       }
     />
@@ -1790,7 +1793,7 @@ function CreditNoteCreateRouteComponent() {
 
 const creditNoteDetailRoute = createRoute({
   getParentRoute: () => shellRoute,
-  path: '/credit-notes/$creditNoteId',
+  path: '/credit-memos/$creditNoteId',
   component: CreditNoteDetailRouteComponent,
 })
 
@@ -1800,7 +1803,7 @@ function CreditNoteDetailRouteComponent() {
   return (
     <CreditNoteDetailPage
       creditNoteId={creditNoteId}
-      onBack={() => void navigate({ to: '/credit-notes', search: {} as never })}
+      onBack={() => void navigate({ to: '/credit-memos', search: {} as never })}
       onOpenInvoice={(invoiceId) =>
         void navigate({ to: '/invoices/$invoiceId', params: { invoiceId } })
       }
@@ -2057,8 +2060,7 @@ function EventsRouteComponent() {
 const settingsRoute = createRoute({
   getParentRoute: () => shellRoute,
   path: '/settings',
-  // API keys and service accounts moved to their own pages under Developers;
-  // an old `?section=api-keys` link follows them there.
+  // Service accounts and webhooks retain their standalone destinations.
   beforeLoad: ({ location }) => {
     const raw = (location.search as Record<string, unknown>)['section']
     const moved = typeof raw === 'string' ? MOVED_SECTIONS[raw] : undefined
@@ -2118,31 +2120,24 @@ function SettingsRouteComponent() {
 }
 
 /**
- * Developer destinations: API keys and service accounts.
- *
- * Both live only here, on a plain page under the Developers breadcrumb;
- * `/settings?section=api-keys` redirects to them. Webhooks has its own routes
- * below.
+ * Service accounts remains a standalone Developer destination.
+ * API keys lives in Settings; webhooks has its own routes below.
  */
 const DeveloperPanels = lazy(() =>
   import('@/pages/settings/DeveloperPanels').then((m) => ({ default: m.DeveloperPanels })),
 )
 
-const developerRedirects = (
-  [
-    ['/api-keys', 'api-keys'],
-    ['/service-accounts', 'service-accounts'],
-  ] as const
-).map(([path, panel]) =>
-  createRoute({
-    getParentRoute: () => shellRoute,
-    path,
-    component: () => (
-      <Suspense fallback={null}>
-        <DeveloperPanels panel={panel} />
-      </Suspense>
-    ),
-  }),
+const developerRedirects = ([['/service-accounts', 'service-accounts']] as const).map(
+  ([path, panel]) =>
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path,
+      component: () => (
+        <Suspense fallback={null}>
+          <DeveloperPanels panel={panel} />
+        </Suspense>
+      ),
+    }),
 )
 
 /**
@@ -2249,6 +2244,49 @@ const labelsRedirect = createRoute({
   },
 })
 
+/** Legacy bookmarks retain their detail path, filters, wizard step and fragment. */
+const legacyRoutes = ['/subscriptions', '/credit-notes', '/products'].flatMap((path) =>
+  [path, `${path}/$`].map((legacyPath) =>
+    createRoute({
+      getParentRoute: () => shellRoute,
+      path: legacyPath,
+      beforeLoad: ({ location }) => {
+        const destination = legacyDestination(location.pathname)
+        if (destination)
+          throw redirect({
+            href: `${destination}${location.searchStr}${location.hash ? `#${location.hash}` : ''}`,
+            replace: true,
+          })
+      },
+    }),
+  ),
+)
+
+const apiKeysRedirect = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/api-keys',
+  beforeLoad: () => {
+    throw redirect({
+      to: '/settings',
+      search: { section: 'api-keys', tab: 'api-keys' },
+      replace: true,
+    })
+  },
+})
+
+const customerContractRedirect = createRoute({
+  getParentRoute: () => shellRoute,
+  path: '/customers/$customerId/subscriptions/new',
+  beforeLoad: ({ params, location }) => {
+    throw redirect({
+      to: '/customers/$customerId/contracts/new',
+      params,
+      search: location.search,
+      replace: true,
+    })
+  },
+})
+
 export const routeTree = rootRoute.addChildren([
   signInRoute,
   signUpRoute,
@@ -2256,6 +2294,9 @@ export const routeTree = rootRoute.addChildren([
   forgotPasswordRoute,
   resetPasswordRoute,
   shellRoute.addChildren([
+    ...legacyRoutes,
+    apiKeysRedirect,
+    customerContractRedirect,
     homeRoute,
     revenueRoute,
     featuresRoute,

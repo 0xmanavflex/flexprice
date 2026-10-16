@@ -14,7 +14,7 @@ test.beforeEach(async ({ context }) => {
 })
 
 test('creates a contract through the steps and posts it', async ({ page }) => {
-  await page.goto('/subscriptions/new')
+  await page.goto('/contracts/new')
   // Customer and plan are one step. The plan half is withheld until there is a
   // customer, so the step opens as one question.
   await expect(page.getByRole('heading', { name: 'Customer' })).toBeVisible()
@@ -57,5 +57,5 @@ test('creates a contract through the steps and posts it', async ({ page }) => {
   await page.getByRole('button', { name: 'Create contract' }).click()
   await request
 
-  await expect(page).toHaveURL(/\/subscriptions$/)
+  await expect(page).toHaveURL(/\/contracts$/)
 })

@@ -141,7 +141,7 @@ function InvoiceDetailPlayground({
   )
 }
 
-/** One invoice: Invoice details (document plus Activity, Metadata, Related rail), Payments and Credit notes tabs. */
+/** One invoice: Invoice details (document plus Activity, Metadata, Related rail), Payments and Credit memos tabs. */
 const meta = {
   title: 'App/Billing/Invoices/Invoice detail view',
   component: InvoiceDetailPlayground,
@@ -273,7 +273,7 @@ export const MoreMenu: Story = {
       'aria-disabled',
       'true',
     )
-    await expect(screen.getByRole('menuitem', { name: /Issue credit note/ })).toBeInTheDocument()
+    await expect(screen.getByRole('menuitem', { name: /Issue credit memo/ })).toBeInTheDocument()
     await expect(screen.getByRole('menuitem', { name: /Send invoice/ })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('menuitem', { name: 'Void invoice' }))
     await expect(args.onVoid).toHaveBeenCalledOnce()
@@ -351,7 +351,7 @@ export const Void: Story = {
   args: { status: InvoiceStatus.Void, paymentStatus: 'none', paymentCount: 0 },
 }
 
-/** Thirty lines, payments, credit notes and events: the long-list state of every tab. */
+/** Thirty lines, payments, credit memos and events: the long-list state of every tab. */
 export const LongInvoice: Story = {
   args: {
     lineCount: 30,
@@ -393,7 +393,7 @@ export const CreditNotesTab: Story = {
   args: { creditNoteCount: 3 },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Credit notes/ }))
+    await userEvent.click(canvas.getByRole('tab', { name: /Credit memos/ }))
     await expect(await canvas.findByText('CN-1000')).toBeInTheDocument()
   },
 }
@@ -401,9 +401,9 @@ export const CreditNotesTab: Story = {
 export const NoCreditNotes: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: /Credit notes/ }))
-    await expect(await canvas.findByText('No credit notes yet')).toBeInTheDocument()
-    await expect(canvas.getByRole('button', { name: 'Issue credit note' })).toBeVisible()
+    await userEvent.click(canvas.getByRole('tab', { name: /Credit memos/ }))
+    await expect(await canvas.findByText('No credit memos yet')).toBeInTheDocument()
+    await expect(canvas.getByRole('button', { name: 'Issue credit memo' })).toBeVisible()
   },
 }
 
@@ -465,9 +465,9 @@ export const CreditNotesError: Story = {
   args: { creditNotesState: 'error' },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await userEvent.click(canvas.getByRole('tab', { name: 'Credit notes' }))
+    await userEvent.click(canvas.getByRole('tab', { name: 'Credit memos' }))
     await expect(await canvas.findByText('Flexprice had a problem loading this.')).toBeVisible()
-    await expect(canvas.queryByText('No credit notes yet')).toBeNull()
+    await expect(canvas.queryByText('No credit memos yet')).toBeNull()
   },
 }
 

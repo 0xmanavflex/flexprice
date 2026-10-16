@@ -51,7 +51,7 @@ export function parseStep(raw: unknown): SubscriptionStepId {
 }
 
 export function toStepSearch(step: SubscriptionStepId): Record<string, string> {
-  // The first step is the canonical `/subscriptions/new`, so it is not spelled out.
+  // The first step is the canonical `/contracts/new`, so it is not spelled out.
   return step === DEFAULT_STEP ? {} : { step }
 }
 

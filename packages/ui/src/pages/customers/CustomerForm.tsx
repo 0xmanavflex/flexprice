@@ -10,7 +10,6 @@ import {
   KEY_PREFIX,
   countryOptions,
   suggestKey,
-  toTimezoneOptions,
 } from '@fp/domain'
 import { Input } from '@ui/components/primitives/input'
 import { FormCard, FormRow } from '@ui/compositions/forms/FormCard'
@@ -19,6 +18,7 @@ import { FormPage } from '@ui/compositions/forms/FormPage'
 import type { DetailCrumb } from '@ui/compositions/detail/DetailShell'
 import { OptionCombobox } from '@ui/compositions/forms/OptionCombobox'
 import { OptionSelect } from '@ui/compositions/forms/OptionSelect'
+import { TimezoneCombobox } from '@ui/compositions/forms/TimezoneCombobox'
 import { provenance } from '@ui/provenance'
 
 /**
@@ -35,6 +35,7 @@ export const CustomerFormProvenance = provenance({
     'compositions/form-page',
     'compositions/option-select',
     'compositions/option-combobox',
+    'compositions/timezone-combobox',
     'compositions/form-disclosure',
   ],
   note: 'RHF + the domain schema, one page: name, external ID and email up front, the rest folded under More details, no preview rail. Create and edit share it. Lineage: compositions/field.',
@@ -64,60 +65,6 @@ const OPTIONAL_FIELDS = [
   'timezone',
   'taxTreatment',
 ] as const satisfies readonly (keyof CreateCustomer)[]
-
-/**
- * Used when the runtime cannot list its IANA zones (`Intl.supportedValuesOf`
- * is missing on older engines). A short list of the common ones.
- */
-const FALLBACK_TIMEZONES = [
-  'UTC',
-  'America/Los_Angeles',
-  'America/Denver',
-  'America/Chicago',
-  'America/New_York',
-  'America/Sao_Paulo',
-  'Europe/London',
-  'Europe/Paris',
-  'Europe/Berlin',
-  'Africa/Johannesburg',
-  'Asia/Dubai',
-  'Asia/Kolkata',
-  'Asia/Singapore',
-  'Asia/Shanghai',
-  'Asia/Tokyo',
-  'Australia/Sydney',
-  'Pacific/Auckland',
-] as const
-
-function listTimezones(): readonly string[] {
-  try {
-    const intl = Intl as typeof Intl & { supportedValuesOf?: (key: 'timeZone') => string[] }
-    const zones = intl.supportedValuesOf?.('timeZone')
-    if (zones && zones.length > 0) return zones.includes('UTC') ? zones : ['UTC', ...zones]
-  } catch {
-    // fall through to the fixed list
-  }
-  return FALLBACK_TIMEZONES
-}
-
-const TIMEZONES = listTimezones()
-
-/**
- * The IANA zones as options; a saved value the runtime does not know is kept.
- *
- * Each carries its abbreviation and UTC offset, and matches on both — typing
- * "IST" or "+05:30" found nothing when the label was the bare zone name.
- */
-function timezoneChoices(current: string | undefined) {
-  const zones = current && !TIMEZONES.includes(current) ? [current, ...TIMEZONES] : TIMEZONES
-  // The label already carries the abbreviation and the offset, and the
-  // combobox filters on it — a hint repeating them only doubles the option's
-  // accessible name.
-  return toTimezoneOptions(zones).map((option) => ({
-    value: option.zone,
-    label: option.label,
-  }))
-}
 
 /** Countries, named in the viewer's language and found by name or code. */
 const COUNTRY_CHOICES = countryOptions().map((option) => ({
@@ -287,14 +234,11 @@ export function CustomerForm({
             control={form.control}
             name="timezone"
             render={({ field: control }) => (
-              <OptionCombobox
+              <TimezoneCombobox
                 id={id}
                 {...field}
                 value={control.value || undefined}
                 onValueChange={(value) => control.onChange(value)}
-                options={timezoneChoices(control.value)}
-                placeholder="Search time zones…"
-                emptyText="No matching time zone."
                 disabled={isSubmitting}
               />
             )}

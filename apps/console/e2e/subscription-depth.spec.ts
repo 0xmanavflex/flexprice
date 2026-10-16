@@ -14,9 +14,9 @@ test.beforeEach(async ({ context }) => {
 })
 
 test('contract detail overview shows the upcoming invoice and entitlements', async ({ page }) => {
-  await page.goto('/subscriptions')
+  await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()
-  await expect(page).toHaveURL(/\/subscriptions\/[^/]+$/)
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
 
   await expect(page.getByRole('heading', { name: 'Contract details' })).toBeVisible()
 
@@ -37,9 +37,9 @@ test('contract detail overview shows the upcoming invoice and entitlements', asy
 })
 
 test('contract detail charges tab lists the contract charges', async ({ page }) => {
-  await page.goto('/subscriptions')
+  await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()
-  await expect(page).toHaveURL(/\/subscriptions\/[^/]+$/)
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
 
   await page.getByRole('tab', { name: 'Charges' }).click()
   await expect(page.getByText('Platform fee')).toBeVisible()
@@ -49,9 +49,9 @@ test('contract detail charges tab lists the contract charges', async ({ page }) 
 })
 
 test('contract detail overview keeps every add section and adds a coupon', async ({ page }) => {
-  await page.goto('/subscriptions')
+  await page.goto('/contracts')
   await page.getByRole('row').nth(1).click()
-  await expect(page).toHaveURL(/\/subscriptions\/[^/]+$/)
+  await expect(page).toHaveURL(/\/contracts\/[^/]+$/)
 
   for (const name of ['Entitlements', 'Credit grants', 'Add-ons', 'Coupons', 'Taxes']) {
     await expect(page.getByRole('heading', { name, exact: true })).toBeVisible()

@@ -77,7 +77,7 @@ export function CustomerDetailPage({
     onRecordPayment: (invoiceId) =>
       void navigate({ to: '/payments/new', search: { invoice: invoiceId } }),
     onIssueCreditNote: (invoiceId) =>
-      void navigate({ to: '/credit-notes/new', search: { invoice: invoiceId } }),
+      void navigate({ to: '/credit-memos/new', search: { invoice: invoiceId } }),
   })
 
   if (!customer.data) {
@@ -102,7 +102,7 @@ export function CustomerDetailPage({
         }
         onCreateContract={() =>
           void navigate({
-            to: '/customers/$customerId/subscriptions/new',
+            to: '/customers/$customerId/contracts/new',
             params: { customerId: customer.data.id },
           })
         }
@@ -118,7 +118,7 @@ export function CustomerDetailPage({
         }
         onOpenContract={(subscriptionId) =>
           void navigate({
-            to: '/subscriptions/$subscriptionId',
+            to: '/contracts/$subscriptionId',
             params: { subscriptionId },
             search: {} as never,
           })

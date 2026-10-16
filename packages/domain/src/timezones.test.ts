@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { toTimezoneOption, timezoneOptions } from './timezones'
+import { IANA_TIMEZONES, timezoneChoices, toTimezoneOption, timezoneOptions } from './timezones'
 
 /** Fixed dates, because an abbreviation and an offset both move with the season. */
 const JANUARY = new Date('2026-01-15T12:00:00Z')
@@ -83,5 +83,19 @@ describe('timezoneOptions', () => {
   it('keeps the order it was given', () => {
     const zones = ['UTC', 'Asia/Kolkata', 'Europe/London']
     expect(timezoneOptions(zones, JANUARY).map((option) => option.zone)).toEqual(zones)
+  })
+})
+
+describe('IANA_TIMEZONES', () => {
+  it('leads with UTC and keeps the alias Intl drops', () => {
+    expect(IANA_TIMEZONES[0]).toBe('UTC')
+    expect(IANA_TIMEZONES).toContain('Asia/Kolkata')
+    expect(IANA_TIMEZONES).toContain('Asia/Calcutta')
+  })
+})
+
+describe('timezoneChoices', () => {
+  it('keeps a saved zone the catalogue does not list', () => {
+    expect(timezoneChoices('Mars/Olympus_Mons', JANUARY)[0]?.zone).toBe('Mars/Olympus_Mons')
   })
 })

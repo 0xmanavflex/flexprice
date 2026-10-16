@@ -32,7 +32,7 @@ import { useDraft } from './useDraft'
 const API_DOCS_URL = 'https://docs.flexprice.io/api-reference/introduction'
 
 /**
- * API keys — list, issue, revoke. Lives under Developers (`/api-keys`).
+ * API keys — list, issue, revoke. Lives in Settings; `/api-keys` redirects to its section.
  *
  * ## A snippet list, not a data table
  *

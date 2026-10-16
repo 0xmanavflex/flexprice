@@ -27,7 +27,7 @@ import { provenance } from '@ui/provenance'
  *   contracts   Riffle     contracts and everything inside them
  *   customers   Phosphor   customers and every tab of a customer
  *   catalog     Slow       products, plans, add-ons and pricing widgets
- *   billing     Loupe      invoices and credit notes
+ *   billing     Loupe      invoices and credit memos
  *   payments    Settle     payments and collections
  *   revenue     Plot       the revenue dashboard
  *   developers  Terminal   events, webhooks, exports, workflows, syncs

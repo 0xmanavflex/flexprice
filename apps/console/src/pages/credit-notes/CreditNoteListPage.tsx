@@ -19,7 +19,7 @@ export function CreditNoteListPage({
   onCreditNoteClick,
 }: CreditNoteListPageProps) {
   const creditNotes = useCreditNotes(query)
-  const failure = toListFailure(creditNotes.error, 'credit notes')
+  const failure = toListFailure(creditNotes.error, 'credit memos')
 
   const rows = creditNotes.data?.creditNotes ?? []
   const isFiltered = query.search.length > 0 || query.statuses.length > 0
@@ -39,8 +39,8 @@ export function CreditNoteListPage({
         isFiltered={isFiltered}
         onRetry={() => void creditNotes.refetch()}
         onClearFilters={clearFilters}
-        emptyTitle="No credit notes yet"
-        emptyDescription="Credit notes refund or adjust an invoice after it has been issued."
+        emptyTitle="No credit memos yet"
+        emptyDescription="Credit memos refund or adjust an invoice after it has been issued."
       >
         <CreditNoteGrid
           creditNotes={rows}

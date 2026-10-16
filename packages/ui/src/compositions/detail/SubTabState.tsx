@@ -56,7 +56,7 @@ export interface SubTabStateProps {
 }
 
 /**
- * The body of a sub-tab (payments, credit notes, entitlements, prices, wallet
+ * The body of a sub-tab (payments, credit memos, entitlements, prices, wallet
  * transactions...). Replaces the pattern "isLoading ? skeleton : rows.length ?
  * table : empty", which renders a failed query as an empty list.
  */

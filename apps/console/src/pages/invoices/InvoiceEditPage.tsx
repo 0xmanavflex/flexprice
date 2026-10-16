@@ -76,7 +76,7 @@ export function InvoiceEditPage({ invoiceId, onCancel, onDone }: InvoiceEditPage
       <PageBody>
         <AppFailure
           title="This invoice can no longer be edited"
-          detail="Only draft and finalized invoices change. Raise a new invoice or a credit note instead."
+          detail="Only draft and finalized invoices change. Raise a new invoice or a credit memo instead."
           onRetry={onCancel}
         />
       </PageBody>

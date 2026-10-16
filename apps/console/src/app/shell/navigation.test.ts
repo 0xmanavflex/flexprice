@@ -21,7 +21,7 @@ describe('navEntryForPath', () => {
     ['/customers', 'customers'],
     ['/customers/new', 'customers'],
     ['/customers/cus_1/edit', 'customers'],
-    ['/subscriptions', 'subscriptions'],
+    ['/contracts', 'subscriptions'],
     ['/coupons', 'settings-discounts'],
     ['/taxes', 'settings-taxes'],
     ['/cost-sheets', 'settings-cost-tracking'],
@@ -102,7 +102,7 @@ describe('the sidebar layout', () => {
     // Children of the two money groups, so a reorder cannot quietly move a page.
     expect(NAV.find((entry) => entry.id === 'billing')?.children?.map((c) => c.label)).toEqual([
       'Invoices',
-      'Credit notes',
+      'Credit memos',
     ])
     expect(NAV.find((entry) => entry.id === 'collections')?.children?.map((c) => c.label)).toEqual([
       'Payments',
@@ -127,6 +127,7 @@ describe('the sidebar layout', () => {
     expect(hrefForNavId('docs')).toBe(DOCS_URL)
     expect(SECONDARY.map((entry) => entry.id)).toEqual([
       'settings',
+      'api-keys',
       'settings-discounts',
       'settings-taxes',
       'settings-cost-tracking',
@@ -194,10 +195,10 @@ describe('every destination resolves', () => {
     '/groups',
     '/cost-sheets',
     '/customers',
-    '/subscriptions',
+    '/contracts',
     '/invoices',
     '/payments',
-    '/credit-notes',
+    '/credit-memos',
     '/taxes',
     '/events',
     '/workflows',

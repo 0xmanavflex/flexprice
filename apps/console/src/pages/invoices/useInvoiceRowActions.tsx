@@ -75,7 +75,7 @@ export function useInvoiceRowActions({
         onSelect: () => run(send, invoice, 'Invoice sent to the customer', 'send the invoice'),
       })
       if (onIssueCreditNote) {
-        items.push({ label: 'Issue credit note', onSelect: () => onIssueCreditNote(invoice.id) })
+        items.push({ label: 'Issue credit memo', onSelect: () => onIssueCreditNote(invoice.id) })
       }
     }
     if (onOpenCustomer && invoice.customerId) {

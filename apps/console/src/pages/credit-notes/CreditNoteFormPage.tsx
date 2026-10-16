@@ -4,13 +4,13 @@ import { ApiError, useCreateCreditNote, useInvoice, useInvoices, serverReason } 
 import { CreditNoteForm } from '@fp/ui/pages'
 
 export interface CreditNoteFormPageProps {
-  /** Start with this invoice chosen, e.g. from the invoice's "Issue credit note". */
+  /** Start with this invoice chosen, e.g. from the invoice's "Issue credit memo". */
   invoiceId?: string
   onCancel: () => void
   onDone: (creditNoteId: string) => void
 }
 
-/** Credit part of an invoice on its own page: `/credit-notes/new`. */
+/** Credit part of an invoice on its own page: `/credit-memos/new`. */
 export function CreditNoteFormPage({
   invoiceId: startInvoiceId,
   onCancel,
@@ -48,7 +48,7 @@ export function CreditNoteFormPage({
       linesLoading={invoiceId !== '' && chosen.isPending}
       onInvoiceChange={setInvoiceId}
       {...(startInvoiceId ? { defaultInvoiceId: startInvoiceId } : {})}
-      trail={[{ label: 'Credit notes', onClick: onCancel }, { label: 'New credit note' }]}
+      trail={[{ label: 'Credit memos', onClick: onCancel }, { label: 'New credit memo' }]}
       onCancel={onCancel}
       isSubmitting={create.isPending}
       submitError={toSubmitError(create.error)}
@@ -62,8 +62,8 @@ function toSubmitError(error: unknown): string | null {
   if (error instanceof ApiError) {
     if (error.kind === 'invalid') return error.message || 'Check the details and try again.'
     if (error.kind === 'forbidden')
-      return serverReason(error) ?? 'You do not have permission to create credit notes here.'
+      return serverReason(error) ?? 'You do not have permission to create credit memos here.'
     if (error.kind === 'network') return 'Could not reach Flexprice. Check your connection.'
   }
-  return 'Could not create the credit note. Try again.'
+  return 'Could not create the credit memo. Try again.'
 }

@@ -62,7 +62,7 @@ export const InvoiceDetailViewProvenance = provenance({
     'ui/spinner',
     '@reui/badge',
   ],
-  note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit notes tabs.',
+  note: 'Invoice detail: DetailShell header (status chips, ID, More), Invoice details (the document and an Activity, Metadata, Related rail), Payments and Credit memos tabs.',
 })
 
 export interface InvoiceDetailViewProps {
@@ -98,7 +98,7 @@ export interface InvoiceDetailViewProps {
   onOpenCreditNote?: (creditNoteId: string) => void
   /** Payments sub-query. Omitted: treated as loaded. */
   payments?: SubTabQuery
-  /** Credit notes sub-query. Omitted: treated as loaded. */
+  /** Credit memos sub-query. Omitted: treated as loaded. */
   creditNotes?: SubTabQuery
   /**
    * The action in flight, if any. Its menu item and button disable and say what
@@ -122,7 +122,7 @@ type InvoiceTab = 'details' | 'payments' | 'credit-notes'
  * "Invoice" with the status pills under it, the ID chip and one More menu on the right; every
  * action, Download PDF and Copy link included, lives in that menu. Tabs sit under
  * the header: Invoice details (the invoice as a document, with the Activity,
- * Metadata, Related rail beside it), Payments and Credit notes.
+ * Metadata, Related rail beside it), Payments and Credit memos.
  */
 export function InvoiceDetailView({
   invoice,
@@ -275,7 +275,7 @@ export function InvoiceDetailView({
               />
               <MenuAction
                 icon={<FileMinusIcon />}
-                label="Issue credit note"
+                label="Issue credit memo"
                 onSelect={onIssueCreditNote}
                 disabled={!canIssueCreditNote}
                 hint={isDraft ? 'Finalize the invoice first' : undefined}
@@ -327,7 +327,7 @@ export function InvoiceDetailView({
             },
             {
               value: 'credit-notes',
-              label: 'Credit notes',
+              label: 'Credit memos',
               ...optionalCount(knownCount(invoice.creditNotes.length, creditNotesQuery)),
             },
           ]}
@@ -431,7 +431,7 @@ export function InvoiceDetailView({
         ) : null}
 
         {tab === 'credit-notes' ? (
-          <Section table title="Credit notes">
+          <Section table title="Credit memos">
             <SubTabState
               hasData={invoice.creditNotes.length > 0}
               isLoading={creditNotesQuery.isLoading}
@@ -441,30 +441,30 @@ export function InvoiceDetailView({
               onRetry={creditNotesQuery.onRetry}
               isRetrying={creditNotesQuery.isRetrying}
               truncation={truncationNote(invoice.creditNotes.length, SUB_LIST_LIMIT)}
-              loadingLabel="Loading credit notes"
+              loadingLabel="Loading credit memos"
               columns={[{ width: '2fr' }, { kind: 'money' }, { kind: 'short' }, { kind: 'badge' }]}
               empty={{
                 scene: 'billing',
-                title: 'No credit notes yet',
-                description: 'No credit notes issued against this invoice.',
+                title: 'No credit memos yet',
+                description: 'No credit memos issued against this invoice.',
                 action:
                   onIssueCreditNote && canIssueCreditNote ? (
                     <Button size="sm" onClick={onIssueCreditNote}>
-                      Issue credit note
+                      Issue credit memo
                     </Button>
                   ) : undefined,
               }}
             >
               <DetailTable<InvoiceCreditNoteRow>
                 compact
-                label="Credit notes"
-                noun="credit notes"
+                label="Credit memos"
+                noun="credit memos"
                 rows={invoice.creditNotes}
                 {...(onOpenCreditNote ? { onRowClick: (row) => onOpenCreditNote(row.id) } : {})}
                 columns={[
                   {
                     key: 'number',
-                    header: 'Credit note',
+                    header: 'Credit memo',
                     cell: (row) => <span className="font-mono text-xs">{row.number}</span>,
                   },
                   {
