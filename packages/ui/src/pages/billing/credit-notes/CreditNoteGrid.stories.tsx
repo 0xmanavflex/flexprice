@@ -128,6 +128,9 @@ export const Default: Story = {
     const canvas = within(canvasElement)
     await expect(await canvas.findByText('CN-0001')).toBeInTheDocument()
     await expect(canvas.getByText('INV-1042')).toBeInTheDocument()
+    await expect(
+      canvas.getAllByRole('columnheader').map((cell) => cell.textContent?.trim()),
+    ).toEqual(['Credit memo', 'Customer', 'Invoice number', 'Date', 'Amount', 'Status', 'Actions'])
   },
 }
 

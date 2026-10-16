@@ -950,7 +950,7 @@ export const AddonsCouponsTaxes: Story = {
   },
 }
 
-/** Empty sections stay on the page, each with its own centred Add button. */
+/** Empty sections keep the Add button above the same bordered frame. */
 export const AddonsCouponsTaxesEmpty: Story = {
   args: {
     ...BASE,
@@ -965,6 +965,18 @@ export const AddonsCouponsTaxesEmpty: Story = {
     await expect(await canvas.findByText('No add-ons')).toBeVisible()
     await expect(canvas.getByText('No coupons')).toBeVisible()
     await expect(canvas.getByText('No taxes')).toBeVisible()
+    for (const [heading, button, empty] of [
+      ['Add-ons', 'Add add-on', 'No add-ons'],
+      ['Coupons', 'Add coupon', 'No coupons'],
+      ['Taxes', 'Add tax', 'No taxes'],
+    ]) {
+      const section = within(canvas.getByRole('region', { name: heading, exact: true }))
+      const add = section.getByRole('button', { name: button, exact: true })
+      const message = section.getByText(empty, { exact: true })
+      await expect(add.getBoundingClientRect().bottom).toBeLessThan(
+        message.getBoundingClientRect().top,
+      )
+    }
     for (const name of [
       'Add entitlement',
       'Add credit grant',
@@ -988,7 +1000,7 @@ export const WithoutAddonsCouponsTaxes: Story = {
   },
 }
 
-/** With data the same button moves to the section's top right. */
+/** With data the Add button stays at the section's top right. */
 export const SectionAddButtons: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)

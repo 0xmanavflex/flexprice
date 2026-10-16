@@ -69,9 +69,15 @@ export function PlanEntitlementsView({
   onRetry,
   isRetrying,
 }: PlanEntitlementsViewProps) {
+  const add = (
+    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+      <PlusIcon aria-hidden />
+      Add entitlement
+    </Button>
+  )
   if (entitlements.length === 0) {
     return (
-      <Section title="Entitlements" flush>
+      <Section table showTitle title="Entitlements" action={add}>
         <SubTabState
           hasData={false}
           isLoading={isLoading ?? false}
@@ -86,12 +92,6 @@ export function PlanEntitlementsView({
             scene: 'catalog',
             title: 'No entitlements yet',
             description: 'Add the features this plan includes.',
-            action: (
-              <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-                <PlusIcon aria-hidden />
-                Add entitlement
-              </Button>
-            ),
           }}
         >
           {null}
@@ -101,16 +101,11 @@ export function PlanEntitlementsView({
   }
 
   return (
-    <Section table showTitle title="Entitlements">
+    <Section table showTitle title="Entitlements" action={add}>
       <DetailTable
         compact
         label="Entitlements"
-        action={
-          <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
-            <PlusIcon aria-hidden />
-            Add entitlement
-          </Button>
-        }
+
         facet={{ label: 'Type', value: (e) => TYPE_LABEL[e.featureType] }}
         noun="entitlements"
         rows={entitlements}

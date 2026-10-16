@@ -329,7 +329,9 @@ function ChargesSection({
       <Section
         title="Charges"
         description="Every plan and add-on that bills for this feature"
-        flush
+        table
+        showTitle
+        action={add}
       >
         <SubTabState
           hasData={false}
@@ -343,7 +345,6 @@ function ChargesSection({
             scene: 'catalog',
             title: 'No charges yet',
             description: 'No plan or add-on prices this feature yet.',
-            action: add,
           }}
         >
           {null}
@@ -355,6 +356,7 @@ function ChargesSection({
     <Section
       table
       showTitle
+      action={add}
       title="Charges"
       description="Every plan and add-on that bills for this feature"
     >
@@ -362,7 +364,6 @@ function ChargesSection({
         compact
         label="Charges"
         noun="charges"
-        action={add}
         rows={rows}
         getRowId={(row) => row.charge.id}
         facets={[
@@ -671,7 +672,6 @@ function EventProperties({ filters }: { filters: { key: string; values: string[]
     </ul>
   )
 }
-
 
 /**
  * The create form, shown read-only.

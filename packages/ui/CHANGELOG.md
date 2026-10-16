@@ -8,6 +8,9 @@ Format: `- <date> — <area>: <what changed> (<why / provenance>)`.
 
 ## 2026-10-16
 
+- Reference HTML follow-up: contract subtable, Plan charges/entitlements/grants, Feature charges and Customer tax headings/Add controls stay above their bordered body in empty and populated states. Section preserves actions when its table title is visually hidden.
+- Billing tables: credit memos now show memo, customer, invoice number, date, amount and status. Invoices now lead with invoice/due dates and amounts; payment status remains visible and document status remains an optional column plus filter. Invoice integration mappings remain pending API support.
+
 - Detail layout: DetailShell and EntityHeader now compose DetailHeader; all share icon, title, pills and integration/ID/menu placement, with narrow-width coverage. Customer Overview gains Metadata and Related below Activity. Customer and contract integration controls appear in Related with link/unlink actions; header marks remain available.
 - Tables: Section table headings/actions now default above the stable frame. Customer contract counts are centred and show a muted dash for zero. Guided first-run states add a secondary documentation action using their existing guide URL.
 

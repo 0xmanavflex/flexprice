@@ -40,9 +40,15 @@ export function PlanCreditGrantsView({
   onRetry,
   isRetrying,
 }: PlanCreditGrantsViewProps) {
+  const add = (
+    <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
+      <PlusIcon aria-hidden />
+      Add grant
+    </Button>
+  )
   if (grants.length === 0) {
     return (
-      <Section title="Credit grants" flush>
+      <Section table showTitle title="Credit grants" action={add}>
         <SubTabState
           hasData={false}
           isLoading={isLoading ?? false}
@@ -57,12 +63,6 @@ export function PlanCreditGrantsView({
             scene: 'catalog',
             title: 'No credit grants yet',
             description: 'Subscribers start with an empty wallet.',
-            action: (
-              <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-                <PlusIcon aria-hidden />
-                Add grant
-              </Button>
-            ),
           }}
         >
           {null}
@@ -72,16 +72,11 @@ export function PlanCreditGrantsView({
   }
 
   return (
-    <Section table showTitle title="Credit grants">
+    <Section table showTitle title="Credit grants" action={add}>
       <DetailTable
         compact
         label="Credit grants"
-        action={
-          <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
-            <PlusIcon aria-hidden />
-            Add grant
-          </Button>
-        }
+
         noun="credit grants"
         rows={grants}
         columns={[

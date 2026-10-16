@@ -90,9 +90,12 @@ export function Section({
             ) : null}
           </div>
         ) : (
-          <Heading id={id} className="sr-only">
-            {title}
-          </Heading>
+          <>
+            <Heading id={id} className="sr-only">
+              {title}
+            </Heading>
+            {headerAction ? <div className="flex justify-end gap-2">{headerAction}</div> : null}
+          </>
         )}
         <div
           className={cn('bg-background min-w-0 overflow-hidden rounded-xl border', bodyClassName)}

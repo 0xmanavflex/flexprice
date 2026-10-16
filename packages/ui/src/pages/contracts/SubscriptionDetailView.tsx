@@ -1634,7 +1634,7 @@ function PartSection<T>({
   scene,
   create,
   isEmpty,
-  showTitle = false,
+  showTitle = true,
   action,
   titleAction,
   children,
@@ -1647,7 +1647,7 @@ function PartSection<T>({
   emptyAction?: ReactNode
   /** The drawing above the empty state. */
   scene?: EmptyScene
-  /** The section's Add button: centred in the empty state, top right once there is data. */
+  /** The section's Add button, above the frame in every state. */
   create?: { label: string; onClick: () => void } | undefined
   isEmpty: (data: T) => boolean
   showTitle?: boolean
@@ -1662,7 +1662,19 @@ function PartSection<T>({
       {create.label}
     </Button>
   ) : undefined
-  const frame = { table: true, title, showTitle, action, titleAction } as const
+  const frame = {
+    table: true,
+    title,
+    showTitle,
+    titleAction,
+    action:
+      action || createButton ? (
+        <>
+          {action}
+          {createButton}
+        </>
+      ) : undefined,
+  } as const
   if (part.isLoading || (!data && !part.isError)) {
     return (
       <Section {...frame}>
@@ -1696,24 +1708,10 @@ function PartSection<T>({
           {...(scene ? { scene } : {})}
           title={emptyTitle}
           description={emptyDescription}
-          action={emptyAction ?? createButton}
+          action={emptyAction}
         />
       </Section>
     )
   }
-  return (
-    <Section
-      {...frame}
-      action={
-        action || createButton ? (
-          <>
-            {action}
-            {createButton}
-          </>
-        ) : undefined
-      }
-    >
-      {children(data)}
-    </Section>
-  )
+  return <Section {...frame}>{children(data)}</Section>
 }

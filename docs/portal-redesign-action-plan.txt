@@ -64,9 +64,9 @@ Dependencies: item 08; coordinate catalog counts with item 54.
 [ ] 10. Customers: Name, Email, External ID, Integrations, Contracts, Created on.
 [ ] 11. Contracts: Customer, Plan, Billing, Status, Current period, Started.
     Remove MRR; display period as a range.
-[ ] 12. Invoices: Invoice number, Customer, Invoice date, Due date, Amount,
+[IN PROGRESS] 12. Invoices: Invoice number, Customer, Invoice date, Due date, Amount,
     Amount due, Payment status, Integrations. Invoice status becomes a filter.
-[ ] 13. Credit memos: Credit memo, Customer, Invoice number, Date, Amount, Status.
+[DONE] 13. Credit memos: Credit memo, Customer, Invoice number, Date, Amount, Status.
     Remove Reason/Type columns; connect row navigation when item 39 is implemented.
 [ ] 14. Payments: Receipt number, Invoice number, Customer, Amount,
     Payment method, Status, Integration.
@@ -252,3 +252,31 @@ SHARED LAYOUT BATCH — VALIDATION
 - No visual baselines were rewritten. Not ready to mark visual validation complete.
 - Desktop customer preview inspected; evidence: portal-customer-layout.png.
 - Runtime/API checks used mocks; live backend behavior remains unverified.
+
+HTML REFERENCE FOLLOW-UP — OCTOBER 16
+- Item 07: stable header/Add placement applied to contract PartSection, Plan charges,
+  entitlements and grants, Feature charges, and Customer taxes. Loading/error frames preserved.
+  Hidden table headings no longer suppress their actions. Remaining shared table consumers need audit.
+- Item 13: credit-memo columns match billing.tsx reference; type removed from list.
+  Navigation and status/search behavior retained.
+- Item 12: invoice date, due date, amount, amount due and payment status align with reference.
+  Document status is an optional column and existing filter; integrations still pending.
+- Item 11 audited: contract list already has Customer/Plan/Billing/Status/Current period/Started
+  and no MRR column. Storybook coverage passed.
+- Item 14 API gap: current Payment read model lacks customer and receipt number.
+  Do not rename payment ID or gateway reference to receipt number.
+- Validation: 7 billing/contract journeys passed; TypeScript and scoped lint passed before
+  final Plan-charge/Customer-tax follow-up. Storybook and final checks recorded below.
+- Targeted visual run: 2 passed, 5 expected-baseline mismatches. Reviewed received screenshots
+  for Plan, contract, invoice and memo layouts. Baselines unchanged; Linux review pending.
+
+FINAL CHECKS FOR HTML FOLLOW-UP
+- 146 affected Storybook tests passed across 10 files (after updating renamed-column
+  assertions and keeping Add charge disabled while loading).
+- 7 assembled billing/contract journeys passed.
+- TypeScript, scoped ESLint, production build, diff whitespace and page matrix checks passed.
+- Vendor integrity: 380 protected files match.
+- Build retains existing large-chunk and Vite config-loader warnings.
+- Visual baselines remain pending Linux verification; no snapshots were rewritten.
+- Next: finish remaining detail rails/integration mapping contracts, then shared charges
+  and the outstanding list fields with verified backend data.

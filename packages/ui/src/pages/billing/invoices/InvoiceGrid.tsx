@@ -28,22 +28,9 @@ import {
 /**
  * The invoice list, on the shared `EntityList`.
  *
- * ## Two statuses, two columns, one dropdown
- *
- * The redesign's tab list — Draft, Outstanding, Overdue, Paid, Voided — mixes
- * two different things. `Draft` and `Voided` are what the *document* is;
- * `Paid` is what the *money* did. The API keeps them apart (`invoice_status`
- * and `payment_status`) and so, now, does this table: the **Status** column
- * is the document, the **Payment** column is the collection.
- *
- * They are not redundant. A finalized invoice nobody has tried to collect and
- * one whose only payment attempt failed are both `open` in the first column
- * and tell you nothing; in the second they are "—" and "Failed", and only one
- * of them needs a phone call today.
- *
- * The dropdown and the advanced filter both write `query.statuses` — the
- * domain's fold of document and payment — so a choice in either place is the
- * same list. The skipped-invoice case is one of those options.
+ * Invoice date, due date, amounts and payment status lead the default table.
+ * Document status is a filter and remains available as an optional column.
+ * The API's document and payment states stay distinct in the data model.
  *
  * ## Which of those the server can answer
  *
@@ -62,7 +49,7 @@ import {
 export const InvoiceGridProvenance = provenance({
   source: 'composition',
   composes: ['pages/shared/EntityList'],
-  note: 'Invoice columns and actions over the shared list table. Document status and payment status as separate columns.',
+  note: 'Invoice columns and actions over the shared list table. Payment status visible; document status available through filtering and optional columns.',
 })
 
 /**
@@ -200,7 +187,7 @@ export function InvoiceGrid({
 }: InvoiceGridProps) {
   const columns = useMemo<EntityColumn<Invoice>[]>(
     () => [
-      textColumn<Invoice>('number', 'Invoice', (row) => row.number, {
+      textColumn<Invoice>('number', 'Invoice number', (row) => row.number, {
         width: 210,
         // The document's own identity. A row without it is unciteable.
         hideable: false,
@@ -209,7 +196,19 @@ export function InvoiceGrid({
         width: 200,
         onOpen: onOpenCustomer ? (row) => onOpenCustomer(row.customerId) : undefined,
       }),
-      moneyColumn<Invoice>('total', 'Total', (row) => row.total, {
+      dateColumn<Invoice>('issuedAt', 'Invoice date', (row) => row.issuedAt, {
+        width: 140,
+        sortable: true,
+        sortValue: InvoiceSortField.IssuedAt,
+        ...(locale ? { locale } : {}),
+      }),
+      dateColumn<Invoice>('dueDate', 'Due date', (row) => row.dueDate, {
+        width: 140,
+        sortable: true,
+        sortValue: InvoiceSortField.DueDate,
+        ...(locale ? { locale } : {}),
+      }),
+      moneyColumn<Invoice>('total', 'Amount', (row) => row.total, {
         width: 150,
         sortable: true,
         sortValue: InvoiceSortField.Total,
@@ -223,11 +222,16 @@ export function InvoiceGrid({
         muteZero: true,
         ...(locale ? { locale } : {}),
       }),
-      pillColumn<Invoice>('status', 'Status', (row) => ({
-        label: STATUS_LABEL[row.status],
-        tone: STATUS_TONE[row.status],
-      })),
-      pillColumn<Invoice>('paymentStatus', 'Payment', (row) =>
+      pillColumn<Invoice>(
+        'status',
+        'Status',
+        (row) => ({
+          label: STATUS_LABEL[row.status],
+          tone: STATUS_TONE[row.status],
+        }),
+        { hiddenByDefault: true },
+      ),
+      pillColumn<Invoice>('paymentStatus', 'Payment status', (row) =>
         row.paymentStatus
           ? {
               label: PAYMENT_STATUS_LABEL[row.paymentStatus],
@@ -245,12 +249,6 @@ export function InvoiceGrid({
             : null,
         { width: 220, muted: true, hiddenByDefault: true },
       ),
-      dateColumn<Invoice>('dueDate', 'Due', (row) => row.dueDate, {
-        width: 130,
-        sortable: true,
-        sortValue: InvoiceSortField.DueDate,
-        ...(locale ? { locale } : {}),
-      }),
     ],
     [locale, onOpenCustomer],
   )

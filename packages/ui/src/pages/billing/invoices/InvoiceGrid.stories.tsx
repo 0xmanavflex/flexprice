@@ -5,14 +5,7 @@ import { DEFAULT_INVOICE_QUERY, type InvoiceQuery, InvoiceStatus } from '@fp/dom
 import { InvoiceGrid } from './InvoiceGrid'
 import { fixtureQuery, invoiceFixtures, manyInvoices } from './invoiceFixtures'
 
-/**
- * The invoice list on the shared table.
- *
- * The stories worth keeping are `DerivedStatusSaysSo` and `TwoStatuses`: the
- * first is the one honesty guarantee this screen makes that no other list
- * needs, and the second is the reason there are two status columns rather
- * than the one the redesign drew.
- */
+/** Invoice table: payment status is visible; document status remains a filter. */
 const meta = {
   title: 'App/Billing/Invoices/Invoice table',
   component: InvoiceGrid,
@@ -31,20 +24,23 @@ type Story = StoryObj<typeof meta>
 
 export const Default: Story = {}
 
-/**
- * The document's state and the money's state are different columns.
- *
- * INV-1041 is overdue with nothing collected; INV-1042 is paid and its
- * payment succeeded. A draft has no payment status at all and renders the em
- * dash rather than a blank, because a blank cell reads as a value that failed
- * to load.
- */
-export const TwoStatuses: Story = {
+/** Missing payment status stays unknown, without inferring it from the balance. */
+export const PaymentStatus: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
 
     await expect(await canvas.findByText('INV-1041')).toBeInTheDocument()
-    await expect(canvas.getByText('Overdue')).toBeInTheDocument()
+    const headings = canvas.getAllByRole('columnheader').map((cell) => cell.textContent?.trim())
+    await expect(headings).toEqual([
+      'Invoice number',
+      'Customer',
+      'Invoice date',
+      'Due date',
+      'Amount',
+      'Amount due',
+      'Payment status',
+      'Actions',
+    ])
     await expect(canvas.getByText('Succeeded')).toBeInTheDocument()
     // The draft and the void invoice carry no payment status.
     await expect(canvas.getAllByText('—').length).toBeGreaterThan(0)
@@ -77,7 +73,7 @@ export const AmountsAreLeftAligned: Story = {
     await canvas.findByText('INV-1041')
 
     const headers = Array.from(canvasElement.querySelectorAll('thead th'))
-    const index = headers.findIndex((th) => /total/i.test(th.textContent ?? ''))
+    const index = headers.findIndex((th) => /^amount$/i.test(th.textContent ?? ''))
     await expect(index).toBeGreaterThan(-1)
 
     const cell = canvasElement.querySelectorAll('tbody tr')[0]?.children[index] as HTMLElement

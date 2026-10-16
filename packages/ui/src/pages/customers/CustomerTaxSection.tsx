@@ -94,10 +94,9 @@ export function CustomerTaxSection({
       <PlusIcon aria-hidden /> Add tax rate
     </Button>
   )
-  const showTable = !isLoading && !failed && associations.length > 0
 
   return (
-    <Section title="Taxes" flush bare={showTable} {...(showTable ? {} : { actions: addTaxRate })}>
+    <Section table showTitle title="Taxes" action={addTaxRate}>
       {isLoading ? (
         <div className="p-6">
           <LoadingRows />
@@ -122,7 +121,6 @@ export function CustomerTaxSection({
       ) : (
         <DetailTable
           label="Tax rates"
-          action={addTaxRate}
           noun="tax rates"
           rows={associations}
           getRowId={(a) => a.id}

@@ -94,6 +94,18 @@ export function PlanChargesView({
   onRetry,
   meterUnit,
 }: PlanChargesViewProps) {
+  const add = readOnly ? null : (
+    <Button
+      type="button"
+      size="sm"
+      className="h-8 px-3"
+      onClick={onAdd}
+      disabled={Boolean(loading || error)}
+    >
+      <PlusIcon aria-hidden />
+      Add charge
+    </Button>
+  )
   const meterName = (id: string) => charges.find((c) => c.meterId === id)?.meterName ?? id
   const nameOf = (charge: Charge) => chargeLabel(chargeToDraft(charge), meterName)
   const priceOf = (charge: Charge) =>
@@ -108,7 +120,7 @@ export function PlanChargesView({
 
   if (loading || error || charges.length === 0) {
     return (
-      <Section title="Charges" flush>
+      <Section table showTitle title="Charges" action={add}>
         {loading ? (
           <div className="p-6">
             <LoadingRows rows={3} columns={5} />
@@ -126,14 +138,6 @@ export function PlanChargesView({
             scene="catalog"
             title="No charges yet"
             description="Nothing is billed yet. Add a fixed fee, a usage charge, or both."
-            action={
-              readOnly ? null : (
-                <Button type="button" size="sm" className="h-8 px-3" onClick={onAdd}>
-                  <PlusIcon aria-hidden />
-                  Add the first charge
-                </Button>
-              )
-            }
           />
         )}
       </Section>
@@ -230,22 +234,13 @@ export function PlanChargesView({
   ]
 
   return (
-    <Section table showTitle title="Charges">
+    <Section table showTitle title="Charges" action={add}>
       <DetailTable<Charge>
         compact
         label="Charges"
         noun="charges"
         rows={charges}
-        {...(readOnly
-          ? {}
-          : {
-              action: (
-                <Button type="button" size="sm" className="h-9 px-3" onClick={onAdd}>
-                  <PlusIcon aria-hidden />
-                  Add charge
-                </Button>
-              ),
-            })}
+
         facets={[
           { id: 'type', label: 'Type', value: typeLabel },
           { id: 'model', label: 'Model', value: modelLabel },

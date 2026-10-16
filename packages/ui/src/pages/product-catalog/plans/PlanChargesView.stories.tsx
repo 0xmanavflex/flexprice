@@ -97,7 +97,7 @@ export const Empty: Story = {
   play: async ({ canvasElement, args }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('No charges yet')).toBeVisible()
-    await userEvent.click(canvas.getByRole('button', { name: 'Add the first charge' }))
+    await userEvent.click(canvas.getByRole('button', { name: 'Add charge' }))
     await expect(args.onAdd).toHaveBeenCalledOnce()
   },
 }
@@ -108,7 +108,7 @@ export const Loading: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByText('Loading')).toBeInTheDocument()
-    await expect(canvas.queryByRole('button', { name: 'Add charge' })).toBeNull()
+    await expect(canvas.getByRole('button', { name: 'Add charge' })).toBeDisabled()
   },
 }
 
