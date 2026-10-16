@@ -1,0 +1,3 @@
+# Push is refused unless the same static checks CI runs have passed:
+# types, lint, and the production build.
+pnpm typecheck && pnpm lint && pnpm build

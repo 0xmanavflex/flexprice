@@ -89,7 +89,7 @@ export const PriceGroup: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
-    await expect(canvas.getByRole('columnheader', { name: 'Price', exact: true })).toBeVisible()
+    await expect(canvas.getByRole('columnheader', { name: /^Price$/ })).toBeVisible()
     await expect(canvas.getByText('Unavailable members')).toBeVisible()
     await userEvent.click(canvas.getByText('Platform charge', { exact: true }))
     await waitFor(() => expect(within(document.body).getByRole('dialog')).toBeVisible())

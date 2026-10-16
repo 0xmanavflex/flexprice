@@ -510,7 +510,7 @@ export const ProviderInvoiceMapping: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement)
     await expect(canvas.getByRole('button', { name: 'Manage Stripe integration' })).toBeVisible()
-    await userEvent.click(canvas.getByRole('button', { name: 'Stripe integration', exact: true }))
+    await userEvent.click(canvas.getByRole('button', { name: /^Stripe integration$/ }))
     const screen = within(canvasElement.ownerDocument.body)
     await expect(await screen.findByRole('menuitem', { name: 'Copy invoice ID' })).toBeVisible()
     await expect(screen.queryByRole('menuitem', { name: 'Copy customer ID' })).toBeNull()
